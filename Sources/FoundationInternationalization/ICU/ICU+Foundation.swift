@@ -59,8 +59,8 @@ internal func _withUCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeMutablePo
     }
 }
 
-/// Allocate a buffer with `size` UChars and execute the given block.
-/// The closure should return the actual length of the string, or nil if
+/// Allocate a buffer with `size` `UChar`s and execute the given block.
+/// The closure should return the actual length of the string, or nil if there is an error in the ICU call or the result is zero length.
 internal func _withFixedUCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_KEYWORD_AND_VALUES_CAPACITY, _ body: (UnsafeMutablePointer<UChar>, Int32, inout UErrorCode) -> Int32?) -> String? {
     withUnsafeTemporaryAllocation(of: UChar.self, capacity: Int(size)) {
         buffer in
@@ -75,6 +75,8 @@ internal func _withFixedUCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_
     }
 }
 
+/// Allocate a buffer with `size` `CChar`s and execute the given block.
+/// The closure should return the actual length of the string, or nil if there is an error in the ICU call or the result is zero length.
 internal func _withFixedCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_KEYWORD_AND_VALUES_CAPACITY, _ body: (UnsafeMutablePointer<CChar>, Int32, inout UErrorCode) -> Int32?) -> String? {
     withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(size + 1)) { buffer in
         var status = U_ZERO_ERROR
