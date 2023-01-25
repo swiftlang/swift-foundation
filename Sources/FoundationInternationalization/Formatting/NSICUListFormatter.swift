@@ -49,29 +49,15 @@ internal class NSICUListFormatter {
             ucharStringLengths.append(Int32(uchars.count))
         }
 
-        var result: String = ""
-
-        _withUCharBuffer { buffer, size in
-            var status = U_ZERO_ERROR
-            var resultLen: Int32 = 0
-
-            resultLen = ulistfmt_format(uformatter, ucharStringPointers, ucharStringLengths, Int32(strings.count), buffer, size, &status)
-
-            if status == U_BUFFER_OVERFLOW_ERROR && resultLen > 0 {
-                return (retry: true, newCapacity: resultLen + 1)
-            }
-
-            if status.isSuccess {
-                result = String(utf16CodeUnits: buffer, count: Int(resultLen))
-            }
-            return (retry: false, newCapacity: nil)
+        let result = _withResizingUCharBuffer { buffer, size, status in
+            ulistfmt_format(uformatter, ucharStringPointers, ucharStringLengths, Int32(strings.count), buffer, size, &status)
         }
 
         for pointer in ucharStringPointers {
             pointer?.deallocate()
         }
 
-        return result
+        return result ?? ""
     }
 
     internal static func formatterCreateIfNeeded<Style, Base>(format: ListFormatStyle<Style, Base>) -> NSICUListFormatter {
