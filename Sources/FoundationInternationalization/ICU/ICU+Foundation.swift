@@ -67,18 +67,13 @@ internal func _withResizingUCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeM
 }
 
 /// Allocate a buffer with `size` `UChar`s and execute the given block.
-/// The closure should return the actual length of the string, or nil if there is an error in the ICU call or the result is zero length.
-internal func _withFixedUCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_KEYWORD_AND_VALUES_CAPACITY, allowableError: UErrorCode? = nil, _ body: (UnsafeMutablePointer<UChar>, Int32, inout UErrorCode) -> Int32?) -> String? {
+/// The closure should return the actual length of the string, or nil if there is an error in the ICU call or the result is zero length. If `defaultIsError` is set to `true`, then `U_USING_DEFAULT_WARNING` is treated as an error instead of a warning.
+internal func _withFixedUCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_KEYWORD_AND_VALUES_CAPACITY, defaultIsError: Bool = false, _ body: (UnsafeMutablePointer<UChar>, Int32, inout UErrorCode) -> Int32?) -> String? {
     withUnsafeTemporaryAllocation(of: UChar.self, capacity: Int(size)) {
         buffer in
         var status = U_ZERO_ERROR
         if let len = body(buffer.baseAddress!, size, &status) {
-            if let allowableError {
-                if status == allowableError {
-                    status = U_ZERO_ERROR
-                }
-            }
-            if status.isSuccess && len <= size && len > 0 {
+            if status.isSuccess && !(defaultIsError && status == U_USING_DEFAULT_WARNING) && len <= size && len > 0 {
                 return String(utf16CodeUnits: buffer.baseAddress!, count: Int(len))
             }
         }
