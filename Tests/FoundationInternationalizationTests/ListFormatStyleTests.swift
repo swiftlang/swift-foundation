@@ -1,0 +1,58 @@
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+//
+// RUN: %target-run-simple-swift
+// REQUIRES: executable_test
+// REQUIRES: objc_interop
+
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+class ListFormatStyleTests : XCTestCase {
+    func test_orList() {
+        var style: ListFormatStyle<StringStyle, [String]> = .list(type: .or, width: .standard)
+        style.locale = Locale(identifier: "en_US")
+
+        XCTAssertEqual(["one", "two"].formatted(style), "one or two")
+        XCTAssertEqual(["one", "two", "three"].formatted(style), "one, two, or three")
+    }
+
+    func test_andList() {
+        var style: ListFormatStyle<StringStyle, [String]> = .list(type: .and, width: .standard)
+        style.locale = Locale(identifier: "en_US")
+
+        XCTAssertEqual(["one", "two"].formatted(style), "one and two")
+        XCTAssertEqual(["one", "two", "three"].formatted(style), "one, two, and three")
+    }
+
+    func test_narrowList() {
+        var style: ListFormatStyle<StringStyle, [String]> = .list(type: .and, width: .narrow)
+        style.locale = Locale(identifier: "en_US")
+
+        XCTAssertEqual(["one", "two"].formatted(style), "one, two")
+        XCTAssertEqual(["one", "two", "three"].formatted(style), "one, two, three")
+    }
+
+    func test_shortList() {
+        var style: ListFormatStyle<StringStyle, [String]> = .list(type: .and, width: .short)
+        style.locale = Locale(identifier: "en_US")
+
+        XCTAssertEqual(["one", "two"].formatted(style), "one & two")
+        XCTAssertEqual(["one", "two", "three"].formatted(style), "one, two, & three")
+    }
+
+#if FOUNDATION_FRAMEWORK // FIXME: rdar://104091257
+    func test_leadingDotSyntax() {
+        let _ = ["one", "two"].formatted(.list(type: .and))
+        let _ = ["one", "two"].formatted()
+        let _ = [1, 2].formatted(.list(memberStyle: .number, type: .or, width: .standard))
+    }
+#endif
+}
