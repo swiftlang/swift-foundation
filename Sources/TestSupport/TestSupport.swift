@@ -17,6 +17,8 @@
 
 public typealias Data = Foundation.Data
 public typealias UUID = Foundation.UUID
+public typealias Date = Foundation.Date
+public typealias TimeInterval = Foundation.TimeInterval
 
 // XCTest implicitly imports Foundation
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
@@ -48,6 +50,8 @@ public typealias PredicateError = Foundation.PredicateError
 
 public typealias Data = FoundationEssentials.Data
 public typealias UUID = FoundationEssentials.UUID
+public typealias Date = FoundationEssentials.Date
+public typealias TimeInterval = FoundationEssentials.TimeInterval
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias ListFormatStyle = FoundationInternationalization.ListFormatStyle
