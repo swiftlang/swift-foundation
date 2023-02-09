@@ -44,6 +44,7 @@ let package = Package(
 
         // FoundationInternationalization
         .target(name: "FoundationInternationalization", dependencies: [
+            .target(name: "FoundationEssentials"),
             .product(name: "FoundationICU", package: "swift-foundation-icu")
         ]),
         .testTarget(name: "FoundationInternationalizationTests", dependencies: [
