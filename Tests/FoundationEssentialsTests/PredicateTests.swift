@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+#if canImport(TestSupport)
+import TestSupport
+#endif
 
 @available(Future, *)
 final class PredicateTests: XCTestCase {
