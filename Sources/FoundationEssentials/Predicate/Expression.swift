@@ -71,10 +71,16 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
 @available(Future, *)
 extension PredicateExpressions {
     public struct VariableID: Hashable, Codable, Sendable {
-        let uuid: UUID
+        let id: UInt
+        private static let nextID = LockedState(initialState: UInt(0))
         
         fileprivate init() {
-            uuid = UUID()
+            self.id = Self.nextID.withLock { value in
+                defer {
+                    (value, _) = value.addingReportingOverflow(1)
+                }
+                return value
+            }
         }
     }
     
