@@ -40,7 +40,7 @@ let package = Package(
             "FoundationEssentials",
             "FoundationInternationalization",
             "FoundationNetworking"
-        ]),
+        ], swiftSettings: swiftSettings),
 
         // FoundationEssentials
         .target(name: "FoundationEssentials", dependencies: ["_CShims"], swiftSettings: swiftSettings),

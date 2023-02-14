@@ -45,8 +45,8 @@ final class PredicateTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(compareTo)
             )
         }
-        try print(predicate.evaluate(Object(a: 1, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
-        try print(predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
+        try XCTAssertFalse(predicate.evaluate(Object(a: 1, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
+        try XCTAssertTrue(predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
     #if false // TODO: Re-enable with Variadic Generics
