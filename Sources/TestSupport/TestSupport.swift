@@ -27,6 +27,19 @@ public typealias StringStyle = Foundation.StringStyle
 
 public typealias Locale = Foundation.Locale
 
+@available(Future, *)
+public typealias Predicate = Foundation.Predicate
+@available(Future, *)
+public typealias PredicateBindings = Foundation.PredicateBindings
+@available(Future, *)
+public typealias PredicateExpression = Foundation.PredicateExpression
+@available(Future, *)
+public typealias PredicateExpressions = Foundation.PredicateExpressions
+@available(Future, *)
+public typealias StandardPredicateExpression = Foundation.StandardPredicateExpression
+@available(Future, *)
+public typealias PredicateError = Foundation.PredicateError
+
 #else
 
 @testable import FoundationEssentials
@@ -43,5 +56,18 @@ public typealias ListFormatStyle = FoundationInternationalization.ListFormatStyl
 public typealias StringStyle = FoundationInternationalization.StringStyle
 
 public typealias Locale = FoundationInternationalization.Locale
+
+@available(Future, *)
+public typealias Predicate = FoundationEssentials.Predicate
+@available(Future, *)
+public typealias PredicateBindings = FoundationEssentials.PredicateBindings
+@available(Future, *)
+public typealias PredicateExpression = FoundationEssentials.PredicateExpression
+@available(Future, *)
+public typealias PredicateExpressions = FoundationEssentials.PredicateExpressions
+@available(Future, *)
+public typealias StandardPredicateExpression = FoundationEssentials.StandardPredicateExpression
+@available(Future, *)
+public typealias PredicateError = FoundationEssentials.PredicateError
 
 #endif // FOUNDATION_FRAMEWORK
