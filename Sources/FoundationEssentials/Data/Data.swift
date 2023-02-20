@@ -17,7 +17,7 @@ import Darwin
 internal func __DataInvokeDeallocatorVirtualMemory(_ mem: UnsafeMutableRawPointer, _ length: Int) {
     guard vm_deallocate(
         mach_task_self_,
-        unsafeBitCast(mem, to: vm_address_t.self),
+        vm_address_t(UInt(bitPattern: mem)),
         vm_size_t(length)) == ERR_SUCCESS else {
         fatalError("*** __DataInvokeDeallocatorVirtualMemory(\(mem), \(length)) failed")
     }
@@ -80,7 +80,7 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
 // coexist without a conflicting ObjC class name, so it was renamed.
 // The old name must not be used in the new runtime.
 @usableFromInline
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 internal final class __DataStorage : @unchecked Sendable {
     @usableFromInline static let maxSize = Int.max >> 1
     @usableFromInline static let vmOpsThreshold = Platform.pageSize * 4
@@ -506,7 +506,7 @@ internal final class __DataStorage : @unchecked Sendable {
 }
 
 @frozen
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollection, RangeReplaceableCollection, MutableDataProtocol, ContiguousBytes, Sendable {
 
     public typealias Index = Int
@@ -2541,7 +2541,7 @@ extension Data {
 #endif //!FOUNDATION_FRAMEWORK
 
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     /// A human-readable description for the data.
     public var description: String {
@@ -2572,7 +2572,7 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
     }
 }
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data : Codable {
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
