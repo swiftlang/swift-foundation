@@ -2442,20 +2442,20 @@ extension Data {
         @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
         public static let alwaysMapped      = ReadingOptions(rawValue: 1 << 3)
         /// Deprecated name for `.mappedIfSafe`
-        @available(macOS, introduced: 10.0, deprecated: 10.15, renamed: "mappedIfSafe")
-        @available(iOS, introduced: 2.0, deprecated: 13.0, renamed: "mappedIfSafe")
+        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "mappedIfSafe")
+        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "mappedIfSafe")
         @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "mappedIfSafe")
         @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "mappedIfSafe")
         public static let dataReadingMapped = ReadingOptions.mappedIfSafe
         /// Deprecated name for `.mappedIfSafe`
-        @available(macOS, introduced: 10.0, deprecated: 10.15, renamed: "mappedIfSafe")
-        @available(iOS, introduced: 2.0, deprecated: 13.0, renamed: "mappedIfSafe")
+        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "mappedIfSafe")
+        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "mappedIfSafe")
         @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "mappedIfSafe")
         @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "mappedIfSafe")
         public static let mappedRead        = ReadingOptions.mappedIfSafe
         /// Deprecated name for `.uncached`
-        @available(macOS, introduced: 10.0, deprecated: 10.15, renamed: "uncached")
-        @available(iOS, introduced: 2.0, deprecated: 13.0, renamed: "uncached")
+        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "uncached")
+        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "uncached")
         @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "uncached")
         @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "uncached")
         public static let uncachedRead      = ReadingOptions.uncached
@@ -2491,8 +2491,8 @@ extension Data {
         @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
         public static let fileProtectionMask        = WritingOptions(rawValue: 0xf0000000)
         /// Deprecated name for `.atomic`
-        @available(macOS, introduced: 10.0, deprecated: 10.15, renamed: "atomic")
-        @available(iOS, introduced: 2.0, deprecated: 13.0, renamed: "atomic")
+        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "atomic")
+        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "atomic")
         @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "atomic")
         @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "atomic")
         public static let atomicWrite               = WritingOptions.atomic
