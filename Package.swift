@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "FoundationPreview",
+    platforms: [.macOS(.v13), .iOS(.v16), .tvOS(.v16), .watchOS(.v9)],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(name: "FoundationPreview", targets: ["FoundationPreview"]),
@@ -45,6 +46,7 @@ let package = Package(
         // FoundationInternationalization
         .target(name: "FoundationInternationalization", dependencies: [
             .target(name: "FoundationEssentials"),
+            .target(name: "_CShims"),
             .product(name: "FoundationICU", package: "swift-foundation-icu")
         ]),
         .testTarget(name: "FoundationInternationalizationTests", dependencies: [

@@ -28,7 +28,7 @@ public typealias TimeInterval = Double
  A `Date` is independent of a particular calendar or time zone. To represent a `Date` to a user, you must interpret it in the context of a `Calendar`.
 */
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct Date : Comparable, Equatable, Sendable {
+public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     internal var _time : TimeInterval
 

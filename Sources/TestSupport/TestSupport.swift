@@ -15,9 +15,13 @@
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 
+public typealias Calendar = Foundation.Calendar
+public typealias TimeZone = Foundation.TimeZone
+public typealias Locale = Foundation.Locale
 public typealias Data = Foundation.Data
 public typealias UUID = Foundation.UUID
 public typealias Date = Foundation.Date
+public typealias DateComponents = Foundation.DateComponents
 public typealias TimeInterval = Foundation.TimeInterval
 
 // XCTest implicitly imports Foundation
@@ -26,8 +30,6 @@ public typealias ListFormatStyle = Foundation.ListFormatStyle
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias StringStyle = Foundation.StringStyle
-
-public typealias Locale = Foundation.Locale
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias Predicate = Foundation.Predicate
@@ -59,7 +61,10 @@ public typealias ListFormatStyle = FoundationInternationalization.ListFormatStyl
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias StringStyle = FoundationInternationalization.StringStyle
 
+public typealias Calendar = FoundationInternationalization.Calendar
+public typealias TimeZone = FoundationInternationalization.TimeZone
 public typealias Locale = FoundationInternationalization.Locale
+public typealias DateComponents = FoundationInternationalization.DateComponents
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias Predicate = FoundationEssentials.Predicate
