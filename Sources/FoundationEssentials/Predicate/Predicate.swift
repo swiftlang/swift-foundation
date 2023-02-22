@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public struct Predicate<Input> : Sendable {
     public let expression : any StandardPredicateExpression<Bool>
     public let variable: (PredicateExpressions.Variable<Input>)
@@ -26,10 +26,10 @@ public struct Predicate<Input> : Sendable {
 }
 
 // Namespace for operator expressions
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 @frozen @_nonSendable public enum PredicateExpressions {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension Sequence {
     public func filter(_ predicate: Predicate<Element>) throws -> [Element] {
         try self.filter {
