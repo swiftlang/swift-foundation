@@ -14,7 +14,7 @@
 import TestSupport
 #endif
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 final class PredicateTests: XCTestCase {
     
     struct Object {

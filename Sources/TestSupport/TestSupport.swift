@@ -27,17 +27,17 @@ public typealias StringStyle = Foundation.StringStyle
 
 public typealias Locale = Foundation.Locale
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias Predicate = Foundation.Predicate
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias PredicateBindings = Foundation.PredicateBindings
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias PredicateExpression = Foundation.PredicateExpression
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias PredicateExpressions = Foundation.PredicateExpressions
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias StandardPredicateExpression = Foundation.StandardPredicateExpression
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias PredicateError = Foundation.PredicateError
 
 #else
@@ -57,17 +57,17 @@ public typealias StringStyle = FoundationInternationalization.StringStyle
 
 public typealias Locale = FoundationInternationalization.Locale
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias Predicate = FoundationEssentials.Predicate
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias PredicateBindings = FoundationEssentials.PredicateBindings
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias PredicateExpression = FoundationEssentials.PredicateExpression
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias PredicateExpressions = FoundationEssentials.PredicateExpressions
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias StandardPredicateExpression = FoundationEssentials.StandardPredicateExpression
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias PredicateError = FoundationEssentials.PredicateError
 
 #endif // FOUNDATION_FRAMEWORK
