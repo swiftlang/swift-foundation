@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions {
     public struct ClosedRange<
         LHS : PredicateExpression,
@@ -42,11 +42,11 @@ extension PredicateExpressions {
     }
 }
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ClosedRange : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ClosedRange : Codable where LHS : Codable, RHS : Codable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ClosedRange : Sendable where LHS : Sendable, RHS : Sendable {}

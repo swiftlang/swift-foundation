@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public protocol PredicateExpression<Output> {
     associatedtype Output
     
@@ -18,10 +18,10 @@ public protocol PredicateExpression<Output> {
 }
 
 // Only Foundation should add conformances to this protocol
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public protocol StandardPredicateExpression<Output> : PredicateExpression, Codable, Sendable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
     internal enum _Error: Hashable, Sendable {
         case undefinedVariable
@@ -68,7 +68,7 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
     public static let forceCastFailure = Self(.forceCastFailure(nil))
 }
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions {
     public struct VariableID: Hashable, Codable, Sendable {
         let id: UInt
@@ -139,7 +139,7 @@ extension PredicateExpressions {
 
 }
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.KeyPath : Codable where Root : Codable {
     private enum CodingKeys: String, CodingKey {
         case root
@@ -154,17 +154,17 @@ extension PredicateExpressions.KeyPath : Codable where Root : Codable {
         throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: "Encoding a PredicateExpressions.KeyPath is not currently supported"))
     }
 }
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.KeyPath : Sendable where Root : Sendable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.KeyPath : StandardPredicateExpression where Root : StandardPredicateExpression {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Value : Codable where Output : Codable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Value : Sendable where Output : Sendable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Value : StandardPredicateExpression where Output : Codable /*, Output : Sendable*/ {}

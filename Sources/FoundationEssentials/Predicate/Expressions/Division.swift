@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions {
     public struct IntDivision<
         LHS : PredicateExpression,
@@ -100,29 +100,29 @@ extension PredicateExpressions {
     }
 }
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.FloatDivision : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.IntRemainder : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.IntDivision : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.FloatDivision : Codable where LHS : Codable, RHS : Codable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.IntRemainder : Codable where LHS : Codable, RHS : Codable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.IntDivision : Codable where LHS : Codable, RHS : Codable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.FloatDivision : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.IntRemainder : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.IntDivision : Sendable where LHS : Sendable, RHS : Sendable {}
