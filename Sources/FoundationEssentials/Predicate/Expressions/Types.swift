@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions {
     public struct ConditionalCast<
         Input : PredicateExpression,
@@ -68,29 +68,29 @@ extension PredicateExpressions {
     }
 }
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ConditionalCast : StandardPredicateExpression where Input : StandardPredicateExpression {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ForceCast : StandardPredicateExpression where Input : StandardPredicateExpression {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.TypeCheck : StandardPredicateExpression where Input : StandardPredicateExpression {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ConditionalCast : Codable where Input : Codable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ForceCast : Codable where Input : Codable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.TypeCheck : Codable where Input : Codable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ConditionalCast : Sendable where Input : Sendable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ForceCast : Sendable where Input : Sendable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.TypeCheck : Sendable where Input : Sendable {}

@@ -3,13 +3,6 @@
 
 import PackageDescription
 
-let swiftSettings: [SwiftSetting] = [
-    .unsafeFlags([
-        "-Xfrontend", "-define-availability",
-        "-Xfrontend", "Future:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999"
-    ])
-]
-
 let package = Package(
     name: "FoundationPreview",
     products: [
@@ -40,14 +33,14 @@ let package = Package(
             "FoundationEssentials",
             "FoundationInternationalization",
             "FoundationNetworking"
-        ], swiftSettings: swiftSettings),
+        ]),
 
         // FoundationEssentials
-        .target(name: "FoundationEssentials", dependencies: ["_CShims"], swiftSettings: swiftSettings),
+        .target(name: "FoundationEssentials", dependencies: ["_CShims"]),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
             "FoundationEssentials"
-        ], swiftSettings: swiftSettings),
+        ]),
 
         // FoundationInternationalization
         .target(name: "FoundationInternationalization", dependencies: [

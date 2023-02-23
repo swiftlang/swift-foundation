@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions {
     public struct Conjunction<
         LHS : PredicateExpression,
@@ -40,11 +40,11 @@ extension PredicateExpressions {
     }
 }
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Conjunction : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Conjunction : Codable where LHS : Codable, RHS : Codable {}
 
-@available(Future, *)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Conjunction : Sendable where LHS : Sendable, RHS : Sendable {}
