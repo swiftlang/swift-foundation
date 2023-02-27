@@ -76,6 +76,8 @@ internal class _NSSwiftUUID : _NSUUIDBridge {
         super.init()
     }
     
+    override static var supportsSecureCoding: Bool { true }
+    
     required init?(coder: NSCoder) {
         guard coder.allowsKeyedCoding else {
             coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Cannot be decoded without keyed coding"]))
