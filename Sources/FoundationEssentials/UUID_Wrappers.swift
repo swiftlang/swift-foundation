@@ -123,8 +123,8 @@ internal class _NSSwiftUUID : _NSUUIDBridge {
         }
     }
     
-    override public init?(uuidString: NSObject) {
-        guard let string = uuidString as? NSString, let swiftUUID = Foundation.UUID(uuidString: string as String) else {
+    override public init?(uuidString: String) {
+        guard let swiftUUID = Foundation.UUID(uuidString: uuidString) else {
             if NSUUID._compatibilityBehavior {
                 let empty = uuid_t(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
                 _storage = Foundation.UUID(uuid: empty)
