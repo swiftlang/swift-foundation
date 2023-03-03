@@ -421,7 +421,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     }
 }
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
 
     public var description: String {
@@ -457,7 +457,7 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
     }
 }
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DateComponents : Codable {
     private enum CodingKeys : Int, CodingKey {
         case calendar
@@ -551,7 +551,7 @@ extension DateComponents : Codable {
 
 @_implementationOnly import _ForSwiftFoundation
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
     public typealias ReferenceType = NSDateComponents
 
@@ -626,7 +626,7 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
     }
 }
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension NSDateComponents : _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc

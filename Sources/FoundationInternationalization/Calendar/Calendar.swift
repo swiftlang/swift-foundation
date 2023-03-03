@@ -59,11 +59,11 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case republicOfChina
 
         /// A simple tabular Islamic calendar using the astronomical/Thursday epoch of CE 622 July 15
-        @available(macOS 10.10, iOS 8.0, *)
+        @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
         case islamicTabular
 
         /// The Islamic Umm al-Qura calendar used in Saudi Arabia. This is based on astronomical calculation, instead of tabular behavior.
-        @available(macOS 10.10, iOS 8.0, *)
+        @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
         case islamicUmmAlQura
 
         static let cldrKeywordKey = "ca"
@@ -1987,7 +1987,7 @@ extension Calendar : Codable {
     }
 }
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar.Identifier : Codable {}
 
 /// Internal-use struct for holding the range of a Weekend
@@ -2000,12 +2000,12 @@ internal struct WeekendRange {
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar : ReferenceConvertible {
     public typealias ReferenceType = NSCalendar
 }
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar : _ObjectiveCBridgeable {
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSCalendar {
@@ -2038,7 +2038,7 @@ extension Calendar : _ObjectiveCBridgeable {
     }
 }
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension NSCalendar : _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
