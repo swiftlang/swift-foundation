@@ -21,7 +21,7 @@ import FoundationEssentials
 
  When a new instance of `DateComponents` is created, the date components are set to `nil`.
 */
-@available(macOS 10.9, iOS 8.0, *)
+@available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct DateComponents : Hashable, Equatable, Sendable {
     internal var _calendar: Calendar?
     internal var _timeZone: TimeZone?
@@ -251,7 +251,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     /// Set the value of one of the properties, using an enumeration value instead of a property name.
     ///
     /// The calendar and timeZone and isLeapMonth properties cannot be set by this method.
-    @available(macOS 10.9, iOS 8.0, *)
+    @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public mutating func setValue(_ value: Int?, for component: Calendar.Component) {
         switch component {
         case .era: self.era = value
@@ -277,7 +277,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     /// Returns the value of one of the properties, using an enumeration value instead of a property name.
     ///
     /// The calendar and timeZone and isLeapMonth property values cannot be retrieved by this method.
-    @available(macOS 10.9, iOS 8.0, *)
+    @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func value(for component: Calendar.Component) -> Int? {
         switch component {
         case .era: return self.era
@@ -310,7 +310,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     /// If the time zone property is set in the `DateComponents`, it is used.
     ///
     /// The calendar property must be set, or the result is always `false`.
-    @available(macOS 10.9, iOS 8.0, *)
+    @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public var isValidDate: Bool {
         guard let calendar = _calendar else { return false }
         return isValidDate(in: calendar)
@@ -323,7 +323,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     /// Except for some trivial cases (e.g., 'seconds' should be 0 - 59 in any calendar), this method is not necessarily cheap.
     ///
     /// If the time zone property is set in the `DateComponents`, it is used.
-    @available(macOS 10.9, iOS 8.0, *)
+    @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func isValidDate(in calendar: Calendar) -> Bool {
         if let ns = _nanosecond, 1000 * 1000 * 1000 <= ns {
             return false
