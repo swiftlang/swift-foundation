@@ -94,7 +94,7 @@ internal final class _Locale: Sendable, Hashable {
 
     internal let identifier: String
     internal let doesNotRequireSpecialCaseHandling: Bool
-    private let prefs: LocalePreferences?
+    internal let prefs: LocalePreferences?
     private let lock: LockedState<State>
 
     // MARK: - init
@@ -1592,7 +1592,7 @@ internal final class _Locale: Sendable, Hashable {
 // MARK: -
 
 /// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identiifer locales never have preferences.
-struct LocalePreferences: Hashable {
+internal struct LocalePreferences: Hashable {
     enum MeasurementUnit {
         case centimeters
         case inches
