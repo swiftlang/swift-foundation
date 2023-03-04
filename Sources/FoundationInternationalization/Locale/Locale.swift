@@ -169,15 +169,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 
 
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    internal init(identifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Locale.Weekday?, minimumDaysInFirstWeek: Int?) {
-        var prefs = LocalePreferences()
-        if let firstWeekday {
-            prefs.firstWeekday = [calendarIdentifier : firstWeekday.icuIndex]
-        }
-        if let minimumDaysInFirstWeek {
-            prefs.minDaysInFirstWeek = [calendarIdentifier : minimumDaysInFirstWeek]
-        }
+    internal init(identifier: String, calendarIdentifier: Calendar.Identifier, prefs: LocalePreferences?) {
         self.kind = .fixed(_Locale(identifier: identifier, prefs: prefs))
     }
 
@@ -879,8 +871,18 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 #endif // FOUNDATION_FRAMEWORK
-
-#if FOUNDATION_FRAMEWORK
+    
+    /// The whole bucket of preferences.
+    /// For use by `Calendar`, which wants to keep these values without a circular retain cycle with `Locale`. Only `current` locales and current-alikes have prefs.
+    internal var prefs: LocalePreferences? {
+        switch kind {
+        case .autoupdating: return LocaleCache.cache.current.prefs
+        case .fixed(let l): return l.prefs
+        case .bridged(_): return nil
+        }
+    }
+    
+    #if FOUNDATION_FRAMEWORK
     internal func pref(for key: String) -> Any? {
         switch kind {
         case .autoupdating: return LocaleCache.cache.current.pref(for: key)
