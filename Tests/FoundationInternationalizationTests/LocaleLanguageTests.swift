@@ -77,7 +77,9 @@ class LocaleLanguageTests: XCTestCase {
         verify("en-Kore-US", expectedParent: .init(identifier: "en-Kore"), minBCP47: "en-Kore", maxBCP47: "en-Kore-US", langCode: "en", script: "Kore", region: "US", lineDirection: .topToBottom, characterDirection: .leftToRight)
         verify("zh-TW", expectedParent: .init(identifier: "root"), minBCP47: "zh-TW", maxBCP47: "zh-Hant-TW", langCode: "zh", script: "Hant", region: "TW", lineDirection: .topToBottom, characterDirection: .leftToRight)
         verify("en-Latn-US", expectedParent: .init(identifier: "en-Latn"), minBCP47: "en", maxBCP47: "en-Latn-US", langCode: "en", script: "Latn", region: "US", lineDirection: .topToBottom, characterDirection: .leftToRight)
-        verify("ar-Arab", expectedParent: .init(identifier: "ar"), minBCP47: "ar", maxBCP47: "ar-Arab-EG", langCode: "ar", script: "Arab", region: "EG", lineDirection: .topToBottom, characterDirection: .rightToLeft)
+        verify("ar-Arab", expectedParent: .init(identifier: "ar"), minBCP47: "ar", maxBCP47: "ar-Arab-EG", langCode: "ar", script: "Arab", region: nil, lineDirection: .topToBottom, characterDirection: .rightToLeft)
+
+        verify("en", expectedParent: .init(identifier: "root"), minBCP47: "en", maxBCP47: "en-Latn-US", langCode: "en", script: "Latn", region: nil, lineDirection: .topToBottom, characterDirection: .leftToRight)
 
         verify("root", expectedParent: .init(identifier: "root"), minBCP47: "root", maxBCP47: "root", langCode: "root", script: nil, region: nil, lineDirection: .topToBottom, characterDirection: .leftToRight)
     }
