@@ -194,7 +194,7 @@ extension Locale {
                 result = lang
             } else {
                 result = _withFixedCharBuffer { buffer, size, status in
-                    uloc_getLanguage(maximalIdentifier, buffer, size, &status)
+                    uloc_getLanguage(components.identifier, buffer, size, &status)
                 }.map { LanguageCode($0) }
             }
             return result
@@ -207,6 +207,7 @@ extension Locale {
                 result = script
             } else {
                 result = _withFixedCharBuffer { buffer, size, status in
+                    // Use `maximalIdentifier` to ensure that script code is present in the identifier. 
                     uloc_getScript(maximalIdentifier, buffer, size, &status)
                 }.map { Script($0) }
             }
@@ -220,7 +221,7 @@ extension Locale {
                 result = script
             } else {
                 result = _withFixedCharBuffer { buffer, size, status in
-                    uloc_getCountry(maximalIdentifier, buffer, size, &status)
+                    uloc_getCountry(components.identifier, buffer, size, &status)
                 }.map { Region($0) }
             }
             return result

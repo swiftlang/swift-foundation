@@ -525,9 +525,19 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         locale.languageCode ?? ""
     }
 
+    override var languageIdentifier: String {
+        let langIdentifier = locale.language.components.identifier
+        let localeWithOnlyLanguage = Locale(identifier: langIdentifier)
+        return localeWithOnlyLanguage.identifier(.bcp47)
+    }
+
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
     override var countryCode: String? {
         locale.regionCode
+    }
+
+    override var regionCode: String? {
+        locale.region?.identifier
     }
 
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
