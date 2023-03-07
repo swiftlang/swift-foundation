@@ -51,26 +51,26 @@ func expectFalse(_ actual: Bool, _ message: @autoclosure () -> String = "", file
     XCTAssertFalse(actual, message(), file: file, line: line)
 }
 
-func expectEqual<T: Equatable>(_ expected: T, _ actual: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+public func expectEqual<T: Equatable>(_ expected: T, _ actual: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
     XCTAssertEqual(expected, actual, message(), file: file, line: line)
 }
 
-func expectNotEqual<T: Equatable>(_ expected: T, _ actual: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+public func expectNotEqual<T: Equatable>(_ expected: T, _ actual: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
     XCTAssertNotEqual(expected, actual, message(), file: file, line: line)
 }
 
-func expectEqual<T: FloatingPoint>(_ expected: T, _ actual: T, within: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+public func expectEqual<T: FloatingPoint>(_ expected: T, _ actual: T, within: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
     XCTAssertEqual(expected, actual, accuracy: within, message(), file: file, line: line)
 }
 
-func expectEqual<T: FloatingPoint>(_ expected: T?, _ actual: T, within: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+public func expectEqual<T: FloatingPoint>(_ expected: T?, _ actual: T, within: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
     XCTAssertNotNil(expected, message(), file: file, line: line)
     if let expected = expected {
         XCTAssertEqual(expected, actual, accuracy: within, message(), file: file, line: line)
     }
 }
 
-func expectEqual(
+public func expectEqual(
     _ expected: Any.Type,
     _ actual: Any.Type,
     _ message: @autoclosure () -> String = "",
