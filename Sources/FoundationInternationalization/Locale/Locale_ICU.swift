@@ -26,169 +26,6 @@ import FoundationEssentials
 let MAX_ICU_NAME_SIZE: Int32 = 1024
 
 internal final class _Locale: Sendable, Hashable {
-
-    /// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identiifer locales never have preferences.
-    struct Prefs: Hashable {
-        enum MeasurementUnit {
-            case centimeters
-            case inches
-
-            /// Init with the value of a user defaults string
-            init?(_ string: String?) {
-                guard let string else { return nil }
-                if string == "Centimeters" { self = .centimeters }
-                else if string == "Inches" { self = .inches }
-                else { return nil }
-            }
-
-            /// Get the value as a user defaults string
-            var userDefaultString: String {
-                switch self {
-                case .centimeters: return "Centimeters"
-                case .inches: return "Inches"
-                }
-            }
-        }
-
-        enum TemperatureUnit {
-            case fahrenheit
-            case celsius
-
-            /// Init with the value of a user defaults string
-            init?(_ string: String?) {
-                guard let string else { return nil }
-                if string == "Celsius" { self = .celsius }
-                else if string == "Fahrenheit" { self = .fahrenheit }
-                else { return nil }
-            }
-
-            /// Get the value as a user defaults string
-            var userDefaultString: String {
-                switch self {
-                case .celsius: return "Celsius"
-                case .fahrenheit: return "Fahrenheit"
-                }
-            }
-        }
-
-        var metricUnits: Bool?
-        var languages: [String]?
-        var locale: String?
-        var collationOrder: String?
-        var firstWeekday: [Calendar.Identifier : Int]?
-        var minDaysInFirstWeek: [Calendar.Identifier : Int]?
-#if FOUNDATION_FRAMEWORK
-        var ICUDateTimeSymbols: CFDictionary?
-        var ICUDateFormatStrings: CFDictionary?
-        var ICUTimeFormatStrings: CFDictionary?
-        var ICUNumberFormatStrings: CFDictionary?
-        var ICUNumberSymbols: CFDictionary?
-#endif
-        var country: String?
-        var measurementUnits: MeasurementUnit?
-        var temperatureUnit: TemperatureUnit?
-        var ICUForce24HourTime: Bool?
-        var ICUForce12HourTime: Bool?
-
-        init() { }
-
-        /// Interpret a dictionary (from user defaults) according to a predefined set of strings and convert it into the more strongly-typed `Prefs` values.
-        /// Several dictionaries may need to be applied to the same instance, which is why this is structured as a mutating setter rather than an initializer.
-        /// Why use a `CFDictionary` instead of a Swift dictionary here? The input prefs may be a complete copy of the user's prefs, and we don't want to bridge a ton of unrelated data into Swift just to extract a few keys. Keeping it as a `CFDictionary` avoids that overhead, and we call into small CF helper functions to get the data we need, if it is there.
-        mutating func apply(_ prefs: CFDictionary) {
-            var exists: DarwinBoolean = false
-            
-            guard CFDictionaryGetCount(prefs) > 0 else { return }
-            
-            if let langs = __CFLocalePrefsCopyAppleLanguages(prefs)?.takeRetainedValue() as? [String] {
-                self.languages = langs
-            }
-            if let locale = __CFLocalePrefsCopyAppleLocale(prefs)?.takeRetainedValue() as? String {
-                self.locale = locale
-            }
-            
-            let isMetric = __CFLocalePrefsAppleMetricUnitsIsMetric(prefs, &exists)
-            if exists.boolValue {
-                self.metricUnits = isMetric
-            }
-
-            let isCentimeters = __CFLocalePrefsAppleMeasurementUnitsIsCm(prefs, &exists)
-            if exists.boolValue {
-                self.measurementUnits = isCentimeters ? .centimeters : .inches
-            }
-
-            let isCelsius = __CFLocalePrefsAppleTemperatureUnitIsC(prefs, &exists)
-            if exists.boolValue {
-                self.temperatureUnit = isCelsius ? .celsius : .fahrenheit
-            }
-
-            let is24Hour = __CFLocalePrefsAppleForce24HourTime(prefs, &exists)
-            if exists.boolValue {
-                self.ICUForce24HourTime = is24Hour
-            }
-            
-            let is12Hour = __CFLocalePrefsAppleForce12HourTime(prefs, &exists)
-            if exists.boolValue {
-                self.ICUForce12HourTime = is12Hour
-            }
-            
-            if let collationOrder = __CFLocalePrefsCopyAppleCollationOrder(prefs)?.takeRetainedValue() as? String {
-                self.collationOrder = collationOrder
-            }
-
-            if let country = __CFLocalePrefsCopyCountry(prefs)?.takeRetainedValue() as? String {
-                self.country = country
-            }
-
-            if let ICUDateTimeSymbols = __CFLocalePrefsCopyAppleICUDateTimeSymbols(prefs)?.takeRetainedValue() {
-                self.ICUDateTimeSymbols = ICUDateTimeSymbols
-            }
-            
-            if let ICUDateFormatStrings = __CFLocalePrefsCopyAppleICUDateFormatStrings(prefs)?.takeRetainedValue() {
-                self.ICUDateFormatStrings = ICUDateFormatStrings
-            }
-            
-            if let ICUTimeFormatStrings = __CFLocalePrefsCopyAppleICUTimeFormatStrings(prefs)?.takeRetainedValue() {
-                self.ICUTimeFormatStrings = ICUTimeFormatStrings
-            }
-            
-            if let ICUNumberFormatStrings = __CFLocalePrefsCopyAppleICUNumberFormatStrings(prefs)?.takeRetainedValue() {
-                self.ICUNumberFormatStrings = ICUNumberFormatStrings
-            }
-            
-            if let ICUNumberSymbols = __CFLocalePrefsCopyAppleICUNumberSymbols(prefs)?.takeRetainedValue() {
-                self.ICUNumberSymbols = ICUNumberSymbols
-            }
-            
-
-            if let firstWeekdaysPrefs = __CFLocalePrefsCopyAppleFirstWeekday(prefs)?.takeRetainedValue() as? [String: Int] {
-                var mapped: [Calendar.Identifier : Int] = [:]
-                for (key, value) in firstWeekdaysPrefs {
-                    if let id = Calendar.Identifier(identifierString: key) {
-                        mapped[id] = value
-                    }
-                }
-
-                if !mapped.isEmpty {
-                    self.firstWeekday = mapped
-                }
-            }
-
-            if let minDaysPrefs = __CFLocalePrefsCopyAppleMinDaysInFirstWeek(prefs)?.takeRetainedValue() as? [String: Int] {
-                var mapped: [Calendar.Identifier : Int] = [:]
-                for (key, value) in minDaysPrefs {
-                    if let id = Calendar.Identifier(identifierString: key) {
-                        mapped[id] = value
-                    }
-                }
-
-                if !mapped.isEmpty {
-                    self.minDaysInFirstWeek = mapped
-                }
-            }
-        }
-    }
-
     // Double-nil values are caches where the result may be nil. If the outer value is nil, the result has not yet been calculated.
     // Single-nil values are caches where the result may not be nil. If the value is nil, the result has not yet been calculated.
     struct State: Hashable, Sendable {
@@ -257,12 +94,12 @@ internal final class _Locale: Sendable, Hashable {
 
     internal let identifier: String
     internal let doesNotRequireSpecialCaseHandling: Bool
-    private let prefs: Prefs?
+    private let prefs: LocalePreferences?
     private let lock: LockedState<State>
 
     // MARK: - init
 
-    init(identifier: String, prefs: Prefs? = nil) {
+    init(identifier: String, prefs: LocalePreferences? = nil) {
         self.identifier = Locale._canonicalLocaleIdentifier(from: identifier)
         doesNotRequireSpecialCaseHandling = Self.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
@@ -350,9 +187,9 @@ internal final class _Locale: Sendable, Hashable {
         case "AppleICUDateTimeSymbols":
             return prefs.ICUDateTimeSymbols
         case "AppleICUForce24HourTime":
-            return prefs.ICUForce24HourTime
+            return prefs.force24Hour
         case "AppleICUForce12HourTime":
-            return prefs.ICUForce12HourTime
+            return prefs.force12Hour
         case "AppleICUDateFormatStrings":
             return prefs.ICUDateFormatStrings
         case "AppleICUTimeFormatStrings":
@@ -1180,7 +1017,7 @@ internal final class _Locale: Sendable, Hashable {
 
     internal var force24Hour: Bool {
         if let prefs {
-            return prefs.ICUForce24HourTime ?? false
+            return prefs.force24Hour ?? false
         }
 
         return false
@@ -1188,7 +1025,7 @@ internal final class _Locale: Sendable, Hashable {
 
     internal var force12Hour: Bool {
         if let prefs {
-            return prefs.ICUForce12HourTime ?? false
+            return prefs.force12Hour ?? false
         }
 
         return false
@@ -1569,11 +1406,64 @@ internal final class _Locale: Sendable, Hashable {
     }()
 #endif // FOUNDATION_FRAMEWORK
 
-    internal static func _currentLocale(name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> (_Locale, Bool) {
-        /*
-         NOTE: calling any CFPreferences function, or any function which calls into a CFPreferences function, *except* for __CFXPreferencesCopyCurrentApplicationStateWithDeadlockAvoidance (and accepting backstop values if its outparam is false), will deadlock. This is because CFPreferences calls os_log_*, which calls -descriptionWithLocale:, which calls CFLocaleCopyCurrent.
-         */
+#if FOUNDATION_FRAMEWORK
+    static func _prefsFromCFPrefs() -> (CFDictionary, Bool) {
+        // On Darwin, we check the current user preferences for Locale values
+        var wouldDeadlock: DarwinBoolean = false
+        let cfPrefs = __CFXPreferencesCopyCurrentApplicationStateWithDeadlockAvoidance(&wouldDeadlock).takeRetainedValue()
 
+        if wouldDeadlock.boolValue {
+            // Don't cache a locale built with incomplete prefs
+            return (cfPrefs, false)
+        } else {
+            return (cfPrefs, true)
+        }
+    }
+    
+    /// Create a `Locale` that acts like a `currentLocale`, using `CFPreferences` values with `CFDictionary` overrides.
+    internal static func _currentLocaleWithCFOverrides(name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> (_Locale, Bool) {
+        let (cfPrefs, wouldDeadlock) = _prefsFromCFPrefs()
+        let suitableForCache = disableBundleMatching ? false : (wouldDeadlock ? false : true)
+        var prefs = LocalePreferences()
+        prefs.apply(cfPrefs)
+        if let overrides {
+            prefs.apply(overrides)
+        }
+        let result = _localeWithPreferences(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        return (result, suitableForCache)
+    }
+    
+    /// Create a `Locale` that acts like a `currentLocale`, using `CFPreferences` values and `LocalePreferences` overrides.
+    internal static func _currentLocaleWithOverrides(name: String?, overrides: LocalePreferences?, disableBundleMatching: Bool) -> (_Locale, Bool) {
+        let (cfPrefs, wouldDeadlock) = _prefsFromCFPrefs()
+        let suitableForCache = disableBundleMatching ? false : (wouldDeadlock ? false : true)
+        var prefs = LocalePreferences()
+        prefs.apply(cfPrefs)
+        if let overrides {
+            prefs.apply(overrides)
+        }
+        let result = _localeWithPreferences(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        return (result, suitableForCache)
+    }
+#else
+    /// Create a `Locale` that acts like a `currentLocale`, using default values and `LocalePreferences` overrides.
+    internal static func _currentLocaleWithOverrides(name: String?, overrides: LocalePreferences?, disableBundleMatching: Bool) -> (_Locale, Bool) {
+        let suitableForCache = disableBundleMatching ? false : true
+        
+        // On this platform, preferences start with default values
+        var prefs = LocalePreferences()
+        prefs.locale = "en_US"
+        prefs.languages = ["en-US"]
+        
+        // Apply overrides
+        if let overrides { prefs.apply(overrides) }
+
+        let result = _localeWithPreferences(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        return (result, suitableForCache)
+    }
+#endif
+    
+    private static func _localeWithPreferences(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) -> _Locale {
         var ident: String?
         if let name {
             ident = Locale._canonicalLocaleIdentifier(from: name)
@@ -1589,65 +1479,24 @@ internal final class _Locale: Sendable, Hashable {
 #endif // FOUNDATION_FRAMEWORK
         }
 
-        // If `disableBundleMatching` is true, caching needs to be turned off, only a single value is cached for the most common case of calling `localeCurrent`.
-        var suitableForCache = disableBundleMatching ? false : true
-
-        var prefs = Prefs()
-
-#if os(Windows)
-        fatalError()
-        // TODO: Needs port from swift-corelibs-foundation's CFPreferences.c, CFBundle_Locale.c
-        /*
-        // From CFPreferences.c
-        let cfPrefs = __CFXPreferencesCopyCurrentApplicationState()
-
-        // From CFBundle_Locale.c
-        // CFStringRef copyLocaleLanguageName(void);
-        // CFStringRef copyLocaleCountryName(void);
-
-         ident = countryName ? "\(langName ? langName : "en")_\(countryName)" : "\(langName ? langName : "en")"
-         */
-#else
-        #if FOUNDATION_FRAMEWORK
-        // On Darwin, we check the current user preferences for Locale values
-        var wouldDeadlock: DarwinBoolean = false
-        let cfPrefs = __CFXPreferencesCopyCurrentApplicationStateWithDeadlockAvoidance(&wouldDeadlock).takeRetainedValue()
-
-        if wouldDeadlock.boolValue {
-            // Don't cache a locale built with incomplete prefs
-            suitableForCache = false
-        }
-        
-        prefs.apply(cfPrefs)
-
-        #endif // FOUNDATION_FRAMEWORK
-#endif // os(...)
-
-        if let overrides { prefs.apply(overrides) }
-
         if let identSet = ident {
             ident = Locale._canonicalLocaleIdentifier(from: identSet)
         } else {
             let preferredLocale = prefs.locale
 
             // If CFBundleAllowMixedLocalizations is set, don't do any checking of the user's preferences for locale-matching purposes (32264371)
-            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if FOUNDATION_FRAMEWORK
             let allowMixed = Bundle.main.infoDictionary?["CFBundleAllowMixedLocalizations"] as? Bool ?? false
-            #else
+#else
             let allowMixed = false
-            #endif
+#endif
             let performBundleMatching = !disableBundleMatching && !allowMixed
 
             let preferredLanguages = prefs.languages
 
             #if FOUNDATION_FRAMEWORK
             if preferredLanguages == nil && (preferredLocale == nil || performBundleMatching) {
-                // We were going to use preferredLanguages
-                if wouldDeadlock.boolValue {
-                    Logger(log).debug("Lookup of 'AppleLanguages' from current preferences failed (lookup would deadlock due to re-entrancy); likely falling back to default locale identifier as current")
-                } else {
-                    Logger(log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
-                }
+                Logger(log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
             }
             #endif
 
@@ -1709,13 +1558,13 @@ internal final class _Locale: Sendable, Hashable {
             #endif
         }
         let locale = _Locale(identifier: ident!, prefs: prefs)
-        return (locale, suitableForCache)
+        return locale
     }
 
     internal static func _currentLocaleWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> _Locale? {
 #if FOUNDATION_FRAMEWORK
         guard !allowsMixedLocalizations else {
-            let (result, _) = _currentLocale(name: nil, overrides: nil, disableBundleMatching: true)
+            let (result, _) = _currentLocaleWithOverrides(name: nil, overrides: nil, disableBundleMatching: true)
             return result
         }
 
@@ -1738,4 +1587,226 @@ internal final class _Locale: Sendable, Hashable {
     }
 
 }
+
+// MARK: -
+
+/// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identiifer locales never have preferences.
+struct LocalePreferences: Hashable {
+    enum MeasurementUnit {
+        case centimeters
+        case inches
+
+        /// Init with the value of a user defaults string
+        init?(_ string: String?) {
+            guard let string else { return nil }
+            if string == "Centimeters" { self = .centimeters }
+            else if string == "Inches" { self = .inches }
+            else { return nil }
+        }
+
+        /// Get the value as a user defaults string
+        var userDefaultString: String {
+            switch self {
+            case .centimeters: return "Centimeters"
+            case .inches: return "Inches"
+            }
+        }
+    }
+
+    enum TemperatureUnit {
+        case fahrenheit
+        case celsius
+
+        /// Init with the value of a user defaults string
+        init?(_ string: String?) {
+            guard let string else { return nil }
+            if string == "Celsius" { self = .celsius }
+            else if string == "Fahrenheit" { self = .fahrenheit }
+            else { return nil }
+        }
+
+        /// Get the value as a user defaults string
+        var userDefaultString: String {
+            switch self {
+            case .celsius: return "Celsius"
+            case .fahrenheit: return "Fahrenheit"
+            }
+        }
+    }
+
+    var metricUnits: Bool?
+    var languages: [String]?
+    var locale: String?
+    var collationOrder: String?
+    var firstWeekday: [Calendar.Identifier : Int]?
+    var minDaysInFirstWeek: [Calendar.Identifier : Int]?
+#if FOUNDATION_FRAMEWORK
+    var ICUDateTimeSymbols: CFDictionary?
+    var ICUDateFormatStrings: CFDictionary?
+    var ICUTimeFormatStrings: CFDictionary?
+    var ICUNumberFormatStrings: CFDictionary?
+    var ICUNumberSymbols: CFDictionary?
+#endif
+    var country: String?
+    var measurementUnits: MeasurementUnit?
+    var temperatureUnit: TemperatureUnit?
+    var force24Hour: Bool?
+    var force12Hour: Bool?
+
+    init() { }
+    
+    init(metricUnits: Bool? = nil,
+         languages: [String]? = nil,
+         locale: String? = nil,
+         collationOrder: String? = nil,
+         firstWeekday: [Calendar.Identifier : Int]? = nil,
+         minDaysInFirstWeek: [Calendar.Identifier : Int]? = nil,
+         country: String? = nil,
+         measurementUnits: MeasurementUnit? = nil,
+         temperatureUnit: TemperatureUnit? = nil,
+         force24Hour: Bool? = nil,
+         force12Hour: Bool? = nil) {
+
+        self.metricUnits = metricUnits
+        self.languages = languages
+        self.locale = locale
+        self.collationOrder = collationOrder
+        self.firstWeekday = firstWeekday
+        self.minDaysInFirstWeek = minDaysInFirstWeek
+        self.country = country
+        self.measurementUnits = measurementUnits
+        self.temperatureUnit = temperatureUnit
+        self.force24Hour = force24Hour
+        self.force12Hour = force12Hour
+        
+#if FOUNDATION_FRAMEWORK
+        ICUDateTimeSymbols = nil
+        ICUDateFormatStrings = nil
+        ICUTimeFormatStrings = nil
+        ICUNumberFormatStrings = nil
+        ICUNumberSymbols = nil
+#endif
+    }
+
+#if FOUNDATION_FRAMEWORK
+    /// Interpret a dictionary (from user defaults) according to a predefined set of strings and convert it into the more strongly-typed `LocalePreferences` values.
+    /// Several dictionaries may need to be applied to the same instance, which is why this is structured as a mutating setter rather than an initializer.
+    /// Why use a `CFDictionary` instead of a Swift dictionary here? The input prefs may be a complete copy of the user's prefs, and we don't want to bridge a ton of unrelated data into Swift just to extract a few keys. Keeping it as a `CFDictionary` avoids that overhead, and we call into small CF helper functions to get the data we need, if it is there.
+    mutating func apply(_ prefs: CFDictionary) {
+        var exists: DarwinBoolean = false
+        
+        guard CFDictionaryGetCount(prefs) > 0 else { return }
+        
+        if let langs = __CFLocalePrefsCopyAppleLanguages(prefs)?.takeRetainedValue() as? [String] {
+            self.languages = langs
+        }
+        if let locale = __CFLocalePrefsCopyAppleLocale(prefs)?.takeRetainedValue() as? String {
+            self.locale = locale
+        }
+        
+        let isMetric = __CFLocalePrefsAppleMetricUnitsIsMetric(prefs, &exists)
+        if exists.boolValue {
+            self.metricUnits = isMetric
+        }
+
+        let isCentimeters = __CFLocalePrefsAppleMeasurementUnitsIsCm(prefs, &exists)
+        if exists.boolValue {
+            self.measurementUnits = isCentimeters ? .centimeters : .inches
+        }
+
+        let isCelsius = __CFLocalePrefsAppleTemperatureUnitIsC(prefs, &exists)
+        if exists.boolValue {
+            self.temperatureUnit = isCelsius ? .celsius : .fahrenheit
+        }
+
+        let is24Hour = __CFLocalePrefsAppleForce24HourTime(prefs, &exists)
+        if exists.boolValue {
+            self.force24Hour = is24Hour
+        }
+        
+        let is12Hour = __CFLocalePrefsAppleForce12HourTime(prefs, &exists)
+        if exists.boolValue {
+            self.force12Hour = is12Hour
+        }
+        
+        if let collationOrder = __CFLocalePrefsCopyAppleCollationOrder(prefs)?.takeRetainedValue() as? String {
+            self.collationOrder = collationOrder
+        }
+
+        if let country = __CFLocalePrefsCopyCountry(prefs)?.takeRetainedValue() as? String {
+            self.country = country
+        }
+
+        if let ICUDateTimeSymbols = __CFLocalePrefsCopyAppleICUDateTimeSymbols(prefs)?.takeRetainedValue() {
+            self.ICUDateTimeSymbols = ICUDateTimeSymbols
+        }
+        
+        if let ICUDateFormatStrings = __CFLocalePrefsCopyAppleICUDateFormatStrings(prefs)?.takeRetainedValue() {
+            self.ICUDateFormatStrings = ICUDateFormatStrings
+        }
+        
+        if let ICUTimeFormatStrings = __CFLocalePrefsCopyAppleICUTimeFormatStrings(prefs)?.takeRetainedValue() {
+            self.ICUTimeFormatStrings = ICUTimeFormatStrings
+        }
+        
+        if let ICUNumberFormatStrings = __CFLocalePrefsCopyAppleICUNumberFormatStrings(prefs)?.takeRetainedValue() {
+            self.ICUNumberFormatStrings = ICUNumberFormatStrings
+        }
+        
+        if let ICUNumberSymbols = __CFLocalePrefsCopyAppleICUNumberSymbols(prefs)?.takeRetainedValue() {
+            self.ICUNumberSymbols = ICUNumberSymbols
+        }
+        
+
+        if let firstWeekdaysPrefs = __CFLocalePrefsCopyAppleFirstWeekday(prefs)?.takeRetainedValue() as? [String: Int] {
+            var mapped: [Calendar.Identifier : Int] = [:]
+            for (key, value) in firstWeekdaysPrefs {
+                if let id = Calendar.Identifier(identifierString: key) {
+                    mapped[id] = value
+                }
+            }
+
+            if !mapped.isEmpty {
+                self.firstWeekday = mapped
+            }
+        }
+
+        if let minDaysPrefs = __CFLocalePrefsCopyAppleMinDaysInFirstWeek(prefs)?.takeRetainedValue() as? [String: Int] {
+            var mapped: [Calendar.Identifier : Int] = [:]
+            for (key, value) in minDaysPrefs {
+                if let id = Calendar.Identifier(identifierString: key) {
+                    mapped[id] = value
+                }
+            }
+
+            if !mapped.isEmpty {
+                self.minDaysInFirstWeek = mapped
+            }
+        }
+    }
+#endif // FOUNDATION_FRAMEWORK
+    
+    /// For testing purposes, merge a set of override prefs into this one.
+    mutating func apply(_ prefs: LocalePreferences) {
+        if let other = prefs.metricUnits { self.metricUnits = other }
+        if let other = prefs.languages { self.languages = other }
+        if let other = prefs.locale { self.locale = other }
+        if let other = prefs.collationOrder { self.collationOrder = other }
+        if let other = prefs.firstWeekday { self.firstWeekday = other }
+        if let other = prefs.minDaysInFirstWeek { self.minDaysInFirstWeek = other }
+#if FOUNDATION_FRAMEWORK
+        if let other = prefs.ICUDateTimeSymbols { self.ICUDateTimeSymbols = other }
+        if let other = prefs.ICUDateFormatStrings { self.ICUDateFormatStrings = other }
+        if let other = prefs.ICUTimeFormatStrings { self.ICUTimeFormatStrings = other }
+        if let other = prefs.ICUNumberFormatStrings { self.ICUNumberFormatStrings = other }
+        if let other = prefs.ICUNumberSymbols { self.ICUNumberSymbols = other }
+#endif
+        if let other = prefs.country { self.country = other }
+        if let other = prefs.measurementUnits { self.measurementUnits = other }
+        if let other = prefs.temperatureUnit { self.temperatureUnit = other }
+        if let other = prefs.force24Hour { self.force24Hour = other }
+        if let other = prefs.force12Hour { self.force12Hour = other }
+    }
+}
+
 
