@@ -42,7 +42,7 @@ extension NSLocale {
     }
 
     @objc
-    private class func _newLocaleAsIfCurrent(_ name: String?, overrides: [String: Any]?, disableBundleMatching: Bool) -> NSLocale? {
+    private class func _newLocaleAsIfCurrent(_ name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> NSLocale? {
         let inner = Locale.localeAsIfCurrent(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
         return _NSSwiftLocale(inner)
     }

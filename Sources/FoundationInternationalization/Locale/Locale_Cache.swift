@@ -187,7 +187,7 @@ struct LocaleCache : Sendable {
     }
 
     var preferred: _Locale {
-        let (locale, _) = _Locale._currentLocale(name: nil, overrides: [:], disableBundleMatching: true)
+        let (locale, _) = _Locale._currentLocale(name: nil, overrides: nil, disableBundleMatching: true)
         return locale
     }
 
