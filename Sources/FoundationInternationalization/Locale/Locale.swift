@@ -116,7 +116,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
-    internal static func localeAsIfCurrent(name: String?, overrides: [String: Any]? = nil, disableBundleMatching: Bool = false) -> Locale {
+    internal static func localeAsIfCurrent(name: String?, overrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
         let (inner, _) = _Locale._currentLocale(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
         return Locale(.fixed(inner))
     }
