@@ -163,6 +163,16 @@ internal class _NSSwiftUUID : _NSUUIDBridge {
         }
     }
     
+    override var description: String {
+        self.uuidString
+    }
+    
+    override var debugDescription: String {
+        withUnsafePointer(to: self) { ptr in
+            "<\(Self.self) \(ptr.debugDescription)> \(self.uuidString)"
+        }
+    }
+    
     override var classForCoder: AnyClass {
         return NSUUID.self
     }
