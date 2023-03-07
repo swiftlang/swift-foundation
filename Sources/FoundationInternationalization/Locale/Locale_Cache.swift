@@ -66,7 +66,7 @@ struct LocaleCache : Sendable {
             if let cachedCurrentLocale {
                 return cachedCurrentLocale
             } else {
-                let (locale, doCache) = _Locale._currentLocale(name: nil, overrides: nil, disableBundleMatching: false)
+                let (locale, doCache) = _Locale._currentLocaleWithOverrides(name: nil, overrides: nil, disableBundleMatching: false)
                 if doCache {
                     self.cachedCurrentLocale = locale
                 }
@@ -110,7 +110,7 @@ struct LocaleCache : Sendable {
                 return nsLocale
             } else {
                 // We have neither a Swift Locale nor an NSLocale. Recalculate and set both.
-                let (locale, doCache) = _Locale._currentLocale(name: nil, overrides: nil, disableBundleMatching: false)
+                let (locale, doCache) = _Locale._currentLocaleWithOverrides(name: nil, overrides: nil, disableBundleMatching: false)
                 let nsLocale = _NSSwiftLocale(Locale(inner: locale))
                 if doCache {
                     // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
@@ -187,7 +187,7 @@ struct LocaleCache : Sendable {
     }
 
     var preferred: _Locale {
-        let (locale, _) = _Locale._currentLocale(name: nil, overrides: nil, disableBundleMatching: true)
+        let (locale, _) = _Locale._currentLocaleWithOverrides(name: nil, overrides: nil, disableBundleMatching: false)
         return locale
     }
 

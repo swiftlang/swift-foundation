@@ -115,11 +115,20 @@ public struct Locale : Hashable, Equatable, Sendable {
         return Locale(.fixed(LocaleCache.cache.system))
     }
 
+#if FOUNDATION_FRAMEWORK
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
-    internal static func localeAsIfCurrent(name: String?, overrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
-        let (inner, _) = _Locale._currentLocale(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
+    internal static func localeAsIfCurrent(name: String?, cfOverrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
+        let (inner, _) = _Locale._currentLocaleWithCFOverrides(name: name, overrides: cfOverrides, disableBundleMatching: disableBundleMatching)
         return Locale(.fixed(inner))
     }
+#endif
+    /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
+    internal static func localeAsIfCurrent(name: String?, overrides: LocalePreferences? = nil, disableBundleMatching: Bool = false) -> Locale {
+        // On Darwin, this overrides are applied on top of CFPreferences.
+        let (inner, _) = _Locale._currentLocaleWithOverrides(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
+        return Locale(.fixed(inner))
+    }
+
 
     internal static func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
         guard let inner = _Locale._currentLocaleWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations) else {
@@ -162,7 +171,7 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     internal init(identifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Locale.Weekday?, minimumDaysInFirstWeek: Int?) {
-        var prefs = _Locale.Prefs()
+        var prefs = LocalePreferences()
         if let firstWeekday {
             prefs.firstWeekday = [calendarIdentifier : firstWeekday.icuIndex]
         }
@@ -188,7 +197,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
     #endif
 
-    /// Produce a copy of the `Locale` (including `Prefs`, if present), but with a different `Calendar.Identifier`. Date formatting uses this.
+    /// Produce a copy of the `Locale` (including `LocalePreferences`, if present), but with a different `Calendar.Identifier`. Date formatting uses this.
     internal func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> Locale {
         switch kind {
         case .fixed(let l):

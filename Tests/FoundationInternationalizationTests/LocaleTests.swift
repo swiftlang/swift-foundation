@@ -334,13 +334,13 @@ final class LocalePropertiesTests : XCTestCase {
             let loc = Locale(identifier: localeID)
             XCTAssertEqual(loc.hourCycle, expectDefault,  "default did not match", file: file, line: line)
 
-            let defaultLoc = Locale.likeCurrent(identifier: localeID, preferences: .init())
+            let defaultLoc = Locale.localeAsIfCurrent(name: localeID, overrides: .init())
             XCTAssertEqual(defaultLoc.hourCycle, expectDefault, "explicit no override did not match", file: file, line: line)
 
-            let force24 = Locale.likeCurrent(identifier: localeID, preferences: .init(force24Hour: true))
+            let force24 = Locale.localeAsIfCurrent(name: localeID, overrides: .init(force24Hour: true))
             XCTAssertEqual(force24.hourCycle, shouldRespectUserPref ? .zeroToTwentyThree : expectDefault, "force 24-hr did not match", file: file, line: line)
 
-            let force12 = Locale.likeCurrent(identifier: localeID, preferences: .init(force12Hour: true))
+            let force12 = Locale.localeAsIfCurrent(name: localeID, overrides: .init(force12Hour: true))
             XCTAssertEqual(force12.hourCycle, shouldRespectUserPref ? .oneToTwelve : expectDefault, "force 12-hr did not match", file: file, line: line)
         }
 
@@ -364,16 +364,16 @@ final class LocalePropertiesTests : XCTestCase {
 
     func test_userPreferenceOverride_measurementSystem() {
         func verify(_ localeID: String, _ expected: Locale.MeasurementSystem, shouldRespectUserPref: Bool, file: StaticString = #file, line: UInt = #line) {
-            let localeNoPref = Locale.likeCurrent(identifier: localeID, preferences: .init())
+            let localeNoPref = Locale.localeAsIfCurrent(name: localeID, overrides: .init())
             XCTAssertEqual(localeNoPref.measurementSystem, expected, file: file, line: line)
 
-            let fakeCurrentMetric = Locale.likeCurrent(identifier: localeID, preferences: .init(measurementSystem: .metric))
+            let fakeCurrentMetric = Locale.localeAsIfCurrent(name: localeID, overrides: .init(metricUnits: true, measurementUnits: .centimeters))
             XCTAssertEqual(fakeCurrentMetric.measurementSystem, shouldRespectUserPref ? .metric : expected, file: file, line: line)
 
-            let fakeCurrentUS = Locale.likeCurrent(identifier: localeID, preferences: .init(measurementSystem: .us))
+            let fakeCurrentUS = Locale.localeAsIfCurrent(name: localeID, overrides: .init(metricUnits: false, measurementUnits: .inches))
             XCTAssertEqual(fakeCurrentUS.measurementSystem, shouldRespectUserPref ? .us : expected, file: file, line: line)
 
-            let fakeCurrentUK = Locale.likeCurrent(identifier: localeID, preferences: .init(measurementSystem: .uk))
+            let fakeCurrentUK = Locale.localeAsIfCurrent(name: localeID, overrides: .init(metricUnits: true, measurementUnits: .inches))
             XCTAssertEqual(fakeCurrentUK.measurementSystem, shouldRespectUserPref ? .uk : expected, file: file, line: line)
         }
 
