@@ -58,6 +58,10 @@ final class LocaleTests : XCTestCase {
         // XCTAssertEqual("something", locale.localizedString(forCollatorIdentifier: "en"))
     }
 
+    @available(macOS, deprecated: 13)
+    @available(iOS, deprecated: 16)
+    @available(tvOS, deprecated: 16)
+    @available(watchOS, deprecated: 9)
     func test_properties_complexIdentifiers() {
         struct S {
             var identifier: String
@@ -388,6 +392,10 @@ final class LocalePropertiesTests : XCTestCase {
         verify("en-GB-u-rg-uszzzz", .us, shouldRespectUserPref: true)
     }
 
+    @available(macOS, deprecated: 13)
+    @available(iOS, deprecated: 16)
+    @available(tvOS, deprecated: 16)
+    @available(watchOS, deprecated: 9)
     func test_properties() {
         let locale = Locale(identifier: "zh-Hant-HK")
 
@@ -446,6 +454,11 @@ extension NSLocale {
 }
 
 final class LocalBridgingTests : XCTestCase {
+    
+    @available(macOS, deprecated: 13)
+    @available(iOS, deprecated: 16)
+    @available(tvOS, deprecated: 16)
+    @available(watchOS, deprecated: 9)
     func test_getACustomLocale() {
         let loc = getACustomLocale()
         let objCLoc = loc as! CustomNSLocaleSubclass
@@ -479,25 +492,13 @@ final class LocalBridgingTests : XCTestCase {
 extension LocaleTests {
     func test_userPreferenceOverride_firstWeekday() {
         func verify(_ localeID: String, _ expected: Locale.Weekday, shouldRespectUserPrefForGregorian: Bool, shouldRespectUserPrefForIslamic: Bool, file: StaticString = #file, line: UInt = #line) {
-            let firstWeekdayKey = "AppleFirstWeekday"
-            // sunday is 1
-            let forceWed = [ firstWeekdayKey: [
-                Calendar.Identifier.gregorian.cldrIdentifier : 4
-            ]] as CFDictionary
-
-            let forceFriIslamic = [ firstWeekdayKey: [
-                Calendar.Identifier.islamic.cldrIdentifier : 6
-            ]] as CFDictionary
-
-            let empty = [ firstWeekdayKey: [] ] as CFDictionary
-
-            let localeNoPref = _CFLocaleCopyAsIfCurrentWithOverrides(localeID as CFString, empty) as Locale
+            let localeNoPref = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [:]))
             XCTAssertEqual(localeNoPref.firstDayOfWeek, expected, file: file, line: line)
 
-            let wed = _CFLocaleCopyAsIfCurrentWithOverrides(localeID as CFString, forceWed) as Locale
+            let wed = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.gregorian : 4]))
             XCTAssertEqual(wed.firstDayOfWeek, shouldRespectUserPrefForGregorian ? .wednesday : expected, file: file, line: line)
 
-            let fri_islamic = _CFLocaleCopyAsIfCurrentWithOverrides(localeID as CFString, forceFriIslamic) as Locale
+            let fri_islamic = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.islamic : 6]))
             XCTAssertEqual(fri_islamic.firstDayOfWeek, shouldRespectUserPrefForIslamic ? .friday : expected, file: file, line: line)
         }
 
