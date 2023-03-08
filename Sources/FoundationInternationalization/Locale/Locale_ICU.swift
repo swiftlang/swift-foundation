@@ -185,19 +185,19 @@ internal final class _Locale: Sendable, Hashable {
             }
             return result
         case "AppleICUDateTimeSymbols":
-            return prefs.ICUDateTimeSymbols
+            return prefs.icuDateTimeSymbols
         case "AppleICUForce24HourTime":
             return prefs.force24Hour
         case "AppleICUForce12HourTime":
             return prefs.force12Hour
         case "AppleICUDateFormatStrings":
-            return prefs.ICUDateFormatStrings
+            return prefs.icuDateFormatStrings
         case "AppleICUTimeFormatStrings":
-            return prefs.ICUTimeFormatStrings
+            return prefs.icuTimeFormatStrings
         case "AppleICUNumberFormatStrings":
-            return prefs.ICUNumberFormatStrings
+            return prefs.icuNumberFormatStrings
         case "AppleICUNumberSymbols":
-            return prefs.ICUNumberSymbols
+            return prefs.icuNumberSymbols
         default:
             return nil
         }
@@ -1407,42 +1407,43 @@ internal final class _Locale: Sendable, Hashable {
 #endif // FOUNDATION_FRAMEWORK
 
 #if FOUNDATION_FRAMEWORK
-    static func _prefsFromCFPrefs() -> (CFDictionary, Bool) {
+    static func _prefsFromCFPrefs() -> (LocalePreferences, Bool) {
         // On Darwin, we check the current user preferences for Locale values
         var wouldDeadlock: DarwinBoolean = false
         let cfPrefs = __CFXPreferencesCopyCurrentApplicationStateWithDeadlockAvoidance(&wouldDeadlock).takeRetainedValue()
 
+        var prefs = LocalePreferences()
+        prefs.apply(cfPrefs)
+        
         if wouldDeadlock.boolValue {
             // Don't cache a locale built with incomplete prefs
-            return (cfPrefs, false)
+            return (prefs, false)
         } else {
-            return (cfPrefs, true)
+            return (prefs, true)
         }
     }
     
     /// Create a `Locale` that acts like a `currentLocale`, using `CFPreferences` values with `CFDictionary` overrides.
     internal static func _currentLocaleWithCFOverrides(name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> (_Locale, Bool) {
-        let (cfPrefs, wouldDeadlock) = _prefsFromCFPrefs()
-        let suitableForCache = disableBundleMatching ? false : (wouldDeadlock ? false : true)
-        var prefs = LocalePreferences()
-        prefs.apply(cfPrefs)
+        var (prefs, wouldDeadlock) = _prefsFromCFPrefs()
         if let overrides {
             prefs.apply(overrides)
         }
         let result = _localeWithPreferences(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        
+        let suitableForCache = !disableBundleMatching && !wouldDeadlock
         return (result, suitableForCache)
     }
     
     /// Create a `Locale` that acts like a `currentLocale`, using `CFPreferences` values and `LocalePreferences` overrides.
     internal static func _currentLocaleWithOverrides(name: String?, overrides: LocalePreferences?, disableBundleMatching: Bool) -> (_Locale, Bool) {
-        let (cfPrefs, wouldDeadlock) = _prefsFromCFPrefs()
-        let suitableForCache = disableBundleMatching ? false : (wouldDeadlock ? false : true)
-        var prefs = LocalePreferences()
-        prefs.apply(cfPrefs)
+        var (prefs, wouldDeadlock) = _prefsFromCFPrefs()
         if let overrides {
             prefs.apply(overrides)
         }
         let result = _localeWithPreferences(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+
+        let suitableForCache = !disableBundleMatching && !wouldDeadlock
         return (result, suitableForCache)
     }
 #else
@@ -1641,11 +1642,13 @@ struct LocalePreferences: Hashable {
     var firstWeekday: [Calendar.Identifier : Int]?
     var minDaysInFirstWeek: [Calendar.Identifier : Int]?
 #if FOUNDATION_FRAMEWORK
-    var ICUDateTimeSymbols: CFDictionary?
-    var ICUDateFormatStrings: CFDictionary?
-    var ICUTimeFormatStrings: CFDictionary?
-    var ICUNumberFormatStrings: CFDictionary?
-    var ICUNumberSymbols: CFDictionary?
+    // The following `CFDictionary` ivars are used directly by `CFDateFormatter`. Keep them as `CFDictionary` to avoid bridging them into and out of Swift. We don't need to access them from Swift at all.
+    
+    var icuDateTimeSymbols: CFDictionary?
+    var icuDateFormatStrings: CFDictionary?
+    var icuTimeFormatStrings: CFDictionary?
+    var icuNumberFormatStrings: CFDictionary?
+    var icuNumberSymbols: CFDictionary?
 #endif
     var country: String?
     var measurementUnits: MeasurementUnit?
@@ -1680,11 +1683,11 @@ struct LocalePreferences: Hashable {
         self.force12Hour = force12Hour
         
 #if FOUNDATION_FRAMEWORK
-        ICUDateTimeSymbols = nil
-        ICUDateFormatStrings = nil
-        ICUTimeFormatStrings = nil
-        ICUNumberFormatStrings = nil
-        ICUNumberSymbols = nil
+        icuDateTimeSymbols = nil
+        icuDateFormatStrings = nil
+        icuTimeFormatStrings = nil
+        icuNumberFormatStrings = nil
+        icuNumberSymbols = nil
 #endif
     }
 
@@ -1737,24 +1740,24 @@ struct LocalePreferences: Hashable {
             self.country = country
         }
 
-        if let ICUDateTimeSymbols = __CFLocalePrefsCopyAppleICUDateTimeSymbols(prefs)?.takeRetainedValue() {
-            self.ICUDateTimeSymbols = ICUDateTimeSymbols
+        if let icuDateTimeSymbols = __CFLocalePrefsCopyAppleICUDateTimeSymbols(prefs)?.takeRetainedValue() {
+            self.icuDateTimeSymbols = icuDateTimeSymbols
         }
         
-        if let ICUDateFormatStrings = __CFLocalePrefsCopyAppleICUDateFormatStrings(prefs)?.takeRetainedValue() {
-            self.ICUDateFormatStrings = ICUDateFormatStrings
+        if let icuDateFormatStrings = __CFLocalePrefsCopyAppleICUDateFormatStrings(prefs)?.takeRetainedValue() {
+            self.icuDateFormatStrings = icuDateFormatStrings
         }
         
-        if let ICUTimeFormatStrings = __CFLocalePrefsCopyAppleICUTimeFormatStrings(prefs)?.takeRetainedValue() {
-            self.ICUTimeFormatStrings = ICUTimeFormatStrings
+        if let icuTimeFormatStrings = __CFLocalePrefsCopyAppleICUTimeFormatStrings(prefs)?.takeRetainedValue() {
+            self.icuTimeFormatStrings = icuTimeFormatStrings
         }
         
-        if let ICUNumberFormatStrings = __CFLocalePrefsCopyAppleICUNumberFormatStrings(prefs)?.takeRetainedValue() {
-            self.ICUNumberFormatStrings = ICUNumberFormatStrings
+        if let icuNumberFormatStrings = __CFLocalePrefsCopyAppleICUNumberFormatStrings(prefs)?.takeRetainedValue() {
+            self.icuNumberFormatStrings = icuNumberFormatStrings
         }
         
-        if let ICUNumberSymbols = __CFLocalePrefsCopyAppleICUNumberSymbols(prefs)?.takeRetainedValue() {
-            self.ICUNumberSymbols = ICUNumberSymbols
+        if let icuNumberSymbols = __CFLocalePrefsCopyAppleICUNumberSymbols(prefs)?.takeRetainedValue() {
+            self.icuNumberSymbols = icuNumberSymbols
         }
         
 
@@ -1795,11 +1798,11 @@ struct LocalePreferences: Hashable {
         if let other = prefs.firstWeekday { self.firstWeekday = other }
         if let other = prefs.minDaysInFirstWeek { self.minDaysInFirstWeek = other }
 #if FOUNDATION_FRAMEWORK
-        if let other = prefs.ICUDateTimeSymbols { self.ICUDateTimeSymbols = other }
-        if let other = prefs.ICUDateFormatStrings { self.ICUDateFormatStrings = other }
-        if let other = prefs.ICUTimeFormatStrings { self.ICUTimeFormatStrings = other }
-        if let other = prefs.ICUNumberFormatStrings { self.ICUNumberFormatStrings = other }
-        if let other = prefs.ICUNumberSymbols { self.ICUNumberSymbols = other }
+        if let other = prefs.icuDateTimeSymbols { self.icuDateTimeSymbols = other }
+        if let other = prefs.icuDateFormatStrings { self.icuDateFormatStrings = other }
+        if let other = prefs.icuTimeFormatStrings { self.icuTimeFormatStrings = other }
+        if let other = prefs.icuNumberFormatStrings { self.icuNumberFormatStrings = other }
+        if let other = prefs.icuNumberSymbols { self.icuNumberSymbols = other }
 #endif
         if let other = prefs.country { self.country = other }
         if let other = prefs.measurementUnits { self.measurementUnits = other }
