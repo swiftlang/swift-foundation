@@ -60,18 +60,26 @@ struct LocaleCache : Sendable {
             }
         }
 
-        mutating func current() -> _Locale {
+        mutating func current(preferences: LocalePreferences?, cache: Bool) -> _Locale? {
             resetCurrentIfNeeded()
 
             if let cachedCurrentLocale {
                 return cachedCurrentLocale
-            } else {
-                let (locale, doCache) = _Locale._currentLocaleWithOverrides(name: nil, overrides: nil, disableBundleMatching: false)
-                if doCache {
-                    self.cachedCurrentLocale = locale
-                }
-                return locale
             }
+            
+            // At this point we know we need to create, or re-create, the Locale instance.
+            // If we do not have a set of preferences to use, we have to return nil.
+            guard let preferences else {
+                return nil
+            }
+
+            let locale = _Locale(name: nil, prefs: preferences, disableBundleMatching: false)
+            if cache {
+                // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
+                self.cachedCurrentLocale = locale
+            }
+
+            return locale
         }
 
         mutating func fixed(_ id: String) -> _Locale {
@@ -98,7 +106,7 @@ struct LocaleCache : Sendable {
             }
         }
 
-        mutating func currentNSLocale() -> _NSSwiftLocale {
+        mutating func currentNSLocale(preferences: LocalePreferences?, cache: Bool) -> _NSSwiftLocale? {
             resetCurrentIfNeeded()
 
             if let currentNSLocale = cachedCurrentNSLocale {
@@ -108,17 +116,25 @@ struct LocaleCache : Sendable {
                 let nsLocale = _NSSwiftLocale(Locale(inner: current))
                 cachedCurrentNSLocale = nsLocale
                 return nsLocale
-            } else {
-                // We have neither a Swift Locale nor an NSLocale. Recalculate and set both.
-                let (locale, doCache) = _Locale._currentLocaleWithOverrides(name: nil, overrides: nil, disableBundleMatching: false)
-                let nsLocale = _NSSwiftLocale(Locale(inner: locale))
-                if doCache {
-                    // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
-                    self.cachedCurrentLocale = locale
-                    cachedCurrentNSLocale = nsLocale
-                }
-                return nsLocale
             }
+            
+            // At this point we know we need to create, or re-create, the Locale instance.
+            
+            // If we do not have a set of preferences to use, we have to return nil.
+            guard let preferences else {
+                return nil
+            }
+
+            // We have neither a Swift Locale nor an NSLocale. Recalculate and set both.
+            let locale = _Locale(name: nil, prefs: preferences, disableBundleMatching: false)
+            let nsLocale = _NSSwiftLocale(Locale(inner: locale))
+            if cache {
+                // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
+                self.cachedCurrentLocale = locale
+                cachedCurrentNSLocale = nsLocale
+            }
+
+            return nsLocale
         }
 
         mutating func autoupdatingNSLocale() -> _NSSwiftLocale {
@@ -179,16 +195,28 @@ struct LocaleCache : Sendable {
     }
 
     var current: _Locale {
-        lock.withLock { $0.current() }
+        var result = lock.withLock {
+            $0.current(preferences: nil, cache: false)
+        }
+        
+        if let result { return result }
+        
+        // We need to fetch prefs and try again
+        let (prefs, doCache) = preferences()
+        
+        result = lock.withLock {
+            $0.current(preferences: prefs, cache: doCache)
+        }
+        
+        guard let result else {
+            fatalError("Nil result getting current Locale with preferences")
+        }
+        
+        return result
     }
 
     var system: _Locale {
         lock.withLock { $0.system() }
-    }
-
-    var preferred: _Locale {
-        let (locale, _) = _Locale._currentLocaleWithOverrides(name: nil, overrides: nil, disableBundleMatching: false)
-        return locale
     }
 
     func fixed(_ id: String) -> _Locale {
@@ -205,7 +233,24 @@ struct LocaleCache : Sendable {
     }
 
     func currentNSLocale() -> _NSSwiftLocale {
-        lock.withLock { $0.currentNSLocale() }
+        var result = lock.withLock {
+            $0.currentNSLocale(preferences: nil, cache: false)
+        }
+        
+        if let result { return result }
+        
+        // We need to fetch prefs and try again. Don't do this inside a lock (106190030). On Darwin it is possible to get a KVO callout from fetching the preferences, which could ask for the current Locale, which could cause a reentrant lock.
+        let (prefs, doCache) = preferences()
+        
+        result = lock.withLock {
+            $0.currentNSLocale(preferences: prefs, cache: doCache)
+        }
+        
+        guard let result else {
+            fatalError("Nil result getting current NSLocale with preferences")
+        }
+        
+        return result
     }
 
     func systemNSLocale() -> _NSSwiftLocale {
@@ -215,5 +260,100 @@ struct LocaleCache : Sendable {
 
     func fixedComponents(_ comps: Locale.Components) -> _Locale {
         lock.withLock { $0.fixedComponents(comps) }
+    }
+    
+#if FOUNDATION_FRAMEWORK
+    func preferences() -> (LocalePreferences, Bool) {
+        // On Darwin, we check the current user preferences for Locale values
+        var wouldDeadlock: DarwinBoolean = false
+        let cfPrefs = __CFXPreferencesCopyCurrentApplicationStateWithDeadlockAvoidance(&wouldDeadlock).takeRetainedValue()
+
+        var prefs = LocalePreferences()
+        prefs.apply(cfPrefs)
+        
+        if wouldDeadlock.boolValue {
+            // Don't cache a locale built with incomplete prefs
+            return (prefs, false)
+        } else {
+            return (prefs, true)
+        }
+    }
+    
+    func preferredLanguages(forCurrentUser: Bool) -> [String] {
+        var languages: [String] = []
+        if forCurrentUser {
+            languages = CFPreferencesCopyValue("AppleLanguages" as CFString, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost) as? [String] ?? []
+        } else {
+            languages = CFPreferencesCopyAppValue("AppleLanguages" as CFString, kCFPreferencesCurrentApplication) as? [String] ?? []
+        }
+        
+        return languages.compactMap {
+            Locale.canonicalLanguageIdentifier(from: $0)
+        }
+    }
+    
+    func preferredLocale() -> String? {
+        guard let preferredLocaleID = CFPreferencesCopyAppValue("AppleLocale" as CFString, kCFPreferencesCurrentApplication) as? String else {
+            return nil
+        }
+        return preferredLocaleID
+    }
+#else
+    func preferences() -> (LocalePreferences, Bool) {
+        var prefs = LocalePreferences()
+        prefs.locale = "en_US"
+        prefs.languages = ["en-US"]
+        return (prefs, true)
+    }
+
+    func preferredLanguages(forCurrentUser: Bool) -> [String] {
+        [Locale.canonicalLanguageIdentifier(from: "en-US")]
+    }
+    
+    func preferredLocale() -> String? {
+        "en_US"
+    }
+#endif
+    
+#if FOUNDATION_FRAMEWORK
+    /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
+    func localeAsIfCurrent(name: String?, cfOverrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
+        
+        var (prefs, _) = preferences()
+        if let cfOverrides { prefs.apply(cfOverrides) }
+        
+        let inner = _Locale(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        return Locale(.fixed(inner))
+    }
+#endif
+    
+    /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
+    func localeAsIfCurrent(name: String?, overrides: LocalePreferences? = nil, disableBundleMatching: Bool = false) -> Locale {
+        var (prefs, _) = preferences()
+        if let overrides { prefs.apply(overrides) }
+        
+        let inner = _Locale(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        return Locale(.fixed(inner))
+    }
+
+
+    func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
+        guard !allowsMixedLocalizations else {
+            let (prefs, _) = preferences()
+            let inner = _Locale(name: nil, prefs: prefs, disableBundleMatching: true)
+            return Locale(.fixed(inner))
+        }
+
+        let preferredLanguages = preferredLanguages(forCurrentUser: false)
+        guard let preferredLocaleID = preferredLocale() else { return nil }
+        
+        let canonicalizedLocalizations = availableLocalizations.compactMap { Locale.canonicalLanguageIdentifier(from: $0) }
+        let identifier = _Locale.localeIdentifierForCanonicalizedLocalizations(canonicalizedLocalizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
+        guard let identifier else {
+            return nil
+        }
+
+        let inner = _Locale(identifier: identifier)
+        return Locale(.fixed(inner))
     }
 }
