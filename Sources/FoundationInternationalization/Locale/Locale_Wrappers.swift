@@ -43,13 +43,13 @@ extension NSLocale {
 
     @objc
     private class func _newLocaleAsIfCurrent(_ name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> NSLocale? {
-        let inner = Locale.localeAsIfCurrent(name: name, cfOverrides: overrides, disableBundleMatching: disableBundleMatching)
+        let inner = LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: overrides, disableBundleMatching: disableBundleMatching)
         return _NSSwiftLocale(inner)
     }
 
     @objc(_currentLocaleWithBundleLocalizations:disableBundleMatching:)
     private class func _currentLocaleWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> NSLocale? {
-        guard let inner = Locale.localeAsIfCurrentWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations) else {
+        guard let inner = LocaleCache.cache.localeAsIfCurrentWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations) else {
             return nil
         }
         return _NSSwiftLocale(inner)
@@ -62,7 +62,7 @@ extension NSLocale {
 
     @objc
     private class func _preferredLanguagesForCurrentUser(_ forCurrentUser: Bool) -> [String] {
-        _Locale.preferredLanguages(forCurrentUser: forCurrentUser)
+        LocaleCache.cache.preferredLanguages(forCurrentUser: forCurrentUser)
     }
 
     @objc

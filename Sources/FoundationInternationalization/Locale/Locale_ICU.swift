@@ -108,6 +108,14 @@ internal final class _Locale: Sendable, Hashable {
     internal let prefs: LocalePreferences?
     private let lock: LockedState<State>
 
+    // MARK: - Logging
+#if FOUNDATION_FRAMEWORK
+    static private let log: OSLog = {
+        OSLog(subsystem: "com.apple.foundation", category: "locale")
+    }()
+#endif // FOUNDATION_FRAMEWORK
+    
+
     // MARK: - init
 
     init(identifier: String, prefs: LocalePreferences? = nil) {
@@ -140,6 +148,108 @@ internal final class _Locale: Sendable, Hashable {
         lock = LockedState(initialState: state)
     }
 
+    /// Use to create a current-like Locale, with preferences.
+    init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) {
+        var ident: String?
+        if let name {
+            ident = Locale._canonicalLocaleIdentifier(from: name)
+#if FOUNDATION_FRAMEWORK
+            if Self.log.isEnabled(type: .debug) {
+                if let ident {
+                    let components = Locale.Components(identifier: ident)
+                    if components.languageComponents.region == nil {
+                        Logger(Self.log).debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
+                    }
+                }
+            }
+#endif // FOUNDATION_FRAMEWORK
+        }
+
+        if let identSet = ident {
+            ident = Locale._canonicalLocaleIdentifier(from: identSet)
+        } else {
+            let preferredLocale = prefs.locale
+
+            // If CFBundleAllowMixedLocalizations is set, don't do any checking of the user's preferences for locale-matching purposes (32264371)
+#if FOUNDATION_FRAMEWORK
+            let allowMixed = Bundle.main.infoDictionary?["CFBundleAllowMixedLocalizations"] as? Bool ?? false
+#else
+            let allowMixed = false
+#endif
+            let performBundleMatching = !disableBundleMatching && !allowMixed
+
+            let preferredLanguages = prefs.languages
+
+            #if FOUNDATION_FRAMEWORK
+            if preferredLanguages == nil && (preferredLocale == nil || performBundleMatching) {
+                Logger(Self.log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
+            }
+            #endif
+
+            // Since localizations can contains legacy lproj names such as `English`, `French`, etc. we need to canonicalize these into language identifiers such as `en`, `fr`, etc. Otherwise the logic that later compares these to language identifiers will fail. (<rdar://problem/37141123>)
+            // `preferredLanguages` has not yet been canonicalized, and if we won't perform the bundle matching below (and have a preferred locale), we don't need to canonicalize the list up-front. We'll do so below on demand.
+            var canonicalizedLocalizations: [String]?
+
+            if let preferredLocale, let preferredLanguages, performBundleMatching {
+                let mainBundle = Bundle.main
+                let availableLocalizations = mainBundle.localizations
+                canonicalizedLocalizations = Self.canonicalizeLocalizations(availableLocalizations)
+
+                ident = Self.localeIdentifierForCanonicalizedLocalizations(canonicalizedLocalizations!, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocale)
+            }
+
+            if ident == nil {
+                // Either we didn't need to match the locale identifier against the main bundle's localizations, or were unable to.
+                if let preferredLocale {
+                    ident = Locale._canonicalLocaleIdentifier(from: preferredLocale)
+                } else if let preferredLanguages {
+                    if canonicalizedLocalizations == nil {
+                        canonicalizedLocalizations = Self.canonicalizeLocalizations(preferredLanguages)
+                    }
+
+                    if canonicalizedLocalizations!.count > 0 {
+                        let languageName = canonicalizedLocalizations![0]
+
+                        // This variable name is a bit confusing, but we do indeed mean to call the canonicalLocaleIdentifier function here and not canonicalLanguageIdentifier.
+                        let languageIdentifier = Locale._canonicalLocaleIdentifier(from: languageName)
+                        // Country???
+                        if let countryCode = prefs.country {
+                            #if FOUNDATION_FRAMEWORK
+                            Logger(Self.log).debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
+                            #endif // FOUNDATION_FRAMEWORK
+                            ident = Locale._canonicalLocaleIdentifier(from: "\(languageIdentifier)_\(countryCode)")
+                        } else {
+                            #if FOUNDATION_FRAMEWORK
+                            Logger(Self.log).debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
+                            #endif // FOUNDATION_FRAMEWORK
+                            ident = Locale._canonicalLocaleIdentifier(from: languageIdentifier)
+                        }
+                    } else {
+                        #if FOUNDATION_FRAMEWORK
+                        Logger(Self.log).debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
+                        #endif // FOUNDATION_FRAMEWORK
+                    }
+                } else {
+                    // We're going to fall back below.
+                    // At this point, we've logged about both `preferredLocale` and `preferredLanguages` being missing, so no need to log again.
+                }
+            }
+        }
+
+        if ident == nil {
+            #if os(macOS)
+            ident = ""
+            #else
+            ident = "en_US"
+            #endif
+        }
+        
+        self.identifier = Locale._canonicalLocaleIdentifier(from: ident!)
+        doesNotRequireSpecialCaseHandling = Self.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
+        self.prefs = prefs
+        lock = LockedState(initialState: State())
+    }
+    
     deinit {
         lock.withLock { state in
             state.cleanup()
@@ -1211,7 +1321,7 @@ internal final class _Locale: Sendable, Hashable {
         if let prefs, let override = prefs.languages {
             langs = override
         } else {
-            langs = _Locale.preferredLanguages(forCurrentUser: false)
+            langs = LocaleCache.cache.preferredLanguages(forCurrentUser: false)
         }
 
         for l in langs {
@@ -1379,212 +1489,6 @@ internal final class _Locale: Sendable, Hashable {
             Locale.canonicalLanguageIdentifier(from: $0)
         }
     }
-
-    // MARK: -
-
-    static func preferredLanguages(forCurrentUser: Bool) -> [String] {
-#if FOUNDATION_FRAMEWORK // TODO: (_Locale.preferredLanguages) Implement `preferredLanguages` for Linux
-        var languages: [String] = []
-        if forCurrentUser {
-            languages = CFPreferencesCopyValue("AppleLanguages" as CFString, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost) as? [String] ?? []
-        } else {
-            languages = CFPreferencesCopyAppValue("AppleLanguages" as CFString, kCFPreferencesCurrentApplication) as? [String] ?? []
-        }
-#else
-        // Fallback to en
-        let languages: [String] = ["en"]
-#endif // FOUNDATION_FRAMEWORK
-        return canonicalizeLocalizations(languages)
-    }
-
-    // MARK: -
-#if FOUNDATION_FRAMEWORK
-    static private let log: OSLog = {
-        OSLog(subsystem: "com.apple.foundation", category: "locale")
-    }()
-#endif // FOUNDATION_FRAMEWORK
-
-#if FOUNDATION_FRAMEWORK
-    static func _prefsFromCFPrefs() -> (LocalePreferences, Bool) {
-        // On Darwin, we check the current user preferences for Locale values
-        var wouldDeadlock: DarwinBoolean = false
-        let cfPrefs = __CFXPreferencesCopyCurrentApplicationStateWithDeadlockAvoidance(&wouldDeadlock).takeRetainedValue()
-
-        var prefs = LocalePreferences()
-        prefs.apply(cfPrefs)
-        
-        if wouldDeadlock.boolValue {
-            // Don't cache a locale built with incomplete prefs
-            return (prefs, false)
-        } else {
-            return (prefs, true)
-        }
-    }
-    
-    /// Create a `Locale` that acts like a `currentLocale`, using `CFPreferences` values with `CFDictionary` overrides.
-    internal static func _currentLocaleWithCFOverrides(name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> (_Locale, Bool) {
-        var (prefs, wouldDeadlock) = _prefsFromCFPrefs()
-        if let overrides {
-            prefs.apply(overrides)
-        }
-        let result = _localeWithPreferences(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
-        
-        let suitableForCache = !disableBundleMatching && !wouldDeadlock
-        return (result, suitableForCache)
-    }
-    
-    /// Create a `Locale` that acts like a `currentLocale`, using `CFPreferences` values and `LocalePreferences` overrides.
-    internal static func _currentLocaleWithOverrides(name: String?, overrides: LocalePreferences?, disableBundleMatching: Bool) -> (_Locale, Bool) {
-        var (prefs, wouldDeadlock) = _prefsFromCFPrefs()
-        if let overrides {
-            prefs.apply(overrides)
-        }
-        let result = _localeWithPreferences(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
-
-        let suitableForCache = !disableBundleMatching && !wouldDeadlock
-        return (result, suitableForCache)
-    }
-#else
-    /// Create a `Locale` that acts like a `currentLocale`, using default values and `LocalePreferences` overrides.
-    internal static func _currentLocaleWithOverrides(name: String?, overrides: LocalePreferences?, disableBundleMatching: Bool) -> (_Locale, Bool) {
-        let suitableForCache = disableBundleMatching ? false : true
-        
-        // On this platform, preferences start with default values
-        var prefs = LocalePreferences()
-        prefs.locale = "en_US"
-        prefs.languages = ["en-US"]
-        
-        // Apply overrides
-        if let overrides { prefs.apply(overrides) }
-
-        let result = _localeWithPreferences(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
-        return (result, suitableForCache)
-    }
-#endif
-    
-    private static func _localeWithPreferences(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) -> _Locale {
-        var ident: String?
-        if let name {
-            ident = Locale._canonicalLocaleIdentifier(from: name)
-#if FOUNDATION_FRAMEWORK
-            if log.isEnabled(type: .debug) {
-                if let ident {
-                    let components = Locale.Components(identifier: ident)
-                    if components.languageComponents.region == nil {
-                        Logger(log).debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
-                    }
-                }
-            }
-#endif // FOUNDATION_FRAMEWORK
-        }
-
-        if let identSet = ident {
-            ident = Locale._canonicalLocaleIdentifier(from: identSet)
-        } else {
-            let preferredLocale = prefs.locale
-
-            // If CFBundleAllowMixedLocalizations is set, don't do any checking of the user's preferences for locale-matching purposes (32264371)
-#if FOUNDATION_FRAMEWORK
-            let allowMixed = Bundle.main.infoDictionary?["CFBundleAllowMixedLocalizations"] as? Bool ?? false
-#else
-            let allowMixed = false
-#endif
-            let performBundleMatching = !disableBundleMatching && !allowMixed
-
-            let preferredLanguages = prefs.languages
-
-            #if FOUNDATION_FRAMEWORK
-            if preferredLanguages == nil && (preferredLocale == nil || performBundleMatching) {
-                Logger(log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
-            }
-            #endif
-
-            // Since localizations can contains legacy lproj names such as `English`, `French`, etc. we need to canonicalize these into language identifiers such as `en`, `fr`, etc. Otherwise the logic that later compares these to language identifiers will fail. (<rdar://problem/37141123>)
-            // `preferredLanguages` has not yet been canonicalized, and if we won't perform the bundle matching below (and have a preferred locale), we don't need to canonicalize the list up-front. We'll do so below on demand.
-            var canonicalizedLocalizations: [String]?
-
-            if let preferredLocale, let preferredLanguages, performBundleMatching {
-                let mainBundle = Bundle.main
-                let availableLocalizations = mainBundle.localizations
-                canonicalizedLocalizations = canonicalizeLocalizations(availableLocalizations)
-
-                ident = localeIdentifierForCanonicalizedLocalizations(canonicalizedLocalizations!, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocale)
-            }
-
-            if ident == nil {
-                // Either we didn't need to match the locale identifier against the main bundle's localizations, or were unable to.
-                if let preferredLocale {
-                    ident = Locale._canonicalLocaleIdentifier(from: preferredLocale)
-                } else if let preferredLanguages {
-                    if canonicalizedLocalizations == nil {
-                        canonicalizedLocalizations = canonicalizeLocalizations(preferredLanguages)
-                    }
-
-                    if canonicalizedLocalizations!.count > 0 {
-                        let languageName = canonicalizedLocalizations![0]
-
-                        // This variable name is a bit confusing, but we do indeed mean to call the canonicalLocaleIdentifier function here and not canonicalLanguageIdentifier.
-                        let languageIdentifier = Locale._canonicalLocaleIdentifier(from: languageName)
-                        // Country???
-                        if let countryCode = prefs.country {
-                            #if FOUNDATION_FRAMEWORK
-                            Logger(log).debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
-                            #endif // FOUNDATION_FRAMEWORK
-                            ident = Locale._canonicalLocaleIdentifier(from: "\(languageIdentifier)_\(countryCode)")
-                        } else {
-                            #if FOUNDATION_FRAMEWORK
-                            Logger(log).debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
-                            #endif // FOUNDATION_FRAMEWORK
-                            ident = Locale._canonicalLocaleIdentifier(from: languageIdentifier)
-                        }
-                    } else {
-                        #if FOUNDATION_FRAMEWORK
-                        Logger(log).debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
-                        #endif // FOUNDATION_FRAMEWORK
-                    }
-                } else {
-                    // We're going to fall back below.
-                    // At this point, we've logged about both `preferredLocale` and `preferredLanguages` being missing, so no need to log again.
-                }
-            }
-        }
-
-        if ident == nil {
-            #if os(macOS)
-            ident = ""
-            #else
-            ident = "en_US"
-            #endif
-        }
-        let locale = _Locale(identifier: ident!, prefs: prefs)
-        return locale
-    }
-
-    internal static func _currentLocaleWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> _Locale? {
-#if FOUNDATION_FRAMEWORK
-        guard !allowsMixedLocalizations else {
-            let (result, _) = _currentLocaleWithOverrides(name: nil, overrides: nil, disableBundleMatching: true)
-            return result
-        }
-
-        let preferredLanguages = preferredLanguages(forCurrentUser: false)
-        guard let preferredLocaleID = CFPreferencesCopyAppValue("AppleLocale" as CFString, kCFPreferencesCurrentApplication) as? String else {
-            return nil
-        }
-
-        let canonicalizedLocalizations = canonicalizeLocalizations(availableLocalizations)
-        let identifier = localeIdentifierForCanonicalizedLocalizations(canonicalizedLocalizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
-        guard let identifier else {
-            return nil
-        }
-
-        return LocaleCache.cache.fixed(identifier)
-#else
-        // TODO: Implement preferred locale once UserDefaults is moved
-        return nil
-#endif // FOUNDATION_FRAMEWORK
-    }
-
 }
 
 // MARK: -

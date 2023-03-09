@@ -122,25 +122,18 @@ public struct Locale : Hashable, Equatable, Sendable {
 #if FOUNDATION_FRAMEWORK
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
     internal static func localeAsIfCurrent(name: String?, cfOverrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
-        let (inner, _) = _Locale._currentLocaleWithCFOverrides(name: name, overrides: cfOverrides, disableBundleMatching: disableBundleMatching)
-        return Locale(.fixed(inner))
+        return LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: cfOverrides, disableBundleMatching: disableBundleMatching)
     }
 #endif
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
     internal static func localeAsIfCurrent(name: String?, overrides: LocalePreferences? = nil, disableBundleMatching: Bool = false) -> Locale {
         // On Darwin, this overrides are applied on top of CFPreferences.
-        let (inner, _) = _Locale._currentLocaleWithOverrides(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
-        return Locale(.fixed(inner))
+        return LocaleCache.cache.localeAsIfCurrent(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
     }
-
 
     internal static func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
-        guard let inner = _Locale._currentLocaleWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations) else {
-            return nil
-        }
-        return Locale(.fixed(inner))
+        return LocaleCache.cache.localeAsIfCurrentWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations)
     }
-
 
     // MARK: -
     //
@@ -168,7 +161,8 @@ public struct Locale : Hashable, Equatable, Sendable {
         self = .init(components: comps)
     }
 
-    private init(_ kind: Kind) {
+    /// To be used only by `LocaleCache`.
+    internal init(_ kind: Kind) {
         self.kind = kind
     }
 
@@ -930,7 +924,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// - seealso: `Bundle.preferredLocalizations(from:)`
     /// - seealso: `Bundle.preferredLocalizations(from:forPreferences:)`
     public static var preferredLanguages: [String] {
-        _Locale.preferredLanguages(forCurrentUser: false)
+        LocaleCache.cache.preferredLanguages(forCurrentUser: false)
     }
 
 
