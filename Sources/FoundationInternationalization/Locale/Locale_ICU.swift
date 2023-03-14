@@ -59,7 +59,7 @@ internal final class _Locale: Sendable, Hashable {
 
         var numberFormatters: [UInt32 /* UNumberFormatStyle */ : UnsafeMutablePointer<UNumberFormat?>] = [:]
 
-        mutating func formatter(for style: UNumberFormatStyle, identifier: String) -> UnsafeMutablePointer<UNumberFormat?>? {
+        mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafeMutablePointer<UNumberFormat?>? {
             if let nf = numberFormatters[style.rawValue] {
                 return nf
             }
@@ -77,11 +77,22 @@ internal final class _Locale: Sendable, Hashable {
             unum_setAttribute(nf, UNUM_LENIENT_PARSE, 0)
             unum_setContext(nf, UDISPCTX_CAPITALIZATION_NONE, &status)
 
+            if let numberSymbols {
+                for (sym, str) in numberSymbols {
+                    let icuSymbol = UNumberFormatSymbol(UInt32(sym))
+                    let utf16 = Array(str.utf16)
+                    utf16.withUnsafeBufferPointer {
+                        var status = U_ZERO_ERROR
+                        unum_setSymbol(nf, icuSymbol, $0.baseAddress, Int32($0.count), &status)
+                    }
+                }
+            }
+            
             numberFormatters[style.rawValue] = nf
 
             return nf
         }
-
+        
         mutating func cleanup() {
             for nf in numberFormatters.values {
                 unum_close(nf)
@@ -815,7 +826,7 @@ internal final class _Locale: Sendable, Hashable {
 
     internal var decimalSeparator: String? {
         lock.withLock { state in
-            guard let nf = state.formatter(for: UNUM_DECIMAL, identifier: identifier) else {
+            guard let nf = state.formatter(for: UNUM_DECIMAL, identifier: identifier, numberSymbols: prefs?.numberSymbols) else {
                 return nil
             }
 
@@ -829,7 +840,7 @@ internal final class _Locale: Sendable, Hashable {
 
     internal var groupingSeparator: String? {
         lock.withLock { state in
-            guard let nf = state.formatter(for: UNUM_DECIMAL, identifier: identifier) else {
+            guard let nf = state.formatter(for: UNUM_DECIMAL, identifier: identifier, numberSymbols: prefs?.numberSymbols) else {
                 return nil
             }
 
@@ -878,7 +889,7 @@ internal final class _Locale: Sendable, Hashable {
 
     internal var currencySymbol: String? {
         lock.withLock { state in
-            guard let nf = state.formatter(for: UNUM_DECIMAL, identifier: identifier) else {
+            guard let nf = state.formatter(for: UNUM_DECIMAL, identifier: identifier, numberSymbols: prefs?.numberSymbols) else {
                 return nil
             }
 
@@ -907,7 +918,7 @@ internal final class _Locale: Sendable, Hashable {
 
     internal var currencyCode: String? {
         lock.withLock { state in
-            guard let nf = state.formatter(for: UNUM_CURRENCY, identifier: identifier) else {
+            guard let nf = state.formatter(for: UNUM_CURRENCY, identifier: identifier, numberSymbols: prefs?.numberSymbols) else {
                 return nil
             }
 
@@ -1647,9 +1658,12 @@ internal struct LocalePreferences: Hashable {
     var icuDateTimeSymbols: CFDictionary?
     var icuDateFormatStrings: CFDictionary?
     var icuTimeFormatStrings: CFDictionary?
+    
+    // The OS no longer writes out this preference, but we keep it here for compatibility with CFDateFormatter behavior.
     var icuNumberFormatStrings: CFDictionary?
     var icuNumberSymbols: CFDictionary?
 #endif
+    var numberSymbols: [UInt32 : String]? // Bridged version of `icuNumberSymbols`
     var country: String?
     var measurementUnits: MeasurementUnit?
     var temperatureUnit: TemperatureUnit?
@@ -1668,7 +1682,8 @@ internal struct LocalePreferences: Hashable {
          measurementUnits: MeasurementUnit? = nil,
          temperatureUnit: TemperatureUnit? = nil,
          force24Hour: Bool? = nil,
-         force12Hour: Bool? = nil) {
+         force12Hour: Bool? = nil,
+         numberSymbols: [UInt32 : String]? = nil) {
 
         self.metricUnits = metricUnits
         self.languages = languages
@@ -1681,6 +1696,7 @@ internal struct LocalePreferences: Hashable {
         self.temperatureUnit = temperatureUnit
         self.force24Hour = force24Hour
         self.force12Hour = force12Hour
+        self.numberSymbols = numberSymbols
         
 #if FOUNDATION_FRAMEWORK
         icuDateTimeSymbols = nil
@@ -1757,7 +1773,13 @@ internal struct LocalePreferences: Hashable {
         }
         
         if let icuNumberSymbols = __CFLocalePrefsCopyAppleICUNumberSymbols(prefs)?.takeRetainedValue() {
+            // Store the CFDictionary for passing back to CFDateFormatter
             self.icuNumberSymbols = icuNumberSymbols
+            
+            // And bridge the mapping for our own usage in Locale
+            if let numberSymbolsPrefs = icuNumberSymbols as? [UInt32 : String] {
+                self.numberSymbols = numberSymbolsPrefs
+            }
         }
         
 
@@ -1809,6 +1831,7 @@ internal struct LocalePreferences: Hashable {
         if let other = prefs.temperatureUnit { self.temperatureUnit = other }
         if let other = prefs.force24Hour { self.force24Hour = other }
         if let other = prefs.force12Hour { self.force12Hour = other }
+        if let other = prefs.numberSymbols { self.numberSymbols = other }
     }
 }
 
