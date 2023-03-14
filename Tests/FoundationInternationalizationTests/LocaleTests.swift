@@ -441,6 +441,13 @@ final class LocalePropertiesTests : XCTestCase {
         // Need to find a good test case for collator identifier
         // XCTAssertEqual("something", locale.collatorIdentifier)
     }
+    
+    func test_customizedProperties() {
+        let localePrefs = LocalePreferences(numberSymbols: [0 : "*", 1: "-"])
+        let customizedLocale = Locale.localeAsIfCurrent(name: "en_US", overrides: localePrefs)
+        XCTAssertEqual(customizedLocale.decimalSeparator, "*")
+        XCTAssertEqual(customizedLocale.groupingSeparator, "-")
+    }
 }
 
 // MARK: - Bridging Tests
