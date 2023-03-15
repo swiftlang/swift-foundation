@@ -17,6 +17,7 @@ import TestSupport
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
+@testable import FoundationEssentials
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
@@ -113,21 +114,6 @@ final class LocaleComponentsTests: XCTestCase {
 
         XCTAssertTrue(Locale.NumberingSystem.availableNumberingSystems.count > 0)
         XCTAssertTrue(Locale.NumberingSystem.availableNumberingSystems.contains(Locale.NumberingSystem("java")))
-    }
-
-    // Locale components are considered equal regardless of the identifier's case
-    func testCaseInsensitiveEquality() {
-        XCTAssertEqual(Locale.Collation("search"), Locale.Collation("SEARCH"))
-        XCTAssertEqual(Locale.NumberingSystem("latn"), Locale.NumberingSystem("Latn"))
-        XCTAssertEqual(
-            [ Locale.NumberingSystem("latn"), Locale.NumberingSystem("ARAB") ],
-            [ Locale.NumberingSystem("Latn"), Locale.NumberingSystem("arab") ])
-        XCTAssertEqual(
-            Set([ Locale.NumberingSystem("latn"), Locale.NumberingSystem("ARAB") ]),
-            Set([ Locale.NumberingSystem("arab"), Locale.NumberingSystem("Latn") ]))
-        XCTAssertEqual(Locale.Region("US"), Locale.Region("us"))
-        XCTAssertEqual(Locale.Script("Hant"), Locale.Script("hant"))
-        XCTAssertEqual(Locale.LanguageCode("EN"), Locale.LanguageCode("en"))
     }
 
     // The internal identifier getter would ignore invalid keywords and returns ICU-style identifier
@@ -347,7 +333,7 @@ final class LocaleCodableTests: XCTestCase {
     // Test types that used to encode both `identifier` and `normalizdIdentifier` now only encodes `identifier`
     func _testRoundtripCoding<T: Codable>(_ obj: T, identifier: String, normalizedIdentifier: String, file: StaticString = #file, line: UInt = #line) -> T? {
         let previousEncoded = "{\"_identifier\":\"\(identifier)\",\"_normalizedIdentifier\":\"\(normalizedIdentifier)\"}"
-        let previousEncodedData = previousEncoded.data(using: .utf8)!
+        let previousEncodedData = previousEncoded.data(using: String._Encoding.utf8)!
         let decoder = JSONDecoder()
         guard let decoded = try? decoder.decode(T.self, from: previousEncodedData) else {
             XCTFail("Decoding \(obj) failed", file: file, line: line)
@@ -501,6 +487,96 @@ final class LocaleCodableTests: XCTestCase {
 
     }
 
+    func test_decode_compatible_localeComponents() {
+        func expectDecode(_ encoded: String, _ expected: Locale.Components, file: StaticString = #file, line: UInt = #line) {
+            guard let data = encoded.data(using: String._Encoding.utf8), let decoded = try? JSONDecoder().decode(Locale.Components.self, from: data) else {
+                XCTFail(file: file, line: line)
+                return
+            }
+            XCTAssertEqual(decoded, expected, file: file, line: line)
+        }
+
+        do {
+            var expected = Locale.Components(identifier: "")
+            expected.region = "HK"
+            expected.firstDayOfWeek = .monday
+            expected.languageComponents.region = "TW"
+            expected.languageComponents.languageCode = "zh"
+            expected.hourCycle = .oneToTwelve
+            expected.timeZone = .gmt
+            expected.calendar = .buddhist
+            expected.currency = "GBP"
+            expected.measurementSystem = .us
+
+            expectDecode("""
+            {"region":{"_identifier":"HK","_normalizedIdentifier":"HK"},"firstDayOfWeek":"mon","languageComponents":{"region":{"_identifier":"TW","_normalizedIdentifier":"TW"},"languageCode":{"_identifier":"zh","_normalizedIdentifier":"zh"}},"hourCycle":"h12","timeZone":{"identifier":"GMT"},"calendar":{"buddhist":{}},"currency":{"_identifier":"GBP","_normalizedIdentifier":"gbp"},"measurementSystem":{"_identifier":"ussystem","_normalizedIdentifier":"ussystem"}}
+            """, expected)
+        }
+
+        do {
+            expectDecode("""
+            {"languageComponents":{}}
+            """, Locale.Components(identifier: ""))
+        }
+    }
+
+    func test_decode_compatible_language() {
+
+        func expectDecode(_ encoded: String, _ expected: Locale.Language, file: StaticString = #file, line: UInt = #line) {
+            guard let data = encoded.data(using: String._Encoding.utf8), let decoded = try? JSONDecoder().decode(Locale.Language.self, from: data) else {
+                XCTFail(file: file, line: line)
+                return
+            }
+            XCTAssertEqual(decoded, expected, file: file, line: line)
+        }
+
+        expectDecode("""
+            {"components":{"script":{"_identifier":"Hans","_normalizedIdentifier":"Hans"},"languageCode":{"_identifier":"zh","_normalizedIdentifier":"zh"},"region":{"_identifier":"HK","_normalizedIdentifier":"HK"}}}
+            """, Locale.Language(identifier: "zh-Hans-HK"))
+
+        expectDecode("""
+            {"components":{}}
+            """, Locale.Language(identifier: ""))
+    }
+
+    func test_decode_compatible_languageComponents() {
+        func expectDecode(_ encoded: String, _ expected: Locale.Language.Components, file: StaticString = #file, line: UInt = #line) {
+            guard let data = encoded.data(using: String._Encoding.utf8), let decoded = try? JSONDecoder().decode(Locale.Language.Components.self, from: data) else {
+                XCTFail(file: file, line: line)
+                return
+            }
+            XCTAssertEqual(decoded, expected, file: file, line: line)
+        }
+
+        expectDecode("""
+            {"script":{"_identifier":"Hans","_normalizedIdentifier":"Hans"},"languageCode":{"_identifier":"zh","_normalizedIdentifier":"zh"},"region":{"_identifier":"HK","_normalizedIdentifier":"HK"}}
+            """, Locale.Language.Components(identifier: "zh-Hans-HK"))
+
+        expectDecode("{}", Locale.Language.Components(identifier: ""))
+    }
+}
+
+// MARK: - FoundationPreview Disabled Tests
+#if FOUNDATION_FRAMEWORK
+extension LocaleComponentsTests {
+    // TODO: Reenable once String.capitalized is implemented in Swift
+    // Locale components are considered equal regardless of the identifier's case
+    func testCaseInsensitiveEquality() {
+        XCTAssertEqual(Locale.Collation("search"), Locale.Collation("SEARCH"))
+        XCTAssertEqual(Locale.NumberingSystem("latn"), Locale.NumberingSystem("Latn"))
+        XCTAssertEqual(
+            [ Locale.NumberingSystem("latn"), Locale.NumberingSystem("ARAB") ],
+            [ Locale.NumberingSystem("Latn"), Locale.NumberingSystem("arab") ])
+        XCTAssertEqual(
+            Set([ Locale.NumberingSystem("latn"), Locale.NumberingSystem("ARAB") ]),
+            Set([ Locale.NumberingSystem("arab"), Locale.NumberingSystem("Latn") ]))
+        XCTAssertEqual(Locale.Region("US"), Locale.Region("us"))
+        XCTAssertEqual(Locale.Script("Hant"), Locale.Script("hant"))
+        XCTAssertEqual(Locale.LanguageCode("EN"), Locale.LanguageCode("en"))
+    }
+}
+
+extension LocaleCodableTests {
     func _encodeAsJSON<T: Codable>(_ t: T) -> String? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [ .sortedKeys ]
@@ -519,7 +595,7 @@ final class LocaleCodableTests: XCTestCase {
 
             XCTAssertEqual(encoded, expectedEncoded, file: file, line: line)
 
-            let data = encoded.data(using: .utf8)
+            let data = encoded.data(using: String._Encoding.utf8)
             guard let data, let decoded = try? JSONDecoder().decode(Locale.Language.self, from: data)  else {
                 XCTFail(file: file, line: line)
                 return
@@ -564,7 +640,7 @@ final class LocaleCodableTests: XCTestCase {
 
             XCTAssertEqual(encoded, expectedEncoded, file: file, line: line)
 
-            let data = encoded.data(using: .utf8)
+            let data = encoded.data(using: String._Encoding.utf8)
             guard let data, let decoded = try? JSONDecoder().decode(Locale.Language.Components.self, from: data)  else {
                 XCTFail(file: file, line: line)
                 return
@@ -604,7 +680,7 @@ final class LocaleCodableTests: XCTestCase {
 
             XCTAssertEqual(encoded, expectedEncoded, file: file, line: line)
 
-            let data = encoded.data(using: .utf8)
+            let data = encoded.data(using: String._Encoding.utf8)
             guard let data, let decoded = try? JSONDecoder().decode(Locale.Components.self, from: data)  else {
                 XCTFail(file: file, line: line)
                 return
@@ -634,74 +710,5 @@ final class LocaleCodableTests: XCTestCase {
         {"languageComponents":{}}
         """)
     }
-
-
-    func test_decode_compatible_localeComponents() {
-        func expectDecode(_ encoded: String, _ expected: Locale.Components, file: StaticString = #file, line: UInt = #line) {
-            guard let data = encoded.data(using: .utf8), let decoded = try? JSONDecoder().decode(Locale.Components.self, from: data) else {
-                XCTFail(file: file, line: line)
-                return
-            }
-            XCTAssertEqual(decoded, expected, file: file, line: line)
-        }
-
-        do {
-            var expected = Locale.Components(identifier: "")
-            expected.region = "HK"
-            expected.firstDayOfWeek = .monday
-            expected.languageComponents.region = "TW"
-            expected.languageComponents.languageCode = "zh"
-            expected.hourCycle = .oneToTwelve
-            expected.timeZone = .gmt
-            expected.calendar = .buddhist
-            expected.currency = "GBP"
-            expected.measurementSystem = .us
-
-            expectDecode("""
-            {"region":{"_identifier":"HK","_normalizedIdentifier":"HK"},"firstDayOfWeek":"mon","languageComponents":{"region":{"_identifier":"TW","_normalizedIdentifier":"TW"},"languageCode":{"_identifier":"zh","_normalizedIdentifier":"zh"}},"hourCycle":"h12","timeZone":{"identifier":"GMT"},"calendar":{"buddhist":{}},"currency":{"_identifier":"GBP","_normalizedIdentifier":"gbp"},"measurementSystem":{"_identifier":"ussystem","_normalizedIdentifier":"ussystem"}}
-            """, expected)
-        }
-
-        do {
-            expectDecode("""
-            {"languageComponents":{}}
-            """, Locale.Components(identifier: ""))
-        }
-    }
-
-    func test_decode_compatible_language() {
-
-        func expectDecode(_ encoded: String, _ expected: Locale.Language, file: StaticString = #file, line: UInt = #line) {
-            guard let data = encoded.data(using: .utf8), let decoded = try? JSONDecoder().decode(Locale.Language.self, from: data) else {
-                XCTFail(file: file, line: line)
-                return
-            }
-            XCTAssertEqual(decoded, expected, file: file, line: line)
-        }
-
-        expectDecode("""
-            {"components":{"script":{"_identifier":"Hans","_normalizedIdentifier":"Hans"},"languageCode":{"_identifier":"zh","_normalizedIdentifier":"zh"},"region":{"_identifier":"HK","_normalizedIdentifier":"HK"}}}
-            """, Locale.Language(identifier: "zh-Hans-HK"))
-
-        expectDecode("""
-            {"components":{}}
-            """, Locale.Language(identifier: ""))
-    }
-
-    func test_decode_compatible_languageComponents() {
-        func expectDecode(_ encoded: String, _ expected: Locale.Language.Components, file: StaticString = #file, line: UInt = #line) {
-            guard let data = encoded.data(using: .utf8), let decoded = try? JSONDecoder().decode(Locale.Language.Components.self, from: data) else {
-                XCTFail(file: file, line: line)
-                return
-            }
-            XCTAssertEqual(decoded, expected, file: file, line: line)
-        }
-
-        expectDecode("""
-            {"script":{"_identifier":"Hans","_normalizedIdentifier":"Hans"},"languageCode":{"_identifier":"zh","_normalizedIdentifier":"zh"},"region":{"_identifier":"HK","_normalizedIdentifier":"HK"}}
-            """, Locale.Language.Components(identifier: "zh-Hans-HK"))
-
-        expectDecode("{}", Locale.Language.Components(identifier: ""))
-    }
-
 }
+#endif
