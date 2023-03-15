@@ -23,6 +23,8 @@ public typealias UUID = Foundation.UUID
 public typealias Date = Foundation.Date
 public typealias DateComponents = Foundation.DateComponents
 public typealias TimeInterval = Foundation.TimeInterval
+public typealias JSONEncoder = Foundation.JSONEncoder
+public typealias JSONDecoder = Foundation.JSONDecoder
 
 // XCTest implicitly imports Foundation
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
@@ -81,6 +83,8 @@ public typealias Data = FoundationEssentials.Data
 public typealias UUID = FoundationEssentials.UUID
 public typealias Date = FoundationEssentials.Date
 public typealias TimeInterval = FoundationEssentials.TimeInterval
+public typealias JSONEncoder = FoundationEssentials.JSONEncoder
+public typealias JSONDecoder = FoundationEssentials.JSONDecoder
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias ListFormatStyle = FoundationInternationalization.ListFormatStyle
