@@ -343,19 +343,6 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - Country, Region, Subdivision, Variant
 
-    internal var countryCode: String? {
-        // n.b. the modern name for this is Region, not Country
-        lock.withLock { state in
-            if let comps = state.languageComponents {
-                return comps.region?.identifier
-            } else {
-                let comps = Locale.Language.Components(identifier: identifier)
-                state.languageComponents = comps
-                return comps.region?.identifier
-            }
-        }
-    }
-
     internal func countryCodeDisplayName(for value: String) -> String? {
         lock.withLock { state in
             if let result = state.countryCodeDisplayNames[value] {
