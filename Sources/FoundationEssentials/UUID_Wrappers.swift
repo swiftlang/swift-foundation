@@ -116,6 +116,7 @@ internal class _NSSwiftUUID : _NSUUIDBridge {
         super.init()
     }
 
+    #if false // rdar://106792309
     override func encode(with coder: NSCoder) {
         var uuid = _storage.uuid
         withUnsafeBytes(of: &uuid) { buffer in
@@ -124,6 +125,7 @@ internal class _NSSwiftUUID : _NSUUIDBridge {
             }
         }
     }
+    #endif
     
     override public init?(uuidString: String) {
         guard let swiftUUID = Foundation.UUID(uuidString: uuidString) else {
