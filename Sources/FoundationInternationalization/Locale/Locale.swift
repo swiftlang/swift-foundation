@@ -393,8 +393,8 @@ public struct Locale : Hashable, Equatable, Sendable {
         // n.b. this is called countryCode in ObjC
         let result: String?
         switch kind {
-        case .autoupdating: result = LocaleCache.cache.current.countryCode
-        case .fixed(let l): result = l.countryCode
+        case .autoupdating: result = LocaleCache.cache.current.region?.identifier
+        case .fixed(let l): result = l.region?.identifier
 #if FOUNDATION_FRAMEWORK
         case .bridged(let l): result = l.countryCode
 #endif
