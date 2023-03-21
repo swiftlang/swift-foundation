@@ -533,7 +533,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
 
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
     override var countryCode: String? {
-        locale.regionCode
+        locale.region?.identifier
     }
 
     override var regionCode: String? {

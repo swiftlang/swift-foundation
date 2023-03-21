@@ -467,7 +467,7 @@ final class LocalBridgingTests : XCTestCase {
     @available(tvOS, deprecated: 16)
     @available(watchOS, deprecated: 9)
     func test_getACustomLocale() {
-        let loc = getACustomLocale()
+        let loc = getACustomLocale("en_US")
         let objCLoc = loc as! CustomNSLocaleSubclass
 
         // Verify that accessing the properties of `l` calls back into ObjC
@@ -476,6 +476,27 @@ final class LocalBridgingTests : XCTestCase {
 
         XCTAssertEqual(loc.currencyCode, "USD")
         XCTAssertEqual(objCLoc.last, "objectForKey:") // Everything funnels through the primitives
+
+        XCTAssertEqual(loc.regionCode, "US")
+        XCTAssertEqual(objCLoc.countryCode, "US")
+    }
+
+    @available(macOS, deprecated: 13)
+    @available(iOS, deprecated: 16)
+    @available(tvOS, deprecated: 16)
+    @available(watchOS, deprecated: 9)
+    func test_customLocaleCountryCode() {
+        let loc = getACustomLocale("en_US@rg=gbzzzz")
+        let objCLoc = loc as! CustomNSLocaleSubclass
+
+        XCTAssertEqual(loc.identifier, "en_US@rg=gbzzzz")
+        XCTAssertEqual(objCLoc.last, "localeIdentifier")
+
+        XCTAssertEqual(loc.currencyCode, "GBP")
+        XCTAssertEqual(objCLoc.last, "objectForKey:") // Everything funnels through the primitives
+
+        XCTAssertEqual(loc.regionCode, "GB")
+        XCTAssertEqual(objCLoc.countryCode, "GB")
     }
 
     func test_AnyHashableCreatedFromNSLocale() {
