@@ -364,7 +364,7 @@ public extension AttributeScope {
 }
 
 #if FOUNDATION_FRAMEWORK
-
+// TODO: Support AttributedString codable conformance in FoundationPreview
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString : Codable {
     public func encode(to encoder: Encoder) throws {

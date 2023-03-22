@@ -174,7 +174,7 @@ public struct ScopedAttributeContainer<S: AttributeScope> {
     }
     
 #if FOUNDATION_FRAMEWORK
-    
+    // TODO: Support scope-specific equality/attributes in FoundationPreview
     internal func equals(_ other: Self) -> Bool {
         var equal = true
         _forEachField(of: S.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
@@ -240,6 +240,7 @@ internal extension AttributedStringKey {
     }
 }
 
+// TODO: Support AttributeScope key finding in FoundationPreview
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 internal extension AttributeScope {
     static func attributeKeyType(matching key: String) -> (any AttributedStringKey.Type)? {
