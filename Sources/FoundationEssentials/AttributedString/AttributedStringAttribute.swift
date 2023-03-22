@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
 @_spi(Reflection) import Swift
+#endif
 
 // MARK: AttributedStringKey API
 
@@ -170,7 +172,9 @@ public struct ScopedAttributeContainer<S: AttributeScope> {
     internal init(_ storage : AttributedString._AttributeStorage = .init()) {
         self.storage = storage
     }
-
+    
+#if FOUNDATION_FRAMEWORK
+    
     internal func equals(_ other: Self) -> Bool {
         var equal = true
         _forEachField(of: S.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
@@ -198,10 +202,14 @@ public struct ScopedAttributeContainer<S: AttributeScope> {
         }
         return AttributeContainer(contents)
     }
+    
+#endif // FOUNDATION_FRAMEWORK
 }
 
 
 // MARK: Internals
+
+#if FOUNDATION_FRAMEWORK
 
 internal extension AttributedStringKey {
     static func _convertToObjectiveCValue(_ value: Value) throws -> AnyObject {
@@ -270,3 +278,5 @@ internal extension AttributeScope {
         return result
     }
 }
+
+#endif // FOUNDATION_FRAMEWORK

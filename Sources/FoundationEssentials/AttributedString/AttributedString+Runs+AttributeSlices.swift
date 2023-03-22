@@ -596,6 +596,8 @@ extension AttributedString.Runs {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
     @_nonSendable
@@ -690,6 +692,8 @@ extension AttributedString.Runs {
         return NSAttributesSlice(runs: self, keys: keys)
     }
 }
+
+#endif // FOUNDATION_FRAMEWORK
 
 extension RangeReplaceableCollection {
     internal init(_contents item1: Element?) {

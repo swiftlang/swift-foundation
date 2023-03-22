@@ -10,47 +10,47 @@ extension AttributedString.Guts {
     /// Retrieve the UTF-8 `location` and `block` index of the run containing the UTF-8 `location`, and update the cache accordingly
     @discardableResult
     private func seekToRun(location: Int, updateCache: Bool = true) -> RunOffset {
-        var currentLocation = 0
-        var currentBlock = 0
+        let runs = runs
+        return runOffsetCache.withLock { runOffsetCache in
+            var currentLocation = 0
+            var currentBlock = 0
         
-        runOffsetCacheLock.lock()
-        defer { runOffsetCacheLock.unlock() }
-        
-        if location > runOffsetCache.location / 2 {
-            currentLocation = runOffsetCache.location
-            currentBlock = runOffsetCache.block
-        }
-        
-        if currentLocation <= location {
-            while currentBlock < runs.count && currentLocation + runs[currentBlock].length <= location {
-                currentLocation += runs[currentBlock].length
-                currentBlock += 1
+            if location > runOffsetCache.location / 2 {
+                currentLocation = runOffsetCache.location
+                currentBlock = runOffsetCache.block
             }
-        } else {
-            repeat {
-                currentBlock -= 1
-                currentLocation -= runs[currentBlock].length
-            } while currentLocation > location && currentBlock >= 0
+            
+            if currentLocation <= location {
+                while currentBlock < runs.count && currentLocation + runs[currentBlock].length <= location {
+                    currentLocation += runs[currentBlock].length
+                    currentBlock += 1
+                }
+            } else {
+                repeat {
+                    currentBlock -= 1
+                    currentLocation -= runs[currentBlock].length
+                } while currentLocation > location && currentBlock >= 0
+            }
+            
+            let currentOffset = RunOffset(location: currentLocation, block: currentBlock)
+            if updateCache {
+                runOffsetCache = currentOffset
+            }
+            return currentOffset
         }
-        
-        let currentOffset = RunOffset(location: currentLocation, block: currentBlock)
-        if updateCache {
-            runOffsetCache = currentOffset
-        }
-        return currentOffset
     }
     
     /// Retrieve the UTF-8 `location` and `block` index of the run at the `rangeIndex` block, and update the cache accordingly
     @discardableResult
     private func seekToRun(rangeIndex: Int) -> RunOffset {
-        runOffsetCacheLock.lock()
-        defer { runOffsetCacheLock.unlock() }
-        return seekToRunAlreadyLocked(rangeIndex: rangeIndex)
+        runOffsetCache.withLock { runOffsetCache in
+            seekToRunAlreadyLocked(rangeIndex: rangeIndex, runOffsetCache: &runOffsetCache)
+        }
     }
     
     /// Retrieve the UTF-8 `location` and `block` index of the run at the `rangeIndex` block, and update the cache accordingly
     @discardableResult
-    private func seekToRunAlreadyLocked(rangeIndex: Int) -> RunOffset {
+    private func seekToRunAlreadyLocked(rangeIndex: Int, runOffsetCache: inout RunOffset) -> RunOffset {
         var currentLocation = 0
         var currentBlock = 0
         
@@ -80,34 +80,34 @@ extension AttributedString.Guts {
     /// - Returns: The new index of the updated run (potentially different from the provided `index` due to coalescing)
     @discardableResult
     func updateAndCoalesce(run: AttributedString._InternalRun, at index: Int) -> Int {
-        runOffsetCacheLock.lock()
-        defer { runOffsetCacheLock.unlock() }
-        if runOffsetCache.block > index {
-            runOffsetCache.location += run.length - runs[index].length
-        }
-        runs[index] = run
-        
-        if index < runs.count - 1 && run.attributes == runs[index + 1].attributes {
-            if runOffsetCache.block == index + 1 {
-                runOffsetCache.location += runs[index + 1].length
-            } else if runOffsetCache.block > index + 1{
-                runOffsetCache.block -= 1
+        runOffsetCache.withLockUnchecked { runOffsetCache in
+            if runOffsetCache.block > index {
+                runOffsetCache.location += run.length - runs[index].length
             }
-            runs[index].length += runs[index + 1].length
-            runs.remove(at: index + 1)
-        }
-        var newIndex = index
-        if index > 0 && run.attributes == runs[index - 1].attributes {
-            if runOffsetCache.block == index {
-                runOffsetCache.location += runs[index].length
-            } else if runOffsetCache.block > index {
-                runOffsetCache.block -= 1
+            runs[index] = run
+            
+            if index < runs.count - 1 && run.attributes == runs[index + 1].attributes {
+                if runOffsetCache.block == index + 1 {
+                    runOffsetCache.location += runs[index + 1].length
+                } else if runOffsetCache.block > index + 1{
+                    runOffsetCache.block -= 1
+                }
+                runs[index].length += runs[index + 1].length
+                runs.remove(at: index + 1)
             }
-            runs[index - 1].length += runs[index].length
-            runs.remove(at: index)
-            newIndex -= 1
+            var newIndex = index
+            if index > 0 && run.attributes == runs[index - 1].attributes {
+                if runOffsetCache.block == index {
+                    runOffsetCache.location += runs[index].length
+                } else if runOffsetCache.block > index {
+                    runOffsetCache.block -= 1
+                }
+                runs[index - 1].length += runs[index].length
+                runs.remove(at: index)
+                newIndex -= 1
+            }
+            return newIndex
         }
-        return newIndex
     }
 
     func runAndLocation(at index: Int) -> (run: AttributedString._InternalRun, location: Int) {
@@ -304,24 +304,24 @@ extension AttributedString.Guts {
     /// Replaces the runs for a specified range of block indices with the given `newElements`
     /// Note: The provided `newElements` must already be coalsced together if needed.
     func replaceRunsSubrange(_ subrange: Range<Int>, with newElements: some Collection<_InternalRun>) {
-        runOffsetCacheLock.lock()
-        defer { runOffsetCacheLock.unlock() }
-        if runOffsetCache.block > subrange.lowerBound {
-            // Move the cached location to a place where it won't be corrupted
-            seekToRunAlreadyLocked(rangeIndex: subrange.lowerBound)
-        }
-        runs.replaceSubrange(subrange, with: newElements)
-        let startOfReplacement = subrange.startIndex
-        let endOfReplacement = subrange.endIndex + (newElements.count - (subrange.endIndex - subrange.startIndex))
-        if endOfReplacement < runs.count && endOfReplacement > 0 && runs[endOfReplacement - 1].attributes == runs[endOfReplacement].attributes {
-            runs[endOfReplacement - 1].length += runs[endOfReplacement].length
-            runs.remove(at: endOfReplacement)
-        }
-        if startOfReplacement < runs.count && startOfReplacement > 0 && runs[startOfReplacement - 1].attributes == runs[startOfReplacement].attributes {
-            runOffsetCache.block -= 1
-            runOffsetCache.location -= runs[startOfReplacement - 1].length
-            runs[startOfReplacement - 1].length += runs[startOfReplacement].length
-            runs.remove(at: startOfReplacement)
+        runOffsetCache.withLockUnchecked { runOffsetCache in
+            if runOffsetCache.block > subrange.lowerBound {
+                // Move the cached location to a place where it won't be corrupted
+                seekToRunAlreadyLocked(rangeIndex: subrange.lowerBound, runOffsetCache: &runOffsetCache)
+            }
+            runs.replaceSubrange(subrange, with: newElements)
+            let startOfReplacement = subrange.startIndex
+            let endOfReplacement = subrange.endIndex + (newElements.count - (subrange.endIndex - subrange.startIndex))
+            if endOfReplacement < runs.count && endOfReplacement > 0 && runs[endOfReplacement - 1].attributes == runs[endOfReplacement].attributes {
+                runs[endOfReplacement - 1].length += runs[endOfReplacement].length
+                runs.remove(at: endOfReplacement)
+            }
+            if startOfReplacement < runs.count && startOfReplacement > 0 && runs[startOfReplacement - 1].attributes == runs[startOfReplacement].attributes {
+                runOffsetCache.block -= 1
+                runOffsetCache.location -= runs[startOfReplacement - 1].length
+                runs[startOfReplacement - 1].length += runs[startOfReplacement].length
+                runs.remove(at: startOfReplacement)
+            }
         }
     }
 }

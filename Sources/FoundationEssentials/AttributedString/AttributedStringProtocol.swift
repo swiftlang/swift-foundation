@@ -211,6 +211,8 @@ public extension AttributedStringProtocol {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
     public func range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = [], locale: Locale? = nil) -> Range<AttributedString.Index>? {
@@ -229,3 +231,5 @@ extension AttributedStringProtocol {
         return start ..< end
     }
 }
+
+#endif // FOUNDATION_FRAMEWORK

@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(Reflection) import Swift
-
 @_nonSendable
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -25,14 +23,12 @@ public struct AttributedString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    internal static var currentIdentity = 0
-    internal static var currentIdentityLock = Lock()
+    internal static var currentIdentity = LockedState(initialState: 0)
     internal static var _nextModifyIdentity : Int {
-        currentIdentityLock.lock()
-        currentIdentity += 1
-        let result = currentIdentity
-        currentIdentityLock.unlock()
-        return result
+        currentIdentity.withLock { identity in
+            identity += 1
+            return identity
+        }
     }
 }
 
@@ -94,6 +90,7 @@ extension AttributedString {
         _guts = Guts(string: str, runs: runs)
     }
 
+#if FOUNDATION_FRAMEWORK
     public init<S : AttributeScope, T : AttributedStringProtocol>(_ other: T, including scope: KeyPath<AttributeScopes, S.Type>) {
         self.init(other, including: S.self)
     }
@@ -119,6 +116,7 @@ extension AttributedString {
             }
         }
     }
+#endif // FOUNDATION_FRAMEWORK
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)

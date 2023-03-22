@@ -246,7 +246,7 @@ extension AttributedString.Guts {
             var startParagraph: Range<Int>? = nil
             var endParagraph: Range<Int>? = nil
 
-#warning("TODO: Performance review")
+            // TODO: Performance review
             if strRange.isEmpty {
                 // Since this was a removal, paragraphs can only change if the removal was in the middle of the string
                 if

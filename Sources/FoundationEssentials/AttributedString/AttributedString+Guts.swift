@@ -55,16 +55,14 @@ extension AttributedString {
 
         // NOTE: the runs and runOffsetCache should never be modified directly. Instead, use the functions defined in AttributedStringRunCoalescing.swift
         var runs: [_InternalRun]
-        var runOffsetCache: RunOffset
-        var runOffsetCacheLock: Lock
+        var runOffsetCache: LockedState<RunOffset>
 
         // Note: the caller is responsible for performing attribute fix-ups if needed based on the source of the runs
         init(string: _BString, runs: [_InternalRun]) {
             precondition(string.isEmpty == runs.isEmpty, "An empty attributed string should not contain any runs")
             self.string = string
             self.runs = runs
-            runOffsetCache = RunOffset()
-            runOffsetCacheLock = Lock()
+            runOffsetCache = LockedState(initialState: RunOffset())
         }
 
         // Note: the caller is responsible for performing attribute fix-ups if needed based on the source of the runs
@@ -74,10 +72,6 @@ extension AttributedString {
 
         convenience init() {
             self.init(string: _BString(), runs: [])
-        }
-
-        deinit {
-            runOffsetCacheLock.cleanupLock()
         }
     }
 }
