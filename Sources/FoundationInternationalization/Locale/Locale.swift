@@ -321,6 +321,20 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 
+    /// This exists in `NSLocale` via the `displayName` API, using the currency *symbol* key instead of *code*.
+    internal func localizedString(forCurrencySymbol currencySymbol: String) -> String? {
+        switch kind {
+        case .fixed(let l):
+            return l.currencySymbolDisplayName(for: currencySymbol)
+#if FOUNDATION_FRAMEWORK
+        case .bridged(let l):
+            return l.currencySymbolDisplayName(for: currencySymbol)
+#endif
+        case .autoupdating:
+            return LocaleCache.cache.current.currencySymbolDisplayName(for: currencySymbol)
+        }
+    }
+    
     /// Returns a localized string for a specified ICU collation identifier.
     ///
     /// For example, in the "en" locale, the result for `"phonebook"` is `"Phonebook Sort Order"`.
