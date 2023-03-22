@@ -265,6 +265,10 @@ internal final class _NSLocaleSwiftWrapper: @unchecked Sendable, Hashable, Custo
     func currencyCodeDisplayName(for currencyCode: String) -> String? {
         return _wrapped.displayName(forKey: .currencyCode, value: currencyCode)
     }
+    
+    func currencySymbolDisplayName(for currencySymbol: String) -> String? {
+        return _wrapped.displayName(forKey: .currencySymbol, value: currencySymbol)
+    }
 
     func collationIdentifierDisplayName(for collationIdentifier: String) -> String? {
         return _wrapped.displayName(forKey: .collationIdentifier, value: collationIdentifier)
@@ -502,7 +506,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         case .measurementSystem: return nil
         case .decimalSeparator: return nil
         case .groupingSeparator: return nil
-        case .currencySymbol: return self.localizedString(forCurrencyCode: value)
+        case .currencySymbol: return self.localizedString(forCurrencySymbol: value)
         case .currencyCode: return self.localizedString(forCurrencyCode: value)
         case .collatorIdentifier: return self.localizedString(forCollatorIdentifier: value)
         case .quotationBeginDelimiterKey: return nil
@@ -638,6 +642,10 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
 
     override func localizedString(forCurrencyCode currencyCode: String) -> String? {
         locale.localizedString(forCurrencyCode: currencyCode)
+    }
+
+    override func localizedString(forCurrencySymbol currencySymbol: String) -> String? {
+        locale.localizedString(forCurrencySymbol: currencySymbol)
     }
 
     override func localizedString(forCollatorIdentifier collatorIdentifier: String) -> String? {
