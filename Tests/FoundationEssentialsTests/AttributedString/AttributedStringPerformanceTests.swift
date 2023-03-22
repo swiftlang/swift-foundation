@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-
+// TODO: Support AttributedString performance tests in FoundationPreview
 #if canImport(TestSupport)
 import TestSupport
 #endif

@@ -1101,7 +1101,7 @@ E {
 
 #if FOUNDATION_FRAMEWORK
     // MARK: - Coding Tests
-    
+    // TODO: Support AttributedString codable conformance in FoundationPreview
     struct CodableType : Codable {
         // One of potentially many different values being encoded:
         @CodableConfiguration(from: \.test)
@@ -2099,7 +2099,7 @@ E {
     }
 
 #if FOUNDATION_FRAMEWORK
-    
+    // TODO: Implement AttributedStringProtocol.range(of:) in FoundationPreview
     func testSearch() {
         let testString = AttributedString("abcdefghi")
         XCTAssertNil(testString.range(of: "baba"))
@@ -2288,6 +2288,7 @@ E {
     }
     
 #if FOUNDATION_FRAMEWORK
+    // TODO: Support scope-specific AttributedString initialization in FoundationPreview
     func testScopedCopy() {
         var str = AttributedString("A")
         str += AttributedString("B", attributes: .init().testInt(2))

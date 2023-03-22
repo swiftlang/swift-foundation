@@ -637,6 +637,7 @@ extension Range where Bound == String.Index {
     }
 
 #if FOUNDATION_FRAMEWORK
+    // TODO: Support AttributedString markdown in FoundationPreview
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public init?<S: StringProtocol>(_ markdownSourcePosition: AttributedString.MarkdownSourcePosition, in target: S) {
         if let start = markdownSourcePosition.startOffsets, let end = markdownSourcePosition.endOffsets {

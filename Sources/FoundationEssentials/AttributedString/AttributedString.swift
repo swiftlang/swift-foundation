@@ -91,6 +91,7 @@ extension AttributedString {
     }
 
 #if FOUNDATION_FRAMEWORK
+    // TODO: Support scope-specific initialization in FoundationPreview
     public init<S : AttributeScope, T : AttributedStringProtocol>(_ other: T, including scope: KeyPath<AttributeScopes, S.Type>) {
         self.init(other, including: S.self)
     }
