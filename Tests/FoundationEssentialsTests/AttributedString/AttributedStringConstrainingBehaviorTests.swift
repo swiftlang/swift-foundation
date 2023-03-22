@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import Foundation
-import XCTest
+#if canImport(TestSupport)
+import TestSupport
+#endif
 
 class TestAttributedStringConstrainingBehavior: XCTestCase {
     
@@ -301,6 +302,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("Hello, w", 1, nil, nil), ("Test\n", 1, nil, true), ("Inserted", 5, 6, true), ("xt Paragraph", 5, 6, nil)], for: \.testParagraphConstrained, \.testSecondParagraphConstrained, \.testBool)
     }
     
+#if FOUNDATION_FRAMEWORK
     func testParagraphFromUntrustedRuns() throws {
         let str = NSMutableAttributedString(string: "Hello ", attributes: [.testParagraphConstrained : NSNumber(2)])
         str.append(NSAttributedString(string: "World", attributes: [.testParagraphConstrained : NSNumber(3), .testSecondParagraphConstrained : NSNumber(4)]))
@@ -308,6 +310,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         let attrStr = try AttributedString(str, including: \.test)
         verify(string: attrStr, matches: [("Hello World", 2, nil)], for: \.testParagraphConstrained, \.testSecondParagraphConstrained)
     }
+#endif // FOUNDATION_FRAMEWORK
     
     func testParagraphFromReplacedSubrange() {
         let str = AttributedString("Before\nHello, world\nNext Paragraph\nAfter", attributes: .init().testParagraphConstrained(1))
@@ -417,6 +420,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("*", 2), ("_____", nil), ("*", 2), ("*", 2), ("__", nil), ("*", 2)], for: \.testCharacterConstrained)
     }
     
+#if FOUNDATION_FRAMEWORK
     func testCharacterFromUntrustedRuns() throws {
         let str = NSMutableAttributedString(string: "*__*__**__*", attributes: [.testCharacterConstrained : NSNumber(2)])
         str.append(NSAttributedString(string: "_*"))
@@ -424,6 +428,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         let attrStr = try AttributedString(str, including: \.test)
         verify(string: attrStr, matches: [("*", 2), ("__", nil), ("*", 2), ("__", nil), ("*", 2), ("*", 2), ("__", nil), ("*", 2), ("_", nil), ("*", nil)], for: \.testCharacterConstrained)
     }
+#endif // FOUNDATION_FRAMEWORK
     
     // MARK: Invalidation Tests
     

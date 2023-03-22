@@ -10,9 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+#if canImport(TestSupport)
+import TestSupport
+#endif
 
+#if FOUNDATION_FRAMEWORK
 @testable import Foundation
+#else
+@testable import FoundationEssentials
+#endif
 
 extension AttributedStringProtocol {
     fileprivate mutating func genericSetAttribute() {

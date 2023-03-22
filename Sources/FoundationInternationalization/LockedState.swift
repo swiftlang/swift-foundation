@@ -81,6 +81,10 @@ internal struct LockedState<State> {
     }
 
     func withLock<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
+        try withLockUnchecked(body)
+    }
+    
+    func withLockUnchecked<T>(_ body: (inout State) throws -> T) rethrows -> T {
         try _buffer.withUnsafeMutablePointers { state, lock in
             _Lock.lock(lock)
             defer { _Lock.unlock(lock) }

@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
 import Darwin
 @_spi(Reflection) import Swift
 @_implementationOnly import os
+#endif
 
 extension String {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -46,6 +48,8 @@ extension String {
     }
     #endif
 }
+
+#if FOUNDATION_FRAMEWORK
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol ObjectiveCConvertibleAttributedStringKey : AttributedStringKey {
@@ -366,6 +370,8 @@ fileprivate func _loadAttributeTypes<S: AttributeScope>(from scope: S.Type) -> [
     return result
 }
 
+#endif // FOUNDATION_FRAMEWORK
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension String.Index {
     // FIXME: Converting indices between different collection types does not make sense.
@@ -399,6 +405,8 @@ extension AttributedString.Index {
         self.init(j)
     }
 }
+
+#if FOUNDATION_FRAMEWORK
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension NSRange {
@@ -444,6 +452,8 @@ extension NSRange {
         self.init(location: startOffsets.utf16, length: actualEndUTF16 - startOffsets.utf16)
     }
 }
+
+#endif // FOUNDATION_FRAMEWORK
 
 extension AttributedString {
     /// A dummy collection type whose only purpose is to facilitate a `RangeExpression.relative(to:)`
@@ -509,6 +519,7 @@ extension _BString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Range where Bound == AttributedString.Index {
+#if FOUNDATION_FRAMEWORK
     public init?<S: AttributedStringProtocol>(_ range: NSRange, in string: S) {
         // FIXME: This can return indices addressing trailing surrogates, which isn't a thing
         // FIXME: AttributedString is normally prepared to handle.
@@ -524,6 +535,7 @@ extension Range where Bound == AttributedString.Index {
         guard start >= string.startIndex._value, end <= string.endIndex._value else { return nil }
         self.init(uncheckedBounds: (.init(start), .init(end)))
     }
+#endif // FOUNDATION_FRAMEWORK
 
     // FIXME: Converting indices between different collection types does not make sense.
     // FIXME: (Indices are meaningless without the collection value to which they belong,
@@ -624,6 +636,7 @@ extension Range where Bound == String.Index {
         self.init(uncheckedBounds: (start, end))
     }
 
+#if FOUNDATION_FRAMEWORK
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public init?<S: StringProtocol>(_ markdownSourcePosition: AttributedString.MarkdownSourcePosition, in target: S) {
         if let start = markdownSourcePosition.startOffsets, let end = markdownSourcePosition.endOffsets {
@@ -635,5 +648,6 @@ extension Range where Bound == String.Index {
             self = target.utf8.index(target.startIndex, offsetBy: offsets.start.utf8) ..< target.utf8.index(target.startIndex, offsetBy: offsets.end.utf8 + 1)
         }
     }
+#endif // FOUNDATION_FRAMEWORK
 }
 

@@ -10,8 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+#if canImport(TestSupport)
+import TestSupport
+#endif
 
+#if FOUNDATION_FRAMEWORK
 extension NSAttributedString.Key {
     static let testInt = NSAttributedString.Key("TestInt")
     static let testString = NSAttributedString.Key("TestString")
@@ -21,25 +24,26 @@ extension NSAttributedString.Key {
     static let testSecondParagraphConstrained = NSAttributedString.Key("TestSecondParagraphConstrained")
     static let testCharacterConstrained = NSAttributedString.Key("TestCharacterConstrained")
 }
+#endif
 
 extension AttributeScopes.TestAttributes {
 
-    enum TestIntAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    enum TestIntAttribute: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestInt"
     }
 
-    enum TestStringAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    enum TestStringAttribute: CodableAttributedStringKey {
         typealias Value = String
         static let name = "TestString"
     }
 
-    enum TestDoubleAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    enum TestDoubleAttribute: CodableAttributedStringKey {
         typealias Value = Double
         static let name = "TestDouble"
     }
 
-    enum TestBoolAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    enum TestBoolAttribute: CodableAttributedStringKey {
         typealias Value = Bool
         static let name = "TestBool"
     }
@@ -86,31 +90,6 @@ extension AttributeScopes.TestAttributes {
         static let invalidationConditions: Set<AttributedString.AttributeInvalidationCondition>? = [.textChanged]
     }
 
-    #if false
-    @frozen enum MisspelledAttribute : CodableAttributedStringKey, FixableAttribute {
-        typealias Value = Bool
-        static let name = "Misspelled"
-        
-        public static func fixAttribute(in string: inout AttributedString) {
-            let words = string.characters.subranges {
-                !$0.isWhitespace && !$0.isPunctuation
-            }
-            
-            // First make sure that no non-words are marked as misspelled
-            let nonWords = RangeSet(string.startIndex ..< string.endIndex).subtracting(words)
-            string[nonWords].misspelled = nil
-            
-            // Then make sure that any word ranges containing the attribute span the entire word
-            for (misspelled, range) in string.runs[\.misspelledAttribute] {
-                if let misspelled = misspelled, misspelled {
-                    let fullRange = words.ranges[words.ranges.firstIndex { $0.contains(range.lowerBound) }!]
-                    string[fullRange].misspelled = true
-                }
-            }
-        }
-    }
-    #endif
-
     enum NonCodableAttribute : AttributedStringKey {
         typealias Value = NonCodableType
         static let name = "NonCodable"
@@ -131,8 +110,14 @@ extension AttributeScopes.TestAttributes {
             return NonCodableType(inner: inner)
         }
     }
-    
 }
+
+#if FOUNDATION_FRAMEWORK
+extension AttributeScopes.TestAttributes.TestIntAttribute : MarkdownDecodableAttributedStringKey {}
+extension AttributeScopes.TestAttributes.TestStringAttribute : MarkdownDecodableAttributedStringKey {}
+extension AttributeScopes.TestAttributes.TestBoolAttribute : MarkdownDecodableAttributedStringKey {}
+extension AttributeScopes.TestAttributes.TestDoubleAttribute : MarkdownDecodableAttributedStringKey {}
+#endif // FOUNDATION_FRAMEWORK
 
 struct NonCodableType : Hashable {
     var inner : Int
@@ -153,9 +138,6 @@ extension AttributeScopes {
         var testUnicodeCharacterConstrained : TestUnicodeCharacterConstrained
         var testAttributeDependent : TestAttributeDependent
         var testCharacterDependent : TestCharacterDependent
-    #if false
-        var misspelled : MisspelledAttribute
-    #endif
     }
 }
 
@@ -171,3 +153,17 @@ enum TestError: Error {
     case conversionError
     case markdownError
 }
+
+#if !FOUNDATION_FRAMEWORK
+
+extension AttributedStringProtocol {
+    func range(of other: String) -> Range<AttributedString.Index>? {
+        let str = String(characters)
+        guard let strRange = str.firstRange(of: other) else { return nil }
+        let start = str.unicodeScalars.distance(from: str.startIndex, to: strRange.lowerBound)
+        let end = str.unicodeScalars.distance(from: str.startIndex, to: strRange.upperBound)
+        return unicodeScalars.index(startIndex, offsetBy: start) ..< unicodeScalars.index(startIndex, offsetBy: end)
+    }
+}
+
+#endif // !FOUNDATION_FRAMEWORK

@@ -9,14 +9,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
-#elseif DEBUG
-@testable import RopeModule
+#else
+@testable import FoundationEssentials
 #endif
-import XCTest
 
-#if FOUNDATION_FRAMEWORK || DEBUG
 struct Chunk: _RopeElement, Equatable, CustomStringConvertible {
   var length: Int
   var value: Int
@@ -545,4 +547,3 @@ class TestRope: XCTestCase {
   }
 
 }
-#endif

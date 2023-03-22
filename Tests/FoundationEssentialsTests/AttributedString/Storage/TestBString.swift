@@ -11,15 +11,16 @@
 
 #if swift(>=5.8)
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#elseif DEBUG
-@testable import RopeModule
+#if canImport(TestSupport)
+import TestSupport
 #endif
 
-import XCTest
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#else
+@testable import FoundationEssentials
+#endif
 
-#if FOUNDATION_FRAMEWORK || DEBUG
 @available(macOS 13.3, iOS 16.4, watchOS 9.4, tvOS 16.4, *)
 class TestBString: XCTestCase {
   override class func setUp() {
@@ -444,5 +445,4 @@ class TestBString: XCTestCase {
     }
   }
 }
-#endif // FOUNDATION_FRAMEWORK || DEBUG
 #endif // swift(>=5.8)

@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
 @_spi(Reflection) import Swift
+#endif
 
 // MARK: AttributedStringKey
 
@@ -64,7 +66,7 @@ public extension MarkdownDecodableAttributedStringKey where Self : DecodableAttr
     static func decodeMarkdown(from decoder: Decoder) throws -> Value { try Self.decode(from: decoder) }
 }
 
-
+#if FOUNDATION_FRAMEWORK
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
     static func encode(_ value: Value, to encoder: Encoder) throws {
@@ -87,6 +89,7 @@ public extension DecodableAttributedStringKey where Value : NSSecureCoding & NSO
         return result
     }
 }
+#endif // FOUNDATION_FRAMEWORK
 
 // MARK: Codable With Configuration
 
@@ -360,6 +363,8 @@ public extension AttributeScope {
     static var decodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(scopeType: self) }
 }
 
+#if FOUNDATION_FRAMEWORK
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString : Codable {
     public func encode(to encoder: Encoder) throws {
@@ -602,6 +607,8 @@ extension AttributeContainer : CodableWithConfiguration {
         self.storage = try AttributedString.decodeAttributeContainer(from: decoder, configuration: configuration, using: &attributeKeyTypeTable)
     }
 }
+
+#endif // FOUNDATION_FRAMEWORK
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension CodableConfiguration where ConfigurationProvider : AttributeScope {

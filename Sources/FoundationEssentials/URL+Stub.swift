@@ -12,7 +12,7 @@
 
 #if !FOUNDATION_FRAMEWORK
 
-public struct URL : Equatable, Sendable {
+public struct URL : Hashable, Sendable, Codable {
     
 }
 

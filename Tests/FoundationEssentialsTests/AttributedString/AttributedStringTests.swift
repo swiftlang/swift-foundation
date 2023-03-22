@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+#if canImport(TestSupport)
+import TestSupport
+#endif
 
+#if FOUNDATION_FRAMEWORK
 @testable @_spi(AttributedString) import Foundation
-import Darwin
-@_spi(Reflection) import Swift
-
 // For testing default attribute scope conversion
 #if canImport(Accessibility)
 import Accessibility
@@ -29,6 +29,7 @@ import UIKit
 #if canImport(AppKit)
 import AppKit
 #endif
+#endif // FOUNDATION_FRAMEWORK
 
 /// Regression and coverage tests for `AttributedString` and its associated objects
 final class TestAttributedString: XCTestCase {
@@ -82,6 +83,7 @@ final class TestAttributedString: XCTestCase {
         XCTAssertNil(expectIterator.next(), "Additional runs expected but not found")
     }
     
+#if FOUNDATION_FRAMEWORK
     func verifyAttributes(_ runs: AttributedString.Runs.NSAttributesSlice, string: AttributedString, expectation: [(String, AttributeContainer)], file: StaticString = #file, line: UInt = #line) {
         // Test that the attribute is correct when iterating through attribute runs
         var expectIterator = expectation.makeIterator()
@@ -101,6 +103,7 @@ final class TestAttributedString: XCTestCase {
         }
         XCTAssertNil(expectIterator.next(), "Additional runs expected but not found", file: file, line: line)
     }
+#endif // FOUNDATION_FRAMEWORK
 
     func testSimpleEnumeration() {
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testInt(1))
@@ -170,6 +173,7 @@ final class TestAttributedString: XCTestCase {
         verifyAttributes(attrView[\.testInt, \.testDouble], string: attrStr, expectation: [("lo", 1, nil), (" ", nil, nil), ("Wo", nil, 2.0)])
     }
     
+#if FOUNDATION_FRAMEWORK
     func testNSSliceEnumeration() {
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testInt(1))
         attrStr += AttributedString(" ")
@@ -194,6 +198,7 @@ final class TestAttributedString: XCTestCase {
             ("rld", .init().testDouble(2.0))
         ])
     }
+#endif // FOUNDATION_FRAMEWORK
 
     // MARK: - Attribute Tests
 
@@ -713,8 +718,8 @@ final class TestAttributedString: XCTestCase {
     func testAddAttributedString() {
         let attrStr = AttributedString("Hello ", attributes: .init().testInt(1))
         let attrStr2 = AttributedString("World", attributes: .init().testInt(2))
-        let original = AttributedString(attrStr)
-        let original2 = AttributedString(attrStr2)
+        let original = attrStr
+        let original2 = attrStr2
         
         var concat = AttributedString("Hello ", attributes: .init().testInt(1))
         concat += AttributedString("World", attributes: .init().testInt(2))
@@ -768,7 +773,7 @@ final class TestAttributedString: XCTestCase {
         var prev: AttributedString.Runs.Run?
         for run in str.runs {
             if let prev = prev {
-                XCTAssertNotEqual(prev._attributes, run._attributes)
+                XCTAssertNotEqual(prev.attributes, run.attributes)
             }
             prev = run
         }
@@ -1094,6 +1099,7 @@ E {
         XCTAssertEqual(recreated.runs.count, 3)
     }
 
+#if FOUNDATION_FRAMEWORK
     // MARK: - Coding Tests
     
     struct CodableType : Codable {
@@ -1790,6 +1796,8 @@ E {
             XCTAssertEqual(attrStr.runs.count, test.1, "Replacement of range \(NSStringFromRange(test.0)) caused a run count of \(attrStr.runs.count)")
         }
     }
+    
+#endif // FOUNDATION_FRAMEWORK
 
     // MARK: - View Tests
 
@@ -2064,7 +2072,6 @@ E {
             attrStr += AttributedString("C", attributes: .init().testInt(3))
             XCTAssertTrue(attrStr == attrStr)
             XCTAssertTrue(attrStr.runs == attrStr.runs)
-            XCTAssertEqual(attrStr._guts.runs[0].length, 1 + str.utf8.count)
         }
     }
 
@@ -2091,6 +2098,8 @@ E {
         XCTAssertEqual(abc_lit, abc)
     }
 
+#if FOUNDATION_FRAMEWORK
+    
     func testSearch() {
         let testString = AttributedString("abcdefghi")
         XCTAssertNil(testString.range(of: "baba"))
@@ -2181,6 +2190,8 @@ E {
         XCTAssertNil(testString.range(of: "bcd", options: [.anchored]))
         XCTAssertNil(testString.range(of: "abc", options: [.anchored, .backwards]))
     }
+    
+#endif // FOUNDATION_FRAMEWORK
 
     func testIndexConversion() {
         let attrStr = AttributedString("ABCDE")
@@ -2195,6 +2206,8 @@ E {
         let reconvertedAttrStrIdex = AttributedString.Index(strIdx, within: attrStr)!
         XCTAssertEqual(attrStr.characters[reconvertedAttrStrIdex], "C")
     }
+    
+#if FOUNDATION_FRAMEWORK
 
     func testRangeConversion() {
         let attrStr = AttributedString("ABCDE")
@@ -2265,6 +2278,8 @@ E {
         }
     }
     
+#endif // FOUNDATION_FRAMEWORK
+    
     func testOOBRangeConversion() {
         let attrStr = AttributedString("")
         let str = "Hello"
@@ -2272,6 +2287,7 @@ E {
         XCTAssertNil(Range<AttributedString.Index>(range, in: attrStr))
     }
     
+#if FOUNDATION_FRAMEWORK
     func testScopedCopy() {
         var str = AttributedString("A")
         str += AttributedString("B", attributes: .init().testInt(2))
@@ -2308,6 +2324,7 @@ E {
         
         XCTAssertEqual(AttributedString(str[range], including: None.self), AttributedString("BC"))
     }
+#endif // FOUNDATION_FRAMEWORK
 
     func testAssignDifferentSubstring() {
         var attrStr1 = AttributedString("ABCDE")
@@ -2321,14 +2338,14 @@ E {
     func testCOWDuringSubstringMutation() {
         func frobnicate(_ sub: inout AttributedSubstring) {
             var new = sub
-            new.foregroundColor = .blue
-            new.backgroundColor = .black
+            new.testInt = 2
+            new.testString = "Hello"
             sub = new
         }
         var attrStr = AttributedString("ABCDE")
         frobnicate(&attrStr[ attrStr.range(of: "BCD")! ])
 
-        let expected = AttributedString("A") + AttributedString("BCD", attributes: .init().foregroundColor(.blue).backgroundColor(.black)) + AttributedString("E")
+        let expected = AttributedString("A") + AttributedString("BCD", attributes: .init().testInt(2).testString("Hello")) + AttributedString("E")
         XCTAssertEqual(attrStr, expected)
     }
 
@@ -2346,11 +2363,11 @@ E {
 #endif
 
     func testAssignDifferentCharacterView() {
-        var attrStr1 = AttributedString("ABC", attributes: .init().foregroundColor(.black)) + AttributedString("DE", attributes: .init().foregroundColor(.white))
-        let attrStr2 = AttributedString("XYZ", attributes: .init().foregroundColor(.blue))
+        var attrStr1 = AttributedString("ABC", attributes: .init().testInt(1)) + AttributedString("DE", attributes: .init().testInt(3))
+        let attrStr2 = AttributedString("XYZ", attributes: .init().testInt(2))
 
         attrStr1.characters = attrStr2.characters
-        XCTAssertEqual(attrStr1, AttributedString("XYZ", attributes: .init().foregroundColor(.black)))
+        XCTAssertEqual(attrStr1, AttributedString("XYZ", attributes: .init().testInt(1)))
     }
 
     func testCOWDuringCharactersMutation() {
@@ -2359,18 +2376,18 @@ E {
             new.replaceSubrange(chars.startIndex ..< chars.endIndex, with: "XYZ")
             chars = new
         }
-        var attrStr = AttributedString("ABCDE", attributes: .init().foregroundColor(.black))
+        var attrStr = AttributedString("ABCDE", attributes: .init().testInt(1))
         frobnicate(&attrStr.characters)
 
-        XCTAssertEqual(attrStr, AttributedString("XYZ", attributes: .init().foregroundColor(.black)))
+        XCTAssertEqual(attrStr, AttributedString("XYZ", attributes: .init().testInt(1)))
     }
 
     func testAssignDifferentUnicodeScalarView() {
-        var attrStr1 = AttributedString("ABC", attributes: .init().foregroundColor(.black)) + AttributedString("DE", attributes: .init().foregroundColor(.white))
-        let attrStr2 = AttributedString("XYZ", attributes: .init().foregroundColor(.blue))
+        var attrStr1 = AttributedString("ABC", attributes: .init().testInt(1)) + AttributedString("DE", attributes: .init().testInt(3))
+        let attrStr2 = AttributedString("XYZ", attributes: .init().testInt(2))
 
         attrStr1.unicodeScalars = attrStr2.unicodeScalars
-        XCTAssertEqual(attrStr1, AttributedString("XYZ", attributes: .init().foregroundColor(.black)))
+        XCTAssertEqual(attrStr1, AttributedString("XYZ", attributes: .init().testInt(1)))
     }
 
     func testCOWDuringUnicodeScalarsMutation() {
@@ -2379,28 +2396,9 @@ E {
             new.replaceSubrange(chars.startIndex ..< chars.endIndex, with: "XYZ")
             chars = new
         }
-        var attrStr = AttributedString("ABCDE", attributes: .init().foregroundColor(.black))
+        var attrStr = AttributedString("ABCDE", attributes: .init().testInt(1))
         frobnicate(&attrStr.characters)
 
-        XCTAssertEqual(attrStr, AttributedString("XYZ", attributes: .init().foregroundColor(.black)))
+        XCTAssertEqual(attrStr, AttributedString("XYZ", attributes: .init().testInt(1)))
     }
-
-
-#if false
-    func testAttributeFixing() {
-        var str =
-            AttributedString("This is a mis") +
-            AttributedString("pel", attributes: AttributeContainer().misspelled(true)) +
-            AttributedString("led word")
-        
-        str.fixAttributes(in: AttributeScopes.TestAttributes.self)
-        
-        let expected =
-            AttributedString("This is a ") +
-            AttributedString("mispelled", attributes: AttributeContainer().misspelled(true)) +
-            AttributedString(" word")
-        XCTAssertEqual(str, expected)
-    }
-#endif
-
 }

@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+#if FOUNDATION_FRAMEWORK
 
-import Foundation
+#if canImport(TestSupport)
+import TestSupport
+#endif
 
 /// Performance tests for `AttributedString` and its associated objects
 final class TestAttributedStringPerformance: XCTestCase {
@@ -426,3 +428,5 @@ final class TestAttributedStringPerformance: XCTestCase {
         }
     }
 }
+
+#endif // FOUNDATION_FRAMEWORK
