@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_spi(Reflection) import Swift
-#endif
-
 // MARK: AttributedStringKey
 
 extension Decoder {
