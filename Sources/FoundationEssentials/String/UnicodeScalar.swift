@@ -31,23 +31,11 @@ extension UnicodeScalar {
     }
 
     var _isGraphemeExtend: Bool {
-#if FOUNDATION_FRAMEWORK // TODO: Implement `CFUniCharGetBitmapPtrForPlane` in Swift
-        let truncated = UInt16(truncatingIfNeeded: value) // intentionally truncated
-        let bitmap = CFUniCharGetBitmapPtrForPlane(UInt32(kCFUniCharGraphemeExtendCharacterSet), (value < 0x10000) ? 0 : (value >> 16))
-        return CFUniCharIsMemberOfBitmap(truncated, bitmap)
-#else
-        return false
-#endif
+        return BuiltInUnicodeScalarSet.graphemeExtend.contains(self)
     }
 
     var _isCanonicalDecomposable: Bool {
-#if FOUNDATION_FRAMEWORK // TODO: Implement `CFUniCharGetBitmapPtrForPlane` in Swift
-        let truncated = UInt16(truncatingIfNeeded: value)
-        let bitmap = CFUniCharGetBitmapPtrForPlane(UInt32(kCFUniCharCanonicalDecomposableCharacterSet), value >> 16)
-        return CFUniCharIsMemberOfBitmap(truncated, bitmap)
-#else
-        return false
-#endif
+        return BuiltInUnicodeScalarSet.canonicalDecomposable.contains(self)
     }
 
     func _stripDiacritics() -> Self {
