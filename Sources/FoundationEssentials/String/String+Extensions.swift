@@ -20,3 +20,41 @@ extension Character {
     }
 
 }
+
+extension Substring.UnicodeScalarView {
+    func _rangeOfCharacter(from set: CharacterSet, anchored: Bool, backwards: Bool) -> Range<Index>? {
+        guard !isEmpty else { return nil }
+
+        let fromLoc: String.Index
+        let toLoc: String.Index
+        let step: Int
+        if backwards {
+            fromLoc = index(before: endIndex)
+            toLoc = anchored ? fromLoc : startIndex
+            step = -1
+        } else {
+            fromLoc = startIndex
+            toLoc = anchored ? fromLoc : index(before: endIndex)
+            step = 1
+        }
+
+        var done = false
+        var found = false
+
+        var idx = fromLoc
+        while !done {
+            let ch = self[idx]
+            if set.contains(ch) {
+                done = true
+                found = true
+            } else if idx == toLoc {
+                done = true
+            } else {
+                formIndex(&idx, offsetBy: step)
+            }
+        }
+
+        guard found else { return nil }
+        return idx..<index(after: idx)
+    }
+}

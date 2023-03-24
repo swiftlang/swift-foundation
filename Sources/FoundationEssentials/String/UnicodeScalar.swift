@@ -26,7 +26,7 @@ extension UnicodeScalar {
             return self
         }
 #else
-        return self
+        fatalError("_toHalfWidth is not implemented yet")
 #endif
     }
 
@@ -59,7 +59,7 @@ extension UnicodeScalar {
 
         return stripped != nil ? UnicodeScalar(stripped!)! : self
 #else
-        return self
+        fatalError("_stripDiacritics is not implemented yet")
 #endif // FOUNDATION_FRAMEWORK
     }
 
@@ -67,7 +67,7 @@ extension UnicodeScalar {
 #if FOUNDATION_FRAMEWORK // TODO: Expose Case Mapping Data without @_spi(_Unicode)
         return self.properties._caseFolded
 #else
-        return ""
+        fatalError("_caseFoldMapping is not implemented yet")
 #endif
     }
 }
