@@ -21,17 +21,9 @@ import Glibc
 ///
 /// The marker protocol also provides access to the type of the `Decodable` values,
 /// which is needed for the implementation of the key conversion strategy exemption.
-///
-/// NOTE: Please see comment above regarding SR-8276
-#if arch(i386) || arch(arm)
-internal protocol _JSONStringDictionaryDecodableMarker {
-    static var elementType: Decodable.Type { get }
-}
-#else
 private protocol _JSONStringDictionaryDecodableMarker {
     static var elementType: Decodable.Type { get }
 }
-#endif
 
 extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String, Value: Decodable {
     static var elementType: Decodable.Type { return Value.self }
@@ -667,7 +659,7 @@ extension JSONDecoderImpl: Decoder {
         }
     }
 
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once DateFormatStyle has been moved
+#if FOUNDATION_FRAMEWORK // TODO: Reenable once URL and Decimal has been moved
     private func unwrapURL(from mapValue: JSONMap.Value, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> URL {
         try checkNotNull(mapValue, expectedType: URL.self, for: codingPathNode, additionalKey)
 
