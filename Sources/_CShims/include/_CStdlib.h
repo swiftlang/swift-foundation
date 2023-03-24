@@ -130,5 +130,9 @@
 #include <uchar.h>
 #endif
 
+#if __has_include(<stdint.h>)
+#include <stdint.h>
+#endif
+
 #endif // FOUNDATION_CSTDLIB
 
