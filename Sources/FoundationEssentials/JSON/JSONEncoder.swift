@@ -12,16 +12,7 @@
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
-///
-/// NOTE: The architecture and environment check is due to a bug in the current (2018-08-08) Swift 4.2
-/// runtime when running on i386 simulator. The issue is tracked in https://bugs.swift.org/browse/SR-8276
-/// Making the protocol `internal` instead of `private` works around this issue.
-/// Once SR-8276 is fixed, this check can be removed and the protocol always be made private.
-#if arch(i386) || arch(arm)
-internal protocol _JSONStringDictionaryEncodableMarker { }
-#else
 private protocol _JSONStringDictionaryEncodableMarker { }
-#endif
 
 extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
 
@@ -34,7 +25,9 @@ extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String,
 // The two must coexist, so it was renamed. The old name must not be
 // used in the new runtime. _TtC10Foundation13__JSONEncoder is the
 // mangled name for Foundation.__JSONEncoder.
+#if FOUNDATION_FRAMEWORK
 @_objcRuntimeName(_TtC10Foundation13__JSONEncoder)
+#endif
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 open class JSONEncoder {
     // MARK: Options
@@ -125,7 +118,7 @@ open class JSONEncoder {
         case useDefaultKeys
 
 #if FOUNDATION_FRAMEWORK
-        // TODO: Reenable this option once String.capitalize() is moved
+        // TODO: Reenable this option once String.rangeOfCharacter(from:) is moved
 
         /// Convert from "camelCaseKeys" to "snake_case_keys" before writing a key to JSON payload.
         ///
