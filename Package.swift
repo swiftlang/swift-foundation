@@ -14,7 +14,8 @@ let package = Package(
         .library(name: "FoundationNetworking", targets: ["FoundationNetworking"])
     ],
     dependencies: [
-        .package(url: "git@github.com:apple/swift-foundation-icu.git", branch: "main")
+        // Intentionally use this deprecated version so we can control the package name.
+        .package(name: "swift-foundation-icu", url: "git@github.com:apple/swift-foundation-icu.git", branch: "main")
     ],
     targets: [
         // Foundation (umbrella)
