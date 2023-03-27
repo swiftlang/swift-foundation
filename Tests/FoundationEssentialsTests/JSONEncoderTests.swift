@@ -1223,7 +1223,7 @@ final class JSONEncoderTests : XCTestCase {
     }
 
     func test_topLevelNumberFragmentsWithJunkDigitCharacters() {
-        let fullData = "3.141596".data(using: .utf8)!
+        let fullData = "3.141596".data(using: String._Encoding.utf8)!
         let partialData = fullData[0..<4]
 
         XCTAssertEqual(3.14, try JSONDecoder().decode(Double.self, from: partialData))

@@ -890,11 +890,13 @@ public struct Locale : Hashable, Equatable, Sendable {
         switch kind {
         case .autoupdating: return LocaleCache.cache.current.prefs
         case .fixed(let l): return l.prefs
+#if FOUNDATION_FRAMEWORK
         case .bridged(_): return nil
+#endif
         }
     }
     
-    #if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK
     internal func pref(for key: String) -> Any? {
         switch kind {
         case .autoupdating: return LocaleCache.cache.current.pref(for: key)
