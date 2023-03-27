@@ -312,8 +312,11 @@ internal struct JSONWriter {
     }
 }
 
-// MARK: - Exported Types
+// MARK: - WritingOptions
 extension JSONWriter {
+#if FOUNDATION_FRAMEWORK
+    typealias WritingOptions = JSONSerialization.WritingOptions
+#else
     struct WritingOptions : OptionSet, Sendable {
         let rawValue: UInt
 
@@ -330,4 +333,5 @@ extension JSONWriter {
         /// Specifies that the output doesn’t prefix slash characters with escape characters.
         static let withoutEscapingSlashes = WritingOptions(rawValue: 1 << 3)
     }
+#endif // FOUNDATION_FRAMEWORK
 }

@@ -554,12 +554,7 @@ final class LocaleCodableTests: XCTestCase {
 
         expectDecode("{}", Locale.Language.Components(identifier: ""))
     }
-}
 
-// MARK: - FoundationPreview Disabled Tests
-#if FOUNDATION_FRAMEWORK
-extension LocaleComponentsTests {
-    // TODO: Reenable once String.capitalized is implemented in Swift
     // Locale components are considered equal regardless of the identifier's case
     func testCaseInsensitiveEquality() {
         XCTAssertEqual(Locale.Collation("search"), Locale.Collation("SEARCH"))
@@ -576,6 +571,8 @@ extension LocaleComponentsTests {
     }
 }
 
+// MARK: - FoundationPreview Disabled Tests
+#if FOUNDATION_FRAMEWORK
 extension LocaleCodableTests {
     func _encodeAsJSON<T: Codable>(_ t: T) -> String? {
         let encoder = JSONEncoder()

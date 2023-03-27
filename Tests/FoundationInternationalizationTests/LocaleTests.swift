@@ -426,6 +426,28 @@ final class LocalePropertiesTests : XCTestCase {
         XCTAssertEqual(customizedLocale.decimalSeparator, "*")
         XCTAssertEqual(customizedLocale.groupingSeparator, "-")
     }
+
+    func test_defaultValue() {
+        verify("en_US", expectedLanguage: "en", script: "Latn", languageRegion: "US", region: "US", measurementSystem: .us, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "USD", numberingSystem: "latn", numberingSystems: [ "latn" ], firstDayOfWeek: .sunday, collation: .standard, variant: nil)
+
+        verify("en_GB", expectedLanguage: "en", script: "Latn", languageRegion: "GB", region: "GB", measurementSystem: .uk, calendar: .gregorian, hourCycle: .zeroToTwentyThree, currency: "GBP", numberingSystem: "latn", numberingSystems: [ "latn" ], firstDayOfWeek: .monday, collation: .standard, variant: nil)
+
+        verify("zh_TW", expectedLanguage: "zh", script: "Hant", languageRegion: "TW", region: "TW", measurementSystem: .metric, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "TWD", numberingSystem: "latn", numberingSystems: [ "latn", "hantfin", "hanidec", "hant" ], firstDayOfWeek: .sunday, collation: .standard, variant: nil)
+
+        verify("ar_EG", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "EG", measurementSystem: .metric, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "EGP", numberingSystem: "arab", numberingSystems: [ "latn", "arab" ], firstDayOfWeek: .saturday, collation: .standard, variant: nil)
+    }
+
+    func test_keywordOverrides() {
+
+        verify("ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: nil, measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: [ "traditio", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dict")
+
+        // With legacy values
+        verify("ar_EG@calendar=ethiopic-amete-alem;collation=dictionary;measure=imperial;numbers=traditional", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "EG", measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .oneToTwelve, currency: "EGP", numberingSystem: "traditional", numberingSystems: [ "traditional", "latn", "arab" ], firstDayOfWeek: .saturday, collation: "dictionary", variant: nil)
+
+        verify("ar-EG-u-ca-ethioaa-co-dict-cu-frf-fw-fri-hc-h11-ms-uksystem-nu-traditio-rg-uszzzz",expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: nil, measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditional", numberingSystems: [ "traditional", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dictionary")
+
+        verify("ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz;sd=usca", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: "usca", measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: [ "traditio", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dict")
+    }
 }
 
 // MARK: - Bridging Tests
@@ -595,31 +617,6 @@ extension LocaleTests {
     }
 }
 
-extension LocalePropertiesTests {
-    // TODO: Reenable once String.capitalize is implemented
-    func test_defaultValue() {
-        verify("en_US", expectedLanguage: "en", script: "Latn", languageRegion: "US", region: "US", measurementSystem: .us, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "USD", numberingSystem: "latn", numberingSystems: [ "latn" ], firstDayOfWeek: .sunday, collation: .standard, variant: nil)
-
-        verify("en_GB", expectedLanguage: "en", script: "Latn", languageRegion: "GB", region: "GB", measurementSystem: .uk, calendar: .gregorian, hourCycle: .zeroToTwentyThree, currency: "GBP", numberingSystem: "latn", numberingSystems: [ "latn" ], firstDayOfWeek: .monday, collation: .standard, variant: nil)
-
-        verify("zh_TW", expectedLanguage: "zh", script: "Hant", languageRegion: "TW", region: "TW", measurementSystem: .metric, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "TWD", numberingSystem: "latn", numberingSystems: [ "latn", "hantfin", "hanidec", "hant" ], firstDayOfWeek: .sunday, collation: .standard, variant: nil)
-
-        verify("ar_EG", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "EG", measurementSystem: .metric, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "EGP", numberingSystem: "arab", numberingSystems: [ "latn", "arab" ], firstDayOfWeek: .saturday, collation: .standard, variant: nil)
-    }
-
-    // TODO: Reenable once String.capitalize is implemented
-    func test_keywordOverrides() {
-
-        verify("ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: nil, measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: [ "traditio", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dict")
-
-        // With legacy values
-        verify("ar_EG@calendar=ethiopic-amete-alem;collation=dictionary;measure=imperial;numbers=traditional", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "EG", measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .oneToTwelve, currency: "EGP", numberingSystem: "traditional", numberingSystems: [ "traditional", "latn", "arab" ], firstDayOfWeek: .saturday, collation: "dictionary", variant: nil)
-
-        verify("ar-EG-u-ca-ethioaa-co-dict-cu-frf-fw-fri-hc-h11-ms-uksystem-nu-traditio-rg-uszzzz",expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: nil, measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditional", numberingSystems: [ "traditional", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dictionary")
-
-        verify("ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz;sd=usca", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: "usca", measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: [ "traditio", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dict")
-    }
-}
 #endif // FOUNDATION_FRAMEWORK
 
 // MARK: - Disabled Tests
