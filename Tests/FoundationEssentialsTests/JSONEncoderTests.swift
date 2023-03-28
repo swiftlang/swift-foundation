@@ -1323,8 +1323,11 @@ final class JSONEncoderTests : XCTestCase {
     }
 
     func test_localeDecimalPolicyIndependence() {
-        let currentLocale = setlocale(LC_ALL, nil)
-
+        var currentLocale: UnsafeMutablePointer<CChar>? = nil
+        if let localePtr = setlocale(LC_ALL, nil) {
+            currentLocale = strdup(localePtr)
+        }
+        
         let orig = ["decimalValue" : 1.1]
 
         do {
@@ -1338,8 +1341,11 @@ final class JSONEncoderTests : XCTestCase {
         } catch {
             XCTFail("Error: \(error)")
         }
-
-        setlocale(LC_ALL, currentLocale)
+        
+        if let currentLocale {
+            setlocale(LC_ALL, currentLocale)
+            currentLocale.deallocate()
+        }
     }
 
     func test_whitespace() {
