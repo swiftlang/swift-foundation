@@ -10,22 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-enum JSONValue: Equatable {
-    case string(String)
-    case number(String)
-    case bool(Bool)
-    case null
-
-    case array([JSONValue])
-    case object([String: JSONValue])
-}
-
-extension JSONValue {
-    static func number(from num: any (FixedWidthInteger & CustomStringConvertible)) -> JSONValue {
+extension JSONReference {
+    static func number(from num: any (FixedWidthInteger & CustomStringConvertible)) -> JSONReference {
         return .number(num.description)
     }
 
-    static func number<T: BinaryFloatingPoint & CustomStringConvertible>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = Optional<_JSONKey>.none) throws -> JSONValue {
+    static func number<T: BinaryFloatingPoint & CustomStringConvertible>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = Optional<_JSONKey>.none) throws -> JSONReference {
         guard !float.isNaN, !float.isInfinite else {
             if case .convertToString(let posInfString, let negInfString, let nanString) = options {
                 switch float {
@@ -77,8 +67,8 @@ internal struct JSONWriter {
         data = Data()
     }
 
-    mutating func serializeJSON(_ value: JSONValue, depth: Int = 0) throws {
-        switch value {
+    mutating func serializeJSON(_ value: JSONReference, depth: Int = 0) throws {
+        switch value.backing {
         case .string(let str):
             try serializeString(str)
         case .bool(let boolValue):
@@ -184,7 +174,7 @@ internal struct JSONWriter {
         writer("\"")
     }
 
-    mutating func serializeArray(_ array: [JSONValue], depth: Int) throws {
+    mutating func serializeArray(_ array: [JSONReference], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
@@ -216,7 +206,7 @@ internal struct JSONWriter {
         writer("]")
     }
 
-    mutating func serializeObject(_ dict: [String:JSONValue], depth: Int) throws {
+    mutating func serializeObject(_ dict: [String:JSONReference], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
@@ -232,7 +222,7 @@ internal struct JSONWriter {
 
         var first = true
 
-        func serializeObjectElement(key: String, value: JSONValue, depth: Int) throws {
+        func serializeObjectElement(key: String, value: JSONReference, depth: Int) throws {
             if first {
                 first = false
             } else if pretty {
