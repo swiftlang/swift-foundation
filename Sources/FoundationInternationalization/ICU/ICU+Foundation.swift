@@ -82,6 +82,35 @@ internal func _withFixedUCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_
     }
 }
 
+/// Allocate a buffer with `size` `CChar`s and execute the given block.
+/// The closure should return the actual length of the string, or nil if there is an error in the ICU call or the result is zero length.
+internal func _withResizingCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeMutablePointer<CChar>, Int32, inout UErrorCode) -> Int32?) -> String? {
+    withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(initialSize)) {
+        buffer in
+        var status = U_ZERO_ERROR
+        if let len = body(buffer.baseAddress!, initialSize, &status) {
+            if status == U_BUFFER_OVERFLOW_ERROR {
+                // Retry, once
+                return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(len + 1)) { innerBuffer in
+                    var innerStatus = U_ZERO_ERROR
+                    if let innerLen = body(innerBuffer.baseAddress!, len + 1, &innerStatus) {
+                        if innerStatus.isSuccess && innerLen > 0 {
+                            return String(validatingUTF8: innerBuffer.baseAddress!)
+                        }
+                    }
+
+                    // At this point the retry has also failed
+                    return nil
+                }
+            } else if status.isSuccess && len > 0 {
+                return String(validatingUTF8: buffer.baseAddress!)
+            }
+        }
+
+        return nil
+    }
+}
+
 /// Allocate a buffer with `size` `CChar`s and execute the given block. The result is always null-terminated.
 /// The closure should return the actual length of the string, or nil if there is an error in the ICU call or the result is zero length.
 internal func _withFixedCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_KEYWORD_AND_VALUES_CAPACITY, _ body: (UnsafeMutablePointer<CChar>, Int32, inout UErrorCode) -> Int32?) -> String? {

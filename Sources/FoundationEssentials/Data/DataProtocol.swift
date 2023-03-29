@@ -18,7 +18,7 @@ import Glibc
 
 //===--- DataProtocol -----------------------------------------------------===//
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public protocol DataProtocol : RandomAccessCollection where Element == UInt8, SubSequence : DataProtocol {
     // FIXME: Remove in favor of opaque type on `regions`.
     associatedtype Regions: BidirectionalCollection where Regions.Element : DataProtocol & ContiguousBytes, Regions.Element.SubSequence : ContiguousBytes
@@ -71,7 +71,7 @@ public protocol DataProtocol : RandomAccessCollection where Element == UInt8, Su
 
 //===--- MutableDataProtocol ----------------------------------------------===//
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public protocol MutableDataProtocol : DataProtocol, MutableCollection, RangeReplaceableCollection {
     /// Replaces the contents of the buffer at the given range with zeroes.
     ///
@@ -82,7 +82,7 @@ public protocol MutableDataProtocol : DataProtocol, MutableCollection, RangeRepl
 
 //===--- DataProtocol Extensions ------------------------------------------===//
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DataProtocol {
     public func firstRange<D: DataProtocol>(of data: D) -> Range<Index>? {
         return self.firstRange(of: data, in: self.startIndex ..< self.endIndex)
@@ -200,7 +200,7 @@ extension DataProtocol {
     }
 }
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DataProtocol where Self : ContiguousBytes {
     public func copyBytes<DestinationType, R: RangeExpression>(to ptr: UnsafeMutableBufferPointer<DestinationType>, from range: R) where R.Bound == Index {
         precondition(ptr.baseAddress != nil)
@@ -216,7 +216,7 @@ extension DataProtocol where Self : ContiguousBytes {
 
 //===--- MutableDataProtocol Extensions -----------------------------------===//
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension MutableDataProtocol {
     public mutating func resetBytes<R: RangeExpression>(in range: R) where R.Bound == Index {
         let r = range.relative(to: self)
@@ -227,7 +227,7 @@ extension MutableDataProtocol {
 
 //===--- DataProtocol Conditional Conformances ----------------------------===//
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Slice : DataProtocol where Base : DataProtocol {
     public typealias Regions = [Base.Regions.Element.SubSequence]
 

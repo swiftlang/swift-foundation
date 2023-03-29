@@ -287,15 +287,15 @@ final class LocaleComponentsTests: XCTestCase {
             let nonCurrentDefault = Locale.Components(locale: loc)
             XCTAssertEqual(nonCurrentDefault.hourCycle, expectDefault,  "default did not match", file: file, line: line)
 
-            let defaultLoc = Locale.likeCurrent(identifier: localeID, preferences: .init())
+            let defaultLoc = Locale.localeAsIfCurrent(name: localeID, overrides: .init())
             let defaultComp = Locale.Components(locale: defaultLoc)
             XCTAssertEqual(defaultComp.hourCycle, expectDefault, "explicit no override did not match", file: file, line: line)
 
-            let force24 = Locale.likeCurrent(identifier: localeID, preferences: .init(force24Hour: true))
+            let force24 = Locale.localeAsIfCurrent(name: localeID, overrides: .init(force24Hour: true))
             let force24Comp = Locale.Components(locale: force24)
             XCTAssertEqual(force24Comp.hourCycle, shouldRespectUserPref ? .zeroToTwentyThree : expectDefault, "force 24-hr did not match", file: file, line: line)
 
-            let force12 = Locale.likeCurrent(identifier: localeID, preferences: .init(force12Hour: true))
+            let force12 = Locale.localeAsIfCurrent(name: localeID, overrides: .init(force12Hour: true))
             let force12Comp = Locale.Components(locale: force12)
             XCTAssertEqual(force12Comp.hourCycle, shouldRespectUserPref ? .oneToTwelve : expectDefault, "force 12-hr did not match", file: file, line: line)
         }
@@ -313,7 +313,7 @@ final class LocaleComponentsTests: XCTestCase {
     }
 
     func test_userPreferenceOverrideRoundtrip() {
-        let customLocale = Locale.likeCurrent(identifier: "en_US", preferences: .init(measurementSystem: .metric, force24Hour: true, firstWeekday: [.gregorian: .wednesday]))
+        let customLocale = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(metricUnits: true, firstWeekday: [.gregorian: Locale.Weekday.wednesday.icuIndex], measurementUnits: .centimeters, force24Hour: true))
         XCTAssertEqual(customLocale.identifier, "en_US")
         XCTAssertEqual(customLocale.hourCycle, .zeroToTwentyThree)
         XCTAssertEqual(customLocale.firstDayOfWeek, .wednesday)

@@ -58,6 +58,10 @@ final class LocaleTests : XCTestCase {
         // XCTAssertEqual("something", locale.localizedString(forCollatorIdentifier: "en"))
     }
 
+    @available(macOS, deprecated: 13)
+    @available(iOS, deprecated: 16)
+    @available(tvOS, deprecated: 16)
+    @available(watchOS, deprecated: 9)
     func test_properties_complexIdentifiers() {
         struct S {
             var identifier: String
@@ -330,13 +334,13 @@ final class LocalePropertiesTests : XCTestCase {
             let loc = Locale(identifier: localeID)
             XCTAssertEqual(loc.hourCycle, expectDefault,  "default did not match", file: file, line: line)
 
-            let defaultLoc = Locale.likeCurrent(identifier: localeID, preferences: .init())
+            let defaultLoc = Locale.localeAsIfCurrent(name: localeID, overrides: .init())
             XCTAssertEqual(defaultLoc.hourCycle, expectDefault, "explicit no override did not match", file: file, line: line)
 
-            let force24 = Locale.likeCurrent(identifier: localeID, preferences: .init(force24Hour: true))
+            let force24 = Locale.localeAsIfCurrent(name: localeID, overrides: .init(force24Hour: true))
             XCTAssertEqual(force24.hourCycle, shouldRespectUserPref ? .zeroToTwentyThree : expectDefault, "force 24-hr did not match", file: file, line: line)
 
-            let force12 = Locale.likeCurrent(identifier: localeID, preferences: .init(force12Hour: true))
+            let force12 = Locale.localeAsIfCurrent(name: localeID, overrides: .init(force12Hour: true))
             XCTAssertEqual(force12.hourCycle, shouldRespectUserPref ? .oneToTwelve : expectDefault, "force 12-hr did not match", file: file, line: line)
         }
 
@@ -360,16 +364,16 @@ final class LocalePropertiesTests : XCTestCase {
 
     func test_userPreferenceOverride_measurementSystem() {
         func verify(_ localeID: String, _ expected: Locale.MeasurementSystem, shouldRespectUserPref: Bool, file: StaticString = #file, line: UInt = #line) {
-            let localeNoPref = Locale.likeCurrent(identifier: localeID, preferences: .init())
+            let localeNoPref = Locale.localeAsIfCurrent(name: localeID, overrides: .init())
             XCTAssertEqual(localeNoPref.measurementSystem, expected, file: file, line: line)
 
-            let fakeCurrentMetric = Locale.likeCurrent(identifier: localeID, preferences: .init(measurementSystem: .metric))
+            let fakeCurrentMetric = Locale.localeAsIfCurrent(name: localeID, overrides: .init(metricUnits: true, measurementUnits: .centimeters))
             XCTAssertEqual(fakeCurrentMetric.measurementSystem, shouldRespectUserPref ? .metric : expected, file: file, line: line)
 
-            let fakeCurrentUS = Locale.likeCurrent(identifier: localeID, preferences: .init(measurementSystem: .us))
+            let fakeCurrentUS = Locale.localeAsIfCurrent(name: localeID, overrides: .init(metricUnits: false, measurementUnits: .inches))
             XCTAssertEqual(fakeCurrentUS.measurementSystem, shouldRespectUserPref ? .us : expected, file: file, line: line)
 
-            let fakeCurrentUK = Locale.likeCurrent(identifier: localeID, preferences: .init(measurementSystem: .uk))
+            let fakeCurrentUK = Locale.localeAsIfCurrent(name: localeID, overrides: .init(metricUnits: true, measurementUnits: .inches))
             XCTAssertEqual(fakeCurrentUK.measurementSystem, shouldRespectUserPref ? .uk : expected, file: file, line: line)
         }
 
@@ -388,6 +392,10 @@ final class LocalePropertiesTests : XCTestCase {
         verify("en-GB-u-rg-uszzzz", .us, shouldRespectUserPref: true)
     }
 
+    @available(macOS, deprecated: 13)
+    @available(iOS, deprecated: 16)
+    @available(tvOS, deprecated: 16)
+    @available(watchOS, deprecated: 9)
     func test_properties() {
         let locale = Locale(identifier: "zh-Hant-HK")
 
@@ -433,6 +441,13 @@ final class LocalePropertiesTests : XCTestCase {
         // Need to find a good test case for collator identifier
         // XCTAssertEqual("something", locale.collatorIdentifier)
     }
+    
+    func test_customizedProperties() {
+        let localePrefs = LocalePreferences(numberSymbols: [0 : "*", 1: "-"])
+        let customizedLocale = Locale.localeAsIfCurrent(name: "en_US", overrides: localePrefs)
+        XCTAssertEqual(customizedLocale.decimalSeparator, "*")
+        XCTAssertEqual(customizedLocale.groupingSeparator, "-")
+    }
 }
 
 // MARK: - Bridging Tests
@@ -446,8 +461,13 @@ extension NSLocale {
 }
 
 final class LocalBridgingTests : XCTestCase {
+    
+    @available(macOS, deprecated: 13)
+    @available(iOS, deprecated: 16)
+    @available(tvOS, deprecated: 16)
+    @available(watchOS, deprecated: 9)
     func test_getACustomLocale() {
-        let loc = getACustomLocale()
+        let loc = getACustomLocale("en_US")
         let objCLoc = loc as! CustomNSLocaleSubclass
 
         // Verify that accessing the properties of `l` calls back into ObjC
@@ -456,6 +476,27 @@ final class LocalBridgingTests : XCTestCase {
 
         XCTAssertEqual(loc.currencyCode, "USD")
         XCTAssertEqual(objCLoc.last, "objectForKey:") // Everything funnels through the primitives
+
+        XCTAssertEqual(loc.regionCode, "US")
+        XCTAssertEqual(objCLoc.countryCode, "US")
+    }
+
+    @available(macOS, deprecated: 13)
+    @available(iOS, deprecated: 16)
+    @available(tvOS, deprecated: 16)
+    @available(watchOS, deprecated: 9)
+    func test_customLocaleCountryCode() {
+        let loc = getACustomLocale("en_US@rg=gbzzzz")
+        let objCLoc = loc as! CustomNSLocaleSubclass
+
+        XCTAssertEqual(loc.identifier, "en_US@rg=gbzzzz")
+        XCTAssertEqual(objCLoc.last, "localeIdentifier")
+
+        XCTAssertEqual(loc.currencyCode, "GBP")
+        XCTAssertEqual(objCLoc.last, "objectForKey:") // Everything funnels through the primitives
+
+        XCTAssertEqual(loc.regionCode, "GB")
+        XCTAssertEqual(objCLoc.countryCode, "GB")
     }
 
     func test_AnyHashableCreatedFromNSLocale() {
@@ -479,25 +520,13 @@ final class LocalBridgingTests : XCTestCase {
 extension LocaleTests {
     func test_userPreferenceOverride_firstWeekday() {
         func verify(_ localeID: String, _ expected: Locale.Weekday, shouldRespectUserPrefForGregorian: Bool, shouldRespectUserPrefForIslamic: Bool, file: StaticString = #file, line: UInt = #line) {
-            let firstWeekdayKey = "AppleFirstWeekday"
-            // sunday is 1
-            let forceWed = [ firstWeekdayKey: [
-                Calendar.Identifier.gregorian.cldrIdentifier : 4
-            ]] as CFDictionary
-
-            let forceFriIslamic = [ firstWeekdayKey: [
-                Calendar.Identifier.islamic.cldrIdentifier : 6
-            ]] as CFDictionary
-
-            let empty = [ firstWeekdayKey: [] ] as CFDictionary
-
-            let localeNoPref = _CFLocaleCopyAsIfCurrentWithOverrides(localeID as CFString, empty) as Locale
+            let localeNoPref = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [:]))
             XCTAssertEqual(localeNoPref.firstDayOfWeek, expected, file: file, line: line)
 
-            let wed = _CFLocaleCopyAsIfCurrentWithOverrides(localeID as CFString, forceWed) as Locale
+            let wed = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.gregorian : 4]))
             XCTAssertEqual(wed.firstDayOfWeek, shouldRespectUserPrefForGregorian ? .wednesday : expected, file: file, line: line)
 
-            let fri_islamic = _CFLocaleCopyAsIfCurrentWithOverrides(localeID as CFString, forceFriIslamic) as Locale
+            let fri_islamic = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.islamic : 6]))
             XCTAssertEqual(fri_islamic.firstDayOfWeek, shouldRespectUserPrefForIslamic ? .friday : expected, file: file, line: line)
         }
 
