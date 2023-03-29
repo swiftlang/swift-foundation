@@ -14,18 +14,6 @@
 import FoundationEssentials
 #endif
 
-extension ComparisonResult {
-    init<T: Comparable>(_ t1: T, _ t2: T) {
-        if t1 < t2 {
-            self = .orderedAscending
-        } else if t1 > t2 {
-            self = .orderedDescending
-        } else {
-            self = .orderedSame
-        }
-    }
-}
-
 extension Range where Bound: Comparable {
     func extended(to other: Range<Bound>) -> Range<Bound> {
         Swift.min(self.lowerBound, other.lowerBound)..<Swift.max(self.upperBound, other.upperBound)
@@ -2142,3 +2130,17 @@ extension Calendar.Component {
         }
     }
 }
+
+#if !FOUNDATION_FRAMEWORK
+extension ComparisonResult {
+    init<T: Comparable>(_ t1: T, _ t2: T) {
+        if t1 < t2 {
+            self = .orderedAscending
+        } else if t1 > t2 {
+            self = .orderedDescending
+        } else {
+            self = .orderedSame
+        }
+    }
+}
+#endif
