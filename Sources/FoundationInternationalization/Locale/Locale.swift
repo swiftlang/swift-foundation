@@ -115,19 +115,21 @@ public struct Locale : Hashable, Equatable, Sendable {
         return Locale(.fixed(LocaleCache.cache.system))
     }
 
+#if FOUNDATION_FRAMEWORK
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
-    internal static func localeAsIfCurrent(name: String?, overrides: [String: Any]? = nil, disableBundleMatching: Bool = false) -> Locale {
-        let (inner, _) = _Locale._currentLocale(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
-        return Locale(.fixed(inner))
+    internal static func localeAsIfCurrent(name: String?, cfOverrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
+        return LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: cfOverrides, disableBundleMatching: disableBundleMatching)
+    }
+#endif
+    /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
+    internal static func localeAsIfCurrent(name: String?, overrides: LocalePreferences? = nil, disableBundleMatching: Bool = false) -> Locale {
+        // On Darwin, this overrides are applied on top of CFPreferences.
+        return LocaleCache.cache.localeAsIfCurrent(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
     }
 
     internal static func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
-        guard let inner = _Locale._currentLocaleWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations) else {
-            return nil
-        }
-        return Locale(.fixed(inner))
+        return LocaleCache.cache.localeAsIfCurrentWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations)
     }
-
 
     // MARK: -
     //
@@ -155,20 +157,13 @@ public struct Locale : Hashable, Equatable, Sendable {
         self = .init(components: comps)
     }
 
-    private init(_ kind: Kind) {
+    /// To be used only by `LocaleCache`.
+    internal init(_ kind: Kind) {
         self.kind = kind
     }
 
 
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    internal init(identifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Locale.Weekday?, minimumDaysInFirstWeek: Int?) {
-        var prefs = _Locale.Prefs()
-        if let firstWeekday {
-            prefs.firstWeekday = [calendarIdentifier : firstWeekday.icuIndex]
-        }
-        if let minimumDaysInFirstWeek {
-            prefs.minDaysInFirstWeek = [calendarIdentifier : minimumDaysInFirstWeek]
-        }
+    internal init(identifier: String, calendarIdentifier: Calendar.Identifier, prefs: LocalePreferences?) {
         self.kind = .fixed(_Locale(identifier: identifier, prefs: prefs))
     }
 
@@ -188,7 +183,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
     #endif
 
-    /// Produce a copy of the `Locale` (including `Prefs`, if present), but with a different `Calendar.Identifier`. Date formatting uses this.
+    /// Produce a copy of the `Locale` (including `LocalePreferences`, if present), but with a different `Calendar.Identifier`. Date formatting uses this.
     internal func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> Locale {
         switch kind {
         case .fixed(let l):
@@ -320,6 +315,20 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 
+    /// This exists in `NSLocale` via the `displayName` API, using the currency *symbol* key instead of *code*.
+    internal func localizedString(forCurrencySymbol currencySymbol: String) -> String? {
+        switch kind {
+        case .fixed(let l):
+            return l.currencySymbolDisplayName(for: currencySymbol)
+#if FOUNDATION_FRAMEWORK
+        case .bridged(let l):
+            return l.currencySymbolDisplayName(for: currencySymbol)
+#endif
+        case .autoupdating:
+            return LocaleCache.cache.current.currencySymbolDisplayName(for: currencySymbol)
+        }
+    }
+    
     /// Returns a localized string for a specified ICU collation identifier.
     ///
     /// For example, in the "en" locale, the result for `"phonebook"` is `"Phonebook Sort Order"`.
@@ -392,8 +401,8 @@ public struct Locale : Hashable, Equatable, Sendable {
         // n.b. this is called countryCode in ObjC
         let result: String?
         switch kind {
-        case .autoupdating: result = LocaleCache.cache.current.countryCode
-        case .fixed(let l): result = l.countryCode
+        case .autoupdating: result = LocaleCache.cache.current.region?.identifier
+        case .fixed(let l): result = l.region?.identifier
 #if FOUNDATION_FRAMEWORK
         case .bridged(let l): result = l.countryCode
 #endif
@@ -870,8 +879,18 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 #endif // FOUNDATION_FRAMEWORK
-
-#if FOUNDATION_FRAMEWORK
+    
+    /// The whole bucket of preferences.
+    /// For use by `Calendar`, which wants to keep these values without a circular retain cycle with `Locale`. Only `current` locales and current-alikes have prefs.
+    internal var prefs: LocalePreferences? {
+        switch kind {
+        case .autoupdating: return LocaleCache.cache.current.prefs
+        case .fixed(let l): return l.prefs
+        case .bridged(_): return nil
+        }
+    }
+    
+    #if FOUNDATION_FRAMEWORK
     internal func pref(for key: String) -> Any? {
         switch kind {
         case .autoupdating: return LocaleCache.cache.current.pref(for: key)
@@ -901,7 +920,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// - seealso: `Bundle.preferredLocalizations(from:)`
     /// - seealso: `Bundle.preferredLocalizations(from:forPreferences:)`
     public static var preferredLanguages: [String] {
-        _Locale.preferredLanguages(forCurrentUser: false)
+        LocaleCache.cache.preferredLanguages(forCurrentUser: false)
     }
 
 

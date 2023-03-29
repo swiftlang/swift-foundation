@@ -43,9 +43,9 @@ internal struct Platform {
 #if canImport(Darwin)
         if vm_copy(
             mach_task_self_,
-            unsafeBitCast(source, to: vm_address_t.self),
+            vm_address_t(UInt(bitPattern: source)),
             vm_size_t(length),
-            unsafeBitCast(dest, to: vm_address_t.self)) != KERN_SUCCESS {
+            vm_address_t(UInt(bitPattern: dest))) != KERN_SUCCESS {
             memmove(dest, source, length)
         }
 #else

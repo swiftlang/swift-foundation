@@ -31,13 +31,12 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     // These custom values take precedence over the locale values
     private var customFirstWeekday: Int?
     private var customMinimumFirstDaysInWeek: Int?
+
+    // Identifier of any locale used
     private var localeIdentifier: String
-
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    private var localeFirstWeekday: Locale.Weekday?
-
-    private var localeMinimumFirstDaysInWeek: Int?
-
+    // Custom user preferences of any locale used (current locale or current locale imitation only). We need to store this to correctly rebuild a Locale that has been stored inside Calendar as an identifier.
+    private var localePrefs: LocalePreferences?
+    
     let customGregorianStartDate: Date?
 
     internal init(identifier: Calendar.Identifier,
@@ -54,27 +53,24 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         // We do not store the Locale here, as Locale stores a Calendar. We only keep the values we need that affect Calendar's operation.
         if let locale {
             localeIdentifier = locale.identifier
-            localeFirstWeekday = locale.forceFirstWeekday(identifier)
-            localeMinimumFirstDaysInWeek = locale.forceMinDaysInFirstWeek(identifier)
+            localePrefs = locale.prefs
         } else {
             localeIdentifier = ""
-            localeFirstWeekday = nil
-            localeMinimumFirstDaysInWeek = nil
+            localePrefs = nil
         }
         _timeZone = timeZone ?? TimeZone.default
 
         customFirstWeekday = firstWeekday
         customMinimumFirstDaysInWeek = minimumDaysInFirstWeek
         customGregorianStartDate = gregorianStartDate
-
-        ucalendar = Self.icuCalendar(identifier: identifier, timeZone: _timeZone, localeIdentifier: localeIdentifier, localeFirstWeekday: localeFirstWeekday, localeMinimumDaysInFirstWeek: localeMinimumFirstDaysInWeek, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: customGregorianStartDate)
+        
+        ucalendar = Self.icuCalendar(identifier: identifier, timeZone: _timeZone, localeIdentifier: localeIdentifier, localePrefs: localePrefs, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: customGregorianStartDate)
     }
 
     static func icuCalendar(identifier: Calendar.Identifier,
                             timeZone: TimeZone,
                             localeIdentifier: String,
-                            localeFirstWeekday: Locale.Weekday?,
-                            localeMinimumDaysInFirstWeek: Int?,
+                            localePrefs: LocalePreferences?,
                             firstWeekday: Int?,
                             minimumDaysInFirstWeek: Int?,
                             gregorianStartDate: Date?) -> UnsafeMutablePointer<UCalendar?> {
@@ -107,13 +103,14 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
 
         if let firstWeekday {
             ucal_setAttribute(calendar, UCAL_FIRST_DAY_OF_WEEK, Int32(firstWeekday))
-        } else if let forced = localeFirstWeekday {
+        } else if let forcedNumber = localePrefs?.firstWeekday?[identifier], let forced = Locale.Weekday(Int32(forcedNumber)) {
+            // Make sure we don't have an off-by-one error here by using the ICU function. This could probably be simplified.
             ucal_setAttribute(calendar, UCAL_FIRST_DAY_OF_WEEK, Int32(forced.icuIndex))
         }
 
         if let minimumDaysInFirstWeek {
             ucal_setAttribute(calendar, UCAL_MINIMAL_DAYS_IN_FIRST_WEEK, Int32(truncatingIfNeeded: minimumDaysInFirstWeek))
-        } else if let forced = localeMinimumDaysInFirstWeek {
+        } else if let forced = localePrefs?.minDaysInFirstWeek?[identifier] {
             ucal_setAttribute(calendar, UCAL_MINIMAL_DAYS_IN_FIRST_WEEK, Int32(truncatingIfNeeded: forced))
         }
 
@@ -132,8 +129,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             identifier: identifier,
             timeZone: _timeZone,
             localeIdentifier: localeIdentifier,
-            localeFirstWeekday: localeFirstWeekday,
-            localeMinimumDaysInFirstWeek: localeMinimumFirstDaysInWeek,
+            localePrefs: localePrefs,
             firstWeekday: customFirstWeekday,
             minimumDaysInFirstWeek: customMinimumFirstDaysInWeek,
             gregorianStartDate: customGregorianStartDate)
@@ -141,13 +137,12 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
 
     var locale: Locale {
         get {
-            return Locale(identifier: localeIdentifier, calendarIdentifier: identifier, firstWeekday: localeFirstWeekday, minimumDaysInFirstWeek: localeMinimumFirstDaysInWeek)
+            return Locale(identifier: localeIdentifier, calendarIdentifier: identifier, prefs: localePrefs)
         }
         set {
             lock.withLock {
                 localeIdentifier = newValue.identifier
-                localeFirstWeekday = newValue.forceFirstWeekday(locale._calendarIdentifier)
-                localeMinimumFirstDaysInWeek = newValue.forceMinDaysInFirstWeek(locale._calendarIdentifier)
+                localePrefs = newValue.prefs
                 _locked_regenerate()
             }
         }
@@ -250,8 +245,8 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             lhs.firstWeekday == rhs.firstWeekday &&
             lhs.minimumDaysInFirstWeek == rhs.minimumDaysInFirstWeek &&
             lhs.localeIdentifier == rhs.localeIdentifier &&
-            lhs.localeFirstWeekday == rhs.localeFirstWeekday &&
-            lhs.localeMinimumFirstDaysInWeek == rhs.localeMinimumFirstDaysInWeek
+            lhs.localePrefs?.firstWeekday?[lhs.identifier] == rhs.localePrefs?.firstWeekday?[rhs.identifier] &&
+            lhs.localePrefs?.minDaysInFirstWeek?[lhs.identifier] == rhs.localePrefs?.minDaysInFirstWeek?[rhs.identifier]
     }
 
     func hash(into hasher: inout Hasher) {
@@ -261,8 +256,9 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         hasher.combine(_locked_firstWeekday)
         hasher.combine(_locked_minimumDaysInFirstWeek)
         hasher.combine(localeIdentifier)
-        hasher.combine(localeFirstWeekday)
-        hasher.combine(localeMinimumFirstDaysInWeek)
+        // It's important to include only properties that affect the Calendar itself. That allows e.g. currentLocale (with an irrelevant pref about something like preferred metric unit) to compare equal to a different locale.
+        hasher.combine(localePrefs?.firstWeekday?[identifier])
+        hasher.combine(localePrefs?.minDaysInFirstWeek?[identifier])
         lock.unlock()
     }
 

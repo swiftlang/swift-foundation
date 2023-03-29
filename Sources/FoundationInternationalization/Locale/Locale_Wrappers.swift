@@ -42,14 +42,14 @@ extension NSLocale {
     }
 
     @objc
-    private class func _newLocaleAsIfCurrent(_ name: String?, overrides: [String: Any]?, disableBundleMatching: Bool) -> NSLocale? {
-        let inner = Locale.localeAsIfCurrent(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
+    private class func _newLocaleAsIfCurrent(_ name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> NSLocale? {
+        let inner = LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: overrides, disableBundleMatching: disableBundleMatching)
         return _NSSwiftLocale(inner)
     }
 
     @objc(_currentLocaleWithBundleLocalizations:disableBundleMatching:)
     private class func _currentLocaleWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> NSLocale? {
-        guard let inner = Locale.localeAsIfCurrentWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations) else {
+        guard let inner = LocaleCache.cache.localeAsIfCurrentWithBundleLocalizations(availableLocalizations, allowsMixedLocalizations: allowsMixedLocalizations) else {
             return nil
         }
         return _NSSwiftLocale(inner)
@@ -62,7 +62,7 @@ extension NSLocale {
 
     @objc
     private class func _preferredLanguagesForCurrentUser(_ forCurrentUser: Bool) -> [String] {
-        _Locale.preferredLanguages(forCurrentUser: forCurrentUser)
+        LocaleCache.cache.preferredLanguages(forCurrentUser: forCurrentUser)
     }
 
     @objc
@@ -264,6 +264,10 @@ internal final class _NSLocaleSwiftWrapper: @unchecked Sendable, Hashable, Custo
 
     func currencyCodeDisplayName(for currencyCode: String) -> String? {
         return _wrapped.displayName(forKey: .currencyCode, value: currencyCode)
+    }
+    
+    func currencySymbolDisplayName(for currencySymbol: String) -> String? {
+        return _wrapped.displayName(forKey: .currencySymbol, value: currencySymbol)
     }
 
     func collationIdentifierDisplayName(for collationIdentifier: String) -> String? {
@@ -502,7 +506,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         case .measurementSystem: return nil
         case .decimalSeparator: return nil
         case .groupingSeparator: return nil
-        case .currencySymbol: return self.localizedString(forCurrencyCode: value)
+        case .currencySymbol: return self.localizedString(forCurrencySymbol: value)
         case .currencyCode: return self.localizedString(forCurrencyCode: value)
         case .collatorIdentifier: return self.localizedString(forCollatorIdentifier: value)
         case .quotationBeginDelimiterKey: return nil
@@ -525,9 +529,19 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         locale.languageCode ?? ""
     }
 
+    override var languageIdentifier: String {
+        let langIdentifier = locale.language.components.identifier
+        let localeWithOnlyLanguage = Locale(identifier: langIdentifier)
+        return localeWithOnlyLanguage.identifier(.bcp47)
+    }
+
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
     override var countryCode: String? {
-        locale.regionCode
+        locale.region?.identifier
+    }
+
+    override var regionCode: String? {
+        locale.region?.identifier
     }
 
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
@@ -628,6 +642,10 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
 
     override func localizedString(forCurrencyCode currencyCode: String) -> String? {
         locale.localizedString(forCurrencyCode: currencyCode)
+    }
+
+    override func localizedString(forCurrencySymbol currencySymbol: String) -> String? {
+        locale.localizedString(forCurrencySymbol: currencySymbol)
     }
 
     override func localizedString(forCollatorIdentifier collatorIdentifier: String) -> String? {
