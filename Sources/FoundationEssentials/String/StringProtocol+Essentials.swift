@@ -11,6 +11,8 @@
 
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import _ForSwiftFoundation
+#else
+internal func _foundation_essentials_feature_enabled() -> Bool { return true }
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -44,5 +46,43 @@ extension StringProtocol {
 #else
         return String(self)._capitalized()
 #endif
+    }
+
+    /// Finds and returns the range in the `String` of the first
+    /// character from a given character set found in a given range with
+    /// given options.
+    public func rangeOfCharacter(from aSet: CharacterSet, options mask: String.CompareOptions = [], range aRange: Range<Index>? = nil) -> Range<Index>? {
+        if _foundation_essentials_feature_enabled() {
+            var subStr = Substring(self)
+            if let aRange {
+                subStr = subStr[aRange]
+            }
+            return subStr._rangeOfCharacter(from: aSet, options: mask)
+        }
+
+#if FOUNDATION_FRAMEWORK
+        return aSet.withUnsafeImmutableStorage {
+            return _optionalRange(_ns._rangeOfCharacter(from: $0, options: mask, range: _toRelativeNSRange(aRange ?? startIndex..<endIndex)))
+        }
+#else
+        return nil
+#endif // FOUNDATION_FRAMEWORK
+    }
+
+    /// Returns a `Data` containing a representation of
+    /// the `String` encoded using a given encoding.
+    public func data(using encoding: String.Encoding, allowLossyConversion: Bool = false) -> Data? {
+        switch encoding {
+        case .utf8:
+            return Data(self.utf8)
+        default:
+#if FOUNDATION_FRAMEWORK // TODO: Implement data(using:allowLossyConversion:) in Swift
+            return _ns.data(
+                using: encoding.rawValue,
+                allowLossyConversion: allowLossyConversion)
+#else
+            return nil
+#endif
+        }
     }
 }

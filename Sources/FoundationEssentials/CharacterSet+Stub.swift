@@ -25,6 +25,14 @@ public struct CharacterSet : Equatable, Hashable {
     public mutating func insert(charactersIn string: String) {}
     public mutating func insert(charactersIn range: Range<Unicode.Scalar>) {}
     public mutating func insert(charactersIn range: ClosedRange<Unicode.Scalar>) {}
+
+    public func contains(_ member: Unicode.Scalar) -> Bool { return false }
+}
+
+// MARK: - Exported Character Sets
+extension CharacterSet {
+    public static let uppercaseLetters: CharacterSet = CharacterSet()
+    public static let lowercaseLetters: CharacterSet = CharacterSet()
 }
 
 #endif
