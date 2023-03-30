@@ -21,14 +21,28 @@ public typealias Locale = Foundation.Locale
 public typealias Data = Foundation.Data
 public typealias UUID = Foundation.UUID
 public typealias Date = Foundation.Date
+public typealias DateInterval = Foundation.DateInterval
 public typealias DateComponents = Foundation.DateComponents
+public typealias Decimal = Foundation.Decimal
 public typealias TimeInterval = Foundation.TimeInterval
 public typealias JSONEncoder = Foundation.JSONEncoder
 public typealias JSONDecoder = Foundation.JSONDecoder
 
 // XCTest implicitly imports Foundation
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias FormatStyle = Foundation.FormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias ByteCountFormatStyle = Foundation.ByteCountFormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias ListFormatStyle = Foundation.ListFormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias IntegerFormatStyle = Foundation.IntegerFormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias FloatingPointFormatStyle = Foundation.FloatingPointFormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias NumberFormatStyleConfiguration = Foundation.NumberFormatStyleConfiguration
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias CurrencyFormatStyleConfiguration = Foundation.CurrencyFormatStyleConfiguration
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias StringStyle = Foundation.StringStyle
@@ -82,12 +96,26 @@ public typealias PredicateError = Foundation.PredicateError
 public typealias Data = FoundationEssentials.Data
 public typealias UUID = FoundationEssentials.UUID
 public typealias Date = FoundationEssentials.Date
+public typealias DateInterval = FoundationEssentials.DateInterval
+public typealias Decimal = FoundationEssentials.Decimal
 public typealias TimeInterval = FoundationEssentials.TimeInterval
 public typealias JSONEncoder = FoundationEssentials.JSONEncoder
 public typealias JSONDecoder = FoundationEssentials.JSONDecoder
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias FormatStyle = FoundationInternationalization.FormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias ByteCountFormatStyle = FoundationInternationalization.ByteCountFormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias ListFormatStyle = FoundationInternationalization.ListFormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias IntegerFormatStyle = FoundationInternationalization.IntegerFormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias FloatingPointFormatStyle = FoundationInternationalization.FloatingPointFormatStyle
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias NumberFormatStyleConfiguration = FoundationInternationalization.NumberFormatStyleConfiguration
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias CurrencyFormatStyleConfiguration = FoundationInternationalization.CurrencyFormatStyleConfiguration
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias StringStyle = FoundationInternationalization.StringStyle
