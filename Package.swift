@@ -11,7 +11,6 @@ let package = Package(
         .library(name: "FoundationPreview", targets: ["FoundationPreview"]),
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
-        .library(name: "FoundationNetworking", targets: ["FoundationNetworking"])
     ],
     dependencies: [
         // Intentionally use this deprecated version so we can control the package name.
@@ -24,7 +23,6 @@ let package = Package(
             dependencies: [
                 "FoundationEssentials",
                 "FoundationInternationalization",
-                "FoundationNetworking",
             ],
             path: "Sources/Foundation"),
 
@@ -34,7 +32,6 @@ let package = Package(
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
             "FoundationInternationalization",
-            "FoundationNetworking"
         ]),
 
         // FoundationEssentials
@@ -53,13 +50,6 @@ let package = Package(
         .testTarget(name: "FoundationInternationalizationTests", dependencies: [
             "TestSupport",
             "FoundationInternationalization"
-        ]),
-
-        // FoundationNetworking
-        .target(name: "FoundationNetworking"),
-        .testTarget(name: "FoundationNetworkingTests", dependencies: [
-            "TestSupport",
-            "FoundationNetworking"
         ]),
     ]
 )
