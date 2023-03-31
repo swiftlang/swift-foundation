@@ -10,10 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_nonSendable
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributeContainer {
+public struct AttributeContainer : Sendable {
     internal var storage : AttributedString._AttributeStorage
     
     public init() {
@@ -27,12 +26,14 @@ public struct AttributeContainer {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeContainer {
-    public subscript<T: AttributedStringKey>(_: T.Type) -> T.Value? {
+    @preconcurrency
+    public subscript<T: AttributedStringKey>(_: T.Type) -> T.Value? where T.Value : Sendable {
         get { storage[T.self] }
         set { storage[T.self] = newValue }
     }
 
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? {
+    @preconcurrency
+    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }
@@ -63,11 +64,11 @@ extension AttributeContainer {
         return Builder(container: self)
     }
 
-    @_nonSendable
-    public struct Builder<T: AttributedStringKey> {
+    public struct Builder<T: AttributedStringKey> : Sendable {
         var container : AttributeContainer
 
-        public func callAsFunction(_ value: T.Value) -> AttributeContainer {
+        @preconcurrency
+        public func callAsFunction(_ value: T.Value) -> AttributeContainer where T.Value : Sendable {
             var new = container
             new[T.self] = value
             return new

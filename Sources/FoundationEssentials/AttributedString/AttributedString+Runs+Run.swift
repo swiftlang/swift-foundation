@@ -12,9 +12,8 @@
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
-    @_nonSendable
     @dynamicMemberLookup
-    public struct Run {
+    public struct Run : Sendable {
         internal typealias _AttributeStorage = AttributedString._AttributeStorage
         internal typealias _InternalRun = AttributedString._InternalRun
 
@@ -78,11 +77,13 @@ extension AttributedString.Runs.Run {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs.Run {
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? {
+    @preconcurrency
+    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
         get { self[K.self] }
     }
 
-    public subscript<K : AttributedStringKey>(_: K.Type) -> K.Value? {
+    @preconcurrency
+    public subscript<K : AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
         get { _internal.attributes[K.self] }
     }
 

@@ -12,8 +12,8 @@
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    @_nonSendable
-    public struct SingleAttributeTransformer<T: AttributedStringKey> {
+    @preconcurrency
+    public struct SingleAttributeTransformer<T: AttributedStringKey> : Sendable where T.Value : Sendable {
         public var range: Range<Index>
 
         internal var attrName = T.name
@@ -24,12 +24,14 @@ extension AttributedString {
             set { attr = .wrapIfPresent(newValue, for: T.self) }
         }
 
-        public mutating func replace<U: AttributedStringKey>(with key: U.Type, value: U.Value) {
+        @preconcurrency
+        public mutating func replace<U: AttributedStringKey>(with key: U.Type, value: U.Value) where U.Value : Sendable {
             attrName = key.name
             attr = .init(value, for: U.self)
         }
 
-        public mutating func replace<U: AttributedStringKey>(with keyPath: KeyPath<AttributeDynamicLookup, U>, value: U.Value) {
+        @preconcurrency
+        public mutating func replace<U: AttributedStringKey>(with keyPath: KeyPath<AttributeDynamicLookup, U>, value: U.Value) where U.Value : Sendable {
             self.replace(with: U.self, value: value)
         }
     }

@@ -12,8 +12,7 @@
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    @_nonSendable
-    public struct CharacterView {
+    public struct CharacterView : Sendable {
         /// The guts of the base attributed string.
         internal var _guts: Guts
 

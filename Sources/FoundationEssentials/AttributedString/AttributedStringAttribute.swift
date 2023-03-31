@@ -149,17 +149,17 @@ public enum AttributeDynamicLookup {
     }
 }
 
-@_nonSendable
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct ScopedAttributeContainer<S: AttributeScope> {
+public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
     internal var storage : AttributedString._AttributeStorage
     
     // Record the most recently deleted key for use in AttributedString mutation subscripts that use _modify
     // Note: if ScopedAttributeContainer ever adds a mutating function that can mutate multiple attributes, this will need to record multiple removed keys
     internal var removedKey : String?
 
-    public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<S, T>) -> T.Value? {
+    @preconcurrency
+    public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<S, T>) -> T.Value? where T.Value : Sendable {
         get { storage[T.self] }
         set {
             storage[T.self] = newValue
