@@ -12,8 +12,8 @@
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
-    @_nonSendable
-    public struct AttributesSlice1<T : AttributedStringKey> : BidirectionalCollection {
+    @preconcurrency
+    public struct AttributesSlice1<T : AttributedStringKey> : BidirectionalCollection, Sendable where T.Value : Sendable {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -32,8 +32,7 @@ extension AttributedString.Runs {
             _constraints = T._constraintsInvolved
         }
 
-        @_nonSendable
-        public struct Iterator: IteratorProtocol {
+        public struct Iterator: IteratorProtocol, Sendable {
             // Note: This is basically equivalent to `IndexingIterator`.
 
             public typealias Element = AttributesSlice1.Element
@@ -105,11 +104,15 @@ extension AttributedString.Runs {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
-    @_nonSendable
+    @preconcurrency
     public struct AttributesSlice2<
         T : AttributedStringKey,
         U : AttributedStringKey
-    > : BidirectionalCollection {
+    > : BidirectionalCollection, Sendable
+    where
+        T.Value : Sendable,
+        U.Value : Sendable
+    {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -128,9 +131,7 @@ extension AttributedString.Runs {
             _constraints = Array(_contents: T.runBoundaries, U.runBoundaries)
         }
 
-
-        @_nonSendable
-        public struct Iterator: IteratorProtocol {
+        public struct Iterator: IteratorProtocol, Sendable {
             // Note: This is basically equivalent to `IndexingIterator`.
 
             public typealias Element = AttributesSlice2.Element
@@ -214,12 +215,17 @@ extension AttributedString.Runs {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
-    @_nonSendable
+    @preconcurrency
     public struct AttributesSlice3<
         T : AttributedStringKey,
         U : AttributedStringKey,
         V : AttributedStringKey
-    > : BidirectionalCollection {
+    > : BidirectionalCollection, Sendable
+    where
+        T.Value : Sendable,
+        U.Value : Sendable,
+        V.Value : Sendable
+    {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -238,8 +244,7 @@ extension AttributedString.Runs {
             _constraints = Array(_contents: T.runBoundaries, U.runBoundaries, V.runBoundaries)
         }
 
-        @_nonSendable
-        public struct Iterator: IteratorProtocol {
+        public struct Iterator: IteratorProtocol, Sendable {
             // Note: This is basically equivalent to `IndexingIterator`.
 
             public typealias Element = AttributesSlice3.Element
@@ -331,13 +336,19 @@ extension AttributedString.Runs {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
-    @_nonSendable
+    @preconcurrency
     public struct AttributesSlice4<
         T : AttributedStringKey,
         U : AttributedStringKey,
         V : AttributedStringKey,
         W : AttributedStringKey
-    > : BidirectionalCollection {
+    > : BidirectionalCollection, Sendable
+    where
+        T.Value : Sendable,
+        U.Value : Sendable,
+        V.Value : Sendable,
+        W.Value : Sendable
+    {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -357,8 +368,7 @@ extension AttributedString.Runs {
                 _contents: T.runBoundaries, U.runBoundaries, V.runBoundaries, W.runBoundaries)
         }
 
-        @_nonSendable
-        public struct Iterator: IteratorProtocol {
+        public struct Iterator: IteratorProtocol, Sendable {
             // Note: This is basically equivalent to `IndexingIterator`.
 
             public typealias Element = AttributesSlice4.Element
@@ -460,14 +470,21 @@ extension AttributedString.Runs {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
-    @_nonSendable
+    @preconcurrency
     public struct AttributesSlice5<
         T : AttributedStringKey,
         U : AttributedStringKey,
         V : AttributedStringKey,
         W : AttributedStringKey,
         X : AttributedStringKey
-    > : BidirectionalCollection {
+    > : BidirectionalCollection, Sendable
+    where
+        T.Value : Sendable,
+        U.Value : Sendable,
+        V.Value : Sendable,
+        W.Value : Sendable,
+        X.Value : Sendable
+    {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -491,8 +508,7 @@ extension AttributedString.Runs {
                 X.runBoundaries)
         }
 
-        @_nonSendable
-        public struct Iterator: IteratorProtocol {
+        public struct Iterator: IteratorProtocol, Sendable {
             public typealias Element = AttributesSlice5.Element
 
             let _slice: AttributesSlice5
@@ -600,9 +616,8 @@ extension AttributedString.Runs {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
-    @_nonSendable
     @_spi(AttributedString)
-    public struct NSAttributesSlice : BidirectionalCollection {
+    public struct NSAttributesSlice : BidirectionalCollection, Sendable {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -621,8 +636,7 @@ extension AttributedString.Runs {
             self._names = keys.map { $0.rawValue }
         }
 
-        @_nonSendable
-        public struct Iterator: IteratorProtocol {
+        public struct Iterator: IteratorProtocol, Sendable {
             // Note: This is basically equivalent to `IndexingIterator`.
 
             public typealias Element = NSAttributesSlice.Element
