@@ -1307,15 +1307,16 @@ enum JSONError: Swift.Error, Equatable {
         let column: Int
         let index: Int
 
-        static func sourceLocation(at location: UnsafePointer<UInt8>, docStart: UnsafePointer<UInt8>) -> SourceLocation {
+        static func sourceLocation(at location: UnsafeRawPointer, docStart: UnsafeRawPointer) -> SourceLocation {
             precondition(docStart <= location)
             var cursor = docStart
             var line = 1
             var col = 0
             while cursor <= location {
-                switch cursor.pointee {
+                switch cursor.load(as: UInt8.self) {
                 case ._return:
-                    if cursor+1 <= location, cursor.pointee == ._newline {
+                    if cursor+1 <= location,
+                       cursor.load(fromByteOffset: 1, as: UInt8.self) == ._newline {
                         cursor += 1
                     }
                     line += 1
