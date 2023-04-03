@@ -1,0 +1,410 @@
+// A BufferView<Element> represents a span of memory which
+// contains initialized `Element` instances.
+
+private var invalidAddress: UnsafeRawPointer {
+  .init(bitPattern: 0x7).unsafelyUnwrapped
+}
+
+@frozen @usableFromInline
+internal struct BufferView<Element> {
+  @usableFromInline let baseAddress: UnsafeRawPointer
+  public let count: Int
+
+  @inlinable
+  public init<Owner>(
+    baseAddress: UnsafeRawPointer,
+    count: Int,
+    dependsOn: /*borrowing*/ Owner
+  ) {
+    precondition(count >= 0, "Count must not be negative")
+    if !_isPOD(Element.self) {
+      precondition(
+        Int(bitPattern: baseAddress) & (MemoryLayout<Element>.alignment-1) == 0,
+        "baseAddress must be properly aligned for \(Element.self)"
+      )
+    }
+    self.baseAddress = baseAddress
+    self.count = count
+  }
+
+  public init<Owner>(
+    unsafeBufferPointer buffer: UnsafeBufferPointer<Element>,
+    dependsOn owner: /*borrowing*/ Owner
+  ) {
+    let baseAddress = UnsafeRawPointer(buffer.baseAddress) ?? invalidAddress
+    self.init(
+      baseAddress: baseAddress, count: buffer.count, dependsOn: owner
+    )
+  }
+}
+
+extension BufferView /*where Element: BitwiseCopyable*/ {
+
+  public init<Owner>(
+    unsafeRawBufferPointer buffer: UnsafeRawBufferPointer,
+    dependsOn owner: /*borrowing*/ Owner
+  ) {
+    guard _isPOD(Element.self) else { fatalError() }
+    let (p, c) = (buffer.baseAddress ?? invalidAddress, buffer.count)
+    let (q, r) = c.quotientAndRemainder(dividingBy: MemoryLayout<Element>.stride)
+    precondition(r == 0)
+    self.init(baseAddress: p, count: q, dependsOn: owner)
+  }
+}
+
+//MARK: Sequence
+
+extension BufferView: Sequence {
+
+  public func makeIterator() -> BufferViewIterator<Element> {
+    .init(from: startIndex, to: endIndex, dependsOn: self)
+  }
+
+  //FIXME: this should only exist if we can make the pointer non-escapable
+  public func withContiguousStorageIfAvailable<R>(
+    _ body: (UnsafeBufferPointer<Element>) throws -> R
+  ) rethrows -> R? {
+    try baseAddress.withMemoryRebound(to: Element.self, capacity: count) {
+      [count = count] in
+      try body(UnsafeBufferPointer(start: $0, count: count))
+    }
+  }
+}
+
+@available(*, unavailable)
+extension BufferView: Sendable {}
+
+extension BufferView where Element: Equatable {
+
+  internal func elementsEqual(_ other: Self) -> Bool {
+    guard count == other.count else { return false }
+    if count == 0 { return true }
+    if baseAddress == other.baseAddress { return true }
+
+    //FIXME: This could be a shortcut with a layout constraint
+    //       where stride equals size, with no unused bits.
+    // if Element is BitwiseRepresentable {
+    // return _swift_stdlib_memcmp(lhs.baseAddress, rhs.baseAddress, count) == 0
+    // }
+    for (a,b) in zip(self, other) {
+      guard a == b else { return false }
+    }
+    return true
+  }
+}
+
+//MARK: Collection, RandomAccessCollection
+extension BufferView:
+  Collection,
+  BidirectionalCollection,
+  RandomAccessCollection {
+
+  @usableFromInline typealias Element = Element
+  @usableFromInline typealias Index = BufferViewIndex<Element>
+  @usableFromInline typealias SubSequence = Self
+
+  @inlinable @inline(__always)
+  public var startIndex: Index { .init(rawValue: baseAddress) }
+
+  @inlinable @inline(__always)
+  public var endIndex: Index {
+    .init(
+      rawValue: baseAddress.advanced(by: count*MemoryLayout<Element>.stride)
+    )
+  }
+
+  @inlinable @inline(__always)
+  public var indices: Range<Index> {
+    .init(uncheckedBounds: (startIndex, endIndex))
+  }
+
+  @inlinable @inline(__always)
+  func _checkBounds(_ position: Index) {
+    precondition(
+      distance(from: startIndex, to: position) >= 0 &&
+      distance(from: position, to: endIndex) > 0,
+      "Index out of bounds"
+    )
+    //FIXME: Use `BitwiseCopyable` layout constraint
+    if !_isPOD(Element.self) {
+      precondition(
+        position.isAligned,
+        "Index is unaligned for Element"
+      )
+    }
+  }
+
+  @inlinable @inline(__always)
+  func _checkBounds(_ bounds: Range<Index>) {
+    precondition(
+      distance(from: startIndex, to: bounds.lowerBound) >= 0 &&
+      distance(from: bounds.lowerBound, to: bounds.upperBound) >= 0 &&
+      distance(from: bounds.upperBound, to: endIndex) >= 0,
+      "Range of indices out of bounds"
+    )
+    //FIXME: Use `BitwiseCopyable` layout constraint
+    if !_isPOD(Element.self) {
+      precondition(
+        bounds.lowerBound.isAligned && bounds.upperBound.isAligned,
+        "Range of indices is unaligned for Element"
+      )
+    }
+  }
+
+  @inlinable @inline(__always)
+  public func index(after i: Index) -> Index {
+    i.advanced(by: +1)
+  }
+
+  @inlinable @inline(__always)
+  public func index(before i: Index) -> Index {
+    i.advanced(by: -1)
+  }
+
+  @inlinable @inline(__always)
+  public func formIndex(after i: inout Index) {
+    i = index(after: i)
+  }
+
+  @inlinable @inline(__always)
+  public func formIndex(before i: inout Index) {
+    i = index(before: i)
+  }
+
+  @inlinable @inline(__always)
+  public func index(_ i: Index, offsetBy distance: Int) -> Index {
+    i.advanced(by: distance)
+  }
+
+  @inlinable @inline(__always)
+  public func formIndex(_ i: inout Index, offsetBy distance: Int) {
+    i = index(i, offsetBy: distance)
+  }
+
+  @inlinable @inline(__always)
+  public func distance(from start: BufferViewIndex<Element>, to end: BufferViewIndex<Element>) -> Int {
+    start.distance(to: end)
+  }
+
+  @inlinable @inline(__always)
+  public subscript(position: BufferViewIndex<Element>) -> Element {
+    get {
+      _checkBounds(position)
+      return self[unchecked: position]
+    }
+  }
+
+  @inlinable @inline(__always)
+  public subscript(unchecked position: BufferViewIndex<Element>) -> Element {
+    get {
+      if _isPOD(Element.self) {
+        return position._rawValue.loadUnaligned(as: Element.self)
+      }
+      else {
+        return position._rawValue.load(as: Element.self)
+      }
+    }
+  }
+
+  @inlinable @inline(__always)
+  public subscript(bounds: Range<BufferViewIndex<Element>>) -> Self {
+    get {
+      _checkBounds(bounds)
+      return self[unchecked: bounds]
+    }
+  }
+
+  @inlinable @inline(__always)
+  public subscript(unchecked bounds: Range<BufferViewIndex<Element>>) -> Self {
+    get {
+      BufferView(
+        baseAddress: UnsafeRawPointer(bounds.lowerBound._rawValue),
+        count: bounds.count,
+        dependsOn: self
+      )
+    }
+  }
+
+  @_alwaysEmitIntoClient
+  public subscript(bounds: some RangeExpression<Index>) -> Self {
+  // internal subscript<R: RangeExpression>(bounds: R) -> Self where R.Bound == Index {
+    get {
+      self[bounds.relative(to: self)]
+    }
+  }
+
+  @_alwaysEmitIntoClient
+  public subscript(unchecked bounds: some RangeExpression<Index>) -> Self {
+    get {
+      self[unchecked: bounds.relative(to: self)]
+    }
+  }
+
+  @_alwaysEmitIntoClient
+  public subscript(x: UnboundedRange) -> Self {
+    get {
+      self[unchecked: indices]
+    }
+  }
+}
+
+//MARK: withUnsafeRaw...
+extension BufferView /* where Element: BitwiseCopyable */ {
+
+  //FIXME: mark parameter as non-escaping
+  public func withUnsafeRawPointer<R>(
+    _ body: (_ pointer: UnsafeRawPointer, _ count: Int) throws -> R
+  ) rethrows -> R {
+    try body(baseAddress, count*MemoryLayout<Element>.stride)
+  }
+
+  //FIXME: mark parameter as non-escaping
+  public func withUnsafeBytes<R>(
+    _ body: (_ buffer: UnsafeRawBufferPointer) throws -> R
+  ) rethrows -> R {
+    try body(.init(start: baseAddress, count: count))
+  }
+}
+
+//MARK: withUnsafePointer, etc.
+extension BufferView {
+
+  //FIXME: mark parameter as non-escaping
+  public func withUnsafePointer<R>(
+    _ body: (
+      _ pointer: UnsafePointer<Element>,
+      _ capacity: Int
+    ) throws -> R
+  ) rethrows -> R {
+    try baseAddress.withMemoryRebound(
+      to: Element.self, capacity: count, { try body($0, count) }
+    )
+  }
+
+  //FIXME: mark parameter as non-escaping
+  public func withUnsafeBufferPointer<R>(
+    _ body: (UnsafeBufferPointer<Element>) throws -> R
+  ) rethrows -> R {
+    try baseAddress.withMemoryRebound(to: Element.self, capacity: count) {
+      try body(.init(start: $0, count: count))
+    }
+  }
+}
+
+//MARK: load and store
+extension BufferView /* where Element: BitwiseCopyable */ {
+
+  public func load<T>(
+    fromByteOffset offset: Int = 0, as: T.Type
+  ) -> T {
+    guard _isPOD(Element.self) else { fatalError() }
+    _checkBounds(
+      Range(uncheckedBounds: (
+        .init(rawValue: baseAddress.advanced(by: offset)),
+        .init(rawValue: baseAddress.advanced(by: offset+MemoryLayout<T>.size))
+      ))
+    )
+    return baseAddress.load(fromByteOffset: offset, as: T.self)
+  }
+
+  public func load<T>(from index: Index, as: T.Type) -> T {
+    let o = distance(from: startIndex, to: index)*MemoryLayout<Element>.stride
+    return load(fromByteOffset: o, as: T.self)
+  }
+
+  public func loadUnaligned<T /*: BitwiseCopyable */>(
+    fromByteOffset offset: Int = 0, as: T.Type
+  ) -> T {
+    guard _isPOD(Element.self) && _isPOD(T.self) else { fatalError() }
+    _checkBounds(
+      Range(uncheckedBounds: (
+        .init(rawValue: baseAddress.advanced(by: offset)),
+        .init(rawValue: baseAddress.advanced(by: offset+MemoryLayout<T>.size))
+      ))
+    )
+    return baseAddress.loadUnaligned(fromByteOffset: offset, as: T.self)
+  }
+
+  public func loadUnaligned<T /*: BitwiseCopyable */>(
+    from index: Index, as: T.Type
+  ) -> T {
+    let o = distance(from: startIndex, to: index)*MemoryLayout<Element>.stride
+    return loadUnaligned(fromByteOffset: o, as: T.self)
+  }
+}
+
+//MARK: integer offset subscripts
+
+extension BufferView {
+
+  public subscript(offset offset: Int) -> Element {
+    get {
+      precondition(0 <= offset && offset < count)
+      return self[uncheckedOffset: offset]
+    }
+  }
+
+  public subscript(uncheckedOffset offset: Int) -> Element {
+    get {
+      self[unchecked: index(startIndex, offsetBy: offset)]
+    }
+  }
+}
+
+extension BufferView {
+  public var first: Element? {
+    startIndex == endIndex ? nil : self[unchecked: startIndex]
+  }
+
+  public var last: Element? {
+    startIndex == endIndex ? nil : self[unchecked: index(before: endIndex)]
+  }
+}
+
+//MARK: prefix and suffix slicing
+extension BufferView {
+
+  public func prefix(_ maxLength: Int) -> BufferView {
+    precondition(maxLength >= 0, "Can't have a prefix of negative length.")
+    let nc = maxLength < count ? maxLength : count
+    return BufferView(baseAddress: baseAddress, count: nc, dependsOn: self)
+  }
+
+  public func suffix(_ maxLength: Int) -> BufferView {
+    precondition(maxLength >= 0, "Can't have a suffix of negative length.")
+    let nc = maxLength < count ? maxLength : count
+    let newStart = baseAddress.advanced(by: (count&-nc)*MemoryLayout<Element>.stride)
+    return BufferView(baseAddress: newStart, count: nc, dependsOn: self)
+  }
+
+  public func dropFirst(_ k: Int = 1) -> BufferView {
+    precondition(k >= 0, "Can't drop a negative number of elements.")
+    let dc = k < count ? k : count
+    let newStart = baseAddress.advanced(by: dc*MemoryLayout<Element>.stride)
+    return BufferView(baseAddress: newStart, count: count&-dc, dependsOn: self)
+  }
+
+  public func dropLast(_ k: Int = 1) -> BufferView {
+    precondition(k >= 0, "Can't drop a negative number of elements.")
+    let nc = k < count ? count&-k : 0
+    return BufferView(baseAddress: baseAddress, count: nc, dependsOn: self)
+  }
+
+  public func prefix(upTo index: BufferViewIndex<Element>) -> BufferView {
+    _checkBounds(Range(uncheckedBounds: (startIndex, index)))
+    return BufferView(
+      baseAddress: baseAddress,
+      count: distance(from: startIndex, to: index),
+      dependsOn: self
+    )
+  }
+
+  public func suffix(from index: BufferViewIndex<Element>) -> BufferView {
+    _checkBounds(Range(uncheckedBounds: (index, endIndex)))
+    return BufferView(
+      baseAddress: index._rawValue,
+      count: distance(from: index, to: endIndex),
+      dependsOn: self
+    )
+  }
+}
