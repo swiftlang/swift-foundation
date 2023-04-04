@@ -239,7 +239,6 @@ extension BufferView:
 
   @_alwaysEmitIntoClient
   public subscript(bounds: some RangeExpression<Index>) -> Self {
-  // internal subscript<R: RangeExpression>(bounds: R) -> Self where R.Bound == Index {
     get {
       self[bounds.relative(to: self)]
     }
