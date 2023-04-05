@@ -58,13 +58,13 @@ extension Date {
             self.twoDigitStartDate = twoDigitStartDate
         }
 
-        private var formatter: NSICUDateFormatter {
-            let dateFormatInfo = NSICUDateFormatter.DateFormatInfo(localeIdentifier: locale?.identifier, timeZoneIdentifier: timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format, parseLenient: isLenient, parseTwoDigitStartDate: twoDigitStartDate)
-            return NSICUDateFormatter.cachedFormatter(for: dateFormatInfo)
+        private var formatter: ICUDateFormatter {
+            let dateFormatInfo = ICUDateFormatter.DateFormatInfo(localeIdentifier: locale?.identifier, timeZoneIdentifier: timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format, parseLenient: isLenient, parseTwoDigitStartDate: twoDigitStartDate)
+            return ICUDateFormatter.cachedFormatter(for: dateFormatInfo)
         }
 
         internal init(formatStyle: Date.FormatStyle, lenient: Bool, twoDigitStartDate: Date = Date(timeIntervalSince1970: 0)) {
-            let pattern = NSICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: formatStyle.locale.identifier, calendarIdentifier: formatStyle.calendar.identifier, skeleton: formatStyle.symbols.formatterTemplate, hourCycleOption: .default)
+            let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: formatStyle.locale.identifier, calendarIdentifier: formatStyle.calendar.identifier, skeleton: formatStyle.symbols.formatterTemplate, hourCycleOption: .default)
             self.init(format: pattern, locale: formatStyle.locale, timeZone: formatStyle.timeZone, calendar: formatStyle.calendar, isLenient: lenient, twoDigitStartDate: twoDigitStartDate)
         }
     }

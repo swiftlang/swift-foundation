@@ -17,7 +17,7 @@ import FoundationEssentials
 @_implementationOnly import FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal class NSICURelativeDateFormatter {
+internal final class ICURelativeDateFormatter {
 
     static let sortedAllowedComponents : [Calendar.Component] = [ .year, .month, .weekOfMonth, .day, .hour, .minute, .second ]
 
@@ -33,7 +33,7 @@ internal class NSICURelativeDateFormatter {
 
     let uformatter: OpaquePointer
 
-    internal static let cache = FormatterCache<AnyHashable, NSICURelativeDateFormatter?>()
+    internal static let cache = FormatterCache<AnyHashable, ICURelativeDateFormatter?>()
 
     private init?(uNumberFormatStyle: UNumberFormatStyle?, uRelDateStyle: UDateRelativeDateTimeFormatterStyle, locale: Locale, context: UDisplayContext) {
         var status = U_ZERO_ERROR
@@ -69,9 +69,9 @@ internal class NSICURelativeDateFormatter {
         }
     }
 
-    internal static func formatterCreateIfNeeded(format: Date.RelativeFormatStyle) -> NSICURelativeDateFormatter {
+    internal static func formatterCreateIfNeeded(format: Date.RelativeFormatStyle) -> ICURelativeDateFormatter {
         let formatter = Self.cache.formatter(for: format) {
-            NSICURelativeDateFormatter(uNumberFormatStyle: format.unitsStyle.icuNumberFormatStyle, uRelDateStyle: format.unitsStyle.icuRelativeDateStyle, locale: format.locale, context: format.capitalizationContext.icuContext)
+            ICURelativeDateFormatter(uNumberFormatStyle: format.unitsStyle.icuNumberFormatStyle, uRelDateStyle: format.unitsStyle.icuRelativeDateStyle, locale: format.locale, context: format.capitalizationContext.icuContext)
         }
 
         return formatter!

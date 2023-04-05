@@ -13,10 +13,10 @@
 @_implementationOnly import FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal class NSICUListFormatter {
+internal final class ICUListFormatter {
     let uformatter: OpaquePointer
 
-    internal static let cache = FormatterCache<AnyHashable, NSICUListFormatter>()
+    internal static let cache = FormatterCache<AnyHashable, ICUListFormatter>()
 
     static let uListFormatterTypes: [UListFormatterType] = [ .and, .or, .units ]
     static let uListFormatterWidths: [UListFormatterWidth] = [ .wide, .short, .narrow ]
@@ -60,9 +60,9 @@ internal class NSICUListFormatter {
         return result ?? ""
     }
 
-    internal static func formatterCreateIfNeeded<Style, Base>(format: ListFormatStyle<Style, Base>) -> NSICUListFormatter {
+    internal static func formatterCreateIfNeeded<Style, Base>(format: ListFormatStyle<Style, Base>) -> ICUListFormatter {
         let formatter = Self.cache.formatter(for: format) {
-            NSICUListFormatter(locale: format.locale, type: uListFormatterTypes[format.listType.rawValue], width: uListFormatterWidths[format.width.rawValue])
+            ICUListFormatter(locale: format.locale, type: uListFormatterTypes[format.listType.rawValue], width: uListFormatterWidths[format.width.rawValue])
         }
         return formatter
     }

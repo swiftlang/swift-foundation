@@ -23,7 +23,7 @@ enum HourCycleOverride {
     case force24hour
 }
 
-class NSICUDateFormatter {
+final class ICUDateFormatter {
 
     var udateFormat: UnsafeMutablePointer<UDateFormat?>
     var lenientParsing: Bool
@@ -195,7 +195,7 @@ class NSICUDateFormatter {
 
     // -- Caching support
 
-    // A Date.VerbatimFormatStyle, Date.FormatStyle and Date.ParseStrategy might be able to share a NSICUDateFormatter
+    // A Date.VerbatimFormatStyle, Date.FormatStyle and Date.ParseStrategy might be able to share a ICUDateFormatter
     struct DateFormatInfo: Hashable {
         // Use the bare identifier for locale, time zone and calendar instead of instances of their type so that `.current` and `.autoupdatingCurrent` special instances behaves the same as normal "fixed" ones.
         var localeIdentifier: String
@@ -209,8 +209,8 @@ class NSICUDateFormatter {
         var parseLenient: Bool
         var parseTwoDigitStartDate: Date
 
-        func createICUDateFormatter() -> NSICUDateFormatter {
-            NSICUDateFormatter(localeIdentifier: localeIdentifier, timeZoneIdentifier: timeZoneIdentifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, capitalizationContext: capitalizationContext, pattern: pattern, twoDigitStartDate: parseTwoDigitStartDate, lenientParsing: parseLenient)
+        func createICUDateFormatter() -> ICUDateFormatter {
+            ICUDateFormatter(localeIdentifier: localeIdentifier, timeZoneIdentifier: timeZoneIdentifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, capitalizationContext: capitalizationContext, pattern: pattern, twoDigitStartDate: parseTwoDigitStartDate, lenientParsing: parseLenient)
         }
 
         init(localeIdentifier: String?, timeZoneIdentifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Int, minimumDaysInFirstWeek: Int, capitalizationContext: FormatStyleCapitalizationContext, pattern: String, parseLenient: Bool = true, parseTwoDigitStartDate: Date = Date(timeIntervalSince1970: 0)) {
@@ -226,21 +226,21 @@ class NSICUDateFormatter {
             self.capitalizationContext = capitalizationContext
             self.pattern = pattern
 
-            // Always set a default value even though this is only relevant for parsing -- We might be able to reuse an existing NSICUDateFormatter when parsing
+            // Always set a default value even though this is only relevant for parsing -- We might be able to reuse an existing ICUDateFormatter when parsing
             self.parseLenient = parseLenient
             self.parseTwoDigitStartDate = parseTwoDigitStartDate
         }
     }
 
-    static let formatterCache = FormatterCache<DateFormatInfo, NSICUDateFormatter>()
+    static let formatterCache = FormatterCache<DateFormatInfo, ICUDateFormatter>()
     static var patternCache = LockedState<[Date.FormatStyle : String]>(initialState: [:])
 
-    static func cachedFormatter(for dateFormatInfo: DateFormatInfo) -> NSICUDateFormatter {
+    static func cachedFormatter(for dateFormatInfo: DateFormatInfo) -> ICUDateFormatter {
         return Self.formatterCache.formatter(for: dateFormatInfo, creator: dateFormatInfo.createICUDateFormatter)
     }
 
-    static func cachedFormatter(for format: Date.FormatStyle) -> NSICUDateFormatter {
-        let hourCycleOption: NSICUPatternGenerator.HourCycleOption
+    static func cachedFormatter(for format: Date.FormatStyle) -> ICUDateFormatter {
+        let hourCycleOption: ICUPatternGenerator.HourCycleOption
         if format.locale.force12Hour {
             hourCycleOption = .force12Hour
         } else if format.locale.force24Hour {
@@ -255,7 +255,7 @@ class NSICUDateFormatter {
             if let cachedPattern = state[format] {
                 return cachedPattern
             } else {
-                let pattern = NSICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier, skeleton: format.symbols.formatterTemplate, hourCycleOption: hourCycleOption)
+                let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier, skeleton: format.symbols.formatterTemplate, hourCycleOption: hourCycleOption)
                 state[format] = pattern
                 return pattern
             }
@@ -266,7 +266,7 @@ class NSICUDateFormatter {
         return cachedFormatter(for: info)
     }
 
-    static func cachedFormatter(for format: Date.VerbatimFormatStyle) -> NSICUDateFormatter {
+    static func cachedFormatter(for format: Date.VerbatimFormatStyle) -> ICUDateFormatter {
         let info = DateFormatInfo(localeIdentifier: format.locale?.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: format.calendar.identifier, firstWeekday: format.calendar.firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format.formatPattern)
         return cachedFormatter(for: info)
     }

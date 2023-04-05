@@ -14,7 +14,7 @@
 public struct IntegerParseStrategy<Format> : Codable, Hashable where Format : FormatStyle, Format.FormatInput : BinaryInteger {
     public var formatStyle: Format
     public var lenient: Bool
-    var numberFormatType: NSICULegacyNumberFormatter.NumberFormatType
+    var numberFormatType: ICULegacyNumberFormatter.NumberFormatType
     var locale: Locale
 }
 
@@ -24,7 +24,7 @@ extension IntegerParseStrategy : Sendable where Format : Sendable {}
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension IntegerParseStrategy: ParseStrategy {
     public func parse(_ value: String) throws -> Format.FormatInput {
-        let parser = NSICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
+        let parser = ICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
         let trimmedString = value.trimmingCharacters(in: .whitespaces)
         if let v = parser.parseAsInt(trimmedString) {
             return Format.FormatInput(v)
@@ -48,7 +48,7 @@ extension IntegerParseStrategy: ParseStrategy {
             return nil
         }
 
-        let parser = NSICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
+        let parser = ICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
         let substr = value[index..<range.upperBound]
         var upperBound = 0
         if let value = parser.parseAsInt(substr, upperBound: &upperBound) {

@@ -31,7 +31,7 @@ extension Date {
             }
             var option: Option
 
-            // NSICURelativeDateFormatter compatibility
+            // ICURelativeDateFormatter compatibility
             var icuNumberFormatStyle: UNumberFormatStyle? {
                 switch self.option {
                 case .spellOut:
@@ -128,7 +128,7 @@ extension Date {
             }
 
             let (component, value) = _largestNonZeroComponent(destDate, reference: refDate, adjustComponent: strategy)
-            return NSICURelativeDateFormatter.formatterCreateIfNeeded(format: self).format(value: value, component: component, presentation: self.presentation)!
+            return ICURelativeDateFormatter.formatterCreateIfNeeded(format: self).format(value: value, component: component, presentation: self.presentation)!
         }
 
 
@@ -147,9 +147,9 @@ extension Date {
             let refDateEnd = refDateStart.addingTimeInterval(interval - 1)
             let dateComponents: DateComponents
             if refDate < destDate {
-                dateComponents = calendar.dateComponents(Set(NSICURelativeDateFormatter.sortedAllowedComponents), from: refDateStart, to: destDate)
+                dateComponents = calendar.dateComponents(Set(ICURelativeDateFormatter.sortedAllowedComponents), from: refDateStart, to: destDate)
             } else {
-                dateComponents = calendar.dateComponents(Set(NSICURelativeDateFormatter.sortedAllowedComponents), from: refDateEnd, to: destDate)
+                dateComponents = calendar.dateComponents(Set(ICURelativeDateFormatter.sortedAllowedComponents), from: refDateEnd, to: destDate)
             }
 
             return dateComponents.nonZeroComponentsAndValue.first
@@ -185,14 +185,14 @@ extension Date {
 
         private func _largestNonZeroComponent(_ destDate: Date, reference refDate: Date, adjustComponent: ComponentAdjustmentStrategy) -> CalendarComponentAndValue {
             // Precision of `Date` is nanosecond. Round to the smallest supported unit, seconds.
-            var searchComponents = NSICURelativeDateFormatter.sortedAllowedComponents
+            var searchComponents = ICURelativeDateFormatter.sortedAllowedComponents
             searchComponents.append(.nanosecond)
             let components = self.calendar.dateComponents(Set(searchComponents), from: refDate, to: destDate)
 
             let nanosecondRange = 1.0e+9
             let dateComponents : DateComponents
             if let nanosecond = components.value(for: .nanosecond), abs(nanosecond) > Int(0.5 * nanosecondRange), let adjustedDestDate = calendar.date(byAdding: .second, value: nanosecond > 0 ? 1 : -1, to: destDate) {
-                dateComponents = calendar.dateComponents(Set(NSICURelativeDateFormatter.sortedAllowedComponents), from: refDate, to: adjustedDestDate)
+                dateComponents = calendar.dateComponents(Set(ICURelativeDateFormatter.sortedAllowedComponents), from: refDate, to: adjustedDestDate)
             } else {
                 dateComponents = components
             }
@@ -208,7 +208,7 @@ extension Date {
                     compAndValue = Self._alignedComponentValue(component: largest.component, for: destDate, reference: refDate, calendar: calendar) ?? largest
                 }
             } else {
-                let smallestUnit = NSICURelativeDateFormatter.sortedAllowedComponents.last!
+                let smallestUnit = ICURelativeDateFormatter.sortedAllowedComponents.last!
                 compAndValue = (smallestUnit, dateComponents.value(for: smallestUnit)!)
             }
 
@@ -222,7 +222,7 @@ extension Date.RelativeFormatStyle : FormatStyle {}
 
 extension DateComponents {
     var nonZeroComponentsAndValue: [CalendarComponentAndValue] {
-        return NSICURelativeDateFormatter.sortedAllowedComponents.filter({
+        return ICURelativeDateFormatter.sortedAllowedComponents.filter({
             self.value(for: $0) != 0
         }).map { component in
             return (component, self.value(for: component)!)

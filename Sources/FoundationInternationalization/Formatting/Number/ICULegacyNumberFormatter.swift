@@ -17,7 +17,7 @@ import FoundationEssentials
 @_implementationOnly import FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal class NSICULegacyNumberFormatter {
+internal final class ICULegacyNumberFormatter {
 
     let uformatter: UnsafeMutablePointer<UNumberFormat?>
 
@@ -226,7 +226,7 @@ internal class NSICULegacyNumberFormatter {
         let locale: Locale
         let lenient: Bool
 
-        func createNumberFormatter() -> NSICULegacyNumberFormatter {
+        func createNumberFormatter() -> ICULegacyNumberFormatter {
             var icuType: UNumberFormatStyle
             switch type {
             case .number(let config):
@@ -243,7 +243,7 @@ internal class NSICULegacyNumberFormatter {
                 icuType = config.icuFormatStyle
             }
 
-            let formatter = try! NSICULegacyNumberFormatter(type: icuType, locale: locale)
+            let formatter = try! ICULegacyNumberFormatter(type: icuType, locale: locale)
             formatter.setAttribute(.lenientParse, value: lenient)
 
             switch type {
@@ -294,11 +294,11 @@ internal class NSICULegacyNumberFormatter {
         }
     }
 
-    private static let cache = FormatterCache<CacheSignature, NSICULegacyNumberFormatter>()
+    private static let cache = FormatterCache<CacheSignature, ICULegacyNumberFormatter>()
     // lenient is only used for parsing
-    static func numberFormatterCreateIfNeeded(type: NumberFormatType, locale: Locale, lenient: Bool = false) -> NSICULegacyNumberFormatter {
+    static func numberFormatterCreateIfNeeded(type: NumberFormatType, locale: Locale, lenient: Bool = false) -> ICULegacyNumberFormatter {
         let sig = CacheSignature(type: type, locale: locale, lenient: lenient)
-        let formatter = NSICULegacyNumberFormatter.cache.formatter(for: sig, creator: sig.createNumberFormatter)
+        let formatter = ICULegacyNumberFormatter.cache.formatter(for: sig, creator: sig.createNumberFormatter)
 
         return formatter
     }
