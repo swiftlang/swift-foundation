@@ -23,11 +23,7 @@ internal struct BufferView<Element> {
   public let count: Int
 
   @inlinable
-  public init<Owner>(
-    baseAddress: UnsafeRawPointer,
-    count: Int,
-    dependsOn: /*borrowing*/ Owner
-  ) {
+  public init(baseAddress: UnsafeRawPointer, count: Int) {
     precondition(count >= 0, "Count must not be negative")
     if !_isPOD(Element.self) {
       precondition(
@@ -39,28 +35,20 @@ internal struct BufferView<Element> {
     self.count = count
   }
 
-  public init<Owner>(
-    unsafeBufferPointer buffer: UnsafeBufferPointer<Element>,
-    dependsOn owner: /*borrowing*/ Owner
-  ) {
+  public init(unsafeBufferPointer buffer: UnsafeBufferPointer<Element>) {
     let baseAddress = UnsafeRawPointer(buffer.baseAddress) ?? invalidAddress
-    self.init(
-      baseAddress: baseAddress, count: buffer.count, dependsOn: owner
-    )
+    self.init(baseAddress: baseAddress, count: buffer.count)
   }
 }
 
 extension BufferView /*where Element: BitwiseCopyable*/ {
 
-  public init<Owner>(
-    unsafeRawBufferPointer buffer: UnsafeRawBufferPointer,
-    dependsOn owner: /*borrowing*/ Owner
-  ) {
+  public init(unsafeRawBufferPointer buffer: UnsafeRawBufferPointer) {
     guard _isPOD(Element.self) else { fatalError() }
     let (p, c) = (buffer.baseAddress ?? invalidAddress, buffer.count)
     let (q, r) = c.quotientAndRemainder(dividingBy: MemoryLayout<Element>.stride)
     precondition(r == 0)
-    self.init(baseAddress: p, count: q, dependsOn: owner)
+    self.init(baseAddress: p, count: q)
   }
 }
 
@@ -69,7 +57,7 @@ extension BufferView /*where Element: BitwiseCopyable*/ {
 extension BufferView: Sequence {
 
   public func makeIterator() -> BufferViewIterator<Element> {
-    .init(from: startIndex, to: endIndex, dependsOn: self)
+    .init(from: startIndex, to: endIndex)
   }
 
   //FIXME: this should only exist if we can make the pointer non-escapable
@@ -231,8 +219,7 @@ extension BufferView:
     get {
       BufferView(
         baseAddress: UnsafeRawPointer(bounds.lowerBound._rawValue),
-        count: bounds.count,
-        dependsOn: self
+        count: bounds.count
       )
     }
   }
@@ -378,35 +365,34 @@ extension BufferView {
   public func prefix(_ maxLength: Int) -> BufferView {
     precondition(maxLength >= 0, "Can't have a prefix of negative length.")
     let nc = maxLength < count ? maxLength : count
-    return BufferView(baseAddress: baseAddress, count: nc, dependsOn: self)
+    return BufferView(baseAddress: baseAddress, count: nc)
   }
 
   public func suffix(_ maxLength: Int) -> BufferView {
     precondition(maxLength >= 0, "Can't have a suffix of negative length.")
     let nc = maxLength < count ? maxLength : count
     let newStart = baseAddress.advanced(by: (count&-nc)*MemoryLayout<Element>.stride)
-    return BufferView(baseAddress: newStart, count: nc, dependsOn: self)
+    return BufferView(baseAddress: newStart, count: nc)
   }
 
   public func dropFirst(_ k: Int = 1) -> BufferView {
     precondition(k >= 0, "Can't drop a negative number of elements.")
     let dc = k < count ? k : count
     let newStart = baseAddress.advanced(by: dc*MemoryLayout<Element>.stride)
-    return BufferView(baseAddress: newStart, count: count&-dc, dependsOn: self)
+    return BufferView(baseAddress: newStart, count: count&-dc)
   }
 
   public func dropLast(_ k: Int = 1) -> BufferView {
     precondition(k >= 0, "Can't drop a negative number of elements.")
     let nc = k < count ? count&-k : 0
-    return BufferView(baseAddress: baseAddress, count: nc, dependsOn: self)
+    return BufferView(baseAddress: baseAddress, count: nc)
   }
 
   public func prefix(upTo index: BufferViewIndex<Element>) -> BufferView {
     _checkBounds(Range(uncheckedBounds: (startIndex, index)))
     return BufferView(
       baseAddress: baseAddress,
-      count: distance(from: startIndex, to: index),
-      dependsOn: self
+      count: distance(from: startIndex, to: index)
     )
   }
 
@@ -414,8 +400,7 @@ extension BufferView {
     _checkBounds(Range(uncheckedBounds: (index, endIndex)))
     return BufferView(
       baseAddress: index._rawValue,
-      count: distance(from: index, to: endIndex),
-      dependsOn: self
+      count: distance(from: index, to: endIndex)
     )
   }
 }
