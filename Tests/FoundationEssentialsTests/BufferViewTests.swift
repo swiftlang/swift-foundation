@@ -45,7 +45,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
-      let b = BufferView(unsafeBufferPointer: $0)
+      let b = BufferView(unsafeBufferPointer: $0)!
       XCTAssertEqual(b.count, capacity)
     }
 
@@ -53,10 +53,10 @@ final class BufferViewTests: XCTestCase {
     _ = BufferView(unsafeBufferPointer: e)
 
     a.withUnsafeBytes {
-      let b = BufferView<UInt>(unsafeRawBufferPointer: $0)
+      let b = BufferView<UInt>(unsafeRawBufferPointer: $0)!
       XCTAssertEqual(b.count, capacity)
 
-      let r = BufferView<Int8>(unsafeRawBufferPointer: $0)
+      let r = BufferView<Int8>(unsafeRawBufferPointer: $0)!
       XCTAssertEqual(r.count, capacity*MemoryLayout<Int>.stride)
     }
 
@@ -68,7 +68,7 @@ final class BufferViewTests: XCTestCase {
     let count = 4
     let strings = (1...count).map({ "This String is not BitwiseCopyable (\($0))." })
     strings.withUnsafeBufferPointer {
-      let buffer = BufferView(unsafeBufferPointer: $0)
+      let buffer = BufferView(unsafeBufferPointer: $0)!
 
       let first  = buffer.startIndex
       let second = first.advanced(by: 1)
@@ -81,7 +81,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let s = (0..<capacity).map({ "\(#file)+\(#function)--\($0)" })
     s.withUnsafeBufferPointer {
-      let view = BufferView(unsafeBufferPointer: $0)
+      let view = BufferView(unsafeBufferPointer: $0)!
 
       var iterator = view.makeIterator()
       var buffered = 0
@@ -125,7 +125,7 @@ final class BufferViewTests: XCTestCase {
     let a = Array(0..<capacity)
 
     a.withUnsafeBufferPointer {
-      let view = BufferView(unsafeBufferPointer: $0)
+      let view = BufferView(unsafeBufferPointer: $0)!
 
       var i = view.makeIterator()
       var o = $0.startIndex
@@ -141,7 +141,7 @@ final class BufferViewTests: XCTestCase {
 
     let s = a.map(String.init)
     s.withUnsafeBufferPointer {
-      let view = BufferView(unsafeBufferPointer: $0)
+      let view = BufferView(unsafeBufferPointer: $0)!
 
       var i = view.makeIterator()
       var o = $0.startIndex
@@ -157,7 +157,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
-      let view = BufferView(unsafeBufferPointer: $0)
+      let view = BufferView(unsafeBufferPointer: $0)!
       XCTAssertEqual(view.count, view.indices.count)
     }
   }
@@ -171,7 +171,7 @@ final class BufferViewTests: XCTestCase {
       $1 = $0.count
     }
     a.withUnsafeBufferPointer {
-      let v1 = BufferView(unsafeBufferPointer: $0)
+      let v1 = BufferView(unsafeBufferPointer: $0)!
 
       XCTAssertEqual(v1.elementsEqual(v1.prefix(1)), false)
       XCTAssertEqual(v1.prefix(0).elementsEqual(v1.suffix(0)), true)
@@ -180,7 +180,7 @@ final class BufferViewTests: XCTestCase {
 
       let b = Array(v1)
       b.withUnsafeBufferPointer {
-        let v2 = BufferView(unsafeBufferPointer: $0)
+        let v2 = BufferView(unsafeBufferPointer: $0)!
         XCTAssertEqual(v1.elementsEqual(v2), true)
       }
     }
@@ -190,7 +190,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
-      let v = BufferView(unsafeBufferPointer: $0)
+      let v = BufferView(unsafeBufferPointer: $0)!
       let indices = Array(v.indices)
 
       var i = v.startIndex
@@ -211,13 +211,13 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
-      let v = BufferView(unsafeBufferPointer: $0)
+      let v = BufferView(unsafeBufferPointer: $0)!
       XCTAssertEqual(v[v.startIndex], 0)
     }
 
     let b = a.map(String.init)
     b.withUnsafeBufferPointer {
-      let v = BufferView(unsafeBufferPointer: $0)
+      let v = BufferView(unsafeBufferPointer: $0)!
       let f = v.startIndex
       XCTAssertEqual(v[f], b.first)
     }
@@ -227,7 +227,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let a = (0..<capacity).map(String.init)
     a.withUnsafeBufferPointer {
-      let v = BufferView(unsafeBufferPointer: $0)
+      let v = BufferView(unsafeBufferPointer: $0)!
       XCTAssertTrue(v.elementsEqual(v[v.startIndex..<v.endIndex]))
       XCTAssertTrue(v.elementsEqual(v[v.startIndex...]))
       XCTAssertTrue(v.elementsEqual(v[unchecked: ..<v.endIndex]))
@@ -239,7 +239,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let s = (0..<capacity).map({ "\(#file)+\(#function) #\($0)" })
     s.withUnsafeBytes {
-      let view = BufferView<Int16>(unsafeRawBufferPointer: $0)
+      let view = BufferView<Int16>(unsafeRawBufferPointer: $0)!
       let stride = MemoryLayout<String>.stride
 
       let s0 = view.load(as: String.self)
@@ -256,7 +256,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 64
     let a = Array(0..<UInt8(capacity))
     a.withUnsafeBytes {
-      let view = BufferView<UInt16>(unsafeRawBufferPointer: $0)
+      let view = BufferView<UInt16>(unsafeRawBufferPointer: $0)!
 
       let u0 = view.dropFirst(1).loadUnaligned(as: UInt64.self)
       XCTAssertEqual(u0 & 0xff, 2)
@@ -273,7 +273,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
-      let view = BufferView(unsafeBufferPointer: $0)
+      let view = BufferView(unsafeBufferPointer: $0)!
       XCTAssertEqual(view[offset: 3], 3)
     }
   }
@@ -282,7 +282,7 @@ final class BufferViewTests: XCTestCase {
     let r = Int.random(in: 0..<1000)
     let a = [r]
     a.withUnsafeBufferPointer {
-      let view = BufferView(unsafeBufferPointer: $0)
+      let view = BufferView(unsafeBufferPointer: $0)!
       XCTAssertEqual(view.first, r)
       XCTAssertEqual(view.last, r)
 
@@ -296,7 +296,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
-      let view = BufferView(unsafeBufferPointer: $0)
+      let view = BufferView(unsafeBufferPointer: $0)!
       XCTAssertEqual(view.count, capacity)
       XCTAssertEqual(view.prefix(1).last, 0)
       XCTAssertEqual(view.prefix(capacity).last, capacity-1)
@@ -312,7 +312,7 @@ final class BufferViewTests: XCTestCase {
     let capacity = 4
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
-      let view = BufferView(unsafeBufferPointer: $0)
+      let view = BufferView(unsafeBufferPointer: $0)!
       XCTAssertEqual(view.count, capacity)
       XCTAssertEqual(view.suffix(1).first, capacity-1)
       XCTAssertEqual(view.suffix(capacity).first, 0)
@@ -329,7 +329,7 @@ final class BufferViewTests: XCTestCase {
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
       ub in
-      let view = BufferView(unsafeBufferPointer: ub)
+      let view = BufferView(unsafeBufferPointer: ub)!
 
       view.withUnsafeRawPointer {
         let i = Int.random(in: 0..<$1)
@@ -348,7 +348,7 @@ final class BufferViewTests: XCTestCase {
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
       ub in
-      let view = BufferView(unsafeBufferPointer: ub)
+      let view = BufferView(unsafeBufferPointer: ub)!
 
       view.withUnsafeBytes {
         let i = Int.random(in: 0..<$0.count)

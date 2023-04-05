@@ -13,10 +13,6 @@
 // A BufferView<Element> represents a span of memory which
 // contains initialized `Element` instances.
 
-private var invalidAddress: UnsafeRawPointer {
-  .init(bitPattern: 0x7).unsafelyUnwrapped
-}
-
 @frozen @usableFromInline
 internal struct BufferView<Element> {
   @usableFromInline let baseAddress: UnsafeRawPointer
@@ -35,18 +31,18 @@ internal struct BufferView<Element> {
     self.count = count
   }
 
-  init(unsafeBufferPointer buffer: UnsafeBufferPointer<Element>) {
-    let baseAddress = UnsafeRawPointer(buffer.baseAddress) ?? invalidAddress
+  init?(unsafeBufferPointer buffer: UnsafeBufferPointer<Element>) {
+    guard let baseAddress = UnsafeRawPointer(buffer.baseAddress) else { return nil }
     self.init(baseAddress: baseAddress, count: buffer.count)
   }
 }
 
 extension BufferView /*where Element: BitwiseCopyable*/ {
 
-  init(unsafeRawBufferPointer buffer: UnsafeRawBufferPointer) {
+  init?(unsafeRawBufferPointer buffer: UnsafeRawBufferPointer) {
     guard _isPOD(Element.self) else { fatalError() }
-    let (p, c) = (buffer.baseAddress ?? invalidAddress, buffer.count)
-    let (q, r) = c.quotientAndRemainder(dividingBy: MemoryLayout<Element>.stride)
+    guard let p = buffer.baseAddress else { return nil }
+    let (q, r) = buffer.count.quotientAndRemainder(dividingBy: MemoryLayout<Element>.stride)
     precondition(r == 0)
     self.init(baseAddress: p, count: q)
   }
