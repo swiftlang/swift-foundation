@@ -27,7 +27,7 @@ internal struct BufferViewIterator<Element>{
 
 extension BufferViewIterator: IteratorProtocol {
 
-  public mutating func next() -> Element? {
+  @usableFromInline mutating func next() -> Element? {
     guard curPointer < endPointer else { return nil }
     defer {
       curPointer = curPointer.advanced(by: MemoryLayout<Element>.stride)

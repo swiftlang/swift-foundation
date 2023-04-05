@@ -77,7 +77,7 @@ final class BufferViewTests: XCTestCase {
     }
   }
 
-  public func testIteratorOrdinaryElement() {
+  func testIteratorOrdinaryElement() {
     let capacity = 4
     let s = (0..<capacity).map({ "\(#file)+\(#function)--\($0)" })
     s.withUnsafeBufferPointer {
@@ -93,7 +93,7 @@ final class BufferViewTests: XCTestCase {
     }
   }
 
-  public func testIteratorBitwiseCopyable() {
+  func testIteratorBitwiseCopyable() {
     let count = 4
     let offset = 1
     XCTAssertLessThan(offset, MemoryLayout<UInt64>.stride)
@@ -324,7 +324,7 @@ final class BufferViewTests: XCTestCase {
     }
   }
 
-  public func testWithUnsafePointer() {
+  func testWithUnsafePointer() {
     let capacity: UInt8 = 64
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
@@ -343,7 +343,7 @@ final class BufferViewTests: XCTestCase {
     }
   }
 
-  public func testWithUnsafeBuffer() {
+  func testWithUnsafeBuffer() {
     let capacity: UInt8 = 64
     let a = Array(0..<capacity)
     a.withUnsafeBufferPointer {
