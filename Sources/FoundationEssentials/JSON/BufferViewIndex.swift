@@ -31,22 +31,22 @@ extension BufferViewIndex: Equatable {}
 extension BufferViewIndex: Hashable {}
 
 extension BufferViewIndex: Strideable {
-  public typealias Stride = Int
+  @usableFromInline typealias Stride = Int
 
   @inlinable @inline(__always)
-  public func distance(to other: BufferViewIndex) -> Int {
+  func distance(to other: BufferViewIndex) -> Int {
     _rawValue.distance(to: other._rawValue) / MemoryLayout<Element>.stride
   }
 
   @inlinable @inline(__always)
-  public func advanced(by n: Int) -> BufferViewIndex {
+  func advanced(by n: Int) -> BufferViewIndex {
     .init(rawValue: _rawValue.advanced(by: n &* MemoryLayout<Element>.stride))
   }
 }
 
 extension BufferViewIndex: Comparable {
   @inlinable @inline(__always)
-  public static func <(lhs: BufferViewIndex, rhs: BufferViewIndex) -> Bool {
+  static func <(lhs: BufferViewIndex, rhs: BufferViewIndex) -> Bool {
     lhs._rawValue < rhs._rawValue
   }
 }
