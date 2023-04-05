@@ -10,8 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
+#if canImport(FoundationEssentials)
 @testable import FoundationEssentials
+#endif
 
 final class BufferViewTests: XCTestCase {
 
