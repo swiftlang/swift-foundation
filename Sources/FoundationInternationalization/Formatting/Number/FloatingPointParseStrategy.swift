@@ -14,7 +14,7 @@
 public struct FloatingPointParseStrategy<Format> : Codable, Hashable where Format : FormatStyle, Format.FormatInput : BinaryFloatingPoint {
     public var formatStyle: Format
     public var lenient: Bool
-    var numberFormatType: NSICULegacyNumberFormatter.NumberFormatType
+    var numberFormatType: ICULegacyNumberFormatter.NumberFormatType
     var locale: Locale
 }
 
@@ -25,7 +25,7 @@ extension FloatingPointParseStrategy : Sendable where Format : Sendable {}
 extension FloatingPointParseStrategy: ParseStrategy {
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
     public func parse(_ value: String) throws -> Format.FormatInput {
-        let parser = NSICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
+        let parser = ICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
         if let v = parser.parseAsDouble(value.trimmingCharacters(in: .whitespaces)) {
             return Format.FormatInput(v)
         } else {
@@ -47,7 +47,7 @@ extension FloatingPointParseStrategy: ParseStrategy {
             return nil
         }
 
-        let parser = NSICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
+        let parser = ICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
         let substr = value[index..<range.upperBound]
         var upperBound = 0
         if let value = parser.parseAsDouble(substr, upperBound: &upperBound) {

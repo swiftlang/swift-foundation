@@ -1177,12 +1177,12 @@ internal final class _Locale: Sendable, Hashable {
                     // ICU isn't handling `rg` keyword yet (93783223), so we do this manually: create a fake locale with the `rg` override as the language region.
                     // Use "und" as the language code as it is irrelevant for regional preferences
                     let tmpLocaleIdentifier = "und_\(regionOverride)"
-                    let hc = NSICUPatternGenerator.cachedPatternGenerator(localeIdentifier: tmpLocaleIdentifier, calendarIdentifier: calendarId).defaultHourCycle
+                    let hc = ICUPatternGenerator.cachedPatternGenerator(localeIdentifier: tmpLocaleIdentifier, calendarIdentifier: calendarId).defaultHourCycle
                     state.hourCycle = hc
                     return hc
                 }
 
-                let hc = NSICUPatternGenerator.cachedPatternGenerator(localeIdentifier: identifier, calendarIdentifier: calendarId).defaultHourCycle
+                let hc = ICUPatternGenerator.cachedPatternGenerator(localeIdentifier: identifier, calendarIdentifier: calendarId).defaultHourCycle
                 state.hourCycle = hc
                 return hc
             }

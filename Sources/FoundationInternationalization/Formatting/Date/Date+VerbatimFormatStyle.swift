@@ -38,7 +38,7 @@ extension Date {
         }
 
         public func format(_ value: Date) -> String {
-            return NSICUDateFormatter.cachedFormatter(for: self).format(value) ?? value.description
+            return ICUDateFormatter.cachedFormatter(for: self).format(value) ?? value.description
         }
 
         public func locale(_ locale: Locale) -> Date.VerbatimFormatStyle {

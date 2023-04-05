@@ -144,7 +144,7 @@ final class DateFormatStyleTests : XCTestCase {
                 let timeZone = TimeZone(secondsFromGMT: -3600)!
 
                 let formatStyle = Date.FormatStyle(date: .abbreviated, locale: locale, timeZone: timeZone)
-                let formatterFromCache = NSICUDateFormatter.cachedFormatter(for: formatStyle)
+                let formatterFromCache = ICUDateFormatter.cachedFormatter(for: formatStyle)
 
                 let expected = expectations[localeIdentifier]!
                 let result = formatterFromCache.format(date)
@@ -172,7 +172,7 @@ final class DateFormatStyleTests : XCTestCase {
                 let locale = Locale(identifier: localeIdentifier)
                 XCTAssertNotNil(locale)
 
-                let pattern = NSICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: .gregorian, skeleton: "yMMMd", hourCycleOption: .default)
+                let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: .gregorian, skeleton: "yMMMd", hourCycleOption: .default)
 
                 let expected = expectations[localeIdentifier]
                 XCTAssertEqual(pattern, expected)
@@ -313,8 +313,8 @@ final class DateFormatStyleTests : XCTestCase {
         let styleUsingFixedTimeZone = Date.FormatStyle(date: dateStyle, time: timeStyle, timeZone: fixedTimeZone)
         let styleUsingFixedCalendar = Date.FormatStyle(date: dateStyle, time: timeStyle, calendar: fixedCalendar)
 
-        XCTAssertTrue(NSICUDateFormatter.cachedFormatter(for: style) === NSICUDateFormatter.cachedFormatter(for: styleUsingFixedTimeZone))
-        XCTAssertTrue(NSICUDateFormatter.cachedFormatter(for: style) === NSICUDateFormatter.cachedFormatter(for: styleUsingFixedCalendar))
+        XCTAssertTrue(ICUDateFormatter.cachedFormatter(for: style) === ICUDateFormatter.cachedFormatter(for: styleUsingFixedTimeZone))
+        XCTAssertTrue(ICUDateFormatter.cachedFormatter(for: style) === ICUDateFormatter.cachedFormatter(for: styleUsingFixedCalendar))
     }
 #endif
 

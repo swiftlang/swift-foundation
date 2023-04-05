@@ -128,7 +128,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
                 let unit: Unit = allowedUnits.contains(.kb) ? .kilobyte : .byte
 
                 let configuration = DescriptiveNumberFormatConfiguration.Collection(presentation: .spellOut, capitalizationContext: .beginningOfSentence)
-                let spellOutFormatter = NSICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: .descriptive(configuration), locale: locale)
+                let spellOutFormatter = ICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: .descriptive(configuration), locale: locale)
 
                 let numberFormatter = ICUByteCountNumberFormatter.create(for: "measure-unit/digital-\(unit.name) \(unit == .byte ? "unit-width-full-name" : "")", locale: locale)
 

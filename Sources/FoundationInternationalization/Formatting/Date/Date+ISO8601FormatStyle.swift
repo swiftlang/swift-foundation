@@ -140,10 +140,10 @@ extension Date {
             return result
         }
 
-        private var formatter: NSICUDateFormatter {
-            let dateFormatInfo = NSICUDateFormatter.DateFormatInfo(localeIdentifier: "en_US_POSIX", timeZoneIdentifier: timeZone.identifier, calendarIdentifier: .gregorian, firstWeekday: 2, minimumDaysInFirstWeek: 4, capitalizationContext: .unknown, pattern: format, parseLenient: false)
+        private var formatter: ICUDateFormatter {
+            let dateFormatInfo = ICUDateFormatter.DateFormatInfo(localeIdentifier: "en_US_POSIX", timeZoneIdentifier: timeZone.identifier, calendarIdentifier: .gregorian, firstWeekday: 2, minimumDaysInFirstWeek: 4, capitalizationContext: .unknown, pattern: format, parseLenient: false)
 
-            return NSICUDateFormatter.cachedFormatter(for: dateFormatInfo)
+            return ICUDateFormatter.cachedFormatter(for: dateFormatInfo)
         }
 
         // MARK: -

@@ -54,7 +54,7 @@ extension Date {
 
         public func format(_ v: Range<Date>) -> String {
             let formatter = Self.cache.formatter(for: self) {
-                let option: NSICUPatternGenerator.HourCycleOption?
+                let option: ICUPatternGenerator.HourCycleOption?
                 if locale.force24Hour {
                     option = .force24Hour
                 } else if locale.force12Hour {
@@ -65,7 +65,7 @@ extension Date {
 
                 let template: String
                 if let option {
-                    let pattern = NSICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: locale.identifier, calendarIdentifier: calendar.identifier, skeleton: symbols.formatterTemplate, hourCycleOption: option)
+                    let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: locale.identifier, calendarIdentifier: calendar.identifier, skeleton: symbols.formatterTemplate, hourCycleOption: option)
                     template = pattern
                 } else {
                     template = symbols.formatterTemplate

@@ -269,12 +269,12 @@ extension Date {
 
         /// Returns an attributed string with `AttributeScopes.FoundationAttributes.DateFieldAttribute`
         public func format(_ value: Date) -> AttributedString {
-            let fm: NSICUDateFormatter
+            let fm: ICUDateFormatter
             switch innerStyle {
             case .formatStyle(let formatStyle):
-                fm = NSICUDateFormatter.cachedFormatter(for: formatStyle)
+                fm = ICUDateFormatter.cachedFormatter(for: formatStyle)
             case .verbatimFormatStyle(let verbatimFormatStyle):
-                fm = NSICUDateFormatter.cachedFormatter(for: verbatimFormatStyle)
+                fm = ICUDateFormatter.cachedFormatter(for: verbatimFormatStyle)
             }
 
             var result: AttributedString
@@ -287,7 +287,7 @@ extension Date {
             return result
         }
 
-        static func _attributedStringFromPositions(_ positions: [NSICUDateFormatter.AttributePosition], string: String) -> AttributedString {
+        static func _attributedStringFromPositions(_ positions: [ICUDateFormatter.AttributePosition], string: String) -> AttributedString {
             typealias DateFieldAttribute = AttributeScopes.FoundationAttributes.DateFieldAttribute.Field
 
             var attrstr = AttributedString(string)
@@ -411,7 +411,7 @@ extension Date.FormatStyle {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle : FormatStyle {
     public func format(_ value: Date) -> String {
-        let fm = NSICUDateFormatter.cachedFormatter(for: self)
+        let fm = ICUDateFormatter.cachedFormatter(for: self)
         return fm.format(value) ?? value.description
     }
 
@@ -426,7 +426,7 @@ extension Date.FormatStyle : FormatStyle {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle : ParseStrategy {
     public func parse(_ value: String) throws -> Date {
-        let fm = NSICUDateFormatter.cachedFormatter(for: self)
+        let fm = ICUDateFormatter.cachedFormatter(for: self)
         guard let date = fm.parse(value) else {
             throw parseError(value, exampleFormattedString: fm.format(Date.now))
         }
@@ -621,6 +621,6 @@ extension Date.FormatStyle : CustomConsumingRegexComponent {
         guard index < bounds.upperBound else {
             return nil
         }
-        return NSICUDateFormatter.cachedFormatter(for: self).parse(input, in: index..<bounds.upperBound)
+        return ICUDateFormatter.cachedFormatter(for: self).parse(input, in: index..<bounds.upperBound)
     }
 }

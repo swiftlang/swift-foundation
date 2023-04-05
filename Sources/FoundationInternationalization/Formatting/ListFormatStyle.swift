@@ -25,7 +25,7 @@ public struct ListFormatStyle<Style: FormatStyle, Base: Sequence>: FormatStyle w
     }
 
     public func format(_ value: Base) -> String {
-        let formatter = NSICUListFormatter.formatterCreateIfNeeded(format: self)
+        let formatter = ICUListFormatter.formatterCreateIfNeeded(format: self)
         return formatter.format(strings: value.map(memberStyle.format(_:)))
     }
 
