@@ -33,7 +33,10 @@ extension PredicateExpressions {
         public func evaluate(_ bindings: PredicateBindings) throws -> Swift.Range<LHS.Output> {
             let low = try lower.evaluate(bindings)
             let high = try upper.evaluate(bindings)
-            return low..<high
+            guard low <= high else {
+                throw PredicateError(.invalidInput("Range requires that lowerBound (\(low)) <= upperBound (\(high))"))
+            }
+            return low ..< high
         }
     }
     
