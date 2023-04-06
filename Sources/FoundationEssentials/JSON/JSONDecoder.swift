@@ -707,7 +707,7 @@ extension JSONDecoderImpl: Decoder {
                     if let decimal = Decimal(entire: numberString) {
                         return decimal
                     }
-                    try JSON5Scanner.validateNumber(from: numberBuffer, withDigitsBeginningAt: digitsStartPtr, docStart: docStart)
+                    throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), docStart: docStart)
                 }
 
             } else {
@@ -716,11 +716,8 @@ extension JSONDecoderImpl: Decoder {
                 if let decimal = Decimal(entire: numberString) {
                     return decimal
                 }
-                try JSONScanner.validateNumber(from: numberBuffer, withDigitsBeginningAt: digitsStartPtr, docStart: docStart)
+                throw JSONScanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), docStart: docStart)
             }
-            throw DecodingError.dataCorrupted(.init(
-                codingPath: codingPathNode.path(with: additionalKey),
-                debugDescription: "Parsed JSON number <\(String(decoding: numberBuffer, as: UTF8.self))> does not fit in \(Decimal.self)."))
         }
     }
 #endif // FOUNDATION_FRAMEWORK
