@@ -37,7 +37,7 @@ internal struct JSON5Scanner {
                 // Time to predict how big these arrays are going to be based on the current rate of consumption per processed bytes.
                 // total objects = (total bytes / current bytes) * current objects
                 let totalBytes = reader.bytes.count
-                let consumedBytes = reader.byteOffset(at: reader.readPtr)
+                let consumedBytes = reader.byteOffset(at: reader.readIndex)
                 let ratio = (Double(totalBytes) / Double(consumedBytes))
                 let totalExpectedMapSize = Int( Double(mapData.count) * ratio )
                 if prevMapDataSize == 0 || Double(totalExpectedMapSize) / Double(prevMapDataSize) > 1.25 {
@@ -329,7 +329,7 @@ internal struct JSON5Scanner {
     mutating func scanString(withQuote quote: UInt8?) throws {
         var isSimple = false
         let start = try reader.skipUTF8StringTillNextUnescapedQuote(isSimple: &isSimple, quote: quote)
-        let end = reader.readPtr
+        let end = reader.readIndex
 
         // skipUTF8StringTillNextUnescapedQuote will have either thrown an error, or already peek'd the quote.
         if let quote {
@@ -342,9 +342,9 @@ internal struct JSON5Scanner {
     }
 
     mutating func scanNumber() throws {
-        let start = reader.readPtr
+        let start = reader.readIndex
         reader.skipNumber()
-        let end = reader.readPtr
+        let end = reader.readIndex
         return partialMap.record(tagType: .number, count: reader.distance(from: start, to: end), dataOffset: reader.byteOffset(at: start), with: reader)
     }
 
@@ -367,12 +367,12 @@ extension JSON5Scanner {
 
     struct DocumentReader {
         let bytes: BufferView<UInt8>
-        private(set) var readPtr : BufferViewIndex<UInt8>
-        private let endPtr : BufferViewIndex<UInt8>
+        private(set) var readIndex : BufferViewIndex<UInt8>
+        private let endIndex : BufferViewIndex<UInt8>
 
         @inline(__always)
         func checkRemainingBytes(_ count: Int) -> Bool {
-            bytes.distance(from: readPtr, to: endPtr) >= count
+            bytes.distance(from: readIndex, to: endIndex) >= count
         }
 
         @inline(__always)
@@ -387,12 +387,12 @@ extension JSON5Scanner {
         }
 
         func sourceLocation(atOffset offset: Int) -> JSONError.SourceLocation {
-            .sourceLocation(at: readPtr.advanced(by: offset), docStart: bytes.startIndex)
+            .sourceLocation(at: readIndex.advanced(by: offset), docStart: bytes.startIndex)
         }
 
         @inline(__always)
         var isEOF: Bool {
-            readPtr == endPtr
+            readIndex == endIndex
         }
 
         @inline(__always)
@@ -402,8 +402,8 @@ extension JSON5Scanner {
 
         init(bytes: BufferView<UInt8>) {
             self.bytes = bytes
-            self.readPtr = bytes.startIndex
-            self.endPtr = bytes.endIndex
+            self.readIndex = bytes.startIndex
+            self.endIndex = bytes.endIndex
         }
 
         @inline(__always)
@@ -412,17 +412,17 @@ extension JSON5Scanner {
                 return nil
             }
 
-            defer { bytes.formIndex(after: &readPtr) }
+            defer { bytes.formIndex(after: &readIndex) }
 
-            return bytes[unchecked: readPtr]
+            return bytes[unchecked: readIndex]
         }
 
         @inline(__always)
         func peek(offset: Int = 0) -> UInt8? {
             precondition(offset >= 0)
-            assert(bytes.startIndex <= readPtr)
-            let peekIndex = bytes.index(readPtr, offsetBy: offset)
-            guard peekIndex < endPtr else {
+            assert(bytes.startIndex <= readIndex)
+            let peekIndex = bytes.index(readIndex, offsetBy: offset)
+            guard peekIndex < endIndex else {
                 return nil
             }
 
@@ -516,7 +516,7 @@ extension JSON5Scanner {
                 switch char {
                 case UInt8(ascii: "u"):
                     try requireRemainingBytes(6) // 6 bytes for \, u, and 4 hex digits
-                    let remaining = bytes.suffix(from: bytes.index(readPtr, offsetBy: 2)) // Skip \u
+                    let remaining = bytes.suffix(from: bytes.index(readIndex, offsetBy: 2)) // Skip \u
                     let (u16, _) = try JSONScanner.parseUnicodeHexSequence(from: remaining, docStart: bytes.startIndex, allowNulls: false)
                     guard let scalar = UnicodeScalar(u16) else {
                         throw JSONError.couldNotCreateUnicodeScalarFromUInt32(location: sourceLocation, unicodeScalarValue: UInt32(u16))
@@ -524,7 +524,7 @@ extension JSON5Scanner {
                     return (scalar, 6)
                 case UInt8(ascii: "x"):
                     try requireRemainingBytes(4) // 4 bytes for \, x, and 2 hex digits
-                    let remaining = bytes.suffix(from: bytes.index(readPtr, offsetBy: 2)) // Skip \x
+                    let remaining = bytes.suffix(from: bytes.index(readIndex, offsetBy: 2)) // Skip \x
                     let (u8, _) = try JSON5Scanner.parseTwoByteUnicodeHexSequence(from: remaining, docStart: bytes.startIndex)
                     return (UnicodeScalar(u8), 4)
                 default:
@@ -532,7 +532,7 @@ extension JSON5Scanner {
                 }
             }
 
-          let (scalar, length) = _decodeScalar(bytes[unchecked: readPtr..<endPtr])
+          let (scalar, length) = _decodeScalar(bytes[unchecked: readIndex..<endIndex])
             guard let scalar else {
                 throw JSONError.cannotConvertInputStringDataToUTF8(location: sourceLocation)
             }
@@ -541,7 +541,7 @@ extension JSON5Scanner {
 
         @inline(__always)
         mutating func moveReaderIndex(forwardBy offset: Int) {
-            bytes.formIndex(&readPtr, offsetBy: offset)
+            bytes.formIndex(&readIndex, offsetBy: offset)
         }
 
         @inline(__always)
@@ -554,9 +554,9 @@ extension JSON5Scanner {
         @inline(__always)
         @discardableResult
         mutating func consumeWhitespace() throws -> UInt8 {
-            assert(bytes.startIndex <= readPtr)
-            var index = readPtr
-            while index < endPtr {
+            assert(bytes.startIndex <= readIndex)
+            var index = readIndex
+            while index < endIndex {
                 let ascii = bytes[unchecked: index]
                 if Self.whitespaceBitmap & (1 << ascii) != 0 {
                     bytes.formIndex(after: &index)
@@ -566,12 +566,12 @@ extension JSON5Scanner {
                     continue
                 } else if ascii == ._slash {
                     guard try consumePossibleComment(from: &index) else {
-                        self.readPtr = index
+                        self.readIndex = index
                         return ascii
                     }
                     continue
                 } else {
-                    self.readPtr = index
+                    self.readIndex = index
                     return ascii
                 }
             }
@@ -582,9 +582,9 @@ extension JSON5Scanner {
         @inline(__always)
         @discardableResult
         mutating func consumeWhitespace(allowingEOF: Bool) throws -> UInt8? {
-            assert(bytes.startIndex <= readPtr)
-            var index = readPtr
-            while index < endPtr {
+            assert(bytes.startIndex <= readIndex)
+            var index = readIndex
+            while index < endIndex {
                 let ascii = bytes[unchecked: index]
                 if Self.whitespaceBitmap & (1 << ascii) != 0 {
                     bytes.formIndex(after: &index)
@@ -594,12 +594,12 @@ extension JSON5Scanner {
                     continue
                 } else if ascii == ._slash {
                     guard try consumePossibleComment(from: &index) else {
-                        self.readPtr = index
+                        self.readIndex = index
                         return ascii
                     }
                     continue
                 } else {
-                    self.readPtr = index
+                    self.readIndex = index
                     return ascii
                 }
             }
@@ -613,7 +613,7 @@ extension JSON5Scanner {
         func consumePossibleComment(from index: inout BufferViewIndex<UInt8>) throws -> Bool {
             // ptr still points to the first /
             let second = bytes.index(after: index)
-            guard second < endPtr else {
+            guard second < endIndex else {
                 return false
             }
 
@@ -636,7 +636,7 @@ extension JSON5Scanner {
             // No need to bother getting fancy about CR-LF. These only get called in the process of skipping whitespace, and a trailing LF will be picked up by that. We also don't track line number information during nominal parsing.
             assert(bytes.startIndex <= index)
             var local = index
-            while local < endPtr {
+            while local < endIndex {
                 let ascii = bytes[unchecked: local]
                 switch ascii {
                 case ._newline, ._return:
@@ -647,7 +647,7 @@ extension JSON5Scanner {
                     continue
                 }
             }
-            index = endPtr
+            index = endIndex
             // Reaching EOF is fine.
         }
 
@@ -655,7 +655,7 @@ extension JSON5Scanner {
         func consumeMultiLineComment(from index: inout BufferViewIndex<UInt8>) throws {
             assert(bytes.startIndex <= index)
             var nextIndex = bytes.index(after: index)
-            while nextIndex < endPtr {
+            while nextIndex < endIndex {
                 switch (bytes[unchecked: index], bytes[unchecked: nextIndex]) {
                 case (._asterisk, ._slash):
                     bytes.formIndex(&index, offsetBy: 2)
@@ -669,20 +669,20 @@ extension JSON5Scanner {
                 }
                 nextIndex = bytes.index(after: index)
             }
-            index = endPtr
+            index = endIndex
             throw JSONError.unterminatedBlockComment
         }
 
         @inline(__always)
         mutating func readExpectedString(_ str: StaticString, typeDescriptor: String) throws {
-            let cmp = try bytes[unchecked: readPtr..<endPtr].withUnsafeRawPointer { ptr, count in
+            let cmp = try bytes[unchecked: readIndex..<endIndex].withUnsafeRawPointer { ptr, count in
                 if count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
                 return memcmp(ptr, str.utf8Start, str.utf8CodeUnitCount)
             }
             guard cmp == 0 else {
                 // Figure out the exact character that is wrong.
                 let badOffset = str.withUTF8Buffer {
-                    for (i, (a, b)) in zip($0, bytes[readPtr..<endPtr]).enumerated() {
+                    for (i, (a, b)) in zip($0, bytes[readIndex..<endIndex]).enumerated() {
                         if a != b { return i }
                     }
                     return 0 // should be unreachable
@@ -754,7 +754,7 @@ extension JSON5Scanner {
                 guard shouldBeQuote == quote else {
                     throw JSONError.unexpectedCharacter(ascii: shouldBeQuote, location: sourceLocation)
                 }
-                let firstNonQuote = readPtr
+                let firstNonQuote = readIndex
 
                 // If there aren't any escapes, then this is a simple case and we can exit early.
                 if try skipUTF8StringTillQuoteOrBackslashOrInvalidCharacter(quote: quote) == quote {
@@ -778,7 +778,7 @@ extension JSON5Scanner {
                 }
                 throw JSONError.unexpectedEndOfFile
             } else {
-                let firstNonQuote = readPtr
+                let firstNonQuote = readIndex
                 if try skipUTF8StringTillEndOfUnquotedKey(orEscapeSequence: true) == UnicodeScalar(._backslash) {
                     // The presence of a backslash means this isn't a "simple" key. Continue skipping until we reach the end of the key, this time ignoring backslashes.
                     isSimple = false
@@ -814,7 +814,7 @@ extension JSON5Scanner {
             try requireRemainingBytes(4)
 
             // We'll validate the actual characters following the '\u' escape during parsing. Just make sure that the string doesn't end prematurely.
-            let hs = bytes.loadUnaligned(from: readPtr, as: UInt32.self)
+            let hs = bytes.loadUnaligned(from: readIndex, as: UInt32.self)
             guard JSONScanner.noByteMatches(quote, in: hs) else {
                 throw JSONError.invalidHexDigitSequence(
                     _withUnprotectedUnsafeBytes(of: hs, { String(decoding: $0, as: UTF8.self) }),
@@ -829,7 +829,7 @@ extension JSON5Scanner {
             try requireRemainingBytes(2)
 
             // We'll validate the actual characters following the '\x' escape during parsing. Just make sure that the string doesn't end prematurely.
-            let hs = bytes.loadUnaligned(from: readPtr, as: UInt16.self)
+            let hs = bytes.loadUnaligned(from: readIndex, as: UInt16.self)
             guard JSONScanner.noByteMatches(quote, in: UInt32(hs)) else {
                 throw JSONError.invalidHexDigitSequence(
                     _withUnprotectedUnsafeBytes(of: hs, { String(decoding: $0, as: UTF8.self) }),

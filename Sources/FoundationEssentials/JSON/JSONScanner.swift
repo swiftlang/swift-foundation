@@ -278,7 +278,7 @@ internal struct JSONScanner {
                 // Time to predict how big these arrays are going to be based on the current rate of consumption per processed bytes.
                 // total objects = (total bytes / current bytes) * current objects
                 let totalBytes = reader.bytes.count
-                let consumedBytes = reader.byteOffset(at: reader.readPtr)
+                let consumedBytes = reader.byteOffset(at: reader.readIndex)
                 let ratio = (Double(totalBytes) / Double(consumedBytes))
                 let totalExpectedMapSize = Int( Double(mapData.count) * ratio )
                 if prevMapDataSize == 0 || Double(totalExpectedMapSize) / Double(prevMapDataSize) > 1.25 {
@@ -558,7 +558,7 @@ internal struct JSONScanner {
     mutating func scanString() throws {
         var isSimple = false
         let start = try reader.skipUTF8StringTillNextUnescapedQuote(isSimple: &isSimple)
-        let end = reader.readPtr
+        let end = reader.readIndex
 
         // skipUTF8StringTillNextUnescapedQuote will have either thrown an error, or already peek'd the quote.
         let shouldBePostQuote = reader.read()
@@ -569,10 +569,10 @@ internal struct JSONScanner {
     }
 
     mutating func scanNumber() throws {
-        let start = reader.readPtr
+        let start = reader.readIndex
         var containsExponent = false
         reader.skipNumber(containsExponent: &containsExponent)
-        let end = reader.readPtr
+        let end = reader.readIndex
         return partialMap.record(tagType: containsExponent ? .numberContainingExponent : .number, count: reader.distance(from: start, to: end), dataOffset: reader.byteOffset(at: start), with: reader)
     }
 
@@ -595,12 +595,12 @@ extension JSONScanner {
 
     struct DocumentReader {
         let bytes: BufferView<UInt8>
-        private(set) var readPtr : BufferViewIndex<UInt8>
-        private let endPtr : BufferViewIndex<UInt8>
+        private(set) var readIndex : BufferViewIndex<UInt8>
+        private let endIndex : BufferViewIndex<UInt8>
 
         @inline(__always)
         func checkRemainingBytes(_ count: Int) -> Bool {
-          bytes.distance(from: readPtr, to: endPtr) >= count
+          bytes.distance(from: readIndex, to: endIndex) >= count
         }
 
         @inline(__always)
@@ -615,12 +615,12 @@ extension JSONScanner {
         }
 
         func sourceLocation(atOffset offset: Int) -> JSONError.SourceLocation {
-            .sourceLocation(at: bytes.index(readPtr, offsetBy: offset), docStart: bytes.startIndex)
+            .sourceLocation(at: bytes.index(readIndex, offsetBy: offset), docStart: bytes.startIndex)
         }
 
         @inline(__always)
         var isEOF: Bool {
-            readPtr == endPtr
+            readIndex == endIndex
         }
 
         @inline(__always)
@@ -630,8 +630,8 @@ extension JSONScanner {
 
         init(bytes: BufferView<UInt8>) {
             self.bytes = bytes
-            self.readPtr = bytes.startIndex
-            self.endPtr = bytes.endIndex
+            self.readIndex = bytes.startIndex
+            self.endIndex = bytes.endIndex
         }
 
         @inline(__always)
@@ -640,17 +640,17 @@ extension JSONScanner {
                 return nil
             }
 
-            defer { bytes.formIndex(after: &readPtr) }
+            defer { bytes.formIndex(after: &readIndex) }
 
-            return bytes[unchecked: readPtr]
+            return bytes[unchecked: readIndex]
         }
 
         @inline(__always)
         func peek(offset: Int = 0) -> UInt8? {
             precondition(offset >= 0)
-            assert(bytes.startIndex <= readPtr)
-            let peekIndex = bytes.index(readPtr, offsetBy: offset)
-            guard peekIndex < endPtr else {
+            assert(bytes.startIndex <= readIndex)
+            let peekIndex = bytes.index(readIndex, offsetBy: offset)
+            guard peekIndex < endIndex else {
                 return nil
             }
 
@@ -659,7 +659,7 @@ extension JSONScanner {
 
         @inline(__always)
         mutating func moveReaderIndex(forwardBy offset: Int) {
-          bytes.formIndex(&readPtr, offsetBy: offset)
+          bytes.formIndex(&readIndex, offsetBy: offset)
         }
 
         @inline(__always)
@@ -672,11 +672,11 @@ extension JSONScanner {
         @inline(__always)
         @discardableResult
         mutating func consumeWhitespace() throws -> UInt8 {
-            assert(bytes.startIndex <= readPtr)
-            while readPtr < endPtr {
-                let ascii = bytes[unchecked: readPtr]
+            assert(bytes.startIndex <= readIndex)
+            while readIndex < endIndex {
+                let ascii = bytes[unchecked: readIndex]
                 if Self.whitespaceBitmap & (1 << ascii) != 0 {
-                    bytes.formIndex(after: &readPtr)
+                    bytes.formIndex(after: &readIndex)
                     continue
                 } else {
                     return ascii
@@ -689,11 +689,11 @@ extension JSONScanner {
         @inline(__always)
         @discardableResult
         mutating func consumeWhitespace(allowingEOF: Bool) throws -> UInt8? {
-            assert(bytes.startIndex <= readPtr)
-            while readPtr < endPtr {
-                let ascii = bytes[unchecked: readPtr]
+            assert(bytes.startIndex <= readIndex)
+            while readIndex < endIndex {
+                let ascii = bytes[unchecked: readIndex]
                 if Self.whitespaceBitmap & (1 << ascii) != 0 {
-                    bytes.formIndex(after: &readPtr)
+                    bytes.formIndex(after: &readIndex)
                     continue
                 } else {
                     return ascii
@@ -707,14 +707,14 @@ extension JSONScanner {
 
         @inline(__always)
         mutating func readExpectedString(_ str: StaticString, typeDescriptor: String) throws {
-            let cmp = try bytes[unchecked: readPtr..<endPtr].withUnsafeRawPointer { ptr, count in
+            let cmp = try bytes[unchecked: readIndex..<endIndex].withUnsafeRawPointer { ptr, count in
                 if count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
                 return memcmp(ptr, str.utf8Start, str.utf8CodeUnitCount)
             }
             guard cmp == 0 else {
                 // Figure out the exact character that is wrong.
                 let badOffset = str.withUTF8Buffer {
-                    for (i, (a, b)) in zip($0, bytes[readPtr..<endPtr]).enumerated() {
+                    for (i, (a, b)) in zip($0, bytes[readIndex..<endIndex]).enumerated() {
                         if a != b { return i }
                     }
                     return 0 // should be unreachable
@@ -774,7 +774,7 @@ extension JSONScanner {
             guard shouldBeQuote == ._quote else {
                 throw JSONError.unexpectedCharacter(ascii: shouldBeQuote, location: sourceLocation)
             }
-            let firstNonQuote = readPtr
+            let firstNonQuote = readIndex
 
             // If there aren't any escapes, then this is a simple case and we can exit early.
             if try skipUTF8StringTillQuoteOrBackslashOrInvalidCharacter() == ._quote {
@@ -818,7 +818,7 @@ extension JSONScanner {
             try requireRemainingBytes(4)
 
             // We'll validate the actual characters following the '\u' escape during parsing. Just make sure that the string doesn't end prematurely.
-            let hs = bytes.loadUnaligned(from: readPtr, as: UInt32.self)
+            let hs = bytes.loadUnaligned(from: readIndex, as: UInt32.self)
             guard JSONScanner.noByteMatches(UInt8(ascii: "\""), in: hs) else {
                 let hexString = _withUnprotectedUnsafeBytes(of: hs) { String(decoding: $0, as: UTF8.self) }
                 throw JSONError.invalidHexDigitSequence(hexString, location: sourceLocation)
