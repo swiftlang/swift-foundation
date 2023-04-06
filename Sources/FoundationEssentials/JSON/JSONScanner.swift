@@ -1002,7 +1002,7 @@ extension JSONScanner {
 
     internal static func parseUnicodeHexSequence(
         from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>, allowNulls: Bool = true
-    ) throws -> (UInt16, BufferViewIndex<UInt8>) {
+    ) throws -> (scalar: UInt16, nextIndex: BufferViewIndex<UInt8>) {
         let digitBytes = jsonBytes.prefix(4)
         precondition(digitBytes.count == 4, "Scanning should have ensured that all escape sequences are valid shape")
 

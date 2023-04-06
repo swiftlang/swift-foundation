@@ -502,7 +502,7 @@ extension JSON5Scanner {
             }
         }
 
-        func peekU32() throws -> (UnicodeScalar, Int)? {
+        func peekU32() throws -> (scalar: UnicodeScalar, length: Int)? {
             guard let firstChar = peek() else {
                 return nil
             }
@@ -972,7 +972,7 @@ extension JSON5Scanner {
 
     private static func parseTwoByteUnicodeHexSequence(
         from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>
-    ) throws -> (UInt8, BufferViewIndex<UInt8>) {
+    ) throws -> (scalar: UInt8, nextIndex: BufferViewIndex<UInt8>) {
         precondition(jsonBytes.count >= 2, "Scanning should have ensured that all escape sequences are valid shape")
 
         guard let first =  jsonBytes[uncheckedOffset: 0].hexDigitValue,
@@ -1054,7 +1054,7 @@ extension JSON5Scanner {
     // Returns the pointer at which the number's digits begin. If there are no digits, the function throws.
     static func prevalidateJSONNumber(
         from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>
-    ) throws -> (BufferViewIndex<UInt8>, isHex: Bool, isSpecialDoubleValue: Bool) {
+    ) throws -> (firstDigitIndex: BufferViewIndex<UInt8>, isHex: Bool, isSpecialDoubleValue: Bool) {
         // Just make sure we (A) don't have a leading zero, and (B) We have at least one digit.
         guard !jsonBytes.isEmpty else {
             preconditionFailure("Why was this function called, if there is no 0...9 or +/-")
