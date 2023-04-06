@@ -992,16 +992,16 @@ extension JSON5Scanner {
 
     static func validateLeadingZero(
         in jsonBytes: BufferView<UInt8>, zero: BufferViewIndex<UInt8>, docStart: BufferViewIndex<UInt8>
-    ) throws -> (BufferViewIndex<UInt8>, Bool) {
+    ) throws -> (firstDigitIndex: BufferViewIndex<UInt8>, isHex: Bool) {
         // Leading zeros are very restricted.
         guard !jsonBytes.isEmpty else {
             // Yep, this is valid.
-            return (zero, false)
+            return (firstDigitIndex: zero, isHex: false)
         }
         switch jsonBytes[uncheckedOffset: 0] {
         case UInt8(ascii: "."), UInt8(ascii: "e"), UInt8(ascii: "E"):
             // We need to parse the fractional part.
-            return (zero, false)
+            return (firstDigitIndex: zero, isHex: false)
         case UInt8(ascii: "x"), UInt8(ascii: "X"):
             // We have to further validate that there is another digit following this one.
             let firstHexDigitIndex = jsonBytes.index(after: jsonBytes.startIndex)
@@ -1012,7 +1012,7 @@ extension JSON5Scanner {
             guard maybeHex.isValidHexDigit else {
                 throw JSONError.unexpectedCharacter(context: "in number", ascii: maybeHex, location: .sourceLocation(at: firstHexDigitIndex, docStart: docStart))
             }
-            return (firstHexDigitIndex, true)
+            return (firstDigitIndex: firstHexDigitIndex, isHex: true)
         case _asciiNumbers:
             throw JSONError.numberWithLeadingZero(location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
         case let byte: // default
