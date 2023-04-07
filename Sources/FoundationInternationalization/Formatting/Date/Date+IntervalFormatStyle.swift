@@ -63,12 +63,20 @@ extension Date {
                     option = nil
                 }
 
-                let template: String
+                var template: String
                 if let option {
                     let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: locale.identifier, calendarIdentifier: calendar.identifier, skeleton: symbols.formatterTemplate, hourCycleOption: option)
                     template = pattern
                 } else {
                     template = symbols.formatterTemplate
+                }
+
+                // If at this point template is empty, use a default style
+                if template.isEmpty {
+                    let defaultSymbols = Date.FormatStyle.DateFieldCollection()
+                        .collection(date: .numeric)
+                        .collection(time: .shortened)
+                    template = defaultSymbols.formatterTemplate
                 }
 
                 return ICUDateIntervalFormatter(locale: locale, calendar: calendar, timeZone: timeZone, dateTemplate: template)
