@@ -892,20 +892,28 @@ extension JSONScanner {
             jsonBytes.formIndex(after: &index)
         }
 
-        guard var output = String._tryFromUTF8(jsonBytes[unchecked: jsonBytes.startIndex..<index]) else {
+        guard let output = String._tryFromUTF8(jsonBytes[unchecked: jsonBytes.startIndex..<index]) else {
             throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
         }
-        if index == endIndex {
+        if _fastPath(index == endIndex) {
             // We went through all the characters! Easy peasy.
             return output
         }
 
+        let remainingBytes = jsonBytes[unchecked: index..<endIndex]
+        return try _slowpath_stringValue(from: remainingBytes, appendingTo: output, docStart: docStart)
+    }
+
+    static func _slowpath_stringValue(
+        from jsonBytes: BufferView<UInt8>, appendingTo output: consuming String, docStart: BufferViewIndex<UInt8>
+    ) throws -> String {
         // A reasonable guess as to the resulting capacity of the string is 1/4 the length of the remaining buffer. With this scheme, input full of 4 byte UTF-8 sequences won't waste a bunch of extra capacity and predominantly 1 byte UTF-8 sequences will only need to resize the buffer once or twice.
-        output.reserveCapacity(output.underestimatedCount + jsonBytes.distance(from: index, to: endIndex) / 4)
+        output.reserveCapacity(output.underestimatedCount + jsonBytes.count/4)
 
         // Continue scanning, taking into account escaped sequences and control characters
+        var index = jsonBytes.startIndex
         var chunkStart = index
-        while index < endIndex {
+        while index < jsonBytes.endIndex {
             let byte = jsonBytes[unchecked: index]
             switch byte {
             case ._backslash:
