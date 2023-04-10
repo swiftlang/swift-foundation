@@ -10,6 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     internal struct _InternalRun : Hashable, Sendable {
@@ -51,14 +57,14 @@ extension AttributedString {
         typealias _AttributeValue = AttributedString._AttributeValue
         typealias _AttributeStorage = AttributedString._AttributeStorage
 
-        var string: _BString
+        var string: BigString
 
         // NOTE: the runs and runOffsetCache should never be modified directly. Instead, use the functions defined in AttributedStringRunCoalescing.swift
         var runs: [_InternalRun]
         var runOffsetCache: LockedState<RunOffset>
 
         // Note: the caller is responsible for performing attribute fix-ups if needed based on the source of the runs
-        init(string: _BString, runs: [_InternalRun]) {
+        init(string: BigString, runs: [_InternalRun]) {
             precondition(string.isEmpty == runs.isEmpty, "An empty attributed string should not contain any runs")
             self.string = string
             self.runs = runs
@@ -67,11 +73,11 @@ extension AttributedString {
 
         // Note: the caller is responsible for performing attribute fix-ups if needed based on the source of the runs
         convenience init(string: String, runs: [_InternalRun]) {
-            self.init(string: _BString(string), runs: runs)
+            self.init(string: BigString(string), runs: runs)
         }
 
         convenience init() {
-            self.init(string: _BString(), runs: [])
+            self.init(string: BigString(), runs: [])
         }
     }
 }
@@ -82,7 +88,7 @@ extension AttributedString.Guts {
     }
 
     __consuming func copy(in range: Range<Index>) -> AttributedString.Guts {
-        let string = _BString(self.string, in: range._bstringRange)
+        let string = BigString(self.string.unicodeScalars[range._bstringRange])
         let runs = self.runs(in: range)
         let copy = AttributedString.Guts(string: string, runs: runs)
         if range.lowerBound != self.startIndex || range.upperBound != self.endIndex {
@@ -105,8 +111,8 @@ extension AttributedString.Guts {
     }
 
     internal static func characterwiseIsEqual(
-        _ left: AttributedString.Guts, in leftRange: Range<_BString.Index>,
-        to right: AttributedString.Guts, in rightRange: Range<_BString.Index>
+        _ left: AttributedString.Guts, in leftRange: Range<BigString.Index>,
+        to right: AttributedString.Guts, in rightRange: Range<BigString.Index>
     ) -> Bool {
         let leftRuns = left.runs(containing: leftRange._utf8OffsetRange)
         let rightRuns = right.runs(containing: rightRange._utf8OffsetRange)
@@ -117,12 +123,12 @@ extension AttributedString.Guts {
 
     internal static func _characterwiseIsEqual(
         _ left: AttributedString.Guts,
-        from leftStart: _BString.Index,
-        to leftEnd: _BString.Index,
+        from leftStart: BigString.Index,
+        to leftEnd: BigString.Index,
         with leftRuns: some Collection<_InternalRun>,
         comparingTo right: AttributedString.Guts,
-        from rightStart: _BString.Index,
-        to rightEnd: _BString.Index,
+        from rightStart: BigString.Index,
+        to rightEnd: BigString.Index,
         with rightRuns: some Collection<_InternalRun>
     ) -> Bool {
         // To decide if two attributed strings are equal, we need to logically split them up on
@@ -152,13 +158,13 @@ extension AttributedString.Guts {
             case let (leftRun?, rightRun?):
                 guard leftRun.attributes == rightRun.attributes else { return false }
 
-                let leftNext = left.string.utf8Index(leftIndex, offsetBy: leftRun.length)
-                let rightNext = right.string.utf8Index(rightIndex, offsetBy: rightRun.length)
+                let leftNext = left.string.utf8.index(leftIndex, offsetBy: leftRun.length)
+                let rightNext = right.string.utf8.index(rightIndex, offsetBy: rightRun.length)
 
-                guard _BString.characterIsEqual(
-                    left.string, in: leftIndex ..< leftNext,
-                    to: right.string, in: rightIndex ..< rightNext
-                ) else {
+                // FIXME: This doesn't handle sub-character runs correctly.
+                guard
+                    left.string[leftIndex ..< leftNext] == right.string[rightIndex ..< rightNext]
+                else {
                     return false
                 }
                 leftIndex = leftNext
@@ -175,7 +181,7 @@ extension AttributedString.Guts {
         return true
     }
 
-    internal func characterwiseHash(in range: Range<_BString.Index>, into hasher: inout Hasher) {
+    internal func characterwiseHash(in range: Range<BigString.Index>, into hasher: inout Hasher) {
         // Note: This implementation must be precisely in sync with the `_characterwiseIsEqual`
         // implementation above.
         let offsetRange = range._utf8OffsetRange
@@ -184,8 +190,9 @@ extension AttributedString.Guts {
         self.enumerateRuns(containing: offsetRange) { run, start, _, mod in
             mod = .guaranteedNotModified
             hasher.combine(run.attributes)
-            let next = string.utf8Index(index, offsetBy: run.length)
-            string.hashCharacters(into: &hasher, from: index ..< next)
+            let next = string.utf8.index(index, offsetBy: run.length)
+            // FIXME: This doesn't handle sub-character runs correctly.
+            hasher.combine(string[index ..< next])
             index = next
         }
     }
@@ -201,31 +208,31 @@ extension AttributedString.Guts {
     }
 
     func characterIndex(after i: Index) -> Index {
-        Index(string.characterIndex(after: i._value))
+        Index(string.index(after: i._value))
     }
 
     func characterIndex(before i: Index) -> Index {
-        Index(string.characterIndex(before: i._value))
+        Index(string.index(before: i._value))
     }
 
     func characterDistance(from start: Index, to end: Index) -> Int {
-        string.characterDistance(from: start._value, to: end._value)
+        string.distance(from: start._value, to: end._value)
     }
 
     func unicodeScalarDistance(from start: Index, to end: Index) -> Int {
-        string.unicodeScalarDistance(from: start._value, to: end._value)
+        string.unicodeScalars.distance(from: start._value, to: end._value)
     }
 
     func utf8Index(before i: Index) -> Index {
-        Index(string.utf8Index(before: i._value))
+        Index(string.utf8.index(before: i._value))
     }
 
     func utf8Index(at offset: Int) -> Index {
-        Index(string.utf8Index(string.startIndex, offsetBy: offset))
+        Index(string.utf8.index(string.startIndex, offsetBy: offset))
     }
 
     func utf8Index(_ i: Index, offsetBy distance: Int) -> Index {
-        Index(string.utf8Index(i._value, offsetBy: distance))
+        Index(string.utf8.index(i._value, offsetBy: distance))
     }
 
     func utf8IndexRange(from offsets: Range<Int>) -> Range<Index> {
@@ -241,27 +248,27 @@ extension AttributedString.Guts {
     }
 
     func utf8Offset(of index: Index) -> Int {
-        string.utf8Distance(from: string.startIndex, to: index._value)
+        string.utf8.distance(from: string.startIndex, to: index._value)
     }
 
     func utf8Distance(from start: Index, to end: Index) -> Int {
-        string.utf8Distance(from: start._value, to: end._value)
+        string.utf8.distance(from: start._value, to: end._value)
     }
 
     func unicodeScalarIndex(roundingDown i: Index) -> Index {
-        Index(string.unicodeScalarIndex(roundingDown: i._value))
+        Index(string.unicodeScalars.index(roundingDown: i._value))
     }
 
     func unicodeScalarIndex(roundingUp i: Index) -> Index {
-        Index(string.unicodeScalarIndex(roundingUp: i._value))
+        Index(string.unicodeScalars.index(roundingUp: i._value))
     }
 
     func characterIndex(roundingDown i: Index) -> Index {
-        Index(string.characterIndex(roundingDown: i._value))
+        Index(string.index(roundingDown: i._value))
     }
 
     func characterIndex(roundingUp i: Index) -> Index {
-        Index(string.characterIndex(roundingUp: i._value))
+        Index(string.index(roundingUp: i._value))
     }
 
     func boundsCheck(_ idx: AttributedString.Index) {
@@ -307,7 +314,7 @@ extension AttributedString.Guts {
         atUTF8Offset utf8Offset: Int
     ) -> (run: _InternalRun, utf8Range: Range<Int>) {
         precondition(
-            utf8Offset >= 0 && utf8Offset <= string.utf8Count,
+            utf8Offset >= 0 && utf8Offset <= string.utf8.count,
             "AttributedString index is out of bounds")
         let (run, utf8Start) = runAndLocation(containing: utf8Offset)
         let utf8End = utf8Start + run.length
@@ -318,12 +325,13 @@ extension AttributedString.Guts {
         at position: AttributedString.Index
     ) -> (run: _InternalRun, range: Range<AttributedString.Index>) {
         boundsCheck(position)
-        let position = Index(string.resolve(position._value, preferEnd: false))
-        let utf8Offset = utf8Offset(of: position)
+        let position = string.unicodeScalars.index(roundingDown: position._value)
+        let utf8Offset = position.utf8Offset
+
         let (run, utf8Range) = run(atUTF8Offset: utf8Offset)
-        let start = utf8Index(position, offsetBy: utf8Range.lowerBound - utf8Offset)
-        let end = utf8Index(position, offsetBy: utf8Range.upperBound - utf8Offset)
-        return (run, start ..< end)
+        let start = string.utf8.index(position, offsetBy: utf8Range.lowerBound - utf8Offset)
+        let end = string.utf8.index(position, offsetBy: utf8Range.upperBound - utf8Offset)
+        return (run, AttributedString.Index(start) ..< AttributedString.Index(end))
     }
 
     func run(
@@ -463,9 +471,9 @@ extension AttributedString.Guts {
         var mutationRange = utf8TargetRange
         var mutationType: _MutationType = .attributes
 
-        let oldScalars = AttributedSubstring(self, range).unicodeScalars
-        let newScalars = replacement.unicodeScalars
-        if oldScalars._isEqual(to: newScalars) {
+        let oldScalars = self.string.unicodeScalars[range._bstringRange]
+        let newScalars = replacement.unicodeScalars._unicodeScalars
+        if oldScalars == newScalars {
             assert(utf8TargetRange.count == utf8SourceRange.count)
         } else {
             let invalidationRange = self.enforceAttributeConstraintsBeforeMutation(
@@ -475,10 +483,7 @@ extension AttributedString.Guts {
             let utf8Delta = utf8SourceRange.count - utf8TargetRange.count
             mutationRange = invalidationRange.lowerBound ..< invalidationRange.upperBound + utf8Delta
             mutationType = .attributesAndCharacters
-            self.string.replaceSubrange(
-                range._bstringRange,
-                with: replacement._baseString,
-                in: replacement._stringBounds)
+            self.string.unicodeScalars.replaceSubrange(range._bstringRange, with: newScalars)
         }
         let replacementRuns = replacement.__guts.runs(containing: utf8SourceRange)
         self.replaceRunsSubrange(locations: utf8TargetRange, with: replacementRuns)

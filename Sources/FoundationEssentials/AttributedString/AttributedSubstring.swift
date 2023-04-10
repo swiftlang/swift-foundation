@@ -10,6 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributedSubstring : Sendable {
@@ -43,6 +49,15 @@ public struct AttributedSubstring : Sendable {
 extension AttributedSubstring {
     public var base: AttributedString {
         return AttributedString(_guts)
+    }
+
+
+    internal var _unicodeScalars: BigSubstring.UnicodeScalarView {
+        _guts.string.unicodeScalars[_range._bstringRange]
+    }
+
+    internal var _characters: BigSubstring {
+        _guts.string[_range._bstringRange]
     }
 }
 

@@ -10,6 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 // MARK: AttributedStringKey
 
 extension Decoder {
@@ -403,7 +409,7 @@ extension AttributedString : CodableWithConfiguration {
     public func encode(to encoder: Encoder, configuration: AttributeScopeCodableConfiguration) throws {
         if self._guts.runs.count == 0 || (self._guts.runs.count == 1 && self._guts.runs[0].attributes.isEmpty) {
             var container = encoder.singleValueContainer()
-            try container.encode(String(_from: self._guts.string))
+            try container.encode(String(self._guts.string))
             return
         }
 
@@ -423,7 +429,8 @@ extension AttributedString : CodableWithConfiguration {
         var attributeKeyTypes = configuration.extraAttributesTable
         for run in self._guts.runs {
             let currentEndIndex = self._guts.utf8Index(currentIndex, offsetBy: run.length)
-            let text = String(_from: self._guts.string, in: (currentIndex ..< currentEndIndex)._bstringRange)
+            let range = (currentIndex ..< currentEndIndex)._bstringRange
+            let text = String(self._guts.string.unicodeScalars[range])
             try runsContainer.encode(text)
 
             if !run.attributes.isEmpty, var attributeTableContainer = attributeTableContainer {
@@ -494,7 +501,7 @@ extension AttributedString : CodableWithConfiguration {
                 using: &attributeKeyTypeTable)
         }
 
-        var string: _BString = ""
+        var string: BigString = ""
         var runs = [_InternalRun]()
         var hasConstrainedAttributes = false
         if let containerCount = runsContainer.count {

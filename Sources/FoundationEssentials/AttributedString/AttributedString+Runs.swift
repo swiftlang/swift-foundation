@@ -10,6 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     public struct Runs : Sendable {
@@ -217,7 +223,7 @@ extension AttributedString.Runs {
             // Note: we need to slice runs on matching characters even if they don't carry
             // the attributes we're looking for.
             let characters: [Character] = constraints.compactMap { $0._constrainedCharacter }
-            if let firstBreak = _guts.string.findFirstCharacterBoundary(for: characters, in: r) {
+            if let firstBreak = _guts.string[r].findFirstCharacterBoundary(for: characters) {
                 r = r.lowerBound ..< firstBreak
             }
         }
@@ -243,7 +249,7 @@ extension AttributedString.Runs {
             // Note: we need to slice runs on matching characters even if they don't carry
             // the attributes we're looking for.
             let characters: [Character] = constraints.compactMap { $0._constrainedCharacter }
-            if let lastBreak = _guts.string.findLastCharacterBoundary(for: characters, in: r) {
+            if let lastBreak = _guts.string[r].findLastCharacterBoundary(for: characters) {
                 r = lastBreak ..< r.upperBound
             }
         }
@@ -304,54 +310,47 @@ extension AttributedString.Runs {
     }
 }
 
-extension _BString {
+extension BigString {
     func findFirstParagraphBoundary(in range: Range<Index>) -> Index? {
         self.utf8[range]._getBlock(for: [.findEnd], in: range.lowerBound ..< range.lowerBound).end
     }
 
     func findLastParagraphBoundary(in range: Range<Index>) -> Index? {
         guard range.upperBound > startIndex else { return nil }
-        let lower = self.utf8Index(before: range.upperBound)
+        let lower = self.utf8.index(before: range.upperBound)
         return self.utf8[range]._getBlock(for: [.findStart], in: lower ..< range.upperBound).start
     }
 }
 
-extension _BString {
-    func findFirstCharacterBoundary(
-        for characters: [Character],
-        in range: Range<Index>
-    ) -> Index? {
-        assert(range.upperBound <= endIndex)
-        var it = makeCharacterIterator(from: range.lowerBound)
-        guard !it.isAtEnd else { return nil }
-        if characters.contains(it.current) {
-            return Swift.min(range.upperBound, it.nextIndex)
+extension BigSubstring {
+    func findFirstCharacterBoundary(for characters: [Character]) -> Index? {
+        var i = self.startIndex
+        guard i < self.endIndex else { return nil }
+        if characters.contains(self[i]) {
+            return self.index(after: i)
         }
         while true {
-            guard it.stepForward(), it.isBelow(range.upperBound) else { break }
-            if characters.contains(it.current) {
-                return it.index
+            self.formIndex(after: &i)
+            guard i < self.endIndex else { break }
+            if characters.contains(self[i]) {
+                return i
             }
         }
         return nil
     }
 
-    func findLastCharacterBoundary(
-        for characters: [Character],
-        in range: Range<Index>
-    ) -> Index? {
-        assert(range.upperBound <= endIndex)
-        var it = makeCharacterIterator(from: range.upperBound)
-        if it.stepBackward() {
-            if it.isAbove(range.lowerBound), characters.contains(it.current) {
-                return it.index
-            }
+    func findLastCharacterBoundary(for characters: [Character]) -> Index? {
+        guard !isEmpty else { return nil }
+        var i = self.index(before: self.endIndex)
+        if characters.contains(self[i]) {
+            return i
         }
-        while true {
-            guard it.isAbove(range.lowerBound), it.stepBackward() else { break }
-            if characters.contains(it.current) {
-                return it.nextIndex
+        while i > self.startIndex {
+            let j = self.index(before: i)
+            if characters.contains(self[j]) {
+                return i
             }
+            i = j
         }
         return nil
     }

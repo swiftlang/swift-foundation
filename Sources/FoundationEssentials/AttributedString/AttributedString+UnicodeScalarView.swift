@@ -10,6 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     public struct UnicodeScalarView : Sendable {
@@ -51,29 +57,30 @@ extension AttributedString {
 }
 
 extension AttributedString.UnicodeScalarView {
+    var _unicodeScalars: BigSubstring.UnicodeScalarView {
+        _guts.string.unicodeScalars[_range._bstringRange]
+    }
+}
+
+extension Slice<AttributedString.UnicodeScalarView> {
+    internal var _rebased: AttributedString.UnicodeScalarView {
+        let bounds = Range(uncheckedBounds: (self.startIndex, self.endIndex))
+        return AttributedString.UnicodeScalarView(base._guts, bounds)
+    }
+
+    internal var _unicodeScalars: BigSubstring.UnicodeScalarView {
+        _rebased._unicodeScalars
+    }
+}
+
+extension AttributedString.UnicodeScalarView {
     // FIXME: AttributedString.UnicodeScalarView needs to publicly conform to Hashable.
     internal func _isEqual(to other: Self) -> Bool {
-        // FIXME: Just compare the raw UTF-8 data.
-        let c1 = self._guts.unicodeScalarDistance(from: self.startIndex, to: self.endIndex)
-        let c2 = other._guts.unicodeScalarDistance(from: other.startIndex, to: other.endIndex)
-        guard c1 == c2 else { return false }
-
-        var i1 = self.startIndex._value
-        var i2 = other.startIndex._value
-        for _ in 0 ..< c1 {
-            let x = self._guts.string[unicodeScalar: i1]
-            let y = other._guts.string[unicodeScalar: i2]
-            guard x == y else { return false }
-            i1 = self._guts.string.unicodeScalarIndex(after: i1)
-            i2 = other._guts.string.unicodeScalarIndex(after: i2)
-        }
-        return true
+        self._unicodeScalars == other._unicodeScalars
     }
 
     internal func _hash(into hasher: inout Hasher) {
-        let start = self._guts.string.unicodeScalarIndex(roundingDown: self.startIndex._value)
-        let end = self._guts.string.unicodeScalarIndex(roundingDown: self.endIndex._value)
-        self._guts.string.hashUTF8(into: &hasher, from: start, to: end)
+        self._unicodeScalars.hash(into: &hasher)
     }
 }
 
@@ -106,21 +113,21 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection, RangeRepl
 
     public func index(before i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.unicodeScalarIndex(before: i._value))
+        let j = Index(_guts.string.unicodeScalars.index(before: i._value))
         precondition(j >= startIndex, "Can't advance AttributedString index before start index")
         return j
     }
 
     public func index(after i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.unicodeScalarIndex(after: i._value))
+        let j = Index(_guts.string.unicodeScalars.index(after: i._value))
         precondition(j <= endIndex, "Can't advance AttributedString index after end index")
         return j
     }
 
     public func index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.unicodeScalarIndex(i._value, offsetBy: distance))
+        let j = Index(_guts.string.unicodeScalars.index(i._value, offsetBy: distance))
         precondition(j >= startIndex && j <= endIndex, "AttributedString index out of bounds")
         return j
     }
@@ -146,11 +153,11 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection, RangeRepl
     ) -> Int {
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
         precondition(end >= startIndex && end <= endIndex, "AttributedString index out of bounds")
-        return _guts.string.unicodeScalarDistance(from: start._value, to: end._value)
+        return _guts.string.unicodeScalars.distance(from: start._value, to: end._value)
     }
 
     public subscript(index: AttributedString.Index) -> UnicodeScalar {
-        _guts.string[unicodeScalar: index._value]
+        _guts.string.unicodeScalars[index._value]
     }
 
     public subscript(bounds: Range<AttributedString.Index>) -> Slice<AttributedString.UnicodeScalarView> {
@@ -184,9 +191,9 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection, RangeRepl
         let startOffset = _guts.utf8Offset(of: self.startIndex)
         let endOffset = _guts.utf8Offset(of: self.endIndex)
 
-        let oldCount = _guts.string.utf8Count
+        let oldCount = _guts.string.utf8.count
         _guts.replaceSubrange(subrange, with: newAttributedString)
-        let newCount = _guts.string.utf8Count
+        let newCount = _guts.string.utf8.count
 
         _range = _guts.utf8IndexRange(from: startOffset ..< endOffset + (newCount - oldCount))
     }
