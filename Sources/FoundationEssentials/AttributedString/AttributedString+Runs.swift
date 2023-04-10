@@ -12,8 +12,7 @@
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    @_nonSendable
-    public struct Runs {
+    public struct Runs : Sendable {
         internal typealias _InternalRun = AttributedString._InternalRun
         internal typealias _AttributeStorage = AttributedString._AttributeStorage
         internal typealias AttributeRunBoundaries = AttributedString.AttributeRunBoundaries

@@ -10,10 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_nonSendable
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributedSubstring {
+public struct AttributedSubstring : Sendable {
     /// The guts of the base attributed string.
     internal var _guts: AttributedString.Guts
 
@@ -155,7 +154,8 @@ extension AttributedSubstring : AttributedStringProtocol {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring {
-    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? {
+    @preconcurrency
+    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
         get { _guts.getValue(in: _range, key: K.self)?.rawValue(as: K.self) }
         set {
             ensureUniqueReference()
@@ -167,7 +167,8 @@ extension AttributedSubstring {
         }
     }
 
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? {
+    @preconcurrency
+    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }
