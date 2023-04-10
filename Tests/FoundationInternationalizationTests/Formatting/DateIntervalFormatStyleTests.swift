@@ -33,6 +33,13 @@ final class DateIntervalFormatStyleTests: XCTestCase {
 
     let date = Date(timeIntervalSinceReferenceDate: 0)
 
+    func testDefaultFormatStyle() throws {
+        var style = Date.IntervalFormatStyle()
+        style.timeZone = timeZone
+        // Make sure the default style does produce some output
+        XCTAssertGreaterThan(style.format(date ..< date + hour).count, 0)
+    }
+
     func testBasicFormatStyle() throws {
 #if FIXED_106570987
         let style = Date.IntervalFormatStyle(locale: enUSLocale, calendar: calendar, timeZone: timeZone)
