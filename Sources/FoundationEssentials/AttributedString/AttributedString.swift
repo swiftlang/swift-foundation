@@ -10,10 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_nonSendable
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributedString {
+public struct AttributedString : Sendable {
     internal var _guts: Guts
 
     internal init(_ guts: Guts) {
@@ -23,7 +22,7 @@ public struct AttributedString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    internal static var currentIdentity = LockedState(initialState: 0)
+    internal static let currentIdentity = LockedState(initialState: 0)
     internal static var _nextModifyIdentity : Int {
         currentIdentity.withLock { identity in
             identity += 1
@@ -217,7 +216,8 @@ extension AttributedString: AttributedStringProtocol {
         return _guts.endIndex
     }
     
-    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? {
+    @preconcurrency
+    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
         get { _guts.getValue(in: startIndex ..< endIndex, key: K.self)?.rawValue(as: K.self) }
         set {
             ensureUniqueReference()
@@ -229,7 +229,8 @@ extension AttributedString: AttributedStringProtocol {
         }
     }
     
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? {
+    @preconcurrency
+    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }

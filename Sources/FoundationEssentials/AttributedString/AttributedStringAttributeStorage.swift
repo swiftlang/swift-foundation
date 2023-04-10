@@ -12,8 +12,9 @@
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    internal struct _AttributeValue : Hashable, CustomStringConvertible {
-        let rawValue: Any
+    internal struct _AttributeValue : Hashable, CustomStringConvertible, Sendable {
+        typealias RawValue = any Sendable & Hashable
+        let rawValue: RawValue
 
         // FIXME: If these are always tied to keys, then why are we caching these
         // FIXME: on each individual value? Move them to a separate
@@ -25,14 +26,14 @@ extension AttributedString {
         
         var description: String { String(describing: rawValue) }
         
-        init<K: AttributedStringKey>(_ value: K.Value, for key: K.Type) {
+        init<K: AttributedStringKey>(_ value: K.Value, for key: K.Type) where K.Value : Sendable {
             rawValue = value
             runBoundaries = K.runBoundaries
             inheritedByAddedText = K.inheritedByAddedText
             invalidationConditions = K.invalidationConditions
         }
         
-        private init<K: AttributedStringKey>(checkingValue value: Any, for key: K.Type) {
+        private init<K: AttributedStringKey>(checkingValue value: RawValue, for key: K.Type) where K.Value : Sendable {
             guard let trueValue = value as? K.Value else {
                 fatalError("\(#function) called with non-matching attribute value type")
             }
@@ -52,12 +53,12 @@ extension AttributedString {
             return invalidationConditions?.contains { $0 == condition } ?? false
         }
 
-        static func wrapIfPresent<K: AttributedStringKey>(_ value: K.Value?, for key: K.Type) -> Self? {
+        static func wrapIfPresent<K: AttributedStringKey>(_ value: K.Value?, for key: K.Type) -> Self? where K.Value : Sendable {
             guard let value = value else { return nil }
             return Self(value, for: K.self)
         }
         
-        func rawValue<K: AttributedStringKey>(as key: K.Type) -> K.Value {
+        func rawValue<K: AttributedStringKey>(as key: K.Type) -> K.Value where K.Value : Sendable {
             rawValue as! K.Value
         }
         
@@ -66,10 +67,10 @@ extension AttributedString {
         }
         
         func hash(into hasher: inout Hasher) {
-            (rawValue as! any Hashable).hash(into: &hasher)
+            rawValue.hash(into: &hasher)
         }
 
-        private static func __equalAttributes(_ lhs: Any?, _ rhs: Any?) -> Bool {
+        private static func __equalAttributes(_ lhs: RawValue?, _ rhs: RawValue?) -> Bool {
             switch (lhs, rhs) {
             case (.none, .none):
                 return true
@@ -85,11 +86,7 @@ extension AttributedString {
                         return false
                     }
                 }
-                if let equatableLHS = lhs as? any Equatable {
-                    return openEquatable(equatableLHS)
-                } else {
-                    return false
-                }
+                return openEquatable(lhs)
             }
         }
     }
@@ -107,7 +104,7 @@ internal extension Dictionary where Key == String, Value == AttributedString._At
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    internal struct _AttributeStorage : Hashable {
+    internal struct _AttributeStorage : Hashable, Sendable {
         internal typealias AttributeMergePolicy = AttributedString.AttributeMergePolicy
         internal typealias _AttributeValue = AttributedString._AttributeValue
 
@@ -193,7 +190,7 @@ extension AttributedString._AttributeStorage {
         }
     }
 
-    subscript <T: AttributedStringKey>(_ attribute: T.Type) -> T.Value? {
+    subscript <T: AttributedStringKey>(_ attribute: T.Type) -> T.Value? where T.Value : Sendable {
         get { self[T.name]?.rawValue(as: T.self) }
         set { self[T.name] = .wrapIfPresent(newValue, for: T.self) }
     }

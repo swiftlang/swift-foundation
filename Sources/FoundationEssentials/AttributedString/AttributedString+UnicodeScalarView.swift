@@ -12,8 +12,7 @@
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    @_nonSendable
-    public struct UnicodeScalarView {
+    public struct UnicodeScalarView : Sendable {
         internal var _guts : Guts
         internal var _range : Range<Index>
         internal var _identity : Int = 0

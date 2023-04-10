@@ -35,7 +35,7 @@ public protocol AttributedStringAttributeMutation {
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol AttributedStringProtocol
-    : AttributedStringAttributeMutation, Hashable, CustomStringConvertible
+    : AttributedStringAttributeMutation, Hashable, CustomStringConvertible, Sendable
 {
     var startIndex : AttributedString.Index { get }
     var endIndex : AttributedString.Index { get }
@@ -44,8 +44,8 @@ public protocol AttributedStringProtocol
     var characters : AttributedString.CharacterView { get }
     var unicodeScalars : AttributedString.UnicodeScalarView { get }
 
-    subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? { get set }
-    subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? { get set }
+    @preconcurrency subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable { get set }
+    @preconcurrency subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable { get set }
     subscript<S: AttributeScope>(dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>) -> ScopedAttributeContainer<S> { get set }
 
     subscript<R: RangeExpression>(bounds: R) -> AttributedSubstring where R.Bound == AttributedString.Index { get }
