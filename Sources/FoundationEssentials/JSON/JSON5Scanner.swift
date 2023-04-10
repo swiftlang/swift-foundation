@@ -981,19 +981,19 @@ extension JSON5Scanner {
     private static func parseTwoByteUnicodeHexSequence(
         from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>
     ) throws -> (scalar: UInt8, nextIndex: BufferViewIndex<UInt8>) {
-        precondition(jsonBytes.count >= 2, "Scanning should have ensured that all escape sequences are valid shape")
+        let digitBytes = jsonBytes.prefix(2)
+        precondition(digitBytes.count == 2, "Scanning should have ensured that all escape sequences are valid shape")
 
-        guard let first =  jsonBytes[uncheckedOffset: 0].hexDigitValue,
-              let second = jsonBytes[uncheckedOffset: 1].hexDigitValue
+        guard let result: UInt8 = _parseJSONHexIntegerDigits(digitBytes, isNegative: false)
         else {
-            let hexString = String(decoding: jsonBytes.prefix(2), as: Unicode.UTF8.self)
+            let hexString = String(decoding: digitBytes, as: Unicode.UTF8.self)
             throw JSONError.invalidHexDigitSequence(hexString, location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
         }
-        let result = UInt8(first) << 4 | UInt8(second)
         guard result != 0 else {
             throw JSONError.invalidEscapedNullValue(location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
         }
-        return (result, jsonBytes.index(jsonBytes.startIndex, offsetBy: 2))
+        assert(digitBytes.endIndex <= jsonBytes.endIndex)
+        return (result, digitBytes.endIndex)
     }
 
     // MARK: Numbers
@@ -1250,7 +1250,7 @@ internal func _parseJSONHexIntegerDigits<Result: FixedWidthInteger>(
 }
 
 internal func _parseJSON5Integer<Result: FixedWidthInteger>(
-  _ codeUnits: BufferView<UInt8>, isHex: Bool
+    _ codeUnits: BufferView<UInt8>, isHex: Bool
 ) -> Result? {
     guard _fastPath(!codeUnits.isEmpty) else { return nil }
 
