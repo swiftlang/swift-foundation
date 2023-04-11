@@ -483,7 +483,7 @@ fileprivate class JSONDecoderImpl {
     }
 
     @inline(__always)
-    func withBuffer<T>(for region: JSONMap.Region, perform closure: (BufferView<UInt8>, BufferViewIndex<UInt8>) throws -> T) rethrows -> T {
+    func withBuffer<T>(for region: JSONMap.Region, perform closure: (BufferView<UInt8>, BufferView<UInt8>) throws -> T) rethrows -> T {
         try jsonMap.withBuffer(for: region, perform: closure)
     }
 
@@ -927,7 +927,7 @@ extension JSONDecoderImpl: Decoder {
         }
     }
 
-    private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(as type: T.Type, numberBuffer: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>, digitBeginning: BufferViewIndex<UInt8>, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+    private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(as type: T.Type, numberBuffer: BufferView<UInt8>, docStart: BufferView<UInt8>, digitBeginning: BufferViewIndex<UInt8>, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         // This is the slow path... If the fast path has failed. For example for "34.0" as an integer, we try to parse as either a Decimal or a Double and then convert back, losslessly.
         if let double = Double(prevalidatedBuffer: numberBuffer) {
             guard let value = T(exactly: double) else {

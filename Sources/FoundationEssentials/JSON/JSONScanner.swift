@@ -125,10 +125,10 @@ internal class JSONMap {
 
     @inline(__always)
     func withBuffer<T>(
-      for region: Region, perform closure: (BufferView<UInt8>, BufferViewIndex<UInt8>) throws -> T
+      for region: Region, perform closure: (BufferView<UInt8>, BufferView<UInt8>) throws -> T
     ) rethrows -> T {
         try dataLock.withLock {
-            return try closure($0.buffer[region], $0.buffer.startIndex)
+            return try closure($0.buffer[region], $0.buffer)
         }
     }
 
@@ -615,7 +615,7 @@ extension JSONScanner {
         }
 
         func sourceLocation(atOffset offset: Int) -> JSONError.SourceLocation {
-            .sourceLocation(at: bytes.index(readIndex, offsetBy: offset), docStart: bytes.startIndex)
+            .sourceLocation(at: bytes.index(readIndex, offsetBy: offset), docStart: bytes)
         }
 
         @inline(__always)
@@ -881,7 +881,7 @@ extension JSONScanner {
     // MARK: String
 
     static func stringValue(
-        from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>
+        from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
     ) throws -> String {
         // Assume easy path first -- no escapes, no characters requiring escapes.
         var index = jsonBytes.startIndex
@@ -905,7 +905,7 @@ extension JSONScanner {
     }
 
     static func _slowpath_stringValue(
-        from jsonBytes: BufferView<UInt8>, appendingTo output: consuming String, docStart: BufferViewIndex<UInt8>
+        from jsonBytes: BufferView<UInt8>, appendingTo output: consuming String, docStart: BufferView<UInt8>
     ) throws -> String {
         // A reasonable guess as to the resulting capacity of the string is 1/4 the length of the remaining buffer. With this scheme, input full of 4 byte UTF-8 sequences won't waste a bunch of extra capacity and predominantly 1 byte UTF-8 sequences will only need to resize the buffer once or twice.
         output.reserveCapacity(output.underestimatedCount + jsonBytes.count/4)
@@ -948,7 +948,7 @@ extension JSONScanner {
     }
 
     private static func parseEscapeSequence(
-        from jsonBytes: BufferView<UInt8>, into string: inout String, docStart: BufferViewIndex<UInt8>
+        from jsonBytes: BufferView<UInt8>, into string: inout String, docStart: BufferView<UInt8>
     ) throws -> BufferViewIndex<UInt8> {
       precondition(!jsonBytes.isEmpty, "Scanning should have ensured that all escape sequences are valid shape")
         switch jsonBytes[unchecked: jsonBytes.startIndex] {
@@ -970,7 +970,7 @@ extension JSONScanner {
 
     // Shared with JSON5, which requires allowNulls = false for compatibility.
     internal static func parseUnicodeSequence(
-        from jsonBytes: BufferView<UInt8>, into string: inout String, docStart: BufferViewIndex<UInt8>, allowNulls: Bool = true
+        from jsonBytes: BufferView<UInt8>, into string: inout String, docStart: BufferView<UInt8>, allowNulls: Bool = true
     ) throws -> BufferViewIndex<UInt8> {
         // we build this for utf8 only for now.
         let (bitPattern, index1) = try parseUnicodeHexSequence(from: jsonBytes, docStart: docStart, allowNulls: allowNulls)
@@ -1009,7 +1009,7 @@ extension JSONScanner {
     }
 
     internal static func parseUnicodeHexSequence(
-        from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>, allowNulls: Bool = true
+        from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>, allowNulls: Bool = true
     ) throws -> (scalar: UInt16, nextIndex: BufferViewIndex<UInt8>) {
         let digitBytes = jsonBytes.prefix(4)
         precondition(digitBytes.count == 4, "Scanning should have ensured that all escape sequences are valid shape")
@@ -1029,7 +1029,7 @@ extension JSONScanner {
 
     // MARK: Numbers
 
-    static func validateLeadingZero(in jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>) throws {
+    static func validateLeadingZero(in jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>) throws {
         // Leading zeros are very restricted.
         if jsonBytes.isEmpty {
             // Yep, this is valid.
@@ -1048,7 +1048,7 @@ extension JSONScanner {
 
     // Returns the pointer at which the number's digits begin. If there are no digits, the function throws.
     static func prevalidateJSONNumber(
-        from jsonBytes: BufferView<UInt8>, hasExponent: Bool, docStart: BufferViewIndex<UInt8>
+        from jsonBytes: BufferView<UInt8>, hasExponent: Bool, docStart: BufferView<UInt8>
     ) throws -> BufferViewIndex <UInt8> {
         // Just make sure we (A) don't have a leading zero, and (B) We have at least one digit.
         guard !jsonBytes.isEmpty else {
@@ -1110,7 +1110,7 @@ extension JSONScanner {
     }
 
     // This function is intended to be called after prevalidateJSONNumber() (which provides the digitsBeginPtr) and after parsing fails. It will provide more useful information about the invalid input.
-  static func validateNumber(from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>) -> JSONError {
+  static func validateNumber(from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>) -> JSONError {
         enum ControlCharacter {
             case operand
             case decimalPoint
@@ -1327,19 +1327,19 @@ enum JSONError: Swift.Error, Equatable {
         let index: Int
 
         static func sourceLocation(
-          at location: BufferViewIndex<UInt8>, docStart: BufferViewIndex<UInt8>
+          at location: BufferViewIndex<UInt8>, docStart: BufferView<UInt8>
         ) -> SourceLocation {
-            precondition(docStart <= location)
-            var cursor = docStart
+            precondition(docStart.startIndex <= location && location <= docStart.endIndex)
+            var index = docStart.startIndex
             var line = 1
             var col = 0
-            while cursor <= location {
-                switch cursor._rawValue.load(as: UInt8.self) {
+            let end = min(location.advanced(by: 1), docStart.endIndex)
+            while index < end {
+                switch docStart[index] {
                 case ._return:
-                    let next = cursor.advanced(by: 1)
-                    if next <= location,
-                        next._rawValue.load(fromByteOffset: 1, as: UInt8.self) == ._newline {
-                        cursor = next
+                    let next = docStart.index(after: index)
+                    if next <= location, docStart[next] == ._newline {
+                        index = next
                     }
                     line += 1
                     col = 0
@@ -1349,9 +1349,10 @@ enum JSONError: Swift.Error, Equatable {
                 default:
                     col += 1
                 }
-                cursor = cursor.advanced(by: 1)
+                docStart.formIndex(after: &index)
             }
-            return SourceLocation(line: line, column: col, index: docStart.distance(to: location))
+            let offset = docStart.distance(from: docStart.startIndex, to: location)
+            return SourceLocation(line: line, column: col, index: offset)
         }
     }
 
