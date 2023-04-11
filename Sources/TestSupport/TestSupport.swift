@@ -89,9 +89,15 @@ public typealias PredicateError = Foundation.PredicateError
 
 #else
 
+#if DEBUG
 @_exported @testable import FoundationEssentials
 @_exported @testable import FoundationInternationalization
 // XCTest implicitly imports Foundation
+#else
+@_exported import FoundationEssentials
+@_exported import FoundationInternationalization
+// XCTest implicitly imports Foundation
+#endif
 
 public typealias Data = FoundationEssentials.Data
 public typealias UUID = FoundationEssentials.UUID
