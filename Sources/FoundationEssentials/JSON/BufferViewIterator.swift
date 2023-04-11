@@ -11,30 +11,30 @@
 //===----------------------------------------------------------------------===//
 
 @frozen @usableFromInline
-internal struct BufferViewIterator<Element>{
-  var curPointer: UnsafeRawPointer
-  let endPointer: UnsafeRawPointer
+internal struct BufferViewIterator<Element> {
+    var curPointer: UnsafeRawPointer
+    let endPointer: UnsafeRawPointer
 
-  init(startPointer: UnsafeRawPointer, endPointer: UnsafeRawPointer) {
-    self.curPointer = startPointer
-    self.endPointer = endPointer
-  }
+    init(startPointer: UnsafeRawPointer, endPointer: UnsafeRawPointer) {
+        self.curPointer = startPointer
+        self.endPointer = endPointer
+    }
 
-  init(from start: BufferViewIndex<Element>, to end: BufferViewIndex<Element>) {
-    self.init(startPointer: start._rawValue, endPointer: end._rawValue)
-  }
+    init(from start: BufferViewIndex<Element>, to end: BufferViewIndex<Element>) {
+        self.init(startPointer: start._rawValue, endPointer: end._rawValue)
+    }
 }
 
 extension BufferViewIterator: IteratorProtocol {
 
-  @usableFromInline mutating func next() -> Element? {
-    guard curPointer < endPointer else { return nil }
-    defer {
-      curPointer = curPointer.advanced(by: MemoryLayout<Element>.stride)
+    @usableFromInline mutating func next() -> Element? {
+        guard curPointer < endPointer else { return nil }
+        defer {
+            curPointer = curPointer.advanced(by: MemoryLayout<Element>.stride)
+        }
+        if _isPOD(Element.self) {
+            return curPointer.loadUnaligned(as: Element.self)
+        }
+        return curPointer.load(as: Element.self)
     }
-    if _isPOD(Element.self) {
-      return curPointer.loadUnaligned(as: Element.self)
-    }
-    return curPointer.load(as: Element.self)
-  }
 }
