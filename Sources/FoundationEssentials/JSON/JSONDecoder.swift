@@ -379,16 +379,16 @@ open class JSONDecoder {
     // Output: The closure is invoked with a UInt8 buffer containing the valid UTF-8 representation. If the input contained a BOM, that BOM will be excluded in the resulting buffer.
     // If the input cannot be fully decoded by the detected encoding or cannot be converted to UTF-8, the function will throw a JSONError.cannotConvertEntireInputDataToUTF8 error.
     // If the input is detected to already be UTF-8, the Data's buffer will be passed through without copying.
-    static func withUTF8Representation<T>(of jsonData: Data, _ closure: (UnsafeBufferPointer<UInt8>) throws -> T ) throws -> T {
-        let length = jsonData.count
-        return try jsonData.withUnsafeBytes { (origPtr: UnsafeRawBufferPointer) -> T in
+    static func withUTF8Representation<T>(of jsonData: Data, _ closure: (BufferView<UInt8>) throws -> T ) throws -> T {
+        return try jsonData.withBufferView {
+            [length = jsonData.count] bytes in
+            assert(bytes.count == length)
             // RFC4627 section 3
             // The first two characters of a JSON text will always be ASCII. We can determine encoding by looking at the first four bytes.
-            let origBytes = origPtr.assumingMemoryBound(to: UInt8.self)
-            let byte0 = (length > 0) ? origBytes[0] : nil
-            let byte1 = (length > 1) ? origBytes[1] : nil
-            let byte2 = (length > 2) ? origBytes[2] : nil
-            let byte3 = (length > 3) ? origBytes[3] : nil
+            let byte0 = (length > 0) ? bytes[uncheckedOffset: 0] : nil
+            let byte1 = (length > 1) ? bytes[uncheckedOffset: 1] : nil
+            let byte2 = (length > 2) ? bytes[uncheckedOffset: 2] : nil
+            let byte3 = (length > 3) ? bytes[uncheckedOffset: 3] : nil
 
             // Check for explicit BOM first, then check the first two bytes. Note that if there is a BOM, we have to create our string without it.
             // This isn't strictly part of the JSON spec but it's useful to do anyway.
@@ -435,14 +435,17 @@ open class JSONDecoder {
                 sourceEncoding = .utf8
                 bomLength = 0
             }
-            let postBOMBuffer = UnsafeBufferPointer<UInt8>(rebasing: origBytes[bomLength ..< length])
+            let postBOMBuffer = bytes.dropFirst(bomLength)
             if sourceEncoding == .utf8 {
                 return try closure(postBOMBuffer)
             } else {
                 guard var string = String(bytes: postBOMBuffer, encoding: sourceEncoding) else {
                     throw JSONError.cannotConvertEntireInputDataToUTF8
                 }
-                return try string.withUTF8(closure)
+                return try string.withUTF8 {
+                    // String never passes an empty buffer with a `nil` `baseAddress`.
+                    try closure(BufferView(unsafeBufferPointer: $0)!)
+                }
             }
         }
     }
@@ -480,7 +483,7 @@ fileprivate class JSONDecoderImpl {
     }
 
     @inline(__always)
-    func withBuffer<T>(for region: JSONMap.Region, perform closure: (UnsafeBufferPointer<UInt8>, UnsafePointer<UInt8>) throws -> T) rethrows -> T {
+    func withBuffer<T>(for region: JSONMap.Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T) rethrows -> T {
         try jsonMap.withBuffer(for: region, perform: closure)
     }
 
@@ -678,9 +681,9 @@ extension JSONDecoderImpl: Decoder {
             throw DecodingError.typeMismatch(Decimal.self, DecodingError.Context(codingPath: codingPathNode.path(with: additionalKey), debugDescription: ""))
         }
 
-        return try withBuffer(for: region) { numberBuffer, docStart in
+        return try withBuffer(for: region) { numberBuffer, fullSource in
             if options.json5 {
-                let (digitsStartPtr, isHex, isSpecialJSON5DoubleValue) = try JSON5Scanner.prevalidateJSONNumber(from: numberBuffer, docStart: docStart)
+                let (digitsStartPtr, isHex, isSpecialJSON5DoubleValue) = try JSON5Scanner.prevalidateJSONNumber(from: numberBuffer, fullSource: fullSource)
 
                 // Use our integer parsers for hex data, because the underlying strtod() implementation of T(prevalidatedBuffer:) is too permissive (e.g. it accepts decimals and 'p' exponents) which otherwise would require prevalidation of the entire string before calling it.
                 if isHex {
@@ -704,20 +707,17 @@ extension JSONDecoderImpl: Decoder {
                     if let decimal = Decimal(entire: numberString) {
                         return decimal
                     }
-                    try JSON5Scanner.validateNumber(from: numberBuffer, withDigitsBeginningAt: digitsStartPtr, docStart: docStart)
+                    throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), fullSource: fullSource)
                 }
 
             } else {
-                let digitsStartPtr = try JSONScanner.prevalidateJSONNumber(from: numberBuffer, hasExponent: hasExponent, docStart: docStart)
+                let digitsStartPtr = try JSONScanner.prevalidateJSONNumber(from: numberBuffer, hasExponent: hasExponent, fullSource: fullSource)
                 let numberString = String(decoding: numberBuffer, as: UTF8.self)
                 if let decimal = Decimal(entire: numberString) {
                     return decimal
                 }
-                try JSONScanner.validateNumber(from: numberBuffer, withDigitsBeginningAt: digitsStartPtr, docStart: docStart)
+                throw JSONScanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), fullSource: fullSource)
             }
-            throw DecodingError.dataCorrupted(.init(
-                codingPath: codingPathNode.path(with: additionalKey),
-                debugDescription: "Parsed JSON number <\(String(decoding: numberBuffer, as: UTF8.self))> does not fit in \(Decimal.self)."))
         }
     }
 #endif // FOUNDATION_FRAMEWORK
@@ -758,42 +758,42 @@ extension JSONDecoderImpl: Decoder {
         guard case .string(let region, let isSimple) = value else {
             throw self.createTypeMismatchError(type: String.self, for: codingPathNode.path(with: additionalKey), value: value)
         }
-        return try withBuffer(for: region) { stringBuffer, docStart in
+        return try withBuffer(for: region) { stringBuffer, fullSource in
             if isSimple {
                 guard let result = String._tryFromUTF8(stringBuffer) else {
-                    throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: stringBuffer.baseAddress.unsafelyUnwrapped, docStart: docStart))
+                    throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: stringBuffer.startIndex, fullSource: fullSource))
                 }
                 return result
             }
             if options.json5 {
-                return try JSON5Scanner.stringValue(from: stringBuffer, docStart: docStart)
+                return try JSON5Scanner.stringValue(from: stringBuffer, fullSource: fullSource)
             } else {
-                return try JSONScanner.stringValue(from: stringBuffer, docStart: docStart)
+                return try JSONScanner.stringValue(from: stringBuffer, fullSource: fullSource)
             }
         }
     }
 
-    func isTrueZero(_ buffer: UnsafeBufferPointer<UInt8>) -> Bool {
+    func isTrueZero(_ buffer: BufferView<UInt8>) -> Bool {
         var remainingBuffer = buffer
 
         let nonZeroRange = UInt8(ascii: "1") ... UInt8(ascii: "9")
         while remainingBuffer.count >= 4 {
-            if case nonZeroRange = remainingBuffer[0] { return false }
-            if case nonZeroRange = remainingBuffer[1] { return false }
-            if case nonZeroRange = remainingBuffer[2] { return false }
-            if case nonZeroRange = remainingBuffer[3] { return false }
-            remainingBuffer = UnsafeBufferPointer(rebasing: remainingBuffer.suffix(from: 4))
+            if case nonZeroRange = remainingBuffer[uncheckedOffset: 0] { return false }
+            if case nonZeroRange = remainingBuffer[uncheckedOffset: 1] { return false }
+            if case nonZeroRange = remainingBuffer[uncheckedOffset: 2] { return false }
+            if case nonZeroRange = remainingBuffer[uncheckedOffset: 3] { return false }
+            remainingBuffer = remainingBuffer.dropFirst(4)
         }
 
         switch remainingBuffer.count {
         case 3:
-            if case nonZeroRange = remainingBuffer[2] { return false }
+            if case nonZeroRange = remainingBuffer[uncheckedOffset: 2] { return false }
             fallthrough
         case 2:
-            if case nonZeroRange = remainingBuffer[1] { return false }
+            if case nonZeroRange = remainingBuffer[uncheckedOffset: 1] { return false }
             fallthrough
         case 1:
-            if case nonZeroRange = remainingBuffer[0] { return false }
+            if case nonZeroRange = remainingBuffer[uncheckedOffset: 0] { return false }
         default:
             break
         }
@@ -809,9 +809,9 @@ extension JSONDecoderImpl: Decoder {
         try checkNotNull(value, expectedType: type, for: codingPathNode, additionalKey)
 
         if case .number(let region, let hasExponent) = value {
-            return try withBuffer(for: region) { numberBuffer, docStart in
+            return try withBuffer(for: region) { numberBuffer, fullSource in
                 if options.json5 {
-                    let (digitsStartPtr, isHex, isSpecialJSON5DoubleValue) = try JSON5Scanner.prevalidateJSONNumber(from: numberBuffer, docStart: docStart)
+                    let (digitsStartPtr, isHex, isSpecialJSON5DoubleValue) = try JSON5Scanner.prevalidateJSONNumber(from: numberBuffer, fullSource: fullSource)
 
                     // Use our integer parsers for hex data, because the underlying strtod() implementation of T(prevalidatedBuffer:) is too permissive (e.g. it accepts decimals and 'p' exponents) which otherwise would require prevalidation of the entire string before calling it.
                     if isHex {
@@ -846,10 +846,9 @@ extension JSONDecoderImpl: Decoder {
                     }
 
                     // We failed to parse the number. Is that because it was malformed?
-                    try JSON5Scanner.validateNumber(from: numberBuffer, withDigitsBeginningAt: digitsStartPtr, docStart: docStart)
-
+                    throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), fullSource: fullSource)
                 } else {
-                    let digitsStartPtr = try JSONScanner.prevalidateJSONNumber(from: numberBuffer, hasExponent: hasExponent, docStart: docStart)
+                    let digitsStartPtr = try JSONScanner.prevalidateJSONNumber(from: numberBuffer, hasExponent: hasExponent, fullSource: fullSource)
 
                     if let floatingPoint = T(prevalidatedBuffer: numberBuffer) {
                         // Check for overflow (which results in an infinite result), or rounding to zero.
@@ -864,13 +863,8 @@ extension JSONDecoderImpl: Decoder {
                         }
                     }
 
-                    try JSONScanner.validateNumber(from: numberBuffer, withDigitsBeginningAt: digitsStartPtr, docStart: docStart)
+                    throw JSONScanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), fullSource: fullSource)
                 }
-
-                // If that didn't throw, we'll say "it didn't fit"
-                throw DecodingError.dataCorrupted(.init(
-                    codingPath: codingPathNode.path(with: additionalKey),
-                    debugDescription: "Parsed JSON number <\(String(decoding: numberBuffer, as: Unicode.ASCII.self))> does not fit in \(type)."))
             }
         }
 
@@ -904,12 +898,12 @@ extension JSONDecoderImpl: Decoder {
         guard case .number(let region, let hasExponent) = value else {
             throw self.createTypeMismatchError(type: type, for: codingPathNode.path(with: additionalKey), value: value)
         }
-        return try withBuffer(for: region) { numberBuffer, docStart in
-            let digitBeginning: UnsafePointer<UInt8>
+        return try withBuffer(for: region) { numberBuffer, fullSource in
+            let digitBeginning: BufferViewIndex<UInt8>
             if options.json5 {
                 let isHex : Bool
                 let isSpecialFloatValue: Bool
-                (digitBeginning, isHex, isSpecialFloatValue) = try JSON5Scanner.prevalidateJSONNumber(from: numberBuffer, docStart: docStart)
+                (digitBeginning, isHex, isSpecialFloatValue) = try JSON5Scanner.prevalidateJSONNumber(from: numberBuffer, fullSource: fullSource)
 
                 // This is the fast pass. Number directly convertible to desired integer type.
                 if let integer = T(prevalidatedJSON5Buffer: numberBuffer, isHex: isHex) {
@@ -921,7 +915,7 @@ extension JSONDecoderImpl: Decoder {
                     throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
                 }
             } else {
-                digitBeginning = try JSONScanner.prevalidateJSONNumber(from: numberBuffer, hasExponent: hasExponent, docStart: docStart)
+                digitBeginning = try JSONScanner.prevalidateJSONNumber(from: numberBuffer, hasExponent: hasExponent, fullSource: fullSource)
 
                 // This is the fast pass. Number directly convertible to Integer.
                 if let integer = T(prevalidatedBuffer: numberBuffer) {
@@ -929,11 +923,11 @@ extension JSONDecoderImpl: Decoder {
                 }
             }
 
-            return try _slowpath_unwrapFixedWidthInteger(as: type, numberBuffer: numberBuffer, docStart: docStart, digitBeginning: digitBeginning, for: codingPathNode, additionalKey)
+            return try _slowpath_unwrapFixedWidthInteger(as: type, numberBuffer: numberBuffer, fullSource: fullSource, digitBeginning: digitBeginning, for: codingPathNode, additionalKey)
         }
     }
 
-    private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(as type: T.Type, numberBuffer: UnsafeBufferPointer<UInt8>, docStart: UnsafePointer<UInt8>, digitBeginning: UnsafePointer<UInt8>, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+    private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(as type: T.Type, numberBuffer: BufferView<UInt8>, fullSource: BufferView<UInt8>, digitBeginning: BufferViewIndex<UInt8>, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         // This is the slow path... If the fast path has failed. For example for "34.0" as an integer, we try to parse as either a Decimal or a Double and then convert back, losslessly.
         if let double = Double(prevalidatedBuffer: numberBuffer) {
             guard let value = T(exactly: double) else {
@@ -953,14 +947,10 @@ extension JSONDecoderImpl: Decoder {
 #endif // FOUNDATION_FRAMEWORK
         // Maybe it was just an unreadable sequence?
         if options.json5 {
-            try JSON5Scanner.validateNumber(from: numberBuffer, withDigitsBeginningAt: digitBeginning, docStart: docStart)
+            throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitBeginning), fullSource: fullSource)
         } else {
-            try JSONScanner.validateNumber(from: numberBuffer, withDigitsBeginningAt: digitBeginning, docStart: docStart)
+            throw JSONScanner.validateNumber(from: numberBuffer.suffix(from: digitBeginning), fullSource: fullSource)
         }
-
-        throw DecodingError.dataCorrupted(.init(
-            codingPath: codingPathNode.path(with: additionalKey),
-            debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
     }
 
     private func createTypeMismatchError(type: Any.Type, for path: [CodingKey], value: JSONMap.Value) -> DecodingError {
