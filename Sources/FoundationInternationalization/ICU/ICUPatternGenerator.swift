@@ -12,7 +12,7 @@
 
 @_implementationOnly import FoundationICU
 
-final class NSICUPatternGenerator {
+final class ICUPatternGenerator {
 
     let upatternGenerator: UnsafeMutablePointer<UDateTimePatternGenerator?>
 
@@ -79,12 +79,12 @@ final class NSICUPatternGenerator {
         let localeIdentifier: String
         let calendarIdentifier: Calendar.Identifier
 
-        func createNSICUPatternGenerator() -> NSICUPatternGenerator {
-            NSICUPatternGenerator(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier)
+        func createNSICUPatternGenerator() -> ICUPatternGenerator {
+            ICUPatternGenerator(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier)
         }
     }
 
-    static let _patternGeneratorCache = FormatterCache<PatternGeneratorInfo, NSICUPatternGenerator>()
+    static let _patternGeneratorCache = FormatterCache<PatternGeneratorInfo, ICUPatternGenerator>()
 
 
     static func localizedPatternForSkeleton(localeIdentifier: String, calendarIdentifier: Calendar.Identifier, skeleton: String, hourCycleOption: HourCycleOption) -> String {
@@ -92,7 +92,7 @@ final class NSICUPatternGenerator {
         return upatternGenerator._patternForSkeleton(skeleton, hourCycleOption: hourCycleOption)
     }
 
-    static func cachedPatternGenerator(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> NSICUPatternGenerator {
+    static func cachedPatternGenerator(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> ICUPatternGenerator {
         let patternInfo = PatternGeneratorInfo(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier)
         return _patternGeneratorCache.formatter(for: patternInfo, creator: patternInfo.createNSICUPatternGenerator)
     }
