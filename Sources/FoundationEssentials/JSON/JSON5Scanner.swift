@@ -387,7 +387,7 @@ extension JSON5Scanner {
         }
 
         func sourceLocation(atOffset offset: Int) -> JSONError.SourceLocation {
-            .sourceLocation(at: readIndex.advanced(by: offset), docStart: bytes)
+            .sourceLocation(at: readIndex.advanced(by: offset), fullSource: bytes)
         }
 
         @inline(__always)
@@ -517,7 +517,7 @@ extension JSON5Scanner {
                 case UInt8(ascii: "u"):
                     try requireRemainingBytes(6) // 6 bytes for \, u, and 4 hex digits
                     let remaining = bytes.suffix(from: bytes.index(readIndex, offsetBy: 2)) // Skip \u
-                    let (u16, _) = try JSONScanner.parseUnicodeHexSequence(from: remaining, docStart: bytes, allowNulls: false)
+                    let (u16, _) = try JSONScanner.parseUnicodeHexSequence(from: remaining, fullSource: bytes, allowNulls: false)
                     guard let scalar = UnicodeScalar(u16) else {
                         throw JSONError.couldNotCreateUnicodeScalarFromUInt32(location: sourceLocation, unicodeScalarValue: UInt32(u16))
                     }
@@ -525,7 +525,7 @@ extension JSON5Scanner {
                 case UInt8(ascii: "x"):
                     try requireRemainingBytes(4) // 4 bytes for \, x, and 2 hex digits
                     let remaining = bytes.suffix(from: bytes.index(readIndex, offsetBy: 2)) // Skip \x
-                    let (u8, _) = try JSON5Scanner.parseTwoByteUnicodeHexSequence(from: remaining, docStart: bytes)
+                    let (u8, _) = try JSON5Scanner.parseTwoByteUnicodeHexSequence(from: remaining, fullSource: bytes)
                     return (UnicodeScalar(u8), 4)
                 default:
                     throw JSONError.unexpectedCharacter(ascii: char, location: sourceLocation(atOffset: 1))
@@ -877,7 +877,7 @@ extension JSON5Scanner {
     // MARK: String
 
     static func stringValue(
-        from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
+        from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
     ) throws -> String {
         // Assume easy path first -- no escapes, no characters requiring escapes.
         var index = jsonBytes.startIndex
@@ -889,7 +889,7 @@ extension JSON5Scanner {
         }
 
         guard let output = String._tryFromUTF8(jsonBytes[unchecked: jsonBytes.startIndex..<index]) else {
-            throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
         if _fastPath(index == endIndex) {
             // We went through all the characters! Easy peasy.
@@ -897,11 +897,11 @@ extension JSON5Scanner {
         }
 
         let remainingBytes = jsonBytes[unchecked: index..<endIndex]
-        return try _slowpath_stringValue(from: remainingBytes, appendingTo: output, docStart: docStart)
+        return try _slowpath_stringValue(from: remainingBytes, appendingTo: output, fullSource: fullSource)
     }
 
     static func _slowpath_stringValue(
-        from jsonBytes: BufferView<UInt8>, appendingTo output: consuming String, docStart: BufferView<UInt8>
+        from jsonBytes: BufferView<UInt8>, appendingTo output: consuming String, fullSource: BufferView<UInt8>
     ) throws -> String {
         // A reasonable guess as to the resulting capacity of the string is 1/4 the length of the remaining buffer. With this scheme, input full of 4 byte UTF-8 sequences won't waste a bunch of extra capacity and predominantly 1 byte UTF-8 sequences will only need to resize the buffer once or twice.
         output.reserveCapacity(output.underestimatedCount + jsonBytes.count/4)
@@ -914,20 +914,20 @@ extension JSON5Scanner {
             switch byte {
             case ._backslash:
                 guard let stringChunk = String._tryFromUTF8(jsonBytes[unchecked: chunkStart..<index]) else {
-                    throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: chunkStart, docStart: docStart))
+                    throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: chunkStart, fullSource: fullSource))
                 }
                 output += stringChunk
 
                 // Advance past the backslash
                 jsonBytes.formIndex(after: &index)
 
-                index = try parseEscapeSequence(from: jsonBytes.suffix(from: index), into: &output, docStart: docStart)
+                index = try parseEscapeSequence(from: jsonBytes.suffix(from: index), into: &output, fullSource: fullSource)
                 chunkStart = index
 
             default:
                 guard _fastPath(byte & 0xe0 != 0) else {
                     // All Unicode characters may be placed within the quotation marks, except for the characters that must be escaped: quotation mark, reverse solidus, and the control characters (U+0000 through U+001F).
-                    throw JSONError.unescapedControlCharacterInString(ascii: byte, location: .sourceLocation(at: index, docStart: docStart))
+                    throw JSONError.unescapedControlCharacterInString(ascii: byte, location: .sourceLocation(at: index, fullSource: fullSource))
                 }
 
                 jsonBytes.formIndex(after: &index)
@@ -936,7 +936,7 @@ extension JSON5Scanner {
         }
 
         guard let stringChunk = String._tryFromUTF8(jsonBytes[unchecked: chunkStart..<index]) else {
-            throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: chunkStart, docStart: docStart))
+            throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: chunkStart, fullSource: fullSource))
         }
         output += stringChunk
 
@@ -944,7 +944,7 @@ extension JSON5Scanner {
     }
 
     private static func parseEscapeSequence(
-        from jsonBytes: BufferView<UInt8>, into string: inout String, docStart: BufferView<UInt8>
+        from jsonBytes: BufferView<UInt8>, into string: inout String, fullSource: BufferView<UInt8>
     ) throws -> BufferViewIndex<UInt8> {
         precondition(!jsonBytes.isEmpty, "Scanning should have ensured that all escape sequences have a valid shape")
         let index = jsonBytes.startIndex
@@ -967,19 +967,19 @@ extension JSON5Scanner {
                 string.append("\r")
             }
         case UInt8(ascii:"u"):
-            return try JSONScanner.parseUnicodeSequence(from: jsonBytes.dropFirst(), into: &string, docStart: docStart, allowNulls: false)
+            return try JSONScanner.parseUnicodeSequence(from: jsonBytes.dropFirst(), into: &string, fullSource: fullSource, allowNulls: false)
         case UInt8(ascii:"x"):
-            let (escapedByte, indexAfter) = try parseTwoByteUnicodeHexSequence(from: jsonBytes.dropFirst(), docStart: docStart)
+            let (escapedByte, indexAfter) = try parseTwoByteUnicodeHexSequence(from: jsonBytes.dropFirst(), fullSource: fullSource)
             string.unicodeScalars.append(UnicodeScalar(escapedByte))
             return indexAfter
         case let ascii: // default
-            throw JSONError.unexpectedEscapedCharacter(ascii: ascii, location: .sourceLocation(at: index, docStart: docStart))
+            throw JSONError.unexpectedEscapedCharacter(ascii: ascii, location: .sourceLocation(at: index, fullSource: fullSource))
         }
         return jsonBytes.index(after: index)
     }
 
     private static func parseTwoByteUnicodeHexSequence(
-        from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
+        from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
     ) throws -> (scalar: UInt8, nextIndex: BufferViewIndex<UInt8>) {
         let digitBytes = jsonBytes.prefix(2)
         precondition(digitBytes.count == 2, "Scanning should have ensured that all escape sequences are valid shape")
@@ -987,10 +987,10 @@ extension JSON5Scanner {
         guard let result: UInt8 = _parseJSONHexIntegerDigits(digitBytes, isNegative: false)
         else {
             let hexString = String(decoding: digitBytes, as: Unicode.UTF8.self)
-            throw JSONError.invalidHexDigitSequence(hexString, location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.invalidHexDigitSequence(hexString, location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
         guard result != 0 else {
-            throw JSONError.invalidEscapedNullValue(location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.invalidEscapedNullValue(location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
         assert(digitBytes.endIndex <= jsonBytes.endIndex)
         return (result, digitBytes.endIndex)
@@ -999,7 +999,7 @@ extension JSON5Scanner {
     // MARK: Numbers
 
     static func validateLeadingZero(
-        in jsonBytes: BufferView<UInt8>, zero: BufferViewIndex<UInt8>, docStart: BufferView<UInt8>
+        in jsonBytes: BufferView<UInt8>, zero: BufferViewIndex<UInt8>, fullSource: BufferView<UInt8>
     ) throws -> (firstDigitIndex: BufferViewIndex<UInt8>, isHex: Bool) {
         // Leading zeros are very restricted.
         guard !jsonBytes.isEmpty else {
@@ -1014,54 +1014,54 @@ extension JSON5Scanner {
             // We have to further validate that there is another digit following this one.
             let firstHexDigitIndex = jsonBytes.index(after: jsonBytes.startIndex)
             guard firstHexDigitIndex <= jsonBytes.endIndex else {
-                throw JSONError.unexpectedCharacter(context: "in number", ascii: jsonBytes[offset: 0], location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+                throw JSONError.unexpectedCharacter(context: "in number", ascii: jsonBytes[offset: 0], location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
             }
             let maybeHex = jsonBytes[unchecked: firstHexDigitIndex]
             guard maybeHex.isValidHexDigit else {
-                throw JSONError.unexpectedCharacter(context: "in number", ascii: maybeHex, location: .sourceLocation(at: firstHexDigitIndex, docStart: docStart))
+                throw JSONError.unexpectedCharacter(context: "in number", ascii: maybeHex, location: .sourceLocation(at: firstHexDigitIndex, fullSource: fullSource))
             }
             return (firstDigitIndex: firstHexDigitIndex, isHex: true)
         case _asciiNumbers:
-            throw JSONError.numberWithLeadingZero(location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.numberWithLeadingZero(location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         case let byte: // default
-            throw JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
     }
 
-    static func validateInfinity(from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>) throws {
+    static func validateInfinity(from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>) throws {
         guard jsonBytes.count >= _json5Infinity.utf8CodeUnitCount else {
-            throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
         guard strncmp(jsonBytes.baseAddress, _json5Infinity.utf8Start, _json5Infinity.utf8CodeUnitCount) == 0 else {
-            throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
     }
 
-    static func validateNaN(from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>) throws {
+    static func validateNaN(from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>) throws {
         guard jsonBytes.count >= _json5NaN.utf8CodeUnitCount else {
-            throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
         guard strncmp(jsonBytes.baseAddress, _json5NaN.utf8Start, _json5NaN.utf8CodeUnitCount) == 0 else {
-            throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
     }
 
     static func validateLeadingDecimal(
-      from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
+      from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
     ) throws {
         // Leading decimals MUST be followed by a number, unlike trailing decimals.
         guard !jsonBytes.isEmpty else {
-            throw JSONError.unexpectedCharacter(ascii: UInt8(ascii: "."), location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.unexpectedCharacter(ascii: UInt8(ascii: "."), location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
         let nextByte = jsonBytes[unchecked: jsonBytes.startIndex]
         guard case _asciiNumbers = nextByte else {
-            throw JSONError.unexpectedCharacter(context: "after '.' in number", ascii: nextByte, location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+            throw JSONError.unexpectedCharacter(context: "after '.' in number", ascii: nextByte, location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
     }
 
     // Returns the pointer at which the number's digits begin. If there are no digits, the function throws.
     static func prevalidateJSONNumber(
-        from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
+        from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
     ) throws -> (firstDigitIndex: BufferViewIndex<UInt8>, isHex: Bool, isSpecialDoubleValue: Bool) {
         // Just make sure we (A) don't have a leading zero, and (B) We have at least one digit.
         guard !jsonBytes.isEmpty else {
@@ -1072,46 +1072,46 @@ extension JSON5Scanner {
         let firstDigitIndex: BufferViewIndex<UInt8>
         switch jsonBytes[uncheckedOffset: 0] {
         case UInt8(ascii: "0"):
-            (firstDigitIndex, isHex) = try validateLeadingZero(in: jsonBytes.dropFirst(), zero: jsonBytes.startIndex, docStart: docStart)
+            (firstDigitIndex, isHex) = try validateLeadingZero(in: jsonBytes.dropFirst(), zero: jsonBytes.startIndex, fullSource: fullSource)
         case UInt8(ascii: "1") ... UInt8(ascii: "9"):
           firstDigitIndex = jsonBytes.startIndex
         case UInt8(ascii: "-"), UInt8(ascii: "+"):
             guard jsonBytes.count > 1 else {
-                throw JSONError.unexpectedCharacter(context: "at end of number", ascii: jsonBytes[offset: 0], location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
+                throw JSONError.unexpectedCharacter(context: "at end of number", ascii: jsonBytes[offset: 0], location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
             }
             let second = jsonBytes.index(after: jsonBytes.startIndex)
             switch jsonBytes[unchecked: second] {
             case UInt8(ascii: "0"):
-                (firstDigitIndex, isHex) = try validateLeadingZero(in: jsonBytes.dropFirst(2), zero: second, docStart: docStart)
+                (firstDigitIndex, isHex) = try validateLeadingZero(in: jsonBytes.dropFirst(2), zero: second, fullSource: fullSource)
             case UInt8(ascii: "1") ... UInt8(ascii: "9"):
                 // Good, we need at least one digit following the '-'
                 firstDigitIndex = second
             case UInt8(ascii: "I"):
-                try validateInfinity(from: jsonBytes.dropFirst(1), docStart: docStart)
+                try validateInfinity(from: jsonBytes.dropFirst(1), fullSource: fullSource)
                 isSpecialValue = true
                 firstDigitIndex = second
             case UInt8(ascii: "N"):
-                try validateNaN(from: jsonBytes.dropFirst(1), docStart: docStart)
+                try validateNaN(from: jsonBytes.dropFirst(1), fullSource: fullSource)
                 isSpecialValue = true
                 firstDigitIndex = second
             case UInt8(ascii: "."):
-                try validateLeadingDecimal(from: jsonBytes.dropFirst(2), docStart: docStart)
+                try validateLeadingDecimal(from: jsonBytes.dropFirst(2), fullSource: fullSource)
                 // A leading decimal point is part of the number to be parsed
                 firstDigitIndex = second
             case let byte: // default
                 // Any other character is invalid.
-                throw JSONError.unexpectedCharacter(context: "after '\(String(UnicodeScalar(jsonBytes[offset: 0])))' in number", ascii: byte, location: .sourceLocation(at: second, docStart: docStart))
+                throw JSONError.unexpectedCharacter(context: "after '\(String(UnicodeScalar(jsonBytes[offset: 0])))' in number", ascii: byte, location: .sourceLocation(at: second, fullSource: fullSource))
             }
         case UInt8(ascii: "I"):
-            try validateInfinity(from: jsonBytes, docStart: docStart)
+            try validateInfinity(from: jsonBytes, fullSource: fullSource)
             isSpecialValue = true
             firstDigitIndex = jsonBytes.startIndex
         case UInt8(ascii: "N"):
-            try validateNaN(from: jsonBytes, docStart: docStart)
+            try validateNaN(from: jsonBytes, fullSource: fullSource)
             isSpecialValue = true
             firstDigitIndex = jsonBytes.startIndex
         case UInt8(ascii: "."):
-            try validateLeadingDecimal(from: jsonBytes.dropFirst(1), docStart: docStart)
+            try validateLeadingDecimal(from: jsonBytes.dropFirst(1), fullSource: fullSource)
             // A leading decimal point is part of the number to be parsed
             firstDigitIndex = jsonBytes.startIndex
         default:
@@ -1123,7 +1123,7 @@ extension JSON5Scanner {
         let lastByte = jsonBytes[unchecked: lastIndex]
         switch lastByte {
         case UInt8(ascii: "e"), UInt8(ascii: "E"):
-            throw JSONError.unexpectedCharacter(context: "at end of number", ascii: lastByte, location: .sourceLocation(at: lastIndex, docStart: docStart))
+            throw JSONError.unexpectedCharacter(context: "at end of number", ascii: lastByte, location: .sourceLocation(at: lastIndex, fullSource: fullSource))
         default:
             break
         }
@@ -1133,7 +1133,7 @@ extension JSON5Scanner {
 
     // This function is intended to be called after prevalidateJSONNumber() (which provides the digitsBeginPtr) and after parsing fails. It will provide more useful information about the invalid input.
     static func validateNumber(
-      from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
+      from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
     ) -> JSONError {
         enum ControlCharacter {
             case operand
@@ -1159,7 +1159,7 @@ extension JSON5Scanner {
                 if jsonBytes[index].isValidHexDigit {
                     jsonBytes.formIndex(after: &index)
                 } else {
-                    return JSONError.unexpectedCharacter(context: "in hex number", ascii: jsonBytes[index], location: .sourceLocation(at: index, docStart: docStart))
+                    return JSONError.unexpectedCharacter(context: "in hex number", ascii: jsonBytes[index], location: .sourceLocation(at: index, fullSource: fullSource))
                 }
             }
             preconditionFailure("Invalid number expected in \(#function). Input code unit buffer contained valid input.")
@@ -1178,7 +1178,7 @@ extension JSON5Scanner {
                 digitsSinceControlChar += 1
             case UInt8(ascii: "."):
                 guard pastControlChar == .operand else {
-                    return JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: index, docStart: docStart))
+                    return JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: index, fullSource: fullSource))
                 }
                 pastControlChar = .decimalPoint
                 digitsSinceControlChar = 0
@@ -1186,20 +1186,20 @@ extension JSON5Scanner {
             case UInt8(ascii: "e"), UInt8(ascii: "E"):
                 guard (pastControlChar == .operand && digitsSinceControlChar > 0) || pastControlChar == .decimalPoint
                 else {
-                    return JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: index, docStart: docStart))
+                    return JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: index, fullSource: fullSource))
                 }
                 pastControlChar = .exp
                 digitsSinceControlChar = 0
 
             case UInt8(ascii: "+"), UInt8(ascii: "-"):
                 guard digitsSinceControlChar == 0, pastControlChar == .exp else {
-                    return JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: index, docStart: docStart))
+                    return JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: index, fullSource: fullSource))
                 }
                 pastControlChar = .expOperator
                 digitsSinceControlChar = 0
 
             default:
-                return JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: index, docStart: docStart))
+                return JSONError.unexpectedCharacter(context: "in number", ascii: byte, location: .sourceLocation(at: index, fullSource: fullSource))
             }
             jsonBytes.formIndex(after: &index)
         }
