@@ -674,10 +674,18 @@ extension Substring {
         return result
     }
 
+#if FOUNDATION_FRAMEWORK
     func _rangeOfCharacter(from set: CharacterSet, options: String.CompareOptions) -> Range<Index>? {
         guard !isEmpty else { return nil }
 
-        return unicodeScalars._rangeOfCharacter(from: set, anchored: options.contains(.anchored), backwards: options.contains(.backwards))
+        return unicodeScalars._rangeOfCharacter(anchored: options.contains(.anchored), backwards: options.contains(.backwards), matchingPredicate: set.contains)
+    }
+#endif
+
+    func _rangeOfCharacter(from set: BuiltInUnicodeScalarSet, options: String.CompareOptions) -> Range<Index>? {
+        guard !isEmpty else { return nil }
+
+        return unicodeScalars._rangeOfCharacter(anchored: options.contains(.anchored), backwards: options.contains(.backwards), matchingPredicate: set.contains)
     }
 }
 

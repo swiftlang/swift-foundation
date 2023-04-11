@@ -48,6 +48,7 @@ extension StringProtocol {
 #endif
     }
 
+#if FOUNDATION_FRAMEWORK
     /// Finds and returns the range in the `String` of the first
     /// character from a given character set found in a given range with
     /// given options.
@@ -60,17 +61,15 @@ extension StringProtocol {
             return subStr._rangeOfCharacter(from: aSet, options: mask)
         }
 
-#if FOUNDATION_FRAMEWORK
         return aSet.withUnsafeImmutableStorage {
             return _optionalRange(_ns._rangeOfCharacter(from: $0, options: mask, range: _toRelativeNSRange(aRange ?? startIndex..<endIndex)))
         }
-#else
-        return nil
-#endif // FOUNDATION_FRAMEWORK
     }
+#endif // FOUNDATION_FRAMEWORK
 
     /// Returns a `Data` containing a representation of
     /// the `String` encoded using a given encoding.
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func data(using encoding: String.Encoding, allowLossyConversion: Bool = false) -> Data? {
         switch encoding {
         case .utf8:

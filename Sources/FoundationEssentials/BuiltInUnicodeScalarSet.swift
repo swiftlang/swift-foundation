@@ -83,10 +83,10 @@ internal struct BuiltInUnicodeScalarSet {
         return new
     }
 
-    static let uppercaseLetter = Self.init(type: .uppercaseLetter)
-    static let lowercaseLetter = Self.init(type: .lowercaseLetter)
-    static let caseIgnorable = Self.init(type: .caseIgnorable)
-    static let graphemeExtend = Self.init(type: .graphemeExtend)
-    static let canonicalDecomposable = Self.init(type: .canonicalDecomposable)
+    static let uppercaseLetters = Self.init(type: .uppercaseLetter)
+    static let lowercaseLetters = Self.init(type: .lowercaseLetter)
+    static let caseIgnorables = Self.init(type: .caseIgnorable)
+    static let graphemeExtends = Self.init(type: .graphemeExtend)
+    static let canonicalDecomposables = Self.init(type: .canonicalDecomposable)
 }
 

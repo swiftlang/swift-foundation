@@ -456,16 +456,16 @@ public struct Locale : Hashable, Equatable, Sendable {
         return result
     }
 
+#if FOUNDATION_FRAMEWORK
     /// Returns the exemplar character set for the locale, or nil if has none.
     public var exemplarCharacterSet: CharacterSet? {
         switch kind {
         case .autoupdating: return LocaleCache.cache.current.exemplarCharacterSet
         case .fixed(let l): return l.exemplarCharacterSet
-#if FOUNDATION_FRAMEWORK
         case .bridged(let l): return l.exemplarCharacterSet
-#endif
         }
     }
+#endif
 
     /// Returns the calendar for the locale, or the Gregorian calendar as a fallback.
     public var calendar: Calendar {

@@ -22,7 +22,7 @@ extension Character {
 }
 
 extension Substring.UnicodeScalarView {
-    func _rangeOfCharacter(from set: CharacterSet, anchored: Bool, backwards: Bool) -> Range<Index>? {
+    func _rangeOfCharacter(anchored: Bool, backwards: Bool, matchingPredicate predicate: (Unicode.Scalar) -> Bool) -> Range<Index>? {
         guard !isEmpty else { return nil }
 
         let fromLoc: String.Index
@@ -44,7 +44,7 @@ extension Substring.UnicodeScalarView {
         var idx = fromLoc
         while !done {
             let ch = self[idx]
-            if set.contains(ch) {
+            if predicate(ch) {
                 done = true
                 found = true
             } else if idx == toLoc {

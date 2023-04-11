@@ -611,7 +611,7 @@ internal final class _Locale: Sendable, Hashable {
     }
 
     // MARK: - Exemplar Character Set
-
+#if FOUNDATION_FRAMEWORK
     internal var exemplarCharacterSet: CharacterSet? {
         var status = U_ZERO_ERROR
         let data = ulocdata_open(identifier, &status)
@@ -663,6 +663,7 @@ internal final class _Locale: Sendable, Hashable {
 
         return characterSet
     }
+#endif
 
     // MARK: - LocaleCalendarIdentifier
 

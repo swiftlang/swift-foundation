@@ -157,13 +157,13 @@ open class JSONEncoder {
             var searchRange = stringKey.index(after: wordStart)..<stringKey.endIndex
 
             // Find next uppercase character
-            while let upperCaseRange = stringKey.rangeOfCharacter(from: CharacterSet.uppercaseLetters, options: [], range: searchRange) {
+            while let upperCaseRange = stringKey[searchRange]._rangeOfCharacter(from: BuiltInUnicodeScalarSet.uppercaseLetters, options: []) {
                 let untilUpperCase = wordStart..<upperCaseRange.lowerBound
                 words.append(untilUpperCase)
 
                 // Find next lowercase character
                 searchRange = upperCaseRange.lowerBound..<searchRange.upperBound
-                guard let lowerCaseRange = stringKey.rangeOfCharacter(from: CharacterSet.lowercaseLetters, options: [], range: searchRange) else {
+                guard let lowerCaseRange = stringKey[searchRange]._rangeOfCharacter(from: BuiltInUnicodeScalarSet.lowercaseLetters, options: []) else {
                     // There are no more lower case letters. Just end here.
                     wordStart = searchRange.lowerBound
                     break
