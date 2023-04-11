@@ -387,7 +387,7 @@ extension JSON5Scanner {
         }
 
         func sourceLocation(atOffset offset: Int) -> JSONError.SourceLocation {
-            .sourceLocation(at: readIndex.advanced(by: offset), docStart: bytes.startIndex)
+            .sourceLocation(at: readIndex.advanced(by: offset), docStart: bytes)
         }
 
         @inline(__always)
@@ -517,7 +517,7 @@ extension JSON5Scanner {
                 case UInt8(ascii: "u"):
                     try requireRemainingBytes(6) // 6 bytes for \, u, and 4 hex digits
                     let remaining = bytes.suffix(from: bytes.index(readIndex, offsetBy: 2)) // Skip \u
-                    let (u16, _) = try JSONScanner.parseUnicodeHexSequence(from: remaining, docStart: bytes.startIndex, allowNulls: false)
+                    let (u16, _) = try JSONScanner.parseUnicodeHexSequence(from: remaining, docStart: bytes, allowNulls: false)
                     guard let scalar = UnicodeScalar(u16) else {
                         throw JSONError.couldNotCreateUnicodeScalarFromUInt32(location: sourceLocation, unicodeScalarValue: UInt32(u16))
                     }
@@ -525,7 +525,7 @@ extension JSON5Scanner {
                 case UInt8(ascii: "x"):
                     try requireRemainingBytes(4) // 4 bytes for \, x, and 2 hex digits
                     let remaining = bytes.suffix(from: bytes.index(readIndex, offsetBy: 2)) // Skip \x
-                    let (u8, _) = try JSON5Scanner.parseTwoByteUnicodeHexSequence(from: remaining, docStart: bytes.startIndex)
+                    let (u8, _) = try JSON5Scanner.parseTwoByteUnicodeHexSequence(from: remaining, docStart: bytes)
                     return (UnicodeScalar(u8), 4)
                 default:
                     throw JSONError.unexpectedCharacter(ascii: char, location: sourceLocation(atOffset: 1))
@@ -877,7 +877,7 @@ extension JSON5Scanner {
     // MARK: String
 
     static func stringValue(
-        from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>
+        from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
     ) throws -> String {
         // Assume easy path first -- no escapes, no characters requiring escapes.
         var index = jsonBytes.startIndex
@@ -901,7 +901,7 @@ extension JSON5Scanner {
     }
 
     static func _slowpath_stringValue(
-        from jsonBytes: BufferView<UInt8>, appendingTo output: consuming String, docStart: BufferViewIndex<UInt8>
+        from jsonBytes: BufferView<UInt8>, appendingTo output: consuming String, docStart: BufferView<UInt8>
     ) throws -> String {
         // A reasonable guess as to the resulting capacity of the string is 1/4 the length of the remaining buffer. With this scheme, input full of 4 byte UTF-8 sequences won't waste a bunch of extra capacity and predominantly 1 byte UTF-8 sequences will only need to resize the buffer once or twice.
         output.reserveCapacity(output.underestimatedCount + jsonBytes.count/4)
@@ -944,7 +944,7 @@ extension JSON5Scanner {
     }
 
     private static func parseEscapeSequence(
-        from jsonBytes: BufferView<UInt8>, into string: inout String, docStart: BufferViewIndex<UInt8>
+        from jsonBytes: BufferView<UInt8>, into string: inout String, docStart: BufferView<UInt8>
     ) throws -> BufferViewIndex<UInt8> {
         precondition(!jsonBytes.isEmpty, "Scanning should have ensured that all escape sequences have a valid shape")
         let cursor = jsonBytes.startIndex
@@ -979,7 +979,7 @@ extension JSON5Scanner {
     }
 
     private static func parseTwoByteUnicodeHexSequence(
-        from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>
+        from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
     ) throws -> (scalar: UInt8, nextIndex: BufferViewIndex<UInt8>) {
         let digitBytes = jsonBytes.prefix(2)
         precondition(digitBytes.count == 2, "Scanning should have ensured that all escape sequences are valid shape")
@@ -999,7 +999,7 @@ extension JSON5Scanner {
     // MARK: Numbers
 
     static func validateLeadingZero(
-        in jsonBytes: BufferView<UInt8>, zero: BufferViewIndex<UInt8>, docStart: BufferViewIndex<UInt8>
+        in jsonBytes: BufferView<UInt8>, zero: BufferViewIndex<UInt8>, docStart: BufferView<UInt8>
     ) throws -> (firstDigitIndex: BufferViewIndex<UInt8>, isHex: Bool) {
         // Leading zeros are very restricted.
         guard !jsonBytes.isEmpty else {
@@ -1028,7 +1028,7 @@ extension JSON5Scanner {
         }
     }
 
-    static func validateInfinity(from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>) throws {
+    static func validateInfinity(from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>) throws {
         guard jsonBytes.count >= _json5Infinity.utf8CodeUnitCount else {
             throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
         }
@@ -1037,7 +1037,7 @@ extension JSON5Scanner {
         }
     }
 
-    static func validateNaN(from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>) throws {
+    static func validateNaN(from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>) throws {
         guard jsonBytes.count >= _json5NaN.utf8CodeUnitCount else {
             throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, docStart: docStart))
         }
@@ -1047,7 +1047,7 @@ extension JSON5Scanner {
     }
 
     static func validateLeadingDecimal(
-      from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>
+      from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
     ) throws {
         // Leading decimals MUST be followed by a number, unlike trailing decimals.
         guard !jsonBytes.isEmpty else {
@@ -1061,7 +1061,7 @@ extension JSON5Scanner {
 
     // Returns the pointer at which the number's digits begin. If there are no digits, the function throws.
     static func prevalidateJSONNumber(
-        from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>
+        from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
     ) throws -> (firstDigitIndex: BufferViewIndex<UInt8>, isHex: Bool, isSpecialDoubleValue: Bool) {
         // Just make sure we (A) don't have a leading zero, and (B) We have at least one digit.
         guard !jsonBytes.isEmpty else {
@@ -1133,7 +1133,7 @@ extension JSON5Scanner {
 
     // This function is intended to be called after prevalidateJSONNumber() (which provides the digitsBeginPtr) and after parsing fails. It will provide more useful information about the invalid input.
     static func validateNumber(
-      from jsonBytes: BufferView<UInt8>, docStart: BufferViewIndex<UInt8>
+      from jsonBytes: BufferView<UInt8>, docStart: BufferView<UInt8>
     ) -> JSONError {
         enum ControlCharacter {
             case operand
