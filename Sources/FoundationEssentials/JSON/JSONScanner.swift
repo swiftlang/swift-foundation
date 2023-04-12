@@ -96,16 +96,16 @@ internal class JSONMap {
     }
 
     let mapBuffer : [Int]
-    var dataLock : LockedState<(buffer: BufferView<UInt8>, owned: Bool)>
+    var dataLock : LockedState<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
     init(mapBuffer: [Int], dataBuffer: BufferView<UInt8>) {
         self.mapBuffer = mapBuffer
-        self.dataLock = .init(initialState: (buffer: dataBuffer, owned: false))
+        self.dataLock = .init(initialState: (buffer: dataBuffer, allocation: nil))
     }
 
     func copyInBuffer() {
         dataLock.withLock { state in
-            guard !state.owned else {
+            guard state.allocation == nil else {
                 return
             }
 
@@ -118,7 +118,7 @@ internal class JSONMap {
                 return (.init(raw), capacity+1)
             }
 
-            state = (buffer: .init(baseAddress: p, count: c), owned: true)
+            state = (buffer: .init(baseAddress: p, count: c), allocation: p)
         }
     }
 
@@ -134,8 +134,8 @@ internal class JSONMap {
 
     deinit {
         dataLock.withLock {
-            if $0.owned {
-                let allocatedPointer = $0.buffer.startIndex._rawValue
+            if let allocatedPointer = $0.allocation {
+                precondition($0.buffer.startIndex == BufferViewIndex(rawValue: allocatedPointer))
                 allocatedPointer.deallocate()
             }
         }
