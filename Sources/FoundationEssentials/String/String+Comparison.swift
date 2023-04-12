@@ -566,7 +566,11 @@ extension Character : _StringCompareOptionsConvertible {
     }
 
     var isExtendCharacter: Bool {
-        return _isExtendCharacter
+        guard !self.isASCII else {
+            return false
+        }
+
+        return unicodeScalars.allSatisfy { $0._isGraphemeExtend }
     }
 
 }
@@ -795,6 +799,42 @@ extension Substring.UnicodeScalarView {
         }
 
         return ComparisonResult(stringIndex: idx1, idx2: idx2, endIndex1: endIndex, endIndex2: other.endIndex)
+    }
+
+    func _rangeOfCharacter(anchored: Bool, backwards: Bool, matchingPredicate predicate: (Unicode.Scalar) -> Bool) -> Range<Index>? {
+        guard !isEmpty else { return nil }
+
+        let fromLoc: String.Index
+        let toLoc: String.Index
+        let step: Int
+        if backwards {
+            fromLoc = index(before: endIndex)
+            toLoc = anchored ? fromLoc : startIndex
+            step = -1
+        } else {
+            fromLoc = startIndex
+            toLoc = anchored ? fromLoc : index(before: endIndex)
+            step = 1
+        }
+
+        var done = false
+        var found = false
+
+        var idx = fromLoc
+        while !done {
+            let ch = self[idx]
+            if predicate(ch) {
+                done = true
+                found = true
+            } else if idx == toLoc {
+                done = true
+            } else {
+                formIndex(&idx, offsetBy: step)
+            }
+        }
+
+        guard found else { return nil }
+        return idx..<index(after: idx)
     }
 }
 

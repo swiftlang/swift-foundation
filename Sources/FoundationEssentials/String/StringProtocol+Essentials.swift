@@ -52,6 +52,7 @@ extension StringProtocol {
     /// Finds and returns the range in the `String` of the first
     /// character from a given character set found in a given range with
     /// given options.
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func rangeOfCharacter(from aSet: CharacterSet, options mask: String.CompareOptions = [], range aRange: Range<Index>? = nil) -> Range<Index>? {
         if _foundation_essentials_feature_enabled() {
             var subStr = Substring(self)
@@ -113,7 +114,6 @@ extension StringProtocol {
     /// - Parameter separator: The separator string.
     /// - Returns: An array containing substrings that have been divided from the
     ///   string using `separator`.
-
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func components<T : StringProtocol>(separatedBy separator: T) -> [String] {
 #if FOUNDATION_FRAMEWORK
@@ -144,5 +144,59 @@ extension StringProtocol {
             return [String(self)]
         }
 #endif
+    }
+
+    /// Returns the range of characters representing the line or lines
+    /// containing a given range.
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public func lineRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
+        return String(self).lineRange(for: aRange)
+    }
+
+    /// Returns the range of characters representing the
+    /// paragraph or paragraphs containing a given range.
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public func paragraphRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
+        return String(self).paragraphRange(for: aRange)
+    }
+}
+
+extension String {
+    internal func lineRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
+
+        // It's possible that passed-in indices are not on unicode scalar boundaries, such as when they're UTF-16 indices.
+        // Expand the bounds to ensure they are so we can meaningfully iterate their UTF8 views.
+        let r = unicodeScalars._boundaryAlignedRange(aRange)
+        let result = utf8._getBlock(for: [.findStart, .findEnd, .stopAtLineSeparators], in: r)
+
+        guard let start = result.start else {
+            guard let end = result.end else {
+                return startIndex ..< endIndex
+            }
+            return startIndex ..< end
+        }
+
+        guard let upper = result.end else {
+            return start ..< endIndex
+        }
+
+        return start..<upper
+    }
+
+    internal func paragraphRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
+        let r = unicodeScalars._boundaryAlignedRange(aRange)
+        let result = utf8._getBlock(for: [.findStart, .findEnd], in: r)
+        guard let start = result.start else {
+            guard let end = result.end else {
+                return startIndex ..< endIndex
+            }
+            return startIndex ..< end
+        }
+
+        guard let upper = result.end else {
+            return start ..< endIndex
+        }
+
+        return start..<upper
     }
 }
