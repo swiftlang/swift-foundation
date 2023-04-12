@@ -117,12 +117,9 @@ open class JSONEncoder {
         /// Use the keys specified by each type. This is the default strategy.
         case useDefaultKeys
 
-#if FOUNDATION_FRAMEWORK
-        // TODO: Reenable this option once String.rangeOfCharacter(from:) is moved
-
         /// Convert from "camelCaseKeys" to "snake_case_keys" before writing a key to JSON payload.
         ///
-        /// Capital characters are determined by testing membership in `CharacterSet.uppercaseLetters` and `CharacterSet.lowercaseLetters` (Unicode General Categories Lu and Lt).
+        /// Capital characters are determined by testing membership in Unicode General Categories Lu and Lt.
         /// The conversion to lower case uses `Locale.system`, also known as the ICU "root" locale. This means the result is consistent regardless of the current user's locale and language preferences.
         ///
         /// Converting from camel case to snake case:
@@ -135,7 +132,6 @@ open class JSONEncoder {
         ///
         /// - Note: Using a key encoding strategy has a nominal performance cost, as each string key has to be converted.
         case convertToSnakeCase
-#endif
 
         /// Provide a custom conversion to the key in the encoded JSON from the keys specified by the encoded types.
         /// The full path to the current encoding position is provided for context (in case you need to locate this key within the payload). The returned key is used in place of the last component in the coding path before encoding.
@@ -741,11 +737,9 @@ private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContain
         switch encoder.options.keyEncodingStrategy {
         case .useDefaultKeys:
             return key.stringValue
-#if FOUNDATION_FRAMEWORK
         case .convertToSnakeCase:
             let newKeyString = JSONEncoder.KeyEncodingStrategy._convertToSnakeCase(key.stringValue)
             return newKeyString
-#endif // FOUNDATION_FRAMEWORK
         case .custom(let converter):
             return converter(codingPathNode.path(with: key)).stringValue
         }
