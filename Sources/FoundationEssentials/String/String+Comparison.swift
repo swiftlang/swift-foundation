@@ -687,6 +687,91 @@ extension Substring {
 
         return unicodeScalars._rangeOfCharacter(anchored: options.contains(.anchored), backwards: options.contains(.backwards), matchingPredicate: set.contains)
     }
+
+    func _range(of strToFind: Substring, options: String.CompareOptions) throws -> Range<Index>? {
+        if options.contains(.regularExpression) {
+            guard let regex = try RegexPatternCache.cache.regex(for: String(strToFind), caseInsensitive: options.contains(.caseInsensitive)) else {
+                return nil
+            }
+
+            if options.contains(.anchored) {
+                guard let match = prefixMatch(of: regex) else { return nil }
+                return match.range
+            } else {
+                guard let match = firstMatch(of: regex) else { return nil }
+                return match.range
+            }
+        }
+
+        guard !isEmpty, !strToFind.isEmpty else {
+            return nil
+        }
+
+        let toHalfWidth = options.contains(.widthInsensitive)
+        let diacriticsInsensitive = options.contains(.diacriticInsensitive)
+        let caseFold = options.contains(.caseInsensitive)
+        let anchored = options.contains(.anchored)
+        let backwards = options.contains(.backwards)
+
+        let result: Range<Index>?
+        if options.contains(.literal) {
+            result = unicodeScalars._range(of: strToFind.unicodeScalars, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
+        } else if !toHalfWidth && !diacriticsInsensitive && !caseFold {
+            // Fast path: iterate through UTF8 view when we don't need to transform string content
+            guard let utf8Result = utf8._range(of: strToFind.utf8, anchored: anchored, backwards: backwards) else {
+                 return nil
+            }
+
+            // Adjust the index to that of the original slice since we called `makeContiguousUTF8` before
+            guard let lower = String.Index(utf8Result.lowerBound, within: self), let upper = String.Index(utf8Result.upperBound, within: self) else {
+                return nil
+            }
+            result = lower..<upper
+
+        } else if _isASCII && strToFind._isASCII {
+            // Fast path: Iterate utf8 without having to decode as unicode scalars. In this case only case folding matters.
+
+            guard let utf8Result = utf8._range(of: strToFind.utf8, toHalfWidth: false, diacriticsInsensitive: false, caseFold: caseFold, anchored: anchored, backwards: backwards) else {
+                return nil
+            }
+
+            // Adjust the index to that of the original slice since we called `makeContiguousUTF8` before
+            guard let lower = String.Index(utf8Result.lowerBound, within: self), let upper = String.Index(utf8Result.upperBound, within: self) else {
+                return nil
+            }
+            result = lower..<upper
+
+        } else {
+            result = _range(of: strToFind, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
+        }
+
+        return result
+    }
+
+    var _isASCII: Bool {
+        var mutated = self
+        return mutated.withUTF8 {
+            _allASCII($0)
+        }
+    }
+
+    func _components(separatedBy separator: Substring, options: String.CompareOptions = []) throws -> [String] {
+        var result = [String]()
+        var searchStart = startIndex
+        while searchStart < endIndex {
+            let r = try self[searchStart...]._range(of: separator, options: options)
+            guard let r, !r.isEmpty else {
+                break
+            }
+
+            result.append(String(self[searchStart ..< r.lowerBound]))
+            searchStart = r.upperBound
+        }
+
+        result.append(String(self[searchStart..<endIndex]))
+
+        return result
+    }
 }
 
 extension Substring.UnicodeScalarView {
@@ -751,4 +836,35 @@ extension BidirectionalCollection {
         }
         return idx
     }
+}
+
+// Borrowed from stdlib
+internal func _allASCII(_ input: UnsafeBufferPointer<UInt8>) -> Bool {
+    if input.isEmpty { return true }
+    let ptr = input.baseAddress.unsafelyUnwrapped
+    var i = 0
+
+    let count = input.count
+    let stride = MemoryLayout<UInt>.stride
+    let address = Int(bitPattern: ptr)
+
+    let wordASCIIMask = UInt(truncatingIfNeeded: 0x8080_8080_8080_8080 as UInt64)
+    let byteASCIIMask = UInt8(truncatingIfNeeded: wordASCIIMask)
+
+    while (address &+ i) % stride != 0 && i < count {
+        guard ptr[i] & byteASCIIMask == 0 else { return false }
+        i &+= 1
+    }
+
+    while (i &+ stride) <= count {
+        let word: UInt = UnsafePointer(bitPattern: address &+ i).unsafelyUnwrapped.pointee
+        guard word & wordASCIIMask == 0 else { return false }
+        i &+= stride
+    }
+
+    while i < count {
+        guard ptr[i] & byteASCIIMask == 0 else { return false }
+        i &+= 1
+    }
+    return true
 }

@@ -84,4 +84,65 @@ extension StringProtocol {
 #endif
         }
     }
+
+    /// Returns an array containing substrings from the string that have been
+    /// divided by the given separator.
+    ///
+    /// The substrings in the resulting array appear in the same order as the
+    /// original string. Adjacent occurrences of the separator string produce
+    /// empty strings in the result. Similarly, if the string begins or ends
+    /// with the separator, the first or last substring, respectively, is empty.
+    /// The following example shows this behavior:
+    ///
+    ///     let list1 = "Karin, Carrie, David"
+    ///     let items1 = list1.components(separatedBy: ", ")
+    ///     // ["Karin", "Carrie", "David"]
+    ///
+    ///     // Beginning with the separator:
+    ///     let list2 = ", Norman, Stanley, Fletcher"
+    ///     let items2 = list2.components(separatedBy: ", ")
+    ///     // ["", "Norman", "Stanley", "Fletcher"
+    ///
+    /// If the list has no separators, the array contains only the original
+    /// string itself.
+    ///
+    ///     let name = "Karin"
+    ///     let list = name.components(separatedBy: ", ")
+    ///     // ["Karin"]
+    ///
+    /// - Parameter separator: The separator string.
+    /// - Returns: An array containing substrings that have been divided from the
+    ///   string using `separator`.
+
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public func components<T : StringProtocol>(separatedBy separator: T) -> [String] {
+#if FOUNDATION_FRAMEWORK
+        if _foundation_essentials_feature_enabled() {
+            if let contiguousSubstring = _asContiguousUTF8Substring(from: startIndex..<endIndex) {
+                let options: String.CompareOptions
+                if separator == "\n" {
+                    // 106365366: Some clients intend to separate strings whose line separator is "\r\n" with "\n".
+                    // Maintain compability with `.literal` so that "\n" can match that in "\r\n" on the unicode scalar level.
+                    options = [.literal]
+                } else {
+                    options = []
+                }
+
+                do {
+                    return try contiguousSubstring._components(separatedBy: Substring(separator), options: options)
+                } catch {
+                    // Otherwise, inputs were unsupported - fallthrough to NSString implementation for compatibility
+                }
+            }
+        }
+
+        return _ns.components(separatedBy: separator._ephemeralString)
+#else
+        do {
+            return try Substring(self)._components(separatedBy: Substring(separator), options: [])
+        } catch {
+            return [String(self)]
+        }
+#endif
+    }
 }
