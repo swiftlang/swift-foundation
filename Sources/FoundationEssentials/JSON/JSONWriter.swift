@@ -10,6 +10,82 @@
 //
 //===----------------------------------------------------------------------===//
 
+extension String {
+    
+    // Ideally we'd entirely de-deuplicate this code with serializeString()'s, but at the moment there's a noticeable performance regression when doing so.
+    func serializedForJSON(withoutEscapingSlashes: Bool) -> String {
+        var bytes = [UInt8]()
+        bytes.reserveCapacity(self.utf8.count + 2)
+        bytes.append(._quote)
+        
+        self.withCString {
+            $0.withMemoryRebound(to: UInt8.self, capacity: 1) {
+                var cursor = $0
+                var mark = cursor
+                while cursor.pointee != 0 {
+                    let escapeString: String
+                    switch cursor.pointee {
+                    case ._quote:
+                        escapeString = "\\\""
+                        break
+                    case ._backslash:
+                        escapeString = "\\\\"
+                        break
+                    case ._slash where !withoutEscapingSlashes:
+                        escapeString = "\\/"
+                        break
+                    case 0x8:
+                        escapeString = "\\b"
+                        break
+                    case 0xc:
+                        escapeString = "\\f"
+                        break
+                    case ._newline:
+                        escapeString = "\\n"
+                        break
+                    case ._return:
+                        escapeString = "\\r"
+                        break
+                    case ._tab:
+                        escapeString = "\\t"
+                        break
+                    case 0x0...0xf:
+                        escapeString = "\\u000\(String(cursor.pointee, radix: 16))"
+                        break
+                    case 0x10...0x1f:
+                        escapeString = "\\u00\(String(cursor.pointee, radix: 16))"
+                        break
+                    default:
+                        // Accumulate this byte
+                        cursor += 1
+                        continue
+                    }
+                    
+                    // Append accumulated bytes
+                    if cursor > mark {
+                        bytes.append(contentsOf: UnsafeBufferPointer(start: mark, count: cursor-mark))
+                    }
+                    bytes.append(contentsOf: escapeString.utf8)
+                    
+                    cursor += 1
+                    mark = cursor // Start accumulating bytes starting after this escaped byte.
+                }
+                
+                // Append accumulated bytes
+                if cursor > mark {
+                    bytes.append(contentsOf: UnsafeBufferPointer(start: mark, count: cursor-mark))
+                }
+            }
+        }
+        bytes.append(._quote)
+        
+        return String(unsafeUninitializedCapacity: bytes.count) {
+            _ = $0.initialize(from: bytes)
+            return bytes.count
+        }
+    }
+}
+
 extension JSONReference {
     static func number(from num: any (FixedWidthInteger & CustomStringConvertible)) -> JSONReference {
         return .number(num.description)
@@ -77,6 +153,10 @@ internal struct JSONWriter {
             writer(numberStr)
         case .array(let array):
             try serializeArray(array, depth: depth + 1)
+        case .nonPrettyDirectArray(let arrayRepresentation):
+            writer(arrayRepresentation)
+        case .directArray(let strings):
+            try serializeStringArray(strings, depth: depth + 1)
         case .object(let object):
             try serializeObject(object, depth: depth + 1)
         case .null:
@@ -198,6 +278,38 @@ internal struct JSONWriter {
                 writeIndent()
             }
             try serializeJSON(elem, depth: depth)
+        }
+        if pretty {
+            writer("\n")
+            decAndWriteIndent()
+        }
+        writer("]")
+    }
+    
+    mutating func serializeStringArray(_ array: [String], depth: Int) throws {
+        guard depth < Self.maximumRecursionDepth else {
+            throw JSONError.tooManyNestedArraysOrDictionaries()
+        }
+
+        writer("[")
+        if pretty {
+            writer("\n")
+            incIndent()
+        }
+
+        var first = true
+        for elem in array {
+            if first {
+                first = false
+            } else if pretty {
+                writer(",\n")
+            } else {
+                writer(",")
+            }
+            if pretty {
+                writeIndent()
+            }
+            writer(elem)
         }
         if pretty {
             writer("\n")

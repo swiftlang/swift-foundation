@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
-/// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
-private protocol _JSONStringDictionaryEncodableMarker { }
-
-extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
-
 //===----------------------------------------------------------------------===//
 // JSON Encoder
 //===----------------------------------------------------------------------===//
@@ -504,7 +498,11 @@ class JSONReference {
 
         case array([JSONReference])
         case object([String:JSONReference])
+        
+        case nonPrettyDirectArray(String)
+        case directArray([String])
     }
+    
     var backing: Backing
 
     @inline(__always)
@@ -1097,23 +1095,32 @@ private extension __JSONEncoder {
         return try self.wrapGeneric(value, for: codingPathNode, additionalKey) ?? .emptyObject
     }
 
-    func wrapGeneric(_ value: Encodable, for node: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = _JSONKey?.none) throws -> JSONReference? {
-        switch value {
-        case let date as Date:
+    func wrapGeneric<T: Encodable>(_ value: T, for node: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = _JSONKey?.none) throws -> JSONReference? {
+        switch T.self {
+        case is Date.Type:
             // Respect Date encoding strategy
-            return try self.wrap(date, for: node, additionalKey)
-        case let data as Data:
+            return try self.wrap(value as! Date, for: node, additionalKey)
+        case is Data.Type:
             // Respect Data encoding strategy
-            return try self.wrap(data, for: node, additionalKey)
+            return try self.wrap(value as! Data, for: node, additionalKey)
 #if FOUNDATION_FRAMEWORK // TODO: Reenable once URL and Decimal are moved
-        case let url as URL:
+        case is URL.Type:
             // Encode URLs as single strings.
+            let url = value as! URL
             return self.wrap(url.absoluteString)
-        case let decimal as Decimal:
+        case is Decimal.Type:
+            let decimal = value as! Decimal
             return .number(decimal.description)
 #endif // FOUNDATION_FRAMEWORK
-        case let dict as _JSONStringDictionaryEncodableMarker:
-            return try self.wrap(dict as! [String : Encodable], for: node, additionalKey)
+        case is _JSONStringDictionaryEncodableMarker.Type:
+            return try self.wrap(value as! [String : Encodable], for: node, additionalKey)
+        case is _JSONDirectArrayEncodable.Type:
+            let array = value as! _JSONDirectArrayEncodable
+            if options.outputFormatting.contains(.prettyPrinted) {
+                return .init(.directArray(array.individualElementRepresentation(options: options)))
+            } else {
+                return .init(.nonPrettyDirectArray(array.nonPrettyJSONRepresentation(options: options)))
+            }
         default:
             break
         }
@@ -1345,3 +1352,68 @@ extension EncodingError {
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension JSONEncoder : @unchecked Sendable {}
+
+//===----------------------------------------------------------------------===//
+// Special-casing Support
+//===----------------------------------------------------------------------===//
+
+/// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
+/// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
+private protocol _JSONStringDictionaryEncodableMarker { }
+
+extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
+
+/// A protocol used to determine whether a value is an `Array` containing values that allow
+/// us to bypass UnkeyedEncodingContainer overhead by directly encoding the contents as
+/// strings as passing that down to the JSONWriter.
+fileprivate protocol _JSONDirectArrayEncodable {
+    func nonPrettyJSONRepresentation(options: JSONEncoder._Options) -> String
+    func individualElementRepresentation(options: JSONEncoder._Options) -> [String]
+}
+fileprivate protocol _JSONSimpleValueArrayElement: CustomStringConvertible {
+    func jsonRepresentation(options: JSONEncoder._Options) -> String
+}
+extension _JSONSimpleValueArrayElement where Self: FixedWidthInteger {
+    fileprivate func jsonRepresentation(options: JSONEncoder._Options) -> String { description }
+}
+extension Int : _JSONSimpleValueArrayElement { }
+extension Int8 : _JSONSimpleValueArrayElement { }
+extension Int16 : _JSONSimpleValueArrayElement { }
+extension Int32 : _JSONSimpleValueArrayElement { }
+extension Int64 : _JSONSimpleValueArrayElement { }
+extension UInt : _JSONSimpleValueArrayElement { }
+extension UInt8 : _JSONSimpleValueArrayElement { }
+extension UInt16 : _JSONSimpleValueArrayElement { }
+extension UInt32 : _JSONSimpleValueArrayElement { }
+extension UInt64 : _JSONSimpleValueArrayElement { }
+extension String: _JSONSimpleValueArrayElement {
+    fileprivate func jsonRepresentation(options: JSONEncoder._Options) -> String {
+        self.serializedForJSON(withoutEscapingSlashes: options.outputFormatting.contains(.withoutEscapingSlashes))
+    }
+}
+
+// This is not yet extended to Double & Float. That case is more complicated, given the possibility of Infinity or NaN values, which require nonConformingFloatEncodingStrategy and the ability to throw errors.
+
+extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArrayElement {
+    func nonPrettyJSONRepresentation(options: JSONEncoder._Options) -> String {
+        var result = "["
+        result.reserveCapacity(self.count * 2 + 1) // Reserve enough for a minimum of one character per number, each comma required, and the braces
+        
+        for element in self {
+            result += element.jsonRepresentation(options: options) + ","
+        }
+        
+        result += "]"
+        return result
+    }
+    
+    func individualElementRepresentation(options: JSONEncoder._Options) -> [String] {
+        var result = [String]()
+        result.reserveCapacity(self.count)
+        
+        for element in self {
+            result.append(element.jsonRepresentation(options: options))
+        }
+        return result
+    }
+}
