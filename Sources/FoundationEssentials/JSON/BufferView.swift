@@ -131,6 +131,13 @@ extension BufferView:
     }
 
     @inline(__always)
+    func _assertBounds(_ position: Index) {
+        #if DEBUG
+        _checkBounds(position)
+        #endif
+    }
+
+    @inline(__always)
     func _checkBounds(_ bounds: Range<Index>) {
         precondition(
             distance(from: startIndex, to: bounds.lowerBound) >= 0
@@ -145,6 +152,13 @@ extension BufferView:
                 "Range of indices is unaligned for Element"
             )
         }
+    }
+
+    @inline(__always)
+    func _assertBounds(_ bounds: Range<Index>) {
+        #if DEBUG
+        _checkBounds(bounds)
+        #endif
     }
 
     @inline(__always)
