@@ -512,7 +512,47 @@ final class LocalBridgingTests : XCTestCase {
         XCTAssertNotEqual(anyHashables[0], anyHashables[1])
         XCTAssertEqual(anyHashables[1], anyHashables[2])
     }
+    
+    func test_autoupdatingBridge() {
+        let s1 = Locale.autoupdatingCurrent
+        let s2 = Locale.autoupdatingCurrent
+        let ns1 = s1 as NSLocale
+        let ns2 = s2 as NSLocale
+        // Verify that we don't create a new instance each time this is converted to NSLocale
+        XCTAssertTrue(ns1 === ns2)
+    }
+    
+    func test_bridgingTwice() {
+        let s1 = NSLocale.system
+        let l1 = s1 as Locale
+        let s2 = NSLocale.system
+        let l2 = s2 as Locale
+        XCTAssertTrue(l1 as NSLocale === l2 as NSLocale)
+    }
+    
+    func test_bridgingFixedTwice() {
+        let s1 = Locale(identifier: "en_US")
+        let ns1 = s1 as NSLocale
+        let s2 = Locale(identifier: "en_US")
+        let ns2 = s2 as NSLocale
+        XCTAssertTrue(ns1 === ns2)
+    }
+    
+    func test_bridgingCurrentWithPrefs() {
+        // Verify that 'current with prefs' locales (which have identical identifiers but differing prefs) are correctly cached
+        let s1 = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(metricUnits: true), disableBundleMatching: false)
+        let ns1 = s1 as NSLocale
+        let s2 = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(metricUnits: true), disableBundleMatching: false)
+        let ns2 = s2 as NSLocale
+        let s3 = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(measurementUnits: .centimeters), disableBundleMatching: false)
+        let ns3 = s3 as NSLocale
+        
+        XCTAssertTrue(ns1 === ns2)
+        XCTAssertTrue(ns1 !== ns3)
+        XCTAssertTrue(ns2 !== ns3)
+    }
 }
+
 #endif // FOUNDATION_FRAMEWORK
 
 // MARK: - FoundationPreview Disabled Tests

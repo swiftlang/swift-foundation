@@ -33,7 +33,8 @@ struct LocaleCache : Sendable {
         private var cachedCurrentNSLocale: _NSSwiftLocale!
         private var cachedAutoupdatingNSLocale: _NSSwiftLocale!
         private var cachedSystemNSLocale: _NSSwiftLocale!
-        private var cachedFixedNSLocales: [String : _NSSwiftLocale] = [:]
+        private var cachedFixedIdentifierToNSLocales: [String : _NSSwiftLocale] = [:]
+        private var cachedFixedLocaleToNSLocales: [_Locale : _NSSwiftLocale] = [:]
 #endif
 
         private var noteCount = -1
@@ -95,14 +96,26 @@ struct LocaleCache : Sendable {
 
 #if FOUNDATION_FRAMEWORK
         mutating func fixedNSLocale(_ id: String) -> _NSSwiftLocale {
-            if let locale = cachedFixedNSLocales[id] {
+            if let locale = cachedFixedIdentifierToNSLocales[id] {
                 return locale
             } else {
                 let inner = Locale(inner: fixed(id))
                 let locale = _NSSwiftLocale(inner)
                 // We have found ObjC clients that rely upon an immortal lifetime for these `Locale`s, so we do not clear this cache.
-                cachedFixedNSLocales[id] = locale
+                cachedFixedIdentifierToNSLocales[id] = locale
                 return locale
+            }
+        }
+        
+        mutating func fixedNSLocale(_ locale: _Locale) -> _NSSwiftLocale {
+            if let locale = cachedFixedLocaleToNSLocales[locale] {
+                return locale
+            } else {
+                let inner = Locale(inner: locale)
+                let nsLocale = _NSSwiftLocale(inner)
+                // We have found ObjC clients that rely upon an immortal lifetime for these `Locale`s, so we do not clear this cache.
+                cachedFixedLocaleToNSLocales[locale] = nsLocale
+                return nsLocale
             }
         }
 
@@ -226,6 +239,10 @@ struct LocaleCache : Sendable {
 #if FOUNDATION_FRAMEWORK
     func fixedNSLocale(_ id: String) -> _NSSwiftLocale {
         lock.withLock { $0.fixedNSLocale(id) }
+    }
+
+    func fixedNSLocale(_ locale: _Locale) -> _NSSwiftLocale {
+        lock.withLock { $0.fixedNSLocale(locale) }
     }
 
     func autoupdatingCurrentNSLocale() -> _NSSwiftLocale {
