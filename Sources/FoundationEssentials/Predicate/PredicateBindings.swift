@@ -16,8 +16,9 @@ public struct PredicateBindings {
     // Store as a values as an array instead of a dictionary (since it is almost always very few elements, this reduces heap allocation and hashing overhead)
     private var storage: [(id: PredicateExpressions.VariableID, value: Any)]
     
-    public init<T>(_ values: (PredicateExpressions.Variable<T>, T)) {
-        storage = [(values.0.key, values.1)]
+    public init<each T>(_ value: repeat (PredicateExpressions.Variable<each T>, each T)) {
+        storage = []
+        _ = (repeat storage.append(((each value).0.key, (each value).1)))
     }
     
     public subscript<T>(_ variable: PredicateExpressions.Variable<T>) -> T? {
