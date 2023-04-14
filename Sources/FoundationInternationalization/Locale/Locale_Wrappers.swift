@@ -181,30 +181,14 @@ extension NSLocale {
             return self
         }
 
-        guard let swiftLocale = self as? _NSSwiftLocale else {
-            // We do not support this function for custom subclasses of NSLocale
-            return nil
-        }
-
-        guard let id = Calendar._fromNSCalendarIdentifier(NSCalendar.Identifier(rawValue: calendarIdentifier)) else {
-            return nil
-        }
-
-        let copy = swiftLocale.locale.copy(newCalendarIdentifier: id)
-        return _NSSwiftLocale(copy)
+        // Default implementation returns `nil` - subclass `_NSSwiftLocale` implements a better version
+        return nil
     }
 
     @objc(_doesNotRequireSpecialCaseHandling)
     func _doesNotRequireSpecialCaseHandling() -> Bool {
-        let locale: Locale
-        if let swiftLocale = self as? _NSSwiftLocale {
-            locale = swiftLocale.locale
-        } else {
-            // Unable to use cached locale; create a new one
-            locale = Locale(identifier: localeIdentifier)
-        }
-
-        return locale.doesNotRequireSpecialCaseHandling
+        // Unable to use cached locale; create a new one. Subclass `_NSSwiftLocale` implements a better version
+        return Locale(identifier: localeIdentifier).doesNotRequireSpecialCaseHandling
     }
 }
 
@@ -658,6 +642,24 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
 
     override func _numberingSystem() -> String! {
         locale.numberingSystem.identifier
+    }
+    
+    override func _localeWithNewCalendarIdentifier(_ calendarIdentifier: String?) -> NSLocale? {
+        guard let calendarIdentifier else {
+            // No real need to copy here; Locale is immutable
+            return self
+        }
+
+        guard let id = Calendar._fromNSCalendarIdentifier(NSCalendar.Identifier(rawValue: calendarIdentifier)) else {
+            return nil
+        }
+
+        let copy = locale.copy(newCalendarIdentifier: id)
+        return _NSSwiftLocale(copy)
+    }
+    
+    override func _doesNotRequireSpecialCaseHandling() -> Bool {
+        return locale.doesNotRequireSpecialCaseHandling
     }
 }
 
