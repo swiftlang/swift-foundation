@@ -673,8 +673,10 @@ extension Locale : _ObjectiveCBridgeable {
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSLocale {
         switch kind {
-        case .autoupdating, .fixed(_):
-            return _NSSwiftLocale(self)
+        case .autoupdating:
+            return LocaleCache.cache.autoupdatingCurrentNSLocale()
+        case .fixed(let l):
+            return LocaleCache.cache.fixedNSLocale(l)
         case .bridged(let wrapper):
             return wrapper._wrapped
         }
