@@ -1029,20 +1029,24 @@ extension JSON5Scanner {
     }
 
     static func validateInfinity(from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>) throws {
-        guard jsonBytes.count >= _json5Infinity.utf8CodeUnitCount else {
-            throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
-        }
-        guard strncmp(jsonBytes.baseAddress, _json5Infinity.utf8Start, _json5Infinity.utf8CodeUnitCount) == 0 else {
-            throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
+        try jsonBytes.withUnsafeRawPointer { ptr, count in
+            guard count >= _json5Infinity.utf8CodeUnitCount else {
+                throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
+            }
+            guard strncmp(ptr, _json5Infinity.utf8Start, _json5Infinity.utf8CodeUnitCount) == 0 else {
+                throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
+            }
         }
     }
 
     static func validateNaN(from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>) throws {
-        guard jsonBytes.count >= _json5NaN.utf8CodeUnitCount else {
-            throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
-        }
-        guard strncmp(jsonBytes.baseAddress, _json5NaN.utf8Start, _json5NaN.utf8CodeUnitCount) == 0 else {
-            throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
+        try jsonBytes.withUnsafeRawPointer { ptr, count in
+            guard count >= _json5NaN.utf8CodeUnitCount else {
+                throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
+            }
+            guard strncmp(ptr, _json5NaN.utf8Start, _json5NaN.utf8CodeUnitCount) == 0 else {
+                throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
+            }
         }
     }
 
