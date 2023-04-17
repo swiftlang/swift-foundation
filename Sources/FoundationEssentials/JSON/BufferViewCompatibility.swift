@@ -29,7 +29,7 @@ extension Data {
     }
 }
 
-extension BufferView {
+extension BufferView<UInt8> {
     internal subscript(region: JSONMap.Region) -> BufferView {
         precondition(
             region.startOffset >= 0 && region.startOffset < count && region.count >= 0
@@ -39,7 +39,7 @@ extension BufferView {
     }
 
     internal subscript(unchecked region: JSONMap.Region) -> BufferView {
-        let address = startIndex._rawValue.advanced(by: region.startOffset)
-        return BufferView(baseAddress: address, count: region.count)
+        let address = startIndex.advanced(by: region.startOffset)
+        return BufferView(start: address, count: region.count)
     }
 }

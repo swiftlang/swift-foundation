@@ -873,14 +873,15 @@ extension JSONDecoderImpl: Decoder {
             self.options.nonConformingFloatDecodingStrategy
         {
             let result = withBuffer(for: region) { (stringBuffer, _) -> T? in
-                if posInfString.withUTF8({ stringBuffer.count == $0.count && memcmp(stringBuffer.baseAddress, $0.baseAddress, $0.count) == 0 }) {
-                    return T.infinity
-                } else if negInfString.withUTF8({ stringBuffer.count == $0.count && memcmp(stringBuffer.baseAddress, $0.baseAddress, $0.count) == 0 }) {
-                    return -T.infinity
-                } else if nanString.withUTF8({ stringBuffer.count == $0.count && memcmp(stringBuffer.baseAddress, $0.baseAddress, $0.count) == 0 }) {
-                    return T.nan
+                stringBuffer.withUnsafeRawPointer { (ptr, count) -> T? in
+                    func bytesAreEqual(_ b: UnsafeBufferPointer<UInt8>) -> Bool {
+                        count == b.count && memcmp(ptr, b.baseAddress, b.count) == 0
+                    }
+                    if posInfString.withUTF8(bytesAreEqual(_:)) { return T.infinity }
+                    if negInfString.withUTF8(bytesAreEqual(_:)) { return -T.infinity }
+                    if nanString.withUTF8(bytesAreEqual(_:)) { return T.nan }
+                    return nil
                 }
-                return nil
             }
             if let result { return result }
         }
