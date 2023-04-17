@@ -19,7 +19,11 @@ internal struct BufferView<Element> {
 
     private var baseAddress: UnsafeRawPointer { start._rawValue }
 
-    init(start index: Index, count: Int) {
+    init(_unchecked components: (start: BufferViewIndex<Element>, count: Int)) {
+        (start, count) = components
+    }
+
+    init(start index: BufferViewIndex<Element>, count: Int) {
         precondition(count >= 0, "Count must not be negative")
         if !_isPOD(Element.self) {
             precondition(
@@ -27,8 +31,7 @@ internal struct BufferView<Element> {
                 "baseAddress must be properly aligned for \(Element.self)"
             )
         }
-        self.start = index
-        self.count = count
+        self.init(_unchecked: (index, count))
     }
 
     init(baseAddress: UnsafeRawPointer, count: Int) {
@@ -225,7 +228,7 @@ extension BufferView:
 
     @inline(__always)
     subscript(unchecked bounds: Range<Index>) -> Self {
-        get { BufferView(start: bounds.lowerBound, count: bounds.count) }
+        get { BufferView(_unchecked: (bounds.lowerBound, bounds.count)) }
     }
 
     subscript(bounds: some RangeExpression<Index>) -> Self {
@@ -370,42 +373,36 @@ extension BufferView {
     func prefix(_ maxLength: Int) -> BufferView {
         precondition(maxLength >= 0, "Can't have a prefix of negative length.")
         let nc = maxLength < count ? maxLength : count
-        return BufferView(start: start, count: nc)
+        return BufferView(_unchecked: (start: start, count: nc))
     }
 
     func suffix(_ maxLength: Int) -> BufferView {
         precondition(maxLength >= 0, "Can't have a suffix of negative length.")
         let nc = maxLength < count ? maxLength : count
         let newStart = start.advanced(by: count &- nc)
-        return BufferView(start: newStart, count: nc)
+        return BufferView(_unchecked: (start: newStart, count: nc))
     }
 
     func dropFirst(_ k: Int = 1) -> BufferView {
         precondition(k >= 0, "Can't drop a negative number of elements.")
         let dc = k < count ? k : count
         let newStart = start.advanced(by: dc)
-        return BufferView(start: newStart, count: count &- dc)
+        return BufferView(_unchecked: (start: newStart, count: count &- dc))
     }
 
     func dropLast(_ k: Int = 1) -> BufferView {
         precondition(k >= 0, "Can't drop a negative number of elements.")
         let nc = k < count ? count &- k : 0
-        return BufferView(start: start, count: nc)
+        return BufferView(_unchecked: (start: start, count: nc))
     }
 
     func prefix(upTo index: Index) -> BufferView {
-        _checkBounds(Range(uncheckedBounds: (startIndex, index)))
-        return BufferView(
-            start: start,
-            count: distance(from: startIndex, to: index)
-        )
+        _checkBounds(Range(uncheckedBounds: (start, index)))
+        return BufferView(_unchecked: (start, distance(from: startIndex, to: index)))
     }
 
     func suffix(from index: Index) -> BufferView {
         _checkBounds(Range(uncheckedBounds: (index, endIndex)))
-        return BufferView(
-            start: index,
-            count: distance(from: index, to: endIndex)
-        )
+        return BufferView(_unchecked: (index, distance(from: index, to: endIndex)))
     }
 }
