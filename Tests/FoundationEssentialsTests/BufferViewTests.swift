@@ -96,28 +96,31 @@ final class BufferViewTests: XCTestCase {
     func testIteratorBitwiseCopyable() {
         let count = 4
         let offset = 1
-        XCTAssertLessThan(offset, MemoryLayout<UInt64>.stride)
         let bytes = count * MemoryLayout<UInt64>.stride + offset
-        let align = MemoryLayout<UInt64>.alignment
-        let p = UnsafeMutableRawPointer.allocate(byteCount: bytes, alignment: align)
-        defer { p.deallocate() }
-        for i in 0..<bytes where i % 8 == offset {
-            p.storeBytes(of: 1, toByteOffset: i, as: UInt8.self)
+        var a = Array(repeating: UInt8.zero, count: bytes)
+        XCTAssertLessThan(offset, MemoryLayout<UInt64>.stride)
+
+        a.withUnsafeMutableBytes {
+            for i in 0..<$0.count where i % 8 == offset {
+                $0.storeBytes(of: 1, toByteOffset: i, as: UInt8.self)
+            }
+
+            let orig = $0.loadUnaligned(as: Int64.self)
+            XCTAssertNotEqual(orig, 1)
+
+            // BufferView doesn't need to be aligned for accessing `BitwiseCopyable` types.
+            let buffer = BufferView<Int64>(
+                baseAddress: $0.baseAddress!.advanced(by: offset), count: count
+            )
+
+            var iterator = buffer.makeIterator()
+            var buffered = 0
+            while let value = iterator.next() {
+                XCTAssertEqual(value, 1)
+                buffered += 1
+            }
+            XCTAssertEqual(buffered, count)
         }
-
-        let orig = p.loadUnaligned(as: Int64.self)
-        XCTAssertNotEqual(orig, 1)
-
-        // BufferView doesn't need to be aligned for accessing `BitwiseCopyable` types.
-        let buffer = BufferView<Int64>(baseAddress: p + offset, count: count)
-
-        var iterator = buffer.makeIterator()
-        var buffered = 0
-        while let value = iterator.next() {
-            XCTAssertEqual(value, 1)
-            buffered += 1
-        }
-        XCTAssertEqual(buffered, count)
     }
 
     func testBufferViewSequence() {
