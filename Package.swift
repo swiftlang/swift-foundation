@@ -13,8 +13,7 @@ let package = Package(
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
     ],
     dependencies: [
-        // Intentionally use this deprecated version so we can control the package name.
-        .package(name: "swift-foundation-icu", url: "git@github.com:apple/swift-foundation-icu.git", branch: "main")
+        .package(url: "git@github.com:apple/swift-foundation-icu.git", exact: "0.0.1")
     ],
     targets: [
         // Foundation (umbrella)
