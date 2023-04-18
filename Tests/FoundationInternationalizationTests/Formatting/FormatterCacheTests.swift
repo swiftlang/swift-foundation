@@ -82,6 +82,7 @@ final class FormatterCacheTests: XCTestCase {
         XCTAssertEqual(cache[1000], item)
     }
 
+#if FOUNDATION_FRAMEWORK
     func testSynchronouslyClearingCache() {
         let cache = FormatterCache<Int, TestCacheItem>()
         let group = DispatchGroup()
@@ -107,6 +108,7 @@ final class FormatterCacheTests: XCTestCase {
 
         XCTAssertEqual(group.wait(timeout: .now().advanced(by: .seconds(3))), .success)
     }
+#endif
 }
 
 

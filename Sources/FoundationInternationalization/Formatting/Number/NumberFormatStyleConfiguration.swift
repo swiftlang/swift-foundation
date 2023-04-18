@@ -481,7 +481,7 @@ extension FloatingPointRoundingRule {
     }
 }
 
-#if FOUNDATION_FRAMEWORK
+#if os(Linux) || FOUNDATION_FRAMEWORK
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointRoundingRule : Codable { }
 #endif
