@@ -16,9 +16,9 @@ extension String {
         var new = ""
         new.reserveCapacity(utf8.count)
 
-        let uppercaseSet = BuiltInUnicodeScalarSet.uppercaseLetter
-        let lowercaseSet = BuiltInUnicodeScalarSet.lowercaseLetter
-        let cfcaseIgnorableSet = BuiltInUnicodeScalarSet.caseIgnorable
+        let uppercaseSet = BuiltInUnicodeScalarSet.uppercaseLetters
+        let lowercaseSet = BuiltInUnicodeScalarSet.lowercaseLetters
+        let cfcaseIgnorableSet = BuiltInUnicodeScalarSet.caseIgnorables
 
         var isLastCased = false
         for scalar in unicodeScalars {

@@ -1972,6 +1972,217 @@ final class JSONEncoderTests : XCTestCase {
     }
 }
 
+// MARK: - SnakeCase Tests
+extension JSONEncoderTests {
+    func testDecodingKeyStrategyCamel() {
+        let fromSnakeCaseTests = [
+            ("", ""), // don't die on empty string
+            ("a", "a"), // single character
+            ("ALLCAPS", "ALLCAPS"), // If no underscores, we leave the word as-is
+            ("ALL_CAPS", "allCaps"), // Conversion from screaming snake case
+            ("single", "single"), // do not capitalize anything with no underscore
+            ("snake_case", "snakeCase"), // capitalize a character
+            ("one_two_three", "oneTwoThree"), // more than one word
+            ("one_2_three", "one2Three"), // numerics
+            ("one2_three", "one2Three"), // numerics, part 2
+            ("snake_Ćase", "snakeĆase"), // do not further modify a capitalized diacritic
+            ("snake_ćase", "snakeĆase"), // capitalize a diacritic
+            ("alreadyCamelCase", "alreadyCamelCase"), // do not modify already camel case
+            ("__this_and_that", "__thisAndThat"),
+            ("_this_and_that", "_thisAndThat"),
+            ("this__and__that", "thisAndThat"),
+            ("this_and_that__", "thisAndThat__"),
+            ("this_aNd_that", "thisAndThat"),
+            ("_one_two_three", "_oneTwoThree"),
+            ("one_two_three_", "oneTwoThree_"),
+            ("__one_two_three", "__oneTwoThree"),
+            ("one_two_three__", "oneTwoThree__"),
+            ("_one_two_three_", "_oneTwoThree_"),
+            ("__one_two_three", "__oneTwoThree"),
+            ("__one_two_three__", "__oneTwoThree__"),
+            ("_test", "_test"),
+            ("_test_", "_test_"),
+            ("__test", "__test"),
+            ("test__", "test__"),
+            ("_", "_"),
+            ("__", "__"),
+            ("___", "___"),
+            ("m͉̟̹y̦̳G͍͚͎̳r̤͉̤͕ͅea̲͕t͇̥̼͖U͇̝̠R͙̻̥͓̣L̥̖͎͓̪̫ͅR̩͖̩eq͈͓u̞e̱s̙t̤̺ͅ", "m͉̟̹y̦̳G͍͚͎̳r̤͉̤͕ͅea̲͕t͇̥̼͖U͇̝̠R͙̻̥͓̣L̥̖͎͓̪̫ͅR̩͖̩eq͈͓u̞e̱s̙t̤̺ͅ"), // because Itai wanted to test this
+            ("🐧_🐟", "🐧🐟") // fishy emoji example?
+        ]
+
+        for test in fromSnakeCaseTests {
+            // This JSON contains the camel case key that the test object should decode with, then it uses the snake case key (test.0) as the actual key for the boolean value.
+            let input = "{\"camelCaseKey\":\"\(test.1)\",\"\(test.0)\":true}".data(using: String._Encoding.utf8)!
+
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+            let result = try! decoder.decode(DecodeMe.self, from: input)
+
+            XCTAssertTrue(result.found)
+        }
+    }
+
+    func testEncodingDictionaryStringKeyConversionUntouched() {
+        let expected = "{\"leaveMeAlone\":\"test\"}"
+        let toEncode: [String: String] = ["leaveMeAlone": "test"]
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let resultData = try! encoder.encode(toEncode)
+        let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
+
+        XCTAssertEqual(expected, resultString)
+    }
+
+    func testKeyStrategySnakeGeneratedAndCustom() {
+        // Test that this works with a struct that has automatically generated keys
+        struct DecodeMe4 : Codable {
+            var thisIsCamelCase : String
+            var thisIsCamelCaseToo : String
+            private enum CodingKeys : String, CodingKey {
+                case thisIsCamelCase = "fooBar"
+                case thisIsCamelCaseToo
+            }
+        }
+
+        // Decoding
+        let input = "{\"foo_bar\":\"test\",\"this_is_camel_case_too\":\"test2\"}".data(using: String._Encoding.utf8)!
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let decodingResult = try! decoder.decode(DecodeMe4.self, from: input)
+
+        XCTAssertEqual("test", decodingResult.thisIsCamelCase)
+        XCTAssertEqual("test2", decodingResult.thisIsCamelCaseToo)
+
+        // Encoding
+        let encoded = DecodeMe4(thisIsCamelCase: "test", thisIsCamelCaseToo: "test2")
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let encodingResultData = try! encoder.encode(encoded)
+        let encodingResultString = String(bytes: encodingResultData, encoding: String._Encoding.utf8)
+        XCTAssertTrue(encodingResultString!.contains("foo_bar"))
+        XCTAssertTrue(encodingResultString!.contains("this_is_camel_case_too"))
+    }
+
+    func testDecodingDictionaryFailureKeyPathNested() {
+        let input = "{\"top_level\": {\"sub_level\": {\"nested_value\": {\"int_value\": \"not_an_int\"}}}}".data(using: String._Encoding.utf8)!
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        do {
+            _ = try decoder.decode([String: [String : DecodeFailureNested]].self, from: input)
+        } catch DecodingError.typeMismatch(_, let context) {
+            XCTAssertEqual(4, context.codingPath.count)
+            XCTAssertEqual("top_level", context.codingPath[0].stringValue)
+            XCTAssertEqual("sub_level", context.codingPath[1].stringValue)
+            XCTAssertEqual("nestedValue", context.codingPath[2].stringValue)
+            XCTAssertEqual("intValue", context.codingPath[3].stringValue)
+        } catch {
+            XCTFail("Unexpected error: \(String(describing: error))")
+        }
+    }
+
+    func testDecodingKeyStrategyCamelGenerated() {
+        let encoded = DecodeMe3(thisIsCamelCase: "test")
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let resultData = try! encoder.encode(encoded)
+        let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
+        XCTAssertEqual("{\"this_is_camel_case\":\"test\"}", resultString)
+    }
+
+    func testEncodingKeyStrategySnakeGenerated() {
+        // Test that this works with a struct that has automatically generated keys
+        let input = "{\"this_is_camel_case\":\"test\"}".data(using: String._Encoding.utf8)!
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let result = try! decoder.decode(DecodeMe3.self, from: input)
+
+        XCTAssertEqual("test", result.thisIsCamelCase)
+    }
+
+    func testEncodingDictionaryFailureKeyPath() {
+        let toEncode: [String: EncodeFailure] = ["key": EncodeFailure(someValue: Double.nan)]
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        do {
+            _ = try encoder.encode(toEncode)
+        } catch EncodingError.invalidValue(_, let context) {
+            XCTAssertEqual(2, context.codingPath.count)
+            XCTAssertEqual("key", context.codingPath[0].stringValue)
+            XCTAssertEqual("someValue", context.codingPath[1].stringValue)
+        } catch {
+            XCTFail("Unexpected error: \(String(describing: error))")
+        }
+    }
+
+    func testEncodingDictionaryFailureKeyPathNested() {
+        let toEncode: [String: [String: EncodeFailureNested]] = ["key": ["sub_key": EncodeFailureNested(nestedValue: EncodeFailure(someValue: Double.nan))]]
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        do {
+            _ = try encoder.encode(toEncode)
+        } catch EncodingError.invalidValue(_, let context) {
+            XCTAssertEqual(4, context.codingPath.count)
+            XCTAssertEqual("key", context.codingPath[0].stringValue)
+            XCTAssertEqual("sub_key", context.codingPath[1].stringValue)
+            XCTAssertEqual("nestedValue", context.codingPath[2].stringValue)
+            XCTAssertEqual("someValue", context.codingPath[3].stringValue)
+        } catch {
+            XCTFail("Unexpected error: \(String(describing: error))")
+        }
+    }
+
+    func testEncodingKeyStrategySnake() {
+        let toSnakeCaseTests = [
+            ("simpleOneTwo", "simple_one_two"),
+            ("myURL", "my_url"),
+            ("singleCharacterAtEndX", "single_character_at_end_x"),
+            ("thisIsAnXMLProperty", "this_is_an_xml_property"),
+            ("single", "single"), // no underscore
+            ("", ""), // don't die on empty string
+            ("a", "a"), // single character
+            ("aA", "a_a"), // two characters
+            ("version4Thing", "version4_thing"), // numerics
+            ("partCAPS", "part_caps"), // only insert underscore before first all caps
+            ("partCAPSLowerAGAIN", "part_caps_lower_again"), // switch back and forth caps.
+            ("manyWordsInThisThing", "many_words_in_this_thing"), // simple lowercase + underscore + more
+            ("asdfĆqer", "asdf_ćqer"),
+            ("already_snake_case", "already_snake_case"),
+            ("dataPoint22", "data_point22"),
+            ("dataPoint22Word", "data_point22_word"),
+            ("_oneTwoThree", "_one_two_three"),
+            ("oneTwoThree_", "one_two_three_"),
+            ("__oneTwoThree", "__one_two_three"),
+            ("oneTwoThree__", "one_two_three__"),
+            ("_oneTwoThree_", "_one_two_three_"),
+            ("__oneTwoThree", "__one_two_three"),
+            ("__oneTwoThree__", "__one_two_three__"),
+            ("_test", "_test"),
+            ("_test_", "_test_"),
+            ("__test", "__test"),
+            ("test__", "test__"),
+            ("m͉̟̹y̦̳G͍͚͎̳r̤͉̤͕ͅea̲͕t͇̥̼͖U͇̝̠R͙̻̥͓̣L̥̖͎͓̪̫ͅR̩͖̩eq͈͓u̞e̱s̙t̤̺ͅ", "m͉̟̹y̦̳_g͍͚͎̳r̤͉̤͕ͅea̲͕t͇̥̼͖_u͇̝̠r͙̻̥͓̣l̥̖͎͓̪̫ͅ_r̩͖̩eq͈͓u̞e̱s̙t̤̺ͅ"), // because Itai wanted to test this
+            ("🐧🐟", "🐧🐟") // fishy emoji example?
+        ]
+
+        for test in toSnakeCaseTests {
+            let expected = "{\"\(test.1)\":\"test\"}"
+            let encoded = EncodeMe(keyName: test.0)
+
+            let encoder = JSONEncoder()
+            encoder.keyEncodingStrategy = .convertToSnakeCase
+            let resultData = try! encoder.encode(encoded)
+            let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
+
+            XCTAssertEqual(expected, resultString)
+        }
+    }
+}
+
 // MARK: - FoundationPreview Disabled Tests
 #if FOUNDATION_FRAMEWORK
 extension JSONEncoderTests {
@@ -2342,227 +2553,6 @@ extension JSONEncoderTests {
 
         // Optional data should encode the same way.
         _testRoundTrip(of: Optional(data), expectedJSON: expectedJSON)
-    }
-}
-
-// MARK: - .convertFromSnakeCase Tests
-// TODO: Reenable these tests once convertFromSnakeCase is implemented
-extension JSONEncoderTests {
-    // TODO: Reenable once `convertFromSnakeCase` is implemented
-    func testDecodingKeyStrategyCamel() {
-        let fromSnakeCaseTests = [
-            ("", ""), // don't die on empty string
-            ("a", "a"), // single character
-            ("ALLCAPS", "ALLCAPS"), // If no underscores, we leave the word as-is
-            ("ALL_CAPS", "allCaps"), // Conversion from screaming snake case
-            ("single", "single"), // do not capitalize anything with no underscore
-            ("snake_case", "snakeCase"), // capitalize a character
-            ("one_two_three", "oneTwoThree"), // more than one word
-            ("one_2_three", "one2Three"), // numerics
-            ("one2_three", "one2Three"), // numerics, part 2
-            ("snake_Ćase", "snakeĆase"), // do not further modify a capitalized diacritic
-            ("snake_ćase", "snakeĆase"), // capitalize a diacritic
-            ("alreadyCamelCase", "alreadyCamelCase"), // do not modify already camel case
-            ("__this_and_that", "__thisAndThat"),
-            ("_this_and_that", "_thisAndThat"),
-            ("this__and__that", "thisAndThat"),
-            ("this_and_that__", "thisAndThat__"),
-            ("this_aNd_that", "thisAndThat"),
-            ("_one_two_three", "_oneTwoThree"),
-            ("one_two_three_", "oneTwoThree_"),
-            ("__one_two_three", "__oneTwoThree"),
-            ("one_two_three__", "oneTwoThree__"),
-            ("_one_two_three_", "_oneTwoThree_"),
-            ("__one_two_three", "__oneTwoThree"),
-            ("__one_two_three__", "__oneTwoThree__"),
-            ("_test", "_test"),
-            ("_test_", "_test_"),
-            ("__test", "__test"),
-            ("test__", "test__"),
-            ("_", "_"),
-            ("__", "__"),
-            ("___", "___"),
-            ("m͉̟̹y̦̳G͍͚͎̳r̤͉̤͕ͅea̲͕t͇̥̼͖U͇̝̠R͙̻̥͓̣L̥̖͎͓̪̫ͅR̩͖̩eq͈͓u̞e̱s̙t̤̺ͅ", "m͉̟̹y̦̳G͍͚͎̳r̤͉̤͕ͅea̲͕t͇̥̼͖U͇̝̠R͙̻̥͓̣L̥̖͎͓̪̫ͅR̩͖̩eq͈͓u̞e̱s̙t̤̺ͅ"), // because Itai wanted to test this
-            ("🐧_🐟", "🐧🐟") // fishy emoji example?
-        ]
-
-        for test in fromSnakeCaseTests {
-            // This JSON contains the camel case key that the test object should decode with, then it uses the snake case key (test.0) as the actual key for the boolean value.
-            let input = "{\"camelCaseKey\":\"\(test.1)\",\"\(test.0)\":true}".data(using: String._Encoding.utf8)!
-
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-
-            let result = try! decoder.decode(DecodeMe.self, from: input)
-
-            XCTAssertTrue(result.found)
-        }
-    }
-
-    // TODO: Reenable once `convertFromSnakeCase` is implemented
-    func testEncodingDictionaryStringKeyConversionUntouched() {
-        let expected = "{\"leaveMeAlone\":\"test\"}"
-        let toEncode: [String: String] = ["leaveMeAlone": "test"]
-
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        let resultData = try! encoder.encode(toEncode)
-        let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
-
-        XCTAssertEqual(expected, resultString)
-    }
-
-    // TODO: Reenable once `convertFromSnakeCase` is implemented
-    func testKeyStrategySnakeGeneratedAndCustom() {
-        // Test that this works with a struct that has automatically generated keys
-        struct DecodeMe4 : Codable {
-            var thisIsCamelCase : String
-            var thisIsCamelCaseToo : String
-            private enum CodingKeys : String, CodingKey {
-                case thisIsCamelCase = "fooBar"
-                case thisIsCamelCaseToo
-            }
-        }
-
-        // Decoding
-        let input = "{\"foo_bar\":\"test\",\"this_is_camel_case_too\":\"test2\"}".data(using: String._Encoding.utf8)!
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let decodingResult = try! decoder.decode(DecodeMe4.self, from: input)
-
-        XCTAssertEqual("test", decodingResult.thisIsCamelCase)
-        XCTAssertEqual("test2", decodingResult.thisIsCamelCaseToo)
-
-        // Encoding
-        let encoded = DecodeMe4(thisIsCamelCase: "test", thisIsCamelCaseToo: "test2")
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        let encodingResultData = try! encoder.encode(encoded)
-        let encodingResultString = String(bytes: encodingResultData, encoding: String._Encoding.utf8)
-        XCTAssertTrue(encodingResultString!.contains("foo_bar"))
-        XCTAssertTrue(encodingResultString!.contains("this_is_camel_case_too"))
-    }
-
-    // TODO: Reenable once `convertFromSnakeCase` is implemented
-    func testDecodingDictionaryFailureKeyPathNested() {
-        let input = "{\"top_level\": {\"sub_level\": {\"nested_value\": {\"int_value\": \"not_an_int\"}}}}".data(using: String._Encoding.utf8)!
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        do {
-            _ = try decoder.decode([String: [String : DecodeFailureNested]].self, from: input)
-        } catch DecodingError.typeMismatch(_, let context) {
-            XCTAssertEqual(4, context.codingPath.count)
-            XCTAssertEqual("top_level", context.codingPath[0].stringValue)
-            XCTAssertEqual("sub_level", context.codingPath[1].stringValue)
-            XCTAssertEqual("nestedValue", context.codingPath[2].stringValue)
-            XCTAssertEqual("intValue", context.codingPath[3].stringValue)
-        } catch {
-            XCTFail("Unexpected error: \(String(describing: error))")
-        }
-    }
-
-    // TODO: Reenable once `convertFromSnakeCase` is implemented
-    func testDecodingKeyStrategyCamelGenerated() {
-        let encoded = DecodeMe3(thisIsCamelCase: "test")
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        let resultData = try! encoder.encode(encoded)
-        let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
-        XCTAssertEqual("{\"this_is_camel_case\":\"test\"}", resultString)
-    }
-
-    // TODO: Reenable once `convertFromSnakeCase` is implemented
-    func testEncodingKeyStrategySnakeGenerated() {
-        // Test that this works with a struct that has automatically generated keys
-        let input = "{\"this_is_camel_case\":\"test\"}".data(using: String._Encoding.utf8)!
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let result = try! decoder.decode(DecodeMe3.self, from: input)
-
-        XCTAssertEqual("test", result.thisIsCamelCase)
-    }
-
-    // TODO: Reenable once `convertFromSnakeCase` is implemented
-    func testEncodingDictionaryFailureKeyPath() {
-        let toEncode: [String: EncodeFailure] = ["key": EncodeFailure(someValue: Double.nan)]
-
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        do {
-            _ = try encoder.encode(toEncode)
-        } catch EncodingError.invalidValue(_, let context) {
-            XCTAssertEqual(2, context.codingPath.count)
-            XCTAssertEqual("key", context.codingPath[0].stringValue)
-            XCTAssertEqual("someValue", context.codingPath[1].stringValue)
-        } catch {
-            XCTFail("Unexpected error: \(String(describing: error))")
-        }
-    }
-
-    // TODO: Reenable once `convertFromSnakeCase` is implemented
-    func testEncodingDictionaryFailureKeyPathNested() {
-        let toEncode: [String: [String: EncodeFailureNested]] = ["key": ["sub_key": EncodeFailureNested(nestedValue: EncodeFailure(someValue: Double.nan))]]
-
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        do {
-            _ = try encoder.encode(toEncode)
-        } catch EncodingError.invalidValue(_, let context) {
-            XCTAssertEqual(4, context.codingPath.count)
-            XCTAssertEqual("key", context.codingPath[0].stringValue)
-            XCTAssertEqual("sub_key", context.codingPath[1].stringValue)
-            XCTAssertEqual("nestedValue", context.codingPath[2].stringValue)
-            XCTAssertEqual("someValue", context.codingPath[3].stringValue)
-        } catch {
-            XCTFail("Unexpected error: \(String(describing: error))")
-        }
-    }
-
-    // TODO: Reenable once `convertFromSnakeCase` is properly implemented
-    func testEncodingKeyStrategySnake() {
-        let toSnakeCaseTests = [
-            ("simpleOneTwo", "simple_one_two"),
-            ("myURL", "my_url"),
-            ("singleCharacterAtEndX", "single_character_at_end_x"),
-            ("thisIsAnXMLProperty", "this_is_an_xml_property"),
-            ("single", "single"), // no underscore
-            ("", ""), // don't die on empty string
-            ("a", "a"), // single character
-            ("aA", "a_a"), // two characters
-            ("version4Thing", "version4_thing"), // numerics
-            ("partCAPS", "part_caps"), // only insert underscore before first all caps
-            ("partCAPSLowerAGAIN", "part_caps_lower_again"), // switch back and forth caps.
-            ("manyWordsInThisThing", "many_words_in_this_thing"), // simple lowercase + underscore + more
-            ("asdfĆqer", "asdf_ćqer"),
-            ("already_snake_case", "already_snake_case"),
-            ("dataPoint22", "data_point22"),
-            ("dataPoint22Word", "data_point22_word"),
-            ("_oneTwoThree", "_one_two_three"),
-            ("oneTwoThree_", "one_two_three_"),
-            ("__oneTwoThree", "__one_two_three"),
-            ("oneTwoThree__", "one_two_three__"),
-            ("_oneTwoThree_", "_one_two_three_"),
-            ("__oneTwoThree", "__one_two_three"),
-            ("__oneTwoThree__", "__one_two_three__"),
-            ("_test", "_test"),
-            ("_test_", "_test_"),
-            ("__test", "__test"),
-            ("test__", "test__"),
-            ("m͉̟̹y̦̳G͍͚͎̳r̤͉̤͕ͅea̲͕t͇̥̼͖U͇̝̠R͙̻̥͓̣L̥̖͎͓̪̫ͅR̩͖̩eq͈͓u̞e̱s̙t̤̺ͅ", "m͉̟̹y̦̳_g͍͚͎̳r̤͉̤͕ͅea̲͕t͇̥̼͖_u͇̝̠r͙̻̥͓̣l̥̖͎͓̪̫ͅ_r̩͖̩eq͈͓u̞e̱s̙t̤̺ͅ"), // because Itai wanted to test this
-            ("🐧🐟", "🐧🐟") // fishy emoji example?
-        ]
-
-        for test in toSnakeCaseTests {
-            let expected = "{\"\(test.1)\":\"test\"}"
-            let encoded = EncodeMe(keyName: test.0)
-
-            let encoder = JSONEncoder()
-            encoder.keyEncodingStrategy = .convertToSnakeCase
-            let resultData = try! encoder.encode(encoded)
-            let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
-
-            XCTAssertEqual(expected, resultString)
-        }
     }
 }
 

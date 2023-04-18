@@ -382,7 +382,9 @@ final class LocalePropertiesTests : XCTestCase {
         XCTAssertEqual("HK", locale.regionCode)
         XCTAssertEqual("Hant", locale.scriptCode)
         XCTAssertEqual("POSIX", Locale(identifier: "en_POSIX").variantCode)
+#if FOUNDATION_FRAMEWORK
         XCTAssertTrue(locale.exemplarCharacterSet != nil)
+#endif
         // The calendar we get back from Locale has the locale set, but not the one we create with Calendar(identifier:). So we configure our comparison calendar first.
         var c = Calendar(identifier: .gregorian)
         c.locale = Locale(identifier: "en_US")

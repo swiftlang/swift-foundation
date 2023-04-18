@@ -300,11 +300,12 @@ internal final class _NSLocaleSwiftWrapper: @unchecked Sendable, Hashable, Custo
             return nil
         }
     }
-
+#if FOUNDATION_FRAMEWORK
     var exemplarCharacterSet: CharacterSet? {
         return _wrapped.object(forKey: .exemplarCharacterSet) as? CharacterSet
     }
-
+#endif
+    
     var calendar: Calendar {
         if let result = _wrapped.object(forKey: .calendar) as? Calendar {
             // NSLocale should not return nil here
@@ -440,7 +441,9 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         case .countryCode: return self.countryCode
         case .scriptCode: return self.scriptCode
         case .variantCode: return self.variantCode
+#if FOUNDATION_FRAMEWORK
         case .exemplarCharacterSet: return self.exemplarCharacterSet
+#endif
         case .calendarIdentifier: return self.calendarIdentifier
         case .calendar: return locale.calendar
         case .collationIdentifier: return self.collationIdentifier
@@ -483,7 +486,9 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         case .countryCode: return self.localizedString(forCountryCode: value)
         case .scriptCode: return self.localizedString(forScriptCode: value)
         case .variantCode: return self.localizedString(forVariantCode: value)
+#if FOUNDATION_FRAMEWORK
         case .exemplarCharacterSet: return nil
+#endif
         case .calendar: return self.localizedString(forCalendarIdentifier: value)
         case .collationIdentifier: return self.localizedString(forCollationIdentifier: value)
         case .usesMetricSystem: return nil
@@ -584,9 +589,11 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         locale.alternateQuotationEndDelimiter ?? ""
     }
 
+#if FOUNDATION_FRAMEWORK
     override var exemplarCharacterSet: CharacterSet {
         locale.exemplarCharacterSet ?? CharacterSet()
     }
+#endif
 
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
     override var usesMetricSystem: Bool {

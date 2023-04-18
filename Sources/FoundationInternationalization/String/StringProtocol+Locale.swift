@@ -44,4 +44,66 @@ extension StringProtocol {
         return String(self)._capitalized(with: locale)
 #endif
     }
+
+    /// A lowercase version of the string that is produced using the current
+    /// locale.
+    @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
+    public var localizedLowercase: String {
+#if FOUNDATION_FRAMEWORK
+        if _foundation_essentials_feature_enabled() {
+            return String(self)._lowercased(with: .current)
+        }
+
+        return _ns.localizedLowercase
+#else
+        return String(self)._lowercased(with: .current)
+#endif
+    }
+
+
+    /// Returns a version of the string with all letters
+    /// converted to lowercase, taking into account the specified
+    /// locale.
+    @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
+    public func lowercased(with locale: Locale?) -> String {
+#if FOUNDATION_FRAMEWORK
+        if _foundation_essentials_feature_enabled() {
+            return String(self)._lowercased(with: locale)
+        }
+        return _ns.lowercased(with: locale)
+#else
+        return String(self)._lowercased(with: locale)
+#endif
+    }
+
+    /// An uppercase version of the string that is produced using the current
+    /// locale.
+    @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
+    public var localizedUppercase: String {
+#if FOUNDATION_FRAMEWORK
+        if _foundation_essentials_feature_enabled() {
+            return String(self)._uppercased(with: .current)
+        }
+
+        return _ns.localizedUppercase
+#else
+        return String(self)._uppercased(with: .current)
+#endif
+    }
+
+    /// Returns a version of the string with all letters
+    /// converted to uppercase, taking into account the specified
+    /// locale.
+    @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
+    public func uppercased(with locale: Locale?) -> String {
+#if FOUNDATION_FRAMEWORK
+        if _foundation_essentials_feature_enabled() {
+            return String(self)._uppercased(with: locale)
+        }
+
+        return _ns.uppercased(with: locale)
+#else
+        return String(self)._uppercased(with: locale)
+#endif
+    }
 }
