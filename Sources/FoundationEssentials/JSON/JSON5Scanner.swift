@@ -16,6 +16,7 @@ import Darwin
 import Glibc
 #endif
 
+@_implementationOnly import _CShims
 
 internal struct JSON5Scanner {
     let options: Options
@@ -1155,7 +1156,7 @@ extension JSON5Scanner {
             jsonBytes.formIndex(after: &index)
         }
 
-        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ strncasecmp_l($0, "0x", $1, nil) })
+        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ _cshims_strncasecmp_l($0, "0x", $1, nil) })
         if cmp == 0 {
             jsonBytes.formIndex(&index, offsetBy: 2)
 
