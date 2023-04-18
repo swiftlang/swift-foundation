@@ -243,7 +243,9 @@ final class CalendarTests : XCTestCase {
 
         // An arbitrary date, for which we know the answers
         // August 22, 2022 at 3:02:38 PM PDT
-        validateOrdinality(expected, calendar: Calendar(identifier: .gregorian), date: Date(timeIntervalSinceReferenceDate: 682898558.712307))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        validateOrdinality(expected, calendar: calendar, date: Date(timeIntervalSinceReferenceDate: 682898558.712307))
     }
 
     func test_ordinality_dst() {
@@ -267,7 +269,9 @@ final class CalendarTests : XCTestCase {
 
         // A date which corresponds to a DST transition in Pacific Time
         // let d = try! Date("2022-03-13T03:02:08.712-07:00", strategy: .iso8601)
-        validateOrdinality(expected, calendar: Calendar(identifier: .gregorian), date: Date(timeIntervalSinceReferenceDate: 668858528.712))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        validateOrdinality(expected, calendar: calendar, date: Date(timeIntervalSinceReferenceDate: 668858528.712))
     }
     #endif // arch(x86_64) || arch(arm64)
 
@@ -394,7 +398,8 @@ final class CalendarTests : XCTestCase {
         calendar.timeZone = TimeZone(identifier: "UTC")!
         var components = DateComponents(calendar: calendar, month: 9, day: 1)
         components.isLeapMonth = true
-        components.timeZone = TimeZone.default
+        // TimeZone.default points to GTC on Linux
+        components.timeZone = TimeZone(identifier: "America/Los_Angeles")
         components.era = nil
 
         var foundDate: Date?
