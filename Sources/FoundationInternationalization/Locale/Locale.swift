@@ -944,7 +944,7 @@ public struct Locale : Hashable, Equatable, Sendable {
 #if FOUNDATION_FRAMEWORK
     /// Constructs an identifier from a dictionary of components, allowing a `Calendar` value. Compatibility only.
     internal static func identifier(fromComponents components: [String : Any]) -> String {
-        // TODO: Port to Swift
+        // TODO: Port to Swift: https://github.com/apple/swift-foundation/issues/45
         // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar".
         return CFLocaleCreateLocaleIdentifierFromComponents(kCFAllocatorSystemDefault, components as CFDictionary).rawValue as String
     }
@@ -959,7 +959,7 @@ public struct Locale : Hashable, Equatable, Sendable {
 #if FOUNDATION_FRAMEWORK
         CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorSystemDefault, string as CFString).rawValue as String
 #else
-        // TODO: (Locale.canonicalIdentifier) implement in Swift
+        // TODO: (Locale.canonicalIdentifier) implement in Swift: https://github.com/apple/swift-foundation/issues/45
         return string
 #endif // FOUNDATION_FRAMEWORK
     }
@@ -973,7 +973,7 @@ public struct Locale : Hashable, Equatable, Sendable {
             return ""
         }
 #else
-        // TODO: (Locale.canonicalIdentifier) implement in Swift
+        // TODO: (Locale.canonicalIdentifier) implement in Swift: https://github.com/apple/swift-foundation/issues/45
         return string
 #endif // FOUNDATION_FRAMEWORK
     }
@@ -987,7 +987,7 @@ public struct Locale : Hashable, Equatable, Sendable {
             return ""
         }
 #else
-        // TODO: (Locale.canonicalLanguageIdentifier) Implement in Swift
+        // TODO: (Locale.canonicalLanguageIdentifier) Implement in Swift: https://github.com/apple/swift-foundation/issues/45
         return string
 #endif // FOUNDATION_FRAMEWORK
     }
