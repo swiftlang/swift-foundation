@@ -10,22 +10,88 @@
 //
 //===----------------------------------------------------------------------===//
 
-enum JSONValue: Equatable {
-    case string(String)
-    case number(String)
-    case bool(Bool)
-    case null
-
-    case array([JSONValue])
-    case object([String: JSONValue])
+extension String {
+    
+    // Ideally we'd entirely de-deuplicate this code with serializeString()'s, but at the moment there's a noticeable performance regression when doing so.
+    func serializedForJSON(withoutEscapingSlashes: Bool) -> String {
+        var bytes = [UInt8]()
+        bytes.reserveCapacity(self.utf8.count + 2)
+        bytes.append(._quote)
+        
+        self.withCString {
+            $0.withMemoryRebound(to: UInt8.self, capacity: 1) {
+                var cursor = $0
+                var mark = cursor
+                while cursor.pointee != 0 {
+                    let escapeString: String
+                    switch cursor.pointee {
+                    case ._quote:
+                        escapeString = "\\\""
+                        break
+                    case ._backslash:
+                        escapeString = "\\\\"
+                        break
+                    case ._slash where !withoutEscapingSlashes:
+                        escapeString = "\\/"
+                        break
+                    case 0x8:
+                        escapeString = "\\b"
+                        break
+                    case 0xc:
+                        escapeString = "\\f"
+                        break
+                    case ._newline:
+                        escapeString = "\\n"
+                        break
+                    case ._return:
+                        escapeString = "\\r"
+                        break
+                    case ._tab:
+                        escapeString = "\\t"
+                        break
+                    case 0x0...0xf:
+                        escapeString = "\\u000\(String(cursor.pointee, radix: 16))"
+                        break
+                    case 0x10...0x1f:
+                        escapeString = "\\u00\(String(cursor.pointee, radix: 16))"
+                        break
+                    default:
+                        // Accumulate this byte
+                        cursor += 1
+                        continue
+                    }
+                    
+                    // Append accumulated bytes
+                    if cursor > mark {
+                        bytes.append(contentsOf: UnsafeBufferPointer(start: mark, count: cursor-mark))
+                    }
+                    bytes.append(contentsOf: escapeString.utf8)
+                    
+                    cursor += 1
+                    mark = cursor // Start accumulating bytes starting after this escaped byte.
+                }
+                
+                // Append accumulated bytes
+                if cursor > mark {
+                    bytes.append(contentsOf: UnsafeBufferPointer(start: mark, count: cursor-mark))
+                }
+            }
+        }
+        bytes.append(._quote)
+        
+        return String(unsafeUninitializedCapacity: bytes.count) {
+            _ = $0.initialize(from: bytes)
+            return bytes.count
+        }
+    }
 }
 
-extension JSONValue {
-    static func number(from num: any (FixedWidthInteger & CustomStringConvertible)) -> JSONValue {
+extension JSONReference {
+    static func number(from num: any (FixedWidthInteger & CustomStringConvertible)) -> JSONReference {
         return .number(num.description)
     }
 
-    static func number<T: BinaryFloatingPoint & CustomStringConvertible>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = Optional<_JSONKey>.none) throws -> JSONValue {
+    static func number<T: BinaryFloatingPoint & CustomStringConvertible>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = Optional<_JSONKey>.none) throws -> JSONReference {
         guard !float.isNaN, !float.isInfinite else {
             if case .convertToString(let posInfString, let negInfString, let nanString) = options {
                 switch float {
@@ -77,8 +143,8 @@ internal struct JSONWriter {
         data = Data()
     }
 
-    mutating func serializeJSON(_ value: JSONValue, depth: Int = 0) throws {
-        switch value {
+    mutating func serializeJSON(_ value: JSONReference, depth: Int = 0) throws {
+        switch value.backing {
         case .string(let str):
             try serializeString(str)
         case .bool(let boolValue):
@@ -87,6 +153,10 @@ internal struct JSONWriter {
             writer(numberStr)
         case .array(let array):
             try serializeArray(array, depth: depth + 1)
+        case .nonPrettyDirectArray(let arrayRepresentation):
+            writer(arrayRepresentation)
+        case .directArray(let strings):
+            try serializeStringArray(strings, depth: depth + 1)
         case .object(let object):
             try serializeObject(object, depth: depth + 1)
         case .null:
@@ -184,7 +254,7 @@ internal struct JSONWriter {
         writer("\"")
     }
 
-    mutating func serializeArray(_ array: [JSONValue], depth: Int) throws {
+    mutating func serializeArray(_ array: [JSONReference], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
@@ -215,8 +285,40 @@ internal struct JSONWriter {
         }
         writer("]")
     }
+    
+    mutating func serializeStringArray(_ array: [String], depth: Int) throws {
+        guard depth < Self.maximumRecursionDepth else {
+            throw JSONError.tooManyNestedArraysOrDictionaries()
+        }
 
-    mutating func serializeObject(_ dict: [String:JSONValue], depth: Int) throws {
+        writer("[")
+        if pretty {
+            writer("\n")
+            incIndent()
+        }
+
+        var first = true
+        for elem in array {
+            if first {
+                first = false
+            } else if pretty {
+                writer(",\n")
+            } else {
+                writer(",")
+            }
+            if pretty {
+                writeIndent()
+            }
+            writer(elem)
+        }
+        if pretty {
+            writer("\n")
+            decAndWriteIndent()
+        }
+        writer("]")
+    }
+
+    mutating func serializeObject(_ dict: [String:JSONReference], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
@@ -232,7 +334,7 @@ internal struct JSONWriter {
 
         var first = true
 
-        func serializeObjectElement(key: String, value: JSONValue, depth: Int) throws {
+        func serializeObjectElement(key: String, value: JSONReference, depth: Int) throws {
             if first {
                 first = false
             } else if pretty {

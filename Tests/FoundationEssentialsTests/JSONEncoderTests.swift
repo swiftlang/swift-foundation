@@ -2718,6 +2718,28 @@ extension JSONEncoderTests {
 
         XCTAssertEqual(string, "{\"container\":{\"foo\":\"Test\",\"somethingElse\":\"SecondAgain\"},\"somethingElse\":\"Foo\"}")
     }
+
+    func test_singleValueDictionaryAmendedByContainer() {
+        struct Test: Encodable {
+            enum CodingKeys: String, CodingKey {
+                case a
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var svc = encoder.singleValueContainer()
+                try svc.encode(["a" : "b", "other" : "foo"])
+
+                var keyed = encoder.container(keyedBy: CodingKeys.self)
+                try keyed.encode("c", forKey: .a)
+            }
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let data = try! encoder.encode(Test())
+        let string = String(data: data, encoding: .utf8)!
+
+        XCTAssertEqual(string, "{\"a\":\"c\",\"other\":\"foo\"}")
+    }
 }
 
 // MARK: - Decimal Tests
