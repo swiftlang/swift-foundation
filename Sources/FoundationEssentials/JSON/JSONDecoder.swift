@@ -58,7 +58,8 @@ open class JSONDecoder {
         /// Decode the `Date` as UNIX millisecond timestamp from a JSON number.
         case millisecondsSince1970
 
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once DateFormatStyle has been moved
+#if FOUNDATION_FRAMEWORK
+        // TODO: Reenable once DateFormatStyle has been moved: https://github.com/apple/swift-foundation/issues/46
         /// Decode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
         @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
         case iso8601

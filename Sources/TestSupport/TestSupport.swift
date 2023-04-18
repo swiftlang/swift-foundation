@@ -12,6 +12,8 @@
 
 @_exported import XCTest
 
+// See this issue for more info on this file: https://github.com/apple/swift-foundation/issues/40
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 

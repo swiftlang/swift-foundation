@@ -44,7 +44,7 @@ extension AttributeScopes {
         @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public let referentConcept: ReferentConceptAttribute
         
-        // TODO: Support AttributedString markdown in FoundationPreview
+        // TODO: Support AttributedString markdown in FoundationPreview: https://github.com/apple/swift-foundation/issues/44
         public let inlinePresentationIntent: InlinePresentationIntentAttribute
         public let presentationIntent: PresentationIntentAttribute
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
