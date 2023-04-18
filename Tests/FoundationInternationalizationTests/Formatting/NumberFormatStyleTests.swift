@@ -1853,7 +1853,7 @@ extension NumberFormatStyleTests {
 }
 
 // MARK: - Decimal Tests
-// TODO: Reenable once Decimal has been moved
+// TODO: Reenable once Decimal has been moved: https://github.com/apple/swift-foundation/issues/43
 extension NumberFormatStyleTests {
 
 
