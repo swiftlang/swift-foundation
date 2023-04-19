@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_spi(Reflection) import Swift
+@_implementationOnly import ReflectionInternal
 #endif
 
 // MARK: AttributedStringKey API
@@ -176,29 +176,25 @@ public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
 #if FOUNDATION_FRAMEWORK
     // TODO: Support scope-specific equality/attributes in FoundationPreview
     internal func equals(_ other: Self) -> Bool {
-        var equal = true
-        _forEachField(of: S.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
-            switch type {
+        for field in Type(S.self).fields {
+            switch field.type.swiftType {
             case let attribute as any AttributedStringKey.Type:
                 if self.storage[attribute.name] != other.storage[attribute.name] {
-                    equal = false
                     return false
                 }
                 break
             default: break // TODO: Nested scopes
             }
-            return true
         }
-        return equal
+        return true
     }
 
     internal var attributes : AttributeContainer {
         var contents = AttributedString._AttributeStorage()
-        _forEachField(of: S.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
-            if let attribute = type as? any AttributedStringKey.Type {
+        for field in Type(S.self).fields {
+            if let attribute = field.type.swiftType as? any AttributedStringKey.Type {
                 contents[attribute.name] = self.storage[attribute.name]
             }
-            return true
         }
         return AttributeContainer(contents)
     }
@@ -244,39 +240,29 @@ internal extension AttributedStringKey {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 internal extension AttributeScope {
     static func attributeKeyType(matching key: String) -> (any AttributedStringKey.Type)? {
-        var result: (any AttributedStringKey.Type)?
-        _forEachField(of: Self.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
-            if let attributeType = type as? any AttributedStringKey.Type, attributeType.name == key {
-                result = attributeType
-                return false
+        for field in Type(Self.self).fields {
+            if let attributeType = field.type.swiftType as? any AttributedStringKey.Type, attributeType.name == key {
+                return attributeType
             }
             
-            if let scopeType = type as? any AttributeScope.Type, let found = scopeType.attributeKeyType(matching: key) {
-                result = found
-                return false
+            if let scopeType = field.type.swiftType as? any AttributeScope.Type, let found = scopeType.attributeKeyType(matching: key) {
+                return found
             }
-            return true
         }
-        
-        return result
+        return nil
     }
     
     static func markdownAttributeKeyType(matching key: String) -> (any MarkdownDecodableAttributedStringKey.Type)? {
-        var result: (any MarkdownDecodableAttributedStringKey.Type)?
-        _forEachField(of: Self.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
-            if let attributeType = type as? any MarkdownDecodableAttributedStringKey.Type, attributeType.markdownName == key {
-                result = attributeType
-                return false
+        for field in Type(Self.self).fields {
+            if let attributeType = field.type.swiftType as? any MarkdownDecodableAttributedStringKey.Type, attributeType.markdownName == key {
+                return attributeType
             }
             
-            if let scopeType = type as? any AttributeScope.Type, let found = scopeType.markdownAttributeKeyType(matching: key) {
-                result = found
-                return false
+            if let scopeType = field.type.swiftType as? any AttributeScope.Type, let found = scopeType.markdownAttributeKeyType(matching: key) {
+                return found
             }
-            return true
         }
-        
-        return result
+        return nil
     }
 }
 

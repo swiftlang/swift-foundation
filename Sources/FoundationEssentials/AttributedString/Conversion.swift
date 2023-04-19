@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 import Darwin
-@_spi(Reflection) import Swift
+@_implementationOnly import ReflectionInternal
 @_implementationOnly import os
 #endif
 
@@ -355,17 +355,14 @@ fileprivate func _loadScopeAttributes(forSymbol symbol: String, from path: Strin
 
 fileprivate func _loadAttributeTypes<S: AttributeScope>(from scope: S.Type) -> [String : any AttributedStringKey.Type] {
     var result = [String : any AttributedStringKey.Type]()
-    _forEachField(of: scope, options: [.ignoreUnknown]) { pointer, offset, type, kind -> Bool in
-        switch type {
+    for field in Type(scope).fields {
+        switch field.type.swiftType {
         case let attribute as any AttributedStringKey.Type:
             result[attribute.name] = attribute
-            break
         case let scope as any AttributeScope.Type:
             result.merge(_loadAttributeTypes(from: scope), uniquingKeysWith: { current, new in new })
-            break
         default: break
         }
-        return true
     }
     return result
 }
