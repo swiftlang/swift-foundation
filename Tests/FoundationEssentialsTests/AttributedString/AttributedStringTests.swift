@@ -1695,7 +1695,7 @@ E {
         container.testInt = 2
         container[Attribute.self] = 3
         let str = AttributedString("Hello", attributes: container)
-        let result = try? NSAttributedString(str, scope: Scope.self, options: .dropThrowingAttributes) // The same call that the no-scope initializer will make
+        let result = try? NSAttributedString(str, attributeTable: Scope.attributeKeyTypes(), options: .dropThrowingAttributes) // The same call that the no-scope initializer will make
         XCTAssertEqual(result, NSAttributedString(string: "Hello", attributes: [NSAttributedString.Key("TestInt") : 2]))
     }
     
