@@ -13,14 +13,12 @@
 // A BufferView<Element> represents a span of memory which
 // contains initialized `Element` instances.
 
-@frozen @usableFromInline
 internal struct BufferView<Element> {
-    @usableFromInline let start: BufferViewIndex<Element>
-    @usableFromInline let count: Int
+    let start: BufferViewIndex<Element>
+    let count: Int
 
     private var baseAddress: UnsafeRawPointer { start._rawValue }
 
-    @inlinable
     init(start index: BufferViewIndex<Element>, count: Int) {
         precondition(count >= 0, "Count must not be negative")
         if !_isPOD(Element.self) {
@@ -33,7 +31,6 @@ internal struct BufferView<Element> {
         self.count = count
     }
 
-    @inlinable
     init(baseAddress: UnsafeRawPointer, count: Int) {
         self.init(start: .init(rawValue: baseAddress), count: count)
     }
@@ -59,13 +56,11 @@ extension BufferView /*where Element: BitwiseCopyable*/ {
 
 extension BufferView: Sequence {
 
-    @usableFromInline
     func makeIterator() -> BufferViewIterator<Element> {
         .init(from: startIndex, to: endIndex)
     }
 
     //FIXME: mark closure parameter as non-escaping
-    @usableFromInline
     func withContiguousStorageIfAvailable<R>(
         _ body: (UnsafeBufferPointer<Element>) throws -> R
     ) rethrows -> R? {
@@ -104,22 +99,22 @@ extension BufferView:
     BidirectionalCollection,
     RandomAccessCollection {
 
-    @usableFromInline typealias Element = Element
-    @usableFromInline typealias Index = BufferViewIndex<Element>
-    @usableFromInline typealias SubSequence = Self
+    typealias Element = Element
+    typealias Index = BufferViewIndex<Element>
+    typealias SubSequence = Self
 
-    @inlinable @inline(__always)
+    @inline(__always)
     var startIndex: Index { start }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     var endIndex: Index { start.advanced(by: count) }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     var indices: Range<Index> {
         .init(uncheckedBounds: (startIndex, endIndex))
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     func _checkBounds(_ position: Index) {
         precondition(
             distance(from: startIndex, to: position) >= 0
@@ -135,7 +130,7 @@ extension BufferView:
         }
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     func _checkBounds(_ bounds: Range<Index>) {
         precondition(
             distance(from: startIndex, to: bounds.lowerBound) >= 0
@@ -152,42 +147,42 @@ extension BufferView:
         }
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     func index(after i: Index) -> Index {
         i.advanced(by: +1)
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     func index(before i: Index) -> Index {
         i.advanced(by: -1)
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     func formIndex(after i: inout Index) {
         i = index(after: i)
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     func formIndex(before i: inout Index) {
         i = index(before: i)
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     func index(_ i: Index, offsetBy distance: Int) -> Index {
         i.advanced(by: distance)
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     func formIndex(_ i: inout Index, offsetBy distance: Int) {
         i = index(i, offsetBy: distance)
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     func distance(from start: BufferViewIndex<Element>, to end: BufferViewIndex<Element>) -> Int {
         start.distance(to: end)
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     subscript(position: BufferViewIndex<Element>) -> Element {
         get {
             _checkBounds(position)
@@ -195,7 +190,7 @@ extension BufferView:
         }
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     subscript(unchecked position: BufferViewIndex<Element>) -> Element {
         get {
             if _isPOD(Element.self) {
@@ -206,7 +201,7 @@ extension BufferView:
         }
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     subscript(bounds: Range<BufferViewIndex<Element>>) -> Self {
         get {
             _checkBounds(bounds)
@@ -214,26 +209,23 @@ extension BufferView:
         }
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     subscript(unchecked bounds: Range<BufferViewIndex<Element>>) -> Self {
         get { BufferView(start: bounds.lowerBound, count: bounds.count) }
     }
 
-    @_alwaysEmitIntoClient
     subscript(bounds: some RangeExpression<Index>) -> Self {
         get {
             self[bounds.relative(to: self)]
         }
     }
 
-    @_alwaysEmitIntoClient
     subscript(unchecked bounds: some RangeExpression<Index>) -> Self {
         get {
             self[unchecked: bounds.relative(to: self)]
         }
     }
 
-    @_alwaysEmitIntoClient
     subscript(x: UnboundedRange) -> Self {
         get {
             self[unchecked: indices]
@@ -332,7 +324,7 @@ extension BufferView /* where Element: BitwiseCopyable */ {
 
 extension BufferView {
 
-    @inlinable @inline(__always)
+    @inline(__always)
     subscript(offset offset: Int) -> Element {
         get {
             precondition(0 <= offset && offset < count)
@@ -340,7 +332,7 @@ extension BufferView {
         }
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     subscript(uncheckedOffset offset: Int) -> Element {
         get {
             self[unchecked: index(startIndex, offsetBy: offset)]
@@ -361,14 +353,12 @@ extension BufferView {
 //MARK: prefix and suffix slicing
 extension BufferView {
 
-    @usableFromInline
     func prefix(_ maxLength: Int) -> BufferView {
         precondition(maxLength >= 0, "Can't have a prefix of negative length.")
         let nc = maxLength < count ? maxLength : count
         return BufferView(start: start, count: nc)
     }
 
-    @usableFromInline
     func suffix(_ maxLength: Int) -> BufferView {
         precondition(maxLength >= 0, "Can't have a suffix of negative length.")
         let nc = maxLength < count ? maxLength : count
@@ -376,7 +366,6 @@ extension BufferView {
         return BufferView(start: newStart, count: nc)
     }
 
-    @usableFromInline
     func dropFirst(_ k: Int = 1) -> BufferView {
         precondition(k >= 0, "Can't drop a negative number of elements.")
         let dc = k < count ? k : count
@@ -384,14 +373,12 @@ extension BufferView {
         return BufferView(start: newStart, count: count &- dc)
     }
 
-    @usableFromInline
     func dropLast(_ k: Int = 1) -> BufferView {
         precondition(k >= 0, "Can't drop a negative number of elements.")
         let nc = k < count ? count &- k : 0
         return BufferView(start: start, count: nc)
     }
 
-    @usableFromInline
     func prefix(upTo index: BufferViewIndex<Element>) -> BufferView {
         _checkBounds(Range(uncheckedBounds: (startIndex, index)))
         return BufferView(
@@ -400,7 +387,6 @@ extension BufferView {
         )
     }
 
-    @usableFromInline
     func suffix(from index: BufferViewIndex<Element>) -> BufferView {
         _checkBounds(Range(uncheckedBounds: (index, endIndex)))
         return BufferView(
