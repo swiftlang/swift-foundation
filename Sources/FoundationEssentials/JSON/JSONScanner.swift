@@ -59,6 +59,8 @@ import Darwin
 import Glibc
 #endif // canImport(Darwin)
 
+@_implementationOnly import _CShims
+
 internal class JSONMap {
     enum TypeDescriptor : Int {
         case string  // [marker, count, sourceByteOffset]
@@ -1181,7 +1183,7 @@ extension Double : PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: BufferView<UInt8>) {
         let decodedValue = buffer.withUnsafePointer { nptr, count -> Double? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
-            let decodedValue = strtod_l(nptr, &endPtr, nil)
+            let decodedValue = _cshims_strtod_l(nptr, &endPtr, nil)
             if let endPtr, nptr.advanced(by: count) == endPtr {
                 return decodedValue
             } else {
@@ -1197,7 +1199,7 @@ extension Float : PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: BufferView<UInt8>) {
         let decodedValue = buffer.withUnsafePointer { nptr, count -> Float? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
-            let decodedValue = strtof_l(nptr, &endPtr, nil)
+            let decodedValue = _cshims_strtof_l(nptr, &endPtr, nil)
             if let endPtr, nptr.advanced(by: count) == endPtr {
                 return decodedValue
             } else {

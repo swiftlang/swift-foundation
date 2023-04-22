@@ -16,6 +16,8 @@ import Darwin
 import Glibc
 #endif
 
+@_implementationOnly import _CShims
+
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Decodable` values (in which case it should be exempt from key conversion strategies).
 ///
@@ -876,7 +878,7 @@ extension JSONDecoderImpl: Decoder {
             let result = withBuffer(for: region) { (stringBuffer, _) -> T? in
                 stringBuffer.withUnsafeRawPointer { (ptr, count) -> T? in
                     func bytesAreEqual(_ b: UnsafeBufferPointer<UInt8>) -> Bool {
-                        count == b.count && memcmp(ptr, b.baseAddress, b.count) == 0
+                        count == b.count && memcmp(ptr, b.baseAddress!, b.count) == 0
                     }
                     if posInfString.withUTF8(bytesAreEqual(_:)) { return T.infinity }
                     if negInfString.withUTF8(bytesAreEqual(_:)) { return -T.infinity }

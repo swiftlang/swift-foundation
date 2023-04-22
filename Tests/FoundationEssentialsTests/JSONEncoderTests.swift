@@ -28,6 +28,10 @@ import TestSupport
 @testable import Foundation
 #endif
 
+#if canImport(_CShims)
+@_implementationOnly import _CShims
+#endif
+
 // MARK: - Test Suite
 
 final class JSONEncoderTests : XCTestCase {
@@ -139,10 +143,14 @@ final class JSONEncoderTests : XCTestCase {
     func x_testEncodingDate() {
 
         func formattedLength(of value: Double) -> Int {
+        #if canImport(_CShims)
+            return Int(_cshims_get_formatted_str_length(value))
+        #else
             let empty = UnsafeMutablePointer<Int8>.allocate(capacity: 0)
             defer { empty.deallocate() }
             let length = snprintf(ptr: empty, 0, "%0.*g", DBL_DECIMAL_DIG, value)
             return Int(length)
+        #endif
         }
 
         // Duplicated to handle a special case
