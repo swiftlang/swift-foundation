@@ -97,6 +97,16 @@ final class JSONEncoderTests : XCTestCase {
         _testRoundTrip(of: EnhancedBool.false, expectedJSON: "false".data(using: String._Encoding.utf8)!)
         _testRoundTrip(of: EnhancedBool.fileNotFound, expectedJSON: "null".data(using: String._Encoding.utf8)!)
     }
+    
+    func testEncodingTopLevelArrayOfInt() {
+        let a = [1,2,3]
+        let result1 = String(data: try! JSONEncoder().encode(a), encoding: String._Encoding.utf8)
+        XCTAssertEqual(result1, "[1,2,3]")
+        
+        let b : [Int] = []
+        let result2 = String(data: try! JSONEncoder().encode(b), encoding: String._Encoding.utf8)
+        XCTAssertEqual(result2, "[]")
+    }
 
 #if false // FIXME: XCTest doesn't support crash tests yet rdar://20195010&22387653
     func testEncodingConflictedTypeNestedContainersWithTheSameTopLevelKey() {

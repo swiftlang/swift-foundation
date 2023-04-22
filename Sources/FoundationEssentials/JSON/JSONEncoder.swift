@@ -1398,7 +1398,12 @@ extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArray
             result += element.jsonRepresentation(options: options) + ","
         }
         
+        if !self.isEmpty {
+            // Replace the last ,
+            let _ = result.popLast()
+        }
         result += "]"
+
         return result
     }
     
