@@ -525,4 +525,45 @@ final class PredicateTests: XCTestCase {
         XCTAssert(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
         XCTAssert(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
+    
+    func testSubscripts() throws {
+        var predicate = Predicate<Object> {
+            // $0.g[0] == 0
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_subscript(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.g
+                    ),
+                    PredicateExpressions.build_Arg(0)
+                ),
+                rhs: PredicateExpressions.build_Arg(0)
+            )
+        }
+        
+        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0])))
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1])))
+        XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
+        
+        predicate = Predicate<Object> {
+            // $0.g[0 ..< 2].isEmpty
+            PredicateExpressions.build_KeyPath(
+                root: PredicateExpressions.build_subscript(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.g
+                    ),
+                    PredicateExpressions.build_Range(
+                        lower: PredicateExpressions.build_Arg(0),
+                        upper: PredicateExpressions.build_Arg(2))
+                ),
+                keyPath: \.isEmpty
+            )
+        }
+        
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0, 1, 2])))
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0, 1])))
+        XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0])))
+        XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
+    }
 }

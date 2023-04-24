@@ -27,6 +27,7 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
         case undefinedVariable
         case forceUnwrapFailure(String?)
         case forceCastFailure(String?)
+        case invalidInput(String?)
     }
     
     private let _error: _Error
@@ -43,6 +44,8 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
             return string ?? "Attempted to force unwrap a nil value"
         case .forceCastFailure(let string):
             return string ?? "Failed to cast a value to the desired type"
+        case .invalidInput(let string):
+            return string ?? "The inputs to this expression are invalid"
         }
     }
     
@@ -60,12 +63,18 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
                 return true
             }
             return false
+        case .invalidInput(_):
+            if case .invalidInput(_) = rhs._error {
+                return true
+            }
+            return false
         }
     }
     
     public static let undefinedVariable = Self(.undefinedVariable)
     public static let forceUnwrapFailure = Self(.forceUnwrapFailure(nil))
     public static let forceCastFailure = Self(.forceCastFailure(nil))
+    public static let invalidInput = Self(.invalidInput(nil))
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
