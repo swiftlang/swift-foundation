@@ -10,6 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     public enum AttributeMergePolicy : Sendable {
@@ -84,7 +90,7 @@ extension AttributedStringProtocol {
         }
     }
     
-    internal var _baseString: _BString {
+    internal var _baseString: BigString {
         __guts.string
     }
 
@@ -92,27 +98,31 @@ extension AttributedStringProtocol {
         startIndex ..< endIndex
     }
 
-    internal var _stringBounds: Range<_BString.Index> {
+    internal var _stringBounds: Range<BigString.Index> {
         startIndex._value ..< endIndex._value
+    }
+
+    internal var _characters: BigSubstring {
+        _baseString[_stringBounds]
     }
 }
 
 extension AttributedString {
-    internal var _baseString: _BString {
+    internal var _baseString: BigString {
         _guts.string
     }
 
-    internal var _bounds: Range<_BString.Index> {
+    internal var _bounds: Range<BigString.Index> {
         Range(uncheckedBounds: (_guts.string.startIndex, _guts.string.endIndex))
     }
 }
 
 extension AttributedSubstring {
-    internal var _baseString: _BString {
+    internal var _baseString: BigString {
         _guts.string
     }
 
-    internal var _bounds: Range<_BString.Index> {
+    internal var _bounds: Range<BigString.Index> {
         _range._bstringRange
     }
 }
@@ -218,17 +228,20 @@ extension AttributedStringProtocol {
     public func range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = [], locale: Locale? = nil) -> Range<AttributedString.Index>? {
         // Since we have secret access to the String property, go ahead and use the full implementation given by Foundation rather than the limited reimplementation we needed for CharacterView.
         // FIXME: There is no longer a `String` property. This is going to be terribly slow.
+        let bstring = self.__guts.string
         let bounds = self._stringBounds
-        let string = String(_from: __guts.string, in: bounds)
+        let string = String(bstring[bounds])
         guard let range = string.range(of: stringToFind, options: options, locale: locale) else {
             return nil
         }
         // Restore original index range.
-        let utf8Start = bounds.lowerBound._utf8Offset + range.lowerBound._utf8Offset
-        let utf8End = bounds.lowerBound._utf8Offset + range.upperBound._utf8Offset
-        let start = AttributedString.Index(_BString.Index(_utf8Offset: utf8Start))
-        let end = AttributedString.Index(_BString.Index(_utf8Offset: utf8End))
-        return start ..< end
+        let utf8Start = string.utf8.distance(from: string.startIndex, to: range.lowerBound)
+        let utf8End = string.utf8.distance(from: string.startIndex, to: range.upperBound)
+
+        let start = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8Start)
+        let end = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8End)
+
+        return AttributedString.Index(start) ..< AttributedString.Index(end)
     }
 }
 

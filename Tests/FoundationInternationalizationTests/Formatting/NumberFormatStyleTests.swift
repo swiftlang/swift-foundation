@@ -21,6 +21,9 @@ import TestSupport
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
 #endif
 
 final class NumberFormatStyleTests: XCTestCase {
@@ -1315,7 +1318,7 @@ extension Sequence where Element == Segment {
 
 extension AttributedString {
     fileprivate var string: String {
-        String(_from: self._guts.string)
+        String(self._guts.string)
     }
 }
 

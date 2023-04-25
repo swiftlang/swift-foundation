@@ -899,8 +899,6 @@ E {
         + AttributedString("D", attributes: .init().testInt(4))
         + AttributedString("E", attributes: .init().testInt(5))
         
-        print(string.runs)
-        
         let runsDescs = string.runs.map() { String(describing: $0) }
         let expected = [ """
 A {
@@ -1964,8 +1962,16 @@ E {
         var attrStr = AttributedString("Caf", attributes: AttributeContainer().testString("a"))
         attrStr += AttributedString("e", attributes: AttributeContainer().testString("b"))
         attrStr += AttributedString("\u{301}", attributes: AttributeContainer().testString("c"))
-        let strs = attrStr.runs.map { String(attrStr.characters[$0.range]) }
-        XCTAssertEqual(strs, ["Caf", "e", "\u{301}"])
+
+        // We can use the Unicode scalars view to process sub-character range boundaries.
+        let strs1 = attrStr.runs.map {
+            String(String.UnicodeScalarView(attrStr.unicodeScalars[$0.range]))
+        }
+        XCTAssertEqual(strs1, ["Caf", "e", "\u{301}"])
+
+        // The characters view rounds indices down to the nearest character boundary.
+        let strs2 = attrStr.runs.map { String(attrStr.characters[$0.range]) }
+        XCTAssertEqual(strs2, ["Caf", "", "e\u{301}"])
     }
 
     func testSettingAttributeOnSlice() throws {

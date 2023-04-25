@@ -10,6 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     public struct CharacterView : Sendable {
@@ -74,6 +80,24 @@ extension AttributedString {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributedString.CharacterView {
+    internal var _characters: BigSubstring {
+        BigSubstring(_unchecked: _guts.string, in: _range._bstringRange)
+    }
+}
+
+extension Slice<AttributedString.CharacterView> {
+    internal var _rebased: AttributedString.CharacterView {
+        let bounds = Range(uncheckedBounds: (self.startIndex, self.endIndex))
+        return AttributedString.CharacterView(base._guts, bounds)
+    }
+
+    internal var _characters: BigSubstring {
+        _rebased._characters
+    }
+}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.CharacterView: BidirectionalCollection, RangeReplaceableCollection {
     public typealias Element = Character
     public typealias Index = AttributedString.Index
@@ -126,7 +150,7 @@ extension AttributedString.CharacterView: BidirectionalCollection, RangeReplacea
     @usableFromInline
     internal func _index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.characterIndex(i._value, offsetBy: distance))
+        let j = Index(_guts.string.index(i._value, offsetBy: distance))
         precondition(j >= startIndex && j <= endIndex, "AttributedString index out of bounds")
         return j
     }
@@ -159,7 +183,7 @@ extension AttributedString.CharacterView: BidirectionalCollection, RangeReplacea
 
     public subscript(index: AttributedString.Index) -> Character {
         get {
-            _guts.string[character: index._value]
+            _guts.string[index._value]
         }
         set {
             let j = _guts.characterIndex(after: index)
@@ -197,9 +221,7 @@ extension AttributedString.CharacterView: BidirectionalCollection, RangeReplacea
         ensureUniqueReference()
 
         let replacement = AttributedString._bstring(from: newElements)
-        let sameText = _BString.characterIsEqual(
-            replacement, in: replacement.startIndex ..< replacement.endIndex,
-            to: _guts.string, in: subrange._bstringRange)
+        let sameText = (replacement[...] == _characters[subrange._bstringRange])
 
         let attributes = _guts.attributesToUseForTextReplacement(
             in: subrange,
@@ -209,9 +231,9 @@ extension AttributedString.CharacterView: BidirectionalCollection, RangeReplacea
         let startOffset = _guts.utf8Offset(of: self.startIndex)
         let endOffset = _guts.utf8Offset(of: self.endIndex)
 
-        let oldCount = _guts.string.utf8Count
+        let oldCount = _guts.string.utf8.count
         _guts.replaceSubrange(subrange, with: new)
-        let newCount = _guts.string.utf8Count
+        let newCount = _guts.string.utf8.count
 
         _range = _guts.utf8IndexRange(from: startOffset ..< endOffset + (newCount - oldCount))
     }

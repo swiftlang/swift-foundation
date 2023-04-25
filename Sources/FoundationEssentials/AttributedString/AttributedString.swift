@@ -10,6 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributedString : Sendable {
@@ -50,12 +56,12 @@ extension AttributedString {
         }
     }
 
-    internal init(_ string: _BString, attributes: _AttributeStorage) {
+    internal init(_ string: BigString, attributes: _AttributeStorage) {
         guard !string.isEmpty else {
             self.init()
             return
         }
-        let run = _InternalRun(length: string.utf8Count, attributes: attributes)
+        let run = _InternalRun(length: string.utf8.count, attributes: attributes)
         self.init(Guts(string: string, runs: [run]))
         // Only character-bound attributes can be incorrect if only one run exists
         if run.attributes.containsCharacterConstraint {
@@ -66,13 +72,13 @@ extension AttributedString {
     /// Creates a new attributed string with the given `String` value associated with the given
     /// attributes.
     public init(_ string: String, attributes: AttributeContainer = .init()) {
-        self.init(_BString(string), attributes: attributes.storage)
+        self.init(BigString(string), attributes: attributes.storage)
     }
 
     /// Creates a new attributed string with the given `Substring` value associated with the given
     /// attributes.
     public init(_ substring: Substring, attributes: AttributeContainer = .init()) {
-        self.init(_BString(substring), attributes: attributes.storage)
+        self.init(BigString(substring), attributes: attributes.storage)
     }
 
     public init<S : Sequence>(
@@ -84,8 +90,9 @@ extension AttributedString {
     }
 
     public init(_ substring: AttributedSubstring) {
-        let str = _BString(substring._guts.string, in: substring._range._bstringRange)
+        let str = BigString(substring._unicodeScalars)
         let runs = substring._guts.runs(in: substring._range)
+        assert(str.utf8.count == runs.reduce(into: 0) { $0 += $1.length })
         _guts = Guts(string: str, runs: runs)
     }
 
@@ -121,17 +128,22 @@ extension AttributedString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    internal static func _bstring(from elements: some Sequence<Character>) -> _BString {
-        if let string = elements as? String {
-            return _BString(string)
+    internal static func _bstring<S: Sequence<Character>>(from elements: S) -> BigString {
+        if S.self == String.self {
+            return BigString(_identityCast(elements, to: String.self))
         }
-        if let substring = elements as? Substring {
-            return _BString(substring)
+        if S.self == Substring.self {
+            return BigString(_identityCast(elements, to: Substring.self))
         }
-        if let string = elements as? AttributedString.CharacterView {
-            return _BString(string._guts.string, in: string._range._bstringRange)
+        if S.self == AttributedString.CharacterView.self {
+            let view = _identityCast(elements, to: AttributedString.CharacterView.self)
+            return BigString(view._characters)
         }
-        return _BString(elements)
+        if S.self == Slice<AttributedString.CharacterView>.self {
+            let view = _identityCast(elements, to: Slice<AttributedString.CharacterView>.self)
+            return BigString(view._characters)
+        }
+        return BigString(elements)
     }
 }
 
@@ -193,9 +205,9 @@ extension AttributedString { // AttributedStringAttributeMutation
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString: AttributedStringProtocol {
     public struct Index : Comparable, Sendable {
-        internal var _value: _BString.Index
+        internal var _value: BigString.Index
 
-        internal init(_ value: _BString.Index) {
+        internal init(_ value: BigString.Index) {
             self._value = value
         }
 
@@ -310,11 +322,11 @@ extension AttributedString {
 extension AttributedString {
     public subscript<R: RangeExpression>(bounds: R) -> AttributedSubstring where R.Bound == Index {
         get {
-            return AttributedSubstring(_guts, bounds.relative(to: characters))
+            return AttributedSubstring(_guts, bounds.relative(to: unicodeScalars))
         }
         _modify {
             ensureUniqueReference()
-            var substr = AttributedSubstring(_guts, bounds.relative(to: characters))
+            var substr = AttributedSubstring(_guts, bounds.relative(to: unicodeScalars))
             let ident = Self._nextModifyIdentity
             substr._identity = ident
             _guts = Guts(string: "", runs: []) // Dummy guts so the substr has (hopefully) the sole reference
@@ -334,19 +346,19 @@ extension AttributedString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Range where Bound == AttributedString.Index {
-    internal var _bstringRange: Range<_BString.Index> {
-        Range<_BString.Index>(uncheckedBounds: (lowerBound._value, upperBound._value))
+    internal var _bstringRange: Range<BigString.Index> {
+        Range<BigString.Index>(uncheckedBounds: (lowerBound._value, upperBound._value))
     }
 
     internal var _utf8OffsetRange: Range<Int> {
-        Range<Int>(uncheckedBounds: (lowerBound._value._utf8Offset, upperBound._value._utf8Offset))
+        Range<Int>(uncheckedBounds: (lowerBound._value.utf8Offset, upperBound._value.utf8Offset))
     }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension Range where Bound == _BString.Index {
+extension Range where Bound == BigString.Index {
     internal var _utf8OffsetRange: Range<Int> {
-        Range<Int>(uncheckedBounds: (lowerBound._utf8Offset, upperBound._utf8Offset))
+        Range<Int>(uncheckedBounds: (lowerBound.utf8Offset, upperBound.utf8Offset))
     }
 }
 

@@ -23,9 +23,15 @@ import TestSupport
 @testable import Foundation
 #endif
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 extension AttributedString {
     fileprivate var string: String {
-        String(_from: self._guts.string)
+        String(self._guts.string)
     }
 }
 

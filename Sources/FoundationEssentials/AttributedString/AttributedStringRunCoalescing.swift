@@ -1,3 +1,21 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2020-2023 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Guts {
     internal struct RunOffset {
@@ -254,7 +272,7 @@ extension AttributedString.Guts {
     }
     
     func indexOfRun(containing utf8Offset: Int) -> Int {
-        if utf8Offset == string.utf8Count {
+        if utf8Offset == string.utf8.count {
             return runs.count
         }
         return seekToRun(location: utf8Offset).block

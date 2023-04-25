@@ -2,13 +2,19 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2020 Apple Inc. and the Swift project authors
+// Copyright (c) 2020-2023 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
+
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
+#endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString._AttributeStorage {
@@ -93,8 +99,7 @@ extension AttributedString.Guts {
     
     private func _paragraphExtending(from idx: Index) -> Range<Index> {
         let i = idx._value
-        let block = string.utf8._getBlock(
-            for: [.findEnd], in: i ..< string.characterIndex(after: i))
+        let block = string.utf8._getBlock(for: [.findEnd], in: i ..< string.index(after: i))
         return idx ..< Index(block.end!)
     }
     
@@ -298,13 +303,13 @@ extension AttributedString.Guts {
         // Attribute keys with associated range sets that we'll need to remove.
         var invalidAttributes: [String: [Range<Int>]] = [:]
 
-        func invalidate(_ key: String, from start: _BString.Index, to end: _BString.Index) {
-            let range = start._utf8Offset ..< end._utf8Offset
+        func invalidate(_ key: String, from start: BigString.Index, to end: BigString.Index) {
+            let range = start.utf8Offset ..< end.utf8Offset
             invalidAttributes[key, default: []]._extend(with: range)
         }
 
-        let lowerBound = string.characterIndex(roundingDown: range.lowerBound._value)
-        let upperBound = string.characterIndex(roundingUp: range.upperBound._value)
+        let lowerBound = string.index(roundingDown: range.lowerBound._value)
+        let upperBound = string.index(roundingUp: range.upperBound._value)
 
         // Character-constrained attributes at the end of the previous run that are still
         // in indeterminate state.
@@ -313,10 +318,10 @@ extension AttributedString.Guts {
 
         // Iterate over all runs, gathering keys to remove in exactly one pass.
         var runStart = lowerBound
-        enumerateRuns(containing: lowerBound._utf8Offset ..< upperBound._utf8Offset) { run, location, _, status in
+        enumerateRuns(containing: lowerBound.utf8Offset ..< upperBound.utf8Offset) { run, location, _, status in
             status = .guaranteedNotModified
-            precondition(runStart._utf8Offset == location, "Internal error: Discontiguous runs")
-            let runEnd = string.utf8Index(runStart, offsetBy: run.length)
+            precondition(runStart.utf8Offset == location, "Internal error: Discontiguous runs")
+            let runEnd = string.utf8.index(runStart, offsetBy: run.length)
             defer { runStart = runEnd }
 
             // Figure out the fate of keys carried over from the previous run. (If any.)
@@ -337,13 +342,13 @@ extension AttributedString.Guts {
                 return
             }
 
-            var i = string.characterIndex(roundingDown: runStart)
+            var i = string.index(roundingDown: runStart)
             if i < runStart {
                 // If the first character starts before this run, then we need to check
                 // character-constrained attributes against `remainingAttributes` and discard
                 // any mismatches.
-                let char = string[character: i]
-                let next = string.characterIndex(after: i)
+                let char = string[i]
+                let next = string.index(after: i)
                 for (key, value) in run.attributes.contents {
                     if
                         let c = value.runBoundaries?._constrainedCharacter,
@@ -362,8 +367,8 @@ extension AttributedString.Guts {
             }
 
             while i < runEnd {
-                let char = string[character: i]
-                let next = string.characterIndex(after: i)
+                let char = string[i]
+                let next = string.index(after: i)
                 for (key, value) in run.attributes.contents {
                     if let c = value.runBoundaries?._constrainedCharacter, c != char {
                         invalidate(key, from: i, to: next)
