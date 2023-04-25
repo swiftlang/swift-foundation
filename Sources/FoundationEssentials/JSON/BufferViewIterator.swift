@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-@frozen @usableFromInline
 internal struct BufferViewIterator<Element> {
     var curPointer: UnsafeRawPointer
     let endPointer: UnsafeRawPointer
@@ -27,7 +26,7 @@ internal struct BufferViewIterator<Element> {
 
 extension BufferViewIterator: IteratorProtocol {
 
-    @usableFromInline mutating func next() -> Element? {
+    mutating func next() -> Element? {
         guard curPointer < endPointer else { return nil }
         defer {
             curPointer = curPointer.advanced(by: MemoryLayout<Element>.stride)

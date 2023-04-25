@@ -858,7 +858,7 @@ extension JSONScanner {
         }
     }
 
-    @inlinable @inline(__always)
+    @inline(__always)
     internal static func noByteMatches(_ asciiByte: UInt8, in hexString: UInt32) -> Bool {
         assert(asciiByte & 0x80 == 0)
         // Copy asciiByte of interest to mask.
@@ -1211,7 +1211,6 @@ extension Float : PrevalidatedJSONNumberBufferConvertible {
     }
 }
 
-@_alwaysEmitIntoClient
 internal func _parseIntegerDigits<Result: FixedWidthInteger>(
     _ codeUnits: BufferView<UInt8>, isNegative: Bool
 ) -> Result? {
@@ -1243,7 +1242,6 @@ internal func _parseIntegerDigits<Result: FixedWidthInteger>(
     return result
 }
 
-@_alwaysEmitIntoClient
 internal func _parseInteger<Result: FixedWidthInteger>(_ codeUnits: BufferView<UInt8>) -> Result? {
     guard _fastPath(!codeUnits.isEmpty) else { return nil }
 
