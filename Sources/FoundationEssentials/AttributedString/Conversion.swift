@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2020 Apple Inc. and the Swift project authors
+// Copyright (c) 2020-2023 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -10,23 +10,26 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 #if FOUNDATION_FRAMEWORK
 import Darwin
 @_implementationOnly import ReflectionInternal
 @_implementationOnly import os
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
 #endif
 
 extension String {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public init(_ characters: Slice<AttributedString.CharacterView>) {
-        let range = Range(uncheckedBounds: (characters.startIndex, characters.endIndex))
-        self.init(_from: characters.base._guts.string, in: range._bstringRange)
+        self.init(characters._characters)
     }
 
     #if true // FIXME: Make this public.
     @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
     internal init(_characters: AttributedString.CharacterView) {
-        self.init(_from: _characters._guts.string, in: _characters._range._bstringRange)
+        self.init(_characters._characters)
     }
     #else
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -44,7 +47,7 @@ extension String {
     @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
     @usableFromInline
     internal init(_characters: AttributedString.CharacterView) {
-        self.init(_from: _characters._guts.string, in: _characters._range._bstringRange)
+        self.init(_characters._characters)
     }
     #endif
 }
@@ -210,15 +213,15 @@ public extension NSAttributedString {
         otherAttributeTypes: [String : any AttributedStringKey.Type] = [:],
         options: _AttributeConversionOptions = []
     ) throws {
-        // FIXME: Consider making an NSString subclass backed by a _BString
-        let result = NSMutableAttributedString(string: String(_from: attrStr._guts.string))
+        // FIXME: Consider making an NSString subclass backed by a BigString
+        let result = NSMutableAttributedString(string: String(attrStr._guts.string))
         var attributeKeyTypes: [String : any AttributedStringKey.Type] = otherAttributeTypes
         // Iterate through each run of the source
         var nsStartIndex = 0
         var stringStart = attrStr._guts.string.startIndex
         for run in attrStr._guts.runs {
-            let stringEnd = attrStr._guts.string.utf8Index(stringStart, offsetBy: run.length)
-            let utf16Length = attrStr._guts.string.utf16Distance(from: stringStart, to: stringEnd)
+            let stringEnd = attrStr._guts.string.utf8.index(stringStart, offsetBy: run.length)
+            let utf16Length = attrStr._guts.string.utf16.distance(from: stringStart, to: stringEnd)
             let range = NSRange(location: nsStartIndex, length: utf16Length)
             let attributes = try Dictionary(AttributeContainer(run.attributes), including: scope, attributeKeyTypes: &attributeKeyTypes, options: options)
             result.setAttributes(attributes, range: range)
@@ -376,7 +379,7 @@ extension String.Index {
     // FIXME: and this entry point is not given that.)
     // FIXME: This API ought to be deprecated, with clients migrating to e.g. using UTF-8 offsets.
     public init?<S: StringProtocol>(_ sourcePosition: AttributedString.Index, within target: S) {
-        let utf8Offset = sourcePosition._value._utf8Offset
+        let utf8Offset = sourcePosition._value.utf8Offset
         let isTrailingSurrogate = sourcePosition._value._isUTF16TrailingSurrogate
         let i = String.Index(_utf8Offset: utf8Offset, utf16TrailingSurrogate: isTrailingSurrogate)
         self.init(i, within: target)
@@ -397,7 +400,7 @@ extension AttributedString.Index {
         else {
             return nil
         }
-        let j = target.__guts.string.characterIndex(roundingDown: i)
+        let j = target.__guts.string.index(roundingDown: i)
         guard j == i else { return nil }
         self.init(j)
     }
@@ -416,9 +419,9 @@ extension NSRange {
             range.lowerBound >= target.startIndex && range.upperBound <= target.endIndex,
             "Range out of bounds")
         let str = target.__guts.string
-        let utf16Base = str.utf16Offset(of: target.startIndex._value)
-        let utf16Start = str.utf16Offset(of: range.lowerBound._value)
-        let utf16Length = str.utf16Distance(
+        let utf16Base = str.utf16.distance(from: str.startIndex, to: target.startIndex._value)
+        let utf16Start = str.utf16.distance(from: str.startIndex, to: range.lowerBound._value)
+        let utf16Length = str.utf16.distance(
             from: range.lowerBound._value,
             to: range.upperBound._value)
         self.init(location: utf16Start - utf16Base, length: utf16Length)
@@ -460,35 +463,37 @@ extension AttributedString {
         typealias Index = String.Index
         typealias Element = Index
         
-        let _string: _BString
-        let _range: Range<_BString.Index>
+        let _string: BigString
+        let _range: Range<BigString.Index>
 
-        init(_ string: _BString, _ range: Range<_BString.Index>) {
+        init(_ string: BigString, _ range: Range<BigString.Index>) {
             self._string = string
             self._range = range
         }
 
         subscript(position: String.Index) -> String.Index { position }
 
-        var startIndex: String.Index { Index(_utf8Offset: _range.lowerBound._utf8Offset) }
-        var endIndex: String.Index { Index(_utf8Offset: _range.upperBound._utf8Offset) }
+        var startIndex: String.Index { Index(_utf8Offset: _range.lowerBound.utf8Offset) }
+        var endIndex: String.Index { Index(_utf8Offset: _range.upperBound.utf8Offset) }
         func index(after i: String.Index) -> Index {
             guard let j = _string.index(from: i) else {
                 preconditionFailure("Index out of bounds")
             }
-            let k = _string.characterIndex(after: j)
-            return Index(_utf8Offset: k._utf8Offset)
+            let k = _string.index(after: j)
+            return Index(_utf8Offset: k.utf8Offset)
         }
     }
 }
 
-extension _BString {
+extension BigString {
     func index(from stringIndex: String.Index) -> Index? {
         if stringIndex._canBeUTF8 {
             let utf8Offset = stringIndex._utf8Offset
-            let utf16Delta = stringIndex._utf16Delta
-            guard utf16Delta <= 1 else { return nil }
-            let j = _BString.Index(_utf8Offset: utf8Offset, utf16TrailingSurrogate: utf16Delta > 0)
+            // Note: ideally we should also check that the result actually addresses a
+            // trailing surrogate, when this flag is true.
+            let utf16TrailingSurrogate = stringIndex._isUTF16TrailingSurrogate
+            let j = BigString.Index(
+                _utf8Offset: utf8Offset, utf16TrailingSurrogate: utf16TrailingSurrogate)
             guard j <= endIndex else { return nil }
             // Note: if utf16Delta > 0, ideally we should also check that the result
             // addresses a trailing surrogate.
@@ -496,20 +501,17 @@ extension _BString {
         }
         let utf16Offset = stringIndex._abi_encodedOffset
         let utf8Delta = stringIndex._abi_transcodedOffset
-        guard utf16Offset <= self.utf16Count else { return nil }
-        let j = utf16Index(at: utf16Offset)
+        guard utf16Offset <= self.utf16.count else { return nil }
+        let j = self.utf16.index(self.startIndex, offsetBy: utf16Offset)
         guard utf8Delta > 0 else { return j }
         // Note: if utf8Delta > 0, ideally we should also check that the result
         // addresses a scalar that actually does have that many continuation bytes.
-        return Index(
-            baseUTF8Offset: j._utf8BaseOffset,
-            rope: j._rope!,
-            chunk: String.Index(_utf8Offset: j._utf8ChunkOffset + utf8Delta))
+        return self.utf8.index(j, offsetBy: utf8Delta)
     }
 
     func stringIndex(from index: Index) -> String.Index? {
         String.Index(
-            _utf8Offset: index._utf8Offset,
+            _utf8Offset: index.utf8Offset,
             utf16TrailingSurrogate: index._isUTF16TrailingSurrogate)
     }
 }
@@ -524,10 +526,11 @@ extension Range where Bound == AttributedString.Index {
         guard range.location != NSNotFound else { return nil }
         guard range.location >= 0, range.length >= 0 else { return nil }
         let endOffset = range.location + range.length
-        guard endOffset <= string.__guts.string.utf16Count else { return nil }
+        let bstr = string.__guts.string
+        guard endOffset <= bstr.utf16.count else { return nil }
 
-        let start = string.__guts.string.utf16Index(at: range.location)
-        let end = string.__guts.string.utf16Index(start, offsetBy: range.length)
+        let start = bstr.utf16.index(bstr.startIndex, offsetBy: range.location)
+        let end = bstr.utf16.index(start, offsetBy: range.length)
 
         guard start >= string.startIndex._value, end <= string.endIndex._value else { return nil }
         self.init(uncheckedBounds: (.init(start), .init(end)))
@@ -584,12 +587,12 @@ extension AttributedString {
         let string: Substring
         init(_ string: Substring) { self.string = string }
         subscript(position: Index) -> Index { position }
-        var startIndex: Index { Index(_BString.Index(_utf8Offset: string.startIndex._utf8Offset)) }
-        var endIndex: Index { Index(_BString.Index(_utf8Offset: string.endIndex._utf8Offset)) }
+        var startIndex: Index { Index(BigString.Index(_utf8Offset: string.startIndex._utf8Offset)) }
+        var endIndex: Index { Index(BigString.Index(_utf8Offset: string.endIndex._utf8Offset)) }
         func index(after i: Index) -> Index {
-            let j = String.Index(_utf8Offset: i._value._utf8Offset)
+            let j = String.Index(_utf8Offset: i._value.utf8Offset)
             let k = string.index(after: j)
-            return Index(_BString.Index(_utf8Offset: k._utf8Offset))
+            return Index(BigString.Index(_utf8Offset: k._utf8Offset))
         }
     }
 }
@@ -623,10 +626,10 @@ extension Range where Bound == String.Index {
         // (at least) the nearest scalar boundary, but NSRange conversions can still generate
         // indices addressing trailing surrogates, and we want to preserve those here.
         let start = String.Index(
-            _utf8Offset: _range.lowerBound._value._utf8Offset,
+            _utf8Offset: _range.lowerBound._value.utf8Offset,
             utf16TrailingSurrogate: _range.lowerBound._value._isUTF16TrailingSurrogate)
         let end = String.Index(
-            _utf8Offset: _range.upperBound._value._utf8Offset,
+            _utf8Offset: _range.upperBound._value.utf8Offset,
             utf16TrailingSurrogate: _range.upperBound._value._isUTF16TrailingSurrogate)
 
         guard string.startIndex <= start, end <= string.endIndex else { return nil }

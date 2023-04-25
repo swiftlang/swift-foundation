@@ -12,6 +12,9 @@
 
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import ReflectionInternal
+@_implementationOnly @_spi(Unstable) import CollectionsInternal
+#else
+import _RopeModule
 #endif
 
 // MARK: AttributedStringKey API
