@@ -11,17 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-public struct Predicate<Input> : Sendable {
+public struct Predicate<each Input> : Sendable {
     public let expression : any StandardPredicateExpression<Bool>
-    public let variable: (PredicateExpressions.Variable<Input>)
-    
-    public init<E: StandardPredicateExpression<Bool>>(_ builder: (PredicateExpressions.Variable<Input>) -> E) {
-        self.variable = PredicateExpressions.Variable<Input>()
-        self.expression = builder(self.variable)
+    public let variable: (repeat PredicateExpressions.Variable<each Input>)
+
+    public init<E: StandardPredicateExpression<Bool>>(_ builder: (repeat PredicateExpressions.Variable<each Input>) -> E) {
+        self.variable = (repeat PredicateExpressions.Variable<each Input>())
+        self.expression = builder(repeat each variable.element)
     }
     
-    public func evaluate(_ input: Input) throws -> Bool {
-        try expression.evaluate(.init((variable, input)))
+    public func evaluate(_ input: repeat each Input) throws -> Bool {
+        try expression.evaluate(
+            .init(repeat (each variable.element, each input))
+        )
     }
 }
 
