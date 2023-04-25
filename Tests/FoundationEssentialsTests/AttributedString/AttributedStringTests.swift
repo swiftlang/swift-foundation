@@ -899,8 +899,6 @@ E {
         + AttributedString("D", attributes: .init().testInt(4))
         + AttributedString("E", attributes: .init().testInt(5))
         
-        print(string.runs)
-        
         let runsDescs = string.runs.map() { String(describing: $0) }
         let expected = [ """
 A {
