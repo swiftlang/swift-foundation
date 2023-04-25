@@ -110,13 +110,49 @@ extension PredicateExpressions.IntRemainder : StandardPredicateExpression where 
 extension PredicateExpressions.IntDivision : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.FloatDivision : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.FloatDivision : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(lhs)
+        try container.encode(rhs)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        lhs = try container.decode(LHS.self)
+        rhs = try container.decode(RHS.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.IntRemainder : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.IntRemainder : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(lhs)
+        try container.encode(rhs)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        lhs = try container.decode(LHS.self)
+        rhs = try container.decode(RHS.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.IntDivision : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.IntDivision : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(lhs)
+        try container.encode(rhs)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        lhs = try container.decode(LHS.self)
+        rhs = try container.decode(RHS.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.FloatDivision : Sendable where LHS : Sendable, RHS : Sendable {}
