@@ -779,24 +779,39 @@ extension JSONDecoderImpl: Decoder {
     func isTrueZero(_ buffer: BufferView<UInt8>) -> Bool {
         var remainingBuffer = buffer
 
+        // Non-zero numbers are allowed after 'e'/'E'. Since the format is already validated at this stage, we can stop scanning as soon as we see one.
         let nonZeroRange = UInt8(ascii: "1") ... UInt8(ascii: "9")
+
+        @inline(__always)
+        func check(_ off: Int) -> Bool? {
+            switch remainingBuffer[uncheckedOffset: off] {
+            case nonZeroRange: return false
+            case UInt8(ascii: "e"), UInt8(ascii: "E"): return true
+            default: return nil
+            }
+        }
+
+        // Manual loop unrolling.
         while remainingBuffer.count >= 4 {
-            if case nonZeroRange = remainingBuffer[uncheckedOffset: 0] { return false }
-            if case nonZeroRange = remainingBuffer[uncheckedOffset: 1] { return false }
-            if case nonZeroRange = remainingBuffer[uncheckedOffset: 2] { return false }
-            if case nonZeroRange = remainingBuffer[uncheckedOffset: 3] { return false }
+            if let res = check(0) { return res }
+            if let res = check(1) { return res }
+            if let res = check(2) { return res }
+            if let res = check(3) { return res }
+
             remainingBuffer = remainingBuffer.dropFirst(4)
         }
 
+        // Process any remaining bytes in the same way.
         switch remainingBuffer.count {
         case 3:
-            if case nonZeroRange = remainingBuffer[uncheckedOffset: 2] { return false }
+            if let res = check(2) { return res }
             fallthrough
         case 2:
-            if case nonZeroRange = remainingBuffer[uncheckedOffset: 1] { return false }
+            if let res = check(1) { return res }
             fallthrough
         case 1:
-            if case nonZeroRange = remainingBuffer[uncheckedOffset: 0] { return false }
+            if let res = check(0) { return res }
+            break
         default:
             break
         }
