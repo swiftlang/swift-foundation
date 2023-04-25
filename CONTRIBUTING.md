@@ -2,7 +2,7 @@
 
 Contributions to Foundation are welcome! This project follows the [contribution guidelines for the Swift project](https://swift.org/contributing/#contributing-code).
 
-All changes that affect public types, methods, or other API must be proposed through the [Foundation Evolution Process](Evolution.md).
+Please see the [Foundation Evolution Process](Evolution.md) for any change that adds or modifies public API.
 
 ## Licensing
 
