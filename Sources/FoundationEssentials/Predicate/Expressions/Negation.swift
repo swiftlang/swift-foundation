@@ -35,7 +35,17 @@ extension PredicateExpressions {
 extension PredicateExpressions.Negation : StandardPredicateExpression where Wrapped : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Negation : Codable where Wrapped : Codable {}
+extension PredicateExpressions.Negation : Codable where Wrapped : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(wrapped)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        wrapped = try container.decode(Wrapped.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Negation : Sendable where Wrapped : Sendable {}

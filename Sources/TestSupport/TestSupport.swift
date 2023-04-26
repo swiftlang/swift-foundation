@@ -88,6 +88,8 @@ public typealias PredicateExpressions = Foundation.PredicateExpressions
 public typealias StandardPredicateExpression = Foundation.StandardPredicateExpression
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias PredicateError = Foundation.PredicateError
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+public typealias PredicateCodableConfiguration = Foundation.PredicateCodableConfiguration
 
 #else
 

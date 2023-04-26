@@ -121,13 +121,53 @@ extension PredicateExpressions.SequenceContainsWhere : StandardPredicateExpressi
 extension PredicateExpressions.SequenceAllSatisfy : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.SequenceContains : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.SequenceContains : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(sequence)
+        try container.encode(element)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        sequence = try container.decode(LHS.self)
+        element = try container.decode(RHS.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.SequenceContainsWhere : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.SequenceContainsWhere : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(sequence)
+        try container.encode(test)
+        try container.encode(variable)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        sequence = try container.decode(LHS.self)
+        test = try container.decode(RHS.self)
+        variable = try container.decode(PredicateExpressions.Variable<Element>.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.SequenceAllSatisfy : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.SequenceAllSatisfy : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(sequence)
+        try container.encode(test)
+        try container.encode(variable)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        sequence = try container.decode(LHS.self)
+        test = try container.decode(RHS.self)
+        variable = try container.decode(PredicateExpressions.Variable<Element>.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.SequenceContains : Sendable where LHS : Sendable, RHS : Sendable {}

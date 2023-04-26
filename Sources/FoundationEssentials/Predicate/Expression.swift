@@ -83,13 +83,30 @@ extension PredicateExpressions {
         let id: UInt
         private static let nextID = LockedState(initialState: UInt(0))
         
-        fileprivate init() {
+        init() {
             self.id = Self.nextID.withLock { value in
                 defer {
                     (value, _) = value.addingReportingOverflow(1)
                 }
                 return value
             }
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(id)
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let decodedID = try container.decode(UInt.self)
+#if FOUNDATION_FRAMEWORK
+            if let newVariable = _ThreadLocal[.predicateArchivingState]?.createVariable(for: decodedID) {
+                self = newVariable
+                return
+            }
+#endif // FOUNDATION_FRAMEWORK
+            self.id = decodedID
         }
     }
     
@@ -113,6 +130,7 @@ extension PredicateExpressions {
         public let keyPath: Swift.KeyPath<Root.Output, Output> & Sendable
         
         public init(root: Root, keyPath: Swift.KeyPath<Root.Output, Output> & Sendable) {
+            keyPath._validateForPredicateUsage()
             self.root = root
             self.keyPath = keyPath
         }
@@ -150,17 +168,39 @@ extension PredicateExpressions {
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.KeyPath : Codable where Root : Codable {
-    private enum CodingKeys: String, CodingKey {
+    private enum CodingKeys : CodingKey {
         case root
-        case keyPath
-    }
-    
-    public init(from decoder: Decoder) throws {
-        throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Decoding a PredicateExpressions.KeyPath is not currently supported"))
+        case identifier
     }
     
     public func encode(to encoder: Encoder) throws {
-        throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: "Encoding a PredicateExpressions.KeyPath is not currently supported"))
+#if FOUNDATION_FRAMEWORK
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(root, forKey: .root)
+        guard let identifier = _ThreadLocal[.predicateArchivingState]?.configuration._identifier(for: keyPath) else {
+            throw EncodingError.invalidValue(keyPath, .init(codingPath: container.codingPath, debugDescription: "The '\(keyPath.debugDescription)' keypath is not in the provided allowlist"))
+        }
+        try container.encode(identifier, forKey: .identifier)
+#else
+        throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: "Encoding PredicateExpressions.KeyPath is not supported"))
+#endif // FOUNDATION_FRAMEWORK
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+#if FOUNDATION_FRAMEWORK
+        root = try container.decode(Root.self, forKey: .root)
+        let identifier = try container.decode(String.self, forKey: .identifier)
+        guard let anykp = _ThreadLocal[.predicateArchivingState]?.configuration._keyPath(for: identifier, rootType: Root.Output.self) else {
+            throw DecodingError.dataCorruptedError(forKey: .identifier, in: container, debugDescription: "A keypath for the '\(identifier)' identifier is not in the provided allowlist")
+        }
+        guard let kp = anykp as? Swift.KeyPath<Root.Output, Output> else {
+            throw DecodingError.dataCorruptedError(forKey: .identifier, in: container, debugDescription: "Key path '\(anykp.debugDescription)' (KeyPath<\(_typeName(type(of: anykp).rootType)), \(_typeName(type(of: anykp).valueType))>) for identifier '\(identifier)' did not match the expression's requirement for KeyPath<\(_typeName(Root.Output.self)), \(_typeName(Output.self))>")
+        }
+        self.keyPath = kp
+#else
+        throw DecodingError.dataCorruptedError(forKey: .identifier, in: container, debugDescription: "Decoding PredicateExpressions.KeyPath is not supported")
+#endif // FOUNDATION_FRAMEWORK
     }
 }
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
@@ -170,7 +210,17 @@ extension PredicateExpressions.KeyPath : Sendable where Root : Sendable {}
 extension PredicateExpressions.KeyPath : StandardPredicateExpression where Root : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Value : Codable where Output : Codable {}
+extension PredicateExpressions.Value : Codable where Output : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try container.decode(Output.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Value : Sendable where Output : Sendable {}

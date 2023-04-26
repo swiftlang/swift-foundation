@@ -121,13 +121,49 @@ extension PredicateExpressions.NilCoalesce : StandardPredicateExpression where L
 extension PredicateExpressions.ForcedUnwrap : StandardPredicateExpression where LHS : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.OptionalFlatMap : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.OptionalFlatMap : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(wrapped)
+        try container.encode(transform)
+        try container.encode(variable)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        wrapped = try container.decode(LHS.self)
+        transform = try container.decode(RHS.self)
+        variable = try container.decode(PredicateExpressions.Variable<Wrapped>.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.NilCoalesce : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.NilCoalesce : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(lhs)
+        try container.encode(rhs)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        lhs = try container.decode(LHS.self)
+        rhs = try container.decode(RHS.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.ForcedUnwrap : Codable where LHS : Codable {}
+extension PredicateExpressions.ForcedUnwrap : Codable where LHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(lhs)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        lhs = try container.decode(LHS.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.OptionalFlatMap : Sendable where LHS : Sendable, RHS : Sendable {}

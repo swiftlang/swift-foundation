@@ -78,13 +78,43 @@ extension PredicateExpressions.ForceCast : StandardPredicateExpression where Inp
 extension PredicateExpressions.TypeCheck : StandardPredicateExpression where Input : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.ConditionalCast : Codable where Input : Codable {}
+extension PredicateExpressions.ConditionalCast : Codable where Input : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(input)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        input = try container.decode(Input.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.ForceCast : Codable where Input : Codable {}
+extension PredicateExpressions.ForceCast : Codable where Input : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(input)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        input = try container.decode(Input.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.TypeCheck : Codable where Input : Codable {}
+extension PredicateExpressions.TypeCheck : Codable where Input : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(input)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        input = try container.decode(Input.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ConditionalCast : Sendable where Input : Sendable {}
