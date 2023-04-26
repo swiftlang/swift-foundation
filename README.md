@@ -79,6 +79,6 @@ The Foundation framework may have the occasional need to add Darwin-specific API
 
 Foundation welcomes contributions from the community, including bug fixes, tests, documentation, and ports to new platforms.
 
-The project uses the [Swift forums for discussion](https://forums.swift.org/c/related-projects/foundation/99) and [GitHub Issues](https://github.com/apple/swift-corelibs-foundation) for tracking bugs, feature requests, and other work.
+The project uses the [Swift forums for discussion](https://forums.swift.org/c/related-projects/foundation/99) and [GitHub Issues](https://github.com/apple/swift-foundation/issues) for tracking bugs, feature requests, and other work.
 
 Please see the [CONTRIBUTING](https://github.com/apple/swift-foundation/blob/main/CONTRIBUTING.md) document for more information, including the process for accepting community contributions for new API in Foundation.
