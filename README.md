@@ -1,13 +1,16 @@
 # Foundation
 
-The Foundation package defines a low-level layer of functionality that is useful for many applications. It is designed with these goals in mind:
+Foundation provides a base layer of functionality useful in many applications, including fundamental types for numbers, data, collections, and dates, as well as functions for task management, file system access, and more.
+
+This package is a work-in-progress that aims to build a new and unified Swift implementation of Foundation for all platforms. The project is in its early stages, with features still to be implemented.  Contributions are welcome, including API implementations, bug fixes, documentation, tests and ports to new platforms.
+
+It is designed with these goals in mind:
 
 * Provide a small set of basic utility types.
 * Make software development easier by introducing consistent conventions that can be widely adopted by the Swift ecosystem.
 * Support internationalization and localization, to make software accessible to users around the world.
 * Provide a level of OS independence, to enhance portability.
 
-This project aims to build a new and unified Swift implementation of Foundation for all platforms. The project is in its early stages, with features still to be implemented.  Contributions are welcome, including API implementations, bug fixes, documentation, tests and ports to new platforms.
 ## Current State
 
 The following types are available in the preview package, with more to come later. Many types, including `JSONEncoder`, `Calendar`, `TimeZone`, and `Locale` are all-new Swift implementations. `FormatStyle` and `ParseStyle` available as open source for the first time.
