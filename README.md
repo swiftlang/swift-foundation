@@ -1,6 +1,10 @@
 # Foundation
 
-The Foundation package defines a low-level layer of functionality that is useful for many applications. It is designed with these goals in mind:
+Foundation provides a base layer of functionality useful in many applications, including fundamental types for numbers, data, collections, and dates, as well as functions for task management, file system access, and networking.
+
+This package is a work-in-progress replacement for the Foundation library used in many apps across the Swift ecosystem today. It aims to provide a single implementation of Foundation across platforms that is written in Swift.
+
+It is designed with these goals in mind:
 
 * Provide a small set of basic utility types.
 * Make software development easier by introducing consistent conventions that can be widely adopted by the Swift ecosystem.
