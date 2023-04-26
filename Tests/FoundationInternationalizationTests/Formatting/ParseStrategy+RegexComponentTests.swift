@@ -188,7 +188,6 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         XCTAssertEqual(matches.map(\.output.1), expectedDates)
         XCTAssertEqual(matches.map(\.output.3), expectedAmounts)
     }
-#endif
 
     func testAPITestSuites() {
         let input = "Test Suite 'MergeableSetTests' started at 2021-07-08 10:19:35.418"
@@ -225,6 +224,7 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         // dateFormatter.date(from: "2021-07-08 10:19:35.418")!
         XCTAssertEqual(match.output.3, Date(timeIntervalSinceReferenceDate: 647432375.418))
     }
+#endif
 
     func testVariousDatesAndTimes() {
         func verify(_ str: String, _ strategy: Date.ParseStrategy, _ expected: String?, file: StaticString = #file, line: UInt = #line) {
