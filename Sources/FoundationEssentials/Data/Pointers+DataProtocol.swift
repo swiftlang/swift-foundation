@@ -11,14 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeRawBufferPointer : DataProtocol {
     public var regions: CollectionOfOne<UnsafeRawBufferPointer> {
         return CollectionOfOne(self)
     }
 }
 
-@available(macOS 10.10, iOS 8.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeBufferPointer : DataProtocol where Element == UInt8 {
     public var regions: CollectionOfOne<UnsafeBufferPointer<Element>> {
         return CollectionOfOne(self)

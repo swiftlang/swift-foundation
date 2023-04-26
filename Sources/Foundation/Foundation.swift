@@ -11,4 +11,3 @@
 
 @_exported import FoundationEssentials
 @_exported import FoundationInternationalization
-@_exported import FoundationNetworking

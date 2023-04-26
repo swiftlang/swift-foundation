@@ -35,7 +35,7 @@
 #define TARGET_OS_BSD 0
 #endif
 
-#if defined(_Win32)
+#if defined(_WIN32)
 #define TARGET_OS_WINDOWS 1
 #else
 #define TARGET_OS_WINDOWS 0

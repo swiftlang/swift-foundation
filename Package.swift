@@ -1,26 +1,22 @@
-// swift-tools-version: 5.7
+// swift-tools-version: 5.8
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
-let swiftSettings: [SwiftSetting] = [
-    .unsafeFlags([
-        "-Xfrontend", "-define-availability",
-        "-Xfrontend", "Future:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999"
-    ])
-]
-
 let package = Package(
     name: "FoundationPreview",
+    platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(name: "FoundationPreview", targets: ["FoundationPreview"]),
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
-        .library(name: "FoundationNetworking", targets: ["FoundationNetworking"])
     ],
     dependencies: [
-        .package(url: "git@github.com:apple/swift-foundation-icu.git", branch: "main")
+        .package(
+          url: "https://github.com/apple/swift-collections",
+          revision: "2ca40e2a653e5e04a1c5468a35fc7494ef6db1d3"), // on release/1.1
+        .package(url: "git@github.com:apple/swift-foundation-icu.git", exact: "0.0.1")
     ],
     targets: [
         // Foundation (umbrella)
@@ -29,7 +25,6 @@ let package = Package(
             dependencies: [
                 "FoundationEssentials",
                 "FoundationInternationalization",
-                "FoundationNetworking",
             ],
             path: "Sources/Foundation"),
 
@@ -39,30 +34,31 @@ let package = Package(
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
             "FoundationInternationalization",
-            "FoundationNetworking"
         ]),
 
         // FoundationEssentials
-        .target(name: "FoundationEssentials", dependencies: ["_CShims"], swiftSettings: swiftSettings),
+        .target(
+          name: "FoundationEssentials",
+          dependencies: [
+            "_CShims",
+            .product(name: "_RopeModule", package: "swift-collections"),
+          ],
+          swiftSettings: [.enableExperimentalFeature("VariadicGenerics")]
+        ),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
             "FoundationEssentials"
-        ], swiftSettings: swiftSettings),
+        ]),
 
         // FoundationInternationalization
         .target(name: "FoundationInternationalization", dependencies: [
+            .target(name: "FoundationEssentials"),
+            .target(name: "_CShims"),
             .product(name: "FoundationICU", package: "swift-foundation-icu")
         ]),
         .testTarget(name: "FoundationInternationalizationTests", dependencies: [
             "TestSupport",
             "FoundationInternationalization"
-        ]),
-
-        // FoundationNetworking
-        .target(name: "FoundationNetworking"),
-        .testTarget(name: "FoundationNetworkingTests", dependencies: [
-            "TestSupport",
-            "FoundationNetworking"
         ]),
     ]
 )
