@@ -68,6 +68,7 @@ final class ParseStrategyMatchTests: XCTestCase {
         XCTAssertEqual(res.output.1, expectedDate)
     }
 
+// https://github.com/apple/swift-foundation/issues/60
 #if false
     func testAPIStatement() {
 
