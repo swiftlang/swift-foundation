@@ -41,7 +41,19 @@ For internationalization support on non-Darwin platforms, we created a separate 
 
 Using a common version of ICU will result in more reliable and consistent results when formatting dates, times, and numbers.
 
-> Note: The Foundation Preview package depends on the under-development [Swift 5.9 toolchain](https://www.swift.org/download).
+## Building and Testing
+
+Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download) on macOS and Linux. On macOS, macOS Ventura 13.3.1 is the minimum supported version.
+
+### macOS
+- Download the latest Xcode from the App Store
+- Download and install the Swift 5.9 toolchain for Xcode from [swift.org](https://www.swift.org/download)
+- Launch Xcode and select the downloaded 5.9 toolchains via *Xcode > Toolchains*
+- Open `Package.swift` and select *Debug > Test*
+
+### Linux
+- Download the latest [Swift 5.9 docker image](https://www.swift.org/download/#docker) and follow instructions to attach
+- Run `swift test`
 
 ### Development Focus for 2023
 
