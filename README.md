@@ -1,6 +1,6 @@
 # Foundation
 
-The Foundation framework defines a low-level layer of functionality that is useful for many applications. It is designed with these goals in mind:
+The Foundation package defines a low-level layer of functionality that is useful for many applications. It is designed with these goals in mind:
 
 * Provide a small set of basic utility types.
 * Make software development easier by introducing consistent conventions that can be widely adopted by the Swift ecosystem.
