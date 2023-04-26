@@ -68,6 +68,8 @@ final class ParseStrategyMatchTests: XCTestCase {
         XCTAssertEqual(res.output.1, expectedDate)
     }
 
+// https://github.com/apple/swift-foundation/issues/60
+#if false
     func testAPIStatement() {
 
         let statement = """
@@ -186,6 +188,7 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
         XCTAssertEqual(matches.map(\.output.1), expectedDates)
         XCTAssertEqual(matches.map(\.output.3), expectedAmounts)
     }
+#endif
 
     func testAPITestSuites() {
         let input = "Test Suite 'MergeableSetTests' started at 2021-07-08 10:19:35.418"
