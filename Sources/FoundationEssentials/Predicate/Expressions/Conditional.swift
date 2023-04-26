@@ -52,7 +52,21 @@ extension PredicateExpressions {
 extension PredicateExpressions.Conditional : StandardPredicateExpression where Test : StandardPredicateExpression, If : StandardPredicateExpression, Else : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Conditional : Codable where Test : Codable, If : Codable, Else : Codable {}
+extension PredicateExpressions.Conditional : Codable where Test : Codable, If : Codable, Else : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(test)
+        try container.encode(trueBranch)
+        try container.encode(falseBranch)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        test = try container.decode(Test.self)
+        trueBranch = try container.decode(If.self)
+        falseBranch = try container.decode(Else.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Conditional : Sendable where Test : Sendable, If : Sendable, Else : Sendable {}

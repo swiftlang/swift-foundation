@@ -52,7 +52,21 @@ extension PredicateExpressions {
 extension PredicateExpressions.Filter : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(sequence)
+        try container.encode(filter)
+        try container.encode(variable)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        sequence = try container.decode(LHS.self)
+        filter = try container.decode(RHS.self)
+        variable = try container.decode(PredicateExpressions.Variable<Element>.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Filter : Sendable where LHS : Sendable, RHS : Sendable {}

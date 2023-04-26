@@ -58,7 +58,21 @@ extension PredicateExpressions {
 extension PredicateExpressions.Comparison : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Comparison : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.Comparison : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(lhs)
+        try container.encode(rhs)
+        try container.encode(op)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        lhs = try container.decode(LHS.self)
+        rhs = try container.decode(RHS.self)
+        op = try container.decode(PredicateExpressions.ComparisonOperator.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Comparison : Sendable where LHS : Sendable, RHS : Sendable {}

@@ -44,7 +44,19 @@ extension PredicateExpressions {
 extension PredicateExpressions.Conjunction : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Conjunction : Codable where LHS : Codable, RHS : Codable {}
+extension PredicateExpressions.Conjunction : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(lhs)
+        try container.encode(rhs)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        lhs = try container.decode(LHS.self)
+        rhs = try container.decode(RHS.self)
+    }
+}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Conjunction : Sendable where LHS : Sendable, RHS : Sendable {}
