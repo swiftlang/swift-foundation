@@ -43,7 +43,7 @@ Using a common version of ICU will result in more reliable and consistent result
 
 > Note: The Foundation Preview package depends on the under-development [Swift 5.9 toolchain](https://www.swift.org/download).
 
-### Current Development Focus
+### Development Focus for 2023
 
 Quality and performance are our two most important goals for the project. Therefore, the plans for the first half of 2023 are continuing refinement of the core API, adding to our suites of unit and performance tests, and expanding to other platforms where possible, using the most relevant code from [swift-corelibs-foundation](https://github.com/apple/swift-corelibs-foundation).
 
@@ -65,7 +65,7 @@ For Foundation, our goal is to create the best fundamental data types and intern
 
 Moving Foundation into this future requires not only an improved implementation, but also an improved process for using it outside of Apple’s platforms. Therefore, Foundation now has a path for the community to add new API for the benefit of Swift developers on every platform.
 
-The Foundation package is an independent project in its early incubation stages. Inspired by the workgroups in the Swift project, it has a workgroup to (a) oversee [community API proposals](/Users/tony/Desktop/FoundationPreview_Final.md) and (b) to closely coordinate with developments in the Swift project and Apple platforms. In the future, we will explore how to sunset the existing [swift-corelibs-foundation](https://github.com/apple/swift-corelibs-foundation) and migrate to using the new version of Foundation created by this project.
+The Foundation package is an independent project in its early incubation stages. Inspired by the workgroups in the Swift project, it has a workgroup to (a) oversee [community API proposals](Evolution.md) and (b) to closely coordinate with developments in the Swift project and Apple platforms. In the future, we will explore how to sunset the existing [swift-corelibs-foundation](https://github.com/apple/swift-corelibs-foundation) and migrate to using the new version of Foundation created by this project.
 
 The workgroup meets regularly to review proposals, look at emerging trends in the Swift ecosystem, and discuss how the library can evolve to best meet our common goals.
 
