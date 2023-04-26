@@ -43,6 +43,12 @@ Using a common version of ICU will result in more reliable and consistent result
 
 > Note: The Foundation Preview package depends on the under-development [Swift 5.9 toolchain](https://www.swift.org/download).
 
+### Current Development Focus
+
+Quality and performance are our two most important goals for the project. Therefore, the plans for the first half of 2023 are continuing refinement of the core API, adding to our suites of unit and performance tests, and expanding to other platforms where possible, using the most relevant code from [swift-corelibs-foundation](https://github.com/apple/swift-corelibs-foundation).
+
+Later this year, the porting effort will continue. It will bring high quality Swift implementations of additional important Foundation API such as `URL`, `Bundle`, `FileManager`, `FileHandle`, `Process`, `SortDescriptor`, `SortComparator` and more. 
+
 ## Performance
 
 Being written in Swift, this new implementation provides some major benefits over the previous C and Objective-C versions.
