@@ -69,7 +69,7 @@ The Foundation package is an independent project in its early incubation stages.
 
 The workgroup meets regularly to review proposals, look at emerging trends in the Swift ecosystem, and discuss how the library can evolve to best meet our common goals.
 
-## Foundation Package vs. Foundation Framework
+## Foundation Framework and Foundation Package
 
 The Swift code in the package is the core of the Foundation framework that ships on macOS, iOS, and other Apple platforms. As new Swift implementations of Foundation API are implemented in the package, Apple will use those implementations in the framework as well. 
 
@@ -77,7 +77,7 @@ The Foundation framework may have the occasional need to add Darwin-specific API
 
 ## Contributions
 
-Foundation welcomes contributions from the community, including API implementations, bug fixes, tests, documentation, and ports to new platforms.
+Foundation welcomes contributions from the community, including bug fixes, tests, documentation, and ports to new platforms.
 
 The project uses the [Swift forums for discussion](https://forums.swift.org/c/related-projects/foundation/99) and [GitHub Issues](https://github.com/apple/swift-corelibs-foundation) for tracking bugs, feature requests, and other work.
 
