@@ -15,9 +15,7 @@ This package is a work in progress that aims to build a new and unified Swift im
 
 It is in its early stages with many features still to be implemented.
 
-The following types are available, with more to come later.
-
-Many types, including `JSONEncoder`, `Calendar`, `TimeZone`, and `Locale` are all-new Swift implementations. `FormatStyle` and `ParseStyle` available as open source for the first time.
+The following types are available, with more to come later:
 
 * **FoundationEssentials**
     * `AttributedString`
@@ -37,15 +35,24 @@ Many types, including `JSONEncoder`, `Calendar`, `TimeZone`, and `Locale` are al
     * `FormatStyle`
     * `ParseStrategy`
 
+Many types, including `JSONEncoder`, `Calendar`, `TimeZone`, and `Locale` are all-new Swift implementations. `FormatStyle` and `ParseStyle` available as open source for the first time.
+
 For internationalization support on non-Darwin platforms, we created a separate package named *[FoundationICU](https://github.com/apple/swift-foundation-icu)*. This repository contains the necessary ICU implementations and data from the upstream [Apple OSS Distribution ICU](https://github.com/apple-oss-distributions/ICU), wrapped in Swift so FoundationInternationalization can easily depend on it.
 
 Using a common version of ICU will result in more reliable and consistent results when formatting dates, times, and numbers.
+### Development Focus for 2023
+
+Quality and performance are our two most important goals for the project. Therefore, the plans for the first half of 2023 are continuing refinement of the core API, adding to our suites of unit and performance tests, and expanding to other platforms where possible, using the most relevant code from [swift-corelibs-foundation](https://github.com/apple/swift-corelibs-foundation).
+
+Later this year, the porting effort will continue. It will bring high quality Swift implementations of additional important Foundation API such as `URL`, `Bundle`, `FileManager`, `FileHandle`, `Process`, `SortDescriptor`, `SortComparator` and more. 
 
 ## Building and Testing
 
-Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download) on macOS and Linux. On macOS, macOS Ventura 13.3.1 is the minimum supported version.
-
+Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download) on macOS and Linux.
 ### macOS
+
+macOS Ventura 13.3.1 is the minimum supported version.
+
 - Download the latest Xcode from the App Store
 - Download and install the Swift 5.9 toolchain for Xcode from [swift.org](https://www.swift.org/download)
 - Launch Xcode and select the downloaded 5.9 toolchains via *Xcode > Toolchains*
@@ -54,13 +61,6 @@ Building the Foundation package requires the under-development [Swift 5.9 toolch
 ### Linux
 - Download the latest [Swift 5.9 docker image](https://www.swift.org/download/#docker) and follow instructions to attach
 - Run `swift test`
-
-### Development Focus for 2023
-
-Quality and performance are our two most important goals for the project. Therefore, the plans for the first half of 2023 are continuing refinement of the core API, adding to our suites of unit and performance tests, and expanding to other platforms where possible, using the most relevant code from [swift-corelibs-foundation](https://github.com/apple/swift-corelibs-foundation).
-
-Later this year, the porting effort will continue. It will bring high quality Swift implementations of additional important Foundation API such as `URL`, `Bundle`, `FileManager`, `FileHandle`, `Process`, `SortDescriptor`, `SortComparator` and more. 
-
 ## Performance
 
 Being written in Swift, this new implementation provides some major benefits over the previous C and Objective-C versions.
