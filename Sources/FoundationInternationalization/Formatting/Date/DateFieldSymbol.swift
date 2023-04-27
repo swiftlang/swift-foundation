@@ -940,7 +940,7 @@ public extension Date.FormatStyle.Symbol.TimeZone {
     }
 
     /// Generic non-location format. Falls back to `genericLocation` if unavailable. For example,
-    /// short: "PT". Fallback again to `localizedGMT(.short)` if `genericLocation(.short)` is unavaiable.
+    /// short: "PT". Fallback again to `localizedGMT(.short)` if `genericLocation(.short)` is unavailable.
     /// long: "Pacific Time"
     static func genericName(_ width: Width) -> Self {
         switch width {
