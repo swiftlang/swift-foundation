@@ -43,7 +43,7 @@ extension AttributeScopes {
         @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public let agreementConcept: AgreementConceptAttribute
         @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-        public let agreementReplacement: AgreementReplacementAttribute
+        public let agreementArgument: AgreementArgumentAttribute
         @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public let referentConcept: ReferentConceptAttribute
         
@@ -112,10 +112,10 @@ extension AttributeScopes.FoundationAttributes {
     
     @frozen @_nonSendable
     @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-    public enum AgreementReplacementAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    public enum AgreementArgumentAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
-        public static let name = NSAttributedString.Key.agreeWithReplacement.rawValue
-        public static let markdownName = "agreeWithReplacement"
+        public static let name = NSAttributedString.Key.agreeWithArgument.rawValue
+        public static let markdownName = "agreeWithArgument"
     }
     
     @frozen
