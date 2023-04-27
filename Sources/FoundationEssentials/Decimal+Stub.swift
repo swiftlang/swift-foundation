@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK
 
 #if canImport(Darwin)
 import Darwin

@@ -1004,7 +1004,7 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     // MARK: -
 
-    /// Returns `true` if the locale is one of the "special" languages that rqeuires special handling during case mapping.
+    /// Returns `true` if the locale is one of the "special" languages that requires special handling during case mapping.
     /// - "az": Azerbaijani
     /// - "lt": Lithuanian
     /// - "tr": Turkish
