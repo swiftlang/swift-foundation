@@ -40,7 +40,6 @@ internal func __DataInvokeDeallocatorFree(_ mem: UnsafeMutableRawPointer, _ leng
     free(mem)
 }
 
-
 @_alwaysEmitIntoClient
 internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBufferPointer<UInt8>) -> Void) {
     guard capacity > 0 else {
@@ -81,7 +80,7 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
 // The old name must not be used in the new runtime.
 @usableFromInline
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-internal final class __DataStorage : @unchecked Sendable {
+internal final class __DataStorage: @unchecked Sendable {
     @usableFromInline static let maxSize = Int.max >> 1
     @usableFromInline static let vmOpsThreshold = Platform.pageSize * 4
 
@@ -95,7 +94,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
 
     static func reallocate(_ ptr: UnsafeMutableRawPointer, _ newSize: Int) -> UnsafeMutableRawPointer? {
-        return realloc(ptr, newSize);
+        return realloc(ptr, newSize)
     }
 #endif // !FOUNDATION_FRAMEWORK
 
@@ -507,7 +506,7 @@ internal final class __DataStorage : @unchecked Sendable {
 
 @frozen
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollection, RangeReplaceableCollection, MutableDataProtocol, ContiguousBytes, Sendable {
+public struct Data: Equatable, Hashable, RandomAccessCollection, MutableCollection, RangeReplaceableCollection, MutableDataProtocol, ContiguousBytes, Sendable {
 
     public typealias Index = Int
     public typealias Indices = Range<Int>
@@ -971,7 +970,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     // Inlinability strategy: everything should be inlinable as trivial.
     @usableFromInline
     @_fixed_layout
-    internal final class RangeReference : @unchecked Sendable {
+    internal final class RangeReference: @unchecked Sendable {
         @usableFromInline var range: Range<Int>
 
         @inlinable @inline(__always) // This is @inlinable as trivially forwarding.
@@ -999,7 +998,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     // Inlinability strategy: everything here should be easily inlinable as large _DataStorage methods should not inline into here.
     @usableFromInline
     @frozen
-    internal struct LargeSlice : Sendable {
+    internal struct LargeSlice: Sendable {
         // ***WARNING***
         // These ivars are specifically laid out so that they cause the enum _Representation to be 16 bytes on 64 bit platforms. This means we _MUST_ have the class type thing last
         @usableFromInline var slice: RangeReference
@@ -1176,7 +1175,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     // Inlinability strategy: almost everything should be inlinable as forwarding the underlying implementations. (Inlining can also help avoid retain-release traffic around pulling values out of enums.)
     @usableFromInline
     @frozen
-    internal enum _Representation : Sendable {
+    internal enum _Representation: Sendable {
         case empty
         case inline(InlineData)
         case slice(InlineSlice)
@@ -1744,7 +1743,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         /// A custom deallocator.
         case custom((UnsafeMutableRawPointer, Int) -> Void)
 
-        @usableFromInline internal var _deallocator : ((UnsafeMutableRawPointer, Int) -> Void) {
+        @usableFromInline internal var _deallocator: ((UnsafeMutableRawPointer, Int) -> Void) {
             switch self {
             case .unmap:
                 return { __DataInvokeDeallocatorUnmap($0, $1) }
@@ -1829,7 +1828,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     public init() {
         _representation = .empty
     }
-
 
     /// Initialize a `Data` without copying the bytes.
     ///
@@ -2023,7 +2021,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         let cnt = count
         guard cnt > 0 else { return 0 }
 
-        let copyRange : Range<Index>
+        let copyRange: Range<Index>
         if let r = range {
             guard !r.isEmpty else { return 0 }
             copyRange = r.lowerBound..<(r.lowerBound + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, r.upperBound - r.lowerBound))
@@ -2049,7 +2047,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     }
 
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
-    internal mutating func _append<SourceType>(_ buffer : UnsafeBufferPointer<SourceType>) {
+    internal mutating func _append<SourceType>(_ buffer: UnsafeBufferPointer<SourceType>) {
         if buffer.isEmpty { return }
         _representation.append(contentsOf: UnsafeRawBufferPointer(buffer))
     }
@@ -2071,7 +2069,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     ///
     /// - parameter buffer: The buffer of bytes to append. The size is calculated from `SourceType` and `buffer.count`.
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
-    public mutating func append<SourceType>(_ buffer : UnsafeBufferPointer<SourceType>) {
+    public mutating func append<SourceType>(_ buffer: UnsafeBufferPointer<SourceType>) {
         _append(buffer)
     }
 
@@ -2184,7 +2182,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     /// - parameter subrange: The range in the data to replace.
     /// - parameter newElements: The replacement bytes.
     @inlinable // This is @inlinable as generic and reasonably small.
-    public mutating func replaceSubrange<ByteCollection : Collection>(_ subrange: Range<Index>, with newElements: ByteCollection) where ByteCollection.Iterator.Element == Data.Iterator.Element {
+    public mutating func replaceSubrange<ByteCollection: Collection>(_ subrange: Range<Index>, with newElements: ByteCollection) where ByteCollection.Iterator.Element == Data.Iterator.Element {
         // If the collection is already contiguous, access the underlying raw memory directly.
         if let contiguous = newElements as? ContiguousBytes {
             contiguous.withUnsafeBytes { buffer in
@@ -2348,7 +2346,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         return Iterator(self, at: startIndex)
     }
 
-    public struct Iterator : IteratorProtocol, Sendable {
+    public struct Iterator: IteratorProtocol, Sendable {
         @usableFromInline
         internal typealias Buffer = (
             UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
@@ -2365,7 +2363,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         internal init(_ data: Data, at loc: Data.Index) {
             // The let vars prevent this from being marked as @inlinable
             _data = data
-            _buffer = (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+            _buffer = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             _idx = loc
             _endIdx = data.endIndex
 
@@ -2385,7 +2383,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             _idx += 1
 
             let bufferIdx = (idx - _data.startIndex) % bufferSize
-
 
             if bufferIdx == 0 {
                 var buffer = _buffer
@@ -2409,7 +2406,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 
     /// Returns `true` if the two `Data` arguments are equal.
     @inlinable // This is @inlinable as emission into clients is safe -- the concept of equality on Data will not change.
-    public static func ==(d1 : Data, d2 : Data) -> Bool {
+    public static func ==(d1: Data, d2: Data) -> Bool {
         let length1 = d1.count
         if length1 != d2.count {
             return false
@@ -2428,7 +2425,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 #if !FOUNDATION_FRAMEWORK
 // MARK: Exported Types
 extension Data {
-    public struct ReadingOptions : OptionSet, Sendable {
+    public struct ReadingOptions: OptionSet, Sendable {
         public let rawValue: UInt
 
         public init(rawValue: UInt) {
@@ -2461,7 +2458,7 @@ extension Data {
         public static let uncachedRead      = ReadingOptions.uncached
     }
 
-    public struct WritingOptions : OptionSet, Sendable {
+    public struct WritingOptions: OptionSet, Sendable {
         public let rawValue: UInt
 
         public init(rawValue: UInt) {
@@ -2498,7 +2495,7 @@ extension Data {
         public static let atomicWrite               = WritingOptions.atomic
     }
 
-    public struct SearchOptions : OptionSet, Sendable {
+    public struct SearchOptions: OptionSet, Sendable {
         public let rawValue: UInt
 
         public init(rawValue: UInt) {
@@ -2511,7 +2508,7 @@ extension Data {
     }
 
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public struct Base64EncodingOptions : OptionSet, Sendable {
+    public struct Base64EncodingOptions: OptionSet, Sendable {
         public let rawValue: UInt
 
         public init(rawValue: UInt) {
@@ -2528,7 +2525,7 @@ extension Data {
     }
 
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public struct Base64DecodingOptions : OptionSet, Sendable {
+    public struct Base64DecodingOptions: OptionSet, Sendable {
         public let rawValue: UInt
 
         public init(rawValue: UInt) {
@@ -2542,7 +2539,7 @@ extension Data {
 
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension Data: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     /// A human-readable description for the data.
     public var description: String {
         return "\(self.count) bytes"
@@ -2558,7 +2555,7 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
         var children: [(label: String?, value: Any)] = []
         children.append((label: "count", value: nBytes))
 
-        self.withUnsafeBytes { (bytes : UnsafeRawBufferPointer) in
+        self.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
             children.append((label: "pointer", value: bytes.baseAddress!))
         }
 
@@ -2567,13 +2564,13 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
             children.append((label: "bytes", value: Array(self[startIndex..<Swift.min(nBytes + startIndex, endIndex)])))
         }
 
-        let m = Mirror(self, children:children, displayStyle: Mirror.DisplayStyle.struct)
+        let m = Mirror(self, children: children, displayStyle: Mirror.DisplayStyle.struct)
         return m
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : Codable {
+extension Data: Codable {
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
 

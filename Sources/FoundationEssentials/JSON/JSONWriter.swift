@@ -60,17 +60,17 @@ extension String {
                         cursor += 1
                         continue
                     }
-                    
+
                     // Append accumulated bytes
                     if cursor > mark {
                         bytes.append(contentsOf: UnsafeBufferPointer(start: mark, count: cursor-mark))
                     }
                     bytes.append(contentsOf: escapeString.utf8)
-                    
+
                     cursor += 1
                     mark = cursor // Start accumulating bytes starting after this escaped byte.
                 }
-                
+
                 // Append accumulated bytes
                 if cursor > mark {
                     bytes.append(contentsOf: UnsafeBufferPointer(start: mark, count: cursor-mark))
@@ -78,7 +78,7 @@ extension String {
             }
         }
         bytes.append(._quote)
-        
+
         return String(unsafeUninitializedCapacity: bytes.count) {
             _ = $0.initialize(from: bytes)
             return bytes.count
@@ -285,7 +285,7 @@ internal struct JSONWriter {
         }
         writer("]")
     }
-    
+
     mutating func serializeStringArray(_ array: [String], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
@@ -420,6 +420,7 @@ extension JSONWriter {
     typealias WritingOptions = JSONSerialization.WritingOptions
 #else
     struct WritingOptions : OptionSet, Sendable {
+    struct WritingOptions: OptionSet, Sendable {
         let rawValue: UInt
 
         init(rawValue: UInt) {

@@ -28,15 +28,15 @@ public typealias TimeInterval = Double
  A `Date` is independent of a particular calendar or time zone. To represent a `Date` to a user, you must interpret it in the context of a `Calendar`.
 */
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct Date : Comparable, Hashable, Equatable, Sendable {
+public struct Date: Comparable, Hashable, Equatable, Sendable {
 
-    internal var _time : TimeInterval
+    internal var _time: TimeInterval
 
     /// The number of seconds from 1 January 1970 to the reference date, 1 January 2001.
-    public static let timeIntervalBetween1970AndReferenceDate : TimeInterval = 978307200.0
+    public static let timeIntervalBetween1970AndReferenceDate: TimeInterval = 978307200.0
 
     /// The interval between 00:00:00 UTC on 1 January 2001 and the current date and time.
-    public static var timeIntervalSinceReferenceDate : TimeInterval {
+    public static var timeIntervalSinceReferenceDate: TimeInterval {
         return Self.getCurrentAbsoluteTime()
     }
 
@@ -152,7 +152,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     /// Returns a `Date` initialized to the current date and time.
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public static var now : Date { Date() }
+    public static var now: Date { Date() }
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(_time)
@@ -227,10 +227,7 @@ extension Date {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
-// For backwards compatibility, the Darwin version of this method is left alone
-// because it uses `NSDateFormatter` and may behave slightly differently.
-#if !FOUNDATION_FRAMEWORK
+extension Date: CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
     /// A string representation of the date object (read-only).
     /// The representation is useful for debugging only.
     /// There are a number of options to acquire a formatted string for a date including: date formatters
@@ -269,7 +266,7 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : Codable {
+extension Date: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let timestamp = try container.decode(Double.self)
@@ -285,7 +282,7 @@ extension Date : Codable {
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : ReferenceConvertible, _ObjectiveCBridgeable {
+extension Date: ReferenceConvertible, _ObjectiveCBridgeable {
     public typealias ReferenceType = NSDate
 
     @_semantics("convertToObjectiveC")
@@ -313,7 +310,7 @@ extension Date : ReferenceConvertible, _ObjectiveCBridgeable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension NSDate : _HasCustomAnyHashableRepresentation {
+extension NSDate: _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {
@@ -325,7 +322,7 @@ extension NSDate : _HasCustomAnyHashableRepresentation {
 // MARK: - Playground Support
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : _CustomPlaygroundQuickLookable {
+extension Date: _CustomPlaygroundQuickLookable {
     var summary: String {
         let df = DateFormatter()
         df.dateStyle = .medium

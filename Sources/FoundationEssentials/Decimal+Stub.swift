@@ -19,7 +19,7 @@ import Glibc
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct Decimal : Hashable, Codable, Equatable, CustomStringConvertible {
+public struct Decimal: Hashable, Codable, Equatable, CustomStringConvertible {
     private let fake: Double
 
     public var doubleValue: Double { self.fake }
@@ -49,7 +49,7 @@ public struct Decimal : Hashable, Codable, Equatable, CustomStringConvertible {
         self.fake = value
     }
 
-    public init?<T>(exactly source: T) where T : BinaryInteger {
+    public init?<T>(exactly source: T) where T: BinaryInteger {
         guard let value = Double(exactly: source) else {
             return nil
         }
@@ -58,14 +58,14 @@ public struct Decimal : Hashable, Codable, Equatable, CustomStringConvertible {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : ExpressibleByFloatLiteral {
+extension Decimal: ExpressibleByFloatLiteral {
     public init(floatLiteral value: Double) {
         self.init(value)
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal : ExpressibleByIntegerLiteral {
+extension Decimal: ExpressibleByIntegerLiteral {
     public init(integerLiteral value: Int) {
         self.init(value)
     }

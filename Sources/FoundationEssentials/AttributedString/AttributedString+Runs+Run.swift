@@ -19,14 +19,14 @@ import _RopeModule
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
     @dynamicMemberLookup
-    public struct Run : Sendable {
+    public struct Run: Sendable {
         internal typealias _AttributeStorage = AttributedString._AttributeStorage
         internal typealias _InternalRun = AttributedString._InternalRun
 
         internal let _internal: _InternalRun
         internal let _range: Range<AttributedString.Index>
         internal let _guts: AttributedString.Guts
-        
+
         internal init(
             _internal run: _InternalRun,
             _ range: Range<AttributedString.Index>,
@@ -36,7 +36,7 @@ extension AttributedString.Runs {
             self._range = range
             self._guts = guts
         }
-        
+
         internal init(_ other: Self) {
             self._internal = other._internal
             self._range = other._range
@@ -68,7 +68,7 @@ extension AttributedString.Runs.Run {
     internal var _attributes: _AttributeStorage {
         return _internal.attributes
     }
-    
+
     internal func run(clampedTo range: Range<AttributedString.Index>) -> Self {
         var newInternal = _internal
         let newRange = _range.clamped(to: range)
@@ -84,12 +84,12 @@ extension AttributedString.Runs.Run {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs.Run {
     @preconcurrency
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value: Sendable {
         get { self[K.self] }
     }
 
     @preconcurrency
-    public subscript<K : AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value: Sendable {
         get { _internal.attributes[K.self] }
     }
 

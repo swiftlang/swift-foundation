@@ -21,7 +21,7 @@ import _RopeModule
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension AttributedString {
-    public enum AttributeRunBoundaries : Hashable, Sendable {
+    public enum AttributeRunBoundaries: Hashable, Sendable {
         case paragraph
         case character(Character)
     }
@@ -44,14 +44,14 @@ extension AttributedString.AttributeRunBoundaries {
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension AttributedString {
-    public struct AttributeInvalidationCondition : Hashable, Sendable {
-        private enum _Storage : Hashable {
+    public struct AttributeInvalidationCondition: Hashable, Sendable {
+        private enum _Storage: Hashable {
             case textChanged
             case attributeChanged(String)
         }
-        
+
         private let storage: _Storage
-        
+
         private init(_ storage: _Storage) {
             self.storage = storage
         }
@@ -69,7 +69,7 @@ extension AttributedString {
                 return string
             }
         }
-        
+
         public static let textChanged = Self(.textChanged)
 
         public static func attributeChanged<T: AttributedStringKey>(_ key: T.Type) -> Self {
@@ -79,7 +79,7 @@ extension AttributedString {
         public static func attributeChanged<T: AttributedStringKey>(_ key: KeyPath<AttributeDynamicLookup, T>) -> Self {
             Self(.attributeChanged(T.name))
         }
-        
+
         static func attributeChanged(_ name: String) -> Self {
             Self(.attributeChanged(name))
         }
@@ -89,31 +89,31 @@ extension AttributedString {
 // Developers define new attributes by implementing AttributeKey.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol AttributedStringKey {
-    associatedtype Value : Hashable
-    static var name : String { get }
-    
+    associatedtype Value: Hashable
+    static var name: String { get }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var runBoundaries : AttributedString.AttributeRunBoundaries? { get }
-    
+    static var runBoundaries: AttributedString.AttributeRunBoundaries? { get }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var inheritedByAddedText : Bool { get }
-    
+    static var inheritedByAddedText: Bool { get }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { get }
+    static var invalidationConditions: Set<AttributedString.AttributeInvalidationCondition>? { get }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension AttributedStringKey {
     var description: String { Self.name }
-    
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var runBoundaries : AttributedString.AttributeRunBoundaries? { nil }
-    
+    static var runBoundaries: AttributedString.AttributeRunBoundaries? { nil }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var inheritedByAddedText : Bool { true }
-    
+    static var inheritedByAddedText: Bool { true }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { nil }
+    static var invalidationConditions: Set<AttributedString.AttributeInvalidationCondition>? { nil }
 }
 
 extension AttributedStringKey {
@@ -133,7 +133,7 @@ extension AttributedStringKey {
 // }
 // An AttributeScope can contain other scopes as well.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding {
+public protocol AttributeScope: DecodingConfigurationProviding, EncodingConfigurationProviding {
     static var decodingConfiguration: AttributeScopeCodableConfiguration { get }
     static var encodingConfiguration: AttributeScopeCodableConfiguration { get }
 }
@@ -154,15 +154,15 @@ public enum AttributeDynamicLookup {
 
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
-    internal var storage : AttributedString._AttributeStorage
-    
+public struct ScopedAttributeContainer<S: AttributeScope>: Sendable {
+    internal var storage: AttributedString._AttributeStorage
+
     // Record the most recently deleted key for use in AttributedString mutation subscripts that use _modify
     // Note: if ScopedAttributeContainer ever adds a mutating function that can mutate multiple attributes, this will need to record multiple removed keys
-    internal var removedKey : String?
+    internal var removedKey: String?
 
     @preconcurrency
-    public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<S, T>) -> T.Value? where T.Value : Sendable {
+    public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<S, T>) -> T.Value? where T.Value: Sendable {
         get { storage[T.self] }
         set {
             storage[T.self] = newValue
@@ -172,7 +172,7 @@ public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
         }
     }
 
-    internal init(_ storage : AttributedString._AttributeStorage = .init()) {
+    internal init(_ storage: AttributedString._AttributeStorage = .init()) {
         self.storage = storage
     }
     
@@ -192,7 +192,7 @@ public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
         return true
     }
 
-    internal var attributes : AttributeContainer {
+    internal var attributes: AttributeContainer {
         var contents = AttributedString._AttributeStorage()
         for field in Type(S.self).fields {
             if let attribute = field.type.swiftType as? any AttributedStringKey.Type {
@@ -221,7 +221,7 @@ internal extension AttributedStringKey {
             return value as AnyObject
         }
     }
-    
+
     static func _convertFromObjectiveCValue(_ value: AnyObject) throws -> Value {
         if let convertibleType = Self.self as? any ObjectiveCConvertibleAttributedStringKey.Type {
             func project<K: ObjectiveCConvertibleAttributedStringKey>(_: K.Type) throws -> Value {
@@ -247,20 +247,20 @@ internal extension AttributeScope {
             if let attributeType = field.type.swiftType as? any AttributedStringKey.Type, attributeType.name == key {
                 return attributeType
             }
-            
+
             if let scopeType = field.type.swiftType as? any AttributeScope.Type, let found = scopeType.attributeKeyType(matching: key) {
                 return found
             }
         }
         return nil
     }
-    
+
     static func markdownAttributeKeyType(matching key: String) -> (any MarkdownDecodableAttributedStringKey.Type)? {
         for field in Type(Self.self).fields {
             if let attributeType = field.type.swiftType as? any MarkdownDecodableAttributedStringKey.Type, attributeType.markdownName == key {
                 return attributeType
             }
-            
+
             if let scopeType = field.type.swiftType as? any AttributeScope.Type, let found = scopeType.markdownAttributeKeyType(matching: key) {
                 return found
             }

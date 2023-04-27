@@ -18,10 +18,10 @@ import _RopeModule
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    internal struct _InternalRun : Hashable, Sendable {
+    internal struct _InternalRun: Hashable, Sendable {
         // UTF-8 Code Unit Length
-        internal var length : Int
-        internal var attributes : _AttributeStorage
+        internal var length: Int
+        internal var attributes: _AttributeStorage
 
         internal static func == (lhs: _InternalRun, rhs: _InternalRun) -> Bool {
             if lhs.length != rhs.length {
@@ -30,7 +30,7 @@ extension AttributedString {
             return lhs.attributes == rhs.attributes
         }
 
-        internal func get<T: AttributedStringKey>(_ k: T.Type) -> T.Value? where T.Value : Sendable {
+        internal func get<T: AttributedStringKey>(_ k: T.Type) -> T.Value? where T.Value: Sendable {
             attributes[k]
         }
     }
@@ -48,7 +48,7 @@ extension AttributedString._InternalRun {
 }
 
 extension AttributedString {
-    internal final class Guts : @unchecked Sendable {
+    internal final class Guts: @unchecked Sendable {
         typealias Index = AttributedString.Index
         typealias Runs = AttributedString.Runs
         typealias AttributeMergePolicy = AttributedString.AttributeMergePolicy
@@ -412,12 +412,12 @@ extension AttributedString.Guts {
         }
     }
 
-    func add<K: AttributedStringKey>(value: K.Value, in range: Range<Index>, key: K.Type) where K.Value : Sendable {
+    func add<K: AttributedStringKey>(value: K.Value, in range: Range<Index>, key: K.Type) where K.Value: Sendable {
         let _value = _AttributeValue(value, for: K.self)
         self.add(value: _value, in: range, key: K.name)
     }
 
-    func add(attributes: AttributeContainer, in range: Range<Index>, mergePolicy:  AttributeMergePolicy = .keepNew) {
+    func add(attributes: AttributeContainer, in range: Range<Index>, mergePolicy: AttributeMergePolicy = .keepNew) {
         let newAttrDict = attributes.storage
         let utf8Range = utf8OffsetRange(from: range)
         self.enumerateRuns(containing: utf8Range) { run, _, _, _ in
@@ -437,7 +437,7 @@ extension AttributedString.Guts {
             in: range, type: .attributes, constraintsInvolved: attributes.storage.constraintsInvolved)
     }
 
-    func remove<T : AttributedStringKey>(attribute: T.Type, in range: Range<Index>) where T.Value : Sendable {
+    func remove<T: AttributedStringKey>(attribute: T.Type, in range: Range<Index>) where T.Value: Sendable {
         let utf8Range = utf8OffsetRange(from: range)
         self.enumerateRuns(containing: utf8Range) { run, _, _, _ in
             run.attributes[T.self] = nil

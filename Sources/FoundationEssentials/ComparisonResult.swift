@@ -26,7 +26,7 @@
 /// NOTE: This enum comes from Foundation's Objective-C header on Darwin.
 @frozen
 @available(macOS 10.0, iOS 2.0, tvOS 9.0, watchOS 2.0, *)
-public enum ComparisonResult : Int, Codable, Sendable {
+public enum ComparisonResult: Int, Codable, Sendable {
     case orderedAscending   = -1
     case orderedSame        = 0
     case orderedDescending  = 1

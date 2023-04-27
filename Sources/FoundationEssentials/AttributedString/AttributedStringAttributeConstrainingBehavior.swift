@@ -37,7 +37,7 @@ extension AttributedString._AttributeStorage {
     var constraintsInvolved: [AttributedString.AttributeRunBoundaries] {
         return self.contents.values.compactMap(\.runBoundaries)
     }
-    
+
     fileprivate mutating func matchStyle(of other: Self, for constraint: AttributedString.AttributeRunBoundaries) {
         for key in self.keys {
             if self[key]?.runBoundaries == constraint && other[key] == nil {
@@ -55,7 +55,7 @@ extension AttributedString._AttributeValue {
     var hasConstrainedAttributes: Bool {
         runBoundaries != nil
     }
-    
+
     var constraintsInvolved: [AttributedString.AttributeRunBoundaries] {
         guard let constraint = runBoundaries else { return [] }
         return [constraint]
@@ -72,14 +72,14 @@ extension AttributedStringKey {
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Collection where Element == AttributedString.AttributeRunBoundaries {
-    var _containsCharacterConstraint : Bool {
+    var _containsCharacterConstraint: Bool {
         self.contains { $0._isCharacter }
     }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Guts {
-    
+
     // MARK: Index/Range Utilities
 
     private func nextParagraphBreak(after index: Index) -> Index {
@@ -96,15 +96,15 @@ extension AttributedString.Guts {
         let block = string.utf8._getBlock(for: [.findStart, .findEnd], in: range._bstringRange)
         return Index(block.start!) ..< Index(block.end!)
     }
-    
+
     private func _paragraphExtending(from idx: Index) -> Range<Index> {
         let i = idx._value
         let block = string.utf8._getBlock(for: [.findEnd], in: i ..< string.index(after: i))
         return idx ..< Index(block.end!)
     }
-    
+
     // MARK: Attribute Utilities
-    
+
     private func _constrainedAttributes(
         at location: Int, with constraint: AttributeRunBoundaries
     ) -> _AttributeStorage {
@@ -113,13 +113,13 @@ extension AttributedString.Guts {
             .attributes
             .filter { $0.value.runBoundaries == constraint }
     }
-    
+
     private func _characterInvalidatedAttributes(at location: Int) -> _AttributeStorage {
         run(containing: location)
             .attributes
             .filter { $0.value.isInvalidatedOnTextChange }
     }
-    
+
     private func _needsParagraphFixing(from start: Int, to end: Int) -> Bool {
         let startAttributes = run(containing: start, updateCache: false)
         let endAttributes = run(containing: end, updateCache: false)
@@ -140,7 +140,7 @@ extension AttributedString.Guts {
         }
         return false
     }
-    
+
     private func _applyStyle(
         type: AttributedString.AttributeRunBoundaries, from idx: Int, to range: Range<Int>
     ) {
@@ -149,7 +149,7 @@ extension AttributedString.Guts {
             run.attributes.matchStyle(of: style, for: type)
         }
     }
-    
+
     private func _removeRangeOfAttributes(
         _ attributes: _AttributeStorage, extendingFrom location: Int, backwards: Bool
     ) -> Int {
@@ -161,7 +161,7 @@ extension AttributedString.Guts {
             reverse: backwards
         ) { run, location, stop, modificationStatus in
             modificationStatus = .guaranteedNotModified
-            
+
             for key in currentKeys {
                 if run.attributes[key] != attributes[key] {
                     currentKeys.remove(key)
@@ -177,14 +177,14 @@ extension AttributedString.Guts {
         }
         return newLocation
     }
-    
+
     // MARK: Constraining Behavior
-    
+
     enum _MutationType {
         case attributes
         case attributesAndCharacters
     }
-    
+
     /// Removes full runs of any attributes that have declared a `AttributedString.AttributeInvalidationCondition.textChanged` invalidation condition from the mutation range. Note: this should be called _before_ the mutation takes place
     /// - Parameter range: The UTF-8 range in which the mutation will take place
     /// - Returns: The UTF-8 range that was modified as a result of this invalidation (or `range` if no modification took place)
@@ -201,7 +201,7 @@ extension AttributedString.Guts {
 
         return lowerBound ..< upperBound
     }
-    
+
     /// Adjusts any attributes constrained to specified run boundaries based on a mutation that has taken place. Note: this should be called _after_ the mutation takes place
     /// - Parameters:
     ///   - range: The UTF-8 range in which the mutation has taken place (this range should be based on the resulting string)
@@ -281,7 +281,7 @@ extension AttributedString.Guts {
                     endParagraph = r._utf8OffsetRange
                 }
             }
-            
+
             // If the start paragraph extends into the mutation, fixup the range within the mutation
             if let startParagraph, startParagraph.upperBound > range.lowerBound {
                 _applyStyle(
@@ -375,7 +375,7 @@ extension AttributedString.Guts {
                     }
                 }
                 if next > runEnd {
-                    pendingAttributes = run.attributes.contents.filter { (key, value) in
+                    pendingAttributes = run.attributes.contents.filter { (_, value) in
                         value.runBoundaries?._constrainedCharacter != nil
                     }
                     pendingStart = i
@@ -391,7 +391,7 @@ extension AttributedString.Guts {
             }
         }
     }
-    
+
     /// Performs a "full fix-up" of the entire string and fixes all attributes according to their constraints. This requires thorough enumeration of the entire string and should only be used when an `AttributedString` is created through means that bypass the standard constraint adjustments such as conversion from `NSAttributedString` and decoding from an archive.
     func adjustConstrainedAttributesForUntrustedRuns() {
         self.fixCharacterConstrainedAttributes(in: startIndex ..< endIndex)
@@ -402,7 +402,7 @@ extension AttributedString.Guts {
             let startOffset = utf8Offset(of: i)
             let endOffset = utf8Offset(of: j)
             let paragraphStyle = self._constrainedAttributes(at: startOffset, with: .paragraph)
-            self.enumerateRuns(containing: startOffset ..< endOffset) { run, _, _, mod in
+            self.enumerateRuns(containing: startOffset ..< endOffset) { run, _, _, _ in
                 run.attributes.matchStyle(of: paragraphStyle, for: .paragraph)
             }
             i = j

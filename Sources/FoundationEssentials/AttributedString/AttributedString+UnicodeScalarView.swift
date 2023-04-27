@@ -18,15 +18,15 @@ import _RopeModule
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    public struct UnicodeScalarView : Sendable {
-        internal var _guts : Guts
-        internal var _range : Range<Index>
-        internal var _identity : Int = 0
+    public struct UnicodeScalarView: Sendable {
+        internal var _guts: Guts
+        internal var _range: Range<Index>
+        internal var _identity: Int = 0
         internal init(_ g: Guts, _ r: Range<Index>) {
             _guts = g
             _range = r
         }
-        
+
         public init() {
             _guts = Guts(string: "", runs: [])
             _range = _guts.startIndex ..< _guts.endIndex
@@ -170,7 +170,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection, RangeRepl
         }
     }
 
-    public mutating func replaceSubrange<C : Collection>(
+    public mutating func replaceSubrange<C: Collection>(
         _ subrange: Range<Index>,
         with newElements: C
     ) where C.Element == UnicodeScalar {

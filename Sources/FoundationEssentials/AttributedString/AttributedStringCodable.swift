@@ -29,12 +29,12 @@ extension Decoder {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol EncodableAttributedStringKey : AttributedStringKey {
+public protocol EncodableAttributedStringKey: AttributedStringKey {
     static func encode(_ value: Value, to encoder: Encoder) throws
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol DecodableAttributedStringKey : AttributedStringKey {
+public protocol DecodableAttributedStringKey: AttributedStringKey {
     static func decode(from decoder: Decoder) throws -> Value
 }
 
@@ -42,18 +42,17 @@ public protocol DecodableAttributedStringKey : AttributedStringKey {
 public typealias CodableAttributedStringKey = EncodableAttributedStringKey & DecodableAttributedStringKey
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension EncodableAttributedStringKey where Value : Encodable {
+public extension EncodableAttributedStringKey where Value: Encodable {
     static func encode(_ value: Value, to encoder: Encoder) throws { try value.encode(to: encoder) }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension DecodableAttributedStringKey where Value : Decodable {
+public extension DecodableAttributedStringKey where Value: Decodable {
     static func decode(from decoder: Decoder) throws -> Value { return try Value.init(from: decoder) }
 }
 
-
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol MarkdownDecodableAttributedStringKey : AttributedStringKey {
+public protocol MarkdownDecodableAttributedStringKey: AttributedStringKey {
     static func decodeMarkdown(from decoder: Decoder) throws -> Value
     static var markdownName: String { get }
 }
@@ -64,13 +63,13 @@ public extension MarkdownDecodableAttributedStringKey {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension MarkdownDecodableAttributedStringKey where Self : DecodableAttributedStringKey {
+public extension MarkdownDecodableAttributedStringKey where Self: DecodableAttributedStringKey {
     static func decodeMarkdown(from decoder: Decoder) throws -> Value { try Self.decode(from: decoder) }
 }
 
 #if FOUNDATION_FRAMEWORK
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
+public extension EncodableAttributedStringKey where Value: NSSecureCoding & NSObject {
     static func encode(_ value: Value, to encoder: Encoder) throws {
         let data = try NSKeyedArchiver.archivedData(withRootObject: value, requiringSecureCoding: true)
         var container = encoder.singleValueContainer()
@@ -79,7 +78,7 @@ public extension EncodableAttributedStringKey where Value : NSSecureCoding & NSO
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension DecodableAttributedStringKey where Value : NSSecureCoding & NSObject {
+public extension DecodableAttributedStringKey where Value: NSSecureCoding & NSObject {
     static func decode(from decoder: Decoder) throws -> Value {
         let container = try decoder.singleValueContainer()
         let data = try container.decode(Data.self)
@@ -96,13 +95,13 @@ public extension DecodableAttributedStringKey where Value : NSSecureCoding & NSO
 // MARK: AttributedString CodableWithConfiguration Conformance
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributeScopeCodableConfiguration : Sendable {
-    internal let scopeType : any AttributeScope.Type
-    internal let extraAttributesTable : [String : any AttributedStringKey.Type]
-    
+public struct AttributeScopeCodableConfiguration: Sendable {
+    internal let scopeType: any AttributeScope.Type
+    internal let extraAttributesTable: [String: any AttributedStringKey.Type]
+
     internal init(
         scopeType: any AttributeScope.Type,
-        extraAttributesTable: [String : any AttributedStringKey.Type] = [:]
+        extraAttributesTable: [String: any AttributedStringKey.Type] = [:]
     ) {
         self.scopeType = scopeType
         self.extraAttributesTable = extraAttributesTable
@@ -118,14 +117,14 @@ public extension AttributeScope {
 #if FOUNDATION_FRAMEWORK
 // TODO: Support AttributedString codable conformance in FoundationPreview
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributedString : Codable {
+extension AttributedString: Codable {
     public func encode(to encoder: Encoder) throws {
         let conf = AttributeScopeCodableConfiguration(
             scopeType: AttributeScopes.FoundationAttributes.self,
             extraAttributesTable: _loadDefaultAttributes())
         try encode(to: encoder, configuration: conf)
     }
-    
+
     public init(from decoder: Decoder) throws {
         let conf = AttributeScopeCodableConfiguration(
             scopeType: AttributeScopes.FoundationAttributes.self,
@@ -135,9 +134,9 @@ extension AttributedString : Codable {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributedString : CodableWithConfiguration {
+extension AttributedString: CodableWithConfiguration {
 
-    private enum CodingKeys : String, CodingKey {
+    private enum CodingKeys: String, CodingKey {
         case runs
         case attributeTable
     }
@@ -349,7 +348,7 @@ extension AttributedString : CodableWithConfiguration {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributeContainer : CodableWithConfiguration {
+extension AttributeContainer: CodableWithConfiguration {
     public func encode(to encoder: Encoder, configuration: AttributeScopeCodableConfiguration) throws {
         var attributeKeyTypeTable = configuration.extraAttributesTable
         try AttributedString.encodeAttributeContainer(self.storage, to: encoder, configuration: configuration, using: &attributeKeyTypeTable)
@@ -364,7 +363,7 @@ extension AttributeContainer : CodableWithConfiguration {
 #endif // FOUNDATION_FRAMEWORK
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension CodableConfiguration where ConfigurationProvider : AttributeScope {
+public extension CodableConfiguration where ConfigurationProvider: AttributeScope {
     init(wrappedValue: T, from keyPath: KeyPath<AttributeScopes, ConfigurationProvider.Type>) {
         self.wrappedValue = wrappedValue
     }

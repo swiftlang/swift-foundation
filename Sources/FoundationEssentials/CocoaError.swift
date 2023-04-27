@@ -31,28 +31,28 @@ public struct CocoaError : _BridgedStoredNSError {
 
 public protocol _StoredError {
     associatedtype Code: _ErrorCodeProtocol, RawRepresentable where Code.RawValue: FixedWidthInteger
-    
+
     var code: Code { get }
 }
 
 /// Describes errors within the Cocoa error domain, including errors that Foundation throws.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct CocoaError : CustomNSError, _StoredError, Hashable {
+public struct CocoaError: CustomNSError, _StoredError, Hashable {
     // On not-Darwin, CocoaError is backed by a simple code.
     public let code: Code
     public let userInfo: [String: AnyHashable]
-    
+
     public init(code: Code, userInfo: [String: AnyHashable]) {
         self.code = code
         self.userInfo = userInfo
     }
-    
+
     public static var errorDomain: String { "NSCocoaErrorDomain" }
-    
+
     public func hash(into hasher: inout Hasher) {
         hasher.combine(code)
     }
-    
+
     public static func ==(lhs: Self, rhs: Self) -> Bool {
         return lhs.code == rhs.code && lhs.userInfo == rhs.userInfo
     }
@@ -61,8 +61,8 @@ public struct CocoaError : CustomNSError, _StoredError, Hashable {
 
 /// Describes the code of an error.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public protocol _ErrorCodeProtocol : Equatable {
 #if FOUNDATION_FRAMEWORK
+public protocol _ErrorCodeProtocol: Equatable {
     /// The corresponding error code.
     associatedtype _ErrorType: _BridgedStoredNSError where _ErrorType.Code == Self
 #else
@@ -83,7 +83,7 @@ extension _ErrorCodeProtocol {
 extension CocoaError {
     /// The error code itself.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public struct Code : RawRepresentable, Hashable, _ErrorCodeProtocol, Sendable {
+    public struct Code: RawRepresentable, Hashable, _ErrorCodeProtocol, Sendable {
         public typealias _ErrorType = CocoaError
 
         public let rawValue: Int
@@ -134,7 +134,7 @@ public extension CocoaError {
     /// A list of underlying errors, if any. It includes the values of both NSUnderlyingErrorKey and NSMultipleUnderlyingErrorsKey. If there are no underlying errors, returns an empty array.
     @available(macOS 11.3, iOS 14.5, watchOS 7.4, tvOS 14.5, *)
     var underlyingErrors: [Error] {
-        var result : [Error] = []
+        var result: [Error] = []
 
 #if FOUNDATION_FRAMEWORK
         if let underlying = _nsUserInfo[NSUnderlyingErrorKey as NSString] as? Error {
@@ -220,7 +220,7 @@ public extension LocalizedError {
 /// Describes an error type that specifically provides a domain, code,
 /// and user-info dictionary.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public protocol CustomNSError : Error {
+public protocol CustomNSError: Error {
     /// The domain of the error.
     static var errorDomain: String { get }
 
@@ -273,5 +273,3 @@ public extension Error {
     }
 }
 #endif
-
-

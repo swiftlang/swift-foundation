@@ -18,7 +18,7 @@ extension KeyedEncodingContainer {
         var container = self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self, forKey: key)
         try container._encode(expression, variables: variables, predicateConfiguration: predicateConfiguration)
     }
-    
+
     public mutating func encodePredicateExpressionIfPresent<T: PredicateExpression & Encodable, Input>(_ expression: T?, forKey key: Self.Key, variables: (PredicateExpressions.Variable<Input>), predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
         guard let expression else { return }
         try self.encodePredicateExpression(expression, forKey: key, variables: variables, predicateConfiguration: predicateConfiguration)
@@ -31,7 +31,7 @@ extension KeyedDecodingContainer {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self, forKey: key)
         return try container._decode(inputs: inputs, predicateConfiguration: predicateConfiguration)
     }
-    
+
     public mutating func decodePredicateExpressionIfPresent<Input>(forKey key: Self.Key, inputs: (Input.Type), predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variables: (PredicateExpressions.Variable<Input>))? {
         guard self.contains(key) else { return nil }
         return try self.decodePredicateExpression(forKey: key, inputs: inputs, predicateConfiguration: predicateConfiguration)
@@ -44,7 +44,7 @@ extension UnkeyedEncodingContainer {
         var container = self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self)
         try container._encode(expression, variables: variables, predicateConfiguration: predicateConfiguration)
     }
-    
+
     public mutating func encodePredicateExpressionIfPresent<T: PredicateExpression & Encodable, Input>(_ expression: T?, variables: (PredicateExpressions.Variable<Input>), predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
         guard let expression else {
             try self.encodeNil()
@@ -60,7 +60,7 @@ extension UnkeyedDecodingContainer {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self)
         return try container._decode(inputs: inputs, predicateConfiguration: predicateConfiguration)
     }
-    
+
     public mutating func decodePredicateExpressionIfPresent<Input>(inputs: (Input.Type), predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variables: (PredicateExpressions.Variable<Input>))? {
         if try self.decodeNil() {
             return nil

@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the Swift.org open source project
 //
@@ -8,18 +8,18 @@
 // See https://swift.org/LICENSE.txt for license information
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-public struct Predicate<Input> : Sendable {
-    public let expression : any StandardPredicateExpression<Bool>
+public struct Predicate<Input>: Sendable {
+    public let expression: any StandardPredicateExpression<Bool>
     public let variable: (PredicateExpressions.Variable<Input>)
-    
+
     public init<E: StandardPredicateExpression<Bool>>(_ builder: (PredicateExpressions.Variable<Input>) -> E) {
         self.variable = PredicateExpressions.Variable<Input>()
         self.expression = builder(self.variable)
     }
-    
+
     public func evaluate(_ input: Input) throws -> Bool {
         try expression.evaluate(.init((variable, input)))
     }

@@ -37,7 +37,6 @@ public protocol DecodableWithConfiguration {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public typealias CodableWithConfiguration = EncodableWithConfiguration & DecodableWithConfiguration
 
-
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension KeyedEncodingContainer {
     mutating func encode<T, C>(_ wrapper: CodableConfiguration<T?, C>, forKey key: Self.Key) throws {
@@ -62,7 +61,6 @@ public extension KeyedDecodingContainer {
     }
 
 }
-
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension KeyedEncodingContainer {
@@ -89,14 +87,14 @@ public extension KeyedEncodingContainer {
 public extension KeyedDecodingContainer {
 
     func decode<T: DecodableWithConfiguration, C: DecodingConfigurationProviding>(
-        _ : T.Type,
+        _: T.Type,
         forKey key: Self.Key,
         configuration: C.Type
     ) throws -> T where T.DecodingConfiguration == C.DecodingConfiguration {
         return try T(from: self.superDecoder(forKey: key), configuration: C.decodingConfiguration)
     }
     func decodeIfPresent<T: DecodableWithConfiguration, C: DecodingConfigurationProviding>(
-        _ : T.Type,
+        _: T.Type,
         forKey key: Self.Key,
         configuration: C.Type
     ) throws -> T? where T.DecodingConfiguration == C.DecodingConfiguration {
@@ -108,14 +106,14 @@ public extension KeyedDecodingContainer {
     }
 
     func decode<T: DecodableWithConfiguration>(
-        _ : T.Type,
+        _: T.Type,
         forKey key: Self.Key,
         configuration: T.DecodingConfiguration
     ) throws -> T {
         return try T(from: self.superDecoder(forKey: key), configuration: configuration)
     }
     func decodeIfPresent<T: DecodableWithConfiguration>(
-        _ : T.Type,
+        _: T.Type,
         forKey key: Self.Key,
         configuration: T.DecodingConfiguration
     ) throws -> T? {
@@ -145,12 +143,12 @@ public extension UnkeyedEncodingContainer {
 public extension UnkeyedDecodingContainer {
 
     mutating func decode<T: DecodableWithConfiguration, C: DecodingConfigurationProviding>(
-        _ : T.Type, configuration: C.Type
+        _: T.Type, configuration: C.Type
     ) throws -> T where T.DecodingConfiguration == C.DecodingConfiguration {
         return try T(from: try self.superDecoder(), configuration: C.decodingConfiguration)
     }
     mutating func decodeIfPresent<T: DecodableWithConfiguration, C: DecodingConfigurationProviding>(
-        _ : T.Type, configuration: C.Type
+        _: T.Type, configuration: C.Type
     ) throws -> T? where T.DecodingConfiguration == C.DecodingConfiguration {
         if try self.decodeNil() {
             return nil
@@ -160,12 +158,12 @@ public extension UnkeyedDecodingContainer {
     }
 
     mutating func decode<T: DecodableWithConfiguration>(
-        _ : T.Type, configuration: T.DecodingConfiguration
+        _: T.Type, configuration: T.DecodingConfiguration
     ) throws -> T {
         return try T(from: try self.superDecoder(), configuration: configuration)
     }
     mutating func decodeIfPresent<T: DecodableWithConfiguration>(
-        _ : T.Type, configuration: T.DecodingConfiguration
+        _: T.Type, configuration: T.DecodingConfiguration
     ) throws -> T? {
         if try self.decodeNil() {
             return nil
@@ -178,7 +176,7 @@ public extension UnkeyedDecodingContainer {
 
 @propertyWrapper
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct CodableConfiguration<T, ConfigurationProvider> : Codable
+public struct CodableConfiguration<T, ConfigurationProvider>: Codable
 where T: CodableWithConfiguration,
       ConfigurationProvider: EncodingConfigurationProviding & DecodingConfigurationProviding,
       ConfigurationProvider.EncodingConfiguration == T.EncodingConfiguration,
@@ -204,16 +202,16 @@ where T: CodableWithConfiguration,
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension CodableConfiguration : Sendable where T : Sendable { }
+extension CodableConfiguration: Sendable where T: Sendable { }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension CodableConfiguration : Equatable where T : Equatable { }
+extension CodableConfiguration: Equatable where T: Equatable { }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension CodableConfiguration : Hashable where T : Hashable { }
+extension CodableConfiguration: Hashable where T: Hashable { }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension Optional : EncodableWithConfiguration where Wrapped : EncodableWithConfiguration {
+extension Optional: EncodableWithConfiguration where Wrapped: EncodableWithConfiguration {
     public func encode(to encoder: Encoder, configuration: Wrapped.EncodingConfiguration) throws {
         if let wrapped = self {
             try wrapped.encode(to: encoder, configuration: configuration)
@@ -225,7 +223,7 @@ extension Optional : EncodableWithConfiguration where Wrapped : EncodableWithCon
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension Optional : DecodableWithConfiguration where Wrapped : DecodableWithConfiguration {
+extension Optional: DecodableWithConfiguration where Wrapped: DecodableWithConfiguration {
     public init(from decoder: Decoder, configuration: Wrapped.DecodingConfiguration) throws {
         let c = try decoder.singleValueContainer()
         if c.decodeNil() {
@@ -237,7 +235,7 @@ extension Optional : DecodableWithConfiguration where Wrapped : DecodableWithCon
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension Array : EncodableWithConfiguration where Element : EncodableWithConfiguration {
+extension Array: EncodableWithConfiguration where Element: EncodableWithConfiguration {
     public func encode(to encoder: Encoder, configuration: Element.EncodingConfiguration) throws {
         var c = encoder.unkeyedContainer()
         for e in self {
@@ -247,7 +245,7 @@ extension Array : EncodableWithConfiguration where Element : EncodableWithConfig
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension Array : DecodableWithConfiguration where Element : DecodableWithConfiguration {
+extension Array: DecodableWithConfiguration where Element: DecodableWithConfiguration {
     public init(from decoder: Decoder, configuration: Element.DecodingConfiguration) throws {
         var result = [Element]()
         var c = try decoder.unkeyedContainer()

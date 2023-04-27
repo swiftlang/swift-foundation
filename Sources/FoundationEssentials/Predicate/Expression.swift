@@ -82,7 +82,7 @@ extension PredicateExpressions {
     public struct VariableID: Hashable, Codable, Sendable {
         let id: UInt
         private static let nextID = LockedState(initialState: UInt(0))
-        
+
         init() {
             self.id = Self.nextID.withLock { value in
                 defer {
@@ -124,42 +124,42 @@ extension PredicateExpressions {
             throw PredicateError.undefinedVariable
         }
     }
-    
-    public struct KeyPath<Root : PredicateExpression, Output> : PredicateExpression {
+
+    public struct KeyPath<Root: PredicateExpression, Output>: PredicateExpression {
         public let root: Root
         public let keyPath: Swift.KeyPath<Root.Output, Output> & Sendable
-        
+
         public init(root: Root, keyPath: Swift.KeyPath<Root.Output, Output> & Sendable) {
             keyPath._validateForPredicateUsage()
             self.root = root
             self.keyPath = keyPath
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
             return try root.evaluate(bindings)[keyPath: keyPath as Swift.KeyPath<Root.Output, Output>]
         }
     }
 
-    public struct Value<Output> : PredicateExpression {
+    public struct Value<Output>: PredicateExpression {
         public let value: Output
-        
+
         public init(_ value: Output) {
             self.value = value
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) -> Output {
             return self.value
         }
     }
-    
+
     public static func build_Arg<T>(_ arg: T) -> Value<T> {
         Value(arg)
     }
-    
+
     public static func build_Arg<T: PredicateExpression>(_ arg: T) -> T {
         arg
     }
-    
+
     public static func build_KeyPath<Root, Value>(root: Root, keyPath: Swift.KeyPath<Root.Output, Value>) -> PredicateExpressions.KeyPath<Root, Value> {
         KeyPath(root: root, keyPath: keyPath)
     }
@@ -167,12 +167,11 @@ extension PredicateExpressions {
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.KeyPath : Codable where Root : Codable {
-    private enum CodingKeys : CodingKey {
+extension PredicateExpressions.KeyPath: Codable where Root: Codable {
+    private enum CodingKeys: CodingKey {
         case root
         case identifier
     }
-    
     public func encode(to encoder: Encoder) throws {
 #if FOUNDATION_FRAMEWORK
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -204,18 +203,18 @@ extension PredicateExpressions.KeyPath : Codable where Root : Codable {
     }
 }
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.KeyPath : Sendable where Root : Sendable {}
+extension PredicateExpressions.KeyPath: Sendable where Root: Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.KeyPath : StandardPredicateExpression where Root : StandardPredicateExpression {}
+extension PredicateExpressions.KeyPath: StandardPredicateExpression where Root: StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Value : Codable where Output : Codable {
+extension PredicateExpressions.Value: Codable where Output: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(value)
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         value = try container.decode(Output.self)
@@ -223,7 +222,7 @@ extension PredicateExpressions.Value : Codable where Output : Codable {
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Value : Sendable where Output : Sendable {}
+extension PredicateExpressions.Value: Sendable where Output: Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Value : StandardPredicateExpression where Output : Codable /*, Output : Sendable*/ {}
+extension PredicateExpressions.Value: StandardPredicateExpression where Output: Codable /*, Output : Sendable*/ {}

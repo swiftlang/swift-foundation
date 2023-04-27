@@ -18,7 +18,7 @@ import _RopeModule
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    public struct CharacterView : Sendable {
+    public struct CharacterView: Sendable {
         /// The guts of the base attributed string.
         internal var _guts: Guts
 
@@ -48,7 +48,7 @@ extension AttributedString {
             let upper = _guts.characterIndex(roundingDown: r.upperBound)
             _range = Range(uncheckedBounds: (lower, upper))
         }
-        
+
         public init() {
             _guts = Guts(string: "", runs: [])
             _range = _guts.startIndex ..< _guts.endIndex
@@ -211,7 +211,7 @@ extension AttributedString.CharacterView: BidirectionalCollection, RangeReplacea
         }
     }
 
-    public mutating func replaceSubrange<C : Collection>(
+    public mutating func replaceSubrange<C: Collection>(
         _ subrange: Range<Index>, with newElements: C
     ) where C.Element == Character {
         precondition(

@@ -19,9 +19,9 @@ import Glibc
 //===--- DataProtocol -----------------------------------------------------===//
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public protocol DataProtocol : RandomAccessCollection where Element == UInt8, SubSequence : DataProtocol {
+public protocol DataProtocol: RandomAccessCollection where Element == UInt8, SubSequence: DataProtocol {
     // FIXME: Remove in favor of opaque type on `regions`.
-    associatedtype Regions: BidirectionalCollection where Regions.Element : DataProtocol & ContiguousBytes, Regions.Element.SubSequence : ContiguousBytes
+    associatedtype Regions: BidirectionalCollection where Regions.Element: DataProtocol & ContiguousBytes, Regions.Element.SubSequence: ContiguousBytes
 
     /// A `BidirectionalCollection` of `DataProtocol` elements which compose a
     /// discontiguous buffer of memory.  Each region is a contiguous buffer of
@@ -72,7 +72,7 @@ public protocol DataProtocol : RandomAccessCollection where Element == UInt8, Su
 //===--- MutableDataProtocol ----------------------------------------------===//
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public protocol MutableDataProtocol : DataProtocol, MutableCollection, RangeReplaceableCollection {
+public protocol MutableDataProtocol: DataProtocol, MutableCollection, RangeReplaceableCollection {
     /// Replaces the contents of the buffer at the given range with zeroes.
     ///
     /// A default implementation is given in terms of
@@ -201,7 +201,7 @@ extension DataProtocol {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DataProtocol where Self : ContiguousBytes {
+extension DataProtocol where Self: ContiguousBytes {
     public func copyBytes<DestinationType, R: RangeExpression>(to ptr: UnsafeMutableBufferPointer<DestinationType>, from range: R) where R.Bound == Index {
         precondition(ptr.baseAddress != nil)
 
@@ -228,7 +228,7 @@ extension MutableDataProtocol {
 //===--- DataProtocol Conditional Conformances ----------------------------===//
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Slice : DataProtocol where Base : DataProtocol {
+extension Slice: DataProtocol where Base: DataProtocol {
     public typealias Regions = [Base.Regions.Element.SubSequence]
 
     public var regions: [Base.Regions.Element.SubSequence] {

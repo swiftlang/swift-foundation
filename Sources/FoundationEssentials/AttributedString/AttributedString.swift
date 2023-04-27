@@ -18,7 +18,7 @@ import _RopeModule
 
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributedString : Sendable {
+public struct AttributedString: Sendable {
     internal var _guts: Guts
 
     internal init(_ guts: Guts) {
@@ -29,7 +29,7 @@ public struct AttributedString : Sendable {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     internal static let currentIdentity = LockedState(initialState: 0)
-    internal static var _nextModifyIdentity : Int {
+    internal static var _nextModifyIdentity: Int {
         currentIdentity.withLock { identity in
             identity += 1
             return identity
@@ -81,7 +81,7 @@ extension AttributedString {
         self.init(BigString(substring), attributes: attributes.storage)
     }
 
-    public init<S : Sequence>(
+    public init<S: Sequence>(
         _ elements: S,
         attributes: AttributeContainer = .init()
     ) where S.Element == Character {
@@ -98,11 +98,11 @@ extension AttributedString {
 
 #if FOUNDATION_FRAMEWORK
     // TODO: Support scope-specific initialization in FoundationPreview
-    public init<S : AttributeScope, T : AttributedStringProtocol>(_ other: T, including scope: KeyPath<AttributeScopes, S.Type>) {
+    public init<S: AttributeScope, T: AttributedStringProtocol>(_ other: T, including scope: KeyPath<AttributeScopes, S.Type>) {
         self.init(other, including: S.self)
     }
 
-    public init<S : AttributeScope, T : AttributedStringProtocol>(_ other: T, including scope: S.Type) {
+    public init<S: AttributeScope, T: AttributedStringProtocol>(_ other: T, including scope: S.Type) {
         self.init(other.__guts.copy(in: other.startIndex ..< other.endIndex))
         var attributeCache = [String : Bool]()
         _guts.enumerateRuns { run, _, _, modification in
@@ -170,9 +170,9 @@ extension AttributedString { // AttributedStringAttributeMutation
         _guts.set(attributes: attributes, in: startIndex ..< endIndex)
     }
 
-    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributeMergePolicy = .keepNew) {
+    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy: AttributeMergePolicy = .keepNew) {
         ensureUniqueReference()
-        _guts.add(attributes: attributes, in: startIndex ..< endIndex, mergePolicy:  mergePolicy)
+        _guts.add(attributes: attributes, in: startIndex ..< endIndex, mergePolicy: mergePolicy)
     }
 
     public mutating func replaceAttributes(_ attributes: AttributeContainer, with others: AttributeContainer) {
@@ -204,7 +204,7 @@ extension AttributedString { // AttributedStringAttributeMutation
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString: AttributedStringProtocol {
-    public struct Index : Comparable, Sendable {
+    public struct Index: Comparable, Sendable {
         internal var _value: BigString.Index
 
         internal init(_ value: BigString.Index) {
@@ -219,17 +219,17 @@ extension AttributedString: AttributedStringProtocol {
             left._value < right._value
         }
     }
-    
-    public var startIndex : Index {
+
+    public var startIndex: Index {
         return _guts.startIndex
     }
-    
-    public var endIndex : Index {
+
+    public var endIndex: Index {
         return _guts.endIndex
     }
-    
+
     @preconcurrency
-    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value: Sendable {
         get { _guts.getValue(in: startIndex ..< endIndex, key: K.self)?.rawValue(as: K.self) }
         set {
             ensureUniqueReference()
@@ -240,13 +240,13 @@ extension AttributedString: AttributedStringProtocol {
             }
         }
     }
-    
+
     @preconcurrency
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value: Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }
-    
+
     public subscript<S: AttributeScope>(dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>) -> ScopedAttributeContainer<S> {
         get {
             return ScopedAttributeContainer(_guts.getValues(in: startIndex ..< endIndex))
@@ -301,17 +301,17 @@ extension AttributedString {
         result.append(rhs)
         return result
     }
-    
+
     public static func += <T: AttributedStringProtocol> (lhs: inout AttributedString, rhs: T) {
         lhs.append(rhs)
     }
-    
+
     public static func + (lhs: AttributedString, rhs: AttributedString) -> AttributedString {
         var result = lhs
         result.append(rhs)
         return result
     }
-    
+
     public static func += (lhs: inout Self, rhs: AttributedString) {
         lhs.append(rhs)
     }
@@ -368,4 +368,3 @@ extension Range<AttributedString.Runs.Index> {
         Range<Int>(uncheckedBounds: (lowerBound.rangeIndex, upperBound.rangeIndex))
     }
 }
-

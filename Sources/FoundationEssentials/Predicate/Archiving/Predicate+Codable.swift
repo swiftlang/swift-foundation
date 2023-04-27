@@ -13,26 +13,26 @@
 #if FOUNDATION_FRAMEWORK
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension Predicate : Codable {
+extension Predicate: Codable {
     public func encode(to encoder: Encoder) throws {
         try self.encode(to: encoder, configuration: .standardConfiguration)
     }
-    
+
     public init(from decoder: Decoder) throws {
         try self.init(from: decoder, configuration: .standardConfiguration)
     }
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension Predicate : CodableWithConfiguration {
+extension Predicate: CodableWithConfiguration {
     public typealias EncodingConfiguration = PredicateCodableConfiguration
     public typealias DecodingConfiguration = PredicateCodableConfiguration
-    
+
     public func encode(to encoder: Encoder, configuration: EncodingConfiguration) throws {
         var container = encoder.unkeyedContainer()
         try container.encodePredicateExpression(expression, variables: variable, predicateConfiguration: configuration)
     }
-    
+
     public init(from decoder: Decoder, configuration: DecodingConfiguration) throws {
         var container = try decoder.unkeyedContainer()
         let result = try container.decodePredicateExpression(inputs: Input.self, predicateConfiguration: configuration)

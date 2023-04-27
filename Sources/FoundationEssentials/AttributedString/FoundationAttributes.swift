@@ -22,9 +22,9 @@ import _RopeModule
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScopes {
     public var foundation: FoundationAttributes.Type { FoundationAttributes.self }
-    
+
     @_nonSendable
-    public struct FoundationAttributes : AttributeScope {
+    public struct FoundationAttributes: AttributeScope {
         public let link: LinkAttribute
         public let languageIdentifier: LanguageIdentifierAttribute
         public let personNameComponent: PersonNameComponentAttribute
@@ -32,7 +32,7 @@ extension AttributeScopes {
         public let dateField: DateFieldAttribute
         public let alternateDescription: AlternateDescriptionAttribute
         public let imageURL: ImageURLAttribute
-        public let replacementIndex : ReplacementIndexAttribute
+        public let replacementIndex: ReplacementIndexAttribute
         public let measurement: MeasurementAttribute
         public let byteCount: ByteCountAttribute
         
@@ -87,7 +87,7 @@ extension AttributeScopes.FoundationAttributes {
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum LinkAttribute : CodableAttributedStringKey {
+    public enum LinkAttribute: CodableAttributedStringKey {
         public typealias Value = URL
         public static var name = "NSLink"
     }
@@ -96,7 +96,7 @@ extension AttributeScopes.FoundationAttributes {
     
     @frozen @_nonSendable
     @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-    public enum ReferentConceptAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    public enum ReferentConceptAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
         public static let name = NSAttributedString.Key.referentConcept.rawValue
         public static let markdownName = "referentConcept"
@@ -104,43 +104,43 @@ extension AttributeScopes.FoundationAttributes {
 
     @frozen @_nonSendable
     @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-    public enum AgreementConceptAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    public enum AgreementConceptAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
         public static let name = NSAttributedString.Key.agreeWithConcept.rawValue
         public static let markdownName = "agreeWithConcept"
     }
-    
+
     @frozen @_nonSendable
     @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-    public enum AgreementReplacementAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    public enum AgreementReplacementAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
         public static let name = NSAttributedString.Key.agreeWithReplacement.rawValue
         public static let markdownName = "agreeWithReplacement"
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum MorphologyAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    public enum MorphologyAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Morphology
         public static let name = NSAttributedString.Key.morphology.rawValue
         public static let markdownName = "morphology"
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum InflectionRuleAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    public enum InflectionRuleAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = InflectionRule
         public static let name = NSAttributedString.Key.inflectionRule.rawValue
         public static let markdownName = "inflect"
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @_spi(AutomaticGrammaticalAgreement)
-    public enum AssumedFallbackInflectionAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+    public enum AssumedFallbackInflectionAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Morphology
         public static let name = NSAttributedString.Key._assumedFallbackInflection.rawValue
         public static let markdownName = "assumedFallbackInflection"
@@ -151,15 +151,15 @@ extension AttributeScopes.FoundationAttributes {
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum LanguageIdentifierAttribute : CodableAttributedStringKey {
+    public enum LanguageIdentifierAttribute: CodableAttributedStringKey {
         public typealias Value = String
         public static let name = "NSLanguage"
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum PersonNameComponentAttribute : CodableAttributedStringKey {
+    public enum PersonNameComponentAttribute: CodableAttributedStringKey {
         public typealias Value = Component
         public static let name = "NSPersonNameComponentKey"
 
@@ -167,17 +167,17 @@ extension AttributeScopes.FoundationAttributes {
             case givenName, familyName, middleName, namePrefix, nameSuffix, nickname, delimiter
         }
     }
-    
+
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public struct NumberFormatAttributes: AttributeScope {
         public let numberSymbol: SymbolAttribute
         public let numberPart: NumberPartAttribute
-        
+
         @frozen
         @_nonSendable
-        public enum NumberPartAttribute : CodableAttributedStringKey {
-            public enum NumberPart : Int, Codable, Sendable {
+        public enum NumberPartAttribute: CodableAttributedStringKey {
+            public enum NumberPart: Int, Codable, Sendable {
                 case integer
                 case fraction
             }
@@ -185,11 +185,11 @@ extension AttributeScopes.FoundationAttributes {
             public static let name = "Foundation.NumberFormatPart"
             public typealias Value = NumberPart
         }
-        
+
         @frozen
         @_nonSendable
-        public enum SymbolAttribute : CodableAttributedStringKey {
-            public enum Symbol : Int, Codable, Sendable {
+        public enum SymbolAttribute: CodableAttributedStringKey {
+            public enum Symbol: Int, Codable, Sendable {
                 case groupingSeparator
                 case sign
                 case decimalSeparator
@@ -201,12 +201,12 @@ extension AttributeScopes.FoundationAttributes {
             public typealias Value = Symbol
         }
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum DateFieldAttribute : CodableAttributedStringKey {
-        public enum Field : Hashable, Codable, Sendable {
+    public enum DateFieldAttribute: CodableAttributedStringKey {
+        public enum Field: Hashable, Codable, Sendable {
             case era
             case year
             /// For non-Gregorian calendars, this corresponds to the extended Gregorian year in which the calendar’s year begins.
@@ -304,7 +304,7 @@ extension AttributeScopes.FoundationAttributes {
                     "O": .timeZone,
                     "V": .timeZone,
                     "X": .timeZone,
-                    "x": .timeZone,
+                    "x": .timeZone
                 ]
 
                 guard let field = mappings[rawValue] else {
@@ -338,22 +338,22 @@ extension AttributeScopes.FoundationAttributes {
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum InflectionAlternativeAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
+    public enum InflectionAlternativeAttribute: CodableAttributedStringKey, MarkdownDecodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
         public typealias Value = AttributedString
         public typealias ObjectiveCValue = NSObject
         public static let name = NSAttributedString.Key.inflectionAlternative.rawValue
         public static let markdownName = "inflectionAlternative"
-        
+
         public static func decodeMarkdown(from decoder: Decoder) throws -> AttributedString {
             let container = try decoder.singleValueContainer()
             let stringContent = try container.decode(String.self)
             return try AttributedString(markdown: stringContent, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
         }
-        
+
         public static func objectiveCValue(for value: AttributedString) throws -> NSObject {
             try NSAttributedString(value, including: \.foundation)
         }
-        
+
         public static func value(for object: NSObject) throws -> AttributedString {
             if let attrString = object as? NSAttributedString {
                 return try AttributedString(attrString, including: \.foundation)
@@ -362,32 +362,32 @@ extension AttributeScopes.FoundationAttributes {
             }
         }
     }
-    
-	@frozen
+
+    @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum InlinePresentationIntentAttribute : CodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
+    public enum InlinePresentationIntentAttribute: CodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
         public typealias Value = InlinePresentationIntent
         public typealias ObjectiveCValue = NSNumber
         public static let name = NSAttributedString.Key.inlinePresentationIntent.rawValue
-        
+
         public static func objectiveCValue(for value: InlinePresentationIntent) throws -> NSNumber {
             NSNumber(value: value.rawValue)
         }
-        
+
         public static func value(for object: NSNumber) throws -> InlinePresentationIntent {
             InlinePresentationIntent(rawValue: object.uintValue)
         }
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum PresentationIntentAttribute : CodableAttributedStringKey {
+    public enum PresentationIntentAttribute: CodableAttributedStringKey {
         public typealias Value = PresentationIntent
         public static let name = NSAttributedString.Key.presentationIntentAttributeName.rawValue
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
@@ -401,30 +401,30 @@ extension AttributeScopes.FoundationAttributes {
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum AlternateDescriptionAttribute : CodableAttributedStringKey {
+    public enum AlternateDescriptionAttribute: CodableAttributedStringKey {
         public typealias Value = String
         public static let name = "NSAlternateDescription"
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum ImageURLAttribute : CodableAttributedStringKey {
+    public enum ImageURLAttribute: CodableAttributedStringKey {
         public typealias Value = URL
         public static let name = "NSImageURL"
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum ReplacementIndexAttribute : CodableAttributedStringKey {
+    public enum ReplacementIndexAttribute: CodableAttributedStringKey {
         public typealias Value = Int
         public static let name = "NSReplacementIndex"
     }
-    
+
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public struct MeasurementAttribute : CodableAttributedStringKey {
+    public struct MeasurementAttribute: CodableAttributedStringKey {
         public typealias Value = Component
         public static let name = "Foundation.MeasurementAttribute"
         public enum Component: Int, Codable, Sendable {
@@ -432,11 +432,11 @@ extension AttributeScopes.FoundationAttributes {
             case unit
         }
     }
-    
+
     @frozen
     @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum ByteCountAttribute : CodableAttributedStringKey {
+    public enum ByteCountAttribute: CodableAttributedStringKey {
         public typealias Value = Component
         public static let name = "Foundation.ByteCountAttribute"
         public enum Component: Codable, Hashable, Sendable {
@@ -445,7 +445,7 @@ extension AttributeScopes.FoundationAttributes {
             case unit(Unit)
             case actualByteCount
         }
-        
+
         public enum Unit: Codable, Sendable {
             case byte
             case kb
@@ -462,7 +462,7 @@ extension AttributeScopes.FoundationAttributes {
     @frozen
     @_nonSendable
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public enum DurationFieldAttribute : CodableAttributedStringKey {
+    public enum DurationFieldAttribute: CodableAttributedStringKey {
         public typealias Value = Field
         public static let name = "Foundation.DurationFieldAttribute"
         public enum Field: Int, Codable, Sendable {
@@ -481,47 +481,47 @@ extension AttributeScopes.FoundationAttributes {
     @_nonSendable
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct LocalizedStringArgumentAttributes {
-    
+
         // Represents all numeric arguments (i.e. those that use format specifiers such as %d, %f, etc.)
         public let localizedNumericArgument: LocalizedNumericArgumentAttribute
-        
+
         public let localizedDateArgument: LocalizedDateArgumentAttribute
         public let localizedDateIntervalArgument: LocalizedDateIntervalArgumentAttribute
         public let localizedURLArgument: LocalizedURLArgumentAttribute
-        
+
         @frozen
         @_nonSendable
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-        public enum LocalizedNumericArgumentAttribute : CodableAttributedStringKey {
+        public enum LocalizedNumericArgumentAttribute: CodableAttributedStringKey {
             public static let name = "Foundation.LocalizedNumericArgumentAttribute"
-            public enum Value : Hashable, Codable, Sendable {
+            public enum Value: Hashable, Codable, Sendable {
                 case uint(UInt64)
                 case int(Int64)
                 case double(Double)
                 case decimal(Decimal)
             }
         }
-        
+
         @frozen
         @_nonSendable
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-        public enum LocalizedDateArgumentAttribute : CodableAttributedStringKey {
+        public enum LocalizedDateArgumentAttribute: CodableAttributedStringKey {
             public typealias Value = Date
             public static let name = "Foundation.LocalizedDateArgumentAttribute"
         }
-        
+
         @frozen
         @_nonSendable
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-        public enum LocalizedDateIntervalArgumentAttribute : CodableAttributedStringKey {
+        public enum LocalizedDateIntervalArgumentAttribute: CodableAttributedStringKey {
             public typealias Value = Range<Date>
             public static let name = "Foundation.LocalizedDateIntervalArgumentAttribute"
         }
-        
+
         @frozen
         @_nonSendable
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-        public enum LocalizedURLArgumentAttribute : CodableAttributedStringKey {
+        public enum LocalizedURLArgumentAttribute: CodableAttributedStringKey {
             public typealias Value = URL
             public static let name = "Foundation.LocalizedURLArgumentAttribute"
         }
@@ -532,13 +532,13 @@ extension AttributeScopes.FoundationAttributes {
 #if FOUNDATION_FRAMEWORK
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributeScopes.FoundationAttributes.LinkAttribute : ObjectiveCConvertibleAttributedStringKey {
+extension AttributeScopes.FoundationAttributes.LinkAttribute: ObjectiveCConvertibleAttributedStringKey {
     public typealias ObjectiveCValue = NSObject // NSURL or NSString
-    
+
     public static func objectiveCValue(for value: URL) throws -> NSObject {
         value as NSURL
     }
-    
+
     public static func value(for object: NSObject) throws -> URL {
         if let object = object as? NSURL {
             return object as URL
@@ -553,12 +553,12 @@ extension AttributeScopes.FoundationAttributes.LinkAttribute : ObjectiveCConvert
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributeScopes.FoundationAttributes.LanguageIdentifierAttribute : MarkdownDecodableAttributedStringKey {
+extension AttributeScopes.FoundationAttributes.LanguageIdentifierAttribute: MarkdownDecodableAttributedStringKey {
     public static let markdownName = "languageIdentifier"
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributeScopes.FoundationAttributes.PersonNameComponentAttribute : ObjectiveCConvertibleAttributedStringKey {
+extension AttributeScopes.FoundationAttributes.PersonNameComponentAttribute: ObjectiveCConvertibleAttributedStringKey {
     public typealias ObjectiveCValue = NSString
 }
 

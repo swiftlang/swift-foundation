@@ -18,11 +18,11 @@ import _RopeModule
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    public struct Runs : Sendable {
+    public struct Runs: Sendable {
         internal typealias _InternalRun = AttributedString._InternalRun
         internal typealias _AttributeStorage = AttributedString._AttributeStorage
         internal typealias AttributeRunBoundaries = AttributedString.AttributeRunBoundaries
-        
+
         internal var _guts: Guts
         internal var _range: Range<AttributedString.Index>
         internal var _runRange: Range<AttributedString.Runs.Index>
@@ -64,21 +64,21 @@ extension AttributedString.Runs: Equatable {
         guard lhsSlice.count == rhsSlice.count else {
             return false
         }
-        
+
         let runCount = lhsSlice.count
-        
+
         // Empty slices are always equal
         guard runCount > 0 else {
             return true
         }
-        
+
         // Compare the first run (clamping their ranges) since we know each has at least one run
         let first1 = lhs._guts.run(at: lhs.startIndex, clampedBy: lhs._range)
         let first2 = rhs._guts.run(at: rhs.startIndex, clampedBy: rhs._range)
         if first1 != first2 {
             return false
         }
-        
+
         // Compare all inner runs if they exist without needing to clamp ranges
         if runCount > 2 {
             let slice1 = lhsSlice[lhsSlice.startIndex + 1 ..< lhsSlice.endIndex - 1]
@@ -87,7 +87,7 @@ extension AttributedString.Runs: Equatable {
                 return false
             }
         }
-        
+
         // If there are more than one run (so we didn't already check this as the first run), check the last run (clamping its range)
         if runCount > 1 {
             let i1 = Index(rangeIndex: lhs._runRange.upperBound.rangeIndex - 1)
@@ -98,7 +98,7 @@ extension AttributedString.Runs: Equatable {
                 return false
             }
         }
-        
+
         return true
     }
 }
@@ -114,46 +114,46 @@ extension AttributedString.Runs: CustomStringConvertible {
 extension AttributedString.Runs: BidirectionalCollection {
     public struct Index: Comparable, Strideable, Sendable {
         internal let rangeIndex: Int
-        
+
         public static func < (lhs: Self, rhs: Self) -> Bool {
             lhs.rangeIndex < rhs.rangeIndex
         }
-        
+
         public func distance(to other: Self) -> Int {
             other.rangeIndex - rangeIndex
         }
-        
+
         public func advanced(by n: Int) -> Self {
             Index(rangeIndex: rangeIndex + n)
         }
     }
-    
+
     public typealias Element = Run
-    
+
     public func index(before i: Index) -> Index {
         Index(rangeIndex: i.rangeIndex - 1)
     }
-    
+
     public func index(after i: Index) -> Index {
         Index(rangeIndex: i.rangeIndex + 1)
     }
-    
+
     public var startIndex: Index {
         _runRange.lowerBound
     }
-    
+
     public var endIndex: Index {
         _runRange.upperBound
     }
-    
+
     public subscript(position: Index) -> Run {
         return _guts.run(at: position, clampedBy: _range)
     }
-    
+
     internal subscript(internal position: Index) -> _InternalRun {
         return _guts.runs[position.rangeIndex]
     }
-    
+
     public subscript(position: AttributedString.Index) -> Run {
         let (internalRun, range) = _guts.run(at: position, clampedBy: _range)
         return Run(_internal: internalRun, range, _guts)

@@ -18,10 +18,10 @@ import _RopeModule
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    public enum AttributeMergePolicy : Sendable {
+    public enum AttributeMergePolicy: Sendable {
         case keepNew
         case keepCurrent
-        
+
         internal var combinerClosure: (_AttributeValue, _AttributeValue) -> _AttributeValue {
             switch self {
             case .keepNew: return { _, new in new }
@@ -41,17 +41,16 @@ public protocol AttributedStringAttributeMutation {
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol AttributedStringProtocol
-    : AttributedStringAttributeMutation, Hashable, CustomStringConvertible, Sendable
-{
-    var startIndex : AttributedString.Index { get }
-    var endIndex : AttributedString.Index { get }
+: AttributedStringAttributeMutation, Hashable, CustomStringConvertible, Sendable {
+    var startIndex: AttributedString.Index { get }
+    var endIndex: AttributedString.Index { get }
 
-    var runs : AttributedString.Runs { get }
-    var characters : AttributedString.CharacterView { get }
-    var unicodeScalars : AttributedString.UnicodeScalarView { get }
+    var runs: AttributedString.Runs { get }
+    var characters: AttributedString.CharacterView { get }
+    var unicodeScalars: AttributedString.UnicodeScalarView { get }
 
-    @preconcurrency subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable { get set }
-    @preconcurrency subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable { get set }
+    @preconcurrency subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value: Sendable { get set }
+    @preconcurrency subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value: Sendable { get set }
     subscript<S: AttributeScope>(dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>) -> ScopedAttributeContainer<S> { get set }
 
     subscript<R: RangeExpression>(bounds: R) -> AttributedSubstring where R.Bound == AttributedString.Index { get }
@@ -65,9 +64,9 @@ public extension AttributedStringProtocol {
         return new
     }
 
-    func mergingAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) -> AttributedString {
+    func mergingAttributes(_ attributes: AttributeContainer, mergePolicy: AttributedString.AttributeMergePolicy = .keepNew) -> AttributedString {
         var new = AttributedString(self)
-        new.mergeAttributes(attributes, mergePolicy:  mergePolicy)
+        new.mergeAttributes(attributes, mergePolicy: mergePolicy)
         return new
     }
 
@@ -80,7 +79,7 @@ public extension AttributedStringProtocol {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
-    internal var __guts : AttributedString.Guts {
+    internal var __guts: AttributedString.Guts {
         if let s = self as? AttributedString {
             return s._guts
         } else if let s = self as? AttributedSubstring {
@@ -89,7 +88,7 @@ extension AttributedStringProtocol {
             return self.characters._guts
         }
     }
-    
+
     internal var _baseString: BigString {
         __guts.string
     }
@@ -129,7 +128,7 @@ extension AttributedSubstring {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
-    public var description : String {
+    public var description: String {
         var result = ""
         let guts = self.__guts
         guts.enumerateRuns(containing: self._bounds._utf8OffsetRange) { run, loc, _, modified in

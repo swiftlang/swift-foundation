@@ -12,8 +12,8 @@
 
 #if !FOUNDATION_FRAMEWORK
 
-public struct URL : Hashable, Sendable, Codable {
-    
+public struct URL: Hashable, Sendable, Codable {
+
 }
 
 #endif // !Foundation_FRAMEWORK

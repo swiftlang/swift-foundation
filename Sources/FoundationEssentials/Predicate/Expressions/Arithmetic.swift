@@ -47,24 +47,24 @@ extension PredicateExpressions {
             }
         }
     }
-    
+
     public static func build_Arithmetic<LHS, RHS>(lhs: LHS, rhs: RHS, op: ArithmeticOperator) -> Arithmetic<LHS, RHS> {
         Arithmetic(lhs: lhs, rhs: rhs, op: op)
     }
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Arithmetic : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+extension PredicateExpressions.Arithmetic: StandardPredicateExpression where LHS: StandardPredicateExpression, RHS: StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Arithmetic : Codable where LHS : Codable, RHS : Codable {
+extension PredicateExpressions.Arithmetic: Codable where LHS: Codable, RHS: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(lhs)
         try container.encode(rhs)
         try container.encode(op)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         lhs = try container.decode(LHS.self)
@@ -74,4 +74,4 @@ extension PredicateExpressions.Arithmetic : Codable where LHS : Codable, RHS : C
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Arithmetic : Sendable where LHS : Sendable, RHS : Sendable {}
+extension PredicateExpressions.Arithmetic: Sendable where LHS: Sendable, RHS: Sendable {}

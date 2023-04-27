@@ -16,11 +16,11 @@
 import ReflectionInternal
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-enum PredicateCodableError : Error, CustomStringConvertible {
+enum PredicateCodableError: Error, CustomStringConvertible {
     case disallowedType(typeName: String, path: String)
     case disallowedIdentifier(String, path: String)
     case reconstructionFailure(PartialType, [Type])
-    
+
     var description: String {
         switch self {
         case .disallowedType(let typeName, let path): return "The '\(typeName)' type is not in the provided allowlist (required by \(path))"
@@ -31,15 +31,15 @@ enum PredicateCodableError : Error, CustomStringConvertible {
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-private struct ExpressionStructure : Codable {
+private struct ExpressionStructure: Codable {
     let identifier: String
     let args: [ExpressionStructure]
-    
+
     private enum CodingKeys: CodingKey {
         case identifier
         case args
     }
-    
+
     func encode(to encoder: Encoder) throws {
         if args.isEmpty {
             var container = encoder.singleValueContainer()
@@ -50,25 +50,25 @@ private struct ExpressionStructure : Codable {
             try container.encode(args, forKey: .args)
         }
     }
-    
+
     init(from decoder: Decoder) throws {
         if let keyedContainer = try? decoder.container(keyedBy: CodingKeys.self) {
             identifier = try keyedContainer.decode(String.self, forKey: .identifier)
             args = try keyedContainer.decode([ExpressionStructure].self, forKey: .args)
             return
         }
-        
+
         identifier = try decoder.singleValueContainer().decode(String.self)
         args = []
     }
-    
+
     init(_ type: Type, with configuration: PredicateCodableConfiguration, path: [String] = []) throws {
         guard let result = configuration._identifier(for: type) else {
             throw PredicateCodableError.disallowedType(typeName: _typeName(type.swiftType), path: "/\(path.joined(separator: "/"))")
         }
-        
+
         self.identifier = result.identifier
-        
+
         if !result.isConcrete {
             self.args = try type.genericArguments.map {
                 try .init($0, with: configuration, path: path + [result.identifier])
@@ -77,12 +77,12 @@ private struct ExpressionStructure : Codable {
             self.args = []
         }
     }
-    
+
     func reconstruct(with configuration: PredicateCodableConfiguration, path: [String] = []) throws -> Type {
         guard let result = configuration._type(for: identifier) else {
             throw PredicateCodableError.disallowedIdentifier(identifier, path: "/\(path.joined(separator: "/"))")
         }
-        
+
         let partial: PartialType
         switch result {
         case .concrete(let type):
@@ -90,11 +90,11 @@ private struct ExpressionStructure : Codable {
         case .partial(let partialType):
             partial = partialType
         }
-        
+
         let argTypes = try args.map {
             try $0.reconstruct(with: configuration, path: path + [identifier])
         }
-        
+
         guard let created = partial.create(with: argTypes) else {
             throw PredicateCodableError.reconstructionFailure(partial, argTypes)
         }
@@ -128,7 +128,7 @@ extension _ThreadLocal.Key<PredicateArchivingState> {
     static let predicateArchivingState = Self<PredicateArchivingState>()
 }
 
-enum PredicateExpressionCodingKeys : CodingKey {
+enum PredicateExpressionCodingKeys: CodingKey {
     case variable
     case expression
     case structure

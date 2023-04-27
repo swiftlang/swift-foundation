@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 /// Describes an error in the POSIX error domain.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct POSIXError : _BridgedStoredNSError {
+public struct POSIXError: _BridgedStoredNSError {
     public let _nsError: NSError
 
     public init(_nsError error: NSError) {
@@ -31,7 +31,7 @@ public struct POSIXError : _BridgedStoredNSError {
 }
 #else
 // Define the POSIXErrorCode for all platforms here.
-public enum POSIXErrorCode : Int32 {
+public enum POSIXErrorCode: Int32 {
     /// Operation not permitted.
     case EPERM = 1
 
@@ -364,12 +364,12 @@ public enum POSIXErrorCode : Int32 {
     public typealias RawValue = Int32
 }
 
-extension POSIXErrorCode : Equatable, Hashable, RawRepresentable {
+extension POSIXErrorCode: Equatable, Hashable, RawRepresentable {
 }
 
 /// Describes an error in the POSIX error domain.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct POSIXError : _StoredError {
+public struct POSIXError: _StoredError {
     public let code: Code
 
     public static var errorDomain: String { return "NSPOSIXErrorDomain" }
@@ -383,7 +383,7 @@ public struct POSIXError : _StoredError {
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension POSIXErrorCode : _ErrorCodeProtocol {
+extension POSIXErrorCode: _ErrorCodeProtocol {
     public typealias _ErrorType = POSIXError
 }
 

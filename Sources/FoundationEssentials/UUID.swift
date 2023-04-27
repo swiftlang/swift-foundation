@@ -16,7 +16,7 @@ public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8
 
 /// Represents UUID strings, which can be used to uniquely identify types, interfaces, and other items.
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
-public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
+public struct UUID: Hashable, Equatable, CustomStringConvertible, Sendable {
     public private(set) var uuid: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
     /* Create a new UUID with RFC 4122 version 4 random bytes */
@@ -97,16 +97,16 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
 }
 
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
-extension UUID : CustomReflectable {
+extension UUID: CustomReflectable {
     public var customMirror: Mirror {
-        let c : [(label: String?, value: Any)] = []
-        let m = Mirror(self, children:c, displayStyle: .struct)
+        let c: [(label: String?, value: Any)] = []
+        let m = Mirror(self, children: c, displayStyle: .struct)
         return m
     }
 }
 
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
-extension UUID : Codable {
+extension UUID: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let uuidString = try container.decode(String.self)
@@ -126,7 +126,7 @@ extension UUID : Codable {
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension UUID : Comparable {
+extension UUID: Comparable {
     @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
     public static func < (lhs: UUID, rhs: UUID) -> Bool {
         var leftUUID = lhs.uuid

@@ -13,46 +13,45 @@
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions {
     public struct ClosedRange<
-        LHS : PredicateExpression,
-        RHS : PredicateExpression
-    > : PredicateExpression
+        LHS: PredicateExpression,
+        RHS: PredicateExpression
+    >: PredicateExpression
     where
         LHS.Output == RHS.Output,
-        LHS.Output: Comparable
-    {
+        LHS.Output: Comparable {
         public typealias Output = Swift.ClosedRange<LHS.Output>
-        
+
         public let lower: LHS
         public let upper: RHS
-        
+
         public init(lower: LHS, upper: RHS) {
             self.lower = lower
             self.upper = upper
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Swift.ClosedRange<LHS.Output> {
             let low = try lower.evaluate(bindings)
             let high = try upper.evaluate(bindings)
             return low...high
         }
     }
-    
+
     public static func build_ClosedRange<LHS, RHS>(lower: LHS, upper: RHS) -> ClosedRange<LHS, RHS> {
         ClosedRange(lower: lower, upper: upper)
     }
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.ClosedRange : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+extension PredicateExpressions.ClosedRange: StandardPredicateExpression where LHS: StandardPredicateExpression, RHS: StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.ClosedRange : Codable where LHS : Codable, RHS : Codable {
+extension PredicateExpressions.ClosedRange: Codable where LHS: Codable, RHS: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(lower)
         try container.encode(upper)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         lower = try container.decode(LHS.self)
@@ -61,4 +60,4 @@ extension PredicateExpressions.ClosedRange : Codable where LHS : Codable, RHS : 
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.ClosedRange : Sendable where LHS : Sendable, RHS : Sendable {}
+extension PredicateExpressions.ClosedRange: Sendable where LHS: Sendable, RHS: Sendable {}

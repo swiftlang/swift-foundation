@@ -18,7 +18,7 @@ import _RopeModule
 
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributedSubstring : Sendable {
+public struct AttributedSubstring: Sendable {
     /// The guts of the base attributed string.
     internal var _guts: AttributedString.Guts
 
@@ -50,7 +50,6 @@ extension AttributedSubstring {
     public var base: AttributedString {
         return AttributedString(_guts)
     }
-
 
     internal var _unicodeScalars: BigSubstring.UnicodeScalarView {
         _guts.string.unicodeScalars[_range._bstringRange]
@@ -87,7 +86,7 @@ extension AttributedSubstring { // Equatable
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributedSubstring : AttributedStringProtocol {
+extension AttributedSubstring: AttributedStringProtocol {
     public var startIndex: AttributedString.Index {
         get {
             return _range.lowerBound
@@ -117,9 +116,9 @@ extension AttributedSubstring : AttributedStringProtocol {
         _guts.set(attributes: attributes, in: _range)
     }
 
-    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) {
+    public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy: AttributedString.AttributeMergePolicy = .keepNew) {
         ensureUniqueReference()
-        _guts.add(attributes: attributes, in: _range, mergePolicy:  mergePolicy)
+        _guts.add(attributes: attributes, in: _range, mergePolicy: mergePolicy)
     }
 
     public mutating func replaceAttributes(_ attributes: AttributeContainer, with others: AttributeContainer) {
@@ -150,15 +149,15 @@ extension AttributedSubstring : AttributedStringProtocol {
         }
     }
 
-    public var runs : AttributedString.Runs {
+    public var runs: AttributedString.Runs {
         get { .init(_guts, _range) }
     }
 
-    public var characters : AttributedString.CharacterView {
+    public var characters: AttributedString.CharacterView {
         return AttributedString.CharacterView(_guts, startIndex ..< endIndex)
     }
 
-    public var unicodeScalars : AttributedString.UnicodeScalarView {
+    public var unicodeScalars: AttributedString.UnicodeScalarView {
         return AttributedString.UnicodeScalarView(_guts, startIndex ..< endIndex)
     }
 
@@ -170,7 +169,7 @@ extension AttributedSubstring : AttributedStringProtocol {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring {
     @preconcurrency
-    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value: Sendable {
         get { _guts.getValue(in: _range, key: K.self)?.rawValue(as: K.self) }
         set {
             ensureUniqueReference()
@@ -183,7 +182,7 @@ extension AttributedSubstring {
     }
 
     @preconcurrency
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value: Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }

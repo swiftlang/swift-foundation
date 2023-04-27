@@ -18,13 +18,13 @@ import _RopeModule
 
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributeContainer : Sendable {
-    internal var storage : AttributedString._AttributeStorage
-    
+public struct AttributeContainer: Sendable {
+    internal var storage: AttributedString._AttributeStorage
+
     public init() {
         storage = .init()
     }
-    
+
     internal init(_ storage: AttributedString._AttributeStorage) {
         self.storage = storage
     }
@@ -33,13 +33,13 @@ public struct AttributeContainer : Sendable {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeContainer {
     @preconcurrency
-    public subscript<T: AttributedStringKey>(_: T.Type) -> T.Value? where T.Value : Sendable {
+    public subscript<T: AttributedStringKey>(_: T.Type) -> T.Value? where T.Value: Sendable {
         get { storage[T.self] }
         set { storage[T.self] = newValue }
     }
 
     @preconcurrency
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value: Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }
@@ -70,11 +70,11 @@ extension AttributeContainer {
         return Builder(container: self)
     }
 
-    public struct Builder<T: AttributedStringKey> : Sendable {
-        var container : AttributeContainer
+    public struct Builder<T: AttributedStringKey>: Sendable {
+        var container: AttributeContainer
 
         @preconcurrency
-        public func callAsFunction(_ value: T.Value) -> AttributeContainer where T.Value : Sendable {
+        public func callAsFunction(_ value: T.Value) -> AttributeContainer where T.Value: Sendable {
             var new = container
             new[T.self] = value
             return new
@@ -85,9 +85,9 @@ extension AttributeContainer {
         self.storage.mergeIn(other.storage, mergePolicy: mergePolicy)
     }
 
-    public func merging(_ other: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) -> AttributeContainer {
+    public func merging(_ other: AttributeContainer, mergePolicy: AttributedString.AttributeMergePolicy = .keepNew) -> AttributeContainer {
         var copy = self
-        copy.merge(other, mergePolicy:  mergePolicy)
+        copy.merge(other, mergePolicy: mergePolicy)
         return copy
     }
 }

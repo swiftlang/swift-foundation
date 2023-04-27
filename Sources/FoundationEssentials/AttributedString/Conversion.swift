@@ -55,15 +55,15 @@ extension String {
 #if FOUNDATION_FRAMEWORK
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol ObjectiveCConvertibleAttributedStringKey : AttributedStringKey {
-    associatedtype ObjectiveCValue : NSObject
+public protocol ObjectiveCConvertibleAttributedStringKey: AttributedStringKey {
+    associatedtype ObjectiveCValue: NSObject
 
     static func objectiveCValue(for value: Value) throws -> ObjectiveCValue
     static func value(for object: ObjectiveCValue) throws -> Value
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == Int, ObjectiveCValue == NSNumber {
+public extension ObjectiveCConvertibleAttributedStringKey where Value: RawRepresentable, Value.RawValue == Int, ObjectiveCValue == NSNumber {
     static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
         return NSNumber(value: value.rawValue)
     }
@@ -76,7 +76,7 @@ public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepre
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == String, ObjectiveCValue == NSString {
+public extension ObjectiveCConvertibleAttributedStringKey where Value: RawRepresentable, Value.RawValue == String, ObjectiveCValue == NSString {
     static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
         return value.rawValue as NSString
     }
@@ -88,9 +88,8 @@ public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepre
     }
 }
 
-internal struct _AttributeConversionOptions : OptionSet {
+internal struct _AttributeConversionOptions: OptionSet {
     let rawValue: Int
-    
     // If an attribute's value(for: ObjectieCValue) or objectiveCValue(for: Value) function throws, ignore the error and drop the attribute
     static let dropThrowingAttributes = Self(rawValue: 1 << 0)
 }
@@ -583,7 +582,7 @@ extension AttributedString {
     internal struct _IndexConverterFromAttributedString: Collection {
         typealias Index = AttributedString.Index
         typealias Element = Index
-        
+
         let string: Substring
         init(_ string: Substring) { self.string = string }
         subscript(position: Index) -> Index { position }

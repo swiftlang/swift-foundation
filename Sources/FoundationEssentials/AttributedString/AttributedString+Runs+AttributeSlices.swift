@@ -19,7 +19,7 @@ import _RopeModule
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
     @preconcurrency
-    public struct AttributesSlice1<T : AttributedStringKey> : BidirectionalCollection, Sendable where T.Value : Sendable {
+    public struct AttributesSlice1<T: AttributedStringKey>: BidirectionalCollection, Sendable where T.Value: Sendable {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -27,7 +27,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: [AttributeRunBoundaries]
 
@@ -99,11 +99,11 @@ extension AttributedString.Runs {
         }
     }
 
-    public subscript<T : AttributedStringKey>(_ keyPath: KeyPath<AttributeDynamicLookup, T>) -> AttributesSlice1<T> {
+    public subscript<T: AttributedStringKey>(_ keyPath: KeyPath<AttributeDynamicLookup, T>) -> AttributesSlice1<T> {
         return AttributesSlice1<T>(runs: self)
     }
 
-    public subscript<T : AttributedStringKey>(_ t: T.Type) -> AttributesSlice1<T> {
+    public subscript<T: AttributedStringKey>(_ t: T.Type) -> AttributesSlice1<T> {
         return AttributesSlice1<T>(runs: self)
     }
 }
@@ -112,9 +112,9 @@ extension AttributedString.Runs {
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice2<
-        T : AttributedStringKey,
-        U : AttributedStringKey
-    > : BidirectionalCollection, Sendable
+        T: AttributedStringKey,
+        U: AttributedStringKey
+    >: BidirectionalCollection, Sendable
     where
         T.Value : Sendable,
         U.Value : Sendable
@@ -126,7 +126,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: [AttributeRunBoundaries]
 
@@ -199,8 +199,8 @@ extension AttributedString.Runs {
     }
 
     public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey
+        T: AttributedStringKey,
+        U: AttributedStringKey
     > (
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>
@@ -209,8 +209,8 @@ extension AttributedString.Runs {
     }
 
     public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey
+        T: AttributedStringKey,
+        U: AttributedStringKey
     > (
         _ t: T.Type,
         _ u: U.Type
@@ -223,10 +223,10 @@ extension AttributedString.Runs {
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice3<
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey
-    > : BidirectionalCollection, Sendable
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey
+    >: BidirectionalCollection, Sendable
     where
         T.Value : Sendable,
         U.Value : Sendable,
@@ -239,7 +239,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: [AttributeRunBoundaries]
 
@@ -316,9 +316,9 @@ extension AttributedString.Runs {
     }
 
     public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey
     > (
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>,
@@ -328,9 +328,9 @@ extension AttributedString.Runs {
     }
 
     public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey
     > (
         _ t: T.Type,
         _ u: U.Type,
@@ -344,11 +344,11 @@ extension AttributedString.Runs {
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice4<
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey
-    > : BidirectionalCollection, Sendable
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey
+    >: BidirectionalCollection, Sendable
     where
         T.Value : Sendable,
         U.Value : Sendable,
@@ -362,7 +362,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: [AttributeRunBoundaries]
 
@@ -446,10 +446,10 @@ extension AttributedString.Runs {
     }
 
     public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey
     > (
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>,
@@ -460,10 +460,10 @@ extension AttributedString.Runs {
     }
 
     public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey
     > (
         _ t: T.Type,
         _ u: U.Type,
@@ -478,19 +478,18 @@ extension AttributedString.Runs {
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice5<
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey,
-        X : AttributedStringKey
-    > : BidirectionalCollection, Sendable
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey,
+        X: AttributedStringKey
+    >: BidirectionalCollection, Sendable
     where
-        T.Value : Sendable,
-        U.Value : Sendable,
-        V.Value : Sendable,
-        W.Value : Sendable,
-        X.Value : Sendable
-    {
+        T.Value: Sendable,
+        U.Value: Sendable,
+        V.Value: Sendable,
+        W.Value: Sendable,
+        X.Value: Sendable {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -498,7 +497,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: [AttributeRunBoundaries]
 
@@ -586,11 +585,11 @@ extension AttributedString.Runs {
     }
 
     public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey,
-        X : AttributedStringKey
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey,
+        X: AttributedStringKey
     > (
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>,
@@ -602,11 +601,11 @@ extension AttributedString.Runs {
     }
 
     public subscript <
-        T : AttributedStringKey,
-        U : AttributedStringKey,
-        V : AttributedStringKey,
-        W : AttributedStringKey,
-        X : AttributedStringKey
+        T: AttributedStringKey,
+        U: AttributedStringKey,
+        V: AttributedStringKey,
+        W: AttributedStringKey,
+        X: AttributedStringKey
     > (
         _ t: T.Type,
         _ u: U.Type,
@@ -623,7 +622,7 @@ extension AttributedString.Runs {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
     @_spi(AttributedString)
-    public struct NSAttributesSlice : BidirectionalCollection, Sendable {
+    public struct NSAttributesSlice: BidirectionalCollection, Sendable {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -631,8 +630,8 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
-        let keys : [NSAttributedString.Key]
+        let runs: Runs
+        let keys: [NSAttributedString.Key]
 
         private let _names: [String]
 
@@ -785,4 +784,3 @@ extension RangeReplaceableCollection {
         if let item5 { self.append(item5) }
     }
 }
-

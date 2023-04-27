@@ -19,11 +19,11 @@ import _RopeModule
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     @preconcurrency
-    public struct SingleAttributeTransformer<T: AttributedStringKey> : Sendable where T.Value : Sendable {
+    public struct SingleAttributeTransformer<T: AttributedStringKey>: Sendable where T.Value: Sendable {
         public var range: Range<Index>
 
         internal var attrName = T.name
-        internal var attr : _AttributeValue?
+        internal var attr: _AttributeValue?
 
         public var value: T.Value? {
             get { attr?.rawValue(as: T.self) }
@@ -31,13 +31,13 @@ extension AttributedString {
         }
 
         @preconcurrency
-        public mutating func replace<U: AttributedStringKey>(with key: U.Type, value: U.Value) where U.Value : Sendable {
+        public mutating func replace<U: AttributedStringKey>(with key: U.Type, value: U.Value) where U.Value: Sendable {
             attrName = key.name
             attr = .init(value, for: U.self)
         }
 
         @preconcurrency
-        public mutating func replace<U: AttributedStringKey>(with keyPath: KeyPath<AttributeDynamicLookup, U>, value: U.Value) where U.Value : Sendable {
+        public mutating func replace<U: AttributedStringKey>(with keyPath: KeyPath<AttributeDynamicLookup, U>, value: U.Value) where U.Value: Sendable {
             self.replace(with: U.self, value: value)
         }
     }
@@ -76,7 +76,7 @@ extension AttributedString {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     public func transformingAttributes<K>(
-        _ k:  K.Type,
+        _ k: K.Type,
         _ c: (inout AttributedString.SingleAttributeTransformer<K>) -> Void
     ) -> AttributedString {
         let orig = AttributedString(_guts)
@@ -93,7 +93,7 @@ extension AttributedString {
     }
 
     public func transformingAttributes<K1, K2>(
-        _ k:  K1.Type,
+        _ k: K1.Type,
         _ k2: K2.Type,
         _ c: (inout AttributedString.SingleAttributeTransformer<K1>,
               inout AttributedString.SingleAttributeTransformer<K2>) -> Void
@@ -116,7 +116,7 @@ extension AttributedString {
     }
 
     public func transformingAttributes<K1, K2, K3>(
-        _ k:  K1.Type,
+        _ k: K1.Type,
         _ k2: K2.Type,
         _ k3: K3.Type,
         _ c: (inout AttributedString.SingleAttributeTransformer<K1>,
@@ -145,7 +145,7 @@ extension AttributedString {
     }
 
     public func transformingAttributes<K1, K2, K3, K4>(
-        _ k:  K1.Type,
+        _ k: K1.Type,
         _ k2: K2.Type,
         _ k3: K3.Type,
         _ k4: K4.Type,
@@ -180,7 +180,7 @@ extension AttributedString {
     }
 
     public func transformingAttributes<K1, K2, K3, K4, K5>(
-        _ k:  K1.Type,
+        _ k: K1.Type,
         _ k2: K2.Type,
         _ k3: K3.Type,
         _ k4: K4.Type,
@@ -231,7 +231,7 @@ extension AttributedString {
     }
 
     public func transformingAttributes<K1, K2>(
-        _ k:  KeyPath<AttributeDynamicLookup, K1>,
+        _ k: KeyPath<AttributeDynamicLookup, K1>,
         _ k2: KeyPath<AttributeDynamicLookup, K2>,
         _ c: (inout AttributedString.SingleAttributeTransformer<K1>,
               inout AttributedString.SingleAttributeTransformer<K2>) -> Void
@@ -240,7 +240,7 @@ extension AttributedString {
     }
 
     public func transformingAttributes<K1, K2, K3>(
-        _ k:  KeyPath<AttributeDynamicLookup, K1>,
+        _ k: KeyPath<AttributeDynamicLookup, K1>,
         _ k2: KeyPath<AttributeDynamicLookup, K2>,
         _ k3: KeyPath<AttributeDynamicLookup, K3>,
         _ c: (inout AttributedString.SingleAttributeTransformer<K1>,
@@ -251,7 +251,7 @@ extension AttributedString {
     }
 
     public func transformingAttributes<K1, K2, K3, K4>(
-        _ k:  KeyPath<AttributeDynamicLookup, K1>,
+        _ k: KeyPath<AttributeDynamicLookup, K1>,
         _ k2: KeyPath<AttributeDynamicLookup, K2>,
         _ k3: KeyPath<AttributeDynamicLookup, K3>,
         _ k4: KeyPath<AttributeDynamicLookup, K4>,
@@ -264,7 +264,7 @@ extension AttributedString {
     }
 
     public func transformingAttributes<K1, K2, K3, K4, K5>(
-        _ k:  KeyPath<AttributeDynamicLookup, K1>,
+        _ k: KeyPath<AttributeDynamicLookup, K1>,
         _ k2: KeyPath<AttributeDynamicLookup, K2>,
         _ k3: KeyPath<AttributeDynamicLookup, K3>,
         _ k4: KeyPath<AttributeDynamicLookup, K4>,
