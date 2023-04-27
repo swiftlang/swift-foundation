@@ -932,21 +932,62 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// Constructs an identifier from a dictionary of components.
     public static func identifier(fromComponents components: [String : String]) -> String {
-#if FOUNDATION_FRAMEWORK
-        // TODO: Port to Swift
-        // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar".
-        return CFLocaleCreateLocaleIdentifierFromComponents(kCFAllocatorSystemDefault, components as CFDictionary).rawValue as String
-#else
-        return ""
-#endif // FOUNDATION_FRAMEWORK
+        var result = ""
+        if let language = components["kCFLocaleLanguageCodeKey"] {
+            result += language
+        }
+        if let script = components["kCFLocaleScriptCodeKey"] {
+            result += "_" + script
+        }
+        let country = components["kCFLocaleCountryCodeKey"]
+        let variant = components["kCFLocaleVariantCodeKey"]
+        
+        if country != nil || variant != nil {
+            result += "_"
+        }
+        
+        if let country {
+            result += country
+        }
+        
+        if let variant {
+            result += "_" + variant
+        }
+        
+        return result
     }
 
 #if FOUNDATION_FRAMEWORK
     /// Constructs an identifier from a dictionary of components, allowing a `Calendar` value. Compatibility only.
     internal static func identifier(fromComponents components: [String : Any]) -> String {
-        // TODO: Port to Swift: https://github.com/apple/swift-foundation/issues/45
-        // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar".
-        return CFLocaleCreateLocaleIdentifierFromComponents(kCFAllocatorSystemDefault, components as CFDictionary).rawValue as String
+        // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar". This version for framework use allows Calendar.
+        var result = ""
+        if let language = components["kCFLocaleLanguageCodeKey"] as? String {
+            result += language
+        }
+        if let script = components["kCFLocaleScriptCodeKey"] as? String {
+            result += "_" + script
+        }
+        let country = components["kCFLocaleCountryCodeKey"] as? String
+        let variant = components["kCFLocaleVariantCodeKey"] as? String
+        
+        if country != nil || variant != nil {
+            result += "_"
+        }
+        
+        if let country {
+            result += country
+        }
+        
+        if let variant {
+            result += "_" + variant
+        }
+        
+        if let calendar = components["kCFLocaleCalendarKey"] as? Calendar {
+            result += "@calendar=" + calendar.identifier.cfCalendarIdentifier
+        }
+        
+        return result
     }
 #endif // FOUNDATION_FRAMEWORK
 
