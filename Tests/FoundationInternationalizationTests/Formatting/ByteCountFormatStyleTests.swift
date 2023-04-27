@@ -181,7 +181,7 @@ final class ByteCountFormatStyleTests : XCTestCase {
 
 #if !os(watchOS)
     func testEveryAllowedUnit() {
-        // 84270854: The largest unit supported currenly is pb
+        // 84270854: The largest unit supported currently is pb
         let expectations: [ByteCountFormatStyle.Units: String] = [
             .bytes: "10,000,000,000,000,000 bytes",
             .kb: "10,000,000,000,000 kB",

@@ -21,7 +21,7 @@ import TestSupport
 #endif
 
 extension String {
-    var _scalarViewDiscription: String {
+    var _scalarViewDescription: String {
         return unicodeScalars.map { "\\u{\(String($0.value, radix: 16, uppercase: true))}" }.joined()
     }
 }
@@ -74,7 +74,7 @@ final class StringLocaleTests: XCTestCase {
             }
             let actual = string._uppercased(with: locale)
 
-            XCTAssertEqual(actual, expected, "actual: \(actual._scalarViewDiscription), expected: \(expected._scalarViewDiscription)", file: file, line: line)
+            XCTAssertEqual(actual, expected, "actual: \(actual._scalarViewDescription), expected: \(expected._scalarViewDescription)", file: file, line: line)
         }
 
         test(nil, "ﬄ", "FFL") // 0xFB04
@@ -117,7 +117,7 @@ final class StringLocaleTests: XCTestCase {
             }
             let actual = string._lowercased(with: locale)
 
-            XCTAssertEqual(actual, expected, "actual: \(actual._scalarViewDiscription), expected: \(expected._scalarViewDiscription)", file: file, line: line)
+            XCTAssertEqual(actual, expected, "actual: \(actual._scalarViewDescription), expected: \(expected._scalarViewDescription)", file: file, line: line)
         }
 
         test(nil, "ᾈ", "ᾀ")     // 0x1F88

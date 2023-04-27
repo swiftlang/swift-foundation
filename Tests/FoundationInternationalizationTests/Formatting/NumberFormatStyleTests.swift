@@ -1517,7 +1517,7 @@ final class FormatStylePatternMatchingTests : XCTestCase {
         for testCase in signTests {
             _verifyMatching(testCase.string, formatStyle: style, expectedUpperBound: testCase.string.endIndex, expectedValue: testCase.value)
         }
-        // Scientific notitation
+        // Scientific notation
         let scientificTests = [
             (string: "4.2E4", value: 42000),
             (string: "-128.82E6", value: -128820000)

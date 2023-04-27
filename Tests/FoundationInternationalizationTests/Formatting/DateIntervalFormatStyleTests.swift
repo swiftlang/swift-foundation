@@ -111,7 +111,7 @@ final class DateIntervalFormatStyleTests: XCTestCase {
         XCTAssertEqual(noAMPMStyle.format(date..<date + day * 32), "1/1/2001, 12:00 – 2/2/2001, 12:00")
     }
 
-#if FOUNDATION_FRAMWORK
+#if FOUNDATION_FRAMEWORK
     func testLeadingDotSyntax() {
         let _ = (date..<date + hour).formatted(.interval)
         let _ = (date..<date + hour).formatted()
