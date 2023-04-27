@@ -35,7 +35,7 @@ The following types are available, with more to come later:
     * `FormatStyle`
     * `ParseStrategy`
 
-Many types, including `JSONEncoder`, `Calendar`, `TimeZone`, and `Locale` are all-new Swift implementations. `FormatStyle` and `ParseStyle` available as open source for the first time.
+Many types, including `JSONEncoder`, `Calendar`, `TimeZone`, and `Locale` are all-new Swift implementations. `FormatStyle` and `ParseStrategy` available as open source for the first time.
 
 For internationalization support on non-Darwin platforms, we created a separate package named *[FoundationICU](https://github.com/apple/swift-foundation-icu)*. This repository contains the necessary ICU implementations and data from the upstream [Apple OSS Distribution ICU](https://github.com/apple-oss-distributions/ICU), wrapped in Swift so FoundationInternationalization can easily depend on it.
 
