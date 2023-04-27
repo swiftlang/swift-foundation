@@ -16,7 +16,7 @@ let package = Package(
         .package(
           url: "https://github.com/apple/swift-collections",
           revision: "2ca40e2a653e5e04a1c5468a35fc7494ef6db1d3"), // on release/1.1
-        .package(url: "git@github.com:apple/swift-foundation-icu.git", exact: "0.0.1")
+        .package(url: "https://github.com/apple/swift-foundation-icu", exact: "0.0.1")
     ],
     targets: [
         // Foundation (umbrella)
