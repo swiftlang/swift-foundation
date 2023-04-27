@@ -36,7 +36,7 @@ extension AttributedString {
 
         internal init(_ g: Guts) {
             _guts = g
-            // The bounds of a whole attributed string are alread character-aligned.
+            // The bounds of a whole attributed string are already character-aligned.
             _range = Range(uncheckedBounds: (g.startIndex, g.endIndex))
         }
 

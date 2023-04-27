@@ -168,7 +168,7 @@ internal final class __DataStorage : @unchecked Sendable {
     @inlinable // This is inlinable as trivially computable.
     var isExternallyOwned: Bool {
         // all __DataStorages will have some sort of capacity, because empty cases hit the .empty enum _Representation
-        // anything with 0 capacity means that we have not allocated this pointer and concequently mutation is not ours to make.
+        // anything with 0 capacity means that we have not allocated this pointer and consequently mutation is not ours to make.
         return _capacity == 0
     }
 
@@ -399,7 +399,7 @@ internal final class __DataStorage : @unchecked Sendable {
         setLength(length)
     }
 
-    @usableFromInline // This is not @inlinable as a non-convience initializer.
+    @usableFromInline // This is not @inlinable as a non-convenience initializer.
     init(capacity capacity_: Int = 0) {
         var capacity = capacity_
         precondition(capacity < __DataStorage.maxSize)
@@ -413,7 +413,7 @@ internal final class __DataStorage : @unchecked Sendable {
         _offset = 0
     }
 
-    @usableFromInline // This is not @inlinable as a non-convience initializer.
+    @usableFromInline // This is not @inlinable as a non-convenience initializer.
     init(bytes: UnsafeRawPointer?, length: Int) {
         precondition(length < __DataStorage.maxSize)
         _offset = 0
@@ -441,7 +441,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-    @usableFromInline // This is not @inlinable as a non-convience initializer.
+    @usableFromInline // This is not @inlinable as a non-convenience initializer.
     init(bytes: UnsafeMutableRawPointer?, length: Int, copy: Bool, deallocator: ((UnsafeMutableRawPointer, Int) -> Void)?, offset: Int) {
         precondition(length < __DataStorage.maxSize)
         _offset = offset
@@ -628,7 +628,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             }
         }
 
-        @inlinable // This is @inlinable as tribially computable.
+        @inlinable // This is @inlinable as trivially computable.
         mutating func append(byte: UInt8) {
             let count = self.count
             assert(count + 1 <= MemoryLayout<Buffer>.size)
@@ -995,7 +995,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
-    // A buffer of bytes whose range is too large to fit in a signle word. Used alongside a RangeReference to make it fit into _Representation's two-word size.
+    // A buffer of bytes whose range is too large to fit in a single word. Used alongside a RangeReference to make it fit into _Representation's two-word size.
     // Inlinability strategy: everything here should be easily inlinable as large _DataStorage methods should not inline into here.
     @usableFromInline
     @frozen
@@ -2041,7 +2041,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 
     /// Enumerate the contents of the data.
     ///
-    /// In some cases, (for example, a `Data` backed by a `dispatch_data_t`, the bytes may be stored discontiguously. In those cases, this function invokes the closure for each contiguous region of bytes.
+    /// In some cases, (for example, a `Data` backed by a `dispatch_data_t`, the bytes may be stored discontinuously. In those cases, this function invokes the closure for each contiguous region of bytes.
     /// - parameter block: The closure to invoke for each region of data. You may stop the enumeration by setting the `stop` parameter to `true`.
     @available(swift, deprecated: 5, message: "use `regions` or `for-in` instead")
     public func enumerateBytes(_ block: (_ buffer: UnsafeBufferPointer<UInt8>, _ byteIndex: Index, _ stop: inout Bool) -> Void) {
