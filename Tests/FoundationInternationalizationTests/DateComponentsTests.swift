@@ -14,7 +14,7 @@
 import TestSupport
 #endif
 
-final class DateComponentsTests : XCTestCase {
+final class DateComponentsTests: XCTestCase {
 
     func test_isValidDate() {
         let dc = DateComponents(year: 2022, month: 11, day: 1)
@@ -94,7 +94,7 @@ final class DateComponentsTests : XCTestCase {
         let values: [DateComponents] = [
             DateComponents(year: 2016),
             DateComponents(year: 1995),
-            DateComponents(year: 1995),
+            DateComponents(year: 1995)
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(DateComponents.self, type(of: anyHashables[0].base))

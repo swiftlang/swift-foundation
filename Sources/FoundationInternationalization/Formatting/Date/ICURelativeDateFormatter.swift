@@ -19,9 +19,9 @@ import FoundationEssentials
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 internal final class ICURelativeDateFormatter {
 
-    static let sortedAllowedComponents : [Calendar.Component] = [ .year, .month, .weekOfMonth, .day, .hour, .minute, .second ]
+    static let sortedAllowedComponents: [Calendar.Component] = [ .year, .month, .weekOfMonth, .day, .hour, .minute, .second ]
 
-    static let componentsToURelativeDateUnit : [Calendar.Component: URelativeDateTimeUnit] = [
+    static let componentsToURelativeDateUnit: [Calendar.Component: URelativeDateTimeUnit] = [
         .year: .year,
         .month: .month,
         .weekOfMonth: .week,

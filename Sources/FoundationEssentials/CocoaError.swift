@@ -41,7 +41,7 @@ public struct CocoaError: CustomNSError, _StoredError, Hashable {
     // On not-Darwin, CocoaError is backed by a simple code.
     public let code: Code
     public let userInfo: [String: AnyHashable]
-
+    
     public init(code: Code, userInfo: [String: AnyHashable]) {
         self.code = code
         self.userInfo = userInfo
@@ -61,8 +61,8 @@ public struct CocoaError: CustomNSError, _StoredError, Hashable {
 
 /// Describes the code of an error.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-#if FOUNDATION_FRAMEWORK
 public protocol _ErrorCodeProtocol: Equatable {
+#if FOUNDATION_FRAMEWORK
     /// The corresponding error code.
     associatedtype _ErrorType: _BridgedStoredNSError where _ErrorType.Code == Self
 #else
@@ -75,7 +75,7 @@ extension _ErrorCodeProtocol {
     /// Allow one to match an error code against an arbitrary error.
     public static func ~=(match: Self, error: Error) -> Bool {
         guard let specificError = error as? Self._ErrorType else { return false }
-
+        
         return match == specificError.code
     }
 }
@@ -160,7 +160,7 @@ public extension CocoaError {
         
         return result
     }
-
+    
     /// The URL associated with this error, if any.
     var url: URL? {
 #if FOUNDATION_FRAMEWORK
@@ -198,13 +198,13 @@ extension CocoaError {
 public protocol LocalizedError : Error {
     /// A localized message describing what error occurred.
     var errorDescription: String? { get }
-
+    
     /// A localized message describing the reason for the failure.
     var failureReason: String? { get }
-
+    
     /// A localized message describing how one might recover from the failure.
     var recoverySuggestion: String? { get }
-
+    
     /// A localized message providing "help" text if the user requests help.
     var helpAnchor: String? { get }
 }
@@ -220,13 +220,13 @@ public extension LocalizedError {
 /// Describes an error type that specifically provides a domain, code,
 /// and user-info dictionary.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public protocol CustomNSError: Error {
+public protocol CustomNSError : Error {
     /// The domain of the error.
     static var errorDomain: String { get }
-
+    
     /// The error code within the given domain.
     var errorCode: Int { get }
-
+    
     /// The user-info dictionary.
     var errorUserInfo: [String : Any] { get }
 }
@@ -237,12 +237,12 @@ public extension CustomNSError {
     static var errorDomain: String {
         return String(reflecting: self)
     }
-
+    
     /// The error code within the given domain.
     var errorCode: Int {
         return _getDefaultErrorCode(self)
     }
-
+    
     /// The default user-info dictionary.
     var errorUserInfo: [String : Any] {
         return [:]
@@ -253,7 +253,7 @@ public extension CustomNSError {
 public extension Error where Self : CustomNSError {
     /// Default implementation for customized NSErrors.
     var _domain: String { return Self.errorDomain }
-
+    
     /// Default implementation for customized NSErrors.
     var _code: Int { return self.errorCode }
 }
@@ -273,3 +273,5 @@ public extension Error {
     }
 }
 #endif
+
+

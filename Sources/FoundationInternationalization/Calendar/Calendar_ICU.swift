@@ -1142,13 +1142,13 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         return lock.withLock {
             var result = WeekendRange(start: 0, end: 0)
 
-            var weekdaysIndex : [UInt32] = [0, 0, 0, 0, 0, 0, 0]
+            var weekdaysIndex: [UInt32] = [0, 0, 0, 0, 0, 0, 0]
             weekdaysIndex[0] = UInt32(_locked_firstWeekday)
             for i in 1..<7 {
                 weekdaysIndex[i] = (weekdaysIndex[i - 1] % 7) + 1
             }
 
-            var weekdayTypes : [UCalendarWeekdayType] = [UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY]
+            var weekdayTypes: [UCalendarWeekdayType] = [UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY]
 
             var onset: UInt32?
             var cease: UInt32?
@@ -1455,7 +1455,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         // This shares some magic numbers with _locked_dateInterval, but the clarity at the call site of using only the start date vs needing the interval (plus the performance benefit of not calculating it if we don't need it) makes the duplication worth it.
         let capped = at.capped
 
-        let inf_ti : TimeInterval = 4398046511104.0
+        let inf_ti: TimeInterval = 4398046511104.0
         let time = capped.timeIntervalSinceReferenceDate
 
         var effectiveUnit = unit
@@ -1547,7 +1547,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     private func _locked_dateInterval(of unit: Calendar.Component, at: Date) -> DateInterval? {
         let capped = at.capped
 
-        let inf_ti : TimeInterval = 4398046511104.0
+        let inf_ti: TimeInterval = 4398046511104.0
         let time = capped.timeIntervalSinceReferenceDate
 
         var effectiveUnit = unit
@@ -1687,7 +1687,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         ucal_set(ucalendar, UCAL_SECOND, ucal_getLimit(ucalendar, UCAL_SECOND, UCAL_ACTUAL_MINIMUM, &status))
         ucal_set(ucalendar, UCAL_MILLISECOND, 0)
 
-        status = U_ZERO_ERROR;
+        status = U_ZERO_ERROR
         let end = Date(udate: ucal_getMillis(ucalendar, &status))
         if let tzTransition = _locked_timeZoneTransitionInterval(at: end) {
             return DateInterval(start: start, end: end - tzTransition.duration)
@@ -1750,11 +1750,11 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         case .quarter:
             var month = ucal_get(ucalendar, UCAL_MONTH, &status)
             if identifier == .hebrew {
-                let qmonth : [Int32] = [0, 0, 0, 3, 3, 3, 3, 7, 7, 7, 10, 10, 10]
+                let qmonth: [Int32] = [0, 0, 0, 3, 3, 3, 3, 7, 7, 7, 10, 10, 10]
                 month = qmonth[Int(month)]
             } else {
                 // A lunar leap month is considered to be in the same quarter that the base month number is in.
-                let qmonth : [Int32] = [0, 0, 0, 3, 3, 3, 6, 6, 6, 9, 9, 9, 9]
+                let qmonth: [Int32] = [0, 0, 0, 3, 3, 3, 6, 6, 6, 9, 9, 9, 9]
                 month = qmonth[Int(month)]
             }
             // TODO: if there is a lunar leap month of the same number *preceeding* month N, then we should set the calendar to the leap month, not the regular month.

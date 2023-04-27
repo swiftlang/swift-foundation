@@ -78,7 +78,7 @@ public struct IntegerFormatStyle<Value: BinaryInteger>: Codable, Hashable, Senda
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension IntegerFormatStyle {
-    public struct Percent : Codable, Hashable, Sendable {
+    public struct Percent: Codable, Hashable, Sendable {
         public typealias Configuration = NumberFormatStyleConfiguration
 
         public var locale: Locale
@@ -140,7 +140,7 @@ extension IntegerFormatStyle {
     }
 
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct Currency : Codable, Hashable, Sendable  {
+    public struct Currency: Codable, Hashable, Sendable {
         public typealias Configuration = CurrencyFormatStyleConfiguration
 
         public var locale: Locale
@@ -207,7 +207,7 @@ extension IntegerFormatStyle {
 // MARK: - FormatStyle conformance
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension IntegerFormatStyle : FormatStyle {
+extension IntegerFormatStyle: FormatStyle {
     /// Returns a localized string for the given value. Supports up to 64-bit signed integer precision. Values not representable by `Int64` are clamped.
     /// - Parameter value: The value to be formatted.
     /// - Returns: A localized string for the given value.
@@ -239,7 +239,7 @@ extension IntegerFormatStyle : FormatStyle {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension IntegerFormatStyle.Percent : FormatStyle {
+extension IntegerFormatStyle.Percent: FormatStyle {
     /// Returns a localized string for the given value in percentage. Supports up to 64-bit signed integer precision. Values not representable by `Int64` are clamped.
     /// - Parameter value: The value to be formatted.
     /// - Returns: A localized string for the given value in percentage.
@@ -271,7 +271,7 @@ extension IntegerFormatStyle.Percent : FormatStyle {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension IntegerFormatStyle.Currency : FormatStyle {
+extension IntegerFormatStyle.Currency: FormatStyle {
     /// Returns a localized currency string for the given value. Supports up to 64-bit signed integer precision. Values not representable by `Int64` are clamped.
     /// - Parameter value: The value to be formatted.
     /// - Returns: A localized currency string for the given value.
@@ -482,8 +482,8 @@ public extension FormatStyle {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension IntegerFormatStyle {
-    public struct Attributed : Codable, Hashable, FormatStyle, Sendable {
-        enum Style : Codable, Hashable {
+    public struct Attributed: Codable, Hashable, FormatStyle, Sendable {
+        enum Style: Codable, Hashable {
             case integer(IntegerFormatStyle)
             case percent(IntegerFormatStyle.Percent)
             case currency(IntegerFormatStyle.Currency)
@@ -555,7 +555,7 @@ extension IntegerFormatStyle {
 // MARK: Pattern Matching
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension IntegerFormatStyle : CustomConsumingRegexComponent {
+extension IntegerFormatStyle: CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
         IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
@@ -563,7 +563,7 @@ extension IntegerFormatStyle : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension IntegerFormatStyle.Percent : CustomConsumingRegexComponent {
+extension IntegerFormatStyle.Percent: CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
         IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
@@ -571,7 +571,7 @@ extension IntegerFormatStyle.Percent : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension IntegerFormatStyle.Currency : CustomConsumingRegexComponent {
+extension IntegerFormatStyle.Currency: CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
         IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)

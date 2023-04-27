@@ -21,7 +21,7 @@ import TestSupport
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-final class CalendarTests : XCTestCase {
+final class CalendarTests: XCTestCase {
 
     var allCalendars: [Calendar] = [
         Calendar(identifier: .gregorian),
@@ -113,7 +113,7 @@ final class CalendarTests : XCTestCase {
             Calendar(identifier: .buddhist),
             Calendar(identifier: .gregorian),
             Calendar(identifier: .islamic),
-            Calendar(identifier: .iso8601),
+            Calendar(identifier: .iso8601)
         ]
         checkHashable(calendars, equalityOracle: { $0 == $1 })
 
@@ -121,7 +121,7 @@ final class CalendarTests : XCTestCase {
         // likely to be the same.
         let calendars2: [Calendar] = [
             Calendar.autoupdatingCurrent,
-            Calendar.current,
+            Calendar.current
         ]
         checkHashable(calendars2, equalityOracle: { $0 == $1 })
     }
@@ -463,7 +463,7 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(0..<60, c.range(of: .second, in: .minute, for: d))
 
         var d1 = Date()
-        var ti : TimeInterval = 0
+        var ti: TimeInterval = 0
 
         XCTAssertTrue(c.dateInterval(of: .day, start: &d1, interval: &ti, for: d))
         XCTAssertEqual(Date(timeIntervalSince1970: 1468652400.0), d1)
@@ -602,12 +602,12 @@ extension CalendarTests {
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
-final class CalendarBridgingTests : XCTestCase {
+final class CalendarBridgingTests: XCTestCase {
     func test_AnyHashableCreatedFromNSCalendar() {
         let values: [NSCalendar] = [
             NSCalendar(identifier: .gregorian)!,
             NSCalendar(identifier: .japanese)!,
-            NSCalendar(identifier: .japanese)!,
+            NSCalendar(identifier: .japanese)!
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(Calendar.self, type(of: anyHashables[0].base))

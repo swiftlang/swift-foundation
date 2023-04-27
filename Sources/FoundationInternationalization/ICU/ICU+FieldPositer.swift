@@ -30,7 +30,7 @@ extension ICU {
             Fields(positer: self)
         }
 
-        struct Fields : Sequence {
+        struct Fields: Sequence {
             struct Element {
                 var field: Int
                 var begin: Int
@@ -46,7 +46,7 @@ extension ICU {
                 Iterator(positer: positer)
             }
 
-            struct Iterator : IteratorProtocol {
+            struct Iterator: IteratorProtocol {
                 var beginIndex: Int32 = 0
                 var endIndex: Int32 = 0
                 let positer: FieldPositer

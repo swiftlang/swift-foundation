@@ -20,7 +20,7 @@
 import TestSupport
 #endif
 
-final class StringTests : XCTestCase {
+final class StringTests: XCTestCase {
     // MARK: - Case mapping
 
     func testCapitalize() {

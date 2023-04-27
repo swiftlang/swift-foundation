@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 struct RegexPatternCache: @unchecked Sendable {
-    private struct Key : Sendable, Hashable {
+    private struct Key: Sendable, Hashable {
         var pattern: String
         var caseInsensitive: Bool
     }

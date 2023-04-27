@@ -94,7 +94,7 @@ final class DateISO8601FormatStyleTests: XCTestCase {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
+final class DateISO8601FormatStylePatternMatchingTests: XCTestCase {
 
     func _matchFullRange(_ str: String, formatStyle: Date.ISO8601FormatStyle, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #file, line: UInt = #line) {
         _matchRange(str, formatStyle: formatStyle, range: nil, expectedUpperBound: expectedUpperBound, expectedDate: expectedDate, file: file, line: line)

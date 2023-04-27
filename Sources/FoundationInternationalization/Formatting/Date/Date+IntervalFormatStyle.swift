@@ -17,7 +17,7 @@ import FoundationEssentials
 extension Date {
 
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct IntervalFormatStyle : Codable, Hashable, Sendable {
+    public struct IntervalFormatStyle: Codable, Hashable, Sendable {
 
         public typealias DateStyle = Date.FormatStyle.DateStyle
         public typealias TimeStyle = Date.FormatStyle.TimeStyle
@@ -97,7 +97,7 @@ extension Date {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.IntervalFormatStyle : FormatStyle {}
+extension Date.IntervalFormatStyle: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.IntervalFormatStyle {

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public struct IntegerParseStrategy<Format> : Codable, Hashable where Format : FormatStyle, Format.FormatInput : BinaryInteger {
+public struct IntegerParseStrategy<Format>: Codable, Hashable where Format: FormatStyle, Format.FormatInput: BinaryInteger {
     public var formatStyle: Format
     public var lenient: Bool
     var numberFormatType: ICULegacyNumberFormatter.NumberFormatType
@@ -19,7 +19,7 @@ public struct IntegerParseStrategy<Format> : Codable, Hashable where Format : Fo
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension IntegerParseStrategy : Sendable where Format : Sendable {}
+extension IntegerParseStrategy: Sendable where Format: Sendable {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension IntegerParseStrategy: ParseStrategy {

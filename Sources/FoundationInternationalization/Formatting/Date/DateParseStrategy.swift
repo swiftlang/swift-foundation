@@ -17,7 +17,7 @@ import FoundationEssentials
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
     /// Options for parsing string representations of dates to create a `Date` instance.
-    public struct ParseStrategy : Hashable, Sendable {
+    public struct ParseStrategy: Hashable, Sendable {
 
         /// Indicates whether to use heuristics when parsing the representation.
         public var isLenient: Bool
@@ -71,7 +71,7 @@ extension Date {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ParseStrategy : ParseStrategy {
+extension Date.ParseStrategy: ParseStrategy {
     /// Returns a `Date` of a given string interpreted using the current settings.
     /// - Parameter value: A string representation of a date.
     /// - Throws: Throws `NSFormattingError` if the string cannot be parsed.
@@ -95,9 +95,9 @@ public extension ParseStrategy {
 // MARK: Regex
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.ParseStrategy : CustomConsumingRegexComponent {
+extension Date.ParseStrategy: CustomConsumingRegexComponent {
     public typealias RegexOutput = Date
-    public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)?  {
+    public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)? {
         guard index < bounds.upperBound else {
             return nil
         }

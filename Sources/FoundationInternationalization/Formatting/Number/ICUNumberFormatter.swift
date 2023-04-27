@@ -211,8 +211,8 @@ internal class ICUNumberFormatterBase {
 
 // MARK: - Integer
 
-final class ICUNumberFormatter : ICUNumberFormatterBase {
-    fileprivate struct Signature : Hashable {
+final class ICUNumberFormatter: ICUNumberFormatterBase {
+    fileprivate struct Signature: Hashable {
         let collection: NumberFormatStyleConfiguration.Collection
         let locale: Locale
     }
@@ -247,8 +247,8 @@ final class ICUNumberFormatter : ICUNumberFormatterBase {
 
 // MARK: - Currency
 
-final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase {
-    fileprivate struct Signature : Hashable {
+final class ICUCurrencyNumberFormatter: ICUNumberFormatterBase {
+    fileprivate struct Signature: Hashable {
         let collection: CurrencyFormatStyleConfiguration.Collection
         let currencyCode: String
         let locale: Locale
@@ -295,8 +295,8 @@ final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase {
 
 // MARK: - Integer Percent
 
-final class ICUPercentNumberFormatter : ICUNumberFormatterBase {
-    fileprivate struct Signature : Hashable {
+final class ICUPercentNumberFormatter: ICUNumberFormatterBase {
+    fileprivate struct Signature: Hashable {
         let collection: NumberFormatStyleConfiguration.Collection
         let locale: Locale
     }
@@ -340,8 +340,8 @@ final class ICUPercentNumberFormatter : ICUNumberFormatterBase {
 
 // MARK: - Byte Count
 
-final class ICUByteCountNumberFormatter : ICUNumberFormatterBase {
-    fileprivate struct Signature : Hashable {
+final class ICUByteCountNumberFormatter: ICUNumberFormatterBase {
+    fileprivate struct Signature: Hashable {
         let skeleton: String
         let locale: Locale
     }
@@ -398,8 +398,8 @@ final class ICUByteCountNumberFormatter : ICUNumberFormatterBase {
 
 // MARK: - Measurement
 
-final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase {
-    fileprivate struct Signature : Hashable {
+final class ICUMeasurementNumberFormatter: ICUNumberFormatterBase {
+    fileprivate struct Signature: Hashable {
         let skeleton: String
         let locale: Locale
     }

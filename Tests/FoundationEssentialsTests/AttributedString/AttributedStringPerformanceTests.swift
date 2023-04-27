@@ -405,17 +405,17 @@ final class TestAttributedStringPerformance: XCTestCase {
             _ = hasher.finalize()
         }
     }
-    
+
     func testHashAttributeContainer() throws {
         guard !TestAttributedStringPerformance.runWithNSAttributedString else {
             throw XCTSkip("Test disabled for NSAS")
         }
-        
-        struct TestAttribute : AttributedStringKey {
+
+        struct TestAttribute: AttributedStringKey {
             static var name = "0"
             typealias Value = Int
         }
-        
+
         var container = AttributeContainer()
         for i in 0 ..< 100000 {
             TestAttribute.name = "\(i)"

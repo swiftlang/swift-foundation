@@ -54,7 +54,7 @@ internal final class _TimeZone: Sendable {
 
             // Open the calendar (_TimeZone will close)
             var status = U_ZERO_ERROR
-            let calendar : UnsafeMutablePointer<UCalendar?>? = Array(identifier.utf16).withUnsafeBufferPointer {
+            let calendar: UnsafeMutablePointer<UCalendar?>? = Array(identifier.utf16).withUnsafeBufferPointer {
                 let calendar = ucal_open($0.baseAddress, Int32($0.count), "", UCAL_DEFAULT, &status)
                 if !status.isSuccess {
                     return nil

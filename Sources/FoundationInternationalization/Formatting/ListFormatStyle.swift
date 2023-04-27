@@ -48,7 +48,7 @@ public struct ListFormatStyle<Style: FormatStyle, Base: Sequence>: FormatStyle w
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension ListFormatStyle : Sendable where Style : Sendable {}
+extension ListFormatStyle: Sendable where Style: Sendable {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct StringStyle: FormatStyle, Sendable {

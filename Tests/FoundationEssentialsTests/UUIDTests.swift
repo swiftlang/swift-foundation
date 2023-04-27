@@ -14,11 +14,11 @@
 import TestSupport
 #endif
 
-final class UUIDTests : XCTestCase {
+final class UUIDTests: XCTestCase {
     func test_UUIDEquality() {
         let uuidA = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")
         let uuidB = UUID(uuidString: "e621e1f8-c36c-495a-93fc-0c247a3e6e5f")
-        let uuidC = UUID(uuid: (0xe6,0x21,0xe1,0xf8,0xc3,0x6c,0x49,0x5a,0x93,0xfc,0x0c,0x24,0x7a,0x3e,0x6e,0x5f))
+        let uuidC = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         let uuidD = UUID()
 
         XCTAssertEqual(uuidA, uuidB, "String case must not matter.")
@@ -34,7 +34,7 @@ final class UUIDTests : XCTestCase {
     // `uuidString` should return an uppercase string
     // See: https://bugs.swift.org/browse/SR-865
     func test_UUIDuuidString() {
-        let uuid = UUID(uuid: (0xe6,0x21,0xe1,0xf8,0xc3,0x6c,0x49,0x5a,0x93,0xfc,0x0c,0x24,0x7a,0x3e,0x6e,0x5f))
+        let uuid = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         XCTAssertEqual(uuid.uuidString, "E621E1F8-C36C-495A-93FC-0C247A3E6E5F", "The uuidString representation must be uppercase.")
     }
 
@@ -65,7 +65,7 @@ final class UUIDTests : XCTestCase {
             UUID(uuidString: "a53baa1c-b4f5-48db-9467-9786b86b256c")!,
             UUID(uuidString: "a53baa1c-b4f5-48db-9467-9786b76c256c")!,
             UUID(uuidString: "a53baa1c-b4f5-48db-9467-9786b76b266c")!,
-            UUID(uuidString: "a53baa1c-b4f5-48db-9467-9786b76b256d")!,
+            UUID(uuidString: "a53baa1c-b4f5-48db-9467-9786b76b256d")!
         ]
         checkHashable(values, equalityOracle: { $0 == $1 })
     }
@@ -74,7 +74,7 @@ final class UUIDTests : XCTestCase {
         let values: [UUID] = [
             UUID(uuidString: "e621e1f8-c36c-495a-93fc-0c247a3e6e5f")!,
             UUID(uuidString: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6")!,
-            UUID(uuidString: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6")!,
+            UUID(uuidString: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6")!
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(UUID.self, type(of: anyHashables[0].base))

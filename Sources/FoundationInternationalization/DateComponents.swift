@@ -22,7 +22,7 @@ import FoundationEssentials
  When a new instance of `DateComponents` is created, the date components are set to `nil`.
 */
 @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct DateComponents : Hashable, Equatable, Sendable {
+public struct DateComponents: Hashable, Equatable, Sendable {
     internal var _calendar: Calendar?
     internal var _timeZone: TimeZone?
     internal var _era: Int?
@@ -77,7 +77,6 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         self.weekOfYear = weekOfYear
         self.yearForWeekOfYear = yearForWeekOfYear
     }
-
 
     // MARK: - Properties
 
@@ -345,7 +344,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         }
 
         // This is similar to the list of units and keys\. in Calendar_Enumerate.swift, but this one does not include nanosecond or leap month
-        let units : [Calendar.Component] = [.era, .year, .quarter, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
+        let units: [Calendar.Component] = [.era, .year, .quarter, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
 
         let newComponents = calendar.dateComponents(Set(units), from: date)
 
@@ -390,7 +389,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 
     // MARK: - Bridging Helpers
 
-    public static func ==(lhs : DateComponents, rhs: DateComponents) -> Bool {
+    public static func ==(lhs: DateComponents, rhs: DateComponents) -> Bool {
         if lhs.era != rhs.era ||
             lhs.year != rhs.year ||
             lhs.quarter != rhs.quarter ||
@@ -422,7 +421,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension DateComponents: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
 
     public var description: String {
         return self.customMirror.children.reduce(into: "") {
@@ -458,8 +457,8 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DateComponents : Codable {
-    private enum CodingKeys : Int, CodingKey {
+extension DateComponents: Codable {
+    private enum CodingKeys: Int, CodingKey {
         case calendar
         case timeZone
         case era
@@ -552,7 +551,7 @@ extension DateComponents : Codable {
 @_implementationOnly import _ForSwiftFoundation
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
+extension DateComponents: ReferenceConvertible, _ObjectiveCBridgeable {
     public typealias ReferenceType = NSDateComponents
 
     public static func _getObjectiveCType() -> Any.Type {
@@ -627,7 +626,7 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension NSDateComponents : _HasCustomAnyHashableRepresentation {
+extension NSDateComponents: _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {

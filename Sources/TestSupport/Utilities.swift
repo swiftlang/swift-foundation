@@ -80,7 +80,7 @@ public func expectEqual(
     XCTAssertTrue(expected == actual, message(), file: file, line: line)
 }
 
-func expectChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line, _ expression: () throws -> ()) rethrows {
+func expectChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line, _ expression: () throws -> Void) rethrows {
     let valueBefore = check()
     try expression()
     let valueAfter = check()
@@ -91,7 +91,7 @@ func expectChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by differenc
     }
 }
 
-func expectNoChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line, _ expression: () throws -> ()) rethrows {
+func expectNoChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line, _ expression: () throws -> Void) rethrows {
     let valueBefore = check()
     try expression()
     let valueAfter = check()
@@ -134,7 +134,7 @@ private class Box<T> {
     }
 }
 
-internal func _checkEquatableImpl<Instance : Equatable>(
+internal func _checkEquatableImpl<Instance: Equatable>(
     _ instances: [Instance],
     oracle: (Int, Int) -> Bool,
     allowBrokenTransitivity: Bool = false,
@@ -391,11 +391,11 @@ func shouldAttemptOpenBSDXFailTests(_ reason: String) -> Bool {
     #endif
 }
 
-func testExpectedToFail<T>(_ test:  @escaping (T) -> () throws -> Void, _ reason: String) -> (T) -> () throws -> Void {
+func testExpectedToFail<T>(_ test: @escaping (T) -> () throws -> Void, _ reason: String) -> (T) -> () throws -> Void {
     testExpectedToFailWithCheck(check: shouldAttemptXFailTests(_:), test, reason)
 }
 
-func testExpectedToFailOnWindows<T>(_ test:  @escaping (T) -> () throws -> Void, _ reason: String) -> (T) -> () throws -> Void {
+func testExpectedToFailOnWindows<T>(_ test: @escaping (T) -> () throws -> Void, _ reason: String) -> (T) -> () throws -> Void {
     testExpectedToFailWithCheck(check: shouldAttemptWindowsXFailTests(_:), test, reason)
 }
 
@@ -407,11 +407,10 @@ func testExpectedToFailOnOpenBSD<T>(_ test: @escaping (T) -> () throws -> Void, 
     testExpectedToFailWithCheck(check: shouldAttemptOpenBSDXFailTests(_:), test, reason)
 }
 
-func testExpectedToFailWithCheck<T>(check: (String) -> Bool, _ test:  @escaping (T) -> () throws -> Void, _ reason: String) -> (T) -> () throws -> Void {
+func testExpectedToFailWithCheck<T>(check: (String) -> Bool, _ test: @escaping (T) -> () throws -> Void, _ reason: String) -> (T) -> () throws -> Void {
     if check(reason) {
         return test
     } else {
         return { _ in return { } }
     }
 }
-

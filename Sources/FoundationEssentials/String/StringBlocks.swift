@@ -10,20 +10,20 @@
 //===----------------------------------------------------------------------===//
 
 extension String {
-    struct _BlockSearchingOptions : OptionSet {
+    struct _BlockSearchingOptions: OptionSet {
         let rawValue: Int
-        
+
         static let findStart = Self(rawValue: 1 << 0)
         static let findEnd = Self(rawValue: 1 << 1)
         static let findContentsEnd = Self(rawValue: 1 << 2)
         static let stopAtLineSeparators = Self(rawValue: 1 << 3)
     }
-    
-    static let paragraphSeparators : [[UTF8.CodeUnit]] = [
+
+    static let paragraphSeparators: [[UTF8.CodeUnit]] = [
         [0xE2, 0x80, 0xA9] // U+2029 Paragraph Separator
     ]
-    
-    static let lineSeparators : [[UTF8.CodeUnit]] = paragraphSeparators + [
+
+    static let lineSeparators: [[UTF8.CodeUnit]] = paragraphSeparators + [
         [0xE2, 0x80, 0xA8], // U+2028 Line Separator
         [0xC2, 0x85] // U+0085 <Next Line> (NEL)
     ]

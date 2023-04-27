@@ -214,14 +214,14 @@ internal final class ICULegacyNumberFormatter {
 
     // MARK: - Cache utilities
 
-    enum NumberFormatType : Hashable, Codable {
+    enum NumberFormatType: Hashable, Codable {
         case number(NumberFormatStyleConfiguration.Collection)
         case percent(NumberFormatStyleConfiguration.Collection)
         case currency(CurrencyFormatStyleConfiguration.Collection)
         case descriptive(DescriptiveNumberFormatConfiguration.Collection)
     }
 
-    private struct CacheSignature : Hashable {
+    private struct CacheSignature: Hashable {
         let type: NumberFormatType
         let locale: Locale
         let lenient: Bool
@@ -257,7 +257,7 @@ internal final class ICULegacyNumberFormatter {
                 formatter.setRoundingIncrement(config.roundingIncrement)
 
                 // Decimal and percent style specific attributes
-                if let sign = config.signDisplayStrategy  {
+                if let sign = config.signDisplayStrategy {
                     switch sign.positive {
                     case .always:
                         formatter.setAttribute(.signAlwaysShown, value: true)
@@ -288,7 +288,6 @@ internal final class ICULegacyNumberFormatter {
                     formatter.setCapitalizationContext(capitalizationContext)
                 }
             }
-
 
             return formatter
         }

@@ -227,7 +227,7 @@ extension DateComponents {
 }
 
 /* public */
-internal struct DateSequence : Sequence {
+internal struct DateSequence: Sequence {
     typealias Element = Date
 
     let calendar: Calendar
@@ -415,7 +415,7 @@ extension Calendar {
             exactMatch = false
         }
 
-        let order : ComparisonResult
+        let order: ComparisonResult
         if let previouslyReturnedMatchDate {
             order = ComparisonResult(previouslyReturnedMatchDate, matchDate)
         } else {
@@ -533,7 +533,7 @@ extension Calendar {
 
     // This function checks the input (assuming we've detected a mismatch hour), for a DST transition. If we find one, then it returns a new date. Otherwise it returns nil.
     func _adjustedDateForMismatchedHour(matchDate: Date, // the currently proposed match
-                                        compsToMatch:DateComponents,
+                                        compsToMatch: DateComponents,
                                         matchingPolicy: MatchingPolicy,
                                         repeatedTimePolicy: RepeatedTimePolicy,
                                         isExactMatch: inout Bool) -> Date? {
@@ -1725,7 +1725,7 @@ extension Calendar {
                 } else {
                     // This is always correct to do since we are using today's length on today -- there can't be a mismatch.
                     tempSearchDate = foundRange.start + foundRange.duration
-                 }
+                }
 
                 dateDay = component(.day, from: tempSearchDate)
                 let dateMonth = component(.month, from: tempSearchDate)

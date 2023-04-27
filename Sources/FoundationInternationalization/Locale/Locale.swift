@@ -20,7 +20,7 @@ import FoundationEssentials
  Locales are typically used to provide, format, and interpret information about and according to the user's customs and preferences. They are frequently used in conjunction with formatters. Although you can use many locales, you usually use the one associated with the current user.
 */
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct Locale : Hashable, Equatable, Sendable {
+public struct Locale: Hashable, Equatable, Sendable {
 
 #if FOUNDATION_FRAMEWORK
     public typealias LanguageDirection = NSLocale.LanguageDirection
@@ -105,17 +105,17 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// If mutated, this Locale will no longer track the user's preferences.
     ///
     /// - note: The autoupdating Locale will only compare equal to another autoupdating Locale.
-    public static var autoupdatingCurrent : Locale {
+    public static var autoupdatingCurrent: Locale {
         return Locale(.autoupdating)
     }
 
     /// Returns the user's current locale.
-    public static var current : Locale {
+    public static var current: Locale {
         return Locale(.fixed(LocaleCache.cache.current))
     }
 
     /// System locale.
-    internal static var system : Locale {
+    internal static var system: Locale {
         return Locale(.fixed(LocaleCache.cache.system))
     }
 

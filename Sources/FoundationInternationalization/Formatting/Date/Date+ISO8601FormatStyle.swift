@@ -25,29 +25,29 @@ extension Date {
 extension Date {
 
     /// Options for generating and parsing string representations of dates following the ISO 8601 standard.
-    public struct ISO8601FormatStyle : Sendable {
+    public struct ISO8601FormatStyle: Sendable {
 
-        public enum TimeZoneSeparator : String, Codable, Sendable {
+        public enum TimeZoneSeparator: String, Codable, Sendable {
             case colon = ":"
             case omitted = ""
         }
 
-        public enum DateSeparator : String, Codable, Sendable  {
+        public enum DateSeparator: String, Codable, Sendable {
             case dash = "-"
             case omitted = ""
         }
 
-        public enum TimeSeparator : String, Codable, Sendable {
+        public enum TimeSeparator: String, Codable, Sendable {
             case colon = ":"
             case omitted = ""
         }
 
-        public enum DateTimeSeparator : String, Codable, Sendable {
+        public enum DateTimeSeparator: String, Codable, Sendable {
             case space = " "
             case standard = "'T'"
         }
 
-        enum Field : Int, Codable, Hashable, Comparable {
+        enum Field: Int, Codable, Hashable, Comparable {
             case year
             case month
             case weekOfYear
@@ -148,9 +148,8 @@ extension Date {
 
         // MARK: -
 
-
         @_disfavoredOverload
-        public init(dateSeparator: DateSeparator = .dash, dateTimeSeparator: DateTimeSeparator = .standard, timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!)  {
+        public init(dateSeparator: DateSeparator = .dash, dateTimeSeparator: DateTimeSeparator = .standard, timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!) {
             self.dateSeparator = dateSeparator
             self.dateTimeSeparator = dateTimeSeparator
             self.timeZone = timeZone
@@ -238,18 +237,18 @@ extension Date.ISO8601FormatStyle {
 
 #if FOUNDATION_FRAMEWORK
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension ISO8601DateFormatter.Options : Hashable {}
+extension ISO8601DateFormatter.Options: Hashable {}
 #endif // FOUNDATION_FRAMEWORK
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle : FormatStyle {
+extension Date.ISO8601FormatStyle: FormatStyle {
     public func format(_ value: Date) -> String {
         return formatter.format(value) ?? value.description
     }
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle : ParseStrategy {
+extension Date.ISO8601FormatStyle: ParseStrategy {
     public func parse(_ value: String) throws -> Date {
         let formatter = formatter
 
@@ -291,7 +290,7 @@ public extension ParseStrategy where Self == Date.ISO8601FormatStyle {
 // MARK: Regex
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.ISO8601FormatStyle : CustomConsumingRegexComponent {
+extension Date.ISO8601FormatStyle: CustomConsumingRegexComponent {
     public typealias RegexOutput = Date
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)? {
         guard index < bounds.upperBound else {

@@ -77,7 +77,7 @@ extension Date {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
-    internal struct DateFieldCollection : Codable, Hashable {
+    internal struct DateFieldCollection: Codable, Hashable {
         var era: Symbol.SymbolType.EraOption?
         var year: Symbol.SymbolType.YearOption?
         var quarter: Symbol.SymbolType.QuarterOption?
@@ -93,7 +93,7 @@ extension Date.FormatStyle {
         var secondFraction: Symbol.SymbolType.SecondFractionOption?
         var timeZoneSymbol: Symbol.SymbolType.TimeZoneSymbolOption?
 
-        var formatterTemplate : String {
+        var formatterTemplate: String {
             var ret = ""
             ret.append(era?.rawValue ?? "")
             ret.append(year?.rawValue ?? "")
@@ -150,7 +150,7 @@ extension Date.FormatStyle {
             }
         }
 
-        func collection(date len: DateStyle)-> DateFieldCollection {
+        func collection(date len: DateStyle) -> DateFieldCollection {
             var new = self
             if len == .omitted {
                 return new
@@ -193,7 +193,7 @@ extension Date.FormatStyle {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
     /// Strategies for formatting a `Date`.
-    public struct FormatStyle : Sendable {
+    public struct FormatStyle: Sendable {
 
         var _symbols = DateFieldCollection()
         var symbols: DateFieldCollection {
@@ -255,7 +255,7 @@ extension Date {
         }
     }
 
-    public struct AttributedStyle : Sendable {
+    public struct AttributedStyle: Sendable {
 
         enum InnerStyle: Codable, Hashable {
             case formatStyle(Date.FormatStyle)
@@ -325,7 +325,7 @@ extension Date {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.AttributedStyle : FormatStyle {}
+extension Date.AttributedStyle: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
@@ -409,7 +409,7 @@ extension Date.FormatStyle {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.FormatStyle : FormatStyle {
+extension Date.FormatStyle: FormatStyle {
     public func format(_ value: Date) -> String {
         let fm = ICUDateFormatter.cachedFormatter(for: self)
         return fm.format(value) ?? value.description
@@ -422,9 +422,8 @@ extension Date.FormatStyle : FormatStyle {
     }
 }
 
-
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.FormatStyle : ParseStrategy {
+extension Date.FormatStyle: ParseStrategy {
     public func parse(_ value: String) throws -> Date {
         let fm = ICUDateFormatter.cachedFormatter(for: self)
         guard let date = fm.parse(value) else {
@@ -436,7 +435,7 @@ extension Date.FormatStyle : ParseStrategy {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.FormatStyle : Codable, Hashable {
+extension Date.FormatStyle: Codable, Hashable {
 
     enum CodingKeys: CodingKey {
         case symbols
@@ -466,11 +465,10 @@ extension Date.FormatStyle : Codable, Hashable {
     }
 }
 
-
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
     /// Predefined date styles varied in lengths or the components included. The exact format depends on the locale.
-    public struct DateStyle : Codable, Hashable, Sendable {
+    public struct DateStyle: Codable, Hashable, Sendable {
 
         /// Excludes the date part.
         public static let omitted: DateStyle = DateStyle(rawValue: 0)
@@ -487,11 +485,11 @@ extension Date.FormatStyle {
         /// Shows the complete day. For example, "Wednesday, October 21, 2015".
         public static let complete: DateStyle = DateStyle(rawValue: 4)
 
-        let rawValue : UInt
+        let rawValue: UInt
     }
 
     /// Predefined time styles varied in lengths or the components included. The exact format depends on the locale.
-    public struct TimeStyle : Codable, Hashable, Sendable {
+    public struct TimeStyle: Codable, Hashable, Sendable {
 
         /// Excludes the time part.
         public static let omitted: TimeStyle = TimeStyle(rawValue: 0)
@@ -505,7 +503,7 @@ extension Date.FormatStyle {
         /// For example, `4:29:24 PM PDT`, `16:29:24 GMT`.
         public static let complete: TimeStyle = TimeStyle(rawValue: 3)
 
-        let rawValue : UInt
+        let rawValue: UInt
     }
 }
 
@@ -613,9 +611,8 @@ extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
     }
 }
 
-
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.FormatStyle : CustomConsumingRegexComponent {
+extension Date.FormatStyle: CustomConsumingRegexComponent {
     public typealias RegexOutput = Date
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)? {
         guard index < bounds.upperBound else {

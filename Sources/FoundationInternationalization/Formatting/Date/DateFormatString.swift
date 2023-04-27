@@ -16,7 +16,7 @@ import FoundationEssentials
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
-    public struct FormatString : Hashable, Sendable {
+    public struct FormatString: Hashable, Sendable {
         internal var rawFormat: String = ""
     }
 }
@@ -35,7 +35,7 @@ extension String {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.FormatString : ExpressibleByStringInterpolation {
+extension Date.FormatString: ExpressibleByStringInterpolation {
     public init(stringInterpolation: StringInterpolation) {
         rawFormat = stringInterpolation.format
     }
@@ -44,7 +44,7 @@ extension Date.FormatString : ExpressibleByStringInterpolation {
         rawFormat = value.asDateFormatLiteral()
     }
 
-    public struct StringInterpolation : StringInterpolationProtocol, Sendable {
+    public struct StringInterpolation: StringInterpolationProtocol, Sendable {
         public typealias StringLiteralType = String
         fileprivate var format: String = ""
         public init(literalCapacity: Int, interpolationCount: Int) {}

@@ -22,7 +22,7 @@ import Glibc
 #endif
 
 /// Singleton which listens for notifications about preference changes for TimeZone and holds cached values for current, fixed time zones, etc.
-struct TimeZoneCache : Sendable {
+struct TimeZoneCache: Sendable {
     struct State {
         // a.k.a. `systemTimeZone`
         private var currentTimeZone: TimeZone!

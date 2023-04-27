@@ -35,7 +35,7 @@ extension BinaryInteger {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension BinaryInteger {
     /// Initialize an instance by parsing `value` with the given `strategy`.
-    public init<S: ParseStrategy>(_ value: S.ParseInput, strategy: S) throws where S.ParseOutput : BinaryInteger {
+    public init<S: ParseStrategy>(_ value: S.ParseInput, strategy: S) throws where S.ParseOutput: BinaryInteger {
         let parsed = try strategy.parse(value)
         self = Self(parsed)
     }

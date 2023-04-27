@@ -15,11 +15,11 @@
 extension Locale {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Language : Hashable, Codable, Sendable {
+    public struct Language: Hashable, Codable, Sendable {
 
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         /// Represents a language identifier
-        public struct Components : Hashable, Codable, Sendable {
+        public struct Components: Hashable, Codable, Sendable {
             public var languageCode: Locale.LanguageCode?
             public var script: Locale.Script?
             public var region: Locale.Region?
@@ -149,7 +149,7 @@ extension Locale {
         // MARK: - identifiers
 
         /// Returns a BCP-47 identifier in a minimalist form. Script and region may be omitted. For example, "zh-TW", "en"
-        public var minimalIdentifier : String {
+        public var minimalIdentifier: String {
             let componentsIdentifier = components.identifier
 
             let localeIDWithLikelySubtags = _withFixedCharBuffer { buffer, size, status in
@@ -168,7 +168,7 @@ extension Locale {
         }
 
         /// Returns a BCP-47 identifier that always includes the script: "zh-Hant-TW", "en-Latn-US"
-        public var maximalIdentifier : String {
+        public var maximalIdentifier: String {
             let id = components.identifier
             let localeIDWithLikelySubtags = _withFixedCharBuffer { buffer, size, status in
                 return uloc_addLikelySubtags(id, buffer, size, &status)

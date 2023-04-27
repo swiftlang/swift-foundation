@@ -14,7 +14,7 @@
 import TestSupport
 #endif
 
-final class DateIntervalTests : XCTestCase {
+final class DateIntervalTests: XCTestCase {
 
     func test_compareDateIntervals() {
         // dateWithString("2010-05-17 14:49:47 -0700")
@@ -62,20 +62,20 @@ final class DateIntervalTests : XCTestCase {
         let intervals: [[DateInterval]] = [
             [
                 DateInterval(start: start1a, duration: duration1),
-                DateInterval(start: start1b, duration: duration1),
+                DateInterval(start: start1b, duration: duration1)
             ],
             [
                 DateInterval(start: start1a, duration: duration2),
-                DateInterval(start: start1b, duration: duration2),
+                DateInterval(start: start1b, duration: duration2)
             ],
             [
                 DateInterval(start: start2a, duration: duration1),
-                DateInterval(start: start2b, duration: duration1),
+                DateInterval(start: start2b, duration: duration1)
             ],
             [
                 DateInterval(start: start2a, duration: duration2),
-                DateInterval(start: start2b, duration: duration2),
-            ],
+                DateInterval(start: start2b, duration: duration2)
+            ]
         ]
         checkHashableGroups(intervals)
     }
@@ -161,7 +161,7 @@ final class DateIntervalTests : XCTestCase {
         let values: [DateInterval] = [
             DateInterval(start: start, duration: duration),
             DateInterval(start: start, duration: duration / 2),
-            DateInterval(start: start, duration: duration / 2),
+            DateInterval(start: start, duration: duration / 2)
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(DateInterval.self, type(of: anyHashables[0].base))
@@ -182,7 +182,7 @@ extension DateIntervalTests {
         let values: [NSDateInterval] = [
             NSDateInterval(start: start, duration: duration),
             NSDateInterval(start: start, duration: duration / 2),
-            NSDateInterval(start: start, duration: duration / 2),
+            NSDateInterval(start: start, duration: duration / 2)
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(DateInterval.self, type(of: anyHashables[0].base))

@@ -183,7 +183,7 @@ extension String {
         return start..<upper
     }
 
-    internal func paragraphRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
+    internal func paragraphRange<R: RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
         let r = unicodeScalars._boundaryAlignedRange(aRange)
         let result = utf8._getBlock(for: [.findStart, .findEnd], in: r)
         guard let start = result.start else {

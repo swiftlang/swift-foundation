@@ -17,33 +17,33 @@ import FoundationEssentials
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
 
-    public struct Symbol : Hashable, Sendable {
+    public struct Symbol: Hashable, Sendable {
         let symbolType: SymbolType
 
-        public struct Era : Hashable, Sendable { let option: SymbolType.EraOption }
-        public struct Year : Hashable, Sendable { let option: SymbolType.YearOption }
-        public struct YearForWeekOfYear : Hashable, Sendable { let option: SymbolType.YearForWeekOfYearOption }
-        public struct CyclicYear : Hashable, Sendable { let option: SymbolType.CyclicYearOption }
-        public struct Quarter : Hashable, Sendable { let option: SymbolType.QuarterOption }
-        public struct Month : Hashable, Sendable { let option: SymbolType.MonthOption }
-        public struct Week : Hashable, Sendable { let option: SymbolType.WeekOption }
-        public struct Day : Hashable, Sendable { let option: SymbolType.DayOption }
-        public struct DayOfYear : Hashable, Sendable { let option: SymbolType.DayOfYearOption }
-        public struct Weekday : Hashable, Sendable { let option: SymbolType.WeekdayOption }
-        public struct DayPeriod : Hashable, Sendable { let option: SymbolType.DayPeriodOption }
-        public struct Hour : Hashable, Sendable { let option: SymbolType.HourOption }
-        public struct Minute : Hashable, Sendable { let option: SymbolType.MinuteOption }
-        public struct Second : Hashable, Sendable { let option: SymbolType.SecondOption }
-        public struct SecondFraction : Hashable, Sendable { let option: SymbolType.SecondFractionOption }
-        public struct TimeZone : Hashable, Sendable { let option: SymbolType.TimeZoneSymbolOption }
+        public struct Era: Hashable, Sendable { let option: SymbolType.EraOption }
+        public struct Year: Hashable, Sendable { let option: SymbolType.YearOption }
+        public struct YearForWeekOfYear: Hashable, Sendable { let option: SymbolType.YearForWeekOfYearOption }
+        public struct CyclicYear: Hashable, Sendable { let option: SymbolType.CyclicYearOption }
+        public struct Quarter: Hashable, Sendable { let option: SymbolType.QuarterOption }
+        public struct Month: Hashable, Sendable { let option: SymbolType.MonthOption }
+        public struct Week: Hashable, Sendable { let option: SymbolType.WeekOption }
+        public struct Day: Hashable, Sendable { let option: SymbolType.DayOption }
+        public struct DayOfYear: Hashable, Sendable { let option: SymbolType.DayOfYearOption }
+        public struct Weekday: Hashable, Sendable { let option: SymbolType.WeekdayOption }
+        public struct DayPeriod: Hashable, Sendable { let option: SymbolType.DayPeriodOption }
+        public struct Hour: Hashable, Sendable { let option: SymbolType.HourOption }
+        public struct Minute: Hashable, Sendable { let option: SymbolType.MinuteOption }
+        public struct Second: Hashable, Sendable { let option: SymbolType.SecondOption }
+        public struct SecondFraction: Hashable, Sendable { let option: SymbolType.SecondFractionOption }
+        public struct TimeZone: Hashable, Sendable { let option: SymbolType.TimeZoneSymbolOption }
 
-        public struct StandaloneQuarter : Hashable, Sendable { let option: SymbolType.StandaloneQuarterOption }
-        public struct StandaloneMonth : Hashable, Sendable { let option: SymbolType.StandaloneMonthOption }
-        public struct StandaloneWeekday : Hashable, Sendable { let option: SymbolType.StandaloneWeekdayOption }
-        public struct VerbatimHour : Hashable, Sendable { let option: SymbolType.VerbatimHourOption }
+        public struct StandaloneQuarter: Hashable, Sendable { let option: SymbolType.StandaloneQuarterOption }
+        public struct StandaloneMonth: Hashable, Sendable { let option: SymbolType.StandaloneMonthOption }
+        public struct StandaloneWeekday: Hashable, Sendable { let option: SymbolType.StandaloneWeekdayOption }
+        public struct VerbatimHour: Hashable, Sendable { let option: SymbolType.VerbatimHourOption }
 
         static let maxPadding = 10
-        enum SymbolType : Hashable {
+        enum SymbolType: Hashable {
             case era(EraOption)
             case year(YearOption)
             case yearForWeekOfYear(YearForWeekOfYearOption)
@@ -64,13 +64,13 @@ extension Date.FormatStyle {
             case secondFraction(SecondFractionOption)
             case timeZone(TimeZoneSymbolOption)
 
-            enum EraOption : String, Codable, Hashable {
+            enum EraOption: String, Codable, Hashable {
                 case abbreviated = "G"
                 case wide = "GGGG"
                 case narrow = "GGGGG"
             }
 
-            enum YearOption : RawRepresentable, Codable, Hashable {
+            enum YearOption: RawRepresentable, Codable, Hashable {
                 case defaultDigits
                 case twoDigits
                 case padded(Int)
@@ -119,7 +119,7 @@ extension Date.FormatStyle {
                 }
             }
 
-            enum YearForWeekOfYearOption : RawRepresentable, Codable, Hashable {
+            enum YearForWeekOfYearOption: RawRepresentable, Codable, Hashable {
                 case defaultDigits
                 case twoDigits
                 case padded(Int)
@@ -152,13 +152,13 @@ extension Date.FormatStyle {
                 }
             }
 
-            enum CyclicYearOption : String, Codable, Hashable {
+            enum CyclicYearOption: String, Codable, Hashable {
                 case abbreviated = "U"
                 case wide = "UUUU"
                 case narrow = "UUUUU"
             }
 
-            enum QuarterOption : String, Codable, Hashable {
+            enum QuarterOption: String, Codable, Hashable {
                 case oneDigit = "Q"
                 case twoDigits = "QQ"
                 case abbreviated = "QQQ"
@@ -166,7 +166,7 @@ extension Date.FormatStyle {
                 case narrow = "QQQQQ"
             }
 
-            enum StandaloneQuarterOption : String, Codable, Hashable {
+            enum StandaloneQuarterOption: String, Codable, Hashable {
                 case oneDigit = "q"
                 case twoDigits = "qq"
                 case abbreviated = "qqq"
@@ -174,7 +174,7 @@ extension Date.FormatStyle {
                 case narrow = "qqqqq"
             }
 
-            enum MonthOption : String, Codable, Hashable {
+            enum MonthOption: String, Codable, Hashable {
                 case defaultDigits = "M"
                 case twoDigits = "MM"
                 case abbreviated = "MMM"
@@ -182,7 +182,7 @@ extension Date.FormatStyle {
                 case narrow = "MMMMM"
             }
 
-            enum StandaloneMonthOption : String, Codable, Hashable {
+            enum StandaloneMonthOption: String, Codable, Hashable {
                 case defaultDigits = "L"
                 case twoDigits = "LL"
                 case abbreviated = "LLL"
@@ -190,19 +190,19 @@ extension Date.FormatStyle {
                 case narrow = "LLLLL"
             }
 
-            enum WeekOption : String, Codable, Hashable {
+            enum WeekOption: String, Codable, Hashable {
                 case defaultDigits = "w"
                 case twoDigits = "ww"
                 case weekOfMonth = "W"
             }
 
-            enum DayOfYearOption : String, Codable, Hashable {
+            enum DayOfYearOption: String, Codable, Hashable {
                 case defaultDigits = "D"
                 case twoDigits = "DD"
                 case threeDigits = "DDD"
             }
 
-            enum DayOption : RawRepresentable, Codable, Hashable {
+            enum DayOption: RawRepresentable, Codable, Hashable {
                 case defaultDigits
                 case twoDigits
                 case ordinalOfDayInMonth
@@ -241,7 +241,7 @@ extension Date.FormatStyle {
                 }
             }
 
-            enum WeekdayOption : String, Codable, Hashable {
+            enum WeekdayOption: String, Codable, Hashable {
                 case abbreviated = "EEE"
                 case wide = "EEEE"
                 case narrow = "EEEEE"
@@ -250,7 +250,7 @@ extension Date.FormatStyle {
                 case twoDigits = "ee"
             }
 
-            enum StandaloneWeekdayOption : String, Codable, Hashable {
+            enum StandaloneWeekdayOption: String, Codable, Hashable {
                 case oneDigit = "c"
                 case abbreviated = "ccc"
                 case wide = "cccc"
@@ -258,7 +258,7 @@ extension Date.FormatStyle {
                 case short = "cccccc"
             }
 
-            enum DayPeriodOption : String, Codable, Hashable {
+            enum DayPeriodOption: String, Codable, Hashable {
                 case abbreviated = "a"
                 case wide = "aaaa"
                 case narrow = "aaaaa"
@@ -270,7 +270,7 @@ extension Date.FormatStyle {
                 case conversationalWide = "BBBBB"
             }
 
-            enum HourOption : String, Codable, Hashable {
+            enum HourOption: String, Codable, Hashable {
                 case defaultDigitsWithAbbreviatedAMPM = "j"
                 case twoDigitsWithAbbreviatedAMPM = "jj"
                 case defaultDigitsWithWideAMPM = "jjj"
@@ -289,7 +289,7 @@ extension Date.FormatStyle {
                 case conversationalTwoDigitsWithNarrowAMPM = "CCCCCC"
             }
 
-            enum VerbatimHourOption : String, Codable, Hashable {
+            enum VerbatimHourOption: String, Codable, Hashable {
                 case twelveHourDefaultDigitsOneBased = "h"
                 case twelveHourTwoDigitsOneBased = "hh"
                 case twentyFourHourDefaultDigitsZeroBased = "H"
@@ -301,17 +301,17 @@ extension Date.FormatStyle {
                 case twentyFourHourTwoDigitsOneBased = "kk"
             }
 
-            enum MinuteOption : String, Codable, Hashable {
+            enum MinuteOption: String, Codable, Hashable {
                 case defaultDigits = "m"
                 case twoDigits = "mm"
             }
 
-            enum SecondOption : String, Codable, Hashable {
+            enum SecondOption: String, Codable, Hashable {
                 case defaultDigits = "s"
                 case twoDigits = "ss"
             }
 
-            enum SecondFractionOption : RawRepresentable, Codable, Hashable {
+            enum SecondFractionOption: RawRepresentable, Codable, Hashable {
 
                 init?(rawValue: String) {
                     guard let first = rawValue.first else { return nil }
@@ -329,11 +329,11 @@ extension Date.FormatStyle {
                 case fractional(Int)
                 case milliseconds(Int)
 
-                public var rawValue : String {
+                public var rawValue: String {
 
-                    let formatString : String
-                    let requested : Int
-                    let actual : Int
+                    let formatString: String
+                    let requested: Int
+                    let actual: Int
                     let maxCharacters = 9
 
                     switch self {
@@ -364,7 +364,7 @@ extension Date.FormatStyle {
 
             }
 
-            enum TimeZoneSymbolOption : String, Codable, Hashable {
+            enum TimeZoneSymbolOption: String, Codable, Hashable {
                 case shortSpecificName = "z"
                 case longSpecificName = "zzzz"
                 case iso8601Basic = "Z"
@@ -384,7 +384,7 @@ extension Date.FormatStyle {
 }
 
 fileprivate extension Int {
-    var clampedPadding : Int {
+    var clampedPadding: Int {
         if self < 1 {
             return 1
         } else if self > Date.FormatStyle.Symbol.maxPadding {
@@ -648,7 +648,7 @@ public extension Date.FormatStyle.Symbol.StandaloneWeekday {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Date.FormatStyle.Symbol.DayPeriod {
 
-    enum Width : Sendable {
+    enum Width: Sendable {
         case abbreviated
         case wide
         case narrow
@@ -709,7 +709,7 @@ public extension Date.FormatStyle.Symbol.DayPeriod {
 /// Hour symbols.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Date.FormatStyle.Symbol.Hour {
-    struct AMPMStyle : Codable, Hashable, Sendable {
+    struct AMPMStyle: Codable, Hashable, Sendable {
         let rawValue: UInt
 
         /// Hides the day period marker (AM/PM).
@@ -735,7 +735,7 @@ public extension Date.FormatStyle.Symbol.Hour {
 
     /// The preferred numeric hour format for the locale with minimum digits. Whether the period symbol (AM/PM) will be shown depends on the locale.
     static func defaultDigits(amPM: AMPMStyle) -> Self {
-        let new : Self
+        let new: Self
         if amPM == .omitted {
             new = .init(option: .defaultDigitsNoAMPM)
         } else if amPM == .narrow {
@@ -752,7 +752,7 @@ public extension Date.FormatStyle.Symbol.Hour {
 
     /// The preferred two-digit hour format for the locale, zero padded if necessary. Whether the period symbol (AM/PM) will be shown depends on the locale.
     static func twoDigits(amPM: AMPMStyle) -> Self {
-        let new : Self
+        let new: Self
         if amPM == .omitted {
             new = .init(option: .twoDigitsNoAMPM)
         } else if amPM == .narrow {
@@ -769,7 +769,7 @@ public extension Date.FormatStyle.Symbol.Hour {
 
     /// Behaves like `defaultDigits`: the preferred numeric hour format for the locale with minimum digits. May also use conversational period formats.
     static func conversationalDefaultDigits(amPM: AMPMStyle) -> Self {
-        let new : Self
+        let new: Self
         if amPM == .omitted {
             new = .init(option: .defaultDigitsNoAMPM)
         } else if amPM == .narrow {
@@ -786,7 +786,7 @@ public extension Date.FormatStyle.Symbol.Hour {
 
     /// Behaves like `twoDigits`: two-digit hour format for the locale, zero padded if necessary. May also use conversational period formats.
     static func conversationalTwoDigits(amPM: AMPMStyle) -> Self {
-        let new : Self
+        let new: Self
         if amPM == .omitted {
             new = .init(option: .twoDigitsNoAMPM)
         } else if amPM == .narrow {
@@ -801,27 +801,27 @@ public extension Date.FormatStyle.Symbol.Hour {
         return new
     }
 
-    @available(*, deprecated, renamed:"defaultDigits(amPM:)")
+    @available(*, deprecated, renamed: "defaultDigits(amPM:)")
     static var defaultDigitsNoAMPM: Self { .init(option: .defaultDigitsNoAMPM) }
 
-    @available(*, deprecated, renamed:"twoDigits(amPM:)")
+    @available(*, deprecated, renamed: "twoDigits(amPM:)")
     static var twoDigitsNoAMPM: Self { .init(option: .twoDigitsNoAMPM) }
 }
 
 /// Hour symbols that does not take users' preferences into account, and is displayed as-is.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Date.FormatStyle.Symbol.VerbatimHour {
-    struct HourCycle : Codable, Hashable, Sendable {
+    struct HourCycle: Codable, Hashable, Sendable {
         /// The hour ranges from 0 to 11 in a 12-hour clock. Ranges from 0 to 23 in a 24-hour clock.
         public static let zeroBased = HourCycle(rawValue: 0)
 
         /// The hour ranges from 1 to 12 in the 12-hour clock. Ranges from 1 to 24 in a 24-hour clock.
         public static let oneBased = HourCycle(rawValue: 1)
 
-        let rawValue : UInt
+        let rawValue: UInt
     }
 
-    struct Clock : Codable, Hashable, Sendable {
+    struct Clock: Codable, Hashable, Sendable {
         /// In a 12-hour clock system, the 24-hour day is divided into two periods, a.m. and p.m, and each period consists of 12 hours.
         /// - Note: Does not include the period marker (AM/PM). Specify a `PeriodSymbol` if that's desired.
         public static let twelveHour = Clock(rawValue: 0)
@@ -830,14 +830,14 @@ public extension Date.FormatStyle.Symbol.VerbatimHour {
         /// - Note: If using `twentyFourHour` together with `PeriodSymbol`, the period is ignored.
         public static let twentyFourHour = Clock(rawValue: 1)
 
-        let rawValue : UInt
+        let rawValue: UInt
     }
 
     /// Minimum digits to show the numeric hour. For example, `1`, `12`.
     /// Or `23` if using the `twentyFourHour` clock.
     /// - Note: This format does not take user's locale preferences into account. Consider using `defaultDigits` if applicable.
     static func defaultDigits(clock: Clock, hourCycle: HourCycle) -> Self {
-        let new : Self
+        let new: Self
         if clock == .twelveHour {
             if hourCycle == .zeroBased {
                 new = .init(option: .twelveHourDefaultDigitsZeroBased)
@@ -861,7 +861,7 @@ public extension Date.FormatStyle.Symbol.VerbatimHour {
     /// Or `23` if using the `twentyFourHour` clock.
     /// - Note: This format does not take user's locale preferences into account. Consider using `defaultDigits` if applicable.
     static func twoDigits(clock: Clock, hourCycle: HourCycle) -> Self {
-        let new : Self
+        let new: Self
         if clock == .twelveHour {
             if hourCycle == .zeroBased {
                 new = .init(option: .twelveHourTwoDigitsZeroBased)
@@ -922,7 +922,7 @@ public extension Date.FormatStyle.Symbol.SecondFraction {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Date.FormatStyle.Symbol.TimeZone {
 
-    enum Width : Sendable {
+    enum Width: Sendable {
         case short
         case long
     }

@@ -15,7 +15,7 @@
 extension StringProtocol {
     /// Compares the string using the specified options and
     /// returns the lexical ordering for the range.
-    internal func compare<T : StringProtocol>(_ aString: T, options mask: String.CompareOptions = [], range: Range<Index>? = nil) -> ComparisonResult {
+    internal func compare<T: StringProtocol>(_ aString: T, options mask: String.CompareOptions = [], range: Range<Index>? = nil) -> ComparisonResult {
         // TODO: This method is modified from `public func compare<T : StringProtocol>(_ aString: T, options mask: String.CompareOptions = [], range: Range<Index>? = nil, locale: Locale? = nil) -> ComparisonResult`. Move that method here once `Locale` can be staged in `FoundationEssentials`.
         var substr = Substring(self)
         if let range {

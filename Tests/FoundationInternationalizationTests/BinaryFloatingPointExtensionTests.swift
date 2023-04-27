@@ -105,21 +105,19 @@ final class BinaryFloatingPointExtensionTests: XCTestCase {
             }
         }
 
-
         verify(80, base: 60, mode: .down, expected: [
             00: (60, 0),         // Representing 60 in terms of 60 is "1", which has exactly no fractional digits
             01: (78, 0),         // Representing 78 in terms of 60 is "1.3", which has exactly one fractional digit
             02: (79, 800000000), // Representing 79.8 in terms of 60 is "1.33", which has exactly 2 fractional digits
-            03: (79, 980000000),
+            03: (79, 980000000)
         ])
 
         verify(80, base: 60, mode: .up, expected: [
             00: (120, 0),       // Representing 120 in terms of 60 is "2", which has exactly no fractional digits
             01: (84, 0),        // Representing 84 in terms of 60 is "1.4", which has exactly 1 fractional digits
             02: (80, 400000000),
-            03: (80, 40000000),
+            03: (80, 40000000)
         ])
     }
 
 }
-

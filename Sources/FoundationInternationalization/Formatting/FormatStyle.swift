@@ -12,7 +12,7 @@
 
 /// A type that can convert a given data type into a representation.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public protocol FormatStyle : Codable, Hashable {
+public protocol FormatStyle: Codable, Hashable {
 
     /// The type of data to format.
     associatedtype FormatInput

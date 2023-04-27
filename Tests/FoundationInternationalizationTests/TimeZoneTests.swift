@@ -14,7 +14,7 @@
 import TestSupport
 #endif
 
-final class TimeZoneTests : XCTestCase {
+final class TimeZoneTests: XCTestCase {
 
     func test_timeZoneBasics() {
         let tz = TimeZone(identifier: "America/Los_Angeles")!
@@ -37,7 +37,7 @@ final class TimeZoneTests : XCTestCase {
         let values: [TimeZone] = [
             TimeZone(identifier: "America/Los_Angeles")!,
             TimeZone(identifier: "Europe/Kiev")!,
-            TimeZone(identifier: "Europe/Kiev")!,
+            TimeZone(identifier: "Europe/Kiev")!
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(TimeZone.self, type(of: anyHashables[0].base))
@@ -156,7 +156,7 @@ extension TimeZoneTests {
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
-final class TimeZoneBridgingTests : XCTestCase {
+final class TimeZoneBridgingTests: XCTestCase {
     func testCustomNSTimeZone() {
         // This test verifies that a custom ObjC subclass of NSTimeZone, bridged into Swift, still calls back into ObjC. `customTimeZone` returns an instances of "MyCustomTimeZone : NSTimeZone".
         let myTZ = customTimeZone()
@@ -187,7 +187,7 @@ final class TimeZoneBridgingTests : XCTestCase {
         let values: [NSTimeZone] = [
             NSTimeZone(name: "America/Los_Angeles")!,
             NSTimeZone(name: "Europe/Kiev")!,
-            NSTimeZone(name: "Europe/Kiev")!,
+            NSTimeZone(name: "Europe/Kiev")!
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(TimeZone.self, type(of: anyHashables[0].base))

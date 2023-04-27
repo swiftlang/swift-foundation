@@ -21,9 +21,9 @@ typealias CalendarComponentAndValue = (component: Calendar.Component, value: Int
 extension Date {
 
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct RelativeFormatStyle : Codable, Hashable, Sendable {
-        public struct UnitsStyle : Codable, Hashable, Sendable {
-            enum Option : Int, Codable, Hashable {
+    public struct RelativeFormatStyle: Codable, Hashable, Sendable {
+        public struct UnitsStyle: Codable, Hashable, Sendable {
+            enum Option: Int, Codable, Hashable {
                 case wide
                 case spellOut
                 case abbreviated
@@ -71,8 +71,8 @@ extension Date {
             public static var narrow: Self { .init(option: .narrow) }
         }
 
-        public struct Presentation : Codable, Hashable, Sendable {
-            enum Option : Int, Codable, Hashable {
+        public struct Presentation: Codable, Hashable, Sendable {
+            enum Option: Int, Codable, Hashable {
                 case numeric
                 case named
             }
@@ -111,7 +111,7 @@ extension Date {
             return new
         }
 
-        enum ComponentAdjustmentStrategy : Codable, Hashable {
+        enum ComponentAdjustmentStrategy: Codable, Hashable {
             case alignedWithComponentBoundary
             case rounded
         }
@@ -190,7 +190,7 @@ extension Date {
             let components = self.calendar.dateComponents(Set(searchComponents), from: refDate, to: destDate)
 
             let nanosecondRange = 1.0e+9
-            let dateComponents : DateComponents
+            let dateComponents: DateComponents
             if let nanosecond = components.value(for: .nanosecond), abs(nanosecond) > Int(0.5 * nanosecondRange), let adjustedDestDate = calendar.date(byAdding: .second, value: nanosecond > 0 ? 1 : -1, to: destDate) {
                 dateComponents = calendar.dateComponents(Set(ICURelativeDateFormatter.sortedAllowedComponents), from: refDate, to: adjustedDestDate)
             } else {
@@ -218,7 +218,7 @@ extension Date {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.RelativeFormatStyle : FormatStyle {}
+extension Date.RelativeFormatStyle: FormatStyle {}
 
 extension DateComponents {
     var nonZeroComponentsAndValue: [CalendarComponentAndValue] {
@@ -233,6 +233,6 @@ extension DateComponents {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension FormatStyle where Self == Date.RelativeFormatStyle {
     static func relative(presentation: Date.RelativeFormatStyle.Presentation, unitsStyle: Date.RelativeFormatStyle.UnitsStyle = .wide) -> Self {
-            .init(presentation: presentation, unitsStyle: unitsStyle)
+        .init(presentation: presentation, unitsStyle: unitsStyle)
     }
 }

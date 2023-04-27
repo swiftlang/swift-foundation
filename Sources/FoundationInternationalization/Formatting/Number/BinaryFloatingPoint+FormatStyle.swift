@@ -19,12 +19,12 @@ extension BinaryFloatingPoint {
     }
 
     /// Format `self` with the given format.
-    public func formatted<S>(_ format: S) -> S.FormatOutput where Self == S.FormatInput, S : FormatStyle {
+    public func formatted<S>(_ format: S) -> S.FormatOutput where Self == S.FormatInput, S: FormatStyle {
         format.format(self)
     }
 
     /// Format `self` with the given format. `self` is first converted to `S.FormatInput` type, then format with the given format.
-    public func formatted<S>(_ format: S) -> S.FormatOutput where S : FormatStyle, S.FormatInput : BinaryFloatingPoint {
+    public func formatted<S>(_ format: S) -> S.FormatOutput where S: FormatStyle, S.FormatInput: BinaryFloatingPoint {
         format.format(S.FormatInput(self))
     }
 }
@@ -34,7 +34,7 @@ extension BinaryFloatingPoint {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension BinaryFloatingPoint {
     /// Initialize an instance by parsing `value` with the given `strategy`.
-    public init<S: ParseStrategy>(_ value: S.ParseInput, strategy: S) throws where S.ParseOutput : BinaryFloatingPoint {
+    public init<S: ParseStrategy>(_ value: S.ParseInput, strategy: S) throws where S.ParseOutput: BinaryFloatingPoint {
         let parsed = try strategy.parse(value)
         self = Self(parsed)
     }

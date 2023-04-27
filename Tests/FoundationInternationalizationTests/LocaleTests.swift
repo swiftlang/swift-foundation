@@ -30,7 +30,7 @@
 import TestSupport
 #endif
 
-final class LocaleTests : XCTestCase {
+final class LocaleTests: XCTestCase {
 
     func test_equality() {
         let autoupdating = Locale.autoupdatingCurrent
@@ -95,7 +95,7 @@ final class LocaleTests : XCTestCase {
         let values: [Locale] = [
             Locale(identifier: "en"),
             Locale(identifier: "uk"),
-            Locale(identifier: "uk"),
+            Locale(identifier: "uk")
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(Locale.self, type(of: anyHashables[0].base))
@@ -169,7 +169,7 @@ final class LocaleTests : XCTestCase {
         }
 
         verify(cldr: "und_US", bcp47: "und-US", icu: "und_US") {
-            return Locale.Components(languageCode: .unidentified ,languageRegion: .unitedStates)
+            return Locale.Components(languageCode: .unidentified, languageRegion: .unitedStates)
         }
 
         verify(cldr: "und_Latn_DE", bcp47: "und-Latn-DE", icu: "_Latn_DE") {
@@ -247,7 +247,7 @@ final class LocaleTests : XCTestCase {
     }
 }
 
-final class LocalePropertiesTests : XCTestCase {
+final class LocalePropertiesTests: XCTestCase {
 
     func _verify(locale: Locale, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, file: StaticString = #file, line: UInt = #line) {
         XCTAssertEqual(locale.language.languageCode, language, "languageCode should be equal", file: file, line: line)
@@ -505,7 +505,7 @@ final class LocalBridgingTests : XCTestCase {
         let values: [NSLocale] = [
             NSLocale(localeIdentifier: "en"),
             NSLocale(localeIdentifier: "uk"),
-            NSLocale(localeIdentifier: "uk"),
+            NSLocale(localeIdentifier: "uk")
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(Locale.self, type(of: anyHashables[0].base))

@@ -15,7 +15,7 @@ import TestSupport
 #endif
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-final class ByteCountFormatStyleTests : XCTestCase {
+final class ByteCountFormatStyleTests: XCTestCase {
     let locales = [Locale(identifier: "en_US"), .init(identifier: "fr_FR"), .init(identifier: "zh_TW"), .init(identifier: "ar")]
 
     func test_zeroSpelledOutKb() {
@@ -23,7 +23,7 @@ final class ByteCountFormatStyleTests : XCTestCase {
             Locale(identifier: "en_US"): "Zero kB",
             Locale(identifier: "fr_FR"): "Zéro ko",
             Locale(identifier: "zh_TW"): "〇 kB",
-            Locale(identifier: "ar"): "صفر كيلوبايت",
+            Locale(identifier: "ar"): "صفر كيلوبايت"
         ]
 
         for locale in locales {
@@ -36,7 +36,7 @@ final class ByteCountFormatStyleTests : XCTestCase {
             Locale(identifier: "en_US"): "Zero bytes",
             Locale(identifier: "fr_FR"): "Zéro octet",
             Locale(identifier: "zh_TW"): "〇 byte",
-            Locale(identifier: "ar"): "صفر بايت",
+            Locale(identifier: "ar"): "صفر بايت"
         ]
 
         for locale in locales {

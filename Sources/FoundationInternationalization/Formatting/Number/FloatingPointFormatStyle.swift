@@ -78,7 +78,7 @@ public struct FloatingPointFormatStyle<Value: BinaryFloatingPoint>: Codable, Has
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointFormatStyle {
-    public struct Percent : Codable, Hashable, Sendable {
+    public struct Percent: Codable, Hashable, Sendable {
         public var locale: Locale
 
         public init(locale: Locale = .autoupdatingCurrent) {
@@ -141,7 +141,7 @@ extension FloatingPointFormatStyle {
     }
 
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct Currency : Codable, Hashable, Sendable  {
+    public struct Currency: Codable, Hashable, Sendable {
         public var locale: Locale
         public let currencyCode: String
 
@@ -207,7 +207,7 @@ extension FloatingPointFormatStyle {
 // MARK: - FormatStyle conformance
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension FloatingPointFormatStyle : FormatStyle {
+extension FloatingPointFormatStyle: FormatStyle {
     public func format(_ value: Value) -> String {
         if let nf = ICUNumberFormatter.create(for: self), let str = nf.format(Double(value)) {
             return str
@@ -223,7 +223,7 @@ extension FloatingPointFormatStyle : FormatStyle {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension FloatingPointFormatStyle.Percent : FormatStyle {
+extension FloatingPointFormatStyle.Percent: FormatStyle {
     public func format(_ value: Value) -> String {
         if let nf = ICUPercentNumberFormatter.create(for: self), let str = nf.format(Double(value)) {
             return str
@@ -239,7 +239,7 @@ extension FloatingPointFormatStyle.Percent : FormatStyle {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension FloatingPointFormatStyle.Currency : FormatStyle {
+extension FloatingPointFormatStyle.Currency: FormatStyle {
     public func format(_ value: Value) -> String {
         if let nf = ICUCurrencyNumberFormatter.create(for: self), let str = nf.format(Double(value)) {
             return str
@@ -328,8 +328,8 @@ public extension FormatStyle where Self == FloatingPointFormatStyle<Float16>.Per
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointFormatStyle {
-    public struct Attributed : Codable, Hashable, FormatStyle, Sendable {
-        enum Style : Codable, Hashable, Sendable {
+    public struct Attributed: Codable, Hashable, FormatStyle, Sendable {
+        enum Style: Codable, Hashable, Sendable {
             case floatingPoint(FloatingPointFormatStyle)
             case currency(FloatingPointFormatStyle.Currency)
             case percent(FloatingPointFormatStyle.Percent)
@@ -404,7 +404,7 @@ extension FloatingPointFormatStyle {
 // MARK: Regex
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension FloatingPointFormatStyle : CustomConsumingRegexComponent {
+extension FloatingPointFormatStyle: CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
         FloatingPointParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
@@ -412,7 +412,7 @@ extension FloatingPointFormatStyle : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension FloatingPointFormatStyle.Percent : CustomConsumingRegexComponent {
+extension FloatingPointFormatStyle.Percent: CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
         FloatingPointParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
@@ -420,13 +420,12 @@ extension FloatingPointFormatStyle.Percent : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension FloatingPointFormatStyle.Currency : CustomConsumingRegexComponent {
+extension FloatingPointFormatStyle.Currency: CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
         FloatingPointParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
-
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension RegexComponent where Self == FloatingPointFormatStyle<Double> {

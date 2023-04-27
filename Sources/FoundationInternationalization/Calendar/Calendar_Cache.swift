@@ -18,7 +18,7 @@ import CoreFoundation
 #endif
 
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.
-struct CalendarCache : Sendable {
+struct CalendarCache: Sendable {
     struct State {
         // If nil, the calendar has been invalidated and will be created next time State.current() is called
         private var currentCalendar: _Calendar?

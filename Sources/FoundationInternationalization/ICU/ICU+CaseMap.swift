@@ -13,17 +13,17 @@
 @_implementationOnly import FoundationICU
 
 extension ICU {
-    final class CaseMap : @unchecked Sendable {
+    final class CaseMap: @unchecked Sendable {
         let casemap: OpaquePointer
-        
+
         let lock: LockedState<Void>
-        
+
         // Empty locale ("") means root locale
         init(localeID: String) throws {
             var status = U_ZERO_ERROR
             casemap = ucasemap_open(localeID, UInt32(), &status)
             try status.checkSuccess()
-            
+
             lock = LockedState()
         }
 

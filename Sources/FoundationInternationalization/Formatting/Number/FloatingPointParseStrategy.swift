@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public struct FloatingPointParseStrategy<Format> : Codable, Hashable where Format : FormatStyle, Format.FormatInput : BinaryFloatingPoint {
+public struct FloatingPointParseStrategy<Format>: Codable, Hashable where Format: FormatStyle, Format.FormatInput: BinaryFloatingPoint {
     public var formatStyle: Format
     public var lenient: Bool
     var numberFormatType: ICULegacyNumberFormatter.NumberFormatType
@@ -19,7 +19,7 @@ public struct FloatingPointParseStrategy<Format> : Codable, Hashable where Forma
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension FloatingPointParseStrategy : Sendable where Format : Sendable {}
+extension FloatingPointParseStrategy: Sendable where Format: Sendable {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointParseStrategy: ParseStrategy {

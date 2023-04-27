@@ -22,7 +22,7 @@ import TestSupport
 @testable import Foundation
 #endif
 
-final class NumberParseStrategyTests : XCTestCase {
+final class NumberParseStrategyTests: XCTestCase {
     func testIntStrategy() {
         let format: IntegerFormatStyle<Int> = .init()
         let strategy = IntegerParseStrategy(format: format, lenient: true)

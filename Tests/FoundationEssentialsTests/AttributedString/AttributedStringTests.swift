@@ -219,8 +219,8 @@ final class TestAttributedString: XCTestCase {
     }
 
     func testAddAndRemoveAttribute() {
-        let attr : Int = 42
-        let attr2 : Double = 1.0
+        let attr: Int = 42
+        let attr2: Double = 1.0
         var attrStr = AttributedString("Test")
         attrStr.testInt = attr
         attrStr.testDouble = attr2
@@ -416,8 +416,8 @@ final class TestAttributedString: XCTestCase {
     }
 
     func testSliceAttributeMutation() {
-        let attr : Int = 42
-        let attr2 : Double = 1.0
+        let attr: Int = 42
+        let attr2: Double = 1.0
 
         var attrStr = AttributedString("Hello World", attributes: AttributeContainer().testInt(attr))
         let copy = attrStr
@@ -1100,7 +1100,7 @@ E {
 #if FOUNDATION_FRAMEWORK
     // MARK: - Coding Tests
     // TODO: Support AttributedString codable conformance in FoundationPreview
-    struct CodableType : Codable {
+    struct CodableType: Codable {
         // One of potentially many different values being encoded:
         @CodableConfiguration(from: \.test)
         var attributedString = AttributedString()
@@ -1132,90 +1132,90 @@ E {
         let ns = try NSAttributedString(attrStr, including: AttributeScopes.TestAttributes.self)
         XCTAssertEqual(ns, decodedns)
     }
-    
+
     func testCustomAttributeCoding() throws {
-        struct MyAttributes : AttributeScope {
-            var customCodable : AttributeScopes.TestAttributes.CustomCodableAttribute
+        struct MyAttributes: AttributeScope {
+            var customCodable: AttributeScopes.TestAttributes.CustomCodableAttribute
         }
-        
-        struct CodableType : Codable {
+
+        struct CodableType: Codable {
             @CodableConfiguration(from: MyAttributes.self)
             var attributedString = AttributedString()
         }
-        
+
         let encoder = JSONEncoder()
         var attrStr = AttributedString("Hello")
         attrStr[AttributeScopes.TestAttributes.CustomCodableAttribute.self] = .init(inner: 42)
-        
+
         let c = CodableType(attributedString: attrStr)
         let json = try encoder.encode(c)
-        
+
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(CodableType.self, from: json)
         XCTAssertEqual(decoded.attributedString, attrStr)
     }
-    
+
     func testCustomCodableTypeWithCodableAttributedString() throws {
-        struct MyType : Codable, Equatable {
+        struct MyType: Codable, Equatable {
             var other: NonCodableType
             var str: AttributedString
-            
+
             init(other: NonCodableType, str: AttributedString) {
                 self.other = other
                 self.str = str
             }
-            
-            enum Keys : CodingKey {
+
+            enum Keys: CodingKey {
                 case other
                 case str
             }
-            
+
             init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: Keys.self)
                 other = NonCodableType(inner: try container.decode(Int.self, forKey: .other))
                 str = try container.decode(AttributedString.self, forKey: .str, configuration: AttributeScopes.TestAttributes.self)
             }
-            
+
             func encode(to encoder: Encoder) throws {
                 var container = encoder.container(keyedBy: Keys.self)
                 try container.encode(other.inner, forKey: .other)
                 try container.encode(str, forKey: .str, configuration: AttributeScopes.TestAttributes.self)
             }
         }
-        
+
         var container = AttributeContainer()
         container.testInt = 3
         let type = MyType(other: NonCodableType(inner: 2), str: AttributedString("Hello World", attributes: container))
-        
+
         let encoder = JSONEncoder()
         let data = try encoder.encode(type)
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(MyType.self, from: data)
         XCTAssertEqual(type, decoded)
     }
-    
+
     func testCodingErrorsPropogateUpToCallSite() {
-        enum CustomAttribute : CodableAttributedStringKey {
+        enum CustomAttribute: CodableAttributedStringKey {
             typealias Value = String
             static var name = "CustomAttribute"
-            
+
             static func encode(_ value: Value, to encoder: Encoder) throws {
                 throw TestError.encodingError
             }
-            
+
             static func decode(from decoder: Decoder) throws -> Value {
                 throw TestError.decodingError
             }
         }
-        
-        struct CustomScope : AttributeScope {
+
+        struct CustomScope: AttributeScope {
             var custom: CustomAttribute
         }
-        
-        struct Obj : Codable {
+
+        struct Obj: Codable {
             @CodableConfiguration(from: CustomScope.self) var str = AttributedString()
         }
-        
+
         var str = AttributedString("Hello, world")
         str[CustomAttribute.self] = "test"
         let encoder = JSONEncoder()
@@ -1223,38 +1223,38 @@ E {
             XCTAssert(err is TestError, "Encoding did not throw the proper error")
         }
     }
-    
+
     func testEncodeWithPartiallyCodableScope() throws {
-        enum NonCodableAttribute : AttributedStringKey {
+        enum NonCodableAttribute: AttributedStringKey {
             typealias Value = Int
             static var name = "NonCodableAttributes"
         }
-        struct PartialCodableScope : AttributeScope {
-            var codableAttr : AttributeScopes.TestAttributes.TestIntAttribute
-            var nonCodableAttr : NonCodableAttribute
+        struct PartialCodableScope: AttributeScope {
+            var codableAttr: AttributeScopes.TestAttributes.TestIntAttribute
+            var nonCodableAttr: NonCodableAttribute
         }
-        struct Obj : Codable {
+        struct Obj: Codable {
             @CodableConfiguration(from: PartialCodableScope.self) var str = AttributedString()
         }
-        
+
         var str = AttributedString("Hello, world")
         str[AttributeScopes.TestAttributes.TestIntAttribute.self] = 2
         str[NonCodableAttribute.self] = 3
-        
+
         let encoder = JSONEncoder()
         let data = try encoder.encode(Obj(str: str))
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(Obj.self, from: data)
-        
+
         var expected = str
         expected[NonCodableAttribute.self] = nil
         XCTAssertEqual(decoded.str, expected)
     }
 
     func testAutomaticCoding() throws {
-        struct Obj : Codable, Equatable {
+        struct Obj: Codable, Equatable {
             @CodableConfiguration(from: AttributeScopes.TestAttributes.self) var attrStr = AttributedString()
-            @CodableConfiguration(from: AttributeScopes.TestAttributes.self) var optAttrStr : AttributedString? = nil
+            @CodableConfiguration(from: AttributeScopes.TestAttributes.self) var optAttrStr: AttributedString?
             @CodableConfiguration(from: AttributeScopes.TestAttributes.self) var attrStrArr = [AttributedString]()
             @CodableConfiguration(from: AttributeScopes.TestAttributes.self) var optAttrStrArr = [AttributedString?]()
 
@@ -1299,13 +1299,12 @@ E {
 
     }
 
-
     func testManualCoding() throws {
-        struct Obj : Codable, Equatable {
-            var attrStr : AttributedString
-            var optAttrStr : AttributedString?
-            var attrStrArr : [AttributedString]
-            var optAttrStrArr : [AttributedString?]
+        struct Obj: Codable, Equatable {
+            var attrStr: AttributedString
+            var optAttrStr: AttributedString?
+            var attrStrArr: [AttributedString]
+            var optAttrStrArr: [AttributedString?]
 
             public init(testValueWithNils: Bool) {
                 attrStr = AttributedString("Test")
@@ -1321,7 +1320,7 @@ E {
                 }
             }
 
-            enum Keys : CodingKey {
+            enum Keys: CodingKey {
                 case attrStr
                 case optAttrStr
                 case attrStrArr
@@ -1387,9 +1386,9 @@ E {
             "{\"attributedString\": {\"runs\": [\"\"], \"attributeTable\": []}}",
             "{\"attributedString\": {\"runs\": [\"\", 1], \"attributeTable\": []}}",
             "{\"attributedString\": {\"runs\": [\"\", {}, \"Test\", {}], \"attributeTable\": []}}",
-            "{\"attributedString\": {\"runs\": \"Test\", {}, \"\", {}, \"attributeTable\": []}}",
+            "{\"attributedString\": {\"runs\": \"Test\", {}, \"\", {}, \"attributeTable\": []}}"
         ]
-        
+
         let decoder = JSONDecoder()
         for string in jsonStrings {
             XCTAssertThrowsError(try decoder.decode(CodableType.self, from: string.data(using: .utf8)!), "Corrupt data did not throw error for json data: \(string)") { err in
@@ -1397,9 +1396,9 @@ E {
             }
         }
     }
-    
+
     func testCodableRawRepresentableAttribute() throws {
-        struct Attribute : CodableAttributedStringKey {
+        struct Attribute: CodableAttributedStringKey {
             static let name = "MyAttribute"
             enum Value: String, Codable, Hashable {
                 case one = "one"
@@ -1407,16 +1406,16 @@ E {
                 case three = "three"
             }
         }
-        
-        struct Scope : AttributeScope {
+
+        struct Scope: AttributeScope {
             let attribute: Attribute
         }
-        
-        struct Object : Codable {
+
+        struct Object: Codable {
             @CodableConfiguration(from: Scope.self)
             var str = AttributedString()
         }
-        
+
         var str = AttributedString("Test")
         str[Attribute.self] = .two
         let encoder = JSONEncoder()
@@ -1427,7 +1426,7 @@ E {
     }
 
     func testContainerEncoding() throws {
-        struct ContainerContainer : Codable {
+        struct ContainerContainer: Codable {
             @CodableConfiguration(from: AttributeScopes.TestAttributes.self) var container = AttributeContainer()
         }
         let obj = ContainerContainer(container: AttributeContainer().testInt(1).testBool(true))
@@ -1439,12 +1438,12 @@ E {
 
         XCTAssertEqual(obj.container, decoded.container)
     }
-    
+
     func testDefaultAttributesCoding() throws {
-        struct DefaultContainer : Codable, Equatable {
-            var str : AttributedString
+        struct DefaultContainer: Codable, Equatable {
+            var str: AttributedString
         }
-        
+
         let cont = DefaultContainer(str: AttributedString("Hello", attributes: .init().link(URL(string: "http://apple.com")!)))
         let encoder = JSONEncoder()
         let encoded = try encoder.encode(cont)
@@ -1452,10 +1451,10 @@ E {
         let decoded = try decoder.decode(DefaultContainer.self, from: encoded)
         XCTAssertEqual(cont, decoded)
     }
-    
+
     func testDecodingMultibyteCharacters() throws {
         let json = "{\"str\": [\"🎺ABC\", {\"TestInt\": 2}]}"
-        struct Object : Codable {
+        struct Object: Codable {
             @CodableConfiguration(from: AttributeScopes.TestAttributes.self) var str: AttributedString = AttributedString()
         }
         let decoder = JSONDecoder()
@@ -1491,35 +1490,35 @@ E {
         string += AttributedString("lo!", attributes: AttributeContainer().testBool(true))
         XCTAssertEqual(string, convertedString)
     }
-    
+
     func testRoundTripConversion_boxed() throws {
-        struct MyCustomType : Hashable {
+        struct MyCustomType: Hashable {
             var num: Int
             var str: String
         }
-        
-        enum MyCustomAttribute : AttributedStringKey {
+
+        enum MyCustomAttribute: AttributedStringKey {
             typealias Value = MyCustomType
             static let name = "MyCustomAttribute"
         }
-        
-        struct MyCustomScope : AttributeScope {
-            let attr : MyCustomAttribute
+
+        struct MyCustomScope: AttributeScope {
+            let attr: MyCustomAttribute
         }
-        
+
         let customVal = MyCustomType(num: 2, str: "test")
         var attrString = AttributedString("Hello world")
         attrString[MyCustomAttribute.self] = customVal
         let nsString = try NSAttributedString(attrString, including: MyCustomScope.self)
         let converted = try AttributedString(nsString, including: MyCustomScope.self)
-        
+
         XCTAssertEqual(converted[MyCustomAttribute.self], customVal)
     }
 
     func testRoundTripConversion_customConversion() throws {
-        struct MyCustomType : Hashable { }
+        struct MyCustomType: Hashable { }
 
-        enum MyCustomAttribute : ObjectiveCConvertibleAttributedStringKey {
+        enum MyCustomAttribute: ObjectiveCConvertibleAttributedStringKey {
             typealias Value = MyCustomType
             static let name = "MyCustomAttribute"
 
@@ -1527,8 +1526,8 @@ E {
             static func value(for object: NSUUID) throws -> Value { MyCustomType() }
         }
 
-        struct MyCustomScope : AttributeScope {
-            let attr : MyCustomAttribute
+        struct MyCustomScope: AttributeScope {
+            let attr: MyCustomAttribute
         }
 
         let customVal = MyCustomType()
@@ -1543,7 +1542,7 @@ E {
     }
 
     func testIncompleteConversionFromObjC() throws {
-        struct TestStringAttributeOnly : AttributeScope {
+        struct TestStringAttributeOnly: AttributeScope {
             var testString: AttributeScopes.TestAttributes.TestStringAttribute // Missing TestBoolAttribute
         }
 
@@ -1553,109 +1552,109 @@ E {
         nsString.addAttribute(.testString, value: "Courier", range: rangeA)
         nsString.addAttribute(.testBool, value: NSNumber(value: true), range: rangeB)
         let converted = try AttributedString(nsString, including: TestStringAttributeOnly.self)
-        
+
         var expected = AttributedString("Hel", attributes: AttributeContainer().testString("Courier"))
         expected += AttributedString("lo!")
         XCTAssertEqual(converted, expected)
     }
-    
+
     func testIncompleteConversionToObjC() throws {
-        struct TestStringAttributeOnly : AttributeScope {
+        struct TestStringAttributeOnly: AttributeScope {
             var testString: AttributeScopes.TestAttributes.TestStringAttribute // Missing TestBoolAttribute
         }
 
         var attrStr = AttributedString("Hello ", attributes: .init().testBool(false))
         attrStr += AttributedString("world", attributes: .init().testString("Testing"))
         let converted = try NSAttributedString(attrStr, including: TestStringAttributeOnly.self)
-        
+
         let attrs = converted.attributes(at: 0, effectiveRange: nil)
         XCTAssertFalse(attrs.keys.contains(.testBool))
     }
-    
+
     func testConversionNestedScope() throws {
-        struct SuperScope : AttributeScope {
-            var subscope : SubScope
+        struct SuperScope: AttributeScope {
+            var subscope: SubScope
             var testString: AttributeScopes.TestAttributes.TestStringAttribute
         }
-        
-        struct SubScope : AttributeScope {
-            var testBool : AttributeScopes.TestAttributes.TestBoolAttribute
+
+        struct SubScope: AttributeScope {
+            var testBool: AttributeScopes.TestAttributes.TestBoolAttribute
         }
-        
+
         let nsString = NSMutableAttributedString(string: "Hello!")
-        let rangeA = NSMakeRange(0, 3)
-        let rangeB = NSMakeRange(3, 3)
+        let rangeA = NSRange(location: 0, length: 3)
+        let rangeB = NSRange(location: 3, length: 3)
         nsString.addAttribute(.testString, value: "Courier", range: rangeA)
         nsString.addAttribute(.testBool, value: NSNumber(value: true), range: rangeB)
         let converted = try AttributedString(nsString, including: SuperScope.self)
-        
+
         var expected = AttributedString("Hel", attributes: AttributeContainer().testString("Courier"))
         expected += AttributedString("lo!", attributes: AttributeContainer().testBool(true))
         XCTAssertEqual(converted, expected)
     }
-    
+
     func testConversionAttributeContainers() throws {
         let container = AttributeContainer.testInt(2).testDouble(3.1).testString("Hello")
-        
+
         let dictionary = try Dictionary(container, including: \.test)
         let expected: [NSAttributedString.Key: Any] = [
-                .testInt: 2,
-                .testDouble: 3.1,
-                .testString: "Hello"
+            .testInt: 2,
+            .testDouble: 3.1,
+            .testString: "Hello"
         ]
         XCTAssertEqual(dictionary.keys, expected.keys)
         XCTAssertEqual(dictionary[.testInt] as! Int, expected[.testInt] as! Int)
         XCTAssertEqual(dictionary[.testDouble] as! Double, expected[.testDouble] as! Double)
         XCTAssertEqual(dictionary[.testString] as! String, expected[.testString] as! String)
-        
+
         let container2 = try AttributeContainer(dictionary, including: \.test)
         XCTAssertEqual(container, container2)
     }
-    
+
     func testConversionFromInvalidObjectiveCValueTypes() throws {
-        let nsStr = NSAttributedString(string: "Hello", attributes: [.testInt : "I am not an Int"])
+        let nsStr = NSAttributedString(string: "Hello", attributes: [.testInt: "I am not an Int"])
         XCTAssertThrowsError(try AttributedString(nsStr, including: AttributeScopes.TestAttributes.self))
-        
+
         struct ConvertibleAttribute: ObjectiveCConvertibleAttributedStringKey {
-            struct Value : Hashable {
+            struct Value: Hashable {
                 var subValue: String
             }
             typealias ObjectiveCValue = NSString
             static var name = "Convertible"
-            
+
             static func objectiveCValue(for value: Value) throws -> NSString {
                 return value.subValue as NSString
             }
-            
+
             static func value(for object: NSString) throws -> Value {
                 return Value(subValue: object as String)
             }
         }
-        struct Scope : AttributeScope {
+        struct Scope: AttributeScope {
             let convertible: ConvertibleAttribute
         }
         
         let nsStr2 = NSAttributedString(string: "Hello", attributes: [NSAttributedString.Key(ConvertibleAttribute.name) : 12345])
         XCTAssertThrowsError(try AttributedString(nsStr2, including: Scope.self))
     }
-    
+
     func testConversionToUTF16() throws {
         // Ensure that we're correctly using UTF16 offsets with NSAS and UTF8 offsets with AS without mixing the two
         let multiByteCharacters = ["\u{2029}", "\u{1D11E}", "\u{1D122}", "\u{1F91A}\u{1F3FB}"]
-        
+
         for str in multiByteCharacters {
             let attrStr = AttributedString(str, attributes: .init().testInt(2))
             let nsStr = NSAttributedString(string: str, attributes: [.testInt: 2])
-            
+
             let convertedAttrStr = try AttributedString(nsStr, including: AttributeScopes.TestAttributes.self)
             XCTAssertEqual(str.utf8.count, convertedAttrStr._guts.runs[0].length)
             XCTAssertEqual(attrStr, convertedAttrStr)
-            
+
             let convertedNSStr = try NSAttributedString(attrStr, including: AttributeScopes.TestAttributes.self)
             XCTAssertEqual(nsStr, convertedNSStr)
         }
     }
-    
+
     func testConversionWithoutScope() throws {
         // Ensure simple conversion works (no errors when loading AppKit/UIKit/SwiftUI)
         let attrStr = AttributedString()
@@ -1672,25 +1671,25 @@ E {
         XCTAssertEqual(attrStr2Reverse, attrStr2)
         
         // Ensure attributes that throw are dropped
-        enum Attribute : ObjectiveCConvertibleAttributedStringKey {
+        enum Attribute: ObjectiveCConvertibleAttributedStringKey {
             static var name = "TestAttribute"
             typealias Value = Int
             typealias ObjectiveCValue = NSString
-            
+
             static func objectiveCValue(for value: Int) throws -> NSString {
                 throw TestError.conversionError
             }
-            
+
             static func value(for object: NSString) throws -> Int {
                 throw TestError.conversionError
             }
         }
-        
-        struct Scope : AttributeScope {
+
+        struct Scope: AttributeScope {
             var test: Attribute
             var other: AttributeScopes.TestAttributes
         }
-        
+
         var container = AttributeContainer()
         container.testInt = 2
         container[Attribute.self] = 3
@@ -2129,7 +2128,7 @@ E {
 
         let BcD = testString.range(of: "BcD", options: [.caseInsensitive])!
         XCTAssertEqual(BcD.lowerBound, testString.index(testString.startIndex, offsetByCharacters: 1))
-        XCTAssertEqual(String(testString[BcD].characters), "bcd");
+        XCTAssertEqual(String(testString[BcD].characters), "bcd")
 
         let ghi_backwards = testString.range(of: "ghi", options: [.backwards])!
         XCTAssertEqual(ghi_backwards.lowerBound, testString.index(testString.startIndex, offsetByCharacters: 6))
@@ -2175,7 +2174,7 @@ E {
 
         let BcD = testString.range(of: "BcD", options: [.caseInsensitive])!
         XCTAssertEqual(BcD.lowerBound, testString.index(testString.startIndex, offsetByCharacters: 1))
-        XCTAssertEqual(String(testString[BcD].characters), "bcd");
+        XCTAssertEqual(String(testString[BcD].characters), "bcd")
 
         let ghi_backwards = testString.range(of: "ghi", options: [.backwards])!
         XCTAssertEqual(ghi_backwards.lowerBound, testString.index(testString.startIndex, offsetByCharacters: 6))
@@ -2300,32 +2299,32 @@ E {
         str += AttributedString("B", attributes: .init().testInt(2))
         str += AttributedString("C", attributes: .init().link(URL(string: "http://apple.com")!))
         str += AttributedString("D", attributes: .init().testInt(3).link(URL(string: "http://apple.com")!))
-        
-        struct FoundationAndTest : AttributeScope {
+
+        struct FoundationAndTest: AttributeScope {
             let foundation: AttributeScopes.FoundationAttributes
             let test: AttributeScopes.TestAttributes
         }
         XCTAssertEqual(AttributedString(str, including: FoundationAndTest.self), str)
-        
-        struct None : AttributeScope {
-            
+
+        struct None: AttributeScope {
+
         }
         XCTAssertEqual(AttributedString(str, including: None.self), AttributedString("ABCD"))
-        
+
         var expected = AttributedString("AB")
         expected += AttributedString("CD", attributes: .init().link(URL(string: "http://apple.com")!))
         XCTAssertEqual(AttributedString(str, including: \.foundation), expected)
-        
+
         expected = AttributedString("A")
         expected += AttributedString("B", attributes: .init().testInt(2))
         expected += "C"
         expected += AttributedString("D", attributes: .init().testInt(3))
         XCTAssertEqual(AttributedString(str, including: \.test), expected)
-        
+
         let range = str.index(afterCharacter: str.startIndex) ..< str.index(beforeCharacter: str.endIndex)
         expected = AttributedString("B", attributes: .init().testInt(2)) + "C"
         XCTAssertEqual(AttributedString(str[range], including: \.test), expected)
-        
+
         expected = "B" + AttributedString("C", attributes: .init().link(URL(string: "http://apple.com")!))
         XCTAssertEqual(AttributedString(str[range], including: \.foundation), expected)
         

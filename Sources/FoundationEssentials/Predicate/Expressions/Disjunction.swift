@@ -13,44 +13,43 @@
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions {
     public struct Disjunction<
-        LHS : PredicateExpression,
-        RHS : PredicateExpression
-    > : PredicateExpression
+        LHS: PredicateExpression,
+        RHS: PredicateExpression
+    >: PredicateExpression
     where
         LHS.Output == Bool,
-        RHS.Output == Bool
-    {
+        RHS.Output == Bool {
         public typealias Output = Bool
-        
+
         public let lhs: LHS
         public let rhs: RHS
-        
+
         public init(lhs: LHS, rhs: RHS) {
             self.lhs = lhs
             self.rhs = rhs
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> Bool {
             try lhs.evaluate(bindings) || rhs.evaluate(bindings)
         }
     }
-    
+
     public static func build_Disjunction<LHS, RHS>(lhs: LHS, rhs: RHS) -> Disjunction<LHS, RHS> {
         Disjunction(lhs: lhs, rhs: rhs)
     }
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Disjunction : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+extension PredicateExpressions.Disjunction: StandardPredicateExpression where LHS: StandardPredicateExpression, RHS: StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Disjunction : Codable where LHS : Codable, RHS : Codable {
+extension PredicateExpressions.Disjunction: Codable where LHS: Codable, RHS: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(lhs)
         try container.encode(rhs)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         lhs = try container.decode(LHS.self)
@@ -59,4 +58,4 @@ extension PredicateExpressions.Disjunction : Codable where LHS : Codable, RHS : 
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Disjunction : Sendable where LHS : Sendable, RHS : Sendable {}
+extension PredicateExpressions.Disjunction: Sendable where LHS: Sendable, RHS: Sendable {}

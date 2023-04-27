@@ -36,7 +36,7 @@ extension AttributedString {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-final class DateFormatStyleTests : XCTestCase {
+final class DateFormatStyleTests: XCTestCase {
     let referenceDate = Date(timeIntervalSinceReferenceDate: 0)
 
     func test_constructorSyntax() {
@@ -80,7 +80,7 @@ final class DateFormatStyleTests : XCTestCase {
 
             "\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .oneBased)) o'clock": "h' o''clock'",
 
-            "Day:\(day: .defaultDigits) Month:\(month: .abbreviated) Year:\(year: .padded(4))": "'Day:'d' Month:'MMM' Year:'yyyy",
+            "Day:\(day: .defaultDigits) Month:\(month: .abbreviated) Year:\(year: .padded(4))": "'Day:'d' Month:'MMM' Year:'yyyy"
         ]
 
         for (format, expected) in expectedFormats {
@@ -93,7 +93,7 @@ final class DateFormatStyleTests : XCTestCase {
         let invalidFormats: [(Date.FormatString, String)] = [
             ("ddMMyy", "010599"),
             ("dd/MM/yy", "01/05/99"),
-            ("d/MMM/yyyy", "1/Sep/1999"),
+            ("d/MMM/yyyy", "1/Sep/1999")
         ]
 
         let locale = Locale(identifier: "en_US")
@@ -139,12 +139,12 @@ final class DateFormatStyleTests : XCTestCase {
             "en_GB": "31 Dec 1969",
             "es_SP": "31 dic 1969",
             "zh_TW": "1969年12月31日",
-            "fr_FR": "31 déc. 1969",
+            "fr_FR": "31 déc. 1969"
         ]
         let date = Date(timeIntervalSince1970: 0)
 
         for localeIdentifier in testLocales {
-            DispatchQueue.global(qos: .userInitiated).async(group:group) {
+            DispatchQueue.global(qos: .userInitiated).async(group: group) {
                 let locale = Locale(identifier: localeIdentifier)
                 XCTAssertNotNil(locale)
                 let timeZone = TimeZone(secondsFromGMT: -3600)!
@@ -170,11 +170,11 @@ final class DateFormatStyleTests : XCTestCase {
             "en_GB": "d MMM y",
             "es_SP": "d MMM y",
             "zh_TW": "y年M月d日",
-            "fr_FR": "d MMM y",
+            "fr_FR": "d MMM y"
         ]
 
         for localeIdentifier in testLocales {
-            DispatchQueue.global(qos: .userInitiated).async(group:group) {
+            DispatchQueue.global(qos: .userInitiated).async(group: group) {
                 let locale = Locale(identifier: localeIdentifier)
                 XCTAssertNotNil(locale)
 
@@ -433,7 +433,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
     }
 }
 
-final class DateVerbatimFormatStyleTests : XCTestCase {
+final class DateVerbatimFormatStyleTests: XCTestCase {
     var utcTimeZone = TimeZone(identifier: "UTC")!
 
     func testFormats() throws {
@@ -633,7 +633,7 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-final class MatchConsumerAndSearcherTests : XCTestCase {
+final class MatchConsumerAndSearcherTests: XCTestCase {
 
     let enUS = Locale(identifier: "en_US")
     let utcTimeZone = TimeZone(identifier: "UTC")!

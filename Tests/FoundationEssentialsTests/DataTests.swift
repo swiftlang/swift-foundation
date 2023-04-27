@@ -50,7 +50,7 @@ class DataTests : XCTestCase {
     // MARK: -
 
     // String of course has its own way to get data, but this way tests our own data struct
-    func dataFrom(_ string : String) -> Data {
+    func dataFrom(_ string: String) -> Data {
         // Create a Data out of those bytes
         return string.utf8CString.withUnsafeBufferPointer { (ptr) in
             ptr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: ptr.count) {
@@ -166,7 +166,7 @@ class DataTests : XCTestCase {
         XCTAssertEqual(mutatingHello.count, helloLength * 2, "The length should have changed")
 
         // Get the underlying data for hello2
-        mutatingHello.withUnsafeMutableUInt8Bytes { (bytes : UnsafeMutablePointer<UInt8>) in
+        mutatingHello.withUnsafeMutableUInt8Bytes { (bytes: UnsafeMutablePointer<UInt8>) in
             XCTAssertEqual(bytes.pointee, 0x68, "First byte should be 0x68")
 
             // Mutate it
@@ -216,19 +216,19 @@ class DataTests : XCTestCase {
 
     func testReplaceSubrange3() {
         // The expected result
-        let expectedBytes : [UInt8] = [1, 2, 9, 10, 11, 12, 13]
+        let expectedBytes: [UInt8] = [1, 2, 9, 10, 11, 12, 13]
         let expected = expectedBytes.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
 
         // The data we'll mutate
-        let someBytes : [UInt8] = [1, 2, 3, 4, 5]
+        let someBytes: [UInt8] = [1, 2, 3, 4, 5]
         var a = someBytes.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
 
         // The bytes we'll insert
-        let b : [UInt8] = [9, 10, 11, 12, 13]
+        let b: [UInt8] = [9, 10, 11, 12, 13]
         b.withUnsafeBufferPointer {
             a.replaceSubrange(2..<5, with: $0)
         }
@@ -236,15 +236,15 @@ class DataTests : XCTestCase {
     }
 
     func testReplaceSubrange4() {
-        let expectedBytes : [UInt8] = [1, 2, 9, 10, 11, 12, 13]
+        let expectedBytes: [UInt8] = [1, 2, 9, 10, 11, 12, 13]
         let expected = Data(expectedBytes)
 
         // The data we'll mutate
-        let someBytes : [UInt8] = [1, 2, 3, 4, 5]
+        let someBytes: [UInt8] = [1, 2, 3, 4, 5]
         var a = Data(someBytes)
 
         // The bytes we'll insert
-        let b : [UInt8] = [9, 10, 11, 12, 13]
+        let b: [UInt8] = [9, 10, 11, 12, 13]
         a.replaceSubrange(2..<5, with: b)
         XCTAssertEqual(expected, a)
     }
@@ -294,7 +294,7 @@ class DataTests : XCTestCase {
     func testGenericAlgorithms() {
         let hello = dataFrom("Hello World")
 
-        let isCapital = { (byte : UInt8) in byte >= 65 && byte <= 90 }
+        let isCapital = { (byte: UInt8) in byte >= 65 && byte <= 90 }
 
         let allCaps = hello.filter(isCapital)
         XCTAssertEqual(allCaps.count, 2)
@@ -327,7 +327,7 @@ class DataTests : XCTestCase {
     }
 
     func testCopyBytes_undersized() {
-        let a : [UInt8] = [1, 2, 3, 4, 5]
+        let a: [UInt8] = [1, 2, 3, 4, 5]
         let data = a.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
@@ -349,7 +349,7 @@ class DataTests : XCTestCase {
     }
 
     func testCopyBytes_oversized() {
-        let a : [Int32] = [1, 0, 1, 0, 1]
+        let a: [Int32] = [1, 0, 1, 0, 1]
         let data = a.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
@@ -367,14 +367,14 @@ class DataTests : XCTestCase {
 
         do {
             // Equal sized buffer, data
-            let a : [UInt8] = [1, 2, 3, 4, 5]
+            let a: [UInt8] = [1, 2, 3, 4, 5]
             let data = a.withUnsafeBufferPointer {
                 return Data(buffer: $0)
             }
 
             let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: data.count, alignment: MemoryLayout<UInt8>.size)
 
-            var copiedCount : Int
+            var copiedCount: Int
 
             copiedCount = data.copyBytes(to: buffer, from: 0..<0)
             XCTAssertEqual(0, copiedCount)
@@ -395,13 +395,13 @@ class DataTests : XCTestCase {
 
         do {
             // Larger buffer than data
-            let a : [UInt8] = [1, 2, 3, 4]
+            let a: [UInt8] = [1, 2, 3, 4]
             let data = a.withUnsafeBufferPointer {
                 return Data(buffer: $0)
             }
 
             let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 10, alignment: MemoryLayout<UInt8>.size)
-            var copiedCount : Int
+            var copiedCount: Int
 
             copiedCount = data.copyBytes(to: buffer, from: 0..<3)
             XCTAssertEqual((0..<3).count, copiedCount)
@@ -416,14 +416,14 @@ class DataTests : XCTestCase {
 
         do {
             // Larger data than buffer
-            let a : [UInt8] = [1, 2, 3, 4, 5, 6]
+            let a: [UInt8] = [1, 2, 3, 4, 5, 6]
             let data = a.withUnsafeBufferPointer {
                 return Data(buffer: $0)
             }
 
             let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 4, alignment: MemoryLayout<UInt8>.size)
 
-            var copiedCount : Int
+            var copiedCount: Int
 
             copiedCount = data.copyBytes(to: buffer, from: 0..<data.index(before: data.endIndex))
             XCTAssertEqual(4, copiedCount)
@@ -439,7 +439,7 @@ class DataTests : XCTestCase {
     }
 
     func test_genericBuffers() {
-        let a : [Int32] = [1, 0, 1, 0, 1]
+        let a: [Int32] = [1, 0, 1, 0, 1]
         var data = a.withUnsafeBufferPointer {
             return Data(buffer: $0)
         }
@@ -1636,7 +1636,7 @@ class DataTests : XCTestCase {
     #if false // FIXME: XCTest doesn't support crash tests yet rdar://20195010&22387653
     func test_bounding_failure_replace2() {
         var data = "a".data(using: .utf8)!
-        var bytes : [UInt8] = [1, 2, 3]
+        var bytes: [UInt8] = [1, 2, 3]
         expectCrashLater()
         bytes.withUnsafeBufferPointer {
             // lowerBound ok, upperBound after end of data
@@ -1648,7 +1648,7 @@ class DataTests : XCTestCase {
     #if false // FIXME: XCTest doesn't support crash tests yet rdar://20195010&22387653
     func test_bounding_failure_replace3() {
         var data = "a".data(using: .utf8)!
-        var bytes : [UInt8] = [1, 2, 3]
+        var bytes: [UInt8] = [1, 2, 3]
         expectCrashLater()
         bytes.withUnsafeBufferPointer {
             // lowerBound is > length
@@ -1660,7 +1660,7 @@ class DataTests : XCTestCase {
     #if false // FIXME: XCTest doesn't support crash tests yet rdar://20195010&22387653
     func test_bounding_failure_replace4() {
         var data = "a".data(using: .utf8)!
-        var bytes : [UInt8] = [1, 2, 3]
+        var bytes: [UInt8] = [1, 2, 3]
         expectCrashLater()
         // lowerBound is > length
         data.replaceSubrange(2..<4, with: bytes)
@@ -1790,7 +1790,7 @@ extension DataTests {
         }
         let data = "GET /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n".data(using: .ascii)!
         let fields = split(data, on: "\r\n")
-        let splitFields = fields.map { String(data:$0, encoding: .utf8)! }
+        let splitFields = fields.map { String(data: $0, encoding: .utf8)! }
         XCTAssertEqual([
             "GET /index.html HTTP/1.1",
             "Host: www.example.com",
@@ -1861,7 +1861,7 @@ extension DataTests {
         let values: [Data] = [
             Data(base64Encoded: "AAAA")!,
             Data(base64Encoded: "AAAB")!,
-            Data(base64Encoded: "AAAB")!,
+            Data(base64Encoded: "AAAB")!
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(Data.self, type(of: anyHashables[0].base))

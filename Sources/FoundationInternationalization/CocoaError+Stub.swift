@@ -10,8 +10,8 @@
 //===----------------------------------------------------------------------===//
 
 #if !FOUNDATION_FRAMEWORK
-internal struct CocoaError : Error {
-    enum Code : Int, Sendable {
+internal struct CocoaError: Error {
+    enum Code: Int, Sendable {
         case formatting = 2048
     }
 

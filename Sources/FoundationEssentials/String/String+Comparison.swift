@@ -16,7 +16,7 @@ extension String {
     public typealias CompareOptions = NSString.CompareOptions
 #else
     /// These options apply to the various search/find and comparison methods (except where noted).
-    public struct CompareOptions : OptionSet, Sendable {
+    public struct CompareOptions: OptionSet, Sendable {
         public let rawValue: UInt
 
         public init(rawValue: UInt) {
@@ -80,14 +80,14 @@ extension UTF8.CodeUnit {
 
 // MARK: - _StringCompareOptionsIterable Methods
 // Internal protocols to share the implementation for iterating BidirectionalCollections of String family and process their elements according to String.CompareOptions.
-internal protocol _StringCompareOptionsConvertible : Comparable & Equatable {
+internal protocol _StringCompareOptionsConvertible: Comparable & Equatable {
     associatedtype IterableType: _StringCompareOptionsIterable
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> IterableType
     var intValue: Int? { get }
     var isExtendCharacter: Bool { get }
 }
 
-internal protocol _StringCompareOptionsIterable : BidirectionalCollection where Element: _StringCompareOptionsConvertible, Element.IterableType.SubSequence == Self.SubSequence, Element == SubSequence.Element {
+internal protocol _StringCompareOptionsIterable: BidirectionalCollection where Element: _StringCompareOptionsConvertible, Element.IterableType.SubSequence == Self.SubSequence, Element == SubSequence.Element {
     init()
     var first: Element? { get }
     func _consumeExtendCharacters(from i: inout Index)
@@ -103,7 +103,7 @@ extension _StringCompareOptionsIterable {
         var value = initialValue
         while i < endIndex {
             let c = self[i]
-            guard let num = c.intValue else  {
+            guard let num = c.intValue else {
                 break
             }
             // equivalent to `value = value * 10 + num` but considering overflow
@@ -193,7 +193,7 @@ extension _StringCompareOptionsIterable {
                 }
             }
 
-            if c1 != c2  {
+            if c1 != c2 {
                 if !(toHalfWidth || diacriticsInsensitive || caseFold) {
                     return ComparisonResult(c1, c2)
                 }
@@ -494,7 +494,7 @@ extension _StringCompareOptionsIterable {
     }
 }
 
-extension String : _StringCompareOptionsIterable {}
+extension String: _StringCompareOptionsIterable {}
 extension Substring: _StringCompareOptionsIterable {}
 extension String.UnicodeScalarView: _StringCompareOptionsIterable {}
 extension Substring.UnicodeScalarView: _StringCompareOptionsIterable {}
@@ -509,7 +509,7 @@ extension Substring.UTF8View: _StringCompareOptionsIterable {
     }
 }
 
-extension Unicode.UTF8.CodeUnit : _StringCompareOptionsConvertible {
+extension Unicode.UTF8.CodeUnit: _StringCompareOptionsConvertible {
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> String.UTF8View {
         String(unsafeUninitializedCapacity: 1) {
             $0[0] = caseFolding ? self._lowercased : self
@@ -527,7 +527,7 @@ extension Unicode.UTF8.CodeUnit : _StringCompareOptionsConvertible {
     }
 }
 
-extension Character : _StringCompareOptionsConvertible {
+extension Character: _StringCompareOptionsConvertible {
 
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> String {
         if isASCII {
@@ -575,7 +575,7 @@ extension Character : _StringCompareOptionsConvertible {
 
 }
 
-extension UnicodeScalar : _StringCompareOptionsConvertible {
+extension UnicodeScalar: _StringCompareOptionsConvertible {
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> String.UnicodeScalarView {
 
         var new = self
@@ -723,7 +723,7 @@ extension Substring {
         } else if !toHalfWidth && !diacriticsInsensitive && !caseFold {
             // Fast path: iterate through UTF8 view when we don't need to transform string content
             guard let utf8Result = utf8._range(of: strToFind.utf8, anchored: anchored, backwards: backwards) else {
-                 return nil
+                return nil
             }
 
             // Adjust the index to that of the original slice since we called `makeContiguousUTF8` before
@@ -866,7 +866,7 @@ extension BidirectionalCollection {
     func _index<S: BidirectionalCollection>(_ index: Index, backwardsOffsetByCountOf other: S) -> Index? {
         var idx = index
         var otherIdx = other.endIndex
-        while otherIdx > other.startIndex  {
+        while otherIdx > other.startIndex {
             guard idx > startIndex else {
                 // other.count > self.count: bail
                 return nil

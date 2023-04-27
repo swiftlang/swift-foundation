@@ -105,12 +105,12 @@ internal final class _NSCalendarSwiftWrapper: @unchecked Sendable {
     //
 
     /// The identifier of the calendar.
-    var identifier : Calendar.Identifier {
+    var identifier: Calendar.Identifier {
         return Calendar._fromNSCalendarIdentifier(_calendar.calendarIdentifier)!
     }
 
     /// The locale of the calendar.
-    var locale : Locale? {
+    var locale: Locale? {
         get {
             _calendar.locale
         }
@@ -120,7 +120,7 @@ internal final class _NSCalendarSwiftWrapper: @unchecked Sendable {
     }
 
     /// The time zone of the calendar.
-    var timeZone : TimeZone {
+    var timeZone: TimeZone {
         get {
             _calendar.timeZone
         }
@@ -130,7 +130,7 @@ internal final class _NSCalendarSwiftWrapper: @unchecked Sendable {
     }
 
     /// The first weekday of the calendar.
-    var firstWeekday : Int {
+    var firstWeekday: Int {
         get {
             _calendar.firstWeekday
         }
@@ -140,7 +140,7 @@ internal final class _NSCalendarSwiftWrapper: @unchecked Sendable {
     }
 
     /// The number of minimum days in the first week.
-    var minimumDaysInFirstWeek : Int {
+    var minimumDaysInFirstWeek: Int {
         get {
             _calendar.minimumDaysInFirstWeek
         }
@@ -188,8 +188,8 @@ internal final class _NSCalendarSwiftWrapper: @unchecked Sendable {
     /// - parameter date: The specified date.
     /// - returns: A new `DateInterval` if the starting time and duration of a component could be calculated, otherwise `nil`.
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
-        var interval : TimeInterval = 0
-        var nsDate : NSDate? = NSDate(timeIntervalSinceReferenceDate: 0)
+        var interval: TimeInterval = 0
+        var nsDate: NSDate? = NSDate(timeIntervalSinceReferenceDate: 0)
         if _calendar.range(of: _toNSCalendarUnit([component]), start: &nsDate, interval: &interval, for: date) {
             guard let nsDate else { return nil }
             return DateInterval(start: nsDate as Date, duration: interval)
@@ -271,8 +271,8 @@ internal final class _NSCalendarSwiftWrapper: @unchecked Sendable {
 
     func nextWeekend(startingAfter date: Date, direction: Calendar.SearchDirection = .forward) -> DateInterval? {
         // The implementation actually overrides previousKeepSmaller and nextKeepSmaller with matchNext, always - but strict still trumps all.
-        var nsDate : NSDate?
-        var ti : TimeInterval = 0
+        var nsDate: NSDate?
+        var ti: TimeInterval = 0
         guard _calendar.nextWeekendStart(&nsDate, interval: &ti, options: direction == .backward ? [.searchBackwards] : [], after: date) else {
             return nil
         }
@@ -720,7 +720,7 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
 
 /// Turn our more-specific options into the big bucket option set of NSCalendar
 private func _toCalendarOptions(matchingPolicy: Calendar.MatchingPolicy, repeatedTimePolicy: Calendar.RepeatedTimePolicy, direction: Calendar.SearchDirection) -> NSCalendar.Options {
-    var result : NSCalendar.Options = []
+    var result: NSCalendar.Options = []
 
     switch matchingPolicy {
     case .nextTime:
@@ -816,7 +816,7 @@ internal func _toNSCalendarUnit(_ components : Set<Calendar.Component>) -> NSCal
     return result
 }
 
-private func _fromNSCalendarUnits(_ units : NSCalendar.Unit) -> Set<Calendar.Component> {
+private func _fromNSCalendarUnits(_ units: NSCalendar.Unit) -> Set<Calendar.Component> {
     var result = Set<Calendar.Component>()
     if units.contains(.era) { result.insert(.era) }
     if units.contains(.year) { result.insert(.year) }

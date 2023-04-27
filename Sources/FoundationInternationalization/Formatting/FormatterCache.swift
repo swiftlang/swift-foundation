@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal struct FormatterCache<Format : Hashable & Sendable, FormattingType: Sendable>: Sendable {
+internal struct FormatterCache<Format: Hashable & Sendable, FormattingType: Sendable>: Sendable {
 
     let countLimit = 100
 

@@ -33,80 +33,80 @@ public struct Date: Comparable, Hashable, Equatable, Sendable {
     internal var _time: TimeInterval
 
     /// The number of seconds from 1 January 1970 to the reference date, 1 January 2001.
-    public static let timeIntervalBetween1970AndReferenceDate: TimeInterval = 978307200.0
-
+    public static let timeIntervalBetween1970AndReferenceDate : TimeInterval = 978307200.0
+    
     /// The interval between 00:00:00 UTC on 1 January 2001 and the current date and time.
-    public static var timeIntervalSinceReferenceDate: TimeInterval {
+    public static var timeIntervalSinceReferenceDate : TimeInterval {
         return Self.getCurrentAbsoluteTime()
     }
-
+    
     /// Returns a `Date` initialized to the current date and time.
     public init() {
         _time = Self.getCurrentAbsoluteTime()
     }
-
+    
     /// Returns a `Date` initialized relative to the current date and time by a given number of seconds.
     public init(timeIntervalSinceNow: TimeInterval) {
         self.init(timeIntervalSinceReferenceDate: timeIntervalSinceNow + Self.getCurrentAbsoluteTime())
     }
-
+    
     /// Returns a `Date` initialized relative to 00:00:00 UTC on 1 January 1970 by a given number of seconds.
     public init(timeIntervalSince1970: TimeInterval) {
         self.init(timeIntervalSinceReferenceDate: timeIntervalSince1970 - Date.timeIntervalBetween1970AndReferenceDate)
     }
-
+    
     /**
-    Returns a `Date` initialized relative to another given date by a given number of seconds.
-
-    - Parameter timeInterval: The number of seconds to add to `date`. A negative value means the receiver will be earlier than `date`.
-    - Parameter date: The reference date.
-    */
+     Returns a `Date` initialized relative to another given date by a given number of seconds.
+     
+     - Parameter timeInterval: The number of seconds to add to `date`. A negative value means the receiver will be earlier than `date`.
+     - Parameter date: The reference date.
+     */
     public init(timeInterval: TimeInterval, since date: Date) {
         self.init(timeIntervalSinceReferenceDate: date.timeIntervalSinceReferenceDate + timeInterval)
     }
-
+    
     /// Returns a `Date` initialized relative to 00:00:00 UTC on 1 January 2001 by a given number of seconds.
     public init(timeIntervalSinceReferenceDate ti: TimeInterval) {
         _time = ti
     }
-
+    
     /**
-    Returns the interval between the date object and 00:00:00 UTC on 1 January 2001.
-
-    This property's value is negative if the date object is earlier than the system's absolute reference date (00:00:00 UTC on 1 January 2001).
-    */
+     Returns the interval between the date object and 00:00:00 UTC on 1 January 2001.
+     
+     This property's value is negative if the date object is earlier than the system's absolute reference date (00:00:00 UTC on 1 January 2001).
+     */
     public var timeIntervalSinceReferenceDate: TimeInterval {
         return _time
     }
-
+    
     /**
-    Returns the interval between the receiver and another given date.
-
-    - Parameter another: The date with which to compare the receiver.
-
-    - Returns: The interval between the receiver and the `another` parameter. If the receiver is earlier than `anotherDate`, the return value is negative. If `anotherDate` is `nil`, the results are undefined.
-
-    - SeeAlso: `timeIntervalSince1970`
-    - SeeAlso: `timeIntervalSinceNow`
-    - SeeAlso: `timeIntervalSinceReferenceDate`
-    */
+     Returns the interval between the receiver and another given date.
+     
+     - Parameter another: The date with which to compare the receiver.
+     
+     - Returns: The interval between the receiver and the `another` parameter. If the receiver is earlier than `anotherDate`, the return value is negative. If `anotherDate` is `nil`, the results are undefined.
+     
+     - SeeAlso: `timeIntervalSince1970`
+     - SeeAlso: `timeIntervalSinceNow`
+     - SeeAlso: `timeIntervalSinceReferenceDate`
+     */
     public func timeIntervalSince(_ date: Date) -> TimeInterval {
         return self.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate
     }
-
+    
     /**
-    The time interval between the date and the current date and time.
-
-    If the date is earlier than the current date and time, this property's value is negative.
-
-    - SeeAlso: `timeIntervalSince(_:)`
-    - SeeAlso: `timeIntervalSince1970`
-    - SeeAlso: `timeIntervalSinceReferenceDate`
-    */
+     The time interval between the date and the current date and time.
+     
+     If the date is earlier than the current date and time, this property's value is negative.
+     
+     - SeeAlso: `timeIntervalSince(_:)`
+     - SeeAlso: `timeIntervalSince1970`
+     - SeeAlso: `timeIntervalSinceReferenceDate`
+     */
     public var timeIntervalSinceNow: TimeInterval {
         return self.timeIntervalSinceReferenceDate - Self.getCurrentAbsoluteTime()
     }
-
+    
     /**
     The interval between the date object and 00:00:00 UTC on 1 January 1970.
 
@@ -135,19 +135,19 @@ public struct Date: Comparable, Hashable, Equatable, Sendable {
     public mutating func addTimeInterval(_ timeInterval: TimeInterval) {
         self += timeInterval
     }
-
+    
     /**
-    Creates and returns a Date value representing a date in the distant future.
-
-    The distant future is in terms of centuries.
-    */
+     Creates and returns a Date value representing a date in the distant future.
+     
+     The distant future is in terms of centuries.
+     */
     public static let distantFuture = Date(timeIntervalSinceReferenceDate: 63113904000.0)
-
+    
     /**
-    Creates and returns a Date value representing a date in the distant past.
-
-    The distant past is in terms of centuries.
-    */
+     Creates and returns a Date value representing a date in the distant past.
+     
+     The distant past is in terms of centuries.
+     */
     public static let distantPast = Date(timeIntervalSinceReferenceDate: -63114076800.0)
 
     /// Returns a `Date` initialized to the current date and time.
@@ -157,7 +157,7 @@ public struct Date: Comparable, Hashable, Equatable, Sendable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(_time)
     }
-
+    
     /// Compare two `Date` values.
     public func compare(_ other: Date) -> ComparisonResult {
         if _time < other.timeIntervalSinceReferenceDate {
@@ -168,12 +168,12 @@ public struct Date: Comparable, Hashable, Equatable, Sendable {
             return .orderedSame
         }
     }
-
+    
     /// Returns true if the two `Date` values represent the same point in time.
     public static func ==(lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate == rhs.timeIntervalSinceReferenceDate
     }
-
+    
     /// Returns true if the left hand `Date` is earlier in time than the right hand `Date`.
     public static func <(lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate < rhs.timeIntervalSinceReferenceDate
@@ -228,6 +228,9 @@ extension Date {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Date: CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
+    // For backwards compatibility, the Darwin version of this method is left alone
+    // because it uses `NSDateFormatter` and may behave slightly differently.
+#if !FOUNDATION_FRAMEWORK
     /// A string representation of the date object (read-only).
     /// The representation is useful for debugging only.
     /// There are a number of options to acquire a formatted string for a date including: date formatters
@@ -329,7 +332,7 @@ extension Date: _CustomPlaygroundQuickLookable {
         df.timeStyle = .short
         return df.string(from: self)
     }
-
+    
     @available(*, deprecated, message: "Date.customPlaygroundQuickLook will be removed in a future Swift version")
     public var customPlaygroundQuickLook: PlaygroundQuickLook {
         return .text(summary)

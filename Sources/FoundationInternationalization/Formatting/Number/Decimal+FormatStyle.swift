@@ -92,11 +92,11 @@ extension Decimal {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Decimal.FormatStyle : FormatStyle {}
+extension Decimal.FormatStyle: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal.FormatStyle {
-    public struct Percent : Sendable {
+    public struct Percent: Sendable {
         public typealias Configuration = NumberFormatStyleConfiguration
 
         public var locale: Locale
@@ -173,7 +173,7 @@ extension Decimal.FormatStyle {
     }
 
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct Currency : Sendable  {
+    public struct Currency: Sendable {
         public typealias Configuration = CurrencyFormatStyleConfiguration
 
         public var locale: Locale
@@ -251,8 +251,8 @@ extension Decimal.FormatStyle {
         }
     }
 
-    public struct Attributed : Sendable {
-        enum Style : Hashable, Codable, Sendable {
+    public struct Attributed: Sendable {
+        enum Style: Hashable, Codable, Sendable {
             case decimal(Decimal.FormatStyle)
             case currency(Decimal.FormatStyle.Currency)
             case percent(Decimal.FormatStyle.Percent)
@@ -314,13 +314,13 @@ extension Decimal.FormatStyle {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Decimal.FormatStyle.Percent : FormatStyle {}
+extension Decimal.FormatStyle.Percent: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Decimal.FormatStyle.Currency : FormatStyle {}
+extension Decimal.FormatStyle.Currency: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Decimal.FormatStyle.Attributed : FormatStyle {}
+extension Decimal.FormatStyle.Attributed: FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal.FormatStyle: ParseableFormatStyle {
@@ -393,7 +393,7 @@ extension Decimal {
 // MARK: - Regex
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Decimal.FormatStyle : CustomConsumingRegexComponent {
+extension Decimal.FormatStyle: CustomConsumingRegexComponent {
     public typealias RegexOutput = Decimal
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Decimal)? {
         Decimal.ParseStrategy(formatStyle: self, lenient: false).parse(input, startingAt: index, in: bounds)
@@ -401,7 +401,7 @@ extension Decimal.FormatStyle : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Decimal.FormatStyle.Percent : CustomConsumingRegexComponent {
+extension Decimal.FormatStyle.Percent: CustomConsumingRegexComponent {
     public typealias RegexOutput = Decimal
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Decimal)? {
         Decimal.ParseStrategy(formatStyle: self, lenient: false).parse(input, startingAt: index, in: bounds)
@@ -409,7 +409,7 @@ extension Decimal.FormatStyle.Percent : CustomConsumingRegexComponent {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Decimal.FormatStyle.Currency : CustomConsumingRegexComponent {
+extension Decimal.FormatStyle.Currency: CustomConsumingRegexComponent {
     public typealias RegexOutput = Decimal
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Decimal)? {
         Decimal.ParseStrategy(formatStyle: self, lenient: false).parse(input, startingAt: index, in: bounds)

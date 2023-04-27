@@ -20,7 +20,7 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-final class LocaleLanguageComponentsTests : XCTestCase {
+final class LocaleLanguageComponentsTests: XCTestCase {
 
     func verifyComponents(_ identifier: String,
                           expectedLanguageCode: String?,

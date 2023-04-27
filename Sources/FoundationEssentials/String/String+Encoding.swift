@@ -28,7 +28,7 @@ extension String {
     // We therefore rename String.Encoding to String._Encoding for package
     // internal use so we can use `String._Encoding` to disambiguate.
     public typealias Encoding = _Encoding
-    public struct _Encoding : RawRepresentable, Sendable, Equatable {
+    public struct _Encoding: RawRepresentable, Sendable, Equatable {
         public var rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
 
@@ -96,7 +96,7 @@ extension String {
 
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension String.Encoding : Hashable {
+extension String.Encoding: Hashable {
     public var hashValue: Int {
         // Note: This is effectively the same hashValue definition that
         // RawRepresentable provides on its own. We only need to keep this to
@@ -127,7 +127,7 @@ extension String.Encoding : Hashable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension String.Encoding : CustomStringConvertible {
+extension String.Encoding: CustomStringConvertible {
     public var description: String {
 #if FOUNDATION_FRAMEWORK
         return String.localizedName(of: self)

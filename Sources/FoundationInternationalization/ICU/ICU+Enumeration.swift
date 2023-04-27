@@ -29,7 +29,7 @@ extension ICU {
             Elements(enumerator: self)
         }
 
-        struct Elements : Sequence {
+        struct Elements: Sequence {
             let enumerator: Enumerator
             init(enumerator: Enumerator) {
                 self.enumerator = enumerator
@@ -39,7 +39,7 @@ extension ICU {
                 Iterator(enumerator: enumerator)
             }
 
-            struct Iterator : IteratorProtocol {
+            struct Iterator: IteratorProtocol {
                 var beginIndex: Int32 = 0
                 var endIndex: Int32 = 0
                 let enumerator: Enumerator

@@ -24,7 +24,7 @@ import FoundationEssentials
  Cocoa does not provide any API to change the time zone of the computer, or of other applications.
  */
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct TimeZone : Hashable, Equatable, Sendable {
+public struct TimeZone: Hashable, Equatable, Sendable {
     private enum Kind: Sendable {
         // NSTimeZone uses the terminology 'system' for what Locale/Calendar call 'current'. When TimeZone.current is used, we create a `fixed` time zone reflecting the current settings.
         case fixed // aka 'system'
@@ -147,7 +147,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     }
 
     /// The time zone currently used by the system.
-    public static var current : TimeZone {
+    public static var current: TimeZone {
         TimeZone(current: .current)
     }
 
@@ -156,13 +156,13 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     /// If this time zone is mutated, then it no longer tracks the system time zone.
     ///
     /// The autoupdating time zone only compares equal to itself.
-    public static var autoupdatingCurrent : TimeZone {
+    public static var autoupdatingCurrent: TimeZone {
         TimeZone(current: .autoupdating)
     }
 
     /// The default time zone, settable via ObjC but not available in Swift API (because it's global mutable state).
     /// The default time zone is not autoupdating, but it can change at any time when the ObjC `setDefaultTimeZone:` API is called.
-    internal static var `default` : TimeZone! {
+    internal static var `default`: TimeZone! {
         get {
             TimeZoneCache.cache.default
         }
@@ -295,12 +295,12 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     }
 
     /// Returns an array of strings listing the identifier of all the time zones known to the system.
-    public static var knownTimeZoneIdentifiers : [String] {
+    public static var knownTimeZoneIdentifiers: [String] {
         TimeZoneCache.cache.knownTimeZoneIdentifiers()
     }
 
     /// Returns the mapping of abbreviations to time zone identifiers.
-    public static var abbreviationDictionary : [String : String] {
+    public static var abbreviationDictionary: [String: String] {
         get {
             TimeZoneCache.cache.timeZoneAbbreviations()
         }
@@ -310,7 +310,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     }
 
     /// Returns the time zone data version.
-    public static var timeZoneDataVersion : String {
+    public static var timeZoneDataVersion: String {
         _TimeZone.timeZoneDataVersion
     }
 
@@ -398,8 +398,8 @@ extension TimeZone {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
-    private var _kindDescription : String {
+extension TimeZone: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    private var _kindDescription: String {
         switch _kind {
         case .fixed:
             return "fixed"
@@ -412,7 +412,7 @@ extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, Cust
         }
     }
 
-    public var customMirror : Mirror {
+    public var customMirror: Mirror {
         let c: [(label: String?, value: Any)] = [
           ("identifier", identifier),
           ("kind", _kindDescription),
@@ -427,14 +427,14 @@ extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, Cust
         return "\(identifier) (\(_kindDescription))"
     }
 
-    public var debugDescription : String {
+    public var debugDescription: String {
         return "\(identifier) (\(_kindDescription))"
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension TimeZone : Codable {
-    private enum CodingKeys : Int, CodingKey {
+extension TimeZone: Codable {
+    private enum CodingKeys: Int, CodingKey {
         case identifier
         case autoupdating
     }
@@ -622,7 +622,7 @@ extension TimeZone {
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension TimeZone : ReferenceConvertible, _ObjectiveCBridgeable {
+extension TimeZone: ReferenceConvertible, _ObjectiveCBridgeable {
 
     public typealias ReferenceType = NSTimeZone
 
@@ -658,7 +658,7 @@ extension TimeZone : ReferenceConvertible, _ObjectiveCBridgeable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension NSTimeZone : _HasCustomAnyHashableRepresentation {
+extension NSTimeZone: _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {

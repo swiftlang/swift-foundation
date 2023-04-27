@@ -16,7 +16,7 @@ import FoundationEssentials
 
 @_implementationOnly import FoundationICU
 
-final class ICUDateIntervalFormatter : Hashable {
+final class ICUDateIntervalFormatter: Hashable {
     let locale: Locale
     let calendar: Calendar
     let timeZone: TimeZone

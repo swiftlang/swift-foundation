@@ -13,26 +13,25 @@
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions {
     public struct Conditional<
-        Test : PredicateExpression,
-        If : PredicateExpression,
-        Else : PredicateExpression
-    > : PredicateExpression
+        Test: PredicateExpression,
+        If: PredicateExpression,
+        Else: PredicateExpression
+    >: PredicateExpression
     where
-    Test.Output == Bool,
-    If.Output == Else.Output
-    {
+        Test.Output == Bool,
+        If.Output == Else.Output {
         public typealias Output = If.Output
-        
-        public let test : Test
-        public let trueBranch : If
-        public let falseBranch : Else
-        
+
+        public let test: Test
+        public let trueBranch: If
+        public let falseBranch: Else
+
         public init(test: Test, trueBranch: If, falseBranch: Else) {
             self.test = test
             self.trueBranch = trueBranch
             self.falseBranch = falseBranch
         }
-        
+
         public func evaluate(_ bindings: PredicateBindings) throws -> If.Output {
             let result = try test.evaluate(bindings)
             if result {
@@ -42,24 +41,24 @@ extension PredicateExpressions {
             }
         }
     }
-    
+
     public static func build_Conditional<Test, If, Else>(_ test: Test, _ trueBranch: If, _ falseBranch: Else) -> Conditional<Test, If, Else> {
         Conditional(test: test, trueBranch: trueBranch, falseBranch: falseBranch)
     }
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Conditional : StandardPredicateExpression where Test : StandardPredicateExpression, If : StandardPredicateExpression, Else : StandardPredicateExpression {}
+extension PredicateExpressions.Conditional: StandardPredicateExpression where Test: StandardPredicateExpression, If: StandardPredicateExpression, Else: StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Conditional : Codable where Test : Codable, If : Codable, Else : Codable {
+extension PredicateExpressions.Conditional: Codable where Test: Codable, If: Codable, Else: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         try container.encode(test)
         try container.encode(trueBranch)
         try container.encode(falseBranch)
     }
-    
+
     public init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         test = try container.decode(Test.self)
@@ -69,4 +68,4 @@ extension PredicateExpressions.Conditional : Codable where Test : Codable, If : 
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Conditional : Sendable where Test : Sendable, If : Sendable, Else : Sendable {}
+extension PredicateExpressions.Conditional: Sendable where Test: Sendable, If: Sendable, Else: Sendable {}

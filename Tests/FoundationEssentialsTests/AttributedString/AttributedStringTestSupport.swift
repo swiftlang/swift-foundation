@@ -47,63 +47,63 @@ extension AttributeScopes.TestAttributes {
         typealias Value = Bool
         static let name = "TestBool"
     }
-    
+
     enum TestNonExtended: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestNonExtended"
         static let inheritedByAddedText: Bool = false
     }
-    
+
     enum TestParagraphConstrained: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestParagraphConstrained"
         static let runBoundaries: AttributedString.AttributeRunBoundaries? = .paragraph
     }
-    
+
     enum TestSecondParagraphConstrained: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestSecondParagraphConstrained"
         static let runBoundaries: AttributedString.AttributeRunBoundaries? = .paragraph
     }
-    
+
     enum TestCharacterConstrained: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestCharacterConstrained"
         static let runBoundaries: AttributedString.AttributeRunBoundaries? = .character("*")
     }
-    
+
     enum TestUnicodeCharacterConstrained: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestUnicodeCharacterConstrained"
         static let runBoundaries: AttributedString.AttributeRunBoundaries? = .character("👍🏻") // U+1F44D Thumbs Up Sign + U+1F3FB Emoji Modifier Fitzpatrick Type-1-2
     }
-    
+
     enum TestAttributeDependent: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestAttributeDependent"
         static let invalidationConditions: Set<AttributedString.AttributeInvalidationCondition>? = [.attributeChanged(\.testInt)]
     }
-    
+
     enum TestCharacterDependent: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestCharacterDependent"
         static let invalidationConditions: Set<AttributedString.AttributeInvalidationCondition>? = [.textChanged]
     }
 
-    enum NonCodableAttribute : AttributedStringKey {
+    enum NonCodableAttribute: AttributedStringKey {
         typealias Value = NonCodableType
         static let name = "NonCodable"
     }
 
-    enum CustomCodableAttribute : CodableAttributedStringKey {
+    enum CustomCodableAttribute: CodableAttributedStringKey {
         typealias Value = NonCodableType
         static let name = "NonCodableConvertible"
-        
+
         static func encode(_ value: NonCodableType, to encoder: Encoder) throws {
             var c = encoder.singleValueContainer()
             try c.encode(value.inner)
         }
-        
+
         static func decode(from decoder: Decoder) throws -> NonCodableType {
             let c = try decoder.singleValueContainer()
             let inner = try c.decode(Int.self)
@@ -113,31 +113,31 @@ extension AttributeScopes.TestAttributes {
 }
 
 #if FOUNDATION_FRAMEWORK
-extension AttributeScopes.TestAttributes.TestIntAttribute : MarkdownDecodableAttributedStringKey {}
-extension AttributeScopes.TestAttributes.TestStringAttribute : MarkdownDecodableAttributedStringKey {}
-extension AttributeScopes.TestAttributes.TestBoolAttribute : MarkdownDecodableAttributedStringKey {}
-extension AttributeScopes.TestAttributes.TestDoubleAttribute : MarkdownDecodableAttributedStringKey {}
+extension AttributeScopes.TestAttributes.TestIntAttribute: MarkdownDecodableAttributedStringKey {}
+extension AttributeScopes.TestAttributes.TestStringAttribute: MarkdownDecodableAttributedStringKey {}
+extension AttributeScopes.TestAttributes.TestBoolAttribute: MarkdownDecodableAttributedStringKey {}
+extension AttributeScopes.TestAttributes.TestDoubleAttribute: MarkdownDecodableAttributedStringKey {}
 #endif // FOUNDATION_FRAMEWORK
 
-struct NonCodableType : Hashable {
-    var inner : Int
+struct NonCodableType: Hashable {
+    var inner: Int
 }
 
 extension AttributeScopes {
     var test: TestAttributes.Type { TestAttributes.self }
-    
-    struct TestAttributes : AttributeScope {
-        var testInt : TestIntAttribute
-        var testString : TestStringAttribute
-        var testDouble : TestDoubleAttribute
-        var testBool : TestBoolAttribute
-        var testNonExtended : TestNonExtended
-        var testParagraphConstrained : TestParagraphConstrained
-        var testSecondParagraphConstrained : TestSecondParagraphConstrained
-        var testCharacterConstrained : TestCharacterConstrained
-        var testUnicodeCharacterConstrained : TestUnicodeCharacterConstrained
-        var testAttributeDependent : TestAttributeDependent
-        var testCharacterDependent : TestCharacterDependent
+
+    struct TestAttributes: AttributeScope {
+        var testInt: TestIntAttribute
+        var testString: TestStringAttribute
+        var testDouble: TestDoubleAttribute
+        var testBool: TestBoolAttribute
+        var testNonExtended: TestNonExtended
+        var testParagraphConstrained: TestParagraphConstrained
+        var testSecondParagraphConstrained: TestSecondParagraphConstrained
+        var testCharacterConstrained: TestCharacterConstrained
+        var testUnicodeCharacterConstrained: TestUnicodeCharacterConstrained
+        var testAttributeDependent: TestAttributeDependent
+        var testCharacterDependent: TestCharacterDependent
     }
 }
 

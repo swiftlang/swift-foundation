@@ -142,7 +142,7 @@ internal struct JSONWriter {
         withoutEscapingSlashes = options.contains(.withoutEscapingSlashes)
         data = Data()
     }
-
+    
     mutating func serializeJSON(_ value: JSONReference, depth: Int = 0) throws {
         switch value.backing {
         case .string(let str):
@@ -163,14 +163,14 @@ internal struct JSONWriter {
             serializeNull()
         }
     }
-
+    
     @inline(__always)
     mutating func writer(_ string: StaticString) {
         string.withUTF8Buffer {
             data.append($0.baseAddress.unsafelyUnwrapped, count: $0.count)
         }
     }
-
+    
     @inline(__always)
     mutating func writer(_ string: String) {
         var localString = string
@@ -178,20 +178,20 @@ internal struct JSONWriter {
             data.append($0.baseAddress.unsafelyUnwrapped, count: $0.count)
         }
     }
-
+    
     @inline(__always)
     mutating func writer(ascii: UInt8) {
         data.append(ascii)
     }
-
+    
     @inline(__always)
     mutating func writer(pointer: UnsafePointer<UInt8>, count: Int) {
         data.append(pointer, count: count)
     }
-
+    
     mutating func serializeString(_ str: String) throws {
         writer("\"")
-
+        
         str.withCString {
             $0.withMemoryRebound(to: UInt8.self, capacity: 1) {
                 var cursor = $0
@@ -234,17 +234,17 @@ internal struct JSONWriter {
                         cursor += 1
                         continue
                     }
-
+                    
                     // Append accumulated bytes
                     if cursor > mark {
                         writer(pointer: mark, count: cursor-mark)
                     }
                     writer(escapeString)
-
+                    
                     cursor += 1
                     mark = cursor // Start accumulating bytes starting after this escaped byte.
                 }
-
+                
                 // Append accumulated bytes
                 if cursor > mark {
                     writer(pointer: mark, count: cursor-mark)
@@ -253,18 +253,18 @@ internal struct JSONWriter {
         }
         writer("\"")
     }
-
+    
     mutating func serializeArray(_ array: [JSONReference], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
-
+        
         writer("[")
         if pretty {
             writer("\n")
             incIndent()
         }
-
+        
         var first = true
         for elem in array {
             if first {
@@ -285,18 +285,18 @@ internal struct JSONWriter {
         }
         writer("]")
     }
-
+    
     mutating func serializeStringArray(_ array: [String], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
-
+        
         writer("[")
         if pretty {
             writer("\n")
             incIndent()
         }
-
+        
         var first = true
         for elem in array {
             if first {
@@ -317,12 +317,12 @@ internal struct JSONWriter {
         }
         writer("]")
     }
-
+    
     mutating func serializeObject(_ dict: [String:JSONReference], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
-
+        
         writer("{")
         if pretty {
             writer("\n")
@@ -331,9 +331,9 @@ internal struct JSONWriter {
                 writeIndent()
             }
         }
-
+        
         var first = true
-
+        
         func serializeObjectElement(key: String, value: JSONReference, depth: Int) throws {
             if first {
                 first = false
@@ -352,12 +352,12 @@ internal struct JSONWriter {
             let elems = dict.sorted(by: { a, b in
                 let options: String.CompareOptions = [.numeric, .caseInsensitive, .forcedOrdering]
                 let range: Range<String.Index>  = a.key.startIndex..<a.key.endIndex
-                #if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK
                 let locale = NSLocale.system
                 return a.key.compare(b.key, options: options, range: range, locale: locale) == .orderedAscending
-                #else
+#else
                 return a.key.compare(b.key, options: options, range: range) == .orderedAscending
-                #endif // FOUNDATION_FRAMEWORK
+#endif // FOUNDATION_FRAMEWORK
             })
             for elem in elems {
                 try serializeObjectElement(key: elem.key, value: elem.value, depth: depth)
@@ -367,32 +367,32 @@ internal struct JSONWriter {
                 try serializeObjectElement(key: key, value: value, depth: depth)
             }
         }
-
+        
         if pretty {
             writer("\n")
             decAndWriteIndent()
         }
         writer("}")
     }
-
+    
     mutating func serializeNull() {
         writer("null")
     }
-
+    
     mutating func incIndent() {
         indent += 1
     }
-
+    
     mutating func incAndWriteIndent() {
         indent += 1
         writeIndent()
     }
-
+    
     mutating func decAndWriteIndent() {
         indent -= 1
         writeIndent()
     }
-
+    
     mutating func writeIndent() {
         switch indent {
         case 0:  break
@@ -419,14 +419,13 @@ extension JSONWriter {
 #if FOUNDATION_FRAMEWORK
     typealias WritingOptions = JSONSerialization.WritingOptions
 #else
-    struct WritingOptions : OptionSet, Sendable {
     struct WritingOptions: OptionSet, Sendable {
         let rawValue: UInt
-
+        
         init(rawValue: UInt) {
             self.rawValue = rawValue
         }
-
+        
         /// Specifies that the output uses white space and indentation to make the resulting data more readable.
         static let prettyPrinted = WritingOptions(rawValue: 1 << 0)
         /// Specifies that the output sorts keys in lexicographic order.

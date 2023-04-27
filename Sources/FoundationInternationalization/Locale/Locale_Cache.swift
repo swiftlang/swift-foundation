@@ -22,7 +22,7 @@ import CoreFoundation
 #endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
-struct LocaleCache : Sendable {
+struct LocaleCache: Sendable {
     struct State {
         private var cachedCurrentLocale: _Locale!
         private var cachedSystemLocale: _Locale!

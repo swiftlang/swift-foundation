@@ -12,7 +12,7 @@
 
 /// A type that can parse a representation of a given data type.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public protocol ParseStrategy : Codable, Hashable {
+public protocol ParseStrategy: Codable, Hashable {
 
     /// The type of the representation describing the data.
     associatedtype ParseInput

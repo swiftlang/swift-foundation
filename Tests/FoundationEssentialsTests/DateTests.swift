@@ -18,7 +18,7 @@ import TestSupport
 @testable import FoundationEssentials
 #endif
 
-final class DateTests : XCTestCase {
+final class DateTests: XCTestCase {
 
     func testDateComparison() {
         let d1 = Date()
@@ -67,15 +67,15 @@ final class DateTests : XCTestCase {
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func test_now() {
-        let date1 : Date = .now
-        let date2 : Date = .now
+        let date1: Date = .now
+        let date2: Date = .now
         XCTAssertLessThanOrEqual(date1, date2)
     }
 }
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
-final class DateBridgingTests : XCTestCase {
+final class DateBridgingTests: XCTestCase {
     func testCast() {
         let d0 = NSDate()
         let d1 = d0 as Date
@@ -86,7 +86,7 @@ final class DateBridgingTests : XCTestCase {
         let values: [NSDate] = [
             NSDate(timeIntervalSince1970: 1000000000),
             NSDate(timeIntervalSince1970: 1000000001),
-            NSDate(timeIntervalSince1970: 1000000001),
+            NSDate(timeIntervalSince1970: 1000000001)
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(Date.self, type(of: anyHashables[0].base))
@@ -105,7 +105,7 @@ final class DateBridgingTests : XCTestCase {
         let values: [NSDateComponents] = [
             makeNSDateComponents(year: 2016),
             makeNSDateComponents(year: 1995),
-            makeNSDateComponents(year: 1995),
+            makeNSDateComponents(year: 1995)
         ]
         let anyHashables = values.map(AnyHashable.init)
         expectEqual(DateComponents.self, type(of: anyHashables[0].base))
