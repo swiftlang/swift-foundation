@@ -1537,7 +1537,7 @@ final class JSONEncoderTests : XCTestCase {
                 try unkeyedSVC1.encode("First")
                 try unkeyedSVC2.encode("Second")
 
-                // NOTE!!! At pressent, the order in which the values in the unkeyed container's superEncoders above get inserted into the resulting array depends on the order in which the superEncoders are deinit'd!! This can result in some very unexpected results, and this pattern is not recommended. This test exists just to verify compatibility.
+                // NOTE!!! At present, the order in which the values in the unkeyed container's superEncoders above get inserted into the resulting array depends on the order in which the superEncoders are deinit'd!! This can result in some very unexpected results, and this pattern is not recommended. This test exists just to verify compatibility.
             }
         }
         let data = try! JSONEncoder().encode(SuperEncoding())
