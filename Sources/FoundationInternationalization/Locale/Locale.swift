@@ -851,6 +851,19 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 
+    internal func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
+        switch kind {
+        case .fixed(let l):
+            return l.customDateFormat(style)
+        case .autoupdating:
+            return LocaleCache.cache.current.customDateFormat(style)
+#if FOUNDATION_FRAMEWORK
+        case .bridged(_):
+            return nil
+#endif
+        }
+    }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     internal var forceMeasurementSystem: Locale.MeasurementSystem? {
         switch kind {
