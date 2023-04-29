@@ -131,16 +131,16 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
                 }
 
                 while start == nil, idx >= startIndex, idx < endIndex {
-                     if let _ = _matchesSeparators(separatorCharacters, from: idx, reverse: true) {
-                         start = index(after: idx)
-                         break
-                     }
-                     if idx > startIndex {
-                         idx = index(before: idx)
-                     } else {
-                         start = startIndex
-                         break
-                     }
+                    if let _ = _matchesSeparators(separatorCharacters, from: idx, reverse: true) {
+                        start = index(after: idx)
+                        break
+                    }
+                    if idx > startIndex {
+                        idx = index(before: idx)
+                    } else {
+                        start = startIndex
+                        break
+                    }
                 }
 
                 if start == nil {
