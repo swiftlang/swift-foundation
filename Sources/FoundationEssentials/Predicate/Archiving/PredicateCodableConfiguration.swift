@@ -381,7 +381,7 @@ extension PredicateCodableConfiguration {
         configuration.allowKeyPath(\String.count, identifier: "Swift.String.count")
         configuration.allowKeyPath(\Substring.count, identifier: "Swift.Substring.count")
         configuration.allowKeyPath(\String.isEmpty, identifier: "Swift.String.isEmpty")
-        configuration.allowKeyPath(\Substring.isEmpty, identifier: "Swift.Subtring.isEmpty")
+        configuration.allowKeyPath(\Substring.isEmpty, identifier: "Swift.Substring.isEmpty")
         configuration.allowKeyPath(\String.first, identifier: "Swift.String.first")
         configuration.allowKeyPath(\Substring.first, identifier: "Swift.Substring.first")
         configuration.allowKeyPath(\String.last, identifier: "Swift.String.last")

@@ -15,7 +15,7 @@
 
  To minimize the number of allocations required during scanning, the map's contents are implemented using a array of integers, whose values are a serialization of the JSON payload's full structure. Each type has its own unique marker value, which is followed by zero or more other integers that describe that contents of that type, if any.
 
- Due to the complexity and additional allocations required to parse JSON string values into Swift Strings or JSON number values into the requested integer or floating-point types, their map contents are captured as lengths of bytes and byte offsets into the input. This allows the full parsing to occur at decode time, or to be skipped if the value is not desired. A partial, imperfect parsing is performed by the scanner, simply "skipping" characters which are valid in their given contexts without interpeting or further validating them relative to the other inputs. This incomplete scanning process does however guarnatee that the structure of the JSON input is correctly interpreted.
+ Due to the complexity and additional allocations required to parse JSON string values into Swift Strings or JSON number values into the requested integer or floating-point types, their map contents are captured as lengths of bytes and byte offsets into the input. This allows the full parsing to occur at decode time, or to be skipped if the value is not desired. A partial, imperfect parsing is performed by the scanner, simply "skipping" characters which are valid in their given contexts without interpreting or further validating them relative to the other inputs. This incomplete scanning process does however guarantee that the structure of the JSON input is correctly interpreted.
 
  The JSONMap representation of JSON arrays and objects is a sequence of integers that is delimited by their starting marker and a shared "collection end" marker. Their contents are nested in between those two markers. To facilitate skipping over unwanted elements of a collection, which is especially useful for JSON objects, the map encodes the offset in the map array to the next object after the end of the collection.
 
@@ -31,7 +31,7 @@
  Key:
  <OM> == Object Marker
  <AM> == Array Marker
- <SS> == Simple String (a variant of String that can has no escpaes and can be passed directly to a UTF-8 parser)
+ <SS> == Simple String (a variant of String that can has no escapes and can be passed directly to a UTF-8 parser)
  <NM> == Number Marker
  <CE> == Collection End
  (See JSONMap.TypeDescriptor comments below for more details)
@@ -50,7 +50,7 @@
  3. Skip the key's value by finding its type (array), and then its nextSiblingOffset index (19)
  4. Parse the next key at index 4. It decodes the string and finds "number", which is a match.
  5. Decode the value by findings its type (number), its length (2) and the byte offset from the beginning of the input (26).
- 6. Pass that byte offset + length into the number parser to produce the correspomding Swift Int value.
+ 6. Pass that byte offset + length into the number parser to produce the corresponding Swift Int value.
 */
 
 #if canImport(Darwin)
@@ -418,7 +418,7 @@ internal struct JSONScanner {
         self.depth &+= 1
         defer { depth &-= 1 }
 
-        // parse first value or end immediatly
+        // parse first value or end immediately
         switch try reader.consumeWhitespace() {
         case ._space, ._return, ._newline, ._tab:
             preconditionFailure("Expected that all white space is consumed")
@@ -527,7 +527,7 @@ internal struct JSONScanner {
         self.depth &+= 1
         defer { depth &-= 1 }
 
-        // parse first value or end immediatly
+        // parse first value or end immediately
         switch try reader.consumeWhitespace(allowingEOF: withoutBraces) {
         case ._closebrace?:
             if withoutBraces {

@@ -122,7 +122,7 @@ extension StringProtocol {
                 let options: String.CompareOptions
                 if separator == "\n" {
                     // 106365366: Some clients intend to separate strings whose line separator is "\r\n" with "\n".
-                    // Maintain compability with `.literal` so that "\n" can match that in "\r\n" on the unicode scalar level.
+                    // Maintain compatibility with `.literal` so that "\n" can match that in "\r\n" on the unicode scalar level.
                     options = [.literal]
                 } else {
                     options = []

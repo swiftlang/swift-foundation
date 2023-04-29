@@ -12,7 +12,7 @@
 
 #if canImport(Darwin)
 import Darwin
-#elseif canImport(Gibc)
+#elseif canImport(Glibc)
 import Glibc
 #endif
 
@@ -560,7 +560,7 @@ extension JSONDecoderImpl: Decoder {
         }
     }
 
-    // Instead of creating a new JSONDecoderImpl for passing to methods that take Decoder arguments, wrap the access in this method, which temporarily mutates this JSONDecoderImpl instance with the nesteed value and its coding path.
+    // Instead of creating a new JSONDecoderImpl for passing to methods that take Decoder arguments, wrap the access in this method, which temporarily mutates this JSONDecoderImpl instance with the nested value and its coding path.
     @inline(__always)
     func with<T>(value: JSONMap.Value, path: _JSONCodingPathNode?, perform closure: () throws -> T) rethrows -> T {
         let oldPath = self.codingPathNode
@@ -847,7 +847,7 @@ extension JSONDecoderImpl: Decoder {
                     } // else, fall through to the T(prevalidatedBuffer:) invocation, which is otherwise compatible with JSON5 after our pre-validation.
 
                     if let floatingPoint = T(prevalidatedBuffer: numberBuffer) {
-                        // Check for overflow/underflow, which can result in "rounding" to infinty or zero.
+                        // Check for overflow/underflow, which can result in "rounding" to infinity or zero.
                         // While strtod does set ERANGE in the either case, we don't rely on it because setting errno to 0 first and then check the result is surprisingly expensive. For values "rounded" to infinity, we reject those out of hand, unless it's an explicit JSON5 infinity/nan value. For values "rounded" down to zero, we perform check for any non-zero digits in the input, which turns out to be much faster.
                         if floatingPoint.isFinite {
                             guard floatingPoint != 0 || isTrueZero(numberBuffer) else {

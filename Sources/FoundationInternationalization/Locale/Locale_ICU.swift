@@ -1435,7 +1435,7 @@ internal final class _Locale: Sendable, Hashable {
                 // The numbering system is already the default numbering system (index 0)
                 localeIDComponents.numberingSystem = nil
             } else if whichNumberingSystem > 0 {
-                // If the numbering system for `localeIDWithDesiredComponents` is compatible with the constructed locale’s language and is not already the default numbering system (index 0), then set it on the new locale, e.g. `hi_IN@numbers=latn` + `ar` shoudl get `ar_IN@numbers=latn`, since `latn` is valid for `ar`.
+                // If the numbering system for `localeIDWithDesiredComponents` is compatible with the constructed locale’s language and is not already the default numbering system (index 0), then set it on the new locale, e.g. `hi_IN@numbers=latn` + `ar` should get `ar_IN@numbers=latn`, since `latn` is valid for `ar`.
                 localeIDComponents.numberingSystem = validNumberingSystems[whichNumberingSystem]
             }
 
@@ -1494,7 +1494,7 @@ internal final class _Locale: Sendable, Hashable {
 
 // MARK: -
 
-/// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identiifer locales never have preferences.
+/// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identifier locales never have preferences.
 internal struct LocalePreferences: Hashable {
     enum MeasurementUnit {
         case centimeters

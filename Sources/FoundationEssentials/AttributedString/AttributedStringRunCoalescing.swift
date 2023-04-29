@@ -320,7 +320,7 @@ extension AttributedString.Guts {
     }
     
     /// Replaces the runs for a specified range of block indices with the given `newElements`
-    /// Note: The provided `newElements` must already be coalsced together if needed.
+    /// Note: The provided `newElements` must already be coalesced together if needed.
     func replaceRunsSubrange(_ subrange: Range<Int>, with newElements: some Collection<_InternalRun>) {
         runOffsetCache.withLockUnchecked { runOffsetCache in
             if runOffsetCache.block > subrange.lowerBound {

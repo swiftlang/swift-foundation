@@ -91,7 +91,7 @@ public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepre
 internal struct _AttributeConversionOptions : OptionSet {
     let rawValue: Int
     
-    // If an attribute's value(for: ObjectieCValue) or objectiveCValue(for: Value) function throws, ignore the error and drop the attribute
+    // If an attribute's value(for: ObjectiveCValue) or objectiveCValue(for: Value) function throws, ignore the error and drop the attribute
     static let dropThrowingAttributes = Self(rawValue: 1 << 0)
 }
 
