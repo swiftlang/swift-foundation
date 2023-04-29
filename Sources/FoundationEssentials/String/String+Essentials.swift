@@ -46,7 +46,7 @@ extension String {
     ///
     /// - Parameters:
     ///   - bytes: A sequence of bytes to interpret using `encoding`.
-    ///   - encoding: The ecoding to use to interpret `bytes`.
+    ///   - encoding: The encoding to use to interpret `bytes`.
     public init?<S: Sequence>(bytes: __shared S, encoding: Encoding)
         where S.Iterator.Element == UInt8
     {

@@ -1194,7 +1194,7 @@ E {
         XCTAssertEqual(type, decoded)
     }
     
-    func testCodingErrorsPropogateUpToCallSite() {
+    func testCodingErrorsPropagateUpToCallSite() {
         enum CustomAttribute : CodableAttributedStringKey {
             typealias Value = String
             static var name = "CustomAttribute"

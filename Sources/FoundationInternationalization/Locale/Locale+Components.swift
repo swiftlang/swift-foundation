@@ -18,7 +18,7 @@ import Glibc
 
 extension Locale {
 
-    // Identifier canoncalization
+    // Identifier canonicalization
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public enum IdentifierType : Sendable {
         /* This canonicalizes the identifier */
@@ -2414,7 +2414,7 @@ extension Locale.Region {
     @_alwaysEmitIntoClient
     public static var zimbabwe: Locale.Region { Locale.Region("ZW") }
 
-    // MARK: - Region codes for specifiying language variants
+    // MARK: - Region codes for specifying language variants
 
     @_alwaysEmitIntoClient
     public static var world: Locale.Region { Locale.Region("001") }

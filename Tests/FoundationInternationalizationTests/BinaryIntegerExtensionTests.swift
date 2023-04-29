@@ -106,7 +106,7 @@ final class BinaryIntegerExtensionTests : XCTestCase {
         func verify(_ test: Int64, mode: FloatingPointRoundingRule, expected: [Int64: Int64], file: StaticString = #file, line: UInt = #line) {
             for (digit, expectation) in expected {
                 let actual = test.roundedToSignificantDigits(digit, rule: mode)
-                XCTAssertEqual(actual, expectation, "\(digit) signficant digits does not match", file: file, line: line)
+                XCTAssertEqual(actual, expectation, "\(digit) significant digits does not match", file: file, line: line)
             }
         }
 

@@ -1044,7 +1044,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
-    /// Prefixed with `_` to avoid ambiguity at call stie with the `Set<Component>` method.
+    /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
     internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
         var dc: DateComponents
         switch _kind {
