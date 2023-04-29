@@ -48,7 +48,7 @@ Later this year, the porting effort will continue. It will bring high quality Sw
 
 ## Building and Testing
 
-Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download) on macOS and Linux.
+Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download/#swift-59-development) on macOS and Linux.
 ### macOS
 
 macOS Ventura 13.3.1 is the minimum supported version.
@@ -59,7 +59,7 @@ macOS Ventura 13.3.1 is the minimum supported version.
 - Open `Package.swift` and select *Debug > Test*
 
 ### Linux
-- Download the latest [Swift 5.9 docker image](https://www.swift.org/download/#docker) and follow instructions to attach
+- Download the latest [Swift 5.9 docker image](https://hub.docker.com/r/swiftlang/swift/tags?name=5.9) and follow instructions to attach
 - Run `swift test`
 ## Performance
 
