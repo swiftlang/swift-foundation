@@ -154,7 +154,7 @@ final class ICUDateFormatter {
         return (endIndexInSubstr, date)
     }
 
-    // Search the presense of a date string that matches the specified format by advancing repeatedly until we find a match
+    // Search the presence of a date string that matches the specified format by advancing repeatedly until we find a match
     func search(_ string: String, in range: Range<String.Index>) -> (Range<String.Index>, Date)? {
         var idx = range.lowerBound
         let end = range.upperBound
