@@ -38,7 +38,7 @@ final class DateISO8601FormatStyleTests: XCTestCase {
         // dateFormatter.date(from: "2022-01-28 00:00:00")
         verify(iso8601.year().month().day().dateSeparator(.omitted), expectedString: "20220128", expectedParsedDate: Date(timeIntervalSinceReferenceDate: 665020800.0))
 
-        // Time-only results: we use the the default date of the format style, 1970-01-01, to supplement the parsed date without year, month or day
+        // Time-only results: we use the default date of the format style, 1970-01-01, to supplement the parsed date without year, month or day
         // dateFormatter.date(from: "1970-01-23 00:00:00")
         verify(iso8601.weekOfYear().day().dateSeparator(.dash), expectedString: "W04-05", expectedParsedDate: Date(timeIntervalSinceReferenceDate: -976406400.0))
         // dateFormatter.date(from: "1970-01-28 15:35:46")

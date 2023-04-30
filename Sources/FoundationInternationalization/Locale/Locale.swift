@@ -733,7 +733,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 
-    /// Returns the hour cycle such as whether it uses 12-hour clock or 24-hour clock. Default is `.zeroToTwentyThree` if the the data isn't available.
+    /// Returns the hour cycle such as whether it uses 12-hour clock or 24-hour clock. Default is `.zeroToTwentyThree` if the data isn't available.
     /// Calling this on `.current` or `.autoupdatingCurrent` returns user's preference values as set in the system settings if available, overriding the default value of the user's locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var hourCycle: HourCycle {
