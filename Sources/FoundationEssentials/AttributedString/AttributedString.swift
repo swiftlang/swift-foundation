@@ -45,14 +45,14 @@ extension AttributedString {
     }
 
     internal init(_ s: some AttributedStringProtocol) {
-        if let s = s as? AttributedString {
+        if let s = _specializingCast(s, to: AttributedString.self) {
             self = s
-        } else if let s = s as? AttributedSubstring {
+        } else if let s = _specializingCast(s, to: AttributedSubstring.self) {
             self = AttributedString(s)
         } else {
             // !!!: We don't expect or want this to happen.
-            // FIXME: Handle slicing.
-            self = AttributedString(s.characters._guts)
+            let substring = AttributedSubstring(s.__guts, s._bounds)
+            self = AttributedString(substring)
         }
     }
 
@@ -121,19 +121,19 @@ extension AttributedString {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     internal static func _bstring<S: Sequence<Character>>(from elements: S) -> BigString {
-        if S.self == String.self {
-            return BigString(_identityCast(elements, to: String.self))
+        if let elements = _specializingCast(elements, to: String.self) {
+            return BigString(elements)
         }
-        if S.self == Substring.self {
-            return BigString(_identityCast(elements, to: Substring.self))
+        if let elements = _specializingCast(elements, to: Substring.self) {
+            return BigString(elements)
         }
-        if S.self == AttributedString.CharacterView.self {
-            let view = _identityCast(elements, to: AttributedString.CharacterView.self)
-            return BigString(view._characters)
+        if let elements = _specializingCast(elements, to: AttributedString.CharacterView.self) {
+            return BigString(elements._characters)
         }
-        if S.self == Slice<AttributedString.CharacterView>.self {
-            let view = _identityCast(elements, to: Slice<AttributedString.CharacterView>.self)
-            return BigString(view._characters)
+        if let elements = _specializingCast(
+            elements, to: Slice<AttributedString.CharacterView>.self
+        ) {
+            return BigString(elements._characters)
         }
         return BigString(elements)
     }

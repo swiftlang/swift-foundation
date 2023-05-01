@@ -113,3 +113,10 @@ extension BidirectionalCollection {
     return i
   }
 }
+
+@inline(__always)
+internal func _specializingCast<Input, Output>(_ value: Input, to type: Output.Type) -> Output? {
+    guard Input.self == Output.self else { return nil }
+    return _identityCast(value, to: type)
+}
+
