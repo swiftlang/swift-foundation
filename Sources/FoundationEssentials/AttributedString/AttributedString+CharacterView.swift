@@ -26,7 +26,7 @@ extension AttributedString {
         ///
         /// The bounds are always rounded down to the nearest grapheme break in the original
         /// string -- otherwise the character view of a substring may contain different graphemes
-        /// than the original string. (This is how the standard `String` works, but emulating the
+        /// than the original string. (This isn't how the standard `String` works, but emulating the
         /// same behavior would cause significant trouble for attributed strings, as the data
         /// structure caches the precise positions of grapheme breaks within the string. Allowing
         /// slices to diverge from that would make slicing an O(n) operation.)
@@ -34,24 +34,22 @@ extension AttributedString {
 
         internal var _identity: Int = 0
 
-        internal init(_ g: Guts) {
-            _guts = g
+        internal init(_ guts: Guts) {
+            _guts = guts
             // The bounds of a whole attributed string are already character-aligned.
-            _range = Range(uncheckedBounds: (g.startIndex, g.endIndex))
+            _range = Range(uncheckedBounds: (guts.startIndex, guts.endIndex))
         }
 
-        internal init(_ g: Guts, _ r: Range<Index>) {
-            _guts = g
+        internal init(_ guts: Guts, in range: Range<Index>) {
+            _guts = guts
             // Forcibly round bounds down to nearest character boundary, to prevent grapheme breaks
             // in a substring from diverging from the base string.
-            let lower = _guts.characterIndex(roundingDown: r.lowerBound)
-            let upper = _guts.characterIndex(roundingDown: r.upperBound)
-            _range = Range(uncheckedBounds: (lower, upper))
+            let substring = _guts.string[range._bstringRange]
+            _range = Range(uncheckedBounds: (Index(substring.startIndex), Index(substring.endIndex)))
         }
         
         public init() {
-            _guts = Guts(string: "", runs: [])
-            _range = _guts.startIndex ..< _guts.endIndex
+            self.init(Guts())
         }
     }
 
@@ -61,19 +59,20 @@ extension AttributedString {
         }
         _modify {
             ensureUniqueReference()
-            var cv = CharacterView(_guts)
+            var view = CharacterView(_guts)
             let ident = Self._nextModifyIdentity
-            cv._identity = ident
-            _guts = Guts(string: "", runs: []) // Dummy guts so the CharacterView has (hopefully) the sole reference
+            view._identity = ident
+            _guts = Guts() // Preserve uniqueness of view
             defer {
-                if cv._identity != ident {
+                if view._identity != ident {
                     fatalError("Mutating a CharacterView by replacing it with another from a different source is unsupported")
                 }
-                _guts = cv._guts
+                _guts = view._guts
             }
-            yield &cv
+            yield &view
         }
         set {
+            // FIXME: Why is this allowed if _modify traps on replacement?
             self.characters.replaceSubrange(startIndex ..< endIndex, with: newValue)
         }
     }
@@ -89,7 +88,7 @@ extension AttributedString.CharacterView {
 extension Slice<AttributedString.CharacterView> {
     internal var _rebased: AttributedString.CharacterView {
         let bounds = Range(uncheckedBounds: (self.startIndex, self.endIndex))
-        return AttributedString.CharacterView(base._guts, bounds)
+        return AttributedString.CharacterView(base._guts, in: bounds)
     }
 
     internal var _characters: BigSubstring {
@@ -97,8 +96,10 @@ extension Slice<AttributedString.CharacterView> {
     }
 }
 
+// FIXME: AttributedString.CharacterView needs to publicly conform to Equatable & Hashable.
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributedString.CharacterView: BidirectionalCollection, RangeReplaceableCollection {
+extension AttributedString.CharacterView: BidirectionalCollection {
     public typealias Element = Character
     public typealias Index = AttributedString.Index
 
@@ -121,19 +122,19 @@ extension AttributedString.CharacterView: BidirectionalCollection, RangeReplacea
     @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
     @usableFromInline
     internal var _count: Int {
-        _guts.characterDistance(from: _range.lowerBound, to: _range.upperBound)
+        _characters.count
     }
 
     public func index(before i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = _guts.characterIndex(before: i)
+        let j = Index(_guts.string.index(before: i._value))
         precondition(j >= startIndex, "Can't advance AttributedString index before start index")
         return j
     }
 
     public func index(after i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = _guts.characterIndex(after: i)
+        let j = Index(_guts.string.index(after: i._value))
         precondition(j <= endIndex, "Can't advance AttributedString index after end index")
         return j
     }
@@ -159,11 +160,11 @@ extension AttributedString.CharacterView: BidirectionalCollection, RangeReplacea
 
     @_alwaysEmitIntoClient
     public func distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
-        precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
-        precondition(end >= startIndex && end <= endIndex, "AttributedString index out of bounds")
         if #available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *) {
             return _distance(from: start, to: end)
         }
+        precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
+        precondition(end >= startIndex && end <= endIndex, "AttributedString index out of bounds")
         return _defaultDistance(from: start, to: end)
     }
 
@@ -172,69 +173,140 @@ extension AttributedString.CharacterView: BidirectionalCollection, RangeReplacea
     internal func _distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
         precondition(end >= startIndex && end <= endIndex, "AttributedString index out of bounds")
-        return _guts.characterDistance(from: start, to: end)
+        return _characters.distance(from: start._value, to: end._value)
     }
 
-    internal mutating func ensureUniqueReference() {
+    public subscript(index: AttributedString.Index) -> Character {
+        get {
+            precondition(index >= startIndex && index < endIndex, "AttributedString index out of bounds")
+            return _guts.string[index._value]
+        }
+        set {
+            precondition(index >= startIndex && index < endIndex, "AttributedString index out of bounds")
+            let i = _guts.characterIndex(roundingDown: index)
+            let j = _guts.characterIndex(after: i)
+            self.replaceSubrange(i ..< j, with: String(newValue))
+        }
+    }
+    
+    // Note: This subscript returning a Slice is a bug; unfortunately, this is ABI.
+    public subscript(bounds: Range<AttributedString.Index>) -> Slice<AttributedString.CharacterView> {
+        get {
+            precondition(
+                bounds.lowerBound >= startIndex && bounds.upperBound <= endIndex,
+                "AttributedString index range out of bounds")
+            let view = Self(_guts, in: bounds)
+            return Slice(base: view, bounds: view._range)
+        }
+        set {
+            self.replaceSubrange(bounds, with: newValue)
+        }
+    }
+}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributedString.CharacterView: RangeReplaceableCollection {
+    internal mutating func _ensureUniqueReference() {
         if !isKnownUniquelyReferenced(&_guts) {
             _guts = _guts.copy()
         }
     }
 
-    public subscript(index: AttributedString.Index) -> Character {
-        get {
-            _guts.string[index._value]
-        }
-        set {
-            let j = _guts.characterIndex(after: index)
-            self.replaceSubrange(index ..< j, with: CollectionOfOne(newValue))
-        }
+    internal mutating func _mutateStringContents(
+        in range: Range<Index>,
+        attributes: AttributedString._AttributeStorage,
+        with body: (inout BigSubstring, Range<BigString.Index>) -> Void
+    ) {
+        // Invalidate attributes surrounding the affected range. (Phase 1)
+        let state = _guts._prepareStringMutation(in: range)
+
+        // Update string contents.
+        //
+        // This is "fun". CharacterView (inconsistently) implements self-slicing, and so
+        // mutations of it need to update its bounds to reflect the newly updated content.
+        // We do this by extracting the new bounds from BigSubstring, which already does the
+        // right thing.
+        var characters = _characters
+        _guts.string = BigString() // Preserve uniqueness
+
+        body(&characters, range._bstringRange)
+
+        self._guts.string = characters.base
+        let lower = AttributedString.Index(characters.startIndex)
+        let upper = AttributedString.Index(characters.endIndex)
+        self._range = Range(uncheckedBounds: (lower, upper))
+
+        // Set attributes for the mutated range.
+        let utf8Range = range._utf8OffsetRange
+        let utf8Delta = _guts.string.utf8.count - state.oldUTF8Count
+        let runLength = utf8Range.count + utf8Delta
+        let run = AttributedString._InternalRun(length: runLength, attributes: attributes)
+        _guts.replaceRunsSubrange(locations: utf8Range, with: CollectionOfOne(run))
+
+        // Invalidate attributes surrounding the affected range. (Phase 2)
+        _guts._finalizeStringMutation(state)
     }
 
-    public subscript(bounds: Range<AttributedString.Index>) -> Slice<AttributedString.CharacterView> {
-        get {
-            Slice(base: self, bounds: bounds)
-        }
-        set {
-            ensureUniqueReference()
-            let newAttributedString = AttributedString(String(newValue))
-            if newAttributedString._guts.runs.count > 0 {
-                var run = newAttributedString._guts.runs[0]
-                let attributes = _guts.run(
-                    at: bounds.lowerBound, clampedBy: _range
-                ).run.attributes
-                run.attributes = attributes.attributesForAddedText(
-                    includingCharacterDependentAttributes: newValue.elementsEqual(self[bounds])) // ???: Is this right?
-                newAttributedString._guts.updateAndCoalesce(run: run, at: 0)
-            }
-            _guts.replaceSubrange(bounds, with: newAttributedString)
-        }
+    internal mutating func _setAttributes(
+        in range: Range<Index>,
+        to attributes: AttributedString._AttributeStorage
+    ) {
+        let utf8Range = range._utf8OffsetRange
+        let run = AttributedString._InternalRun(length: utf8Range.count, attributes: attributes)
+        _guts.replaceRunsSubrange(locations: utf8Range, with: CollectionOfOne(run))
     }
 
-    public mutating func replaceSubrange<C : Collection>(
-        _ subrange: Range<Index>, with newElements: C
-    ) where C.Element == Character {
+    public mutating func replaceSubrange(
+        _ subrange: Range<Index>, with newElements: some Collection<Character>
+    ) {
         precondition(
             subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex,
             "AttributedString index range out of bounds")
+        
+        let subrange = _guts.characterRange(roundingDown: subrange)
+        
+        // Prevent the BigString mutation below from falling back to Character-by-Character loops.
+        if let newElements = _specializingCast(newElements, to: Self.self) {
+            _replaceSubrange(subrange, with: newElements._characters)
+        } else if let newElements = _specializingCast(newElements, to: Slice<Self>.self) {
+            _replaceSubrange(subrange, with: newElements._rebased._characters)
+        } else {
+            _replaceSubrange(subrange, with: newElements)
+        }
+    }
 
-        ensureUniqueReference()
+    internal mutating func _replaceSubrange(
+        _ subrange: Range<Index>, with newElements: some Collection<Character>
+    ) {
+        _ensureUniqueReference()
 
-        let replacement = AttributedString._bstring(from: newElements)
-        let sameText = (replacement[...] == _characters[subrange._bstringRange])
+        var hasStringChanges = true
+        if let newElements = _specializingCast(newElements, to: BigSubstring.self) {
+            // Determine if this replacement is going to actively change character data, or if this
+            // is purely an attributes update, by seeing if the replacement string slice is
+            // identical to our own storage. (If it is identical, then we need to update attributes
+            // surrounding the affected bounds in a different way.)
+            //
+            // Note: this is intentionally not comparing actual string data.
+            if newElements.isIdentical(to: _characters[subrange._bstringRange]) {
+                hasStringChanges = false
+            }
+        }
 
         let attributes = _guts.attributesToUseForTextReplacement(
             in: subrange,
-            includingCharacterDependentAttributes: sameText)
+            includingCharacterDependentAttributes: !hasStringChanges)
 
-        let new = AttributedString(replacement, attributes: attributes)
-        let startOffset = _guts.utf8Offset(of: self.startIndex)
-        let endOffset = _guts.utf8Offset(of: self.endIndex)
-
-        let oldCount = _guts.string.utf8.count
-        _guts.replaceSubrange(subrange, with: new)
-        let newCount = _guts.string.utf8.count
-
-        _range = _guts.utf8IndexRange(from: startOffset ..< endOffset + (newCount - oldCount))
+        if hasStringChanges {
+            self._mutateStringContents(in: subrange, attributes: attributes) { string, range in
+                string.replaceSubrange(range, with: newElements)
+            }
+        } else {
+            self._setAttributes(in: subrange, to: attributes)
+        }
     }
+
+    // FIXME: Add individual overrides for other RangeReplaceableCollection mutations.
+    // (Letting everything go through `replaceSubrange` can be extremely costly -- e.g.,
+    // `append(contentsOf:)` calls `replaceSubrange` once for each character!)
 }

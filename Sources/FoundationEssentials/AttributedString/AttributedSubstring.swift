@@ -18,7 +18,7 @@ import _RopeModule
 
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct AttributedSubstring : Sendable {
+public struct AttributedSubstring: Sendable {
     /// The guts of the base attributed string.
     internal var _guts: AttributedString.Guts
 
@@ -34,14 +34,16 @@ public struct AttributedSubstring : Sendable {
 
     internal var _identity: Int = 0
 
-    internal init(_ guts: AttributedString.Guts, _ range: Range<AttributedString.Index>) {
+    internal init(_ guts: AttributedString.Guts, in range: Range<AttributedString.Index>) {
         self._guts = guts
-        self._range = range
+        // Forcibly resolve bounds and round them down to nearest scalar boundary.
+        let slice = _guts.string.unicodeScalars[range._bstringRange]
+        self._range = Range(uncheckedBounds: (.init(slice.startIndex), .init(slice.endIndex)))
     }
 
     public init() {
         let str = AttributedString()
-        self.init(str._guts, str.startIndex ..< str.endIndex)
+        self.init(str._guts, in: str._bounds)
     }
 }
 
@@ -81,23 +83,19 @@ extension AttributedSubstring { // Equatable
             return true
         }
         return AttributedString.Guts.characterwiseIsEqual(
-            lhs._guts, in: lhs._bounds,
-            to: rhs._guts, in: rhs._bounds)
+            lhs._guts, in: lhs._stringBounds,
+            to: rhs._guts, in: rhs._stringBounds)
     }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring : AttributedStringProtocol {
     public var startIndex: AttributedString.Index {
-        get {
-            return _range.lowerBound
-        }
+        _range.lowerBound
     }
 
     public var endIndex: AttributedString.Index {
-        get {
-            return _range.upperBound
-        }
+        _range.upperBound
     }
 
     internal mutating func ensureUniqueReference() {
@@ -150,20 +148,20 @@ extension AttributedSubstring : AttributedStringProtocol {
         }
     }
 
-    public var runs : AttributedString.Runs {
+    public var runs: AttributedString.Runs {
         get { .init(_guts, _range) }
     }
 
-    public var characters : AttributedString.CharacterView {
-        return AttributedString.CharacterView(_guts, startIndex ..< endIndex)
+    public var characters: AttributedString.CharacterView {
+        return AttributedString.CharacterView(_guts, in: _range)
     }
 
-    public var unicodeScalars : AttributedString.UnicodeScalarView {
-        return AttributedString.UnicodeScalarView(_guts, startIndex ..< endIndex)
+    public var unicodeScalars: AttributedString.UnicodeScalarView {
+        return AttributedString.UnicodeScalarView(_guts, in: _range)
     }
 
-    public subscript<R: RangeExpression>(bounds: R) -> AttributedSubstring where R.Bound == AttributedString.Index {
-        return AttributedSubstring(_guts, bounds.relative(to: characters))
+    public subscript(bounds: some RangeExpression<AttributedString.Index>) -> AttributedSubstring {
+        return AttributedSubstring(_guts, in: bounds.relative(to: characters))
     }
 }
 

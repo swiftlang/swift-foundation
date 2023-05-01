@@ -51,7 +51,7 @@ extension AttributedString {
             self = AttributedString(s)
         } else {
             // !!!: We don't expect or want this to happen.
-            let substring = AttributedSubstring(s.__guts, s._bounds)
+            let substring = AttributedSubstring(s.__guts, in: s._bounds)
             self = AttributedString(substring)
         }
     }
@@ -281,7 +281,8 @@ extension AttributedString {
 
     public mutating func replaceSubrange<R: RangeExpression, S: AttributedStringProtocol>(_ range: R, with s: S) where R.Bound == Index {
         ensureUniqueReference()
-        _guts.replaceSubrange(range.relative(to: characters), with: s)
+        // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
+        _guts.replaceSubrange(range.relative(to: unicodeScalars), with: s)
     }
 }
 
@@ -312,13 +313,15 @@ extension AttributedString {
 // MARK: Substring access
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    public subscript<R: RangeExpression>(bounds: R) -> AttributedSubstring where R.Bound == Index {
+    public subscript(bounds: some RangeExpression<Index>) -> AttributedSubstring {
         get {
-            return AttributedSubstring(_guts, bounds.relative(to: unicodeScalars))
+            // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
+            return AttributedSubstring(_guts, in: bounds.relative(to: unicodeScalars))
         }
         _modify {
             ensureUniqueReference()
-            var substr = AttributedSubstring(_guts, bounds.relative(to: unicodeScalars))
+            // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
+            var substr = AttributedSubstring(_guts, in: bounds.relative(to: unicodeScalars))
             let ident = Self._nextModifyIdentity
             substr._identity = ident
             _guts = Guts(string: "", runs: []) // Dummy guts so the substr has (hopefully) the sole reference
@@ -331,6 +334,7 @@ extension AttributedString {
             yield &substr
         }
         set {
+            // FIXME: Why is this allowed if _modify traps on replacement?
             self.replaceSubrange(bounds, with: newValue)
         }
     }
