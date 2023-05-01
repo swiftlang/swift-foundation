@@ -147,7 +147,36 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return j
     }
 
-    // FIXME: Implement index(_:offsetBy:limitedBy:)
+    @_alwaysEmitIntoClient
+    public func index(
+        _ i: AttributedString.Index,
+        offsetBy distance: Int,
+        limitedBy limit: AttributedString.Index
+    ) -> AttributedString.Index? {
+        if #available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *) {
+            return _index(i, offsetBy: distance, limitedBy: limit)
+        }
+        return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
+    }
+
+    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @usableFromInline
+    internal func _index(
+        _ i: AttributedString.Index,
+        offsetBy distance: Int,
+        limitedBy limit: AttributedString.Index
+    ) -> AttributedString.Index? {
+        precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
+        precondition(limit >= startIndex && limit <= endIndex, "AttributedString index out of bounds")
+        guard let j = _guts.string.unicodeScalars.index(
+            i._value, offsetBy: distance, limitedBy: limit._value
+        ) else {
+            return nil
+        }
+        precondition(j >= startIndex._value && j <= endIndex._value,
+                     "AttributedString index out of bounds")
+        return Index(j)
+    }
 
     @_alwaysEmitIntoClient
     public func distance(
