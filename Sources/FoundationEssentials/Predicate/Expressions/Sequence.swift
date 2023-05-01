@@ -98,6 +98,31 @@ extension PredicateExpressions {
         }
     }
     
+    public struct SequenceStartsWith<
+        Base : PredicateExpression,
+        Prefix : PredicateExpression
+    > : PredicateExpression
+    where
+        Base.Output : Sequence,
+        Prefix.Output : Sequence,
+        Base.Output.Element == Prefix.Output.Element,
+        Base.Output.Element : Equatable
+    {
+        public typealias Output = Bool
+        
+        public let base: Base
+        public let prefix: Prefix
+        
+        public init(base: Base, prefix: Prefix) {
+            self.base = base
+            self.prefix = prefix
+        }
+        
+        public func evaluate(_ bindings: PredicateBindings) throws -> Bool {
+            try base.evaluate(bindings).starts(with: try prefix.evaluate(bindings))
+        }
+    }
+    
     public static func build_contains<LHS, RHS>(_ lhs: LHS, _ rhs: RHS) -> SequenceContains<LHS, RHS> {
         SequenceContains(sequence: lhs, element: rhs)
     }
@@ -109,6 +134,10 @@ extension PredicateExpressions {
     public static func build_allSatisfy<LHS, RHS>(_ lhs: LHS, _ builder: (Variable<LHS.Output.Element>) -> RHS) -> SequenceAllSatisfy<LHS, RHS> {
         SequenceAllSatisfy(lhs, builder: builder)
     }
+    
+    public static func build_starts<Base, Prefix>(_ base: Base, with prefix: Prefix) -> SequenceStartsWith<Base, Prefix> {
+        SequenceStartsWith(base: base, prefix: prefix)
+    }
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
@@ -119,6 +148,9 @@ extension PredicateExpressions.SequenceContainsWhere : StandardPredicateExpressi
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.SequenceAllSatisfy : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.SequenceStartsWith : StandardPredicateExpression where Base : StandardPredicateExpression, Prefix : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.SequenceContains : Codable where LHS : Codable, RHS : Codable {
@@ -170,6 +202,21 @@ extension PredicateExpressions.SequenceAllSatisfy : Codable where LHS : Codable,
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.SequenceStartsWith : Codable where Base : Codable, Prefix : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(base)
+        try container.encode(prefix)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        self.base = try container.decode(Base.self)
+        self.prefix = try container.decode(Prefix.self)
+    }
+}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.SequenceContains : Sendable where LHS : Sendable, RHS : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
@@ -177,3 +224,6 @@ extension PredicateExpressions.SequenceContainsWhere : Sendable where LHS : Send
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.SequenceAllSatisfy : Sendable where LHS : Sendable, RHS : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.SequenceStartsWith : Sendable where Base : Sendable, Prefix : Sendable {}
