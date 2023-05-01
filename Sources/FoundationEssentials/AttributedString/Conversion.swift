@@ -13,7 +13,6 @@
 
 #if FOUNDATION_FRAMEWORK
 import Darwin
-@_implementationOnly import ReflectionInternal
 @_implementationOnly import os
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
@@ -98,9 +97,8 @@ internal struct _AttributeConversionOptions : OptionSet {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension AttributeContainer {
     init(_ dictionary: [NSAttributedString.Key : Any]) {
-        var attributeKeyTypes = _loadDefaultAttributes()
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
-        try! self.init(dictionary, including: AttributeScopes.FoundationAttributes.self, attributeKeyTypes: &attributeKeyTypes, options: .dropThrowingAttributes)
+        try! self.init(dictionary, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
     
     
@@ -109,15 +107,13 @@ public extension AttributeContainer {
     }
     
     init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: S.Type) throws {
-        var attributeKeyTypes = [String : any AttributedStringKey.Type]()
-        try self.init(dictionary, including: scope, attributeKeyTypes: &attributeKeyTypes)
+        try self.init(dictionary, attributeTable: S.attributeKeyTypes())
     }
     
-    fileprivate init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: S.Type, attributeKeyTypes: inout [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
+    fileprivate init(_ dictionary: [NSAttributedString.Key : Any], attributeTable: [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
         storage = .init()
         for (key, value) in dictionary {
-            if let type = attributeKeyTypes[key.rawValue] ?? S.attributeKeyType(matching: key.rawValue) {
-                attributeKeyTypes[key.rawValue] = type
+            if let type = attributeTable[key.rawValue] {
                 func project<K: AttributedStringKey>(_: K.Type) throws {
                     storage[K.self] = try K._convertFromObjectiveCValue(value as AnyObject)
                 }
@@ -136,9 +132,8 @@ public extension AttributeContainer {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension Dictionary where Key == NSAttributedString.Key, Value == Any {
     init(_ container: AttributeContainer) {
-        var attributeKeyTypes = _loadDefaultAttributes()
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
-        try! self.init(container, including: AttributeScopes.FoundationAttributes.self, attributeKeyTypes: &attributeKeyTypes, options: .dropThrowingAttributes)
+        try! self.init(container, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
     
     init<S: AttributeScope>(_ container: AttributeContainer, including scope: KeyPath<AttributeScopes, S.Type>) throws {
@@ -146,8 +141,7 @@ public extension Dictionary where Key == NSAttributedString.Key, Value == Any {
     }
     
     init<S: AttributeScope>(_ container: AttributeContainer, including scope: S.Type) throws {
-        var attributeKeyTypes = [String : any AttributedStringKey.Type]()
-        try self.init(container, including: scope, attributeKeyTypes: &attributeKeyTypes)
+        try self.init(container, attributeTable: S.attributeKeyTypes())
     }
     
     // These includingOnly SPI initializers were provided originally when conversion boxed attributes outside of the given scope as an AnyObject
@@ -162,11 +156,10 @@ public extension Dictionary where Key == NSAttributedString.Key, Value == Any {
         try self.init(container, including: S.self)
     }
     
-    fileprivate init<S: AttributeScope>(_ container: AttributeContainer, including scope: S.Type, attributeKeyTypes: inout [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
+    fileprivate init(_ container: AttributeContainer, attributeTable: [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
         self.init()
         for key in container.storage.keys {
-            if let type = attributeKeyTypes[key] ?? S.attributeKeyType(matching: key) {
-                attributeKeyTypes[key] = type
+            if let type = attributeTable[key] {
                 func project<K: AttributedStringKey>(_: K.Type) throws {
                     self[NSAttributedString.Key(rawValue: key)] = try K._convertToObjectiveCValue(container.storage[K.self]!)
                 }
@@ -186,36 +179,34 @@ public extension Dictionary where Key == NSAttributedString.Key, Value == Any {
 public extension NSAttributedString {
     convenience init(_ attrStr: AttributedString) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
-        try! self.init(attrStr, scope: AttributeScopes.FoundationAttributes.self, otherAttributeTypes: _loadDefaultAttributes(), options: .dropThrowingAttributes)
+        try! self.init(attrStr, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
     
     convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: KeyPath<AttributeScopes, S.Type>) throws {
-        try self.init(attrStr, scope: S.self)
+        try self.init(attrStr, including: S.self)
     }
     
     convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: S.Type) throws {
-        try self.init(attrStr, scope: scope)
+        try self.init(attrStr, attributeTable: scope.attributeKeyTypes())
     }
     
     @_spi(AttributedString)
     convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: KeyPath<AttributeScopes, S.Type>) throws {
-        try self.init(attrStr, scope: S.self)
+        try self.init(attrStr, including: S.self)
     }
     
     @_spi(AttributedString)
     convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: S.Type) throws {
-        try self.init(attrStr, scope: scope)
+        try self.init(attrStr, including: scope)
     }
     
-    internal convenience init<S: AttributeScope>(
+    internal convenience init(
         _ attrStr: AttributedString,
-        scope: S.Type,
-        otherAttributeTypes: [String : any AttributedStringKey.Type] = [:],
+        attributeTable: [String : any AttributedStringKey.Type],
         options: _AttributeConversionOptions = []
     ) throws {
         // FIXME: Consider making an NSString subclass backed by a BigString
         let result = NSMutableAttributedString(string: String(attrStr._guts.string))
-        var attributeKeyTypes: [String : any AttributedStringKey.Type] = otherAttributeTypes
         // Iterate through each run of the source
         var nsStartIndex = 0
         var stringStart = attrStr._guts.string.startIndex
@@ -223,7 +214,7 @@ public extension NSAttributedString {
             let stringEnd = attrStr._guts.string.utf8.index(stringStart, offsetBy: run.length)
             let utf16Length = attrStr._guts.string.utf16.distance(from: stringStart, to: stringEnd)
             let range = NSRange(location: nsStartIndex, length: utf16Length)
-            let attributes = try Dictionary(AttributeContainer(run.attributes), including: scope, attributeKeyTypes: &attributeKeyTypes, options: options)
+            let attributes = try Dictionary(AttributeContainer(run.attributes), attributeTable: attributeTable, options: options)
             result.setAttributes(attributes, range: range)
             nsStartIndex += utf16Length
             stringStart = stringEnd
@@ -236,23 +227,22 @@ public extension NSAttributedString {
 public extension AttributedString {
     init(_ nsStr: NSAttributedString) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
-        try! self.init(nsStr, scope: AttributeScopes.FoundationAttributes.self, otherAttributeTypes: _loadDefaultAttributes(), options: .dropThrowingAttributes)
+        try! self.init(nsStr, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
     
     init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: KeyPath<AttributeScopes, S.Type>) throws {
-        try self.init(nsStr, scope: S.self)
+        try self.init(nsStr, including: S.self)
     }
     
     init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: S.Type) throws {
-        try self.init(nsStr, scope: S.self)
+        try self.init(nsStr, attributeTable: S.attributeKeyTypes())
     }
     
-    private init<S: AttributeScope>(_ nsStr: NSAttributedString, scope: S.Type, otherAttributeTypes: [String : any AttributedStringKey.Type] = [:], options: _AttributeConversionOptions = []) throws {
+    private init(_ nsStr: NSAttributedString, attributeTable: [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
         var string = nsStr.string
         // Eagerly bridge to a native string since AttributedString will do this anyways and this guarantees string's contents are well-formed (no unpaired surrogate characters)
         string.makeContiguousUTF8()
         var runs: [_InternalRun] = []
-        var attributeKeyTypes: [String : any AttributedStringKey.Type] = otherAttributeTypes
         var conversionError: Error?
         var endOfLastRange = string.utf16.startIndex
         var hasConstrainedAttributes = false
@@ -260,7 +250,7 @@ public extension AttributedString {
         nsStr.enumerateAttributes(in: NSMakeRange(0, nsStr.length), options: []) { (nsAttrs, range, stop) in
             let container: AttributeContainer
             do {
-                container = try AttributeContainer(nsAttrs, including: scope, attributeKeyTypes: &attributeKeyTypes, options: options)
+                container = try AttributeContainer(nsAttrs, attributeTable: attributeTable, options: options)
             } catch {
                 conversionError = error
                 stop.pointee = true
@@ -303,71 +293,6 @@ public extension AttributedString {
             self._guts.adjustConstrainedAttributesForUntrustedRuns()
         }
     }
-}
-
-internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type] {
-    #if !targetEnvironment(macCatalyst)
-        // AppKit scope on macOS
-        let macOSSymbol = ("$s10Foundation15AttributeScopesO6AppKitE0dE10AttributesVN", "/usr/lib/swift/libswiftAppKit.dylib")
-    #else
-        // UIKit scope on macOS
-        let macOSSymbol = ("$s10Foundation15AttributeScopesO5UIKitE0D10AttributesVN", "/System/iOSSupport/System/Library/Frameworks/UIKit.framework/UIKit")
-    #endif
-
-    let loadedScopes = [
-        macOSSymbol,
-        // UIKit scope on non-macOS
-        ("$s10Foundation15AttributeScopesO5UIKitE0D10AttributesVN", "/System/Library/Frameworks/UIKit.framework/UIKit"),
-        // SwiftUI scope
-        ("$s10Foundation15AttributeScopesO7SwiftUIE0D12UIAttributesVN", "/System/Library/Frameworks/SwiftUI.framework/SwiftUI"),
-        // Accessibility scope
-        ("$s10Foundation15AttributeScopesO13AccessibilityE0D10AttributesVN", "/System/Library/Frameworks/Accessibility.framework/Accessibility")
-    ].compactMap {
-        _loadScopeAttributes(forSymbol: $0.0, from: $0.1)
-    }
-
-    return loadedScopes.reduce([:]) { result, item in
-        result.merging(item) { current, new in new }
-    }
-}
-
-fileprivate struct LoadedScopeCache : Sendable {
-    var cache : [String : [String : any AttributedStringKey.Type]]
-}
-fileprivate let _loadedScopeCacheLock = OSAllocatedUnfairLock(initialState: LoadedScopeCache(cache: .init()))
-
-fileprivate func _loadScopeAttributes(forSymbol symbol: String, from path: String) -> [String : any AttributedStringKey.Type]? {
-    return _loadedScopeCacheLock.withLock { cache in
-        if let cachedResult = cache.cache[symbol] {
-            return cachedResult
-        }
-        guard let handle = dlopen(path, RTLD_NOLOAD) else {
-            return nil
-        }
-        guard let symbolPointer = dlsym(handle, symbol) else {
-            return nil
-        }
-        guard let scopeType = unsafeBitCast(symbolPointer, to: Any.Type.self) as? any AttributeScope.Type else {
-            return nil
-        }
-        let attributeTypes =  _loadAttributeTypes(from: scopeType)
-        cache.cache[symbol] = attributeTypes
-        return attributeTypes
-    }
-}
-
-fileprivate func _loadAttributeTypes<S: AttributeScope>(from scope: S.Type) -> [String : any AttributedStringKey.Type] {
-    var result = [String : any AttributedStringKey.Type]()
-    for field in Type(scope).fields {
-        switch field.type.swiftType {
-        case let attribute as any AttributedStringKey.Type:
-            result[attribute.name] = attribute
-        case let scope as any AttributeScope.Type:
-            result.merge(_loadAttributeTypes(from: scope), uniquingKeysWith: { current, new in new })
-        default: break
-        }
-    }
-    return result
 }
 
 #endif // FOUNDATION_FRAMEWORK

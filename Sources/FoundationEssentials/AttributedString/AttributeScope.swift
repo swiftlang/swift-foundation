@@ -1,0 +1,176 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2023 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+// Developers can also add the attributes to pre-defined scopes of attributes, which are used to provide type information to the encoding and decoding of AttributedString values, as well as allow for dynamic member lookup in Runss of AttributedStrings.
+// Example, where ForegroundColor is an existing AttributedStringKey:
+// struct MyAttributes : AttributeScope {
+//     var foregroundColor : ForegroundColor
+// }
+// An AttributeScope can contain other scopes as well.
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding {
+    static var decodingConfiguration: AttributeScopeCodableConfiguration { get }
+    static var encodingConfiguration: AttributeScopeCodableConfiguration { get }
+}
+
+@_nonSendable
+@frozen
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+public enum AttributeScopes { }
+
+#if FOUNDATION_FRAMEWORK
+
+@_implementationOnly import ReflectionInternal
+
+fileprivate struct ScopeDescription : Sendable {
+    var attributes: [String : any AttributedStringKey.Type] = [:]
+    var markdownAttributes: [String : any MarkdownDecodableAttributedStringKey.Type] = [:]
+    var subscopes: [any AttributeScope.Type] = []
+    
+    mutating func merge(_ other: Self) {
+        attributes.merge(other.attributes, uniquingKeysWith: { current, new in new })
+        markdownAttributes.merge(other.markdownAttributes, uniquingKeysWith: { current, new in new })
+        subscopes.append(contentsOf: other.subscopes)
+    }
+}
+
+fileprivate struct LoadedScopeCache : Sendable {
+    private var scopeMangledNames : [String : (any AttributeScope.Type)?]
+    private var lastImageCount: UInt32
+    private var scopeContents : [Type : ScopeDescription]
+    
+    init() {
+        scopeMangledNames = [:]
+        scopeContents = [:]
+        lastImageCount = 0
+    }
+    
+    mutating func scopeType(for name: String) -> (any AttributeScope.Type)? {
+        if let cached = scopeMangledNames[name] {
+            if let foundScope = cached {
+                // We have a cached result, provide it to the caller
+                return foundScope
+            }
+            let currentImageCount = _dyld_image_count()
+            if lastImageCount == currentImageCount {
+                // We didn't find the scope last time we checked and no new images have been loaded
+                return nil
+            }
+            // We didn't find the scope last time but new images have been loaded so remove all lookup misses from the cache
+            lastImageCount = currentImageCount
+            scopeMangledNames = scopeMangledNames.filter {
+                $0.value != nil
+            }
+        }
+        
+        let type = _typeByName(name) as? any AttributeScope.Type
+        scopeMangledNames[name] = type
+        return type
+    }
+    
+    subscript(_ name: String) -> ScopeDescription? {
+        mutating get {
+            guard let type = scopeType(for: name) else { return nil }
+            return self[type]
+        }
+        set {
+            guard let type = scopeType(for: name) else {
+                fatalError("Unable to cache scope contents for non-loaded scope")
+            }
+            self[type] = newValue
+        }
+    }
+    
+    subscript(_ type: any AttributeScope.Type) -> ScopeDescription? {
+        get {
+            scopeContents[Type(type)]
+        }
+        set {
+            scopeContents[Type(type)] = newValue
+        }
+    }
+}
+
+fileprivate let _loadedScopeCache = LockedState(initialState: LoadedScopeCache())
+
+internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type] {
+    // Gather the metatypes for all scopes currently loaded into the process (may change over time)
+    let defaultScopes = _loadedScopeCache.withLock { cache in
+        [
+            // AppKit
+            "10Foundation15AttributeScopesO6AppKitE0dE10AttributesV",
+            // UIKit
+            "10Foundation15AttributeScopesO5UIKitE0D10AttributesV",
+            // SwiftUI
+            "10Foundation15AttributeScopesO7SwiftUIE0D12UIAttributesV",
+            // Accessibility
+            "10Foundation15AttributeScopesO13AccessibilityE0D10AttributesV"
+        ].compactMap {
+            cache.scopeType(for: $0)
+        }
+    }
+    
+    // Walk each scope (checking the cache) and gather each scope's attribute table
+    let defaultAttributeTypes = (defaultScopes + [AttributeScopes.FoundationAttributes.self]).map {
+        $0.attributeKeyTypes()
+    }
+
+    // Merge the attribute tables together into one large table
+    return defaultAttributeTypes.reduce([:]) { result, item in
+        result.merging(item) { current, new in new }
+    }
+}
+
+// TODO: Support AttributeScope key finding in FoundationPreview
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+internal extension AttributeScope {
+    private static var scopeDescription: ScopeDescription {
+        if let cached = _loadedScopeCache.withLock({ $0[Self.self] }) {
+            return cached
+        }
+        
+        var desc = ScopeDescription()
+        for field in Type(Self.self).fields {
+            switch field.type.swiftType {
+            case let attribute as any AttributedStringKey.Type:
+                desc.attributes[attribute.name] = attribute
+                if let markdownAttribute = attribute as? any MarkdownDecodableAttributedStringKey.Type {
+                    desc.markdownAttributes[markdownAttribute.markdownName] = markdownAttribute
+                }
+            case let scope as any AttributeScope.Type:
+                desc.subscopes.append(scope)
+            default: break
+            }
+        }
+        let _desc = desc
+        _loadedScopeCache.withLock {
+            $0[Self.self] = _desc
+        }
+        return desc
+    }
+    
+    static func attributeKeyTypes() -> [String : any AttributedStringKey.Type] {
+        let description = Self.scopeDescription
+        return description.subscopes.reduce(description.attributes) {
+            $0.merging($1.attributeKeyTypes(), uniquingKeysWith: { current, new in new })
+        }
+    }
+    
+    static func markdownKeyTypes() -> [String : any MarkdownDecodableAttributedStringKey.Type] {
+        let description = Self.scopeDescription
+        return description.subscopes.reduce(description.markdownAttributes) {
+            $0.merging($1.markdownKeyTypes(), uniquingKeysWith: { current, new in new })
+        }
+    }
+}
+
+#endif // FOUNDATION_FRAMEWORK

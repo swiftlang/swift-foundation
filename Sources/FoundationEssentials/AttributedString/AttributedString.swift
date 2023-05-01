@@ -104,19 +104,11 @@ extension AttributedString {
 
     public init<S : AttributeScope, T : AttributedStringProtocol>(_ other: T, including scope: S.Type) {
         self.init(other.__guts.copy(in: other.startIndex ..< other.endIndex))
-        var attributeCache = [String : Bool]()
+        let attributeTypes = scope.attributeKeyTypes()
         _guts.enumerateRuns { run, _, _, modification in
             modification = .guaranteedNotModified
             for key in run.attributes.keys {
-                var inScope: Bool
-                if let cachedInScope = attributeCache[key] {
-                    inScope = cachedInScope
-                } else {
-                    inScope = scope.attributeKeyType(matching: key) != nil
-                    attributeCache[key] = inScope
-                }
-
-                if !inScope {
+                if !attributeTypes.keys.contains(key) {
                     run.attributes[key] = nil
                     modification = .guaranteedModified
                 }
