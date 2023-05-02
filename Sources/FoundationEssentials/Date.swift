@@ -239,20 +239,31 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
     /// function `description(locale:)`.
     public var description: String {
         // NSDate uses the constant format `uuuu-MM-dd HH:mm:ss '+0000'`
-        let outputLength = 26 // Constant length of `uuuu-MM-dd HH:mm:ss '+0000'` + \0
         let format = "%Y-%m-%d %H:%M:%S +0000"
+        let unavailable = "<description unavailable>"
+
         var info = tm()
         var time = time_t(self.timeIntervalSince1970)
         gmtime_r(&time, &info)
-        let result = UnsafeMutablePointer<CChar>.allocate(capacity: outputLength)
-        defer {
-            result.deallocate()
-        }
-        guard strftime(result, outputLength, format, &info) >= 0 else {
-            return "<description unavailable>"
-        }
 
-        return String(validatingUTF8: result) ?? "<description unavailable>"
+        // This allocates stack space for range of 10^102 years
+        // That's more than Date currently supports.
+        let bufferSize = 128
+        return withUnsafeTemporaryAllocation(of: CChar.self, capacity: bufferSize) { buffer -> String in
+           guard let ptr = buffer.baseAddress else {
+              return unavailable
+           }
+
+           guard strftime(ptr, bufferSize, format, &info) != 0 else {
+              return unavailable
+           }
+
+           guard let result = String(validatingUTF8: ptr) else {
+              return unavailable
+           }
+
+           return result
+        }
     }
 #endif // !FOUNDATION_FRAMEWORK
 
