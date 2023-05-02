@@ -341,6 +341,22 @@ open class JSONDecoder {
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     /// - throws: An error if any value throws an error during decoding.
     open func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        try _decode({
+            try $0.unwrap($1, as: type, for: .root, _JSONKey?.none)
+        }, from: data)
+    }
+    
+    open func decode<T: DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
+        try _decode({
+            try $0.unwrap($1, as: type, configuration: configuration, for: .root, _JSONKey?.none)
+        }, from: data)
+    }
+    
+    open func decode<T: DecodableWithConfiguration, C : DecodingConfigurationProviding>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T.DecodingConfiguration == C.DecodingConfiguration {
+        try decode(type, from: data, configuration: C.decodingConfiguration)
+    }
+    
+    private func _decode<T>(_ unwrap: (JSONDecoderImpl, JSONMap.Value) throws -> T, from data: Data) throws -> T {
         do {
             return try Self.withUTF8Representation(of: data) { utf8Buffer in
 
@@ -361,7 +377,7 @@ open class JSONDecoder {
                     impl = JSONDecoderImpl(userInfo: self.userInfo, from: map, codingPathNode: .root, options: self.options)
                 }
                 impl.push(value: topValue) // This is something the old implementation did and apps started relying on. Weird.
-                let result = try impl.unwrap(topValue, as: type, for: .root, _JSONKey?.none)
+                let result = try unwrap(impl, topValue)
                 let uniquelyReferenced = isKnownUniquelyReferenced(&impl)
                 impl.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
                 return result
@@ -600,6 +616,12 @@ extension JSONDecoderImpl: Decoder {
 
         return try self.with(value: mapValue, path: codingPathNode.pushing(additionalKey)) {
             try type.init(from: self)
+        }
+    }
+    
+    func unwrap<T: DecodableWithConfiguration>(_ mapValue: JSONMap.Value, as type: T.Type, configuration: T.DecodingConfiguration, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
+        try self.with(value: mapValue, path: codingPathNode.pushing(additionalKey)) {
+            try type.init(from: self, configuration: configuration)
         }
     }
 

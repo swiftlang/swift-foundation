@@ -76,6 +76,17 @@ public typealias EncodableAttributedStringKey = Foundation.EncodableAttributedSt
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias DecodableAttributedStringKey = Foundation.DecodableAttributedStringKey
 
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias CodableWithConfiguration = Foundation.CodableWithConfiguration
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias EncodableWithConfiguration = Foundation.EncodableWithConfiguration
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias DecodableWithConfiguration = Foundation.DecodableWithConfiguration
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias EncodingConfigurationProviding = Foundation.EncodingConfigurationProviding
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias DecodingConfigurationProviding = Foundation.DecodingConfigurationProviding
+
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public typealias Predicate = Foundation.Predicate
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
@@ -156,6 +167,17 @@ public typealias CodableAttributedStringKey = FoundationEssentials.CodableAttrib
 public typealias EncodableAttributedStringKey = FoundationEssentials.EncodableAttributedStringKey
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias DecodableAttributedStringKey = FoundationEssentials.DecodableAttributedStringKey
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias CodableWithConfiguration = FoundationEssentials.CodableWithConfiguration
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias EncodableWithConfiguration = FoundationEssentials.EncodableWithConfiguration
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias DecodableWithConfiguration = FoundationEssentials.DecodableWithConfiguration
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias EncodingConfigurationProviding = FoundationEssentials.EncodingConfigurationProviding
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public typealias DecodingConfigurationProviding = FoundationEssentials.DecodingConfigurationProviding
 
 public typealias Calendar = FoundationInternationalization.Calendar
 public typealias TimeZone = FoundationInternationalization.TimeZone

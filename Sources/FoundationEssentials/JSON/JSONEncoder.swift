@@ -351,9 +351,25 @@ open class JSONEncoder {
     /// - throws: `EncodingError.invalidValue` if a non-conforming floating-point value is encountered during encoding, and the encoding strategy is `.throw`.
     /// - throws: An error if any value throws an error during encoding.
     open func encode<T : Encodable>(_ value: T) throws -> Data {
+        try _encode({
+            try $0.wrapGeneric(value, for: .root)
+        }, value: value)
+    }
+    
+    open func encode<T : EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration) throws -> Data {
+        try _encode({
+            try $0.wrapGeneric(value, configuration: configuration, for: .root)
+        }, value: value)
+    }
+    
+    open func encode<T : EncodableWithConfiguration, C : EncodingConfigurationProviding>(_ value: T, configuration: C.Type) throws -> Data where T.EncodingConfiguration == C.EncodingConfiguration {
+        try encode(value, configuration: C.encodingConfiguration)
+    }
+    
+    private func _encode<T>(_ wrap: (__JSONEncoder) throws -> JSONReference?, value: T) throws -> Data {
         let encoder = __JSONEncoder(options: self.options, initialDepth: 0)
 
-        guard let topLevel = try encoder.wrapGeneric(value, for: .root) else {
+        guard let topLevel = try wrap(encoder) else {
             throw EncodingError.invalidValue(value,
                                              EncodingError.Context(codingPath: [], debugDescription: "Top-level \(T.self) did not encode any values."))
         }
@@ -1120,11 +1136,23 @@ private extension __JSONEncoder {
             break
         }
 
+        return try _wrapGeneric({
+            try value.encode(to: $0)
+        }, for: node, additionalKey)
+    }
+    
+    func wrapGeneric<T: EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration, for node: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = _JSONKey?.none) throws -> JSONReference? {
+        try _wrapGeneric({
+            try value.encode(to: $0, configuration: configuration)
+        }, for: node, additionalKey)
+    }
+    
+    func _wrapGeneric(_ encode: (__JSONEncoder) throws -> (), for node: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = _JSONKey?.none) throws -> JSONReference? {
         // The value should request a container from the __JSONEncoder.
         let depth = self.storage.count
         do {
             try self.with(path: node.pushing(additionalKey)) {
-                try value.encode(to: self)
+                try encode(self)
             }
         } catch {
             // If the value pushed a container before throwing, pop it back off to restore state.
