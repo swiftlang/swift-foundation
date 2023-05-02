@@ -1449,7 +1449,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter start: Upon return, the starting date of the next weekend if found.
     /// - parameter interval: Upon return, the duration of the next weekend if found.
     /// - parameter direction: Which direction in time to search. The default value is `.forward`.
-    /// - returns: `true` if the next weekend could be found, and `false` if there are no such things as weekend in the calendar and its locale.
+    /// - returns: `true` if the next weekend is found.
     @available(iOS 8.0, *)
     public func nextWeekend(startingAfter date: Date, start: inout Date, interval: inout TimeInterval, direction: SearchDirection = .forward) -> Bool {
         guard let weekend = nextWeekend(startingAfter: date, direction: direction) else {
