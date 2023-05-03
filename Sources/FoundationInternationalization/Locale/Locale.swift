@@ -929,18 +929,27 @@ public struct Locale : Hashable, Equatable, Sendable {
         LocaleCache.cache.preferredLanguages(forCurrentUser: false)
     }
 
+    private static let languageCodeKey = "kCFLocaleLanguageCodeKey"
+    private static let scriptCodeKey = "kCFLocaleScriptCodeKey"
+    private static let countryCodeKey = "kCFLocaleCountryCodeKey"
+    private static let variantCodeKey = "kCFLocaleVariantCodeKey"
+    private static let calendarKey = "kCFLocaleCalendarKey"
 
     /// Constructs an identifier from a dictionary of components.
     public static func identifier(fromComponents components: [String : String]) -> String {
+        // Holds remaining keywords after we remove the CF-specific ones
+        var keywords = components
         var result = ""
-        if let language = components["kCFLocaleLanguageCodeKey"] {
+        if let language = components[Self.languageCodeKey] {
             result += language
+            keywords.removeValue(forKey: Self.languageCodeKey)
         }
-        if let script = components["kCFLocaleScriptCodeKey"] {
+        if let script = components[Self.scriptCodeKey] {
             result += "_" + script
+            keywords.removeValue(forKey: Self.scriptCodeKey)
         }
-        let country = components["kCFLocaleCountryCodeKey"]
-        let variant = components["kCFLocaleVariantCodeKey"]
+        let country = components[Self.countryCodeKey]
+        let variant = components[Self.variantCodeKey]
         
         if country != nil || variant != nil {
             result += "_"
@@ -948,48 +957,109 @@ public struct Locale : Hashable, Equatable, Sendable {
         
         if let country {
             result += country
+            keywords.removeValue(forKey: Self.countryCodeKey)
         }
         
         if let variant {
             result += "_" + variant
+            keywords.removeValue(forKey: Self.variantCodeKey)
+        }
+                
+        let corrected = Dictionary<String, String>(uniqueKeysWithValues: keywords.compactMap { key, value -> (String, String)? in
+            // Keys must be non-empty
+            guard !key.isEmpty else { return nil }
+            
+            // Identifier keywords must be ASCII a-z, A-Z, 0-9
+            // They are normalized to all-lowercase
+            var ok = true
+            var correctedKey = key.utf8.map { c in
+                if 0x41 <= c && c <= 0x5a {
+                    // A-Z
+                    // Convert to lowercase by adding 0x20
+                    return CChar(c + 0x20)
+                } else if 0x61 <= c && c <= 0x7a {
+                    // a-z
+                    return CChar(c)
+                } else if 0x30 <= c && c <= 0x39 {
+                    // 0-9
+                    return CChar(c)
+                } else {
+                    ok = false
+                    return CChar(0)
+                }
+            }
+            // null-terminate
+            correctedKey.append(CChar(0))
+            
+            guard ok else { return nil }
+            let correctedKeyString = String(cString: correctedKey)
+            
+            // Values must be non-empty
+            guard !value.isEmpty else { return nil }
+            
+            // Values must be ASCII a-z, A-Z, 0-9, _, -, +, /
+            let validValue = value.utf8.allSatisfy { char in
+                /* A-Z */ (0x41...0x5a).contains(char) ||
+                /* a-z */ (0x61...0x7a).contains(char) ||
+                /* 0-9 */ (0x30...0x39).contains(char) ||
+                /* _   */ char == 0x5f ||
+                /* -   */ char == 0x2d ||
+                /* +   */ char == 0x2b ||
+                /* /   */ char == 0x2f
+            }
+            
+            guard validValue else { return nil }
+                
+            return (correctedKeyString, value)
+        })
+        
+        guard !corrected.isEmpty else {
+            // Stop here
+            return result
         }
         
+        result += "@"
+        let sortedKeys = corrected.keys.sorted(by: <)
+        
+        for key in sortedKeys {
+            result += key + "=" + corrected[key]! + ";"
+        }
+        
+        // Remove last ;
+        let _ = result.popLast()
+
         return result
     }
 
 #if FOUNDATION_FRAMEWORK
     /// Constructs an identifier from a dictionary of components, allowing a `Calendar` value. Compatibility only.
-    internal static func identifier(fromComponents components: [String : Any]) -> String {
+    internal static func identifier(fromAnyComponents components: [String : Any]) -> String {
         // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar". This version for framework use allows Calendar.
-        var result = ""
-        if let language = components["kCFLocaleLanguageCodeKey"] as? String {
-            result += language
-        }
-        if let script = components["kCFLocaleScriptCodeKey"] as? String {
-            result += "_" + script
-        }
-        let country = components["kCFLocaleCountryCodeKey"] as? String
-        let variant = components["kCFLocaleVariantCodeKey"] as? String
         
-        if country != nil || variant != nil {
-            result += "_"
+        // Handle a special case of having both "kCFLocaleCalendarKey" and "calendar"
+        var uniqued = components
+        if let calendar = uniqued[Self.calendarKey] as? Calendar {
+            // Overwrite any value for "calendar" - the CF key takes precedence
+            uniqued["calendar"] = calendar.identifier.cfCalendarIdentifier
         }
         
-        if let country {
-            result += country
-        }
+        // Always remove this key
+        uniqued.removeValue(forKey: Self.calendarKey)
         
-        if let variant {
-            result += "_" + variant
-        }
+        // Map the remaining values to strings, or remove them
+        let converted = Dictionary<String, String>(uniqueKeysWithValues: uniqued.compactMap { key, value in
+            if let value = value as? String {
+                return (key, value)
+            } else {
+                // Remove this, bad value type
+                return nil
+            }
+        })
         
-        if let calendar = components["kCFLocaleCalendarKey"] as? Calendar {
-            result += "@calendar=" + calendar.identifier.cfCalendarIdentifier
-        }
-        
-        return result
+        return identifier(fromComponents: converted)
     }
 #endif // FOUNDATION_FRAMEWORK
+
 
     /// Returns a canonical identifier from the given string.
     @available(macOS, deprecated: 13, renamed: "identifier(_:from:)")
