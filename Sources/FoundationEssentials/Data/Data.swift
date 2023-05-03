@@ -2371,9 +2371,11 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 
             let bufferSize = MemoryLayout<Buffer>.size
             Swift.withUnsafeMutableBytes(of: &_buffer) {
-                let ptr = $0.bindMemory(to: UInt8.self)
-                let bufferIdx = (loc - data.startIndex) % bufferSize
-                data.copyBytes(to: ptr, from: (loc - bufferIdx)..<(data.endIndex - (loc - bufferIdx) > bufferSize ? (loc - bufferIdx) + bufferSize : data.endIndex))
+                $0.withMemoryRebound(to: UInt8.self) { [endIndex = data.endIndex] buf in
+                    let bufferIdx = (loc - data.startIndex) % bufferSize
+                    let end = (endIndex - (loc - bufferIdx) > bufferSize) ? (loc - bufferIdx + bufferSize) : endIndex
+                    data.copyBytes(to: buf, from: (loc - bufferIdx)..<end)
+                }
             }
         }
 
@@ -2390,9 +2392,10 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             if bufferIdx == 0 {
                 var buffer = _buffer
                 Swift.withUnsafeMutableBytes(of: &buffer) {
-                    let ptr = $0.bindMemory(to: UInt8.self)
-                    // populate the buffer
-                    _data.copyBytes(to: ptr, from: idx..<(_endIdx - idx > bufferSize ? idx + bufferSize : _endIdx))
+                    $0.withMemoryRebound(to: UInt8.self) {
+                        // populate the buffer
+                        _data.copyBytes(to: $0, from: idx..<(_endIdx - idx > bufferSize ? idx + bufferSize : _endIdx))
+                    }
                 }
                 _buffer = buffer
             }
