@@ -2398,8 +2398,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             }
 
             return Swift.withUnsafeMutableBytes(of: &_buffer) {
-                let ptr = $0.bindMemory(to: UInt8.self)
-                return ptr[bufferIdx]
+                $0.load(fromByteOffset: bufferIdx, as: UInt8.self)
             }
         }
     }
