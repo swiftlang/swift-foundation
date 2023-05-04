@@ -178,12 +178,12 @@ extension BufferView:
     }
 
     @inline(__always)
-    func distance(from start: BufferViewIndex<Element>, to end: BufferViewIndex<Element>) -> Int {
+    func distance(from start: Index, to end: Index) -> Int {
         start.distance(to: end)
     }
 
     @inline(__always)
-    subscript(position: BufferViewIndex<Element>) -> Element {
+    subscript(position: Index) -> Element {
         get {
             _checkBounds(position)
             return self[unchecked: position]
@@ -191,7 +191,7 @@ extension BufferView:
     }
 
     @inline(__always)
-    subscript(unchecked position: BufferViewIndex<Element>) -> Element {
+    subscript(unchecked position: Index) -> Element {
         get {
             if _isPOD(Element.self) {
                 return position._rawValue.loadUnaligned(as: Element.self)
@@ -202,7 +202,7 @@ extension BufferView:
     }
 
     @inline(__always)
-    subscript(bounds: Range<BufferViewIndex<Element>>) -> Self {
+    subscript(bounds: Range<Index>) -> Self {
         get {
             _checkBounds(bounds)
             return self[unchecked: bounds]
@@ -210,7 +210,7 @@ extension BufferView:
     }
 
     @inline(__always)
-    subscript(unchecked bounds: Range<BufferViewIndex<Element>>) -> Self {
+    subscript(unchecked bounds: Range<Index>) -> Self {
         get { BufferView(start: bounds.lowerBound, count: bounds.count) }
     }
 
