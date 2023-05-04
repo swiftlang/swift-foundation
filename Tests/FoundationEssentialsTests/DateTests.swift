@@ -71,6 +71,38 @@ final class DateTests : XCTestCase {
         let date2 : Date = .now
         XCTAssertLessThanOrEqual(date1, date2)
     }
+
+    func testDescriptionReferenceDate() {
+        let date = Date(timeIntervalSinceReferenceDate: TimeInterval(0))
+
+        XCTAssertEqual("2001-01-01 00:00:00 +0000", date.description)
+    }
+
+    func testDescription1970() {
+        let date = Date(timeIntervalSince1970: TimeInterval(0))
+
+        XCTAssertEqual("1970-01-01 00:00:00 +0000", date.description)
+    }
+
+    func testDescriptionDistantPast() {
+        XCTAssertEqual("0000-12-30 00:00:00 +0000", Date.distantPast.description)
+    }
+
+    func testDescriptionDistantFuture() {
+        XCTAssertEqual("4001-01-01 00:00:00 +0000", Date.distantFuture.description)
+    }
+
+    func testDescriptionBeyondDistantPast() {
+        let date = Date.distantPast.addingTimeInterval(TimeInterval(-1))
+
+        XCTAssertEqual("<description unavailable>", date.description)
+    }
+
+    func testDescriptionBeyondDistantFuture() {
+        let date = Date.distantFuture.addingTimeInterval(TimeInterval(1))
+
+        XCTAssertEqual("<description unavailable>", date.description)
+    }
 }
 
 // MARK: - Bridging

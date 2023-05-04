@@ -239,8 +239,21 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
     /// function `description(locale:)`.
     public var description: String {
         // NSDate uses the constant format `uuuu-MM-dd HH:mm:ss '+0000'`
+
+        // Glibc needs a non-standard format option to pad %Y to 4 digits
+#if canImport(Glibc)
+        let format = "%4Y-%m-%d %H:%M:%S +0000"
+#else
         let format = "%Y-%m-%d %H:%M:%S +0000"
+#endif
         let unavailable = "<description unavailable>"
+
+        guard self >= Date.distantPast else {
+            return unavailable
+        }
+        guard self <= Date.distantFuture else {
+            return unavailable
+        }
 
         var info = tm()
         var time = time_t(self.timeIntervalSince1970)
