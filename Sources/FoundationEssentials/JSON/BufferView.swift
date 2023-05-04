@@ -102,8 +102,6 @@ extension BufferView:
     RandomAccessCollection {
 
     typealias Element = Element
-    // Index is already defined
-    // typealias Index = BufferViewIndex<Element>
     typealias SubSequence = Self
 
     @inline(__always)
