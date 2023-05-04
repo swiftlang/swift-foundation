@@ -14,12 +14,14 @@
 // contains initialized `Element` instances.
 
 internal struct BufferView<Element> {
-    let start: BufferViewIndex<Element>
+    typealias Index = BufferViewIndex<Element>
+
+    let start: Index
     let count: Int
 
     private var baseAddress: UnsafeRawPointer { start._rawValue }
 
-    init(start index: BufferViewIndex<Element>, count: Int) {
+    init(start index: Index, count: Int) {
         precondition(count >= 0, "Count must not be negative")
         if !_isPOD(Element.self) {
             precondition(
@@ -100,7 +102,8 @@ extension BufferView:
     RandomAccessCollection {
 
     typealias Element = Element
-    typealias Index = BufferViewIndex<Element>
+    // Index is already defined
+    // typealias Index = BufferViewIndex<Element>
     typealias SubSequence = Self
 
     @inline(__always)
@@ -379,7 +382,7 @@ extension BufferView {
         return BufferView(start: start, count: nc)
     }
 
-    func prefix(upTo index: BufferViewIndex<Element>) -> BufferView {
+    func prefix(upTo index: Index) -> BufferView {
         _checkBounds(Range(uncheckedBounds: (startIndex, index)))
         return BufferView(
             start: start,
@@ -387,7 +390,7 @@ extension BufferView {
         )
     }
 
-    func suffix(from index: BufferViewIndex<Element>) -> BufferView {
+    func suffix(from index: Index) -> BufferView {
         _checkBounds(Range(uncheckedBounds: (index, endIndex)))
         return BufferView(
             start: index,
