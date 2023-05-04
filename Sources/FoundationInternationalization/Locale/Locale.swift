@@ -971,27 +971,26 @@ public struct Locale : Hashable, Equatable, Sendable {
             
             // Identifier keywords must be ASCII a-z, A-Z, 0-9
             // They are normalized to all-lowercase
-            var ok = true
-            var correctedKey = key.utf8.map { c in
-                if 0x41 <= c && c <= 0x5a {
+            var correctedKey : [CChar] = []
+            for char in key.utf8 {
+                if (0x41...0x5a).contains(char) {
                     // A-Z
                     // Convert to lowercase by adding 0x20
-                    return CChar(c + 0x20)
-                } else if 0x61 <= c && c <= 0x7a {
+                    correctedKey.append(CChar(char + 0x20))
+                } else if (0x61...0x7a).contains(char) {
                     // a-z
-                    return CChar(c)
-                } else if 0x30 <= c && c <= 0x39 {
+                    correctedKey.append(CChar(char))
+                } else if (0x30...0x39).contains(char) {
                     // 0-9
-                    return CChar(c)
+                    correctedKey.append(CChar(char))
                 } else {
-                    ok = false
-                    return CChar(0)
+                    // Skip this key
+                    return nil
                 }
             }
             // null-terminate
             correctedKey.append(CChar(0))
             
-            guard ok else { return nil }
             let correctedKeyString = String(cString: correctedKey)
             
             // Values must be non-empty
