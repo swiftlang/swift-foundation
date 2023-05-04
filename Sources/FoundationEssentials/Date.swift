@@ -250,19 +250,19 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         // That's more than Date currently supports.
         let bufferSize = 128
         return withUnsafeTemporaryAllocation(of: CChar.self, capacity: bufferSize) { buffer -> String in
-           guard let ptr = buffer.baseAddress else {
-              return unavailable
-           }
+            guard let ptr = buffer.baseAddress else {
+                return unavailable
+            }
 
-           guard strftime(ptr, bufferSize, format, &info) != 0 else {
-              return unavailable
-           }
+            guard strftime(ptr, bufferSize, format, &info) != 0 else {
+                return unavailable
+            }
 
-           guard let result = String(validatingUTF8: ptr) else {
-              return unavailable
-           }
+            guard let result = String(validatingUTF8: ptr) else {
+                return unavailable
+            }
 
-           return result
+            return result
         }
     }
 #endif // !FOUNDATION_FRAMEWORK
