@@ -249,7 +249,7 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         // This allocates stack space for range of 10^102 years
         // That's more than Date currently supports.
         let bufferSize = 128
-        return withUnsafeTemporaryAllocation(of: CChar.self, capacity: bufferSize) { buffer -> String in
+        return withUnsafeTemporaryAllocation(of: CChar.self, capacity: bufferSize) { buffer in
             guard let ptr = buffer.baseAddress else {
                 return unavailable
             }
