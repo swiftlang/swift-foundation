@@ -11,7 +11,7 @@
 
 typedef struct {
     uint32_t _numPlanes;
-    const uint8_t **_planes;
+    uint8_t const * const * const _planes;
 } __CFUniCharBitmapData;
 
 #endif /* _cfunichar_bitmap_data_h */
