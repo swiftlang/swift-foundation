@@ -18,7 +18,7 @@ import _RopeModule
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    public struct Runs : Sendable {
+    public struct Runs: Sendable {
         internal typealias _InternalRun = AttributedString._InternalRun
         internal typealias _AttributeStorage = AttributedString._AttributeStorage
         internal typealias AttributeRunBoundaries = AttributedString.AttributeRunBoundaries
@@ -27,9 +27,9 @@ extension AttributedString {
         internal var _range: Range<AttributedString.Index>
         internal var _runRange: Range<AttributedString.Runs.Index>
 
-        internal init(_ g: Guts, _ r: Range<AttributedString.Index>) {
-            _guts = g
-            _range = r
+        internal init(_ guts: Guts, _ range: Range<AttributedString.Index>) {
+            _guts = guts
+            _range = range
             let startRun = _guts.indexOfRun(at: _range.lowerBound)
             let endRun: AttributedString.Runs.Index
             if _range.upperBound == _guts.endIndex {
@@ -106,7 +106,7 @@ extension AttributedString.Runs: Equatable {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs: CustomStringConvertible {
     public var description: String {
-        AttributedSubstring(_guts, _range).description
+        AttributedSubstring(_guts, in: _range).description
     }
 }
 

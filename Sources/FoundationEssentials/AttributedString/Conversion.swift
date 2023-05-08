@@ -25,12 +25,7 @@ extension String {
         self.init(characters._characters)
     }
 
-    #if true // FIXME: Make this public.
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-    internal init(_characters: AttributedString.CharacterView) {
-        self.init(_characters._characters)
-    }
-    #else
+    #if false // FIXME: Make this public.
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     @_alwaysEmitIntoClient
     public init(_ characters: AttributedString.CharacterView) {
@@ -42,13 +37,13 @@ extension String {
         // the original AttributedString release.
         self.init(characters[...])
     }
+    #endif
 
     @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
     @usableFromInline
     internal init(_characters: AttributedString.CharacterView) {
         self.init(_characters._characters)
     }
-    #endif
 }
 
 #if FOUNDATION_FRAMEWORK
