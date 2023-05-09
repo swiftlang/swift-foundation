@@ -14,8 +14,6 @@
 // contains initialized `Element` instances.
 
 internal struct BufferView<Element> {
-    typealias Index = BufferViewIndex<Element>
-
     let start: Index
     let count: Int
 
@@ -102,6 +100,7 @@ extension BufferView:
     RandomAccessCollection {
 
     typealias Element = Element
+    typealias Index = BufferViewIndex<Element>
     typealias SubSequence = Self
 
     @inline(__always)
