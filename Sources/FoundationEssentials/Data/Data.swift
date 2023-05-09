@@ -63,8 +63,9 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
         )
         withUnsafeMutableBytes(of: &buffer) { buffer in
             assert(buffer.count == inlineCount)
-            let start = buffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-            body(UnsafeMutableBufferPointer(start: start, count: capacity))
+            buffer.withMemoryRebound(to: UInt8.self) {
+                body(UnsafeMutableBufferPointer(start: $0.baseAddress, count: capacity))
+            }
         }
         return
     }
@@ -288,7 +289,8 @@ internal final class __DataStorage : @unchecked Sendable {
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.
     func enumerateBytes(in range: Range<Int>, _ block: (_ buffer: UnsafeBufferPointer<UInt8>, _ byteIndex: Data.Index, _ stop: inout Bool) -> Void) {
         var stopv: Bool = false
-        block(UnsafeBufferPointer<UInt8>(start: _bytes?.advanced(by: range.lowerBound - _offset).assumingMemoryBound(to: UInt8.self), count: Swift.min(range.upperBound - range.lowerBound, _length)), 0, &stopv)
+        let buffer = UnsafeRawBufferPointer(start: _bytes, count: Swift.min(range.upperBound - range.lowerBound, _length))
+        buffer.withMemoryRebound(to: UInt8.self) { block($0, 0, &stopv) }
     }
 
     @inlinable // This is @inlinable as it does not escape the _DataStorage boundary layer.
@@ -319,13 +321,15 @@ internal final class __DataStorage : @unchecked Sendable {
 
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.
     func get(_ index: Int) -> UInt8 {
-        return _bytes!.advanced(by: index - _offset).assumingMemoryBound(to: UInt8.self).pointee
+        // index must have already been validated by the caller
+        return _bytes!.load(fromByteOffset: index - _offset, as: UInt8.self)
     }
 
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.
     func set(_ index: Int, to value: UInt8) {
+        // index must have already been validated by the caller
         ensureUniqueBufferReference()
-        _bytes!.advanced(by: index - _offset).assumingMemoryBound(to: UInt8.self).pointee = value
+        _bytes!.storeBytes(of: value, toByteOffset: index - _offset, as: UInt8.self)
     }
 
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is trivially computed.
@@ -1417,7 +1421,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             case .inline(let inline):
                 inline.withUnsafeBytes {
                     var stop = false
-                    block(UnsafeBufferPointer<UInt8>(start: $0.baseAddress?.assumingMemoryBound(to: UInt8.self), count: $0.count), 0, &stop)
+                    $0.withMemoryRebound(to: UInt8.self) { block($0, 0, &stop) }
                 }
             case .slice(let slice):
                 slice.storage.enumerateBytes(in: slice.range, block)
@@ -1871,9 +1875,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         let underestimatedCount = elements.underestimatedCount
         _representation = _Representation(count: underestimatedCount)
         var (iter, endIndex): (S.Iterator, Int) = _representation.withUnsafeMutableBytes { buffer in
-            let start = buffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-            let b = UnsafeMutableBufferPointer(start: start, count: buffer.count)
-            return elements._copyContents(initializing: b)
+            buffer.withMemoryRebound(to: UInt8.self) {
+                elements._copyContents(initializing: $0)
+            }
         }
         guard endIndex == _representation.count else {
             // We can't trap here. We have to allow an underfilled buffer
@@ -2107,9 +2111,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         resetBytes(in: self.endIndex ..< self.endIndex + underestimatedCount)
         var (iter, copiedCount): (S.Iterator, Int) = _representation.withUnsafeMutableBytes { buffer in
             assert(buffer.count == originalCount + underestimatedCount)
-            let start = buffer.baseAddress!.assumingMemoryBound(to: UInt8.self) + originalCount
-            let b = UnsafeMutableBufferPointer(start: start, count: buffer.count - originalCount)
-            return elements._copyContents(initializing: b)
+            let start = buffer.baseAddress?.advanced(by: originalCount)
+            let b = UnsafeMutableRawBufferPointer(start: start, count: buffer.count - originalCount)
+            return b.withMemoryRebound(to: UInt8.self, elements._copyContents(initializing:))
         }
         guard copiedCount == underestimatedCount else {
             // We can't trap here. We have to allow an underfilled buffer
@@ -2371,9 +2375,11 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 
             let bufferSize = MemoryLayout<Buffer>.size
             Swift.withUnsafeMutableBytes(of: &_buffer) {
-                let ptr = $0.bindMemory(to: UInt8.self)
-                let bufferIdx = (loc - data.startIndex) % bufferSize
-                data.copyBytes(to: ptr, from: (loc - bufferIdx)..<(data.endIndex - (loc - bufferIdx) > bufferSize ? (loc - bufferIdx) + bufferSize : data.endIndex))
+                $0.withMemoryRebound(to: UInt8.self) { [endIndex = data.endIndex] buf in
+                    let bufferIdx = (loc - data.startIndex) % bufferSize
+                    let end = (endIndex - (loc - bufferIdx) > bufferSize) ? (loc - bufferIdx + bufferSize) : endIndex
+                    data.copyBytes(to: buf, from: (loc - bufferIdx)..<end)
+                }
             }
         }
 
@@ -2390,16 +2396,16 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             if bufferIdx == 0 {
                 var buffer = _buffer
                 Swift.withUnsafeMutableBytes(of: &buffer) {
-                    let ptr = $0.bindMemory(to: UInt8.self)
-                    // populate the buffer
-                    _data.copyBytes(to: ptr, from: idx..<(_endIdx - idx > bufferSize ? idx + bufferSize : _endIdx))
+                    $0.withMemoryRebound(to: UInt8.self) {
+                        // populate the buffer
+                        _data.copyBytes(to: $0, from: idx..<(_endIdx - idx > bufferSize ? idx + bufferSize : _endIdx))
+                    }
                 }
                 _buffer = buffer
             }
 
             return Swift.withUnsafeMutableBytes(of: &_buffer) {
-                let ptr = $0.bindMemory(to: UInt8.self)
-                return ptr[bufferIdx]
+                $0.load(fromByteOffset: bufferIdx, as: UInt8.self)
             }
         }
     }
