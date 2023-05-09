@@ -22,7 +22,7 @@ extension UUID : ReferenceConvertible {
 
      @_semantics("convertToObjectiveC")
      public func _bridgeToObjectiveC() -> NSUUID {
-         return _NSSwiftUUID(value: self)
+         return __NSConcreteUUID(value: self)
      }
 
      public static func _forceBridgeFromObjectiveC(_ x: NSUUID, result: inout UUID?) {
@@ -33,7 +33,7 @@ extension UUID : ReferenceConvertible {
 
      public static func _conditionallyBridgeFromObjectiveC(_ input: NSUUID, result: inout UUID?) -> Bool {
          // Is this NSUUID already backed by a UUID?
-         guard let swiftInput = input as? _NSSwiftUUID else {
+         guard let swiftInput = input as? __NSConcreteUUID else {
              // Fallback to using bytes
              var bytes = uuid_t(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
              input.getBytes(&bytes)
@@ -62,8 +62,8 @@ extension NSUUID : _HasCustomAnyHashableRepresentation {
     }
 }
 
-@objc(_NSSwiftUUID)
-internal class _NSSwiftUUID : _NSUUIDBridge {
+@objc(__NSConcreteUUID)
+internal class __NSConcreteUUID : _NSUUIDBridge {
     final var _storage: UUID
 
     fileprivate init(value: Foundation.UUID) {
