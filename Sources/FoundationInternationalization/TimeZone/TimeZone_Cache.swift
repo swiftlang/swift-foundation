@@ -21,7 +21,9 @@ import Glibc
 @_implementationOnly import CoreFoundation_Private.CFNotificationCenter
 #endif
 
+#if canImport(FoundationInternals)
 package import FoundationInternals
+#endif
 
 /// Singleton which listens for notifications about preference changes for TimeZone and holds cached values for current, fixed time zones, etc.
 struct TimeZoneCache : Sendable {

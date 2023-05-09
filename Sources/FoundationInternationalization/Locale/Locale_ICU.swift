@@ -21,8 +21,11 @@ import FoundationEssentials
 @_implementationOnly import os
 #endif
 
-@_implementationOnly import FoundationICU
+#if canImport(FoundationInternals)
 package import FoundationInternals
+#endif
+
+@_implementationOnly import FoundationICU
 
 let MAX_ICU_NAME_SIZE: Int32 = 1024
 

@@ -10,8 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_implementationOnly import FoundationICU
+#if canImport(FoundationInternals)
 package import FoundationInternals
+#endif
+
+@_implementationOnly import FoundationICU
 
 extension ICU {
     final class CaseMap : @unchecked Sendable {

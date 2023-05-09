@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(FoundationInternals)
 package import FoundationInternals
+#endif
 
 struct RegexPatternCache: @unchecked Sendable {
     private struct Key : Sendable, Hashable {

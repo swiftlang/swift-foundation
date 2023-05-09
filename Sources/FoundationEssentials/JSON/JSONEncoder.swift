@@ -23,7 +23,9 @@
 @_objcRuntimeName(_TtC10Foundation13__JSONEncoder)
 #endif
 
+#if canImport(FoundationInternals)
 package import FoundationInternals
+#endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 open class JSONEncoder {
