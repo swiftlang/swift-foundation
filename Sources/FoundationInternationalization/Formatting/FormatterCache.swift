@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+package import FoundationInternals
+
 internal struct FormatterCache<Format : Hashable & Sendable, FormattingType: Sendable>: Sendable {
 
     let countLimit = 100

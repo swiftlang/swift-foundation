@@ -14,11 +14,9 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#elseif canImport(FoundationInternationalization)
-@testable import FoundationInternationalization
-#endif // FOUNDATION_FRAMEWORK
+#if canImport(FoundationInternals)
+@testable import FoundationInternals
+#endif
 
 final class LockedStateTests : XCTestCase {
     final class TestObject {}

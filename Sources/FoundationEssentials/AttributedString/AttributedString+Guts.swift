@@ -16,6 +16,8 @@
 import _RopeModule
 #endif
 
+package import FoundationInternals
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
     internal struct _InternalRun : Hashable, Sendable {

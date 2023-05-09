@@ -19,6 +19,7 @@ import Glibc
 #endif
 
 @_implementationOnly import FoundationICU
+package import FoundationInternals
 
 internal final class _Calendar: Equatable, @unchecked Sendable {
     let lock: LockedState<Void>

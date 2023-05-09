@@ -16,7 +16,7 @@
 import Glibc
 #endif
 
-internal struct LockedState<State> {
+public struct LockedState<State> {
 
     // Internal implementation for a cheap lock to aid sharing code across platforms
     private struct _Lock {
@@ -71,7 +71,7 @@ internal struct LockedState<State> {
 
     private let _buffer: ManagedBuffer<State, _Lock.Primitive>
 
-    init(initialState: State) {
+    public init(initialState: State) {
         _buffer = _Buffer.create(minimumCapacity: 1, makingHeaderWith: { buf in
             buf.withUnsafeMutablePointerToElements {
                 _Lock.initialize($0)
@@ -80,11 +80,11 @@ internal struct LockedState<State> {
         })
     }
 
-    func withLock<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
+    public func withLock<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
         try withLockUnchecked(body)
     }
     
-    func withLockUnchecked<T>(_ body: (inout State) throws -> T) rethrows -> T {
+    public func withLockUnchecked<T>(_ body: (inout State) throws -> T) rethrows -> T {
         try _buffer.withUnsafeMutablePointers { state, lock in
             _Lock.lock(lock)
             defer { _Lock.unlock(lock) }
@@ -93,7 +93,7 @@ internal struct LockedState<State> {
     }
 
     // Ensures the managed state outlives the locked `body`.
-    func withLockExtendingLifetimeOfState<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
+    public func withLockExtendingLifetimeOfState<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
         try withLockUnchecked { state in
             try withExtendedLifetime(state) {
                 try body(&state)
@@ -103,23 +103,23 @@ internal struct LockedState<State> {
 }
 
 extension LockedState where State == Void {
-    init() {
+    public init() {
         self.init(initialState: ())
     }
 
-    func withLock<R: Sendable>(_ body: @Sendable () throws -> R) rethrows -> R {
+    public func withLock<R: Sendable>(_ body: @Sendable () throws -> R) rethrows -> R {
         return try withLock { _ in
             try body()
         }
     }
 
-    func lock() {
+    public func lock() {
         _buffer.withUnsafeMutablePointerToElements { lock in
             _Lock.lock(lock)
         }
     }
 
-    func unlock() {
+    public func unlock() {
         _buffer.withUnsafeMutablePointerToElements { lock in
             _Lock.unlock(lock)
         }

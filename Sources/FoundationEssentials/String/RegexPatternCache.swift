@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+package import FoundationInternals
+
 struct RegexPatternCache: @unchecked Sendable {
     private struct Key : Sendable, Hashable {
         var pattern: String

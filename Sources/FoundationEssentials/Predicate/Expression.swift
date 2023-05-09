@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+package import FoundationInternals
+
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public protocol PredicateExpression<Output> {
     associatedtype Output

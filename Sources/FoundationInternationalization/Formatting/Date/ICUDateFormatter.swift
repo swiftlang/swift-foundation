@@ -15,6 +15,7 @@ import FoundationEssentials
 #endif
 
 @_implementationOnly import FoundationICU
+package import FoundationInternals
 
 typealias UChar = UInt16
 

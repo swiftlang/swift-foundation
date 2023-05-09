@@ -21,6 +21,8 @@ import CoreFoundation
 @_implementationOnly import _CShims
 #endif
 
+package import FoundationInternals
+
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
 struct LocaleCache : Sendable {
     struct State {

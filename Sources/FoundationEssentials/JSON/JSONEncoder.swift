@@ -22,6 +22,9 @@
 #if FOUNDATION_FRAMEWORK
 @_objcRuntimeName(_TtC10Foundation13__JSONEncoder)
 #endif
+
+package import FoundationInternals
+
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 open class JSONEncoder {
     // MARK: Options

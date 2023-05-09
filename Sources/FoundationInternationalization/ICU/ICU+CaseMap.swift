@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 @_implementationOnly import FoundationICU
+package import FoundationInternals
 
 extension ICU {
     final class CaseMap : @unchecked Sendable {
