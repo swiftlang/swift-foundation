@@ -104,7 +104,7 @@ extension String {
     public init?(data: __shared Data, encoding: Encoding) {
         if encoding == .utf8 || encoding == .ascii,
         let str = data.withUnsafeBytes({
-            String._tryFromUTF8($0.bindMemory(to: UInt8.self))
+            $0.withMemoryRebound(to: UInt8.self, String._tryFromUTF8(_:))
         }) {
             if encoding == .utf8 || (encoding == .ascii && str._guts._isContiguousASCII) {
                 self = str
