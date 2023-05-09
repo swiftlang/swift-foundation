@@ -15,7 +15,7 @@
 
 internal struct BufferView<Element> {
     let start: Index
-    let end: Index
+    let count: Int
 
     private var baseAddress: UnsafeRawPointer { start._rawValue }
 
@@ -28,7 +28,7 @@ internal struct BufferView<Element> {
             )
         }
         self.start = index
-        self.end = index.advanced(by: count)
+        self.count = count
     }
 
     init(baseAddress: UnsafeRawPointer, count: Int) {
@@ -107,10 +107,7 @@ extension BufferView:
     var startIndex: Index { start }
 
     @inline(__always)
-    var endIndex: Index { end }
-
-    @inline(__always)
-    var count: Int { start.distance(to: end) }
+    var endIndex: Index { start.advanced(by: count) }
 
     @inline(__always)
     var indices: Range<Index> {
