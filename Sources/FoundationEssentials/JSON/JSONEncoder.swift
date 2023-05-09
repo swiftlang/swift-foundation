@@ -364,7 +364,7 @@ open class JSONEncoder {
     }
     
     @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
-    open func encode<T : EncodableWithConfiguration, C : EncodingConfigurationProviding>(_ value: T, configuration: C.Type) throws -> Data where T.EncodingConfiguration == C.EncodingConfiguration {
+    open func encode<T, C>(_ value: T, configuration: C.Type) throws -> Data where T : EncodableWithConfiguration, C : EncodingConfigurationProviding, T.EncodingConfiguration == C.EncodingConfiguration {
         try encode(value, configuration: C.encodingConfiguration)
     }
     
