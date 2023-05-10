@@ -35,6 +35,7 @@ let package = Package(
         .target(name: "FoundationInternals"),
         .testTarget(name: "FoundationInternalsTests", dependencies: [
             "FoundationInternals",
+            "TestSupport",
         ]),
 
         // TestSupport (Internal)
