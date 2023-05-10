@@ -14,7 +14,11 @@
 import FoundationEssentials
 #endif
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 typealias CalendarComponentAndValue = (component: Calendar.Component, value: Int)
 

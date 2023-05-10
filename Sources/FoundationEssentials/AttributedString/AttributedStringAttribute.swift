@@ -14,7 +14,7 @@
 @_implementationOnly import ReflectionInternal
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 // MARK: AttributedStringKey API

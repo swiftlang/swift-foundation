@@ -15,10 +15,9 @@
 import CoreFoundation
 @_implementationOnly import CoreFoundation_Private.CFNotificationCenter
 @_implementationOnly import os
-#endif
-
-#if canImport(_CShims)
 @_implementationOnly import _CShims
+#else
+package import _CShims
 #endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
