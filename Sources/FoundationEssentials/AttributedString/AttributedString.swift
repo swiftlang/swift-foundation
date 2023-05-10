@@ -16,6 +16,10 @@
 import _RopeModule
 #endif
 
+#if canImport(FoundationInternals)
+package import FoundationInternals
+#endif
+
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributedString : Sendable {

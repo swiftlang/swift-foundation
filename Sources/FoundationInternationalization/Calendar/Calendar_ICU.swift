@@ -20,6 +20,10 @@ import Glibc
 
 @_implementationOnly import FoundationICU
 
+#if canImport(FoundationInternals)
+package import FoundationInternals
+#endif
+
 internal final class _Calendar: Equatable, @unchecked Sendable {
     let lock: LockedState<Void>
     let identifier: Calendar.Identifier
