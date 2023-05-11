@@ -17,10 +17,6 @@
 import CoreFoundation
 #endif
 
-#if canImport(FoundationInternals)
-package import FoundationInternals
-#endif
-
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.
 struct CalendarCache : Sendable {
     struct State {
