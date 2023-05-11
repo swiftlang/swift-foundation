@@ -30,14 +30,6 @@ let package = Package(
 
         // _CShims (Internal)
         .target(name: "_CShims"),
-
-        // FoundationInternals (Internal)
-        .target(name: "FoundationInternals"),
-        .testTarget(name: "FoundationInternalsTests", dependencies: [
-            "FoundationInternals",
-            "TestSupport",
-        ]),
-
         // TestSupport (Internal)
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
@@ -46,16 +38,12 @@ let package = Package(
 
         // FoundationEssentials
         .target(
-            name: "FoundationEssentials",
-            dependencies: [
-                "_CShims",
-                "FoundationInternals",
-                .product(name: "_RopeModule", package: "swift-collections"),
-            ],
-            swiftSettings: [
-                .enableExperimentalFeature("VariadicGenerics"),
-                .enableExperimentalFeature("AccessLevelOnImport"),
-            ]
+          name: "FoundationEssentials",
+          dependencies: [
+            "_CShims",
+            .product(name: "_RopeModule", package: "swift-collections"),
+          ],
+          swiftSettings: [.enableExperimentalFeature("VariadicGenerics")]
         ),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
@@ -63,19 +51,11 @@ let package = Package(
         ]),
 
         // FoundationInternationalization
-        .target(
-            name: "FoundationInternationalization",
-            dependencies: [
-                .target(name: "FoundationEssentials"),
-                .target(name: "_CShims"),
-                .target(name: "FoundationInternals"),
-                .product(name: "FoundationICU", package: "swift-foundation-icu"),
-            ],
-            swiftSettings: [
-                .enableExperimentalFeature("AccessLevelOnImport"),
-            ]
-        ),
-
+        .target(name: "FoundationInternationalization", dependencies: [
+            .target(name: "FoundationEssentials"),
+            .target(name: "_CShims"),
+            .product(name: "FoundationICU", package: "swift-foundation-icu")
+        ]),
         .testTarget(name: "FoundationInternationalizationTests", dependencies: [
             "TestSupport",
             "FoundationInternationalization"

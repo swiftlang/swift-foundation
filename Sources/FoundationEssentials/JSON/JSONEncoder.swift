@@ -14,10 +14,6 @@
 // JSON Encoder
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationInternals)
-package import FoundationInternals
-#endif
-
 /// `JSONEncoder` facilitates the encoding of `Encodable` values into JSON.
 // NOTE: older overlays had Foundation.JSONEncoder as the ObjC name.
 // The two must coexist, so it was renamed. The old name must not be

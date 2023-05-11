@@ -18,10 +18,6 @@ import FoundationEssentials
 import Glibc
 #endif
 
-#if canImport(FoundationInternals)
-package import FoundationInternals
-#endif
-
 @_implementationOnly import FoundationICU
 
 let MIN_TIMEZONE_UDATE = -2177452800000.0  // 1901-01-01 00:00:00 +0000
