@@ -92,11 +92,13 @@ internal struct LockedState<State> {
         }
     }
 
-    // Ensures the managed state outlives the locked `body`.
+    // Ensures the managed state outlives the locked scope.
     func withLockExtendingLifetimeOfState<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
-        try withLockUnchecked { state in
-            try withExtendedLifetime(state) {
-                try body(&state)
+        try _buffer.withUnsafeMutablePointers { state, lock in
+            _Lock.lock(lock)
+            return try withExtendedLifetime(state.pointee) {
+                defer { _Lock.unlock(lock) }
+                return try body(&state.pointee)
             }
         }
     }
