@@ -318,9 +318,8 @@ final class NumberFormatStyleTests: XCTestCase {
     }
 
     func testDecimal_withCustomShorthand() throws {
-        guard Locale.autoupdatingCurrent.identifier == "en_US" else {
-            print("Your current locale is \(Locale.autoupdatingCurrent). Set it to en_US to run this test")
-            return
+        guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
+            throw XCTSkip("This test can only be run with the system set to the en_US language")
         }
         XCTAssertEqual((12345 as Decimal).formatted(.number.grouping(.never)), "12345")
         XCTAssertEqual((12345.678 as Decimal).formatted(.percent.sign(strategy: .always())), "+1,234,567.8%")
@@ -328,9 +327,8 @@ final class NumberFormatStyleTests: XCTestCase {
     }
 
     func testDecimal_withShorthand_enUS() throws {
-        guard Locale.autoupdatingCurrent.identifier == "en_US" else {
-            print("Your current locale is \(Locale.autoupdatingCurrent). Set it to en_US to run this test")
-            return
+        guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
+            throw XCTSkip("This test can only be run with the system set to the en_US language")
         }
 
         XCTAssertEqual((12345 as Decimal).formatted(.number), "12,345")
@@ -368,9 +366,8 @@ final class NumberFormatStyleTests: XCTestCase {
     }
 
     func testDecimal_default_enUS() throws {
-        guard Locale.autoupdatingCurrent == Locale(identifier: "en_US") else {
-            print("Set the current locale to en_US to run this test")
-            return
+        guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
+            throw XCTSkip("This test can only be run with the system set to the en_US language")
         }
         XCTAssertEqual((12345 as Decimal).formatted(), "12,345")
         XCTAssertEqual((12345.678 as Decimal).formatted(), "12,345.678")
@@ -1544,7 +1541,6 @@ final class FormatStylePatternMatchingTests : XCTestCase {
         // Different locale
         let frenchString = "42 %"
         let formatted = style.locale(frFR).format(42)
-        print("formatted: \(formatted)")
         _verifyMatching(frenchString, formatStyle: style.locale(frFR), expectedUpperBound: frenchString.endIndex, expectedValue: 42)
         _verifyMatching("\(frenchString) pommes", formatStyle: style.locale(frFR), expectedUpperBound: frenchString.endIndex, expectedValue: 42)
         let newFrenchStr = "pommes \(frenchString)"
