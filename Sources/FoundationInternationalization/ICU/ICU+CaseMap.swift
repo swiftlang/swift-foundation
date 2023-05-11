@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationInternals)
-package import FoundationInternals
-#endif
-
 @_implementationOnly import FoundationICU
 
 extension ICU {
