@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 // MARK: AttributedStringKey

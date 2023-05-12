@@ -16,7 +16,7 @@
 @_implementationOnly import Foundation_Private.NSAttributedString
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)

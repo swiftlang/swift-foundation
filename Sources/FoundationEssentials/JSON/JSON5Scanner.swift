@@ -16,7 +16,12 @@ import Darwin
 import Glibc
 #endif
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import _CShims
+#else
+package import _CShims
+#endif
+
 
 internal struct JSON5Scanner {
     let options: Options

@@ -10,7 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 extension ICU {
     final class CaseMap : @unchecked Sendable {

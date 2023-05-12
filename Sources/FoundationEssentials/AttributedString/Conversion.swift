@@ -16,7 +16,7 @@ import Darwin
 @_implementationOnly import os
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 extension String {

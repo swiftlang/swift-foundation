@@ -59,7 +59,11 @@ import Darwin
 import Glibc
 #endif // canImport(Darwin)
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import _CShims
+#else
+package import _CShims
+#endif
 
 internal class JSONMap {
     enum TypeDescriptor : Int {

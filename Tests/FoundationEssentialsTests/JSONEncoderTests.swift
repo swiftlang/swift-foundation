@@ -29,7 +29,7 @@ import TestSupport
 #endif
 
 #if canImport(_CShims)
-@_implementationOnly import _CShims
+import _CShims
 #endif
 
 // MARK: - Test Suite
