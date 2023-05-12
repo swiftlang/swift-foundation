@@ -10,11 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_implementationOnly import FoundationICU
 
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import _ForSwiftFoundation
+@_implementationOnly import FoundationICU
 import CoreFoundation
+#else
+package import FoundationICU
 #endif
 
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.

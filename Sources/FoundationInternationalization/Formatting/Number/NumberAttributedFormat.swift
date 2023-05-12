@@ -13,8 +13,11 @@
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
-
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.Symbol {
     init?(unumberFormatField: UNumberFormatFields) {
