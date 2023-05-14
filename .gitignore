@@ -89,5 +89,8 @@ fastlane/test_output
 
 iOSInjectionProject/
 
+# vim swap files
+.*.sw?
+
 .DS_Store
 /.swiftpm
