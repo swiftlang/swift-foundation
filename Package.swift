@@ -29,8 +29,10 @@ let package = Package(
             path: "Sources/Foundation"),
 
         // _CShims (Internal)
-        .target(name: "_CShims"),
-        
+        .target(name: "_CShims",
+                cSettings: [.define("_CRT_SECURE_NO_WARNINGS",
+                                    .when(platforms: [.windows]))]),
+
         // TestSupport (Internal)
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
