@@ -21,7 +21,7 @@ struct _ThreadLocal {
 #if canImport(Darwin) || canImport(Glibc)
     fileprivate typealias PlatformKey = pthread_key_t
 #elseif canImport(WinSDK)
-    fileprivate typealias PlatformKey = UInt
+    fileprivate typealias PlatformKey = DWORD
 #endif
     
     struct Key<Value> {
