@@ -19,7 +19,6 @@
 #if canImport(TestSupport)
 import TestSupport
 #endif // canImport(TestSupport)
-
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
 #endif
@@ -28,8 +27,8 @@ import TestSupport
 @testable import Foundation
 #endif
 
-#if canImport(_CShims)
-import _CShims
+#if canImport(RustShims)
+import RustShims
 #endif
 
 // MARK: - Test Suite
@@ -166,7 +165,7 @@ final class JSONEncoderTests : XCTestCase {
     func x_testEncodingDate() {
 
         func formattedLength(of value: Double) -> Int {
-        #if canImport(_CShims)
+        #if canImport(RustShims)
             return Int(_cshims_get_formatted_str_length(value))
         #else
             let empty = UnsafeMutablePointer<Int8>.allocate(capacity: 0)
@@ -2415,7 +2414,7 @@ extension JSONEncoderTests {
         case .json5:
             XCTAssertNoThrow(try json5.decode(type, from: jsonData))
 
-            // Regular JSON decoder should throw.
+            // Regular JSON decoder should throw.
             do {
                 let val = try json.decode(type, from: jsonData)
                 XCTFail("Expected decode failure (original JSON)for test \(name).\(ext), but got: \(val)")
@@ -2427,7 +2426,7 @@ extension JSONEncoderTests {
                 XCTFail("Expected decode failure (JSON5) for test \(name).\(ext), but got: \(val)")
             } catch { }
 
-            // Regular JSON decoder should also throw.
+            // Regular JSON decoder should also throw.
             do {
                 let val = try json.decode(type, from: jsonData)
                 XCTFail("Expected decode failure (original JSON) for test \(name).\(ext), but got: \(val)")
@@ -2439,7 +2438,7 @@ extension JSONEncoderTests {
                 XCTFail("Expected decode failure (JSON5) for test \(name).\(ext), but got: \(val)")
             } catch { }
 
-            // Regular JSON decoder should also throw.
+            // Regular JSON decoder should also throw.
             do {
                 let val = try json.decode(type, from: jsonData)
                 XCTFail("Expected decode failure (original JSON) for test \(name).\(ext), but got: \(val)")

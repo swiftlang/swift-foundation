@@ -1,0 +1,5 @@
+module RustShims [system] {
+    umbrella header "rustshims.h"
+	link "rustshims"
+    export *
+}

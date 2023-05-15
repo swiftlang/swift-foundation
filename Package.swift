@@ -28,8 +28,14 @@ let package = Package(
             ],
             path: "Sources/Foundation"),
 
-        // _CShims (Internal)
-        .target(name: "_CShims"),
+        // RustShims (Internal)
+        .target(
+            name: "RustShims",
+            plugins: [.plugin(name: "RustShimsSourceGenPlugin")]),
+        .plugin(
+            name: "RustShimsSourceGenPlugin",
+            capability: .buildTool()
+        ),
         
         // TestSupport (Internal)
         .target(name: "TestSupport", dependencies: [
@@ -41,13 +47,14 @@ let package = Package(
         .target(
           name: "FoundationEssentials",
           dependencies: [
-            "_CShims",
+            "RustShims",
             .product(name: "_RopeModule", package: "swift-collections"),
           ],
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
-          ]
+          ],
+          linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])]
         ),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
@@ -59,12 +66,13 @@ let package = Package(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
-                .target(name: "_CShims"),
+                .target(name: "RustShims"),
                 .product(name: "FoundationICU", package: "swift-foundation-icu")
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ]
+            ],
+            linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])]
         ),
         .testTarget(name: "FoundationInternationalizationTests", dependencies: [
             "TestSupport",

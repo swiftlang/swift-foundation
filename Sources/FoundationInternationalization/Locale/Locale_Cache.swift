@@ -15,9 +15,9 @@
 import CoreFoundation
 @_implementationOnly import CoreFoundation_Private.CFNotificationCenter
 @_implementationOnly import os
-@_implementationOnly import _CShims
+@_implementationOnly import RustShims
 #else
-package import _CShims
+package import RustShims
 #endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.

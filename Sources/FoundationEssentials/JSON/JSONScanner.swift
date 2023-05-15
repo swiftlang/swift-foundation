@@ -60,9 +60,9 @@ import Glibc
 #endif // canImport(Darwin)
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims
+@_implementationOnly import RustShims
 #else
-package import _CShims
+package import RustShims
 #endif
 
 internal class JSONMap {

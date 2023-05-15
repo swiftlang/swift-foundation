@@ -10,9 +10,9 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims // uuid.h
+@_implementationOnly import RustShims // uuid.h
 #else
-package import _CShims // uuid.h
+package import RustShims // uuid.h
 #endif
 
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
