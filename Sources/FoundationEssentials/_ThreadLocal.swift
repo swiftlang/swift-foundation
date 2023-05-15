@@ -10,9 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly
-#endif
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
