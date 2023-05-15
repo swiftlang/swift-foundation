@@ -108,7 +108,7 @@ extension NSLocale {
     @objc(_localeIdentifierFromComponents:)
     class func _localeIdentifier(fromComponents dict: [String : Any]) -> String {
         // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar". We call through to a compatibility version of `Locale.identifier(fromComponents:)` to support this.
-        Locale.identifier(fromComponents: dict)
+        Locale.identifier(fromAnyComponents: dict)
     }
 
     @available(macOS, deprecated: 13) @available(iOS, deprecated: 16) @available(tvOS, deprecated: 16) @available(watchOS, deprecated: 9)
