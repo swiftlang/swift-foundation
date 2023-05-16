@@ -17,32 +17,29 @@ public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8
 public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     public private(set) var uuid: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
-    /* Create a new UUID with RFC 4122 version 4 random bytes */
-    public init() {
-        var randomBits = (0 ... 15).map { _ in UInt8.random(in: .min ... .max) }
-        randomBits[6] = (randomBits[6] & 0x0F) | 0x40
-        randomBits[8] = (randomBits[8] & 0x3F) | 0x80
+    public enum Version {
+        case v4
+    }
 
-        uuid = randomBits.withUnsafeBytes { buffer in
-            return buffer.bindMemory(to: uuid_t.self)[0]
+    /* Create a new UUID with RFC 4122 version 4 random bytes */
+    public init(version: Version = .v4) {
+        switch version {
+            case .v4:
+                self.uuid = Self.v4_generatedRandom()
         }
     }
 
     /// Create a UUID from a string such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".
     ///
     /// Returns nil for invalid strings.
-    public init?(uuidString string: __shared String) {
-        let components = string
-            .replacing("-", with: "")
-            .split(by: 2)
-            .compactMap { UInt8($0, radix: 16) }
+    public init?(version: Version = .v4, uuidString string: __shared String) {
+        switch version {
+            case .v4:
+                guard let parsedResult = Self.v4_parse(uuidString: uuidString) else {
+                    return nil
+                }
 
-        guard components.count == 16 else {
-            return nil
-        }
-
-        uuid = components.withUnsafeBytes { buffer in
-            return buffer.bindMemory(to: uuid_t.self)[0]
+                self.uuid = parsedResult
         }
     }
 
@@ -150,20 +147,5 @@ extension UUID : Comparable {
         }
 
         return result < 0
-    }
-}
-
-private extension String {
-    func split(by length: Int) -> [String] {
-        var startIndex = self.startIndex
-        var results = [Substring]()
-
-        while startIndex < self.endIndex {
-            let endIndex = self.index(startIndex, offsetBy: length, limitedBy: self.endIndex) ?? self.endIndex
-            results.append(self[startIndex..<endIndex])
-            startIndex = endIndex
-        }
-
-        return results.map { String($0) }
     }
 }
