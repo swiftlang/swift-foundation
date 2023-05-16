@@ -18,7 +18,11 @@ import FoundationEssentials
 import Glibc
 #endif
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 internal final class _Calendar: Equatable, @unchecked Sendable {
     let lock: LockedState<Void>

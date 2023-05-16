@@ -14,7 +14,7 @@
 @_implementationOnly import ReflectionInternal
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 // MARK: AttributedStringKey API
@@ -126,23 +126,6 @@ extension AttributedStringKey {
 
 // MARK: Attribute Scopes
 
-// Developers can also add the attributes to pre-defined scopes of attributes, which are used to provide type information to the encoding and decoding of AttributedString values, as well as allow for dynamic member lookup in Runs of AttributedStrings.
-// Example, where ForegroundColor is an existing AttributedStringKey:
-// struct MyAttributes : AttributeScope {
-//     var foregroundColor : ForegroundColor
-// }
-// An AttributeScope can contain other scopes as well.
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding {
-    static var decodingConfiguration: AttributeScopeCodableConfiguration { get }
-    static var encodingConfiguration: AttributeScopeCodableConfiguration { get }
-}
-
-@_nonSendable
-@frozen
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public enum AttributeScopes { }
-
 @_nonSendable
 @dynamicMemberLookup @frozen
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -179,14 +162,9 @@ public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
 #if FOUNDATION_FRAMEWORK
     // TODO: Support scope-specific equality/attributes in FoundationPreview
     internal func equals(_ other: Self) -> Bool {
-        for field in Type(S.self).fields {
-            switch field.type.swiftType {
-            case let attribute as any AttributedStringKey.Type:
-                if self.storage[attribute.name] != other.storage[attribute.name] {
-                    return false
-                }
-                break
-            default: break // TODO: Nested scopes
+        for (name, _) in S.attributeKeyTypes() {
+            if self.storage[name] != other.storage[name] {
+                return false
             }
         }
         return true
@@ -194,10 +172,8 @@ public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
 
     internal var attributes : AttributeContainer {
         var contents = AttributedString._AttributeStorage()
-        for field in Type(S.self).fields {
-            if let attribute = field.type.swiftType as? any AttributedStringKey.Type {
-                contents[attribute.name] = self.storage[attribute.name]
-            }
+        for (name, _) in S.attributeKeyTypes() {
+            contents[name] = self.storage[name]
         }
         return AttributeContainer(contents)
     }
@@ -238,35 +214,4 @@ internal extension AttributedStringKey {
         }
     }
 }
-
-// TODO: Support AttributeScope key finding in FoundationPreview
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-internal extension AttributeScope {
-    static func attributeKeyType(matching key: String) -> (any AttributedStringKey.Type)? {
-        for field in Type(Self.self).fields {
-            if let attributeType = field.type.swiftType as? any AttributedStringKey.Type, attributeType.name == key {
-                return attributeType
-            }
-            
-            if let scopeType = field.type.swiftType as? any AttributeScope.Type, let found = scopeType.attributeKeyType(matching: key) {
-                return found
-            }
-        }
-        return nil
-    }
-    
-    static func markdownAttributeKeyType(matching key: String) -> (any MarkdownDecodableAttributedStringKey.Type)? {
-        for field in Type(Self.self).fields {
-            if let attributeType = field.type.swiftType as? any MarkdownDecodableAttributedStringKey.Type, attributeType.markdownName == key {
-                return attributeType
-            }
-            
-            if let scopeType = field.type.swiftType as? any AttributeScope.Type, let found = scopeType.markdownAttributeKeyType(matching: key) {
-                return found
-            }
-        }
-        return nil
-    }
-}
-
 #endif // FOUNDATION_FRAMEWORK

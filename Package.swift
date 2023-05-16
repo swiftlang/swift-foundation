@@ -16,7 +16,7 @@ let package = Package(
         .package(
           url: "https://github.com/apple/swift-collections",
           revision: "2ca40e2a653e5e04a1c5468a35fc7494ef6db1d3"), // on release/1.1
-        .package(url: "https://github.com/apple/swift-foundation-icu", exact: "0.0.1")
+        .package(url: "https://github.com/apple/swift-foundation-icu", exact: "0.0.2")
     ],
     targets: [
         // Foundation (umbrella)
@@ -29,7 +29,10 @@ let package = Package(
             path: "Sources/Foundation"),
 
         // _CShims (Internal)
-        .target(name: "_CShims"),
+        .target(name: "_CShims",
+                cSettings: [.define("_CRT_SECURE_NO_WARNINGS",
+                                    .when(platforms: [.windows]))]),
+
         // TestSupport (Internal)
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
@@ -43,7 +46,10 @@ let package = Package(
             "_CShims",
             .product(name: "_RopeModule", package: "swift-collections"),
           ],
-          swiftSettings: [.enableExperimentalFeature("VariadicGenerics")]
+          swiftSettings: [
+            .enableExperimentalFeature("VariadicGenerics"),
+            .enableExperimentalFeature("AccessLevelOnImport")
+          ]
         ),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
@@ -51,11 +57,17 @@ let package = Package(
         ]),
 
         // FoundationInternationalization
-        .target(name: "FoundationInternationalization", dependencies: [
-            .target(name: "FoundationEssentials"),
-            .target(name: "_CShims"),
-            .product(name: "FoundationICU", package: "swift-foundation-icu")
-        ]),
+        .target(
+            name: "FoundationInternationalization",
+            dependencies: [
+                .target(name: "FoundationEssentials"),
+                .target(name: "_CShims"),
+                .product(name: "FoundationICU", package: "swift-foundation-icu")
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("AccessLevelOnImport")
+            ]
+        ),
         .testTarget(name: "FoundationInternationalizationTests", dependencies: [
             "TestSupport",
             "FoundationInternationalization"

@@ -11,7 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import os
+#else
+package import os
+#endif
 #elseif canImport(Glibc)
 import Glibc
 #endif
@@ -92,14 +96,13 @@ internal struct LockedState<State> {
         }
     }
 
-    // Ensures the managed state outlives the locked `body`.
+    // Ensures the managed state outlives the locked scope.
     func withLockExtendingLifetimeOfState<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
         try _buffer.withUnsafeMutablePointers { state, lock in
             _Lock.lock(lock)
             return try withExtendedLifetime(state.pointee) {
-                let result = try body(&state.pointee)
-                _Lock.unlock(lock)
-                return result
+                defer { _Lock.unlock(lock) }
+                return try body(&state.pointee)
             }
         }
     }

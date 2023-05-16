@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -80,10 +80,10 @@ public extension AttributedStringProtocol {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
-    internal var __guts : AttributedString.Guts {
-        if let s = self as? AttributedString {
+    internal var __guts: AttributedString.Guts {
+        if let s = _specializingCast(self, to: AttributedString.self) {
             return s._guts
-        } else if let s = self as? AttributedSubstring {
+        } else if let s = _specializingCast(self, to: AttributedSubstring.self) {
             return s._guts
         } else {
             return self.characters._guts
@@ -95,11 +95,11 @@ extension AttributedStringProtocol {
     }
 
     internal var _bounds: Range<AttributedString.Index> {
-        startIndex ..< endIndex
+        Range(uncheckedBounds: (startIndex, endIndex))
     }
 
     internal var _stringBounds: Range<BigString.Index> {
-        startIndex._value ..< endIndex._value
+        Range(uncheckedBounds: (startIndex._value, endIndex._value))
     }
 
     internal var _characters: BigSubstring {
@@ -111,8 +111,12 @@ extension AttributedString {
     internal var _baseString: BigString {
         _guts.string
     }
+    
+    internal var _bounds: Range<AttributedString.Index> {
+        Range(uncheckedBounds: (startIndex, endIndex))
+    }
 
-    internal var _bounds: Range<BigString.Index> {
+    internal var _stringBounds: Range<BigString.Index> {
         Range(uncheckedBounds: (_guts.string.startIndex, _guts.string.endIndex))
     }
 }
@@ -121,9 +125,13 @@ extension AttributedSubstring {
     internal var _baseString: BigString {
         _guts.string
     }
+    
+    internal var _bounds: Range<AttributedString.Index> {
+        _range
+    }
 
-    internal var _bounds: Range<BigString.Index> {
-        _range._bstringRange
+    internal var _stringBounds: Range<BigString.Index> {
+        Range(uncheckedBounds: (_range.lowerBound._value, _range.upperBound._value))
     }
 }
 

@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -55,7 +55,7 @@ extension AttributedString.Runs.Run: Equatable {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs.Run: CustomStringConvertible {
     public var description: String {
-        AttributedSubstring(_guts, range).description
+        AttributedSubstring(_guts, in: _range).description
     }
 }
 

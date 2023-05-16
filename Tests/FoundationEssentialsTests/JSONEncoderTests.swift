@@ -29,7 +29,7 @@ import TestSupport
 #endif
 
 #if canImport(_CShims)
-@_implementationOnly import _CShims
+import _CShims
 #endif
 
 // MARK: - Test Suite
@@ -106,6 +106,19 @@ final class JSONEncoderTests : XCTestCase {
         let b : [Int] = []
         let result2 = String(data: try! JSONEncoder().encode(b), encoding: String._Encoding.utf8)
         XCTAssertEqual(result2, "[]")
+    }
+    
+    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+    func testEncodingTopLevelWithConfiguration() throws {
+        // CodableTypeWithConfiguration is a struct that conforms to CodableWithConfiguration
+        let value = CodableTypeWithConfiguration.testValue
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        
+        var decoded = try decoder.decode(CodableTypeWithConfiguration.self, from: try encoder.encode(value, configuration: .init(1)), configuration: .init(1))
+        XCTAssertEqual(decoded, value)
+        decoded = try decoder.decode(CodableTypeWithConfiguration.self, from: try encoder.encode(value, configuration: CodableTypeWithConfiguration.ConfigProviding.self), configuration: CodableTypeWithConfiguration.ConfigProviding.self)
+        XCTAssertEqual(decoded, value)
     }
 
 #if false // FIXME: XCTest doesn't support crash tests yet rdar://20195010&22387653
@@ -3240,6 +3253,42 @@ private struct NestedContainersTestType : Encodable {
       expectEqualPaths(thirdLevelContainerUnkeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 1)], "New third-level unkeyed container had unexpected codingPath.")
     }
   }
+}
+
+private struct CodableTypeWithConfiguration : CodableWithConfiguration, Equatable {
+    struct Config {
+        let num: Int
+        
+        init(_ num: Int) {
+            self.num = num
+        }
+    }
+    
+    struct ConfigProviding : EncodingConfigurationProviding, DecodingConfigurationProviding {
+        static var encodingConfiguration: Config { Config(2) }
+        static var decodingConfiguration: Config { Config(2) }
+    }
+    
+    typealias EncodingConfiguration = Config
+    typealias DecodingConfiguration = Config
+    
+    static let testValue = Self(3)
+    
+    let num: Int
+    
+    init(_ num: Int) {
+        self.num = num
+    }
+    
+    func encode(to encoder: Encoder, configuration: Config) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(num + configuration.num)
+    }
+    
+    init(from decoder: Decoder, configuration: Config) throws {
+        let container = try decoder.singleValueContainer()
+        num = try container.decode(Int.self) - configuration.num
+    }
 }
 
 // MARK: - Helper Types

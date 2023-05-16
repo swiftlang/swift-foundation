@@ -59,7 +59,11 @@ import Darwin
 import Glibc
 #endif // canImport(Darwin)
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import _CShims
+#else
+package import _CShims
+#endif
 
 internal class JSONMap {
     enum TypeDescriptor : Int {
@@ -907,8 +911,9 @@ extension JSONScanner {
     }
 
     static func _slowpath_stringValue(
-        from jsonBytes: BufferView<UInt8>, appendingTo output: consuming String, fullSource: BufferView<UInt8>
+        from jsonBytes: BufferView<UInt8>, appendingTo output: __owned String, fullSource: BufferView<UInt8>
     ) throws -> String {
+        var output = consume output
         // A reasonable guess as to the resulting capacity of the string is 1/4 the length of the remaining buffer. With this scheme, input full of 4 byte UTF-8 sequences won't waste a bunch of extra capacity and predominantly 1 byte UTF-8 sequences will only need to resize the buffer once or twice.
         output.reserveCapacity(output.underestimatedCount + jsonBytes.count/4)
 
