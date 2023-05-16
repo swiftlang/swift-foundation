@@ -9,12 +9,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims // uuid.h
-#else
-package import _CShims // uuid.h
-#endif
-
 public typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8)
 
@@ -25,10 +19,12 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
 
     /* Create a new UUID with RFC 4122 version 4 random bytes */
     public init() {
-        withUnsafeMutablePointer(to: &uuid) {
-            $0.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<uuid_t>.size) {
-                uuid_generate_random($0)
-            }
+        var randomBits = (0 ... 15).map { _ in UInt8.random(in: .min ... .max) }
+        randomBits[6] = (randomBits[6] & 0x0F) | 0x40
+        randomBits[8] = (randomBits[8] & 0x3F) | 0x80
+
+        uuid = randomBits.withUnsafeBytes { buffer in
+            return buffer.bindMemory(to: uuid_t.self)[0]
         }
     }
 
@@ -36,13 +32,17 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     ///
     /// Returns nil for invalid strings.
     public init?(uuidString string: __shared String) {
-        let res = withUnsafeMutablePointer(to: &uuid) {
-            $0.withMemoryRebound(to: UInt8.self, capacity: 16) {
-                return uuid_parse(string, $0)
-            }
-        }
-        if res != 0 {
+        let components = string
+            .replacing("-", with: "")
+            .split(by: 2)
+            .compactMap { UInt8($0, radix: 16) }
+
+        guard components.count == 16 else {
             return nil
+        }
+
+        uuid = components.withUnsafeBytes { buffer in
+            return buffer.bindMemory(to: uuid_t.self)[0]
         }
     }
 
@@ -53,17 +53,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
 
     /// Returns a string created from the UUID, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
     public var uuidString: String {
-        var bytes: uuid_string_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        return withUnsafePointer(to: uuid) { valPtr in
-            valPtr.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<uuid_t>.size) { val in
-                withUnsafeMutablePointer(to: &bytes) { strPtr in
-                    strPtr.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<uuid_string_t>.size) { str in
-                        uuid_unparse_upper(val, str)
-                        return String(cString: str)
-                    }
-                }
-            }
-        }
+        "\(Self.formatToHexString(uuid.0))\(Self.formatToHexString(uuid.1))\(Self.formatToHexString(uuid.2))\(Self.formatToHexString(uuid.3))-\(Self.formatToHexString(uuid.4))\(Self.formatToHexString(uuid.5))-\(Self.formatToHexString(uuid.6))\(Self.formatToHexString(uuid.7))-\(Self.formatToHexString(uuid.8))\(Self.formatToHexString(uuid.9))-\(Self.formatToHexString(uuid.10))\(Self.formatToHexString(uuid.11))\(Self.formatToHexString(uuid.12))\(Self.formatToHexString(uuid.13))\(Self.formatToHexString(uuid.14))\(Self.formatToHexString(uuid.15))"
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -97,6 +87,14 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
             lhs.uuid.13 == rhs.uuid.13 &&
             lhs.uuid.14 == rhs.uuid.14 &&
             lhs.uuid.15 == rhs.uuid.15
+    }
+
+    private static func formatToHexString(_ value: UInt8) -> String {
+        var result = String(value, radix: 16, uppercase: true)
+        if result.count == 1 {
+            result = "0" + result
+        }
+        return result
     }
 }
 
@@ -152,5 +150,20 @@ extension UUID : Comparable {
         }
 
         return result < 0
+    }
+}
+
+private extension String {
+    func split(by length: Int) -> [String] {
+        var startIndex = self.startIndex
+        var results = [Substring]()
+
+        while startIndex < self.endIndex {
+            let endIndex = self.index(startIndex, offsetBy: length, limitedBy: self.endIndex) ?? self.endIndex
+            results.append(self[startIndex..<endIndex])
+            startIndex = endIndex
+        }
+
+        return results.map { String($0) }
     }
 }
