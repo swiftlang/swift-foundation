@@ -18,6 +18,8 @@ package import os
 #endif
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(WinSDK)
+import WinSDK
 #endif
 
 internal struct LockedState<State> {
@@ -28,6 +30,8 @@ internal struct LockedState<State> {
         typealias Primitive = os_unfair_lock
 #elseif canImport(Glibc)
         typealias Primitive = pthread_mutex_t
+#elseif canImport(WinSDK)
+        typealias Primitive = SRWLOCK
 #endif
 
         typealias PlatformLock = UnsafeMutablePointer<Primitive>
@@ -38,6 +42,8 @@ internal struct LockedState<State> {
             platformLock.initialize(to: os_unfair_lock())
 #elseif canImport(Glibc)
             pthread_mutex_init(platformLock, nil)
+#elseif canImport(WinSDK)
+            InitializeSRWLock(platformLock)
 #endif
         }
 
@@ -53,6 +59,8 @@ internal struct LockedState<State> {
             os_unfair_lock_lock(platformLock)
 #elseif canImport(Glibc)
             pthread_mutex_lock(platformLock)
+#elseif canImport(WinSDK)
+            AcquireSRWLockExclusive(platformLock)
 #endif
         }
 
@@ -61,6 +69,8 @@ internal struct LockedState<State> {
             os_unfair_lock_unlock(platformLock)
 #elseif canImport(Glibc)
             pthread_mutex_unlock(platformLock)
+#elseif canImport(WinSDK)
+            ReleaseSRWLockExclusive(platformLock)
 #endif
         }
     }
