@@ -63,7 +63,6 @@ extension String {
 #endif // FOUNDATION_FRAMEWORK
 }
 
-#if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String.Encoding : Hashable {
     public var hashValue: Int {
@@ -105,4 +104,3 @@ extension String.Encoding : CustomStringConvertible {
 #endif
     }
 }
-#endif
