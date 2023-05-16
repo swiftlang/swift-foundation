@@ -898,7 +898,7 @@ extension JSONScanner {
             jsonBytes.formIndex(after: &index)
         }
 
-        guard let output = String._tryFromUTF8(jsonBytes[unchecked: jsonBytes.startIndex..<index]) else {
+        guard var output = String._tryFromUTF8(jsonBytes[unchecked: jsonBytes.startIndex..<index]) else {
             throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
         if _fastPath(index == endIndex) {
@@ -907,14 +907,12 @@ extension JSONScanner {
         }
 
         let remainingBytes = jsonBytes[unchecked: index..<endIndex]
-        return try _slowpath_stringValue(from: remainingBytes, appendingTo: output, fullSource: fullSource)
+        return try _slowpath_stringValue(from: remainingBytes, appendingTo: &output, fullSource: fullSource)
     }
 
     static func _slowpath_stringValue(
-        from jsonBytes: BufferView<UInt8>, appendingTo output: __owned String, fullSource: BufferView<UInt8>
+        from jsonBytes: BufferView<UInt8>, appendingTo output: inout String, fullSource: BufferView<UInt8>
     ) throws -> String {
-        var output = consume output
-
         // Continue scanning, taking into account escaped sequences and control characters
         var index = jsonBytes.startIndex
         var chunkStart = index
