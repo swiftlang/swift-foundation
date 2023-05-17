@@ -256,8 +256,13 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         }
 
         var info = tm()
+#if os(Windows)
+        var time = __time64_t(self.timeIntervalSince1970)
+        _gmtime64_s(&info, &time)
+#else
         var time = time_t(self.timeIntervalSince1970)
         gmtime_r(&time, &info)
+#endif
 
         // This allocates stack space for range of 10^102 years
         // That's more than Date currently supports.
