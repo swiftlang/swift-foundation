@@ -16,6 +16,8 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(ucrt)
+import ucrt
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
