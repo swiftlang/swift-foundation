@@ -143,7 +143,11 @@ internal class ICUNumberFormatterBase {
             try status.checkSuccess()
 
             let attributePositions = positer.fields.compactMap { next -> AttributePosition? in
-                return AttributePosition(field: UNumberFormatFields(rawValue: UInt32(next.field)), begin: next.begin, end: next.end)
+#if os(Windows)
+                return AttributePosition(field: UNumberFormatFields(rawValue: CInt(next.field)), begin: next.begin, end: next.end)
+#else
+                return AttributePosition(field: UNumberFormatFields(rawValue: CUnsignedInt(next.field)), begin: next.begin, end: next.end)
+#endif
             }
 
             return (str, attributePositions)

@@ -829,7 +829,7 @@ extension Locale {
         /// Returns a list of `Locale` currency codes defined in ISO-4217
         public static var isoCurrencies: [Currency] {
             var status = U_ZERO_ERROR
-            let values = ucurr_openISOCurrencies(UCURR_ALL.rawValue, &status)
+            let values = ucurr_openISOCurrencies(UInt32(UCURR_ALL.rawValue), &status)
             guard status.isSuccess, let values else { return [] }
             let e = ICU.Enumerator(enumerator: values)
             return e.elements.map { Currency($0) }
@@ -838,7 +838,7 @@ extension Locale {
         /// For `Locale.commonISOCurrencyCodes`
         internal static var commonISOCurrencies: [String] {
             var status = U_ZERO_ERROR
-            let values = ucurr_openISOCurrencies(UCURR_COMMON.rawValue | UCURR_NON_DEPRECATED.rawValue, &status)
+            let values = ucurr_openISOCurrencies(UInt32(UCURR_COMMON.rawValue | UCURR_NON_DEPRECATED.rawValue), &status)
             guard status.isSuccess, let values else { return [] }
             let e = ICU.Enumerator(enumerator: values)
             return e.elements.map { $0 }
