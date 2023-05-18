@@ -69,7 +69,7 @@ final class ParseStrategyMatchTests: XCTestCase {
     }
 
 // https://github.com/apple/swift-foundation/issues/60
-#if false
+#if FOUNDATION_FRAMEWORK
     func testAPIStatement() {
 
         let statement = """

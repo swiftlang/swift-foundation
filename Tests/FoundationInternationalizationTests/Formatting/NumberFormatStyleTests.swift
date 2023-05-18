@@ -1027,7 +1027,7 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
             "-0",
             "-0",
             "-0",
-            "-0",
+            "-9,223,372,036,854,775,807",
         ]
         for i in 0..<exhaustiveIntNumbers.count {
             XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectations[i], "Style: \(style.collection.debugDescription) is failing for number #\(Int(exhaustiveIntNumbers[i]))")

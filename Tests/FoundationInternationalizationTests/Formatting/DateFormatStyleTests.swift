@@ -355,7 +355,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
                                                       ("3", .hour),
                                                       (":", nil),
                                                       ("04", .minute),
-                                                      (" ", nil),
+                                                      (expectedSeparator, nil),
                                                       ("PM", .amPM)],
         ]
 
