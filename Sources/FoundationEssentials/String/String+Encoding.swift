@@ -21,43 +21,7 @@ public var kCFStringEncodingASCII: CFStringEncoding { return 0x0600 }
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
 
-#if !FOUNDATION_FRAMEWORK
-    // This is a workaround for Clang importer's ambiguous lookup issue since
-    // - Swift doesn't allow typealias to nested type
-    // - Swift doesn't allow typealias to builtin types like String
-    // We therefore rename String.Encoding to String._Encoding for package
-    // internal use so we can use `String._Encoding` to disambiguate.
-    public typealias Encoding = _Encoding
-    public struct _Encoding : RawRepresentable, Sendable, Equatable {
-        public var rawValue: UInt
-        public init(rawValue: UInt) { self.rawValue = rawValue }
-
-        public static let ascii = Self(rawValue: 1)
-        public static let nextstep = Self(rawValue: 2)
-        public static let japaneseEUC = Self(rawValue: 3)
-        public static let utf8 = Self(rawValue: 4)
-        public static let isoLatin1 = Self(rawValue: 5)
-        public static let symbol = Self(rawValue: 6)
-        public static let nonLossyASCII = Self(rawValue: 7)
-        public static let shiftJIS = Self(rawValue: 8)
-        public static let isoLatin2 = Self(rawValue: 9)
-        public static let unicode = Self(rawValue: 10)
-        public static let windowsCP1251 = Self(rawValue: 11)
-        public static let windowsCP1252 = Self(rawValue: 12)
-        public static let windowsCP1253 = Self(rawValue: 13)
-        public static let windowsCP1254 = Self(rawValue: 14)
-        public static let windowsCP1250 = Self(rawValue: 15)
-        public static let iso2022JP = Self(rawValue: 21)
-        public static let macOSRoman = Self(rawValue: 30)
-        public static let utf16 = Self.unicode
-        public static let utf16BigEndian = Self(rawValue: 0x90000100)
-        public static let utf16LittleEndian = Self(rawValue: 0x94000100)
-        public static let utf32 = Self(rawValue: 0x8c000100)
-        public static let utf32BigEndian = Self(rawValue: 0x98000100)
-        public static let utf32LittleEndian = Self(rawValue: 0x9c000100)
-    }
-#else
-    public struct Encoding : RawRepresentable, Sendable {
+    public struct Encoding : RawRepresentable, Sendable, Equatable {
         public var rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
 
@@ -86,15 +50,19 @@ extension String {
         public static let utf32LittleEndian = Encoding(rawValue: 0x9c000100)
     }
 
-    // For internal usage to disambiguate
+    // This is a workaround for Clang importer's ambiguous lookup issue since
+    // - Swift doesn't allow typealias to nested type
+    // - Swift doesn't allow typealias to builtin types like String
+    // We therefore rename String.Encoding to String._Encoding for package
+    // internal use so we can use `String._Encoding` to disambiguate.
     internal typealias _Encoding = Encoding
 
+#if FOUNDATION_FRAMEWORK
     public typealias EncodingConversionOptions = NSString.EncodingConversionOptions
     public typealias EnumerationOptions = NSString.EnumerationOptions
 #endif // FOUNDATION_FRAMEWORK
 }
 
-#if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String.Encoding : Hashable {
     public var hashValue: Int {
@@ -136,4 +104,3 @@ extension String.Encoding : CustomStringConvertible {
 #endif
     }
 }
-#endif
