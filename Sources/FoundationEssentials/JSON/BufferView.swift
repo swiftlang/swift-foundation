@@ -14,7 +14,7 @@
 // contains initialized `Element` instances.
 
 internal struct BufferView<Element> {
-    let start: Index
+    let start: BufferViewIndex<Element>
     let count: Int
 
     private var baseAddress: UnsafeRawPointer { start._rawValue }
