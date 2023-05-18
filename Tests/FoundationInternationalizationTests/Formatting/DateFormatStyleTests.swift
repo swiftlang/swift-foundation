@@ -308,7 +308,11 @@ final class DateFormatStyleTests : XCTestCase {
     }
 
 #if !os(watchOS) // 99504292
-    func testNSICUDateFormatterCache() {
+    func testNSICUDateFormatterCache() throws {
+        guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
+            throw XCTSkip("This test can only be run with the system set to the en_US language")
+        }
+
         let fixedTimeZone = TimeZone(identifier: TimeZone.current.identifier)!
         let fixedCalendar = Calendar(identifier: Calendar.current.identifier)
 

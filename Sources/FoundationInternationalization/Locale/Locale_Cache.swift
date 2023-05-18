@@ -317,17 +317,17 @@ struct LocaleCache : Sendable {
 #else
     func preferences() -> (LocalePreferences, Bool) {
         var prefs = LocalePreferences()
-        prefs.locale = "en_US"
-        prefs.languages = ["en-US"]
+        prefs.locale = "en_001"
+        prefs.languages = ["en-001"]
         return (prefs, true)
     }
 
     func preferredLanguages(forCurrentUser: Bool) -> [String] {
-        [Locale.canonicalLanguageIdentifier(from: "en-US")]
+        [Locale.canonicalLanguageIdentifier(from: "en-001")]
     }
     
     func preferredLocale() -> String? {
-        "en_US"
+        "en_001"
     }
 #endif
     

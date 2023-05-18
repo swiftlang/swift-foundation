@@ -237,15 +237,14 @@ internal final class _Locale: Sendable, Hashable {
             }
         }
 
-        if ident == nil {
-            #if os(macOS)
-            ident = ""
-            #else
-            ident = "en_US"
-            #endif
+        let fixedIdent: String
+        if let ident, !ident.isEmpty {
+            fixedIdent = ident
+        } else {
+            fixedIdent = "en_001"
         }
         
-        self.identifier = Locale._canonicalLocaleIdentifier(from: ident!)
+        self.identifier = Locale._canonicalLocaleIdentifier(from: fixedIdent)
         doesNotRequireSpecialCaseHandling = Self.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
         lock = LockedState(initialState: State())
