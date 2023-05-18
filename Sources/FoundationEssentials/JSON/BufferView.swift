@@ -34,13 +34,13 @@ internal struct BufferView<Element> {
         self.init(_unchecked: (index, count))
     }
 
-    init(baseAddress: UnsafeRawPointer, count: Int) {
-        self.init(start: .init(rawValue: baseAddress), count: count)
+    init(unsafeBaseAddress: UnsafeRawPointer, count: Int) {
+        self.init(start: .init(rawValue: unsafeBaseAddress), count: count)
     }
 
     init?(unsafeBufferPointer buffer: UnsafeBufferPointer<Element>) {
         guard let baseAddress = UnsafeRawPointer(buffer.baseAddress) else { return nil }
-        self.init(baseAddress: baseAddress, count: buffer.count)
+        self.init(unsafeBaseAddress: baseAddress, count: buffer.count)
     }
 }
 
@@ -51,7 +51,7 @@ extension BufferView /*where Element: BitwiseCopyable*/ {
         guard let p = buffer.baseAddress else { return nil }
         let (q, r) = buffer.count.quotientAndRemainder(dividingBy: MemoryLayout<Element>.stride)
         precondition(r == 0)
-        self.init(baseAddress: p, count: q)
+        self.init(unsafeBaseAddress: p, count: q)
     }
 }
 

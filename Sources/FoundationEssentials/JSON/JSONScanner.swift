@@ -124,7 +124,7 @@ internal class JSONMap {
                 return (.init(raw), capacity+1)
             }
 
-            state = (buffer: .init(baseAddress: p, count: c), allocation: p)
+            state = (buffer: .init(unsafeBaseAddress: p, count: c), allocation: p)
         }
     }
 

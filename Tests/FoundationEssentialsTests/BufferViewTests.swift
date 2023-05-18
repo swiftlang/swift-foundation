@@ -110,7 +110,8 @@ final class BufferViewTests: XCTestCase {
 
             // BufferView doesn't need to be aligned for accessing `BitwiseCopyable` types.
             let buffer = BufferView<Int64>(
-                baseAddress: $0.baseAddress!.advanced(by: offset), count: count
+              unsafeBaseAddress: $0.baseAddress!.advanced(by: offset),
+              count: count
             )
 
             var iterator = buffer.makeIterator()
