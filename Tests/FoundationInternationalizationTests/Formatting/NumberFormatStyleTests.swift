@@ -893,7 +893,6 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
             }
         }
     }
-#if FIXED_106570987
     func test_plainStyle_rounded() throws {
         let expectations: [IntegerFormatStyle<Int> : [String]] = [
             baseStyle.rounded(rule: .toNearestOrEven, increment: 5): [ "9,223,372,036,854,775,805",
@@ -1023,7 +1022,6 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
             }
         }
     }
-#endif
     func test_plainStyle_scientific() throws {
         let expectations: [IntegerFormatStyle<Int> : [String]] = [
             baseStyle.notation(.scientific): [ "9.223372E18",

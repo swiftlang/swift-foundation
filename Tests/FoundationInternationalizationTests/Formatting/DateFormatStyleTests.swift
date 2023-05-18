@@ -274,18 +274,14 @@ final class DateFormatStyleTests : XCTestCase {
         XCTAssertEqual(date.formatted(style.weekday(.short)), "Th")
 
         XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .omitted))), "12")
-#if FIXED_106570987
         XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .narrow))), "12\u{202f}a")
         XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .abbreviated))), "12\u{202f}AM")
         XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .wide))), "12\u{202f}AM")
-#endif
 
         XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .omitted))), "12")
-#if FIXED_106570987
         XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .narrow))), "12\u{202f}a")
         XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .abbreviated))), "12\u{202f}AM")
         XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .wide))), "12\u{202f}AM")
-#endif
     }
 
     func testFormattingWithHourCycleOverrides() throws {
@@ -294,16 +290,12 @@ final class DateFormatStyleTests : XCTestCase {
         let esES = "es_ES"
 
         let style = Date.FormatStyle(date: .omitted, time: .standard, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
-#if FIXED_106570987
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init()))), "4:00:00\u{202f}PM")
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force12Hour: true)))), "4:00:00\u{202f}PM")
-#endif
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force24Hour: true)))), "16:00:00")
 
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init()))), "16:00:00")
-#if FIXED_106570987
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force12Hour: true)))), "4:00:00\u{202f}p.\u{202f}m.")
-#endif
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force24Hour: true)))), "16:00:00")
     }
 
@@ -339,11 +331,10 @@ final class DateAttributedFormatStyleTests : XCTestCase {
     var gmtTimeZone = TimeZone(secondsFromGMT: 0)!
 
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?)
-#if FIXED_106570987
     func testAttributedFormatStyle() throws {
         let baseStyle = Date.FormatStyle(locale: enUSLocale, timeZone: gmtTimeZone)
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
-        let date = Date(Date(timeIntervalSinceReferenceDate: 639932672.0))
+        let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
 
         let expectations: [Date.FormatStyle : [Segment]] = [
             baseStyle.month().day().hour().minute(): [("Apr", .month),
@@ -353,7 +344,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
                                                       ("3", .hour),
                                                       (":", nil),
                                                       ("04", .minute),
-                                                      ("\u{202f}", nil),
+                                                      (" ", nil),
                                                       ("PM", .amPM)],
         ]
 
@@ -362,12 +353,10 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             XCTAssertEqual(formatted, expectation.attributedString)
         }
     }
-#endif
     func testIndividualFields() throws {
         let baseStyle = Date.FormatStyle(locale: enUSLocale, timeZone: gmtTimeZone)
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
-#if FIXED_106570987
         let expectations: [Date.FormatStyle : [Segment]] = [
             baseStyle.era(): [ ("AD", .era) ],
             baseStyle.year(.defaultDigits): [ ("2021", .year) ],
@@ -383,22 +372,6 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             baseStyle.second(): [ ("32", .second) ],
             baseStyle.timeZone(): [ ("GMT", .timeZone) ],
         ]
-#else
-        let expectations: [Date.FormatStyle : [Segment]] = [
-            baseStyle.era(): [ ("AD", .era) ],
-            baseStyle.year(.defaultDigits): [ ("2021", .year) ],
-            baseStyle.quarter(): [ ("Q2", .quarter) ],
-            baseStyle.month(.defaultDigits): [ ("4", .month) ],
-            baseStyle.week(): [ ("16", .weekOfYear) ],
-            baseStyle.week(.weekOfMonth): [ ("3", .weekOfMonth) ],
-            baseStyle.day(): [ ("12", .day) ],
-            baseStyle.dayOfYear(): [ ("102", .dayOfYear) ],
-            baseStyle.weekday(): [ ("Mon", .weekday) ],
-            baseStyle.minute(): [ ("4", .minute) ],
-            baseStyle.second(): [ ("32", .second) ],
-            baseStyle.timeZone(): [ ("GMT", .timeZone) ],
-        ]
-#endif
 
         for (style, expectation) in expectations {
             let formatted = style.attributed.format(date)
@@ -901,9 +874,7 @@ extension DateFormatStyleTests {
     func test_hourSymbols() {
 
         let enUS = Locale(identifier: "en_US")
-#if FIXED_106570987
         _verify(.dateTime.hour(.defaultDigits(amPM: .abbreviated)), expectedFormat: "h\u{202f}a", locale: enUS)
-#endif
         _verify(.dateTime.hour(.defaultDigits(amPM: .omitted)), expectedFormat: "hh", locale: enUS)
         _verify(.dateTime.hour(.twoDigits(amPM: .omitted)), expectedFormat: "hh", locale: enUS)
         _verify(.dateTime.hour(.conversationalDefaultDigits(amPM: .omitted)), expectedFormat: "hh", locale: enUS)
