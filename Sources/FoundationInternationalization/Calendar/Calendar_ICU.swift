@@ -1385,7 +1385,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             if let amount = components.second { _ = _locked_add(UCAL_SECOND, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.nanosecond { nanosecond = amount }
 
-            let udate = ucal_getMillis(ucalendar, &status)
+            let udate = ucal_getMillis(self.ucalendar, &status)
             if status.isSuccess {
                 return Date(udate: udate) + startingFrac + (Double(nanosecond) * 1.0e-9)
             } else {
