@@ -38,6 +38,11 @@ extension AttributedString {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 final class DateFormatStyleTests : XCTestCase {
     let referenceDate = Date(timeIntervalSinceReferenceDate: 0)
+#if FOUNDATION_FRAMEWORK
+    let expectedSeparator = "\u{202f}"
+#else
+    let expectedSeparator = " "
+#endif
 
     func test_constructorSyntax() {
         let style = Date.FormatStyle(locale: .init(identifier: "en_US"), calendar: .init(identifier: .gregorian), timeZone: TimeZone(identifier: "America/Los_Angeles")!)
@@ -274,14 +279,14 @@ final class DateFormatStyleTests : XCTestCase {
         XCTAssertEqual(date.formatted(style.weekday(.short)), "Th")
 
         XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .omitted))), "12")
-        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .narrow))), "12\u{202f}a")
-        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .abbreviated))), "12\u{202f}AM")
-        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .wide))), "12\u{202f}AM")
+        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .narrow))), "12\(expectedSeparator)a")
+        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .abbreviated))), "12\(expectedSeparator)AM")
+        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .wide))), "12\(expectedSeparator)AM")
 
         XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .omitted))), "12")
-        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .narrow))), "12\u{202f}a")
-        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .abbreviated))), "12\u{202f}AM")
-        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .wide))), "12\u{202f}AM")
+        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .narrow))), "12\(expectedSeparator)a")
+        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .abbreviated))), "12\(expectedSeparator)AM")
+        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .wide))), "12\(expectedSeparator)AM")
     }
 
     func testFormattingWithHourCycleOverrides() throws {
@@ -290,12 +295,12 @@ final class DateFormatStyleTests : XCTestCase {
         let esES = "es_ES"
 
         let style = Date.FormatStyle(date: .omitted, time: .standard, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
-        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init()))), "4:00:00\u{202f}PM")
-        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force12Hour: true)))), "4:00:00\u{202f}PM")
+        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init()))), "4:00:00\(expectedSeparator)PM")
+        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force12Hour: true)))), "4:00:00\(expectedSeparator)PM")
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force24Hour: true)))), "16:00:00")
 
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init()))), "16:00:00")
-        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force12Hour: true)))), "4:00:00\u{202f}p.\u{202f}m.")
+        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force12Hour: true)))), "4:00:00\(expectedSeparator)p.\u{202f}m.")
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force24Hour: true)))), "16:00:00")
     }
 
@@ -330,6 +335,12 @@ final class DateAttributedFormatStyleTests : XCTestCase {
     var enUSLocale = Locale(identifier: "en_US")
     var gmtTimeZone = TimeZone(secondsFromGMT: 0)!
 
+#if FOUNDATION_FRAMEWORK
+    let expectedSeparator = "\u{202f}"
+#else
+    let expectedSeparator = " "
+#endif
+    
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?)
     func testAttributedFormatStyle() throws {
         let baseStyle = Date.FormatStyle(locale: enUSLocale, timeZone: gmtTimeZone)
@@ -367,7 +378,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             baseStyle.day(): [ ("12", .day) ],
             baseStyle.dayOfYear(): [ ("102", .dayOfYear) ],
             baseStyle.weekday(): [ ("Mon", .weekday) ],
-            baseStyle.hour(): [ ("3", .hour), ("\u{202f}", nil), ("PM", .amPM) ],
+            baseStyle.hour(): [ ("3", .hour), (expectedSeparator, nil), ("PM", .amPM) ],
             baseStyle.minute(): [ ("4", .minute) ],
             baseStyle.second(): [ ("32", .second) ],
             baseStyle.timeZone(): [ ("GMT", .timeZone) ],
