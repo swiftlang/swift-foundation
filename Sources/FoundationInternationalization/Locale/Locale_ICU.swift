@@ -1300,6 +1300,13 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
+    // MARK: - Date/Time Formats
+
+    internal func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
+        guard let dateFormatStrings = prefs?.dateFormats else { return nil }
+        return dateFormatStrings[style]
+    }
+
     // MARK: -
 
     private func displayString(for identifier: String, value: String, status: UnsafeMutablePointer<UErrorCode>, _ f: (UnsafePointer<CChar>?, UnsafePointer<CChar>?, UnsafeMutablePointer<UChar>?, Int32, UnsafeMutablePointer<UErrorCode>?) -> Int32) -> String? {
@@ -1556,6 +1563,8 @@ internal struct LocalePreferences: Hashable {
     var icuNumberSymbols: CFDictionary?
 #endif
     var numberSymbols: [UInt32 : String]? // Bridged version of `icuNumberSymbols`
+    var dateFormats: [Date.FormatStyle.DateStyle: String]? // Bridged version of `icuDateFormatStrings`
+
     var country: String?
     var measurementUnits: MeasurementUnit?
     var temperatureUnit: TemperatureUnit?
@@ -1575,7 +1584,8 @@ internal struct LocalePreferences: Hashable {
          temperatureUnit: TemperatureUnit? = nil,
          force24Hour: Bool? = nil,
          force12Hour: Bool? = nil,
-         numberSymbols: [UInt32 : String]? = nil) {
+         numberSymbols: [UInt32 : String]? = nil,
+         dateFormats: [Date.FormatStyle.DateStyle: String]? = nil) {
 
         self.metricUnits = metricUnits
         self.languages = languages
@@ -1589,7 +1599,8 @@ internal struct LocalePreferences: Hashable {
         self.force24Hour = force24Hour
         self.force12Hour = force12Hour
         self.numberSymbols = numberSymbols
-        
+        self.dateFormats = dateFormats
+
 #if FOUNDATION_FRAMEWORK
         icuDateTimeSymbols = nil
         icuDateFormatStrings = nil
@@ -1651,9 +1662,19 @@ internal struct LocalePreferences: Hashable {
         if let icuDateTimeSymbols = __CFLocalePrefsCopyAppleICUDateTimeSymbols(prefs)?.takeRetainedValue() {
             self.icuDateTimeSymbols = icuDateTimeSymbols
         }
-        
+
         if let icuDateFormatStrings = __CFLocalePrefsCopyAppleICUDateFormatStrings(prefs)?.takeRetainedValue() {
             self.icuDateFormatStrings = icuDateFormatStrings
+            // Bridge the mapping for Locale's usage
+            if let dateFormatPrefs = icuDateFormatStrings as? [String: String] {
+                var mapped: [Date.FormatStyle.DateStyle : String] = [:]
+                for (key, value) in dateFormatPrefs {
+                    if let k = UInt(key) {
+                        mapped[Date.FormatStyle.DateStyle(rawValue: k)] = value
+                    }
+                }
+                self.dateFormats = mapped
+            }
         }
         
         if let icuTimeFormatStrings = __CFLocalePrefsCopyAppleICUTimeFormatStrings(prefs)?.takeRetainedValue() {
@@ -1724,6 +1745,7 @@ internal struct LocalePreferences: Hashable {
         if let other = prefs.force24Hour { self.force24Hour = other }
         if let other = prefs.force12Hour { self.force12Hour = other }
         if let other = prefs.numberSymbols { self.numberSymbols = other }
+        if let other = prefs.dateFormats { self.dateFormats = other }
     }
 }
 

@@ -328,6 +328,85 @@ final class DateFormatStyleTests : XCTestCase {
     }
 #endif
 
+    func testFormattingWithPrefsOverride() {
+        let date = Date(timeIntervalSince1970: 0)
+        let enUS = "en_US"
+
+        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: String, file: StaticString = #file, line: UInt = #line) {
+            let locale = Locale.localeAsIfCurrent(name: enUS, overrides: .init(dateFormats: dateFormatOverride))
+            let style = Date.FormatStyle(date: dateStyle, time: timeStyle, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
+            let formatted = style.format(date)
+            XCTAssertEqual(formatted, expected, file: file, line: line)
+
+            guard let parsed = try? Date(formatted, strategy: style) else {
+                XCTFail("Parsing failed", file: file, line: line)
+                return
+            }
+            let parsedStr = style.format(parsed)
+            XCTAssertEqual(parsedStr, expected, "round trip formatting failed", file: file, line: line)
+        }
+
+        let dateFormatOverride: [Date.FormatStyle.DateStyle: String] = [
+            .abbreviated: "'<short>' yyyy-MMM-dd",
+            .numeric: "'<numeric>' yyyy-MMM-dd",
+            .long: "'<long>' yyyy-MMM-dd",
+            .complete: "'<complete>' yyyy-MMM-dd"
+        ]
+
+#if FOUNDATION_FRAMEWORK
+        let expectTimeString = "4:00:00\u{202F}PM"
+        let expectedShortTimeString = "4:00\u{202F}PM"
+#else
+        let expectTimeString = "4:00:00 PM"
+        let expectedShortTimeString = "4:00 PM"
+#endif
+
+        test(dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "12/31/1969, \(expectedShortTimeString)") // Ignoring override since there's no match for the specific style
+        test(dateStyle: .abbreviated, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<short> 1969-Dec-31")
+        test(dateStyle: .numeric, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<numeric> 1969-Dec-31")
+        test(dateStyle: .long, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<long> 1969-Dec-31")
+        test(dateStyle: .complete, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<complete> 1969-Dec-31")
+
+        test(dateStyle: .omitted, timeStyle: .standard, dateFormatOverride: dateFormatOverride, expected: expectTimeString)
+        test(dateStyle: .abbreviated, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<short> 1969-Dec-31 at \(expectTimeString) PST")
+        test(dateStyle: .numeric, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<numeric> 1969-Dec-31, \(expectTimeString) PST")
+        test(dateStyle: .long, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<long> 1969-Dec-31 at \(expectTimeString) PST")
+        test(dateStyle: .complete, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<complete> 1969-Dec-31 at \(expectTimeString) PST")
+
+    }
+
+    func testFormattingWithPrefsOverride_firstweekday() {
+        let date = Date(timeIntervalSince1970: 0)
+        let locale = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(firstWeekday: [.gregorian : 5]))
+        let style = Date.FormatStyle(date: .complete, time: .omitted, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone).week()
+        XCTAssertEqual(style.format(date), "Wednesday, December 31, 1969 (week: 53)") // First day is Thursday, so `date`, which is Wednesday, falls into the 53th week of the previous year.
+    }
+
+    func testEncodingDecodingWithPrefsOverride() {
+        let date = Date(timeIntervalSince1970: 0)
+        let dateFormatOverride: [Date.FormatStyle.DateStyle: String] = [
+            .complete: "'<complete>' yyyy-MMM-dd"
+        ]
+
+        let localeWithOverride = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(dateFormats: dateFormatOverride))
+        let style = Date.FormatStyle(date: .complete, time: .omitted, locale: localeWithOverride, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
+        XCTAssertEqual(style.format(date), "<complete> 1969-Dec-31")
+
+        guard let encoded = try? JSONEncoder().encode(style) else {
+            XCTFail("Encoding Date.FormatStyle failed")
+            return
+        }
+
+        guard var decoded = try? JSONDecoder().decode(Date.FormatStyle.self, from: encoded) else {
+            XCTFail("Decoding failed")
+            return
+        }
+
+        XCTAssertEqual(decoded._dateStyle, .complete)
+
+        decoded.locale = localeWithOverride
+        XCTAssertEqual(decoded.format(date), "<complete> 1969-Dec-31")
+    }
 }
 
 extension Sequence where Element == (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?) {
@@ -434,6 +513,168 @@ final class DateAttributedFormatStyleTests : XCTestCase {
 
         XCTAssertEqual(date.formatted(.dateTime.weekday().attributed.locale(enUSLocale)).string, "Mon")
         XCTAssertEqual(date.formatted(.dateTime.weekday().attributed.locale(zhTW)).string, "週一")
+    }
+
+    func testFormattingWithPrefsOverride() {
+        let date = Date(timeIntervalSince1970: 0)
+        let enUS = "en_US"
+
+        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: [Segment], file: StaticString = #file, line: UInt = #line) {
+            let locale = Locale.localeAsIfCurrent(name: enUS, overrides: .init(dateFormats: dateFormatOverride))
+            let style = Date.FormatStyle(date: dateStyle, time: timeStyle, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone).attributed
+            XCTAssertEqual(style.format(date), expected.attributedString, file: file, line: line)
+        }
+
+        let dateFormatOverride: [Date.FormatStyle.DateStyle: String] = [
+            .abbreviated: "'<short>' yyyy-MMM-dd",
+            .numeric: "'<numeric>' yyyy-MMM-dd",
+            .long: "'<long>' yyyy-MMM-dd",
+            .complete: "'<complete>' yyyy-MMM-dd"
+        ]
+
+#if FOUNDATION_FRAMEWORK
+        let expectSeparator = "\u{202F}"
+#else
+        let expectSeparator = " "
+#endif
+
+        test(dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
+            ("12", .month),
+            ("/", nil),
+            ("31", .day),
+            ("/", nil),
+            ("1969", .year),
+            (", ", nil),
+            ("4", .hour),
+            (":", nil),
+            ("00", .minute),
+            (expectSeparator, nil),
+            ("PM", .amPM),
+        ]) // Ignoring override since there's no match for the specific style
+
+        test(dateStyle: .abbreviated, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
+            ("<short> ", nil),
+            ("1969", .year),
+            ("-", nil),
+            ("Dec", .month),
+            ("-", nil),
+            ("31", .day),
+        ])
+
+        test(dateStyle: .numeric, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
+            ("<numeric> ", nil),
+            ("1969", .year),
+            ("-", nil),
+            ("Dec", .month),
+            ("-", nil),
+            ("31", .day),
+        ])
+
+        test(dateStyle: .long, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
+            ("<long> ", nil),
+            ("1969", .year),
+            ("-", nil),
+            ("Dec", .month),
+            ("-", nil),
+            ("31", .day),
+        ])
+
+        test(dateStyle: .complete, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
+            ("<complete> ", nil),
+            ("1969", .year),
+            ("-", nil),
+            ("Dec", .month),
+            ("-", nil),
+            ("31", .day),
+        ])
+
+        test(dateStyle: .omitted, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
+            ("4", .hour),
+            (":", nil),
+            ("00", .minute),
+            (":", nil),
+            ("00", .second),
+            (expectSeparator, nil),
+            ("PM", .amPM),
+            (" ", nil),
+            ("PST", .timeZone),
+        ])
+
+        test(dateStyle: .abbreviated, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
+            ("<short> ", nil),
+            ("1969", .year),
+            ("-", nil),
+            ("Dec", .month),
+            ("-", nil),
+            ("31", .day),
+            (" at ", nil),
+            ("4", .hour),
+            (":", nil),
+            ("00", .minute),
+            (":", nil),
+            ("00", .second),
+            (expectSeparator, nil),
+            ("PM", .amPM),
+            (" ", nil),
+            ("PST", .timeZone),
+        ])
+
+        test(dateStyle: .numeric, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
+            ("<numeric> ", nil),
+            ("1969", .year),
+            ("-", nil),
+            ("Dec", .month),
+            ("-", nil),
+            ("31", .day),
+            (", ", nil),
+            ("4", .hour),
+            (":", nil),
+            ("00", .minute),
+            (":", nil),
+            ("00", .second),
+            (expectSeparator, nil),
+            ("PM", .amPM),
+            (" ", nil),
+            ("PST", .timeZone),
+        ])
+
+        test(dateStyle: .long, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
+            ("<long> ", nil),
+            ("1969", .year),
+            ("-", nil),
+            ("Dec", .month),
+            ("-", nil),
+            ("31", .day),
+            (" at ", nil),
+            ("4", .hour),
+            (":", nil),
+            ("00", .minute),
+            (":", nil),
+            ("00", .second),
+            (expectSeparator, nil),
+            ("PM", .amPM),
+            (" ", nil),
+            ("PST", .timeZone),
+        ])
+
+        test(dateStyle: .complete, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: [
+            ("<complete> ", nil),
+            ("1969", .year),
+            ("-", nil),
+            ("Dec", .month),
+            ("-", nil),
+            ("31", .day),
+            (" at ", nil),
+            ("4", .hour),
+            (":", nil),
+            ("00", .minute),
+            (":", nil),
+            ("00", .second),
+            (expectSeparator, nil),
+            ("PM", .amPM),
+            (" ", nil),
+            ("PST", .timeZone),
+        ])
     }
 }
 
