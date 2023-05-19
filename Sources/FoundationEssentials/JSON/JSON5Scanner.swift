@@ -903,12 +903,13 @@ extension JSON5Scanner {
         }
 
         let remainingBytes = jsonBytes[unchecked: index..<endIndex]
-        return try _slowpath_stringValue(from: remainingBytes, appendingTo: &output, fullSource: fullSource)
+        try _slowpath_stringValue(from: remainingBytes, appendingTo: &output, fullSource: fullSource)
+        return output
     }
 
     static func _slowpath_stringValue(
         from jsonBytes: BufferView<UInt8>, appendingTo output: inout String, fullSource: BufferView<UInt8>
-    ) throws -> String {
+    ) throws {
         // Continue scanning, taking into account escaped sequences and control characters
         var index = jsonBytes.startIndex
         var chunkStart = index
@@ -942,8 +943,6 @@ extension JSON5Scanner {
             throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: chunkStart, fullSource: fullSource))
         }
         output += stringChunk
-
-        return output
     }
 
     private static func parseEscapeSequence(
