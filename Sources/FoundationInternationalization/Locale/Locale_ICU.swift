@@ -80,15 +80,10 @@ internal final class _Locale: Sendable, Hashable {
 
             if let numberSymbols {
                 for (sym, str) in numberSymbols {
-#if os(Windows)
-                    let icuSymbol = UNumberFormatSymbol(CInt(sym))
-#else
-                    let icuSymbol = UNumberFormatSymbol(CUnsignedInt(sym))
-#endif
                     let utf16 = Array(str.utf16)
                     utf16.withUnsafeBufferPointer {
                         var status = U_ZERO_ERROR
-                        unum_setSymbol(nf, icuSymbol, $0.baseAddress, Int32($0.count), &status)
+                        unum_setSymbol(nf, UNumberFormatSymbol(CInt(sym)), $0.baseAddress, Int32($0.count), &status)
                     }
                 }
             }

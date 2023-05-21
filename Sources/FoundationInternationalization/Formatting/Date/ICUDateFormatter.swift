@@ -192,12 +192,7 @@ final class ICUDateFormatter {
         }
 
         return (result, positer.fields.map { field -> AttributePosition in
-#if os(Windows)
-            let icuField = UDateFormatField(rawValue: CInt(field.field))
-#else
-            let icuField = UDateFormatField(rawValue: CUnsignedInt(field.field))
-#endif
-            return AttributePosition(field: icuField, begin: field.begin, end: field.end)
+            return AttributePosition(field: UDateFormatField(CInt(field.field)), begin: field.begin, end: field.end)
         })
     }
 
