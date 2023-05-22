@@ -893,7 +893,6 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
             }
         }
     }
-#if FIXED_106570987
     func test_plainStyle_rounded() throws {
         let expectations: [IntegerFormatStyle<Int> : [String]] = [
             baseStyle.rounded(rule: .toNearestOrEven, increment: 5): [ "9,223,372,036,854,775,805",
@@ -976,54 +975,66 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
                                                                             "-922,337,203,685,477,600",
                                                                             "-9,223,372,036,854,775,800",
                                                                        ],
-            baseStyle.rounded(rule: .up, increment: Int.max): [ "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "9,223,372,036,854,775,807",
-                                                                "0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                                "-0",
-                                                              ],
         ]
-        for (style, expectedStrings) in expectations {
+
+        for (idx, (style, expectedStrings)) in expectations.enumerated() {
             for i in 0..<exhaustiveIntNumbers.count {
-                XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
+                XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectedStrings[i], "Style: \(style.collection.debugDescription) is failing for #\(idx), #\(i)")
             }
         }
     }
+
+#if FOUNDATION_FRAMEWORK // Re-enable this test when ICU is updated to 72
+    func test_plainStyle_rounded_largeIncrement() {
+        let style = baseStyle.rounded(rule: .up, increment: Int.max)
+
+        let expectations = [
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "9,223,372,036,854,775,807",
+            "0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-9,223,372,036,854,775,807",
+        ]
+        for i in 0..<exhaustiveIntNumbers.count {
+            XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectations[i], "Style: \(style.collection.debugDescription) is failing for number #\(Int(exhaustiveIntNumbers[i]))")
+        }
+    }
 #endif
+
     func test_plainStyle_scientific() throws {
         let expectations: [IntegerFormatStyle<Int> : [String]] = [
             baseStyle.notation(.scientific): [ "9.223372E18",
@@ -1540,7 +1551,6 @@ final class FormatStylePatternMatchingTests : XCTestCase {
         _verifyMatching("NotANumber", formatStyle: style, expectedUpperBound: nil, expectedValue: nil)
         // Different locale
         let frenchString = "42 %"
-        let formatted = style.locale(frFR).format(42)
         _verifyMatching(frenchString, formatStyle: style.locale(frFR), expectedUpperBound: frenchString.endIndex, expectedValue: 42)
         _verifyMatching("\(frenchString) pommes", formatStyle: style.locale(frFR), expectedUpperBound: frenchString.endIndex, expectedValue: 42)
         let newFrenchStr = "pommes \(frenchString)"

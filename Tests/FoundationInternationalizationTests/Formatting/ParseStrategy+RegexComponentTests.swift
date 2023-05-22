@@ -69,7 +69,7 @@ final class ParseStrategyMatchTests: XCTestCase {
     }
 
 // https://github.com/apple/swift-foundation/issues/60
-#if false
+#if FOUNDATION_FRAMEWORK
     func testAPIStatement() {
 
         let statement = """
@@ -249,15 +249,11 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
 
         verify("03/05/2020", .date(.numeric, locale: enUS, timeZone: gmt), "2020-03-05T00:00:00+00:00")
         verify("03/05/2020", .date(.numeric, locale: enGB, timeZone: gmt), "2020-05-03T00:00:00+00:00")
-#if FIXED_106570987
         verify("03/05/2020, 4:29:24\u{202f}PM", .dateTime(date: .numeric, time: .standard, locale: enUS, timeZone: pst), "2020-03-05T16:29:24-08:00")
-#endif
         verify("03/05/2020, 16:29:24", .dateTime(date: .numeric, time: .standard, locale: enGB, timeZone: gmt), "2020-05-03T16:29:24+00:00")
         verify("03/05/2020, 4:29:24 PM", .dateTime(date: .numeric, time: .standard, locale: enGB, timeZone: pst), nil) // en_GB uses 24-hour time, therefore it does not parse "PM"
-#if FIXED_106570987
         // Passing in time zone does nothing when the string contains the time zone and matches the style
         verify("03/05/2020, 4:29:24\u{202f}PM PDT", .dateTime(date: .numeric, time: .complete, locale: enUS, timeZone: pst), "2020-03-05T16:29:24-07:00")
-#endif
         verify("03/05/2020, 16:29:24 GMT-7", .dateTime(date: .numeric, time: .complete, locale: enGB, timeZone: gmt), "2020-05-03T16:29:24-07:00")
 
         verify("03_05_2020", .date(format: "\(month: .twoDigits)_\(day: .twoDigits)_\(year: .defaultDigits)", locale: enUS, timeZone: gmt), "2020-03-05T00:00:00+00:00")
