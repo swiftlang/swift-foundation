@@ -61,5 +61,4 @@ extension BidirectionalCollection {
         }
         return self[startOfNonTrimmedRange ... backIdx]
     }
-
 }
