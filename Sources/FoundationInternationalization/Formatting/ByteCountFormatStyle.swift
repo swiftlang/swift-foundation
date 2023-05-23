@@ -133,31 +133,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
             guard let languageCode = locale.language.languageCode?._normalizedIdentifier else { return false }
 
             switch languageCode {
-            case "ar":
-                return true
-            case "da":
-                return true
-            case "el":
-                return true
-            case "en":
-                return true
-            case "fr":
-                return true
-            case "hi":
-                return true
-            case "hr":
-                return true
-            case "id":
-                return true
-            case "it":
-                return true
-            case "ms":
-                return true
-            case "pt":
-                return true
-            case "ro":
-                return true
-            case "th":
+            case "ar", "da", "el", "en", "fr",  "hi", "hr", "id", "it", "ms", "pt", "ro", "th":
                 return true
             default:
                 break
@@ -167,9 +143,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
 
             // These only uses spellout zero with byte but not with kilobyte
             switch languageCode {
-            case "ca":
-                return true
-            case "no":
+            case "ca", "no":
                 return true
             default:
                 break
