@@ -54,6 +54,13 @@ internal final class ICULegacyNumberFormatter {
         unum_setAttribute(uformatter, attr, value ? 1 : 0)
     }
 
+    func setTextAttribute(_ attr: UNumberFormatTextAttribute, value: String) throws {
+        let uvalue = Array(value.utf16)
+        var status = U_ZERO_ERROR
+        unum_setTextAttribute(uformatter, attr, uvalue, Int32(uvalue.count), &status)
+        try status.checkSuccess()
+    }
+
     func parseAsInt(_ string: some StringProtocol) -> Int64? {
         let arr = Array(string.utf16)
         var status = U_ZERO_ERROR
@@ -244,7 +251,7 @@ internal final class ICULegacyNumberFormatter {
             case .currency(let config):
                 icuType = config.icuNumberFormatStyle
             case .descriptive(let config):
-                icuType = config.icuFormatStyle
+                icuType = config.icuNumberFormatStyle
             }
 
             let formatter = try! ICULegacyNumberFormatter(type: icuType, locale: locale)
@@ -286,14 +293,26 @@ internal final class ICULegacyNumberFormatter {
                         break
                     }
                 }
-
+                
             case .descriptive(let config):
                 if let capitalizationContext = config.capitalizationContext {
                     formatter.setCapitalizationContext(capitalizationContext)
                 }
+                
+                switch config.presentation.option {
+                case .spellOut:
+                    break
+                case .ordinal:
+                    break
+                case .cardinal:
+                    do {
+                        try formatter.setTextAttribute(.defaultRuleSet, value: "%spellout-cardinal")
+                    } catch {
+                        // the general cardinal rule isn't supported, so try a gendered cardinal. Note that a proper fix requires using the gender of the subsequent noun
+                        try? formatter.setTextAttribute(.defaultRuleSet, value: "%spellout-cardinal-masculine")
+                    }
+                }
             }
-
-
             return formatter
         }
     }
