@@ -505,8 +505,13 @@ internal final class _TimeZone: Sendable {
         }
 
         #if os(Windows)
-        // Need to use _O_BINARY|_O_NOINHERIT
-        fatalError()
+        let fd: CInt = path.withCString(encodedAs: UTF16.self) {
+            var fd: CInt = -1
+            let errno: errno_t =
+                _wsopen_s(&fd, $0, _O_RDONLY | _O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE)
+            guard errno == 0 else { return -1 }
+            return fd
+        }
         #else
         let fd = open(path, O_RDONLY, 0666)
         #endif
@@ -514,20 +519,33 @@ internal final class _TimeZone: Sendable {
         guard fd >= 0 else { return Data() }
         defer { close(fd) }
 
+#if os(Windows)
+        var stat: _stat64 = _stat64()
+        let res = _fstat64(fd, &stat)
+#else
         var stat: stat = stat()
         let res = fstat(fd, &stat)
+#endif
         guard res >= 0 else { return Data() }
 
+#if os(Windows)
+        guard (CInt(stat.st_mode) & _S_IFMT) == S_IFREG else { return Data() }
+        guard stat.st_size < Int64.max else { return Data() }
+#else
         guard (stat.st_mode & S_IFMT) == S_IFREG else { return Data() }
-
         guard stat.st_size < Int.max else { return Data() }
+#endif
 
         let sz = Int(stat.st_size)
 
         let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: sz, alignment: 0)
         defer { bytes.deallocate() }
 
+#if os(Windows)
+        let ret = _read(fd, bytes.baseAddress!, CUnsignedInt(sz))
+#else
         let ret = read(fd, bytes.baseAddress!, sz)
+#endif
         guard ret >= sz else { return Data() }
 
         return Data(bytes: bytes.baseAddress!, count: sz)
