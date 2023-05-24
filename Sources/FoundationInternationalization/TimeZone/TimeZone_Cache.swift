@@ -14,6 +14,8 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(ucrt)
+import ucrt
 #endif
 
 #if FOUNDATION_FRAMEWORK
