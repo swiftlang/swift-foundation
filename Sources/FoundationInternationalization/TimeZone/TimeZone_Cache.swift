@@ -18,6 +18,10 @@ import Glibc
 import ucrt
 #endif
 
+#if os(Windows)
+import WinSDK
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import _ForSwiftFoundation
 @_implementationOnly import CoreFoundation_Private.CFNotificationCenter
@@ -106,6 +110,23 @@ struct TimeZoneCache : Sendable {
                 }
             }
 
+#if os(Windows)
+            let hFile = _TimeZone.TZDEFAULT.withCString(encodedAs: UTF16.self) {
+                CreateFileW($0, GENERIC_READ, DWORD(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE), nil, DWORD(OPEN_EXISTING), 0, nil)
+            }
+            defer { CloseHandle(hFile) }
+            let dwSize = GetFinalPathNameByHandleW(hFile, nil, 0, DWORD(VOLUME_NAME_DOS))
+            let path = withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwSize)) {
+                _ = GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwSize, DWORD(VOLUME_NAME_DOS))
+                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+            }
+            if let rangeOfZoneInfo = path.range(of: "\(_TimeZone.TZDIR)\\") {
+                let name = path[rangeOfZoneInfo.upperBound...]
+                if let result = fixed(String(name)) {
+                    return result
+                }
+            }
+#else
             let buffer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: Int(PATH_MAX + 1))
             defer { buffer.deallocate() }
             buffer.initialize(repeating: 0)
@@ -128,6 +149,7 @@ struct TimeZoneCache : Sendable {
                     }
                 }
             }
+#endif
 
             // Last option as a default is the GMT value (again, using the cached version directly to avoid recursive lock)
             return offsetFixed(0)!
