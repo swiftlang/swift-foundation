@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 extension String {
-    internal func _trimmingWhitespaces() -> String {
+    internal func _trimmingWhitespace() -> String {
         String(unicodeScalars._trimmingCharacters {
             $0.properties.isWhitespace
         })
