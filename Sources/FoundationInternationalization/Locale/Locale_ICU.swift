@@ -372,9 +372,9 @@ internal final class _Locale: Sendable, Hashable {
                 return uloc_toLanguageTag(string, buffer, size, UBool.false, &status)
             }
 
-            if let canonicalized = bcp47?.replacingOccurrences(of: "-", with: "_") {
+            if let canonicalized = bcp47?.replacing("-", with: "_") {
                 if canonicalized == "und" {
-                    result = canonicalized.replacingOccurrences(of: "und", with: "root")
+                    result = canonicalized.replacing("und", with: "root")
                 } else {
                     result = canonicalized
                 }
