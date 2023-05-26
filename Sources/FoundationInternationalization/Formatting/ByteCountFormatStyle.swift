@@ -127,22 +127,49 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
         fileprivate static let maxDecimalSizes = [999, 999499, 999949999, 999994999999, 999994999999999, Int64.max]
         fileprivate static let maxBinarySizes = [1023, 1048063, 1073689395, 1099506259066, 1125894409284485, Int64.max]
 
-        func _format(_ value: ICUNumberFormatter.Value) -> AttributedString {
-            if spellsOutZero && value.isZero {
-                let unit: Unit = allowedUnits.contains(.kb) ? .kilobyte : .byte
+        func useSpelloutZero(forLocale locale: Locale, unit: Unit) -> Bool {
+            guard unit == .byte || unit == .kilobyte else { return false }
 
-                let configuration = DescriptiveNumberFormatConfiguration.Collection(presentation: .spellOut, capitalizationContext: .beginningOfSentence)
+            guard let languageCode = locale.language.languageCode?._normalizedIdentifier else { return false }
+
+            switch languageCode {
+            case "ar", "da", "el", "en", "fr",  "hi", "hr", "id", "it", "ms", "pt", "ro", "th":
+                return true
+            default:
+                break
+            }
+
+            guard unit == .byte else { return false }
+
+            // These only uses spellout zero with byte but not with kilobyte
+            switch languageCode {
+            case "ca", "no":
+                return true
+            default:
+                break
+            }
+
+            return false
+        }
+
+        func _format(_ value: ICUNumberFormatter.Value) -> AttributedString {
+            let unit: Unit = allowedUnits.contains(.kb) ? .kilobyte : .byte
+            if spellsOutZero && value.isZero {
+                let numberFormatter = ICUByteCountNumberFormatter.create(for: "measure-unit/digital-\(unit.name)\(unit == .byte ? " unit-width-full-name" : "")", locale: locale)
+                guard var attributedFormat = numberFormatter?.attributedFormat(.integer(.zero), unit: unit) else {
+                    // fallback to English if ICU formatting fails
+                    return unit == .byte ? "Zero bytes" : "Zero kB"
+                }
+
+                guard useSpelloutZero(forLocale: locale, unit: unit) else {
+                    return attributedFormat
+                }
+
+                let configuration = DescriptiveNumberFormatConfiguration.Collection(presentation: .cardinal, capitalizationContext: .beginningOfSentence)
                 let spellOutFormatter = ICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: .descriptive(configuration), locale: locale)
 
-                let numberFormatter = ICUByteCountNumberFormatter.create(for: "measure-unit/digital-\(unit.name) \(unit == .byte ? "unit-width-full-name" : "")", locale: locale)
-
-                guard var attributedFormat = numberFormatter?.attributedFormat(.integer(.zero), unit: unit), let zeroFormatted = spellOutFormatter.format(Int64.zero) else {
-                    // fallback to English
-                    if unit == .byte {
-                        return "Zero bytes"
-                    } else {
-                        return "Zero kB"
-                    }
+                guard let zeroFormatted = spellOutFormatter.format(Int64.zero) else {
+                    return attributedFormat
                 }
 
                 var attributedZero = AttributedString(zeroFormatted)

@@ -72,6 +72,10 @@ extension UNumberFormatAttribute {
     static let signAlwaysShown = UNUM_SIGN_ALWAYS_SHOWN
 }
 
+extension UNumberFormatTextAttribute {
+    static let defaultRuleSet = UNUM_DEFAULT_RULESET
+}
+
 extension UDateRelativeDateTimeFormatterStyle {
     static let long = UDAT_STYLE_LONG
     static let short = UDAT_STYLE_SHORT
