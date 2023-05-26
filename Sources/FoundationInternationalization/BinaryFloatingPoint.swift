@@ -14,6 +14,8 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(CRT)
+import CRT
 #endif
 
 extension BinaryFloatingPoint {
