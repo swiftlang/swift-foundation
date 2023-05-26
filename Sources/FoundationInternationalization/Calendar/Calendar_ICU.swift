@@ -1159,7 +1159,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
 
             for i in 0..<7 {
                 var status = U_ZERO_ERROR
-                weekdayTypes[i] = ucal_getDayOfWeekType(ucalendar, UCalendarDaysOfWeek(rawValue: weekdaysIndex[i]), &status)
+                weekdayTypes[i] = ucal_getDayOfWeekType(ucalendar, UCalendarDaysOfWeek(CInt(weekdaysIndex[i])), &status)
                 if weekdayTypes[i] == UCAL_WEEKEND_ONSET {
                     onset = weekdaysIndex[i]
                 } else if weekdayTypes[i] == UCAL_WEEKEND_CEASE {
@@ -1178,13 +1178,13 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             if let onset {
                 var status = U_ZERO_ERROR
                 // onsetTime is milliseconds after midnight at which the weekend starts. Divide to get to TimeInterval (seconds)
-                result.onsetTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(rawValue: onset), &status)) / 1000.0
+                result.onsetTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(CInt(onset)), &status)) / 1000.0
             }
 
             if let cease {
                 var status = U_ZERO_ERROR
                 // onsetTime is milliseconds after midnight at which the weekend ends. Divide to get to TimeInterval (seconds)
-                result.ceaseTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(rawValue: cease), &status)) / 1000.0
+                result.ceaseTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(CInt(cease)), &status)) / 1000.0
             }
 
             var weekendStart: UInt32?
