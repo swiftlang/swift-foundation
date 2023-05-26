@@ -38,7 +38,7 @@ extension BidirectionalCollection where Index == String.Index {
 }
 
 extension BidirectionalCollection {
-    func _trimmingCharacters(while predicate:(Element) -> Bool) -> SubSequence {
+    func _trimmingCharacters(while predicate: (Element) -> Bool) -> SubSequence {
         var idx = startIndex
         while idx < endIndex && predicate(self[idx]) {
             formIndex(after: &idx)
