@@ -68,9 +68,14 @@ let package = Package(
                 .enableExperimentalFeature("AccessLevelOnImport")
             ]
         ),
-        .testTarget(name: "FoundationInternationalizationTests", dependencies: [
-            "TestSupport",
-            "FoundationInternationalization"
-        ]),
     ]
 )
+
+#if canImport(RegexBuilder)
+package.targets.append(contentsOf: [
+    .testTarget(name: "FoundationInternationalizationTests", dependencies: [
+        "TestSupport",
+        "FoundationInternationalization"
+    ]),
+])
+#endif
