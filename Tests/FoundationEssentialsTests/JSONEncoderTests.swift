@@ -1138,7 +1138,10 @@ final class JSONEncoderTests : XCTestCase {
         _test(JSONString: "[\"本日\"]", to: ["本日"])
     }
 
-    func test_JSONUnicodeEscapes() {
+    func test_JSONUnicodeEscapes() throws {
+#if os(Linux)
+        throw XCTSkip("current development swift builds cause a stack overflow")
+#endif
         let testCases = [
             // e-acute and greater-than-or-equal-to
             "\"\\u00e9\\u2265\"" : "é≥",
