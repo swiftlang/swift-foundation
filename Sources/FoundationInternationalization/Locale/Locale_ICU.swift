@@ -61,7 +61,7 @@ internal final class _Locale: Sendable, Hashable {
         var numberFormatters: [UInt32 /* UNumberFormatStyle */ : UnsafeMutablePointer<UNumberFormat?>] = [:]
 
         mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafeMutablePointer<UNumberFormat?>? {
-            if let nf = numberFormatters[style.rawValue] {
+            if let nf = numberFormatters[UInt32(style.rawValue)] {
                 return nf
             }
 
@@ -80,16 +80,15 @@ internal final class _Locale: Sendable, Hashable {
 
             if let numberSymbols {
                 for (sym, str) in numberSymbols {
-                    let icuSymbol = UNumberFormatSymbol(UInt32(sym))
                     let utf16 = Array(str.utf16)
                     utf16.withUnsafeBufferPointer {
                         var status = U_ZERO_ERROR
-                        unum_setSymbol(nf, icuSymbol, $0.baseAddress, Int32($0.count), &status)
+                        unum_setSymbol(nf, UNumberFormatSymbol(CInt(sym)), $0.baseAddress, Int32($0.count), &status)
                     }
                 }
             }
-            
-            numberFormatters[style.rawValue] = nf
+
+            numberFormatters[UInt32(style.rawValue)] = nf
 
             return nf
         }

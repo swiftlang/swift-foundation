@@ -1728,7 +1728,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         // Apply an epsilon to comparison of nanosecond values
         if let nanosecond = comp.nanosecond, let tempNanosecond = tempComp.nanosecond {
-            if labs(nanosecond - tempNanosecond) > 500 {
+            if labs(CLong(nanosecond - tempNanosecond)) > 500 {
                 return false
             } else {
                 comp.nanosecond = 0
