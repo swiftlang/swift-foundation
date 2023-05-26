@@ -119,7 +119,7 @@ internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type
     // AppKit
     let macUIScope = (
         "$s10Foundation15AttributeScopesO6AppKitE0dE10AttributesVN",
-        "/usr/lib/swift/libswiftAppKit.dylib"
+        "/System/Library/Frameworks/AppKit.framework/AppKit"
     )
     #else
     // UIKit on macOS
