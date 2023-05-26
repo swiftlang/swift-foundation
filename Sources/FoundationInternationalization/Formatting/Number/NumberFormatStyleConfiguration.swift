@@ -589,7 +589,7 @@ extension NumberFormatStyleConfiguration.Collection {
             s += notation.skeleton + " "
         }
 
-        return s.trimmingCharacters(in: .whitespaces)
+        return s._trimmingWhitespace()
     }
 }
 
@@ -849,7 +849,7 @@ extension CurrencyFormatStyleConfiguration.Collection {
             s += rounding.skeleton + " "
         }
 
-        return s.trimmingCharacters(in: .whitespaces)
+        return s._trimmingWhitespace()
     }
 
     var icuNumberFormatStyle: UNumberFormatStyle {

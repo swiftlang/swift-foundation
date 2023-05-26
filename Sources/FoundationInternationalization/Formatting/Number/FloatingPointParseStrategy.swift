@@ -26,7 +26,7 @@ extension FloatingPointParseStrategy: ParseStrategy {
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
     public func parse(_ value: String) throws -> Format.FormatInput {
         let parser = ICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
-        if let v = parser.parseAsDouble(value.trimmingCharacters(in: .whitespaces)) {
+        if let v = parser.parseAsDouble(value._trimmingWhitespace()) {
             return Format.FormatInput(v)
         } else {
             let exampleString = formatStyle.format(3.14)
