@@ -29,6 +29,7 @@ public enum AttributeScopes { }
 
 #if FOUNDATION_FRAMEWORK
 
+@_implementationOnly import Darwin
 @_implementationOnly import ReflectionInternal
 
 fileprivate struct ScopeDescription : Sendable {
@@ -54,7 +55,10 @@ fileprivate struct LoadedScopeCache : Sendable {
         lastImageCount = 0
     }
     
-    mutating func scopeType(for name: String) -> (any AttributeScope.Type)? {
+    mutating func scopeType(
+        for name: String,
+        in path: String
+    ) -> (any AttributeScope.Type)? {
         if let cached = scopeMangledNames[name] {
             if let foundScope = cached {
                 // We have a cached result, provide it to the caller
@@ -72,7 +76,13 @@ fileprivate struct LoadedScopeCache : Sendable {
             }
         }
         
-        let type = _typeByName(name) as? any AttributeScope.Type
+        guard let handle = dlopen(path, RTLD_NOLOAD),
+             let symbol = dlsym(handle, name) else {
+            scopeMangledNames[name] = nil
+            return nil
+        }
+        
+        let type = unsafeBitCast(symbol, to: Any.Type.self) as? any AttributeScope.Type
         scopeMangledNames[name] = type
         return type
     }
@@ -103,19 +113,43 @@ fileprivate struct LoadedScopeCache : Sendable {
 fileprivate let _loadedScopeCache = LockedState(initialState: LoadedScopeCache())
 
 internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type] {
+    // On native macOS, the UI framework that gets loaded is AppKit. On
+    // macCatalyst however, we load a version of UIKit.
+    #if !targetEnvironment(macCatalyst)
+    // AppKit
+    let macUIScope = (
+        "$s10Foundation15AttributeScopesO6AppKitE0dE10AttributesVN",
+        "/usr/lib/swift/libswiftAppKit.dylib"
+    )
+    #else
+    // UIKit on macOS
+    let macUIScope = (
+        "$s10Foundation15AttributeScopesO5UIKitE0D10AttributesVN",
+        "/System/iOSSupport/System/Library/Frameworks/UIKit.framework/UIKit"
+    )
+    #endif
+
     // Gather the metatypes for all scopes currently loaded into the process (may change over time)
     let defaultScopes = _loadedScopeCache.withLock { cache in
         [
-            // AppKit
-            "10Foundation15AttributeScopesO6AppKitE0dE10AttributesV",
+            macUIScope,
             // UIKit
-            "10Foundation15AttributeScopesO5UIKitE0D10AttributesV",
+            (
+                "$s10Foundation15AttributeScopesO5UIKitE0D10AttributesVN",
+                "/System/Library/Frameworks/UIKit.framework/UIKit"
+            ),
             // SwiftUI
-            "10Foundation15AttributeScopesO7SwiftUIE0D12UIAttributesV",
+            (
+                "$s10Foundation15AttributeScopesO7SwiftUIE0D12UIAttributesVN",
+                "/System/Library/Frameworks/SwiftUI.framework/SwiftUI"
+            ),
             // Accessibility
-            "10Foundation15AttributeScopesO13AccessibilityE0D10AttributesV"
+            (
+                "$s10Foundation15AttributeScopesO13AccessibilityE0D10AttributesVN",
+                "/System/Library/Frameworks/Accessibility.framework/Accessibility"
+            )
         ].compactMap {
-            cache.scopeType(for: $0)
+            cache.scopeType(for: $0.0, in: $0.1)
         }
     }
     
