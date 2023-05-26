@@ -18,6 +18,10 @@ import FoundationEssentials
 import Glibc
 #endif
 
+#if canImport(ucrt)
+import ucrt
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
 #else

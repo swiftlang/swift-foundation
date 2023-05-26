@@ -99,7 +99,7 @@ extension Locale {
                 return
             }
             var status = U_ZERO_ERROR
-            #if canImport(Glibc)
+            #if canImport(Glibc) || canImport(ucrt)
             // Glibc doesn't support strlcpy
             strcpy(buf, identifier)
             #else
