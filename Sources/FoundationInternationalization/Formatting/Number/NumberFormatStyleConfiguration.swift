@@ -385,6 +385,7 @@ public enum DescriptiveNumberFormatConfiguration {
         internal enum Option : Int, Codable, Hashable {
             case spellOut = 1
             case ordinal = 2
+            case cardinal = 3
 
             #if FOUNDATION_FRAMEWORK
             fileprivate var numberFormatterStyle : NumberFormatter.Style {
@@ -393,6 +394,8 @@ public enum DescriptiveNumberFormatConfiguration {
                     return .spellOut
                 case .ordinal:
                     return .ordinal
+                case .cardinal:
+                    return .spellOut // cardinal is a special case spellout style
                 }
             }
             #endif // FOUNDATION_FRAMEWORK
@@ -401,7 +404,8 @@ public enum DescriptiveNumberFormatConfiguration {
 
         public static var spellOut: Self { Presentation(rawValue: 1) }
         public static var ordinal: Self { Presentation(rawValue: 2) }
-
+        internal static var cardinal: Self { Presentation(rawValue: 3) }
+        
         internal init(rawValue: Int) {
             option = Option(rawValue: rawValue)!
         }
@@ -411,20 +415,14 @@ public enum DescriptiveNumberFormatConfiguration {
         var presentation: Presentation
         var capitalizationContext: CapitalizationContext?
 
-        var icuFormatStyle: UNumberFormatStyle {
-            switch presentation.option {
-            case .spellOut:
-                return .spellout
-            case .ordinal:
-                return .ordinal
-            }
-        }
         var icuNumberFormatStyle: UNumberFormatStyle {
             switch presentation.option {
             case .spellOut:
                 return .spellout
             case .ordinal:
                 return .ordinal
+            case .cardinal:
+                return .spellout // cardinal is a special case spellout stype
             }
         }
     }

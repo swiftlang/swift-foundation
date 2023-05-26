@@ -16,18 +16,19 @@ import TestSupport
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 final class ByteCountFormatStyleTests : XCTestCase {
-    let locales = [Locale(identifier: "en_US"), .init(identifier: "fr_FR"), .init(identifier: "zh_TW"), .init(identifier: "ar")]
+    let locales = [Locale(identifier: "en_US"), .init(identifier: "fr_FR"), .init(identifier: "zh_TW"), .init(identifier: "zh_CN"), .init(identifier: "ar")]
 
     func test_zeroSpelledOutKb() {
         let localizedZerosSpelledOutKb: [Locale: String] = [
             Locale(identifier: "en_US"): "Zero kB",
             Locale(identifier: "fr_FR"): "Zéro ko",
-            Locale(identifier: "zh_TW"): "〇 kB",
+            Locale(identifier: "zh_TW"): "0 kB",
+            Locale(identifier: "zh_CN"): "0 kB",
             Locale(identifier: "ar"): "صفر كيلوبايت",
         ]
 
         for locale in locales {
-            XCTAssertEqual(0.formatted(.byteCount(style: .memory, spellsOutZero: true).locale(locale)), localizedZerosSpelledOutKb[locale])
+            XCTAssertEqual(0.formatted(.byteCount(style: .memory, spellsOutZero: true).locale(locale)), localizedZerosSpelledOutKb[locale], "locale: \(locale.identifier) failed expectation" )
         }
     }
 
@@ -35,12 +36,13 @@ final class ByteCountFormatStyleTests : XCTestCase {
         let localizedZerosSpelledOutBytes: [Locale: String] = [
             Locale(identifier: "en_US"): "Zero bytes",
             Locale(identifier: "fr_FR"): "Zéro octet",
-            Locale(identifier: "zh_TW"): "〇 byte",
+            Locale(identifier: "zh_TW"): "0 byte",
+            Locale(identifier: "zh_CN"): "0字节",
             Locale(identifier: "ar"): "صفر بايت",
         ]
 
         for locale in locales {
-            XCTAssertEqual(0.formatted(.byteCount(style: .memory, allowedUnits: .bytes, spellsOutZero: true).locale(locale)), localizedZerosSpelledOutBytes[locale])
+            XCTAssertEqual(0.formatted(.byteCount(style: .memory, allowedUnits: .bytes, spellsOutZero: true).locale(locale)), localizedZerosSpelledOutBytes[locale], "locale: \(locale.identifier) failed expectation")
         }
     }
 
@@ -62,6 +64,14 @@ final class ByteCountFormatStyleTests : XCTestCase {
         "1 Po",
         ],
         Locale(identifier: "zh_TW"): [
+        "1 byte",
+        "1 kB",
+        "1 MB",
+        "1 GB",
+        "1 TB",
+        "1 PB",
+        ],
+        Locale(identifier: "zh_CN"): [
         "1 byte",
         "1 kB",
         "1 MB",
