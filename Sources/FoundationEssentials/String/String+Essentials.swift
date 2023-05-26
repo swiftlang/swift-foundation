@@ -41,6 +41,8 @@ extension String {
         return new
     }
 
+    // MARK: - Public API
+
     /// Creates a new string equivalent to the given bytes interpreted in the
     /// specified encoding.
     ///
