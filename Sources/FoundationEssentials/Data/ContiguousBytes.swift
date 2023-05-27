@@ -45,7 +45,7 @@ extension ContiguousArray : ContiguousBytes where Element == UInt8 { }
 extension UnsafeRawBufferPointer : ContiguousBytes {
     @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try body(self)
+        try body(self)
     }
 }
 
@@ -53,7 +53,7 @@ extension UnsafeRawBufferPointer : ContiguousBytes {
 extension UnsafeMutableRawBufferPointer : ContiguousBytes {
     @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try body(UnsafeRawBufferPointer(self))
+        try body(UnsafeRawBufferPointer(self))
     }
 }
 
@@ -62,7 +62,7 @@ extension UnsafeMutableRawBufferPointer : ContiguousBytes {
 extension UnsafeBufferPointer : ContiguousBytes where Element == UInt8 {
     @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try body(UnsafeRawBufferPointer(self))
+        try body(UnsafeRawBufferPointer(self))
     }
 }
 
@@ -71,7 +71,7 @@ extension UnsafeBufferPointer : ContiguousBytes where Element == UInt8 {
 extension UnsafeMutableBufferPointer : ContiguousBytes where Element == UInt8 {
     @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try body(UnsafeRawBufferPointer(self))
+        try body(UnsafeRawBufferPointer(self))
     }
 }
 
@@ -80,7 +80,7 @@ extension UnsafeMutableBufferPointer : ContiguousBytes where Element == UInt8 {
 extension EmptyCollection : ContiguousBytes where Element == UInt8 {
     @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try body(UnsafeRawBufferPointer(start: nil, count: 0))
+        try body(UnsafeRawBufferPointer(start: nil, count: 0))
     }
 }
 
