@@ -32,7 +32,7 @@ private protocol _JSONStringDictionaryDecodableMarker {
 }
 
 extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String, Value: Decodable {
-    static var elementType: Decodable.Type { return Value.self }
+    static var elementType: Decodable.Type { Value.self }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1311,11 +1311,11 @@ extension JSONDecoderImpl {
         }
 
         func superDecoder() throws -> Decoder {
-            return decoderForKeyNoThrow(_JSONKey.super)
+            decoderForKeyNoThrow(_JSONKey.super)
         }
 
         func superDecoder(forKey key: K) throws -> Decoder {
-            return decoderForKeyNoThrow(key)
+            decoderForKeyNoThrow(key)
         }
 
         private func decoderForKeyNoThrow(_ key: some CodingKey) -> JSONDecoderImpl {
