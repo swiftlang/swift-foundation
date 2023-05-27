@@ -31,11 +31,11 @@ extension UnicodeScalar {
     }
 
     var _isGraphemeExtend: Bool {
-        return BuiltInUnicodeScalarSet.graphemeExtends.contains(self)
+        BuiltInUnicodeScalarSet.graphemeExtends.contains(self)
     }
 
     var _isCanonicalDecomposable: Bool {
-        return BuiltInUnicodeScalarSet.canonicalDecomposables.contains(self)
+        BuiltInUnicodeScalarSet.canonicalDecomposables.contains(self)
     }
 
     func _stripDiacritics() -> Self {
