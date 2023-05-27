@@ -73,15 +73,15 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     }
 
     public var description: String {
-        return uuidString
+        uuidString
     }
 
     public var debugDescription: String {
-        return description
+        description
     }
 
     public static func ==(lhs: UUID, rhs: UUID) -> Bool {
-        return lhs.uuid.0 == rhs.uuid.0 &&
+        lhs.uuid.0 == rhs.uuid.0 &&
             lhs.uuid.1 == rhs.uuid.1 &&
             lhs.uuid.2 == rhs.uuid.2 &&
             lhs.uuid.3 == rhs.uuid.3 &&
