@@ -245,7 +245,7 @@ internal class JSONMap {
     }
 
     func makeObjectIterator(from offset: Int) -> ObjectIterator {
-        return .init(currentOffset: offset, map: self)
+        .init(currentOffset: offset, map: self)
     }
 }
 
