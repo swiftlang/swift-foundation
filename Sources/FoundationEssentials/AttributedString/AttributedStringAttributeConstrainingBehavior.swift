@@ -35,7 +35,7 @@ extension AttributedString._AttributeStorage {
     }
 
     var constraintsInvolved: [AttributedString.AttributeRunBoundaries] {
-        return self.contents.values.compactMap(\.runBoundaries)
+        self.contents.values.compactMap(\.runBoundaries)
     }
     
     fileprivate mutating func matchStyle(of other: Self, for constraint: AttributedString.AttributeRunBoundaries) {
