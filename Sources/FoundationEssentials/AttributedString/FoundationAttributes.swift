@@ -69,7 +69,7 @@ extension AttributeScopes {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension AttributeDynamicLookup {
     subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes, T>) -> T {
-        return self[T.self]
+        self[T.self]
     }
 
     subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes.NumberFormatAttributes, T>) -> T { self[T.self] }
