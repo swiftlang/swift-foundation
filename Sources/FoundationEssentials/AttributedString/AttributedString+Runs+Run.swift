@@ -66,7 +66,7 @@ extension AttributedString.Runs.Run {
     internal var startIndex: AttributedString.Index { _range.lowerBound }
 
     internal var _attributes: _AttributeStorage {
-        return _internal.attributes
+        _internal.attributes
     }
     
     internal func run(clampedTo range: Range<AttributedString.Index>) -> Self {
