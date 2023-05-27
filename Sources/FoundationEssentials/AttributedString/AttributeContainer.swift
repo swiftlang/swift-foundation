@@ -62,12 +62,12 @@ extension AttributeContainer {
     }
 
     public static subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> Builder<K> {
-        return Builder(container: AttributeContainer())
+        Builder(container: AttributeContainer())
     }
 
     @_disfavoredOverload
     public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> Builder<K> {
-        return Builder(container: self)
+        Builder(container: self)
     }
 
     public struct Builder<T: AttributedStringKey> : Sendable {
