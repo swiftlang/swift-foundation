@@ -50,7 +50,7 @@ public struct AttributedSubstring: Sendable {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring {
     public var base: AttributedString {
-        return AttributedString(_guts)
+        AttributedString(_guts)
     }
 
 
@@ -153,15 +153,15 @@ extension AttributedSubstring : AttributedStringProtocol {
     }
 
     public var characters: AttributedString.CharacterView {
-        return AttributedString.CharacterView(_guts, in: _range)
+        AttributedString.CharacterView(_guts, in: _range)
     }
 
     public var unicodeScalars: AttributedString.UnicodeScalarView {
-        return AttributedString.UnicodeScalarView(_guts, in: _range)
+        AttributedString.UnicodeScalarView(_guts, in: _range)
     }
 
     public subscript(bounds: some RangeExpression<AttributedString.Index>) -> AttributedSubstring {
-        return AttributedSubstring(_guts, in: bounds.relative(to: characters))
+        AttributedSubstring(_guts, in: bounds.relative(to: characters))
     }
 }
 
