@@ -15,7 +15,7 @@
 // should drop it here. <rdar://problem/14497260> (need support
 // for CF bridging)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public var kCFStringEncodingASCII: CFStringEncoding { return 0x0600 }
+public var kCFStringEncodingASCII: CFStringEncoding { 0x0600 }
 #endif // FOUNDATION_FRAMEWORK
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -69,7 +69,7 @@ extension String.Encoding : Hashable {
         // Note: This is effectively the same hashValue definition that
         // RawRepresentable provides on its own. We only need to keep this to
         // ensure ABI compatibility with 5.0.
-        return rawValue.hashValue
+        rawValue.hashValue
     }
 
     @_alwaysEmitIntoClient // Introduced in 5.1
@@ -90,7 +90,7 @@ extension String.Encoding : Hashable {
         // Note: This is effectively the same == definition that
         // RawRepresentable provides on its own. We only need to keep this to
         // ensure ABI compatibility with 5.0.
-        return lhs.rawValue == rhs.rawValue
+        lhs.rawValue == rhs.rawValue
     }
 }
 
@@ -98,9 +98,9 @@ extension String.Encoding : Hashable {
 extension String.Encoding : CustomStringConvertible {
     public var description: String {
 #if FOUNDATION_FRAMEWORK
-        return String.localizedName(of: self)
+        String.localizedName(of: self)
 #else
-        return "\(self)"
+        "\(self)"
 #endif
     }
 }
