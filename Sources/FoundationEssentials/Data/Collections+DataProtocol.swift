@@ -15,21 +15,21 @@
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Array: DataProtocol where Element == UInt8 {
     public var regions: CollectionOfOne<Array<UInt8>> {
-        return CollectionOfOne(self)
+        CollectionOfOne(self)
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension ArraySlice: DataProtocol where Element == UInt8 {
     public var regions: CollectionOfOne<ArraySlice<UInt8>> {
-        return CollectionOfOne(self)
+        CollectionOfOne(self)
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension ContiguousArray: DataProtocol where Element == UInt8 {
     public var regions: CollectionOfOne<ContiguousArray<UInt8>> {
-        return CollectionOfOne(self)
+        CollectionOfOne(self)
     }
 }
 
@@ -38,14 +38,14 @@ extension ContiguousArray: DataProtocol where Element == UInt8 {
 //     public typealias Regions = CollectionOfOne<Data>
 //
 //     public var regions: CollectionOfOne<Data> {
-//         return CollectionOfOne<Data>(Data(self))
+//         CollectionOfOne<Data>(Data(self))
 //     }
 // }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension EmptyCollection : DataProtocol where Element == UInt8 {
     public var regions: EmptyCollection<Data> {
-        return EmptyCollection<Data>()
+        EmptyCollection<Data>()
     }
 }
 
