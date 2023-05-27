@@ -15,9 +15,9 @@
 public struct Bundle: Hashable, Equatable, Sendable {
     public static let main: Bundle = Bundle()
 
-    public var localizations: [String] { return [] }
+    public var localizations: [String] { [] }
 
-    public var infoDictionary: [String : Any]? { return [:] }
+    public var infoDictionary: [String : Any]? { [:] }
 
     public static func preferredLocalizations(
         from localizationsArray: [String],
