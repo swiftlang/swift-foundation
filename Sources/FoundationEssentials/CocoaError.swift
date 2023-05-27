@@ -21,10 +21,10 @@ public struct CocoaError : _BridgedStoredNSError {
         self._nsError = error
     }
     
-    public static var errorDomain: String { return NSCocoaErrorDomain }
+    public static var errorDomain: String { NSCocoaErrorDomain }
     
     public var hashValue: Int {
-        return _nsError.hashValue
+        _nsError.hashValue
     }
 }
 #else
@@ -98,26 +98,26 @@ extension CocoaError {
 public extension CocoaError {
 #if FOUNDATION_FRAMEWORK
     private var _nsUserInfo: [AnyHashable : Any] {
-        return (self as NSError).userInfo
+        (self as NSError).userInfo
     }
 #endif
 
     /// The file path associated with the error, if any.
     var filePath: String? {
 #if FOUNDATION_FRAMEWORK
-        return _nsUserInfo[NSFilePathErrorKey as NSString] as? String
+        _nsUserInfo[NSFilePathErrorKey as NSString] as? String
 #else
-        return userInfo["NSFilePathErrorKey"] as? String
+        userInfo["NSFilePathErrorKey"] as? String
 #endif
     }
 
     /// The string encoding associated with this error, if any.
     var stringEncoding: String.Encoding? {
 #if FOUNDATION_FRAMEWORK
-        return (_nsUserInfo[NSStringEncodingErrorKey as NSString] as? NSNumber)
+        (_nsUserInfo[NSStringEncodingErrorKey as NSString] as? NSNumber)
             .map { String.Encoding(rawValue: $0.uintValue) }
 #else
-        return (userInfo["NSStringEncodingErrorKey"] as? Int)
+        (userInfo["NSStringEncodingErrorKey"] as? Int)
             .map { String.Encoding(rawValue: UInt($0)) }
 #endif
     }
@@ -125,9 +125,9 @@ public extension CocoaError {
     /// The underlying error behind this error, if any.
     var underlying: Error? {
 #if FOUNDATION_FRAMEWORK
-        return _nsUserInfo[NSUnderlyingErrorKey as NSString] as? Error
+        _nsUserInfo[NSUnderlyingErrorKey as NSString] as? Error
 #else
-        return userInfo["NSUnderlyingErrorKey"] as? Error
+        userInfo["NSUnderlyingErrorKey"] as? Error
 #endif
     }
 
@@ -164,9 +164,9 @@ public extension CocoaError {
     /// The URL associated with this error, if any.
     var url: URL? {
 #if FOUNDATION_FRAMEWORK
-        return _nsUserInfo[NSURLErrorKey as NSString] as? URL
+        _nsUserInfo[NSURLErrorKey as NSString] as? URL
 #else
-        return userInfo["NSURLErrorKey"] as? URL
+        userInfo["NSURLErrorKey"] as? URL
 #endif
     }
 }
@@ -211,10 +211,10 @@ public protocol LocalizedError : Error {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public extension LocalizedError {
-    var errorDescription: String? { return nil }
-    var failureReason: String? { return nil }
-    var recoverySuggestion: String? { return nil }
-    var helpAnchor: String? { return nil }
+    var errorDescription: String? { nil }
+    var failureReason: String? { nil }
+    var recoverySuggestion: String? { nil }
+    var helpAnchor: String? { nil }
 }
 
 /// Describes an error type that specifically provides a domain, code,
@@ -235,33 +235,33 @@ public protocol CustomNSError : Error {
 public extension CustomNSError {
     /// Default domain of the error.
     static var errorDomain: String {
-        return String(reflecting: self)
+        String(reflecting: self)
     }
 
     /// The error code within the given domain.
     var errorCode: Int {
-        return _getDefaultErrorCode(self)
+        _getDefaultErrorCode(self)
     }
 
     /// The default user-info dictionary.
     var errorUserInfo: [String : Any] {
-        return [:]
+        [:]
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public extension Error where Self : CustomNSError {
     /// Default implementation for customized NSErrors.
-    var _domain: String { return Self.errorDomain }
+    var _domain: String { Self.errorDomain }
 
     /// Default implementation for customized NSErrors.
-    var _code: Int { return self.errorCode }
+    var _code: Int { self.errorCode }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public extension Error where Self: CustomNSError, Self: RawRepresentable, Self.RawValue: FixedWidthInteger {
     /// Default implementation for customized NSErrors.
-    var _code: Int { return self.errorCode }
+    var _code: Int { self.errorCode }
 }
 
 #if FOUNDATION_FRAMEWORK
@@ -269,7 +269,7 @@ public extension Error where Self: CustomNSError, Self: RawRepresentable, Self.R
 public extension Error {
     /// Retrieve the localized description for this error.
     var localizedDescription: String {
-        return (self as NSError).localizedDescription
+        (self as NSError).localizedDescription
     }
 }
 #endif
