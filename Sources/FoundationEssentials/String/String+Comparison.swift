@@ -436,60 +436,6 @@ extension _StringCompareOptionsIterable {
             formIndex(&fromLoc, offsetBy: delta)
         }
 
-
-        return result
-    }
-
-    func _range<S: BidirectionalCollection>(of strToFind: S, anchored: Bool, backwards: Bool) -> Range<Index>? where S.Element == Element {
-        var result: Range<Index>? = nil
-        var fromLoc: Index
-        var toLoc: Index
-        if backwards {
-            guard let idx = _index(endIndex, backwardsOffsetByCountOf: strToFind) else {
-                // strToFind.count > string.count: bail
-                return nil
-            }
-            fromLoc = idx
-
-            toLoc = anchored ? fromLoc : startIndex
-        } else {
-            fromLoc = startIndex
-            if anchored {
-                toLoc = fromLoc
-            } else {
-                guard let idx = _index(endIndex, backwardsOffsetByCountOf: strToFind) else {
-                    return nil
-                }
-                toLoc = idx
-            }
-        }
-
-        let delta = fromLoc <= toLoc ? 1 : -1
-
-        while true {
-            var str1Index = fromLoc
-            var str2Index = strToFind.startIndex
-
-            while str2Index < strToFind.endIndex && str1Index < endIndex {
-                if self[str1Index] != strToFind[str2Index] {
-                    break
-                }
-                formIndex(after: &str1Index)
-                strToFind.formIndex(after: &str2Index)
-            }
-
-            if str2Index == strToFind.endIndex {
-                result = fromLoc..<str1Index
-                break
-            }
-
-            if fromLoc == toLoc {
-                break
-            }
-
-            formIndex(&fromLoc, offsetBy: delta)
-        }
-
         return result
     }
 }
@@ -858,23 +804,6 @@ extension ComparisonResult {
         } else {
             self = .orderedSame
         }
-    }
-}
-
-extension BidirectionalCollection {
-    // Equal to calling `index(&idx, offsetBy: -other.count)` with just one loop
-    func _index<S: BidirectionalCollection>(_ index: Index, backwardsOffsetByCountOf other: S) -> Index? {
-        var idx = index
-        var otherIdx = other.endIndex
-        while otherIdx > other.startIndex  {
-            guard idx > startIndex else {
-                // other.count > self.count: bail
-                return nil
-            }
-            other.formIndex(before: &otherIdx)
-            formIndex(before: &idx)
-        }
-        return idx
     }
 }
 

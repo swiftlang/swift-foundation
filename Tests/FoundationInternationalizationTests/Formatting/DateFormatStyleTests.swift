@@ -15,7 +15,7 @@ import TestSupport
 #endif
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
 @testable import FoundationInternationalization
 #endif
 
@@ -28,12 +28,6 @@ import TestSupport
 #else
 import _RopeModule
 #endif
-
-extension AttributedString {
-    fileprivate var string: String {
-        String(self._guts.string)
-    }
-}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 final class DateFormatStyleTests : XCTestCase {
@@ -492,11 +486,15 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
         let zhTW = Locale(identifier: "zh_TW")
 
-        XCTAssertEqual(date.formatted(.dateTime.weekday().locale(enUSLocale).attributed).string, "Mon")
-        XCTAssertEqual(date.formatted(.dateTime.weekday().locale(zhTW).attributed).string, "週一")
+        func test(_ attributedResult: AttributedString, _ expected: [Segment], file: StaticString = #file, line: UInt = #line) {
+            XCTAssertEqual(attributedResult, expected.attributedString, file: file, line: line)
+        }
 
-        XCTAssertEqual(date.formatted(.dateTime.weekday().attributed.locale(enUSLocale)).string, "Mon")
-        XCTAssertEqual(date.formatted(.dateTime.weekday().attributed.locale(zhTW)).string, "週一")
+        test(date.formatted(.dateTime.weekday().locale(enUSLocale).attributed), [("Mon", .weekday)])
+        test(date.formatted(.dateTime.weekday().locale(zhTW).attributed), [("週一", .weekday)])
+
+        test(date.formatted(.dateTime.weekday().attributed.locale(enUSLocale)), [("Mon", .weekday)])
+        test(date.formatted(.dateTime.weekday().attributed.locale(zhTW)),  [("週一", .weekday)])
     }
 
     func testFormattingWithPrefsOverride() {
@@ -934,7 +932,7 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
 
     func testMatchPartialRangesFromBeginning() {
         func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, file: StaticString = #file, line: UInt = #line) {
-            let occurrenceRange = string.range(of: expectedMatch)!
+            let occurrenceRange = string._range(of: expectedMatch)!
             _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), file: file, line: line)
         }
 
