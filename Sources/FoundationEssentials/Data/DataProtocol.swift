@@ -87,31 +87,31 @@ public protocol MutableDataProtocol : DataProtocol, MutableCollection, RangeRepl
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DataProtocol {
     public func firstRange<D: DataProtocol>(of data: D) -> Range<Index>? {
-        return self.firstRange(of: data, in: self.startIndex ..< self.endIndex)
+        self.firstRange(of: data, in: self.startIndex ..< self.endIndex)
     }
 
     public func lastRange<D: DataProtocol>(of data: D) -> Range<Index>? {
-        return self.lastRange(of: data, in: self.startIndex ..< self.endIndex)
+        self.lastRange(of: data, in: self.startIndex ..< self.endIndex)
     }
 
     @discardableResult
     public func copyBytes(to ptr: UnsafeMutableRawBufferPointer) -> Int {
-        return copyBytes(to: ptr, from: self.startIndex ..< self.endIndex)
+        copyBytes(to: ptr, from: self.startIndex ..< self.endIndex)
     }
 
     @discardableResult
     public func copyBytes<DestinationType>(to ptr: UnsafeMutableBufferPointer<DestinationType>) -> Int {
-        return copyBytes(to: ptr, from: self.startIndex ..< self.endIndex)
+        copyBytes(to: ptr, from: self.startIndex ..< self.endIndex)
     }
 
     @discardableResult
     public func copyBytes(to ptr: UnsafeMutableRawBufferPointer, count: Int) -> Int {
-        return copyBytes(to: ptr, from: self.startIndex ..< self.index(self.startIndex, offsetBy: count))
+        copyBytes(to: ptr, from: self.startIndex ..< self.index(self.startIndex, offsetBy: count))
     }
 
     @discardableResult
     public func copyBytes<DestinationType>(to ptr: UnsafeMutableBufferPointer<DestinationType>, count: Int) -> Int {
-        return copyBytes(to: ptr, from: self.startIndex ..< self.index(self.startIndex, offsetBy: count))
+        copyBytes(to: ptr, from: self.startIndex ..< self.index(self.startIndex, offsetBy: count))
     }
 
     @discardableResult
@@ -144,7 +144,7 @@ extension DataProtocol {
 
     @discardableResult
     public func copyBytes<DestinationType, R: RangeExpression>(to ptr: UnsafeMutableBufferPointer<DestinationType>, from range: R) -> Int where R.Bound == Index {
-        return self.copyBytes(to: UnsafeMutableRawBufferPointer(start: ptr.baseAddress, count: ptr.count * MemoryLayout<DestinationType>.stride), from: range)
+        self.copyBytes(to: UnsafeMutableRawBufferPointer(start: ptr.baseAddress, count: ptr.count * MemoryLayout<DestinationType>.stride), from: range)
     }
 
     private func matches<D: DataProtocol>(_ data: D, from index: Index) -> Bool {
