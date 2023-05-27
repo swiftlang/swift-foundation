@@ -213,11 +213,11 @@ extension AttributedString: AttributedStringProtocol {
     }
     
     public var startIndex : Index {
-        return _guts.startIndex
+        _guts.startIndex
     }
     
     public var endIndex : Index {
-        return _guts.endIndex
+        _guts.endIndex
     }
     
     @preconcurrency
