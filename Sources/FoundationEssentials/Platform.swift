@@ -32,11 +32,11 @@ internal struct Platform {
     static var pageSize: Int = _pageSize
 
     static func roundDownToMultipleOfPageSize(_ size: Int) -> Int {
-        return size & ~(self.pageSize - 1)
+        size & ~(self.pageSize - 1)
     }
 
     static func roundUpToMultipleOfPageSize(_ size: Int) -> Int {
-        return (self.pageSize + size - 1) & ~(self.pageSize - 1)
+        (self.pageSize + size - 1) & ~(self.pageSize - 1)
     }
 
     static func copyMemoryPages(_ source: UnsafeRawPointer, _ dest: UnsafeMutableRawPointer, _ length: Int) {
