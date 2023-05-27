@@ -150,14 +150,14 @@ extension StringProtocol {
     /// containing a given range.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func lineRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
-        return String(self).lineRange(for: aRange)
+        String(self).lineRange(for: aRange)
     }
 
     /// Returns the range of characters representing the
     /// paragraph or paragraphs containing a given range.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func paragraphRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
-        return String(self).paragraphRange(for: aRange)
+        String(self).paragraphRange(for: aRange)
     }
 }
 
