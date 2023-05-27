@@ -48,7 +48,7 @@ public extension EncodableAttributedStringKey where Value : Encodable {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension DecodableAttributedStringKey where Value : Decodable {
-    static func decode(from decoder: Decoder) throws -> Value { return try Value.init(from: decoder) }
+    static func decode(from decoder: Decoder) throws -> Value { try Value.init(from: decoder) }
 }
 
 
