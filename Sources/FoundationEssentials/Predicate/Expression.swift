@@ -136,7 +136,7 @@ extension PredicateExpressions {
         }
         
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
-            return try root.evaluate(bindings)[keyPath: keyPath as Swift.KeyPath<Root.Output, Output>]
+            try root.evaluate(bindings)[keyPath: keyPath as Swift.KeyPath<Root.Output, Output>]
         }
     }
 
@@ -148,7 +148,7 @@ extension PredicateExpressions {
         }
         
         public func evaluate(_ bindings: PredicateBindings) -> Output {
-            return self.value
+            self.value
         }
     }
     
