@@ -100,11 +100,11 @@ extension AttributedString.Runs {
     }
 
     public subscript<T : AttributedStringKey>(_ keyPath: KeyPath<AttributeDynamicLookup, T>) -> AttributesSlice1<T> {
-        return AttributesSlice1<T>(runs: self)
+        AttributesSlice1<T>(runs: self)
     }
 
     public subscript<T : AttributedStringKey>(_ t: T.Type) -> AttributesSlice1<T> {
-        return AttributesSlice1<T>(runs: self)
+        AttributesSlice1<T>(runs: self)
     }
 }
 
@@ -205,7 +205,7 @@ extension AttributedString.Runs {
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>
     ) -> AttributesSlice2<T, U> {
-        return AttributesSlice2<T, U>(runs: self)
+        AttributesSlice2<T, U>(runs: self)
     }
 
     public subscript <
@@ -215,7 +215,7 @@ extension AttributedString.Runs {
         _ t: T.Type,
         _ u: U.Type
     ) -> AttributesSlice2<T, U> {
-        return AttributesSlice2<T, U>(runs: self)
+        AttributesSlice2<T, U>(runs: self)
     }
 }
 
@@ -324,7 +324,7 @@ extension AttributedString.Runs {
         _ u: KeyPath<AttributeDynamicLookup, U>,
         _ v: KeyPath<AttributeDynamicLookup, V>
     ) -> AttributesSlice3<T, U, V> {
-        return AttributesSlice3<T, U, V>(runs: self)
+        AttributesSlice3<T, U, V>(runs: self)
     }
 
     public subscript <
@@ -336,7 +336,7 @@ extension AttributedString.Runs {
         _ u: U.Type,
         _ v: V.Type
     ) -> AttributesSlice3<T, U, V> {
-        return AttributesSlice3<T, U, V>(runs: self)
+        AttributesSlice3<T, U, V>(runs: self)
     }
 }
 
@@ -456,7 +456,7 @@ extension AttributedString.Runs {
         _ v: KeyPath<AttributeDynamicLookup, V>,
         _ w: KeyPath<AttributeDynamicLookup, W>
     ) -> AttributesSlice4<T, U, V, W> {
-        return AttributesSlice4<T, U, V, W>(runs: self)
+        AttributesSlice4<T, U, V, W>(runs: self)
     }
 
     public subscript <
@@ -470,7 +470,7 @@ extension AttributedString.Runs {
         _ v: V.Type,
         _ w: W.Type
     ) -> AttributesSlice4<T, U, V, W> {
-        return AttributesSlice4<T, U, V, W>(runs: self)
+        AttributesSlice4<T, U, V, W>(runs: self)
     }
 }
 
@@ -598,7 +598,7 @@ extension AttributedString.Runs {
         _ w: KeyPath<AttributeDynamicLookup, W>,
         _ x: KeyPath<AttributeDynamicLookup, X>
     ) -> AttributesSlice5<T, U, V, W, X> {
-        return AttributesSlice5<T, U, V, W, X>(runs: self)
+        AttributesSlice5<T, U, V, W, X>(runs: self)
     }
 
     public subscript <
@@ -614,7 +614,7 @@ extension AttributedString.Runs {
         _ w: W.Type,
         _ x: X.Type
     ) -> AttributesSlice5<T, U, V, W, X> {
-        return AttributesSlice5<T, U, V, W, X>(runs: self)
+        AttributesSlice5<T, U, V, W, X>(runs: self)
     }
 }
 
@@ -709,7 +709,7 @@ extension AttributedString.Runs {
 
     @_spi(AttributedString)
     public subscript(nsAttributedStringKeys keys: NSAttributedString.Key...) -> NSAttributesSlice {
-        return NSAttributesSlice(runs: self, keys: keys)
+        NSAttributesSlice(runs: self, keys: keys)
     }
 }
 
