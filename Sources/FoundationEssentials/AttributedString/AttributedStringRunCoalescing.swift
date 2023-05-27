@@ -134,7 +134,7 @@ extension AttributedString.Guts {
     }
     
     func run(containing location: Int, updateCache: Bool = true) -> AttributedString._InternalRun {
-        return runs[seekToRun(location: location, updateCache: updateCache).block]
+        runs[seekToRun(location: location, updateCache: updateCache).block]
     }
     
     func runAndLocation(containing location: Int) -> (run: AttributedString._InternalRun, location: Int) {
