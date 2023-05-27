@@ -37,7 +37,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     /// The interval between 00:00:00 UTC on 1 January 2001 and the current date and time.
     public static var timeIntervalSinceReferenceDate : TimeInterval {
-        return Self.getCurrentAbsoluteTime()
+        Self.getCurrentAbsoluteTime()
     }
 
     /// Returns a `Date` initialized to the current date and time.
@@ -91,7 +91,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     - SeeAlso: `timeIntervalSinceReferenceDate`
     */
     public func timeIntervalSince(_ date: Date) -> TimeInterval {
-        return self.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate
+        self.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate
     }
 
     /**
@@ -104,7 +104,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     - SeeAlso: `timeIntervalSinceReferenceDate`
     */
     public var timeIntervalSinceNow: TimeInterval {
-        return self.timeIntervalSinceReferenceDate - Self.getCurrentAbsoluteTime()
+        self.timeIntervalSinceReferenceDate - Self.getCurrentAbsoluteTime()
     }
 
     /**
@@ -117,7 +117,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     - SeeAlso: `timeIntervalSinceReferenceDate`
     */
     public var timeIntervalSince1970: TimeInterval {
-        return self.timeIntervalSinceReferenceDate + Date.timeIntervalBetween1970AndReferenceDate
+        self.timeIntervalSinceReferenceDate + Date.timeIntervalBetween1970AndReferenceDate
     }
 
     /// Return a new `Date` by adding a `TimeInterval` to this `Date`.
@@ -125,7 +125,7 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     /// - parameter timeInterval: The value to add, in seconds.
     /// - warning: This only adjusts an absolute value. If you wish to add calendrical concepts like hours, days, months then you must use a `Calendar`. That will take into account complexities like daylight saving time, months with different numbers of days, and more.
     public func addingTimeInterval(_ timeInterval: TimeInterval) -> Date {
-        return self + timeInterval
+        self + timeInterval
     }
 
     /// Add a `TimeInterval` to this `Date`.
@@ -171,27 +171,27 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 
     /// Returns true if the two `Date` values represent the same point in time.
     public static func ==(lhs: Date, rhs: Date) -> Bool {
-        return lhs.timeIntervalSinceReferenceDate == rhs.timeIntervalSinceReferenceDate
+        lhs.timeIntervalSinceReferenceDate == rhs.timeIntervalSinceReferenceDate
     }
 
     /// Returns true if the left hand `Date` is earlier in time than the right hand `Date`.
     public static func <(lhs: Date, rhs: Date) -> Bool {
-        return lhs.timeIntervalSinceReferenceDate < rhs.timeIntervalSinceReferenceDate
+        lhs.timeIntervalSinceReferenceDate < rhs.timeIntervalSinceReferenceDate
     }
 
     /// Returns true if the left hand `Date` is later in time than the right hand `Date`.
     public static func >(lhs: Date, rhs: Date) -> Bool {
-        return lhs.timeIntervalSinceReferenceDate > rhs.timeIntervalSinceReferenceDate
+        lhs.timeIntervalSinceReferenceDate > rhs.timeIntervalSinceReferenceDate
     }
 
     /// Returns a `Date` with a specified amount of time added to it.
     public static func +(lhs: Date, rhs: TimeInterval) -> Date {
-        return Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate + rhs)
+        Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate + rhs)
     }
 
     /// Returns a `Date` with a specified amount of time subtracted from it.
     public static func -(lhs: Date, rhs: TimeInterval) -> Date {
-        return Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate - rhs)
+        Date(timeIntervalSinceReferenceDate: lhs.timeIntervalSinceReferenceDate - rhs)
     }
 
     /// Add a `TimeInterval` to a `Date`.
@@ -286,7 +286,7 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
 #endif // !FOUNDATION_FRAMEWORK
 
     public var debugDescription: String {
-        return description
+        description
     }
 
     public var customMirror: Mirror {
@@ -319,7 +319,7 @@ extension Date : ReferenceConvertible, _ObjectiveCBridgeable {
 
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSDate {
-        return NSDate(timeIntervalSinceReferenceDate: _time)
+        NSDate(timeIntervalSinceReferenceDate: _time)
     }
 
     public static func _forceBridgeFromObjectiveC(_ x: NSDate, result: inout Date?) {
@@ -346,7 +346,7 @@ extension NSDate : _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {
-        return AnyHashable(self as Date)
+        AnyHashable(self as Date)
     }
 }
 #endif // FOUNDATION_FRAMEWORK
