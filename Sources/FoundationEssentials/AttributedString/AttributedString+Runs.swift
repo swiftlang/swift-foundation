@@ -147,11 +147,11 @@ extension AttributedString.Runs: BidirectionalCollection {
     }
     
     public subscript(position: Index) -> Run {
-        return _guts.run(at: position, clampedBy: _range)
+        _guts.run(at: position, clampedBy: _range)
     }
     
     internal subscript(internal position: Index) -> _InternalRun {
-        return _guts.runs[position.rangeIndex]
+        _guts.runs[position.rangeIndex]
     }
     
     public subscript(position: AttributedString.Index) -> Run {
