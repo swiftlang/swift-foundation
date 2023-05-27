@@ -412,7 +412,7 @@ private class __JSONEncoder : Encoder {
 
     /// Contextual user-provided information for use during encoding.
     public var userInfo: [CodingUserInfoKey : Any] {
-        return self.options.userInfo
+        self.options.userInfo
     }
 
     /// The path to the current point in encoding.
@@ -440,7 +440,7 @@ private class __JSONEncoder : Encoder {
         //
         // This means that anytime something that can request a new container goes onto the stack, we MUST push a key onto the coding path.
         // Things which will not request containers do not need to have the coding path extended for them (but it doesn't matter if it is, because they will not reach here).
-        return self.storage.count == self.codingPathDepth
+        self.storage.count == self.codingPathDepth
     }
 
     // MARK: - Encoder Methods
@@ -478,7 +478,7 @@ private class __JSONEncoder : Encoder {
     }
 
     public func singleValueContainer() -> SingleValueEncodingContainer {
-        return self
+        self
     }
 
     // Instead of creating a new __JSONEncoder for passing to methods that take Encoder arguments, wrap the access in this method, which temporarily mutates this __JSONEncoder instance with the additional nesting depth and its coding path.
@@ -622,7 +622,7 @@ private struct _JSONEncodingStorage {
     // MARK: - Modifying the Stack
 
     var count: Int {
-        return self.refs.count
+        self.refs.count
     }
 
     mutating func pushKeyedContainer() -> JSONReference {
@@ -781,11 +781,11 @@ private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContain
     }
 
     public mutating func superEncoder() -> Encoder {
-        return __JSONReferencingEncoder(referencing: self.encoder, key: _JSONKey.super, convertedKey: _converted(_JSONKey.super), codingPathNode: self.encoder.encoderCodingPathNode, wrapping: self.reference)
+        __JSONReferencingEncoder(referencing: self.encoder, key: _JSONKey.super, convertedKey: _converted(_JSONKey.super), codingPathNode: self.encoder.encoderCodingPathNode, wrapping: self.reference)
     }
 
     public mutating func superEncoder(forKey key: Key) -> Encoder {
-        return __JSONReferencingEncoder(referencing: self.encoder, key: key, convertedKey: _converted(key), codingPathNode: self.encoder.encoderCodingPathNode, wrapping: self.reference)
+        __JSONReferencingEncoder(referencing: self.encoder, key: key, convertedKey: _converted(key), codingPathNode: self.encoder.encoderCodingPathNode, wrapping: self.reference)
     }
 }
 
@@ -862,7 +862,7 @@ private struct _JSONUnkeyedEncodingContainer : UnkeyedEncodingContainer {
     }
 
     public mutating func superEncoder() -> Encoder {
-        return __JSONReferencingEncoder(referencing: self.encoder, at: self.reference.count, codingPathNode: self.encoder.encoderCodingPathNode, wrapping: self.reference)
+        __JSONReferencingEncoder(referencing: self.encoder, at: self.reference.count, codingPathNode: self.encoder.encoderCodingPathNode, wrapping: self.reference)
     }
 }
 
@@ -1105,7 +1105,7 @@ private extension __JSONEncoder {
     }
 
     func wrap(_ value: Encodable, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = _JSONKey?.none) throws -> JSONReference {
-        return try self.wrapGeneric(value, for: codingPathNode, additionalKey) ?? .emptyObject
+        try self.wrapGeneric(value, for: codingPathNode, additionalKey) ?? .emptyObject
     }
 
     func wrapGeneric<T: Encodable>(_ value: T, for node: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = _JSONKey?.none) throws -> JSONReference? {
@@ -1223,7 +1223,7 @@ private class __JSONReferencingEncoder : __JSONEncoder {
         // With a regular encoder, the storage and coding path grow together.
         // A referencing encoder, however, inherits its parents coding path, as well as the key it was created for.
         // We have to take this into account.
-        return self.storage.count == self.codingPath.count - self.encoder.codingPath.count - 1
+        self.storage.count == self.codingPath.count - self.encoder.codingPath.count - 1
     }
 
     // MARK: - Deinitialization
