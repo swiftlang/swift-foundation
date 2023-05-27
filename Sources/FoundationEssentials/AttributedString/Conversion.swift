@@ -59,7 +59,7 @@ public protocol ObjectiveCConvertibleAttributedStringKey : AttributedStringKey {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == Int, ObjectiveCValue == NSNumber {
     static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
-        return NSNumber(value: value.rawValue)
+        NSNumber(value: value.rawValue)
     }
     static func value(for object: ObjectiveCValue) throws -> Value {
         if let val = Value(rawValue: object.intValue) {
@@ -72,7 +72,7 @@ public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepre
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == String, ObjectiveCValue == NSString {
     static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
-        return value.rawValue as NSString
+        value.rawValue as NSString
     }
     static func value(for object: ObjectiveCValue) throws -> Value {
         if let val = Value(rawValue: object as String) {
