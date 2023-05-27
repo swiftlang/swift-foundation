@@ -88,7 +88,7 @@ extension String {
 
 extension JSONReference {
     static func number(from num: any (FixedWidthInteger & CustomStringConvertible)) -> JSONReference {
-        return .number(num.description)
+        .number(num.description)
     }
 
     static func number<T: BinaryFloatingPoint & CustomStringConvertible>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = Optional<_JSONKey>.none) throws -> JSONReference {
