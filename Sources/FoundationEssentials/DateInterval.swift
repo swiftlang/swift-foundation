@@ -98,7 +98,7 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
 
     /// Returns `true` if `self` intersects the `dateInterval`.
     public func intersects(_ dateInterval: DateInterval) -> Bool {
-        return contains(dateInterval.start) || contains(dateInterval.end) || dateInterval.contains(start) || dateInterval.contains(end)
+        contains(dateInterval.start) || contains(dateInterval.end) || dateInterval.contains(start) || dateInterval.contains(end)
     }
 
     /// Returns a DateInterval that represents the interval where the given date interval and the current instance intersect.
@@ -167,11 +167,11 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
 extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     public var description: String {
-        return "\(start) to \(end)"
+        "\(start) to \(end)"
     }
 
     public var debugDescription: String {
-        return description
+        description
     }
 
     public var customMirror: Mirror {
@@ -190,12 +190,12 @@ extension DateInterval : ReferenceConvertible, _ObjectiveCBridgeable {
     public typealias ReferenceType = NSDateInterval
 
     public static func _getObjectiveCType() -> Any.Type {
-        return NSDateInterval.self
+        NSDateInterval.self
     }
 
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSDateInterval {
-        return NSDateInterval(start: start, duration: duration)
+        NSDateInterval(start: start, duration: duration)
     }
 
     public static func _forceBridgeFromObjectiveC(_ dateInterval: NSDateInterval, result: inout DateInterval?) {
@@ -222,7 +222,7 @@ extension NSDateInterval : _HasCustomAnyHashableRepresentation {
     // Must be @nonobjc to avoid infinite recursion during bridging.
     @nonobjc
     public func _toCustomAnyHashable() -> AnyHashable? {
-        return AnyHashable(self as DateInterval)
+        AnyHashable(self as DateInterval)
     }
 }
 #endif
