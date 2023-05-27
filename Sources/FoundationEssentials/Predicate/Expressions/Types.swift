@@ -25,7 +25,7 @@ extension PredicateExpressions {
         }
         
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
-            return try input.evaluate(bindings) as? Desired
+            try input.evaluate(bindings) as? Desired
         }
     }
     
@@ -63,7 +63,7 @@ extension PredicateExpressions {
         }
         
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
-            return try input.evaluate(bindings) is Desired
+            try input.evaluate(bindings) is Desired
         }
     }
 }
