@@ -1368,7 +1368,11 @@ final class JSONEncoderTests : XCTestCase {
             setlocale(LC_ALL, "fr_FR")
             let data = try JSONEncoder().encode(orig)
 
+#if os(Windows)
+            setlocale(LC_ALL, "en_US")
+#else
             setlocale(LC_ALL, "en_US_POSIX")
+#endif
             let decoded = try JSONDecoder().decode(type(of: orig).self, from: data)
 
             XCTAssertEqual(orig, decoded)

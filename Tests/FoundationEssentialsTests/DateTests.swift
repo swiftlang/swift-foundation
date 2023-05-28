@@ -56,7 +56,7 @@ final class DateTests : XCTestCase {
 
         XCTAssertLessThan(distantPast, currentDate)
         XCTAssertGreaterThan(currentDate, distantPast)
-        XCTAssertLessThan(currentDate.timeIntervalSince(distantPast),
+        XCTAssertLessThan(distantPast.timeIntervalSince(currentDate),
                           3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
     }
 
