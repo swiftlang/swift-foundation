@@ -29,7 +29,7 @@ public enum AttributeScopes { }
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import Darwin
+import Darwin
 @_implementationOnly import ReflectionInternal
 
 fileprivate struct ScopeDescription : Sendable {
@@ -85,19 +85,6 @@ fileprivate struct LoadedScopeCache : Sendable {
         let type = unsafeBitCast(symbol, to: Any.Type.self) as? any AttributeScope.Type
         scopeMangledNames[name] = type
         return type
-    }
-    
-    subscript(_ name: String) -> ScopeDescription? {
-        mutating get {
-            guard let type = scopeType(for: name) else { return nil }
-            return self[type]
-        }
-        set {
-            guard let type = scopeType(for: name) else {
-                fatalError("Unable to cache scope contents for non-loaded scope")
-            }
-            self[type] = newValue
-        }
     }
     
     subscript(_ type: any AttributeScope.Type) -> ScopeDescription? {
