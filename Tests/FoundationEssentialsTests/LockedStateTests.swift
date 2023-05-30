@@ -19,7 +19,14 @@ import TestSupport
 #endif
 
 final class LockedStateTests : XCTestCase {
-    final class TestObject {}
+    final class TestObject {
+        var deinitBlock: () -> Void = {}
+
+        deinit {
+            deinitBlock()
+        }
+    }
+
     struct TestError: Error {}
 
     func testWithLockDoesNotExtendLifetimeOfState() {
@@ -40,7 +47,37 @@ final class LockedStateTests : XCTestCase {
         XCTAssertNil(state, "State object lifetime was extended beyond end of call")
     }
 
-    func testWithLockExtendingLifespanDoesExtendLifetimeOfState() {
+    func testWithLockExtendingLifetimeExtendsLifetimeOfStatePastReassignment() {
+        let lockedState = LockedState(initialState: TestObject())
+
+        lockedState.withLockExtendingLifetimeOfState { state in
+            weak var oldState = state
+            state = TestObject()
+            XCTAssertNotNil(oldState, "State object lifetime was not extended after reassignment within body")
+        }
+    }
+
+    func testWithLockExtendingLifetimeExtendsLifetimeOfStatePastEndOfLockedScope() {
+        let lockedState: LockedState<TestObject> = {
+            let state = TestObject()
+            let lockedState = LockedState(initialState: state)
+
+            // `withLockExtendingLifetimeOfState()` should extend the lifetime of the state until after the lock is
+            // released. By asserting that the lock is not held when the state object is deinit-ed, we can confirm
+            // that the lifetime was extended past the end of the locked scope.
+            state.deinitBlock = {
+                assertLockNotHeld(lockedState, "State object lifetime was not extended to end of locked scope")
+            }
+
+            return lockedState
+        }()
+
+        lockedState.withLockExtendingLifetimeOfState { state in
+            state = TestObject()
+        }
+    }
+
+    func testWithLockExtendingLifetimeDoesNotExtendLifetimeOfStatePastEndOfCall() {
         weak var state: TestObject?
         let lockedState: LockedState<TestObject>
 
@@ -50,15 +87,13 @@ final class LockedStateTests : XCTestCase {
         }()
 
         lockedState.withLockExtendingLifetimeOfState { state in
-            weak var oldState = state
             state = TestObject()
-            XCTAssertNotNil(oldState, "State object lifetime was not extended after reassignment within body")
         }
 
         XCTAssertNil(state, "State object lifetime was extended beyond end of call")
     }
 
-    func testWithLockExtendingLifespanReleasesLockWhenBodyThrows() {
+    func testWithLockExtendingLifetimeReleasesLockWhenBodyThrows() {
         let lockedState = LockedState(initialState: TestObject())
 
         XCTAssertThrowsError(
@@ -68,12 +103,16 @@ final class LockedStateTests : XCTestCase {
             "The body was expected to throw an error, but it did not."
         )
 
-        // ⚠️ This test fails by crashing. If the lock was not properly released by the
-        // `withLockExtendingLifetimeOfState()` call above, the following `withLock()`
-        // call will abort the program.
+        assertLockNotHeld(lockedState, "Lock was not properly released by withLockExtendingLifetimeOfState()")
+    }
+}
 
-        lockedState.withLock { _ in
-            // PASS
-        }
+/// Assert that the locked state is not currently locked.
+///
+/// ⚠️ This assertion fails by crashing. If the lock is currently held, the `withLock()` call will abort the program.
+private func assertLockNotHeld<Value>(_ lockedState: LockedState<Value>, _ message: @autoclosure () -> String) {
+    // Note: Since the assertion fails by crashing, `message` is never logged.
+    lockedState.withLock { _ in
+        // PASS
     }
 }
