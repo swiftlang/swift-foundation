@@ -120,7 +120,7 @@ struct TimeZoneCache : Sendable {
 #else
                     let lookFor = _TimeZone.TZDIR + "/"
 #endif
-                    if let rangeOfZoneInfo = file.range(of: lookFor) {
+                    if let rangeOfZoneInfo = file._range(of: lookFor) {
                         let name = file[rangeOfZoneInfo.upperBound...]
                         if let result = fixed(String(name)) {
                             return result
