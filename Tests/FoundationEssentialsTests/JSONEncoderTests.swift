@@ -1361,7 +1361,14 @@ final class JSONEncoderTests : XCTestCase {
         if let localePtr = setlocale(LC_ALL, nil) {
             currentLocale = strdup(localePtr)
         }
-        
+
+        defer {
+            if let currentLocale {
+                setlocale(LC_ALL, currentLocale)
+                free(currentLocale)
+            }
+        }
+
         let orig = ["decimalValue" : 1.1]
 
         do {
@@ -1378,11 +1385,6 @@ final class JSONEncoderTests : XCTestCase {
             XCTAssertEqual(orig, decoded)
         } catch {
             XCTFail("Error: \(error)")
-        }
-        
-        if let currentLocale {
-            setlocale(LC_ALL, currentLocale)
-            currentLocale.deallocate()
         }
     }
 
