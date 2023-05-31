@@ -566,4 +566,13 @@ final class PredicateTests: XCTestCase {
         XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0])))
         XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
     }
+    
+    func testStaticValues() throws {
+        func assertPredicate<T>(_ pred: Predicate<T>, value: T, expected: Bool) throws {
+            XCTAssertEqual(try pred.evaluate(value), expected)
+        }
+        
+        try assertPredicate(.true, value: "Hello", expected: true)
+        try assertPredicate(.false, value: "Hello", expected: false)
+    }
 }

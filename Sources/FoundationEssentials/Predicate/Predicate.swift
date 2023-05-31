@@ -25,6 +25,23 @@ public struct Predicate<Input> : Sendable {
     }
 }
 
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Predicate {
+    private init(value: Bool) {
+        self.variable = PredicateExpressions.Variable<Input>()
+        self.expression = PredicateExpressions.Value(value)
+    }
+    
+    public static var `true`: Self {
+        Self(value: true)
+    }
+    
+    public static var `false`: Self {
+        Self(value: false)
+    }
+}
+
+
 // Namespace for operator expressions
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 @frozen @_nonSendable public enum PredicateExpressions {}
