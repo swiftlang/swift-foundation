@@ -186,7 +186,7 @@ public enum POSIXErrorCode : Int32 {
     /// Can't assign requested address.
     case EADDRNOTAVAIL = 49
 
-    /// ipc/network software -- operational errors
+    /// ipc/network software -- operational errors.
     /// Network is down.
     case ENETDOWN = 50
 
@@ -610,7 +610,7 @@ extension POSIXError {
         return .EADDRNOTAVAIL
     }
 
-    /// ipc/network software -- operational errors
+    /// ipc/network software -- operational errors.
     /// Network is down.
     public static var ENETDOWN: POSIXErrorCode {
         return .ENETDOWN
