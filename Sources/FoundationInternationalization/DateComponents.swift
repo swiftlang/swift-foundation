@@ -182,7 +182,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     }
 
     /// A weekday ordinal or count of weekday ordinals.
-    /// Weekday ordinal units represent the position of the weekday within the next larger calendar unit, such as the month. For example, 2 is the weekday ordinal unit for the second Friday of the month.///
+    /// Weekday ordinal units represent the position of the weekday within the next larger calendar unit, such as the month. For example, 2 is the weekday ordinal unit for the second Friday of the month.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var weekdayOrdinal: Int? {
         get { _weekdayOrdinal }
