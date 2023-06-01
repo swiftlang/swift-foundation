@@ -240,4 +240,57 @@ final class StringTests : XCTestCase {
         }
     }
 
+    func testTryFromUTF16() {
+        func test(_ utf16Buffer: [UInt16], expected: String?, file: StaticString = #file, line: UInt = #line) {
+            let result = utf16Buffer.withUnsafeBufferPointer {
+                String._tryFromUTF16($0)
+            }
+
+            XCTAssertEqual(result, expected, file: file, line: line)
+        }
+
+        test([], expected: "")
+        test([ 0x00 ], expected: "\u{0000}")
+        test([ 0x24 ], expected: "$")
+        test([ 0x41, 0x42 ], expected: "AB")
+        test([ 0x20AC ], expected: "\u{20AC}")
+        test([ 0x3040, 0x3041, 0xFFEF ], expected: "\u{3040}\u{3041}\u{FFEF}")
+        test([ 0x0939, 0x0940 ], expected: "\u{0939}\u{0940}")
+
+        // surrogates
+        test([ 0xD801, 0xDC37 ], expected: "\u{10437}")
+        test([ 0xD852, 0xDF62 ], expected: "\u{24B62}")
+        test([ 0x41, 0x42, 0xD852, 0xDF62 ], expected: "AB\u{24B62}")
+
+        // invalid input
+        test([ 0xD800 ], expected: nil)
+        test([ 0x42, 0xD800 ], expected: nil)
+        test([ 0xD800, 0x42 ], expected: nil)
+    }
+
+    func testTryFromUTF16_roundtrip() {
+
+        func test(_ string: String, file: StaticString = #file, line: UInt = #line) {
+            let utf16Array = Array(string.utf16)
+            let res = utf16Array.withUnsafeBufferPointer {
+                String._tryFromUTF16($0)
+            }
+            XCTAssertNotNil(res, file: file, line: line)
+            XCTAssertEqual(res, string, file: file, line: line)
+        }
+
+        // BMP: consists code points up to U+FFFF
+        test("")
+        test("\t\t\n abcFooFOO \n FOOc\t \t 123 \n")
+        test("the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy the quick brown fox jumps over the lazy dogz")
+        test("\u{3040}\u{3041}\u{FFEF}")
+        test("\u{3040}\u{3041}\u{FFEF}abbbc\u{FFFF}\u{FFF0}\u{FFF1}")
+
+        // surrogates: U+010000 to U+10FFFF
+        test("\u{10437}\u{24B62}\u{10001}\u{10FFFF}")
+
+        test("\u{1F425}")
+        test("🏳️‍🌈AB👩‍👩‍👧‍👦ab🕵️‍♀️")
+    }
+
 }
