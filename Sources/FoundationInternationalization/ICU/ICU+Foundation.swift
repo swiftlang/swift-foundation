@@ -54,7 +54,7 @@ internal func _withResizingUCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeM
                     var innerStatus = U_ZERO_ERROR
                     if let innerLen = body(innerBuffer.baseAddress!, len + 1, &innerStatus) {
                         if innerStatus.isSuccess && innerLen > 0 {
-                            return String._tryFromUTF16(innerBuffer, len: Int(innerLen))
+                            return String._tryFromUTF16(innerBuffer, count: Int(innerLen))
                         }
                     }
                     
@@ -62,7 +62,7 @@ internal func _withResizingUCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeM
                     return nil
                 }
             } else if status.isSuccess && len > 0 {
-                return String._tryFromUTF16(buffer, len: Int(len))
+                return String._tryFromUTF16(buffer, count: Int(len))
             }
         }
         
@@ -78,7 +78,7 @@ internal func _withFixedUCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_
         var status = U_ZERO_ERROR
         if let len = body(buffer.baseAddress!, size, &status) {
             if status.isSuccess && !(defaultIsError && status == U_USING_DEFAULT_WARNING) && len <= size && len > 0 {
-                return String._tryFromUTF16(buffer, len: Int(len))
+                return String._tryFromUTF16(buffer, count: Int(len))
             }
         }
         

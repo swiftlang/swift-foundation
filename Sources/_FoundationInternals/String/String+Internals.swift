@@ -18,6 +18,7 @@ extension String {
     }
 
     static func _tryFromUTF16(_ input: UnsafeBufferPointer<UInt16>) -> String? {
+        // Allocate input.count * 3 code points since one UTF16 code point may require up to three UTF8 code points when transcoded
         withUnsafeTemporaryAllocation(of: UInt8.self, capacity: input.count * 3) { contents in
             var ptr = contents.baseAddress!
             var count = 0
@@ -35,12 +36,12 @@ extension String {
         }
     }
 
-    static func _tryFromUTF16(_ input: UnsafeMutableBufferPointer<UInt16>, len: Int) -> String? {
-        _tryFromUTF16(UnsafeBufferPointer(rebasing: input[..<len]))
+    static func _tryFromUTF16(_ input: UnsafeMutableBufferPointer<UInt16>, count: Int) -> String? {
+        _tryFromUTF16(UnsafeBufferPointer(rebasing: input[..<count]))
     }
 
-    static func _tryFromUTF16(_ input: UnsafePointer<UInt16>, len: Int) -> String? {
-        _tryFromUTF16(UnsafeBufferPointer(start: input, count: len))
+    static func _tryFromUTF16(_ input: UnsafePointer<UInt16>, count: Int) -> String? {
+        _tryFromUTF16(UnsafeBufferPointer(start: input, count: count))
     }
 
 }
