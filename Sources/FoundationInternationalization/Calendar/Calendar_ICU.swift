@@ -1147,7 +1147,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     }
 
     func weekendRange() -> WeekendRange? {
-        return lock.withLock {
+        return lock.withLock { () -> WeekendRange? in
             var result = WeekendRange(start: 0, end: 0)
 
             var weekdaysIndex : [UInt32] = [0, 0, 0, 0, 0, 0, 0]
