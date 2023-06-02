@@ -243,7 +243,7 @@ final class StringTests : XCTestCase {
     func testTryFromUTF16() {
         func test(_ utf16Buffer: [UInt16], expected: String?, file: StaticString = #file, line: UInt = #line) {
             let result = utf16Buffer.withUnsafeBufferPointer {
-                String._tryFromUTF16($0)
+                String(_utf16CodePoints: $0)
             }
 
             XCTAssertEqual(result, expected, file: file, line: line)
@@ -273,7 +273,7 @@ final class StringTests : XCTestCase {
         func test(_ string: String, file: StaticString = #file, line: UInt = #line) {
             let utf16Array = Array(string.utf16)
             let res = utf16Array.withUnsafeBufferPointer {
-                String._tryFromUTF16($0)
+                String(_utf16CodePoints: $0)
             }
             XCTAssertNotNil(res, file: file, line: line)
             XCTAssertEqual(res, string, file: file, line: line)

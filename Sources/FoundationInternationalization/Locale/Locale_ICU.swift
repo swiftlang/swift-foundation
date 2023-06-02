@@ -966,7 +966,7 @@ internal final class _Locale: Sendable, Hashable {
                 return nil
             }
 
-            let nameStr = String._tryFromUTF16(name, count: Int(size))
+            let nameStr = String(_utf16CodePoints: name, count: Int(size))
             if isChoice.boolValue {
                 let pattern = "{0,choice,\(nameStr)}"
 
