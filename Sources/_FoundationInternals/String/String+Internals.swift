@@ -19,12 +19,10 @@ extension String {
 
     static func _tryFromUTF16(_ input: UnsafeBufferPointer<UInt16>) -> String? {
         // Allocate input.count * 3 code points since one UTF16 code point may require up to three UTF8 code points when transcoded
-        withUnsafeTemporaryAllocation(of: UInt8.self, capacity: input.count * 3) { contents in
-            var ptr = contents.baseAddress!
+        withUnsafeTemporaryAllocation(of: UTF8.CodeUnit.self, capacity: input.count * 3) { contents in
             var count = 0
             let error = transcode(input.makeIterator(), from: UTF16.self, to: UTF8.self, stoppingOnError: true) { codeUnit in
-                ptr.pointee = codeUnit
-                ptr = ptr.advanced(by: 1)
+                contents[count] = codeUnit
                 count += 1
             }
 
