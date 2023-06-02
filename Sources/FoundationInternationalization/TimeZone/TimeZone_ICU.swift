@@ -478,8 +478,7 @@ internal final class _TimeZone: Sendable {
                 continue
             }
 
-
-            guard let tz = String(_utf16CodePoints: chars, count: Int(length)) else {
+            guard let tz = String(_utf16: chars, count: Int(length)) else {
                 continue
             }
 
