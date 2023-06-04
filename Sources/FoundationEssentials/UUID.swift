@@ -22,7 +22,12 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     }
 
     /* Create a new UUID with RFC 4122 version 4 random bytes */
-    public init(version: Version = .v4) {
+    public init() {
+        self.init(version: .v4)
+    }
+
+    /* Create a new UUID with RFC 4122 version 4 random bytes */
+    public init(version: Version) {
         switch version {
             case .v4:
                 self.uuid = Self.v4_generatedRandom()
@@ -32,7 +37,14 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     /// Create a UUID from a string such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".
     ///
     /// Returns nil for invalid strings.
-    public init?(version: Version = .v4, uuidString string: __shared String) {
+    public init?(uuidString string: __shared String) {
+        self.init(version: .v4, uuidString: string)
+    }
+
+    /// Create a UUID from a string such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".
+    ///
+    /// Returns nil for invalid strings.
+    public init?(version: Version, uuidString string: __shared String) {
         switch version {
             case .v4:
                 guard let parsedResult = Self.v4_parse(uuidString: uuidString) else {
