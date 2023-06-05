@@ -245,6 +245,93 @@ final class LocaleTests : XCTestCase {
             XCTAssertEqual(loc.identifier(type), expected[idx], "type: \(type)", file: file, line: line)
         }
     }
+    
+    func comps(language: String? = nil, script: String? = nil, country: String? = nil, variant: String? = nil) -> [String: String] {
+        var result: [String: String] = [:]
+        if let language { result["kCFLocaleLanguageCodeKey"] = language }
+        if let script { result["kCFLocaleScriptCodeKey"] = script }
+        if let country { result["kCFLocaleCountryCodeKey"] = country }
+        if let variant { result["kCFLocaleVariantCodeKey"] = variant }
+        return result
+    }
+
+    func test_identifierFromComponents() {
+        var c: [String: String] = [:]
+        
+        c = comps(language: "zh", script: "Hans", country: "TW")
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW")
+        
+        // Set some keywords
+        c["CuRrEnCy"] = "qqq"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@currency=qqq")
+
+        // Set some more keywords, check order
+        c["d"] = "d"
+        c["0"] = "0"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d")
+        
+        // Add some non-ASCII keywords
+        c["ê"] = "ê"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d")
+        
+        // And some non-ASCII values
+        c["n"] = "ñ"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d")
+        
+        // And some values with other letters
+        c["z"] = "Ab09_-+/"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
+
+        // And some really short keys
+        c[""] = "hi"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
+
+        // And some really short values
+        c["q"] = ""
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
+        
+        // All the valid stuff
+        c["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+/"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz0123456789=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+/;currency=qqq;d=d;z=Ab09_-+/")
+        
+        // POSIX
+        let p = comps(language: "en", script: nil, country: "US", variant: "POSIX")
+        XCTAssertEqual(Locale.identifier(fromComponents: p), "en_US_POSIX")
+        
+        // Odd combos
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(language: "en", variant: "POSIX")), "en__POSIX")
+
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(variant: "POSIX")), "__POSIX")
+
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(language: "en", script: "Hans", country: "US", variant: "POSIX")), "en_Hans_US_POSIX")
+
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(language: "en")), "en")
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(country: "US", variant: "POSIX")), "_US_POSIX")
+    }
+    
+    #if FOUNDATION_FRAMEWORK
+    func test_identifierFromAnyComponents() {
+        // This internal Foundation-specific version allows for a Calendar entry
+        let comps = comps(language: "zh", script: "Hans", country: "TW")
+        XCTAssertEqual(Locale.identifier(fromComponents: comps), "zh_Hans_TW")
+
+        var anyComps : [String : Any] = [:]
+        anyComps.merge(comps) { a, b in a }
+        
+        anyComps["kCFLocaleCalendarKey"] = Calendar(identifier: .gregorian)
+        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@calendar=gregorian")
+
+        // Verify what happens if we have the key in here under two different (but equivalent) names
+        anyComps["calendar"] = "buddhist"
+        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@calendar=gregorian")
+
+        anyComps["currency"] = "xyz"
+        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@calendar=gregorian;currency=xyz")
+        
+        anyComps["AaA"] = "bBb"
+        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@aaa=bBb;calendar=gregorian;currency=xyz")
+    }
+    #endif
 }
 
 final class LocalePropertiesTests : XCTestCase {

@@ -12,11 +12,15 @@
 
 #if canImport(Darwin)
 import Darwin
-#elseif canImport(Gibc)
+#elseif canImport(Glibc)
 import Glibc
 #endif
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import _CShims
+#else
+package import _CShims
+#endif
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Decodable` values (in which case it should be exempt from key conversion strategies).
@@ -341,6 +345,24 @@ open class JSONDecoder {
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     /// - throws: An error if any value throws an error during decoding.
     open func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        try _decode({
+            try $0.unwrap($1, as: type, for: .root, _JSONKey?.none)
+        }, from: data)
+    }
+    
+    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+    open func decode<T: DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
+        try _decode({
+            try $0.unwrap($1, as: type, configuration: configuration, for: .root, _JSONKey?.none)
+        }, from: data)
+    }
+    
+    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+    open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C : DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
+        try decode(type, from: data, configuration: C.decodingConfiguration)
+    }
+    
+    private func _decode<T>(_ unwrap: (JSONDecoderImpl, JSONMap.Value) throws -> T, from data: Data) throws -> T {
         do {
             return try Self.withUTF8Representation(of: data) { utf8Buffer in
 
@@ -361,7 +383,7 @@ open class JSONDecoder {
                     impl = JSONDecoderImpl(userInfo: self.userInfo, from: map, codingPathNode: .root, options: self.options)
                 }
                 impl.push(value: topValue) // This is something the old implementation did and apps started relying on. Weird.
-                let result = try impl.unwrap(topValue, as: type, for: .root, _JSONKey?.none)
+                let result = try unwrap(impl, topValue)
                 let uniquelyReferenced = isKnownUniquelyReferenced(&impl)
                 impl.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
                 return result
@@ -560,7 +582,7 @@ extension JSONDecoderImpl: Decoder {
         }
     }
 
-    // Instead of creating a new JSONDecoderImpl for passing to methods that take Decoder arguments, wrap the access in this method, which temporarily mutates this JSONDecoderImpl instance with the nesteed value and its coding path.
+    // Instead of creating a new JSONDecoderImpl for passing to methods that take Decoder arguments, wrap the access in this method, which temporarily mutates this JSONDecoderImpl instance with the nested value and its coding path.
     @inline(__always)
     func with<T>(value: JSONMap.Value, path: _JSONCodingPathNode?, perform closure: () throws -> T) rethrows -> T {
         let oldPath = self.codingPathNode
@@ -600,6 +622,12 @@ extension JSONDecoderImpl: Decoder {
 
         return try self.with(value: mapValue, path: codingPathNode.pushing(additionalKey)) {
             try type.init(from: self)
+        }
+    }
+    
+    func unwrap<T: DecodableWithConfiguration>(_ mapValue: JSONMap.Value, as type: T.Type, configuration: T.DecodingConfiguration, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
+        try self.with(value: mapValue, path: codingPathNode.pushing(additionalKey)) {
+            try type.init(from: self, configuration: configuration)
         }
     }
 
@@ -847,7 +875,7 @@ extension JSONDecoderImpl: Decoder {
                     } // else, fall through to the T(prevalidatedBuffer:) invocation, which is otherwise compatible with JSON5 after our pre-validation.
 
                     if let floatingPoint = T(prevalidatedBuffer: numberBuffer) {
-                        // Check for overflow/underflow, which can result in "rounding" to infinty or zero.
+                        // Check for overflow/underflow, which can result in "rounding" to infinity or zero.
                         // While strtod does set ERANGE in the either case, we don't rely on it because setting errno to 0 first and then check the result is surprisingly expensive. For values "rounded" to infinity, we reject those out of hand, unless it's an explicit JSON5 infinity/nan value. For values "rounded" down to zero, we perform check for any non-zero digits in the input, which turns out to be much faster.
                         if floatingPoint.isFinite {
                             guard floatingPoint != 0 || isTrueZero(numberBuffer) else {

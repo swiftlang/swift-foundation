@@ -167,12 +167,7 @@ final class BufferViewTests: XCTestCase {
 
     func testElementsEqual() {
         let capacity = 4
-        let a = [Int](unsafeUninitializedCapacity: capacity) {
-            for i in $0.indices {
-                $0.initializeElement(at: i, to: .random(in: 0..<10))
-            }
-            $1 = $0.count
-        }
+        let a = Array(0..<capacity)
         a.withUnsafeBufferPointer {
             let v1 = BufferView(unsafeBufferPointer: $0)!
 

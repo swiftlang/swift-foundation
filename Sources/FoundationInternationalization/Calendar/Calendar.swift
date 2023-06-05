@@ -18,7 +18,15 @@ import FoundationEssentials
 import Glibc
 #endif
 
+#if canImport(CRT)
+import CRT
+#endif
+
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 /**
  `Calendar` encapsulates information about systems of reckoning time in which the beginning, length, and divisions of a year are defined. It provides information about the calendar and support for calendrical computations such as determining the range of a given calendrical unit and adding units to a given absolute time.
@@ -1044,7 +1052,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
-    /// Prefixed with `_` to avoid ambiguity at call stie with the `Set<Component>` method.
+    /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
     internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
         var dc: DateComponents
         switch _kind {
@@ -1393,12 +1401,13 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
     }
 
-    /// Find the range of the weekend around the given date, returned via two by-reference parameters.
+    /// Finds the range of the weekend around the given date, and returns the starting date and duration of the weekend via two inout parameters.
     ///
     /// Note that a given entire day within a calendar is not necessarily all in a weekend or not; weekends can start in the middle of a day in some calendars and locales.
     /// - seealso: `dateIntervalOfWeekend(containing:)`
     /// - parameter date: The date at which to start the search.
-    /// - parameter start: When the result is `true`, set
+    /// - parameter start: Upon return, the starting date of the weekend if found.
+    /// - parameter interval: Upon return, the duration of the weekend if found.
     /// - returns: `true` if a date range could be found, and `false` if the date is not in a weekend.
     @available(iOS 8.0, *)
     public func dateIntervalOfWeekend(containing date: Date, start: inout Date, interval: inout TimeInterval) -> Bool {
@@ -1445,8 +1454,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// Note that a given entire Day within a calendar is not necessarily all in a weekend or not; weekends can start in the middle of a day in some calendars and locales.
     /// - parameter date: The date at which to begin the search.
+    /// - parameter start: Upon return, the starting date of the next weekend if found.
+    /// - parameter interval: Upon return, the duration of the next weekend if found.
     /// - parameter direction: Which direction in time to search. The default value is `.forward`.
-    /// - returns: A `DateInterval`, or nil if the weekend could not be found.
+    /// - returns: `true` if the next weekend is found.
     @available(iOS 8.0, *)
     public func nextWeekend(startingAfter date: Date, start: inout Date, interval: inout TimeInterval, direction: SearchDirection = .forward) -> Bool {
         guard let weekend = nextWeekend(startingAfter: date, direction: direction) else {
@@ -1721,7 +1732,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         // Apply an epsilon to comparison of nanosecond values
         if let nanosecond = comp.nanosecond, let tempNanosecond = tempComp.nanosecond {
-            if labs(nanosecond - tempNanosecond) > 500 {
+            if labs(CLong(nanosecond - tempNanosecond)) > 500 {
                 return false
             } else {
                 comp.nanosecond = 0

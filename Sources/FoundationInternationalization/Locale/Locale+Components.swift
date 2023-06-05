@@ -14,11 +14,15 @@
 import Glibc
 #endif
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 extension Locale {
 
-    // Identifier canoncalization
+    // Identifier canonicalization
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public enum IdentifierType : Sendable {
         /* This canonicalizes the identifier */
@@ -95,7 +99,7 @@ extension Locale {
                 return
             }
             var status = U_ZERO_ERROR
-            #if canImport(Glibc)
+            #if canImport(Glibc) || canImport(ucrt)
             // Glibc doesn't support strlcpy
             strcpy(buf, identifier)
             #else
@@ -825,7 +829,7 @@ extension Locale {
         /// Returns a list of `Locale` currency codes defined in ISO-4217
         public static var isoCurrencies: [Currency] {
             var status = U_ZERO_ERROR
-            let values = ucurr_openISOCurrencies(UCURR_ALL.rawValue, &status)
+            let values = ucurr_openISOCurrencies(UInt32(UCURR_ALL.rawValue), &status)
             guard status.isSuccess, let values else { return [] }
             let e = ICU.Enumerator(enumerator: values)
             return e.elements.map { Currency($0) }
@@ -834,7 +838,7 @@ extension Locale {
         /// For `Locale.commonISOCurrencyCodes`
         internal static var commonISOCurrencies: [String] {
             var status = U_ZERO_ERROR
-            let values = ucurr_openISOCurrencies(UCURR_COMMON.rawValue | UCURR_NON_DEPRECATED.rawValue, &status)
+            let values = ucurr_openISOCurrencies(UInt32(UCURR_COMMON.rawValue | UCURR_NON_DEPRECATED.rawValue), &status)
             guard status.isSuccess, let values else { return [] }
             let e = ICU.Enumerator(enumerator: values)
             return e.elements.map { $0 }
@@ -2414,7 +2418,7 @@ extension Locale.Region {
     @_alwaysEmitIntoClient
     public static var zimbabwe: Locale.Region { Locale.Region("ZW") }
 
-    // MARK: - Region codes for specifiying language variants
+    // MARK: - Region codes for specifying language variants
 
     @_alwaysEmitIntoClient
     public static var world: Locale.Region { Locale.Region("001") }

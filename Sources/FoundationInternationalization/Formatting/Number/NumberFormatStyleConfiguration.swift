@@ -14,7 +14,11 @@
 import FoundationEssentials
 #endif
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
@@ -381,6 +385,7 @@ public enum DescriptiveNumberFormatConfiguration {
         internal enum Option : Int, Codable, Hashable {
             case spellOut = 1
             case ordinal = 2
+            case cardinal = 3
 
             #if FOUNDATION_FRAMEWORK
             fileprivate var numberFormatterStyle : NumberFormatter.Style {
@@ -389,6 +394,8 @@ public enum DescriptiveNumberFormatConfiguration {
                     return .spellOut
                 case .ordinal:
                     return .ordinal
+                case .cardinal:
+                    return .spellOut // cardinal is a special case spellout style
                 }
             }
             #endif // FOUNDATION_FRAMEWORK
@@ -397,7 +404,8 @@ public enum DescriptiveNumberFormatConfiguration {
 
         public static var spellOut: Self { Presentation(rawValue: 1) }
         public static var ordinal: Self { Presentation(rawValue: 2) }
-
+        internal static var cardinal: Self { Presentation(rawValue: 3) }
+        
         internal init(rawValue: Int) {
             option = Option(rawValue: rawValue)!
         }
@@ -407,20 +415,14 @@ public enum DescriptiveNumberFormatConfiguration {
         var presentation: Presentation
         var capitalizationContext: CapitalizationContext?
 
-        var icuFormatStyle: UNumberFormatStyle {
-            switch presentation.option {
-            case .spellOut:
-                return .spellout
-            case .ordinal:
-                return .ordinal
-            }
-        }
         var icuNumberFormatStyle: UNumberFormatStyle {
             switch presentation.option {
             case .spellOut:
                 return .spellout
             case .ordinal:
                 return .ordinal
+            case .cardinal:
+                return .spellout // cardinal is a special case spellout stype
             }
         }
     }
@@ -481,7 +483,7 @@ extension FloatingPointRoundingRule {
     }
 }
 
-#if os(Linux) || FOUNDATION_FRAMEWORK
+#if os(Linux) || os(Windows) || FOUNDATION_FRAMEWORK
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointRoundingRule : Codable { }
 #endif
@@ -587,7 +589,7 @@ extension NumberFormatStyleConfiguration.Collection {
             s += notation.skeleton + " "
         }
 
-        return s.trimmingCharacters(in: .whitespaces)
+        return s._trimmingWhitespace()
     }
 }
 
@@ -847,7 +849,7 @@ extension CurrencyFormatStyleConfiguration.Collection {
             s += rounding.skeleton + " "
         }
 
-        return s.trimmingCharacters(in: .whitespaces)
+        return s._trimmingWhitespace()
     }
 
     var icuNumberFormatStyle: UNumberFormatStyle {

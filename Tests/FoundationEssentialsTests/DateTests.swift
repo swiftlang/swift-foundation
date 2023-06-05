@@ -24,15 +24,15 @@ final class DateTests : XCTestCase {
         let d1 = Date()
         let d2 = d1 + 1
 
-        XCTAssertTrue(d2 > d1)
-        XCTAssertTrue(d1 < d2)
+        XCTAssertGreaterThan(d2, d1)
+        XCTAssertLessThan(d1, d2)
 
         let d3 = Date(timeIntervalSince1970: 12345)
         let d4 = Date(timeIntervalSince1970: 12345)
 
-        XCTAssertTrue(d3 == d4)
-        XCTAssertTrue(d3 <= d4)
-        XCTAssertTrue(d4 >= d3)
+        XCTAssertEqual(d3, d4)
+        XCTAssertLessThanOrEqual(d3, d4)
+        XCTAssertGreaterThanOrEqual(d4, d3)
     }
 
     func testDateMutation() {
@@ -41,35 +41,83 @@ final class DateTests : XCTestCase {
         d1 = d1 + 1.0
         let d2 = Date(timeIntervalSinceNow: 10)
 
-        XCTAssertTrue(d2 > d1)
-        XCTAssertTrue(d1 != d0)
+        XCTAssertGreaterThan(d2, d1)
+        XCTAssertNotEqual(d1, d0)
 
         let d3 = d1
         d1 += 10
-        XCTAssertTrue(d1 > d3)
+
+        XCTAssertGreaterThan(d1, d3)
     }
 
     func testDistantPast() {
         let distantPast = Date.distantPast
         let currentDate = Date()
-        XCTAssertTrue(distantPast < currentDate)
-        XCTAssertTrue(currentDate > distantPast)
-        XCTAssertTrue(distantPast.timeIntervalSince(currentDate) < 3600.0*24*365*100) /* ~1 century in seconds */
+
+        XCTAssertLessThan(distantPast, currentDate)
+        XCTAssertGreaterThan(currentDate, distantPast)
+        XCTAssertLessThan(distantPast.timeIntervalSince(currentDate),
+                          3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
     }
 
     func testDistantFuture() {
         let distantFuture = Date.distantFuture
         let currentDate = Date()
-        XCTAssertTrue(currentDate < distantFuture)
-        XCTAssertTrue(distantFuture > currentDate)
-        XCTAssertTrue(distantFuture.timeIntervalSince(currentDate) > 3600.0*24*365*100) /* ~1 century in seconds */
+
+        XCTAssertLessThan(currentDate, distantFuture)
+        XCTAssertGreaterThan(distantFuture, currentDate)
+        XCTAssertGreaterThan(distantFuture.timeIntervalSince(currentDate),
+                              3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
     }
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func test_now() {
         let date1 : Date = .now
         let date2 : Date = .now
+
         XCTAssertLessThanOrEqual(date1, date2)
+    }
+
+    func testDescriptionReferenceDate() {
+        let date = Date(timeIntervalSinceReferenceDate: TimeInterval(0))
+
+        XCTAssertEqual("2001-01-01 00:00:00 +0000", date.description)
+    }
+
+    func testDescription1970() {
+        let date = Date(timeIntervalSince1970: TimeInterval(0))
+
+        XCTAssertEqual("1970-01-01 00:00:00 +0000", date.description)
+    }
+
+    func testDescriptionDistantPast() {
+#if FOUNDATION_FRAMEWORK
+        XCTAssertEqual("0001-01-01 00:00:00 +0000", Date.distantPast.description)
+#else
+        XCTAssertEqual("0000-12-30 00:00:00 +0000", Date.distantPast.description)
+#endif
+    }
+
+    func testDescriptionDistantFuture() {
+        XCTAssertEqual("4001-01-01 00:00:00 +0000", Date.distantFuture.description)
+    }
+
+    func testDescriptionBeyondDistantPast() {
+        let date = Date.distantPast.addingTimeInterval(TimeInterval(-1))
+#if FOUNDATION_FRAMEWORK
+        XCTAssertEqual("0000-12-31 23:59:59 +0000", date.description)
+#else
+        XCTAssertEqual("<description unavailable>", date.description)
+#endif
+    }
+
+    func testDescriptionBeyondDistantFuture() {
+        let date = Date.distantFuture.addingTimeInterval(TimeInterval(1))
+#if FOUNDATION_FRAMEWORK
+        XCTAssertEqual("4001-01-01 00:00:01 +0000", date.description)
+#else
+        XCTAssertEqual("<description unavailable>", date.description)
+#endif
     }
 }
 

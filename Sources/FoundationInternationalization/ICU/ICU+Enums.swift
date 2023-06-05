@@ -10,7 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
+
+#if os(Windows)
+typealias EnumRawType = CInt
+#else
+typealias EnumRawType = CUnsignedInt
+#endif
 
 extension UBool {
     static let `true` = UBool(1)
@@ -66,6 +76,10 @@ extension UNumberFormatAttribute {
     static let parseDecimalMarkRequired = UNUM_PARSE_DECIMAL_MARK_REQUIRED
     static let parseCaseSensitive = UNUM_PARSE_CASE_SENSITIVE
     static let signAlwaysShown = UNUM_SIGN_ALWAYS_SHOWN
+}
+
+extension UNumberFormatTextAttribute {
+    static let defaultRuleSet = UNUM_DEFAULT_RULESET
 }
 
 extension UDateRelativeDateTimeFormatterStyle {
@@ -143,6 +157,12 @@ extension UDateFormatField {
     static let flexibleDayPeriod = UDAT_FLEXIBLE_DAY_PERIOD_FIELD
 }
 
+extension UDateFormatField {
+  internal init(_ rawValue: CInt) {
+    self.init(rawValue: EnumRawType(rawValue))
+  }
+}
+
 extension UCalendarAttribute {
     static let lenient = UCAL_LENIENT
     static let firstDayOfWeek = UCAL_FIRST_DAY_OF_WEEK
@@ -178,6 +198,12 @@ extension UNumberFormatFields {
     static let measureUnit = UNUM_MEASURE_UNIT_FIELD
 }
 
+extension UNumberFormatFields {
+  internal init(_ rawValue: CInt) {
+    self.init(rawValue: EnumRawType(rawValue))
+  }
+}
+
 extension UDateFormatHourCycle {
     static let hourCycle11 = UDAT_HOUR_CYCLE_11
     static let hourCycle12 = UDAT_HOUR_CYCLE_12
@@ -189,4 +215,16 @@ extension UATimeUnitTimePattern {
     static let hourMinute = UATIMEUNITTIMEPAT_HM
     static let hourMinuteSecond = UATIMEUNITTIMEPAT_HMS
     static let minuteSecond = UATIMEUNITTIMEPAT_MS
+}
+
+extension UCalendarDaysOfWeek {
+    internal init(_ rawValue: CInt) {
+        self.init(rawValue: EnumRawType(rawValue))
+    }
+}
+
+extension UNumberFormatSymbol {
+    internal init(_ rawValue: CInt) {
+        self.init(rawValue: EnumRawType(rawValue))
+    }
 }

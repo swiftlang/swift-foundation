@@ -25,7 +25,7 @@ extension IntegerParseStrategy : Sendable where Format : Sendable {}
 extension IntegerParseStrategy: ParseStrategy {
     public func parse(_ value: String) throws -> Format.FormatInput {
         let parser = ICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: numberFormatType, locale: locale, lenient: lenient)
-        let trimmedString = value.trimmingCharacters(in: .whitespaces)
+        let trimmedString = value._trimmingWhitespace()
         if let v = parser.parseAsInt(trimmedString) {
             return Format.FormatInput(v)
         } else if let v = parser.parseAsDouble(trimmedString) {

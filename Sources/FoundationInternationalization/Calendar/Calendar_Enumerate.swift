@@ -810,7 +810,7 @@ extension Calendar {
         return result
     }
 
-    // This function adjusts a mismatched data in the case where it is the chinese calendar and we have detected a leap month mismatch.
+    // This function adjusts a mismatched data in the case where it is the Chinese calendar and we have detected a leap month mismatch.
     // It will return nil in the case where we could not find an appropriate adjustment. In that case, the algorithm should keep iterating.
     func _adjustedDateForMismatchedChineseLeapMonth(start: Date,
                                                     searchingDate: Date,
@@ -1613,7 +1613,7 @@ extension Calendar {
 
     private func dateAfterMatchingWeekday(startingAt: Date, components: DateComponents, direction: SearchDirection) -> Date? {
         // NOTE: This differs from the weekday check in weekdayOrdinal because weekday is meant to be ambiguous and can be set without setting the ordinality.
-        // e.g. inquiries like "find the next tuesday after 2017-06-01" or "find every wednesday before 2012-12-25"
+        // e.g. inquiries like "find the next Tuesday after 2017-06-01" or "find every Wednesday before 2012-12-25"
 
         guard let weekday = components.weekday else { return nil }
         var dateWeekday = component(.weekday, from: startingAt)

@@ -14,7 +14,11 @@
 import FoundationEssentials
 #endif
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 typealias UChar = UInt16
 
@@ -154,7 +158,7 @@ final class ICUDateFormatter {
         return (endIndexInSubstr, date)
     }
 
-    // Search the presense of a date string that matches the specified format by advancing repeatedly until we find a match
+    // Search the presence of a date string that matches the specified format by advancing repeatedly until we find a match
     func search(_ string: String, in range: Range<String.Index>) -> (Range<String.Index>, Date)? {
         var idx = range.lowerBound
         let end = range.upperBound
@@ -188,8 +192,7 @@ final class ICUDateFormatter {
         }
 
         return (result, positer.fields.map { field -> AttributePosition in
-            let icuField = UDateFormatField(rawValue: UInt32(field.field))
-            return AttributePosition(field: icuField, begin: field.begin, end: field.end)
+            return AttributePosition(field: UDateFormatField(CInt(field.field)), begin: field.begin, end: field.end)
         })
     }
 
@@ -248,20 +251,32 @@ final class ICUDateFormatter {
         } else {
             hourCycleOption = .default
         }
-
         let localeIdentifier = format.locale.identifier
         let calendarIdentifier = format.calendar.identifier
         let pattern = patternCache.withLock { state in
             if let cachedPattern = state[format] {
                 return cachedPattern
             } else {
-                let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier, skeleton: format.symbols.formatterTemplate, hourCycleOption: hourCycleOption)
+                var pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier, skeleton: format.symbols.formatterTemplate, hourCycleOption: hourCycleOption)
+                if let dateStyle = format._dateStyle, let datePatternOverride = format.locale.customDateFormat(dateStyle) {
+                    // substitue date part from pattern with customDatePattern
+                    let datePattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier, skeleton: format.symbols.dateTemplate, hourCycleOption: hourCycleOption)
+                    pattern.replace(datePattern, with: datePatternOverride)
+                }
+                
                 state[format] = pattern
                 return pattern
             }
         }
 
-        let info = DateFormatInfo(localeIdentifier: localeIdentifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: format.calendar.firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
+        let firstWeekday: Int
+        if let forceFirstWeekday = format.locale.forceFirstWeekday(calendarIdentifier) {
+            firstWeekday = forceFirstWeekday.icuIndex
+        } else {
+            firstWeekday = format.calendar.firstWeekday
+        }
+
+        let info = DateFormatInfo(localeIdentifier: localeIdentifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
 
         return cachedFormatter(for: info)
     }
@@ -271,4 +286,3 @@ final class ICUDateFormatter {
         return cachedFormatter(for: info)
     }
 }
-

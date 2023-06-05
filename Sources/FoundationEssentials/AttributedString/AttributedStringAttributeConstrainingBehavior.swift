@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -220,7 +220,7 @@ extension AttributedString.Guts {
         if type == .attributes, range.isEmpty {
             // For attribute-only mutations, we expand the constrained styles out from the mutated
             // range to the paragraph boundaries. If only attributes were modified and the range is
-            // empty, then no true mutation ocurred.
+            // empty, then no true mutation occurred.
             return
         }
 

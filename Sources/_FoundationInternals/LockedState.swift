@@ -11,9 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import os
+#else
+package import os
+#endif
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(WinSDK)
+import WinSDK
 #endif
 
 internal struct LockedState<State> {
@@ -24,6 +30,8 @@ internal struct LockedState<State> {
         typealias Primitive = os_unfair_lock
 #elseif canImport(Glibc)
         typealias Primitive = pthread_mutex_t
+#elseif canImport(WinSDK)
+        typealias Primitive = SRWLOCK
 #endif
 
         typealias PlatformLock = UnsafeMutablePointer<Primitive>
@@ -34,6 +42,8 @@ internal struct LockedState<State> {
             platformLock.initialize(to: os_unfair_lock())
 #elseif canImport(Glibc)
             pthread_mutex_init(platformLock, nil)
+#elseif canImport(WinSDK)
+            InitializeSRWLock(platformLock)
 #endif
         }
 
@@ -49,6 +59,8 @@ internal struct LockedState<State> {
             os_unfair_lock_lock(platformLock)
 #elseif canImport(Glibc)
             pthread_mutex_lock(platformLock)
+#elseif canImport(WinSDK)
+            AcquireSRWLockExclusive(platformLock)
 #endif
         }
 
@@ -57,6 +69,8 @@ internal struct LockedState<State> {
             os_unfair_lock_unlock(platformLock)
 #elseif canImport(Glibc)
             pthread_mutex_unlock(platformLock)
+#elseif canImport(WinSDK)
+            ReleaseSRWLockExclusive(platformLock)
 #endif
         }
     }
@@ -92,14 +106,13 @@ internal struct LockedState<State> {
         }
     }
 
-    // Ensures the managed state outlives the locked `body`.
+    // Ensures the managed state outlives the locked scope.
     func withLockExtendingLifetimeOfState<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
         try _buffer.withUnsafeMutablePointers { state, lock in
             _Lock.lock(lock)
             return try withExtendedLifetime(state.pointee) {
-                let result = try body(&state.pointee)
-                _Lock.unlock(lock)
-                return result
+                defer { _Lock.unlock(lock) }
+                return try body(&state.pointee)
             }
         }
     }

@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -271,6 +271,18 @@ extension AttributedString.Guts {
         Index(string.index(roundingUp: i._value))
     }
 
+    func unicodeScalarRange(roundingDown range: Range<Index>) -> Range<Index> {
+        let lower = unicodeScalarIndex(roundingDown: range.lowerBound)
+        let upper = unicodeScalarIndex(roundingDown: range.upperBound)
+        return Range(uncheckedBounds: (lower, upper))
+    }
+
+    func characterRange(roundingDown range: Range<Index>) -> Range<Index> {
+        let lower = characterIndex(roundingDown: range.lowerBound)
+        let upper = characterIndex(roundingDown: range.upperBound)
+        return Range(uncheckedBounds: (lower, upper))
+    }
+
     func boundsCheck(_ idx: AttributedString.Index) {
         precondition(
             idx._value >= string.startIndex && idx._value < string.endIndex,
@@ -463,32 +475,59 @@ extension AttributedString.Guts {
         }
     }
 
+    func _prepareStringMutation(
+        in range: Range<Index>
+    ) -> (oldUTF8Count: Int, invalidationRange: Range<Int>) {
+        let utf8TargetRange = range._utf8OffsetRange
+        let invalidationRange = self.enforceAttributeConstraintsBeforeMutation(to: utf8TargetRange)
+        assert(invalidationRange.lowerBound <= utf8TargetRange.lowerBound)
+        assert(invalidationRange.upperBound >= utf8TargetRange.upperBound)
+        return (self.string.utf8.count, invalidationRange)
+    }
+
+    func _finalizeStringMutation(
+        _ state: (oldUTF8Count: Int, invalidationRange: Range<Int>)
+    ) {
+        let utf8Delta = self.string.utf8.count - state.oldUTF8Count
+        let lower = state.invalidationRange.lowerBound
+        let upper = state.invalidationRange.upperBound + utf8Delta
+        self.enforceAttributeConstraintsAfterMutation(
+            in: lower ..< upper,
+            type: .attributesAndCharacters)
+    }
+
+    func _finalizeAttributeMutation(in range: Range<Index>) {
+        self.enforceAttributeConstraintsAfterMutation(in: range._utf8OffsetRange, type: .attributes)
+    }
+
     func replaceSubrange(_ range: Range<Index>, with replacement: some AttributedStringProtocol) {
-        let utf8TargetRange = utf8OffsetRange(from: range)
+        let brange = range._bstringRange
+        let replacementScalars = replacement.unicodeScalars._unicodeScalars
 
-        let utf8SourceRange = replacement.__guts.utf8OffsetRange(from: replacement._bounds)
+        // Determine if this replacement is going to actively change character data, or if this is
+        // purely an attributes update, by seeing if the replacement string slice is identical to
+        // our own storage. (If it is identical, then we need to update attributes surrounding the
+        // affected bounds in a different way.)
+        //
+        // Note: this is intentionally not comparing actual string data.
+        let hasStringChanges = !replacementScalars.isIdentical(to: string.unicodeScalars[brange])
 
-        var mutationRange = utf8TargetRange
-        var mutationType: _MutationType = .attributes
-
-        let oldScalars = self.string.unicodeScalars[range._bstringRange]
-        let newScalars = replacement.unicodeScalars._unicodeScalars
-        if oldScalars == newScalars {
-            assert(utf8TargetRange.count == utf8SourceRange.count)
-        } else {
-            let invalidationRange = self.enforceAttributeConstraintsBeforeMutation(
-                to: utf8TargetRange)
-            assert(invalidationRange.lowerBound <= utf8TargetRange.lowerBound)
-            assert(invalidationRange.upperBound >= utf8TargetRange.upperBound)
-            let utf8Delta = utf8SourceRange.count - utf8TargetRange.count
-            mutationRange = invalidationRange.lowerBound ..< invalidationRange.upperBound + utf8Delta
-            mutationType = .attributesAndCharacters
-            self.string.unicodeScalars.replaceSubrange(range._bstringRange, with: newScalars)
-        }
+        let utf8TargetRange = brange._utf8OffsetRange
+        let utf8SourceRange = Range(uncheckedBounds: (
+            replacementScalars.startIndex.utf8Offset,
+            replacementScalars.endIndex.utf8Offset
+        ))
         let replacementRuns = replacement.__guts.runs(containing: utf8SourceRange)
-        self.replaceRunsSubrange(locations: utf8TargetRange, with: replacementRuns)
-        // FIXME: Collect boundary constraints.
-        self.enforceAttributeConstraintsAfterMutation(in: mutationRange, type: mutationType)
+
+        if hasStringChanges {
+            let state = _prepareStringMutation(in: range)
+            self.string.unicodeScalars.replaceSubrange(brange, with: replacementScalars)
+            self.replaceRunsSubrange(locations: utf8TargetRange, with: replacementRuns)
+            _finalizeStringMutation(state)
+        } else {
+            self.replaceRunsSubrange(locations: utf8TargetRange, with: replacementRuns)
+            _finalizeAttributeMutation(in: range)
+        }
     }
 
     func attributesToUseForTextReplacement(

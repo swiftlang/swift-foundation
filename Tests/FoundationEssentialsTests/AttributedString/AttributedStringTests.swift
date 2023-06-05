@@ -298,6 +298,18 @@ final class TestAttributedString: XCTestCase {
         b += AttributedString("def", attributes: AttributeContainer().testInt(2))
         b += "ghijkl"
         XCTAssertNotEqual(a, b)
+
+
+        let a1 = AttributedString("Café", attributes: AttributeContainer().testInt(1))
+        let a2 = AttributedString("Cafe\u{301}", attributes: AttributeContainer().testInt(1))
+        XCTAssertEqual(a1, a2)
+
+        let a3 = (AttributedString("Cafe", attributes: AttributeContainer().testInt(1))
+                  + AttributedString("\u{301}", attributes: AttributeContainer().testInt(2)))
+        XCTAssertNotEqual(a1, a3)
+        XCTAssertNotEqual(a2, a3)
+        XCTAssertTrue(a1.characters.elementsEqual(a3.characters))
+        XCTAssertTrue(a2.characters.elementsEqual(a3.characters))
     }
 
     func testAttributedSubstringEquality() {
@@ -1194,7 +1206,7 @@ E {
         XCTAssertEqual(type, decoded)
     }
     
-    func testCodingErrorsPropogateUpToCallSite() {
+    func testCodingErrorsPropagateUpToCallSite() {
         enum CustomAttribute : CodableAttributedStringKey {
             typealias Value = String
             static var name = "CustomAttribute"
@@ -1695,7 +1707,7 @@ E {
         container.testInt = 2
         container[Attribute.self] = 3
         let str = AttributedString("Hello", attributes: container)
-        let result = try? NSAttributedString(str, scope: Scope.self, options: .dropThrowingAttributes) // The same call that the no-scope initializer will make
+        let result = try? NSAttributedString(str, attributeTable: Scope.attributeKeyTypes(), options: .dropThrowingAttributes) // The same call that the no-scope initializer will make
         XCTAssertEqual(result, NSAttributedString(string: "Hello", attributes: [NSAttributedString.Key("TestInt") : 2]))
     }
     
@@ -1830,7 +1842,17 @@ E {
         XCTAssertEqual(unicode[unicode.index(before: unicode.endIndex)], "\u{301}")
         XCTAssertEqual(unicode[unicode.index(unicode.endIndex, offsetBy: -2)], "e")
     }
-    
+
+    func testCharacterSlicing() {
+        let a: AttributedString = "\u{1f1fa}\u{1f1f8}" // Regional indicators U & S
+        let i = a.unicodeScalars.index(after: a.startIndex)
+        let b = a.characters[..<i]
+        XCTAssertEqual(a.characters.count, 1)
+        XCTAssertEqual(b.startIndex, a.startIndex)
+        XCTAssertEqual(b.endIndex, a.startIndex)
+        XCTAssertEqual(b.count, 0)
+    }
+
     func testUnicodeScalarsSlicing() {
         let attrStr = AttributedString("Cafe\u{301}", attributes: AttributeContainer().testInt(1))
         let range = attrStr.startIndex ..< attrStr.endIndex

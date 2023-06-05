@@ -29,7 +29,7 @@ import TestSupport
 #endif
 
 #if canImport(_CShims)
-@_implementationOnly import _CShims
+import _CShims
 #endif
 
 // MARK: - Test Suite
@@ -106,6 +106,19 @@ final class JSONEncoderTests : XCTestCase {
         let b : [Int] = []
         let result2 = String(data: try! JSONEncoder().encode(b), encoding: String._Encoding.utf8)
         XCTAssertEqual(result2, "[]")
+    }
+    
+    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+    func testEncodingTopLevelWithConfiguration() throws {
+        // CodableTypeWithConfiguration is a struct that conforms to CodableWithConfiguration
+        let value = CodableTypeWithConfiguration.testValue
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        
+        var decoded = try decoder.decode(CodableTypeWithConfiguration.self, from: try encoder.encode(value, configuration: .init(1)), configuration: .init(1))
+        XCTAssertEqual(decoded, value)
+        decoded = try decoder.decode(CodableTypeWithConfiguration.self, from: try encoder.encode(value, configuration: CodableTypeWithConfiguration.ConfigProviding.self), configuration: CodableTypeWithConfiguration.ConfigProviding.self)
+        XCTAssertEqual(decoded, value)
     }
 
 #if false // FIXME: XCTest doesn't support crash tests yet rdar://20195010&22387653
@@ -1125,7 +1138,10 @@ final class JSONEncoderTests : XCTestCase {
         _test(JSONString: "[\"本日\"]", to: ["本日"])
     }
 
-    func test_JSONUnicodeEscapes() {
+    func test_JSONUnicodeEscapes() throws {
+#if os(Linux)
+        throw XCTSkip("current development swift builds cause a stack overflow")
+#endif
         let testCases = [
             // e-acute and greater-than-or-equal-to
             "\"\\u00e9\\u2265\"" : "é≥",
@@ -1345,24 +1361,30 @@ final class JSONEncoderTests : XCTestCase {
         if let localePtr = setlocale(LC_ALL, nil) {
             currentLocale = strdup(localePtr)
         }
-        
+
+        defer {
+            if let currentLocale {
+                setlocale(LC_ALL, currentLocale)
+                free(currentLocale)
+            }
+        }
+
         let orig = ["decimalValue" : 1.1]
 
         do {
             setlocale(LC_ALL, "fr_FR")
             let data = try JSONEncoder().encode(orig)
 
+#if os(Windows)
+            setlocale(LC_ALL, "en_US")
+#else
             setlocale(LC_ALL, "en_US_POSIX")
+#endif
             let decoded = try JSONDecoder().decode(type(of: orig).self, from: data)
 
             XCTAssertEqual(orig, decoded)
         } catch {
             XCTFail("Error: \(error)")
-        }
-        
-        if let currentLocale {
-            setlocale(LC_ALL, currentLocale)
-            currentLocale.deallocate()
         }
     }
 
@@ -1537,7 +1559,7 @@ final class JSONEncoderTests : XCTestCase {
                 try unkeyedSVC1.encode("First")
                 try unkeyedSVC2.encode("Second")
 
-                // NOTE!!! At pressent, the order in which the values in the unkeyed container's superEncoders above get inserted into the resulting array depends on the order in which the superEncoders are deinit'd!! This can result in some very unexpected results, and this pattern is not recommended. This test exists just to verify compatibility.
+                // NOTE!!! At present, the order in which the values in the unkeyed container's superEncoders above get inserted into the resulting array depends on the order in which the superEncoders are deinit'd!! This can result in some very unexpected results, and this pattern is not recommended. This test exists just to verify compatibility.
             }
         }
         let data = try! JSONEncoder().encode(SuperEncoding())
@@ -3240,6 +3262,42 @@ private struct NestedContainersTestType : Encodable {
       expectEqualPaths(thirdLevelContainerUnkeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 1)], "New third-level unkeyed container had unexpected codingPath.")
     }
   }
+}
+
+private struct CodableTypeWithConfiguration : CodableWithConfiguration, Equatable {
+    struct Config {
+        let num: Int
+        
+        init(_ num: Int) {
+            self.num = num
+        }
+    }
+    
+    struct ConfigProviding : EncodingConfigurationProviding, DecodingConfigurationProviding {
+        static var encodingConfiguration: Config { Config(2) }
+        static var decodingConfiguration: Config { Config(2) }
+    }
+    
+    typealias EncodingConfiguration = Config
+    typealias DecodingConfiguration = Config
+    
+    static let testValue = Self(3)
+    
+    let num: Int
+    
+    init(_ num: Int) {
+        self.num = num
+    }
+    
+    func encode(to encoder: Encoder, configuration: Config) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(num + configuration.num)
+    }
+    
+    init(from decoder: Decoder, configuration: Config) throws {
+        let container = try decoder.singleValueContainer()
+        num = try container.decode(Int.self) - configuration.num
+    }
 }
 
 // MARK: - Helper Types

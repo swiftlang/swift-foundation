@@ -13,9 +13,9 @@
 #include "include/string_shims.h"
 #include "include/_CShimsTargetConditionals.h"
 
-#include <strings.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <float.h>
 
 int
@@ -24,6 +24,15 @@ _cshims_strncasecmp_l(const char * _Nullable s1,
                       size_t n,
                       locale_t _Nullable loc)
 {
+#if TARGET_OS_WINDOWS
+  static _locale_t storage;
+  static _locale_t *cloc = NULL;
+  if (cloc == NULL) {
+    storage = _create_locale(LC_ALL, "C");
+    cloc = &storage;
+  }
+  return _strnicmp_l(s1, s2, n, loc ? loc : *cloc);
+#else
     if (loc != NULL) {
         return strncasecmp_l(s1, s2, n, loc);
     }
@@ -35,6 +44,7 @@ _cshims_strncasecmp_l(const char * _Nullable s1,
     locale_t clocale = newlocale(LC_ALL_MASK, "C", (locale_t)0);
     return strncasecmp_l(s1, s2, n, clocale);
 #endif // TARGET_OS_MAC
+#endif // TARGET_OS_WINDOWS
 }
 
 double
@@ -44,6 +54,8 @@ _cshims_strtod_l(const char * _Nullable restrict nptr,
 {
 #if TARGET_OS_MAC
     return strtod_l(nptr, endptr, loc);
+#elif TARGET_OS_WINDOWS
+    return _strtod_l(nptr, endptr, loc);
 #else
     // Use the C locale
     locale_t clocale = newlocale(LC_ALL_MASK, "C", (locale_t)0);
@@ -62,6 +74,8 @@ _cshims_strtof_l(const char * _Nullable restrict nptr,
 {
 #if TARGET_OS_MAC
     return strtof_l(nptr, endptr, loc);
+#elif TARGET_OS_WINDOWS
+    return _strtof_l(nptr, endptr, loc);
 #else
     // Use the C locale
     locale_t clocale = newlocale(LC_ALL_MASK, "C", (locale_t)0);

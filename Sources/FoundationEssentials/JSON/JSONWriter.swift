@@ -12,7 +12,7 @@
 
 extension String {
     
-    // Ideally we'd entirely de-deuplicate this code with serializeString()'s, but at the moment there's a noticeable performance regression when doing so.
+    // Ideally we'd entirely de-duplicate this code with serializeString()'s, but at the moment there's a noticeable performance regression when doing so.
     func serializedForJSON(withoutEscapingSlashes: Bool) -> String {
         var bytes = [UInt8]()
         bytes.reserveCapacity(self.utf8.count + 2)

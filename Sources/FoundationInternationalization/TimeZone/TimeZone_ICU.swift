@@ -18,7 +18,15 @@ import FoundationEssentials
 import Glibc
 #endif
 
+#if canImport(ucrt)
+import ucrt
+#endif
+
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 let MIN_TIMEZONE_UDATE = -2177452800000.0  // 1901-01-01 00:00:00 +0000
 let MAX_TIMEZONE_UDATE = 4133980800000.0  // 2101-01-01 00:00:00 +0000
@@ -470,7 +478,9 @@ internal final class _TimeZone: Sendable {
                 continue
             }
 
-            let tz = String(utf16CodeUnits: chars, count: Int(length))
+            guard let tz = String(_utf16: chars, count: Int(length)) else {
+                continue
+            }
 
             // Filter out things starting with these prefixes
             guard !(tz.starts(with: "US/") || tz.starts(with: "Etc/") || tz.starts(with: "Canada/") || tz.starts(with: "SystemV/") || tz.starts(with: "Mideast/")) else {
@@ -497,8 +507,13 @@ internal final class _TimeZone: Sendable {
         }
 
         #if os(Windows)
-        // Need to use _O_BINARY|_O_NOINHERIT
-        fatalError()
+        let fd: CInt = path.withCString(encodedAs: UTF16.self) {
+            var fd: CInt = -1
+            let errno: errno_t =
+                _wsopen_s(&fd, $0, _O_RDONLY | _O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE)
+            guard errno == 0 else { return -1 }
+            return fd
+        }
         #else
         let fd = open(path, O_RDONLY, 0666)
         #endif
@@ -506,20 +521,33 @@ internal final class _TimeZone: Sendable {
         guard fd >= 0 else { return Data() }
         defer { close(fd) }
 
+#if os(Windows)
+        var stat: _stat64 = _stat64()
+        let res = _fstat64(fd, &stat)
+#else
         var stat: stat = stat()
         let res = fstat(fd, &stat)
+#endif
         guard res >= 0 else { return Data() }
 
+#if os(Windows)
+        guard (CInt(stat.st_mode) & _S_IFMT) == S_IFREG else { return Data() }
+        guard stat.st_size < Int64.max else { return Data() }
+#else
         guard (stat.st_mode & S_IFMT) == S_IFREG else { return Data() }
-
         guard stat.st_size < Int.max else { return Data() }
+#endif
 
         let sz = Int(stat.st_size)
 
         let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: sz, alignment: 0)
         defer { bytes.deallocate() }
 
+#if os(Windows)
+        let ret = _read(fd, bytes.baseAddress!, CUnsignedInt(sz))
+#else
         let ret = read(fd, bytes.baseAddress!, sz)
+#endif
         guard ret >= sz else { return Data() }
 
         return Data(bytes: bytes.baseAddress!, count: sz)

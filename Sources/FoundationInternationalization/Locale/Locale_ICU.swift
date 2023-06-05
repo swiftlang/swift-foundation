@@ -19,9 +19,10 @@ import FoundationEssentials
 @_implementationOnly import _ForSwiftFoundation
 // For Logger
 @_implementationOnly import os
-#endif
-
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 let MAX_ICU_NAME_SIZE: Int32 = 1024
 
@@ -60,7 +61,7 @@ internal final class _Locale: Sendable, Hashable {
         var numberFormatters: [UInt32 /* UNumberFormatStyle */ : UnsafeMutablePointer<UNumberFormat?>] = [:]
 
         mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafeMutablePointer<UNumberFormat?>? {
-            if let nf = numberFormatters[style.rawValue] {
+            if let nf = numberFormatters[UInt32(style.rawValue)] {
                 return nf
             }
 
@@ -79,16 +80,15 @@ internal final class _Locale: Sendable, Hashable {
 
             if let numberSymbols {
                 for (sym, str) in numberSymbols {
-                    let icuSymbol = UNumberFormatSymbol(UInt32(sym))
                     let utf16 = Array(str.utf16)
                     utf16.withUnsafeBufferPointer {
                         var status = U_ZERO_ERROR
-                        unum_setSymbol(nf, icuSymbol, $0.baseAddress, Int32($0.count), &status)
+                        unum_setSymbol(nf, UNumberFormatSymbol(CInt(sym)), $0.baseAddress, Int32($0.count), &status)
                     }
                 }
             }
-            
-            numberFormatters[style.rawValue] = nf
+
+            numberFormatters[UInt32(style.rawValue)] = nf
 
             return nf
         }
@@ -236,15 +236,14 @@ internal final class _Locale: Sendable, Hashable {
             }
         }
 
-        if ident == nil {
-            #if os(macOS)
-            ident = ""
-            #else
-            ident = "en_US"
-            #endif
+        let fixedIdent: String
+        if let ident, !ident.isEmpty {
+            fixedIdent = ident
+        } else {
+            fixedIdent = "en_001"
         }
         
-        self.identifier = Locale._canonicalLocaleIdentifier(from: ident!)
+        self.identifier = Locale._canonicalLocaleIdentifier(from: fixedIdent)
         doesNotRequireSpecialCaseHandling = Self.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
         lock = LockedState(initialState: State())
@@ -373,9 +372,9 @@ internal final class _Locale: Sendable, Hashable {
                 return uloc_toLanguageTag(string, buffer, size, UBool.false, &status)
             }
 
-            if let canonicalized = bcp47?.replacingOccurrences(of: "-", with: "_") {
+            if let canonicalized = bcp47?.replacing("-", with: "_") {
                 if canonicalized == "und" {
-                    result = canonicalized.replacingOccurrences(of: "und", with: "root")
+                    result = canonicalized.replacing("und", with: "root")
                 } else {
                     result = canonicalized
                 }
@@ -967,7 +966,7 @@ internal final class _Locale: Sendable, Hashable {
                 return nil
             }
 
-            let nameStr = String(utf16CodeUnits: name, count: Int(size))
+            let nameStr = String(_utf16: name, count: Int(size))
             if isChoice.boolValue {
                 let pattern = "{0,choice,\(nameStr)}"
 
@@ -1300,6 +1299,13 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
+    // MARK: - Date/Time Formats
+
+    internal func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
+        guard let dateFormatStrings = prefs?.dateFormats else { return nil }
+        return dateFormatStrings[style]
+    }
+
     // MARK: -
 
     private func displayString(for identifier: String, value: String, status: UnsafeMutablePointer<UErrorCode>, _ f: (UnsafePointer<CChar>?, UnsafePointer<CChar>?, UnsafeMutablePointer<UChar>?, Int32, UnsafeMutablePointer<UErrorCode>?) -> Int32) -> String? {
@@ -1435,7 +1441,7 @@ internal final class _Locale: Sendable, Hashable {
                 // The numbering system is already the default numbering system (index 0)
                 localeIDComponents.numberingSystem = nil
             } else if whichNumberingSystem > 0 {
-                // If the numbering system for `localeIDWithDesiredComponents` is compatible with the constructed locale’s language and is not already the default numbering system (index 0), then set it on the new locale, e.g. `hi_IN@numbers=latn` + `ar` shoudl get `ar_IN@numbers=latn`, since `latn` is valid for `ar`.
+                // If the numbering system for `localeIDWithDesiredComponents` is compatible with the constructed locale’s language and is not already the default numbering system (index 0), then set it on the new locale, e.g. `hi_IN@numbers=latn` + `ar` should get `ar_IN@numbers=latn`, since `latn` is valid for `ar`.
                 localeIDComponents.numberingSystem = validNumberingSystems[whichNumberingSystem]
             }
 
@@ -1494,7 +1500,7 @@ internal final class _Locale: Sendable, Hashable {
 
 // MARK: -
 
-/// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identiifer locales never have preferences.
+/// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identifier locales never have preferences.
 internal struct LocalePreferences: Hashable {
     enum MeasurementUnit {
         case centimeters
@@ -1556,6 +1562,8 @@ internal struct LocalePreferences: Hashable {
     var icuNumberSymbols: CFDictionary?
 #endif
     var numberSymbols: [UInt32 : String]? // Bridged version of `icuNumberSymbols`
+    var dateFormats: [Date.FormatStyle.DateStyle: String]? // Bridged version of `icuDateFormatStrings`
+
     var country: String?
     var measurementUnits: MeasurementUnit?
     var temperatureUnit: TemperatureUnit?
@@ -1575,7 +1583,8 @@ internal struct LocalePreferences: Hashable {
          temperatureUnit: TemperatureUnit? = nil,
          force24Hour: Bool? = nil,
          force12Hour: Bool? = nil,
-         numberSymbols: [UInt32 : String]? = nil) {
+         numberSymbols: [UInt32 : String]? = nil,
+         dateFormats: [Date.FormatStyle.DateStyle: String]? = nil) {
 
         self.metricUnits = metricUnits
         self.languages = languages
@@ -1589,7 +1598,8 @@ internal struct LocalePreferences: Hashable {
         self.force24Hour = force24Hour
         self.force12Hour = force12Hour
         self.numberSymbols = numberSymbols
-        
+        self.dateFormats = dateFormats
+
 #if FOUNDATION_FRAMEWORK
         icuDateTimeSymbols = nil
         icuDateFormatStrings = nil
@@ -1651,9 +1661,19 @@ internal struct LocalePreferences: Hashable {
         if let icuDateTimeSymbols = __CFLocalePrefsCopyAppleICUDateTimeSymbols(prefs)?.takeRetainedValue() {
             self.icuDateTimeSymbols = icuDateTimeSymbols
         }
-        
+
         if let icuDateFormatStrings = __CFLocalePrefsCopyAppleICUDateFormatStrings(prefs)?.takeRetainedValue() {
             self.icuDateFormatStrings = icuDateFormatStrings
+            // Bridge the mapping for Locale's usage
+            if let dateFormatPrefs = icuDateFormatStrings as? [String: String] {
+                var mapped: [Date.FormatStyle.DateStyle : String] = [:]
+                for (key, value) in dateFormatPrefs {
+                    if let k = UInt(key) {
+                        mapped[Date.FormatStyle.DateStyle(rawValue: k)] = value
+                    }
+                }
+                self.dateFormats = mapped
+            }
         }
         
         if let icuTimeFormatStrings = __CFLocalePrefsCopyAppleICUTimeFormatStrings(prefs)?.takeRetainedValue() {
@@ -1724,6 +1744,7 @@ internal struct LocalePreferences: Hashable {
         if let other = prefs.force24Hour { self.force24Hour = other }
         if let other = prefs.force12Hour { self.force12Hour = other }
         if let other = prefs.numberSymbols { self.numberSymbols = other }
+        if let other = prefs.dateFormats { self.dateFormats = other }
     }
 }
 

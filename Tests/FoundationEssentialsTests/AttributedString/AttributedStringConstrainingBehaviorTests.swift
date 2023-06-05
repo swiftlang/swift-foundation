@@ -488,11 +488,15 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         result = str
         result.characters.removeSubrange(result.index(afterCharacter: result.startIndex) ..< result.index(beforeCharacter: result.endIndex))
         verify(string: result, matches: [("Hd", 1, nil)], for: \.testInt, \.testCharacterDependent)
-        
+
+        // Replacing a character with an independent instance of the same character should still
+        // count as changing the character data, so it needs to invalidate character-dependent
+        // attributes.
         result = str
         result.characters[result.startIndex] = "H"
-        verify(string: result, matches: [("Hello, world", 1, 2)], for: \.testInt, \.testCharacterDependent)
-        
+        verify(string: result, matches: [("Hello, world", 1, nil)], for: \.testInt, \.testCharacterDependent)
+
+        // But simply assigning a sub-view back to itself should not invalidate any attributes.
         result = str
         result.characters[result.startIndex ..< result.index(afterCharacter: result.startIndex)] = str.characters[str.startIndex ..< str.index(afterCharacter: str.startIndex)]
         verify(string: result, matches: [("Hello, world", 1, 2)], for: \.testInt, \.testCharacterDependent)
@@ -525,11 +529,13 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         result = str
         result.append(replacement)
         verify(string: result, matches: [("Hello, world", 1, 2, nil), ("ABC", nil, nil, "Hello")], for: \.testInt, \.testCharacterDependent, \.testString)
-        
+
+        // Replacing a substring with a different substring of the same contents
+        // still counts as a text change, so it should invalidate character-dependent attributes.
         result = str
         replacement = AttributedString("HBC", attributes: .init().testString("Hello"))
         result[result.startIndex ..< result.index(afterCharacter: result.startIndex)] = replacement[replacement.startIndex ..< replacement.index(afterCharacter: str.startIndex)]
-        verify(string: result, matches: [("H", nil, nil, "Hello"), ("ello, world", 1, 2, nil)], for: \.testInt, \.testCharacterDependent, \.testString)
+        verify(string: result, matches: [("H", nil, nil, "Hello"), ("ello, world", 1, nil, nil)], for: \.testInt, \.testCharacterDependent, \.testString)
     }
 
 }

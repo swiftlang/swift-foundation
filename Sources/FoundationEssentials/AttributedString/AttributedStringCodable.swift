@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 // MARK: AttributedStringKey
@@ -97,22 +97,29 @@ public extension DecodableAttributedStringKey where Value : NSSecureCoding & NSO
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributeScopeCodableConfiguration : Sendable {
-    internal let scopeType : any AttributeScope.Type
-    internal let extraAttributesTable : [String : any AttributedStringKey.Type]
+    internal let attributesTable : [String : any AttributedStringKey.Type]
     
     internal init(
-        scopeType: any AttributeScope.Type,
-        extraAttributesTable: [String : any AttributedStringKey.Type] = [:]
+        _ attributesTable: [String : any AttributedStringKey.Type]
     ) {
-        self.scopeType = scopeType
-        self.extraAttributesTable = extraAttributesTable
+        self.attributesTable = attributesTable
+    }
+    
+    internal init<S: AttributeScope>(
+        _ scope: S.Type
+    ) {
+#if FOUNDATION_FRAMEWORK
+        self.attributesTable = S.attributeKeyTypes()
+#else
+        self.attributesTable = [:]
+#endif // FOUNDATION_FRAMEWORK
     }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public extension AttributeScope {
-    static var encodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(scopeType: self) }
-    static var decodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(scopeType: self) }
+    static var encodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
+    static var decodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
 }
 
 #if FOUNDATION_FRAMEWORK
@@ -120,16 +127,12 @@ public extension AttributeScope {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString : Codable {
     public func encode(to encoder: Encoder) throws {
-        let conf = AttributeScopeCodableConfiguration(
-            scopeType: AttributeScopes.FoundationAttributes.self,
-            extraAttributesTable: _loadDefaultAttributes())
+        let conf = AttributeScopeCodableConfiguration(_loadDefaultAttributes())
         try encode(to: encoder, configuration: conf)
     }
     
     public init(from decoder: Decoder) throws {
-        let conf = AttributeScopeCodableConfiguration(
-            scopeType: AttributeScopes.FoundationAttributes.self,
-            extraAttributesTable: _loadDefaultAttributes())
+        let conf = AttributeScopeCodableConfiguration(_loadDefaultAttributes())
         try self.init(from: decoder, configuration: conf)
     }
 }
@@ -176,7 +179,6 @@ extension AttributedString : CodableWithConfiguration {
         }
 
         var currentIndex = self.startIndex
-        var attributeKeyTypes = configuration.extraAttributesTable
         for run in self._guts.runs {
             let currentEndIndex = self._guts.utf8Index(currentIndex, offsetBy: run.length)
             let range = (currentIndex ..< currentEndIndex)._bstringRange
@@ -189,8 +191,7 @@ extension AttributedString : CodableWithConfiguration {
                     try Self.encodeAttributeContainer(
                         run.attributes,
                         to: attributeTableContainer.superEncoder(),
-                        configuration: configuration,
-                        using: &attributeKeyTypes)
+                        configuration: configuration)
                     attributeTable[run.attributes] = index
                     attributeTableNextIndex += 1
                 }
@@ -199,8 +200,7 @@ extension AttributedString : CodableWithConfiguration {
                 try Self.encodeAttributeContainer(
                     run.attributes,
                     to: runsContainer.superEncoder(),
-                    configuration: configuration,
-                    using: &attributeKeyTypes)
+                    configuration: configuration)
             }
 
             currentIndex = currentEndIndex
@@ -210,16 +210,14 @@ extension AttributedString : CodableWithConfiguration {
     fileprivate static func encodeAttributeContainer(
         _ attributes: _AttributeStorage,
         to encoder: Encoder,
-        configuration: AttributeScopeCodableConfiguration,
-        using attributeKeyTypeTable: inout [String : any AttributedStringKey.Type]
+        configuration: AttributeScopeCodableConfiguration
     ) throws {
         var attributesContainer = encoder.container(keyedBy: AttributeKey.self)
         for name in attributes.keys {
             if
-                let attributeKeyType = attributeKeyTypeTable[name] ?? configuration.scopeType.attributeKeyType(matching: name),
+                let attributeKeyType = configuration.attributesTable[name],
                 let encodableAttributeType = attributeKeyType as? any EncodableAttributedStringKey.Type
             {
-                attributeKeyTypeTable[name] = attributeKeyType
                 let attributeEncoder = attributesContainer.superEncoder(forKey: AttributeKey(stringValue: name)!)
                 func project<K: EncodableAttributedStringKey>(_: K.Type) throws {
                     try K.encode(attributes[K.self]!, to: attributeEncoder)
@@ -237,7 +235,6 @@ extension AttributedString : CodableWithConfiguration {
 
         var runsContainer: UnkeyedDecodingContainer
         var attributeTable: [_AttributeStorage]?
-        var attributeKeyTypeTable = configuration.extraAttributesTable
 
         if let runs = try? decoder.unkeyedContainer() {
             runsContainer = runs
@@ -247,8 +244,7 @@ extension AttributedString : CodableWithConfiguration {
             runsContainer = try topLevelContainer.nestedUnkeyedContainer(forKey: .runs)
             attributeTable = try Self.decodeAttributeTable(
                 from: topLevelContainer.superDecoder(forKey: .attributeTable),
-                configuration: configuration,
-                using: &attributeKeyTypeTable)
+                configuration: configuration)
         }
 
         var string: BigString = ""
@@ -277,8 +273,7 @@ extension AttributedString : CodableWithConfiguration {
             } else {
                 attributes = try Self.decodeAttributeContainer(
                     from: try runsContainer.superDecoder(),
-                    configuration: configuration,
-                    using: &attributeKeyTypeTable)
+                    configuration: configuration)
             }
 
             if substring.isEmpty && (runs.count > 0 || !runsContainer.isAtEnd) {
@@ -309,8 +304,7 @@ extension AttributedString : CodableWithConfiguration {
 
     private static func decodeAttributeTable(
         from decoder: Decoder,
-        configuration: AttributeScopeCodableConfiguration,
-        using attributeKeyTypeTable: inout [String : any AttributedStringKey.Type]
+        configuration: AttributeScopeCodableConfiguration
     ) throws -> [_AttributeStorage] {
         var container = try decoder.unkeyedContainer()
         var table = [_AttributeStorage]()
@@ -318,25 +312,23 @@ extension AttributedString : CodableWithConfiguration {
             table.reserveCapacity(size)
         }
         while !container.isAtEnd {
-            table.append(try decodeAttributeContainer(from: try container.superDecoder(), configuration: configuration, using: &attributeKeyTypeTable))
+            table.append(try decodeAttributeContainer(from: try container.superDecoder(), configuration: configuration))
         }
         return table
     }
 
     fileprivate static func decodeAttributeContainer(
         from decoder: Decoder,
-        configuration: AttributeScopeCodableConfiguration,
-        using attributeKeyTypeTable: inout [String : any AttributedStringKey.Type]
+        configuration: AttributeScopeCodableConfiguration
     ) throws -> _AttributeStorage {
         let attributesContainer = try decoder.container(keyedBy: AttributeKey.self)
         var attributes = _AttributeStorage()
         for key in attributesContainer.allKeys {
             let name = key.stringValue
             if
-                let attributeKeyType = attributeKeyTypeTable[name] ?? configuration.scopeType.attributeKeyType(matching: name),
+                let attributeKeyType = configuration.attributesTable[name],
                 let decodableAttributeType = attributeKeyType as? any DecodableAttributedStringKey.Type
             {
-                attributeKeyTypeTable[name] = attributeKeyType
                 func project<K: DecodableAttributedStringKey>(_: K.Type) throws {
                     attributes[K.self] = try K.decode(from: try attributesContainer.superDecoder(forKey: key))
                 }
@@ -351,13 +343,11 @@ extension AttributedString : CodableWithConfiguration {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeContainer : CodableWithConfiguration {
     public func encode(to encoder: Encoder, configuration: AttributeScopeCodableConfiguration) throws {
-        var attributeKeyTypeTable = configuration.extraAttributesTable
-        try AttributedString.encodeAttributeContainer(self.storage, to: encoder, configuration: configuration, using: &attributeKeyTypeTable)
+        try AttributedString.encodeAttributeContainer(self.storage, to: encoder, configuration: configuration)
     }
 
     public init(from decoder: Decoder, configuration: AttributeScopeCodableConfiguration) throws {
-        var attributeKeyTypeTable = configuration.extraAttributesTable
-        self.storage = try AttributedString.decodeAttributeContainer(from: decoder, configuration: configuration, using: &attributeKeyTypeTable)
+        self.storage = try AttributedString.decodeAttributeContainer(from: decoder, configuration: configuration)
     }
 }
 

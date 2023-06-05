@@ -733,7 +733,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 
-    /// Returns the hour cycle such as whether it uses 12-hour clock or 24-hour clock. Default is `.zeroToTwentyThree` if the the data isn't available.
+    /// Returns the hour cycle such as whether it uses 12-hour clock or 24-hour clock. Default is `.zeroToTwentyThree` if the data isn't available.
     /// Calling this on `.current` or `.autoupdatingCurrent` returns user's preference values as set in the system settings if available, overriding the default value of the user's locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var hourCycle: HourCycle {
@@ -851,6 +851,19 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 
+    internal func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
+        switch kind {
+        case .fixed(let l):
+            return l.customDateFormat(style)
+        case .autoupdating:
+            return LocaleCache.cache.current.customDateFormat(style)
+#if FOUNDATION_FRAMEWORK
+        case .bridged(_):
+            return nil
+#endif
+        }
+    }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     internal var forceMeasurementSystem: Locale.MeasurementSystem? {
         switch kind {
@@ -929,26 +942,136 @@ public struct Locale : Hashable, Equatable, Sendable {
         LocaleCache.cache.preferredLanguages(forCurrentUser: false)
     }
 
+    private static let languageCodeKey = "kCFLocaleLanguageCodeKey"
+    private static let scriptCodeKey = "kCFLocaleScriptCodeKey"
+    private static let countryCodeKey = "kCFLocaleCountryCodeKey"
+    private static let variantCodeKey = "kCFLocaleVariantCodeKey"
+    private static let calendarKey = "kCFLocaleCalendarKey"
 
     /// Constructs an identifier from a dictionary of components.
     public static func identifier(fromComponents components: [String : String]) -> String {
-#if FOUNDATION_FRAMEWORK
-        // TODO: Port to Swift
-        // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar".
-        return CFLocaleCreateLocaleIdentifierFromComponents(kCFAllocatorSystemDefault, components as CFDictionary).rawValue as String
-#else
-        return ""
-#endif // FOUNDATION_FRAMEWORK
+        // Holds remaining keywords after we remove the CF-specific ones
+        var keywords = components
+        var result = ""
+        if let language = components[Self.languageCodeKey] {
+            result += language
+            keywords.removeValue(forKey: Self.languageCodeKey)
+        }
+        if let script = components[Self.scriptCodeKey] {
+            result += "_" + script
+            keywords.removeValue(forKey: Self.scriptCodeKey)
+        }
+        let country = components[Self.countryCodeKey]
+        let variant = components[Self.variantCodeKey]
+        
+        if country != nil || variant != nil {
+            result += "_"
+        }
+        
+        if let country {
+            result += country
+            keywords.removeValue(forKey: Self.countryCodeKey)
+        }
+        
+        if let variant {
+            result += "_" + variant
+            keywords.removeValue(forKey: Self.variantCodeKey)
+        }
+                
+        let corrected = Dictionary<String, String>(uniqueKeysWithValues: keywords.compactMap { key, value -> (String, String)? in
+            // Keys must be non-empty
+            guard !key.isEmpty else { return nil }
+            
+            // Identifier keywords must be ASCII a-z, A-Z, 0-9
+            // They are normalized to all-lowercase
+            var correctedKey : [CChar] = []
+            for char in key.utf8 {
+                if (0x41...0x5a).contains(char) {
+                    // A-Z
+                    // Convert to lowercase by adding 0x20
+                    correctedKey.append(CChar(char + 0x20))
+                } else if (0x61...0x7a).contains(char) {
+                    // a-z
+                    correctedKey.append(CChar(char))
+                } else if (0x30...0x39).contains(char) {
+                    // 0-9
+                    correctedKey.append(CChar(char))
+                } else {
+                    // Skip this key
+                    return nil
+                }
+            }
+            // null-terminate
+            correctedKey.append(CChar(0))
+            
+            let correctedKeyString = String(cString: correctedKey)
+            
+            // Values must be non-empty
+            guard !value.isEmpty else { return nil }
+            
+            // Values must be ASCII a-z, A-Z, 0-9, _, -, +, /
+            let validValue = value.utf8.allSatisfy { char in
+                /* A-Z */ (0x41...0x5a).contains(char) ||
+                /* a-z */ (0x61...0x7a).contains(char) ||
+                /* 0-9 */ (0x30...0x39).contains(char) ||
+                /* _   */ char == 0x5f ||
+                /* -   */ char == 0x2d ||
+                /* +   */ char == 0x2b ||
+                /* /   */ char == 0x2f
+            }
+            
+            guard validValue else { return nil }
+                
+            return (correctedKeyString, value)
+        })
+        
+        guard !corrected.isEmpty else {
+            // Stop here
+            return result
+        }
+        
+        result += "@"
+        let sortedKeys = corrected.keys.sorted(by: <)
+        
+        for key in sortedKeys {
+            result += key + "=" + corrected[key]! + ";"
+        }
+        
+        // Remove last ;
+        let _ = result.popLast()
+
+        return result
     }
 
 #if FOUNDATION_FRAMEWORK
     /// Constructs an identifier from a dictionary of components, allowing a `Calendar` value. Compatibility only.
-    internal static func identifier(fromComponents components: [String : Any]) -> String {
-        // TODO: Port to Swift: https://github.com/apple/swift-foundation/issues/45
-        // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar".
-        return CFLocaleCreateLocaleIdentifierFromComponents(kCFAllocatorSystemDefault, components as CFDictionary).rawValue as String
+    internal static func identifier(fromAnyComponents components: [String : Any]) -> String {
+        // n.b. the CFLocaleCreateLocaleIdentifierFromComponents API is normally [String: String], but for 'convenience' allows a `Calendar` value for "kCFLocaleCalendarKey"/"calendar". This version for framework use allows Calendar.
+        
+        // Handle a special case of having both "kCFLocaleCalendarKey" and "calendar"
+        var uniqued = components
+        if let calendar = uniqued[Self.calendarKey] as? Calendar {
+            // Overwrite any value for "calendar" - the CF key takes precedence
+            uniqued["calendar"] = calendar.identifier.cfCalendarIdentifier
+        }
+        
+        // Always remove this key
+        uniqued.removeValue(forKey: Self.calendarKey)
+        
+        // Map the remaining values to strings, or remove them
+        let converted = Dictionary<String, String>(uniqueKeysWithValues: uniqued.compactMap { key, value in
+            if let value = value as? String {
+                return (key, value)
+            } else {
+                // Remove this, bad value type
+                return nil
+            }
+        })
+        
+        return identifier(fromComponents: converted)
     }
 #endif // FOUNDATION_FRAMEWORK
+
 
     /// Returns a canonical identifier from the given string.
     @available(macOS, deprecated: 13, renamed: "identifier(_:from:)")
@@ -1004,7 +1127,7 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     // MARK: -
 
-    /// Returns `true` if the locale is one of the "special" languages that rqeuires special handling during case mapping.
+    /// Returns `true` if the locale is one of the "special" languages that requires special handling during case mapping.
     /// - "az": Azerbaijani
     /// - "lt": Lithuanian
     /// - "tr": Turkish

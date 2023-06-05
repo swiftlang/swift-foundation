@@ -37,7 +37,7 @@ The following types are available, with more to come later:
     * `FormatStyle`
     * `ParseStrategy`
 
-Many types, including `JSONEncoder`, `Calendar`, `TimeZone`, and `Locale` are all-new Swift implementations. `FormatStyle` and `ParseStyle` available as open source for the first time.
+Many types, including `JSONEncoder`, `Calendar`, `TimeZone`, and `Locale` are all-new Swift implementations. `FormatStyle` and `ParseStrategy` available as open source for the first time.
 
 For internationalization support on non-Darwin platforms, we created a separate package named *[FoundationICU](https://github.com/apple/swift-foundation-icu)*. This repository contains the necessary ICU implementations and data from the upstream [Apple OSS Distribution ICU](https://github.com/apple-oss-distributions/ICU), wrapped in Swift so FoundationInternationalization can easily depend on it.
 
@@ -50,7 +50,7 @@ Later this year, the porting effort will continue. It will bring high quality Sw
 
 ## Building and Testing
 
-Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download) on macOS and Linux.
+Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download/#swift-59-development) on or later than May 3rd 2023 (607f4eb), on macOS and Linux. 
 ### macOS
 
 macOS Ventura 13.3.1 is the minimum supported version.
@@ -61,7 +61,7 @@ macOS Ventura 13.3.1 is the minimum supported version.
 - Open `Package.swift` and select *Debug > Test*
 
 ### Linux
-- Download the latest [Swift 5.9 docker image](https://www.swift.org/download/#docker) and follow instructions to attach
+- Download the latest [Swift 5.9 docker image](https://hub.docker.com/r/swiftlang/swift/tags?name=5.9) and follow instructions to attach
 - Run `swift test`
 ## Performance
 

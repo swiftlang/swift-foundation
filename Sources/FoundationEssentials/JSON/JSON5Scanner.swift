@@ -16,7 +16,12 @@ import Darwin
 import Glibc
 #endif
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import _CShims
+#else
+package import _CShims
+#endif
+
 
 internal struct JSON5Scanner {
     let options: Options
@@ -164,7 +169,7 @@ internal struct JSON5Scanner {
         self.depth &+= 1
         defer { depth &-= 1 }
 
-        // parse first value or end immediatly
+        // parse first value or end immediately
         switch try reader.consumeWhitespace() {
         case ._space, ._return, ._newline, ._tab:
             preconditionFailure("Expected that all white space is consumed")
@@ -273,7 +278,7 @@ internal struct JSON5Scanner {
         self.depth &+= 1
         defer { depth &-= 1 }
 
-        // parse first value or end immediatly
+        // parse first value or end immediately
         switch try reader.consumeWhitespace(allowingEOF: withoutBraces) {
         case ._closebrace?:
             if withoutBraces {
@@ -889,7 +894,7 @@ extension JSON5Scanner {
             jsonBytes.formIndex(after: &index)
         }
 
-        guard let output = String._tryFromUTF8(jsonBytes[unchecked: jsonBytes.startIndex..<index]) else {
+        guard var output = String._tryFromUTF8(jsonBytes[unchecked: jsonBytes.startIndex..<index]) else {
             throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
         if _fastPath(index == endIndex) {
@@ -898,15 +903,13 @@ extension JSON5Scanner {
         }
 
         let remainingBytes = jsonBytes[unchecked: index..<endIndex]
-        return try _slowpath_stringValue(from: remainingBytes, appendingTo: output, fullSource: fullSource)
+        try _slowpath_stringValue(from: remainingBytes, appendingTo: &output, fullSource: fullSource)
+        return output
     }
 
     static func _slowpath_stringValue(
-        from jsonBytes: BufferView<UInt8>, appendingTo output: consuming String, fullSource: BufferView<UInt8>
-    ) throws -> String {
-        // A reasonable guess as to the resulting capacity of the string is 1/4 the length of the remaining buffer. With this scheme, input full of 4 byte UTF-8 sequences won't waste a bunch of extra capacity and predominantly 1 byte UTF-8 sequences will only need to resize the buffer once or twice.
-        output.reserveCapacity(output.underestimatedCount + jsonBytes.count/4)
-
+        from jsonBytes: BufferView<UInt8>, appendingTo output: inout String, fullSource: BufferView<UInt8>
+    ) throws {
         // Continue scanning, taking into account escaped sequences and control characters
         var index = jsonBytes.startIndex
         var chunkStart = index
@@ -940,8 +943,6 @@ extension JSON5Scanner {
             throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: chunkStart, fullSource: fullSource))
         }
         output += stringChunk
-
-        return output
     }
 
     private static func parseEscapeSequence(

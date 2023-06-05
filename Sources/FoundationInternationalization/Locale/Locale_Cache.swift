@@ -15,10 +15,9 @@
 import CoreFoundation
 @_implementationOnly import CoreFoundation_Private.CFNotificationCenter
 @_implementationOnly import os
-#endif
-
-#if canImport(_CShims)
 @_implementationOnly import _CShims
+#else
+package import _CShims
 #endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
@@ -318,17 +317,17 @@ struct LocaleCache : Sendable {
 #else
     func preferences() -> (LocalePreferences, Bool) {
         var prefs = LocalePreferences()
-        prefs.locale = "en_US"
-        prefs.languages = ["en-US"]
+        prefs.locale = "en_001"
+        prefs.languages = ["en-001"]
         return (prefs, true)
     }
 
     func preferredLanguages(forCurrentUser: Bool) -> [String] {
-        [Locale.canonicalLanguageIdentifier(from: "en-US")]
+        [Locale.canonicalLanguageIdentifier(from: "en-001")]
     }
     
     func preferredLocale() -> String? {
-        "en_US"
+        "en_001"
     }
 #endif
     

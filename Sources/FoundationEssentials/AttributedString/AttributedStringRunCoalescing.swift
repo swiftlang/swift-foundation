@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly @_spi(Unstable) import CollectionsInternal
 #else
-import _RopeModule
+package import _RopeModule
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -320,7 +320,7 @@ extension AttributedString.Guts {
     }
     
     /// Replaces the runs for a specified range of block indices with the given `newElements`
-    /// Note: The provided `newElements` must already be coalsced together if needed.
+    /// Note: The provided `newElements` must already be coalesced together if needed.
     func replaceRunsSubrange(_ subrange: Range<Int>, with newElements: some Collection<_InternalRun>) {
         runOffsetCache.withLockUnchecked { runOffsetCache in
             if runOffsetCache.block > subrange.lowerBound {
