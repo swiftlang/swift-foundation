@@ -478,7 +478,9 @@ internal final class _TimeZone: Sendable {
                 continue
             }
 
-            let tz = String(utf16CodeUnits: chars, count: Int(length))
+            guard let tz = String(_utf16: chars, count: Int(length)) else {
+                continue
+            }
 
             // Filter out things starting with these prefixes
             guard !(tz.starts(with: "US/") || tz.starts(with: "Etc/") || tz.starts(with: "Canada/") || tz.starts(with: "SystemV/") || tz.starts(with: "Mideast/")) else {
