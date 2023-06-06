@@ -15,7 +15,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/apple/swift-collections",
-            revision: "2ca40e2a653e5e04a1c5468a35fc7494ef6db1d3"), // on release/1.1
+            revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
         .package(
             url: "https://github.com/apple/swift-foundation-icu",
             revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad")

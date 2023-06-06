@@ -25,11 +25,13 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         let runs = string.runs[key]
         XCTAssertEqual(runs.count, expected.count, "Unexpected number of runs", file: file, line: line)
         for ((val, range), expectation) in zip(runs, expected) {
-            XCTAssertEqual(String(string.characters[range]), expectation.0, "Unexpected range of run", file: file, line: line)
+            let slice = String.UnicodeScalarView(string.unicodeScalars[range])
+            XCTAssertTrue(slice.elementsEqual(expectation.0.unicodeScalars), "Unexpected range of run: \(slice.debugDescription) vs \(expectation.0.debugDescription)", file: file, line: line)
             XCTAssertEqual(val, expectation.1, "Unexpected value of attribute \(K.self) for range \(expectation.0)", file: file, line: line)
         }
         for ((val, range), expectation) in zip(runs.reversed(), expected.reversed()) {
-            XCTAssertEqual(String(string.characters[range]), expectation.0, "Unexpected range of run while reverse iterating", file: file, line: line)
+            let slice = String.UnicodeScalarView(string.unicodeScalars[range])
+            XCTAssertTrue(slice.elementsEqual(expectation.0.unicodeScalars), "Unexpected range of run while reverse iterating: \(slice.debugDescription) vs \(expectation.0.debugDescription)", file: file, line: line)
             XCTAssertEqual(val, expectation.1, "Unexpected value of attribute \(K.self) for range \(expectation.0) while reverse iterating", file: file, line: line)
         }
     }
@@ -355,22 +357,37 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
     }
     
     func testCharacterAttributeSubCharacterApply() {
-        let str = AttributedString("ABC 👍🏻 DEF")
-        
+        let str = AttributedString("ABC \u{FFFD} DEF")
+
         var result = str
-        result.testUnicodeCharacterConstrained = 2
-        verify(string: result, matches: [("ABC ", nil), ("👍🏻", 2), (" DEF", nil)], for: \.testUnicodeCharacterConstrained)
-        
+        result.testUnicodeScalarConstrained = 2
+        verify(string: result, matches: [("ABC ", nil), ("\u{FFFD}", 2), (" DEF", nil)], for: \.testUnicodeScalarConstrained)
+
         result = str
-        result[result.startIndex ..< result.unicodeScalars.index(result.startIndex, offsetBy: 5)].testUnicodeCharacterConstrained = 2
-        verify(string: result, matches: [("ABC ", nil), ("👍🏻", nil), (" DEF", nil)], for: \.testUnicodeCharacterConstrained)
-        
+        result[result.startIndex ..< result.unicodeScalars.index(result.startIndex, offsetBy: 5)].testUnicodeScalarConstrained = 2
+        verify(string: result, matches: [("ABC ", nil), ("\u{FFFD}", 2), (" DEF", nil)], for: \.testUnicodeScalarConstrained)
+
         result = str
-        result.testUnicodeCharacterConstrained = 2
-        result[result.unicodeScalars.index(result.startIndex, offsetBy: 5) ..< result.endIndex].testUnicodeCharacterConstrained = nil
-        verify(string: result, matches: [("ABC ", nil), ("👍🏻", nil), (" DEF", nil)], for: \.testUnicodeCharacterConstrained)
+        result[result.startIndex ..< result.unicodeScalars.index(result.startIndex, offsetBy: 4)].testUnicodeScalarConstrained = 2
+        verify(string: result, matches: [("ABC ", nil), ("\u{FFFD}", nil), (" DEF", nil)], for: \.testUnicodeScalarConstrained)
+
+        result = str
+        result.testUnicodeScalarConstrained = 2
+        result[result.unicodeScalars.index(result.startIndex, offsetBy: 5) ..< result.endIndex].testUnicodeScalarConstrained = nil
+        verify(string: result, matches: [("ABC ", nil), ("\u{FFFD}", 2), (" DEF", nil)], for: \.testUnicodeScalarConstrained)
+
+        result = str
+        result.testUnicodeScalarConstrained = 2
+        result[result.unicodeScalars.index(result.startIndex, offsetBy: 4) ..< result.endIndex].testUnicodeScalarConstrained = nil
+        verify(string: result, matches: [("ABC ", nil), ("\u{FFFD}", nil), (" DEF", nil)], for: \.testUnicodeScalarConstrained)
+
+        let str2 = AttributedString("ABC \u{FFFD}\u{301} DEF") // U+FFFD Replacement Character, U+301 Combining Acute Accent
+        result = str2
+        result.testUnicodeScalarConstrained = 2
+        verify(string: result, matches: [("ABC ", nil), ("\u{FFFD}", 2), ("\u{301} DEF", nil)], for: \.testUnicodeScalarConstrained)
+
     }
-    
+
     func testCharacterAttributeContainerReplacing() {
         var str = AttributedString("*__*__**__*")
         let range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 4)

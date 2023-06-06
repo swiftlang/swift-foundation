@@ -51,7 +51,7 @@ extension AttributedString {
             self = AttributedString(s)
         } else {
             // !!!: We don't expect or want this to happen.
-            let substring = AttributedSubstring(s.__guts, in: s._bounds)
+            let substring = AttributedSubstring(s.__guts, in: s._stringBounds)
             self = AttributedString(substring)
         }
     }
@@ -61,11 +61,12 @@ extension AttributedString {
             self.init()
             return
         }
-        let run = _InternalRun(length: string.utf8.count, attributes: attributes)
-        self.init(Guts(string: string, runs: [run]))
-        // Only character-bound attributes can be incorrect if only one run exists
-        if run.attributes.containsCharacterConstraint {
-            _guts.fixCharacterConstrainedAttributes(in: _guts.startIndex ..< _guts.endIndex)
+        var runs = _InternalRuns.Storage()
+        runs.append(_InternalRun(length: string.utf8.count, attributes: attributes))
+        self.init(Guts(string: string, runs: _InternalRuns(runs)))
+        // Only scalar-bound attributes can be incorrect if only one run exists
+        if attributes.containsScalarConstraint {
+            _guts.fixScalarConstrainedAttributes(in: string.startIndex ..< string.endIndex)
         }
     }
 
@@ -91,9 +92,12 @@ extension AttributedString {
 
     public init(_ substring: AttributedSubstring) {
         let str = BigString(substring._unicodeScalars)
-        let runs = substring._guts.runs(in: substring._range)
-        assert(str.utf8.count == runs.reduce(into: 0) { $0 += $1.length })
+        let runs = substring._guts.runs.extract(utf8Offsets: substring._range._utf8OffsetRange)
+        assert(str.utf8.count == runs.utf8Count)
         _guts = Guts(string: str, runs: runs)
+        // FIXME: Extracting a slice should invalidate .textChanged attribute runs on the edges
+        // (Compare with the `copy(in:)` call in the scope filtering initializer below -- that
+        // one does too much, this one does too little.)
     }
 
 #if FOUNDATION_FRAMEWORK
@@ -103,14 +107,16 @@ extension AttributedString {
     }
 
     public init<S : AttributeScope, T : AttributedStringProtocol>(_ other: T, including scope: S.Type) {
-        self.init(other.__guts.copy(in: other.startIndex ..< other.endIndex))
+        // FIXME: This `copy(in:)` call does too much work, potentially unexpectedly removing attributes.
+        self.init(other.__guts.copy(in: other._stringBounds))
         let attributeTypes = scope.attributeKeyTypes()
-        _guts.enumerateRuns { run, _, _, modification in
-            modification = .guaranteedNotModified
-            for key in run.attributes.keys {
+
+        _guts.runs(in: _guts.utf8OffsetRange).updateEach { attributes, utf8Range, modified in
+            modified = false
+            for key in attributes.keys {
                 if !attributeTypes.keys.contains(key) {
-                    run.attributes[key] = nil
-                    modification = .guaranteedModified
+                    attributes[key] = nil
+                    modified = true
                 }
             }
         }
@@ -159,12 +165,12 @@ extension AttributedString: ExpressibleByStringLiteral {
 extension AttributedString { // AttributedStringAttributeMutation
     public mutating func setAttributes(_ attributes: AttributeContainer) {
         ensureUniqueReference()
-        _guts.set(attributes: attributes, in: startIndex ..< endIndex)
+        _guts.setAttributes(attributes, in: _stringBounds)
     }
 
     public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributeMergePolicy = .keepNew) {
         ensureUniqueReference()
-        _guts.add(attributes: attributes, in: startIndex ..< endIndex, mergePolicy:  mergePolicy)
+        _guts.mergeAttributes(attributes, in: _stringBounds, mergePolicy:  mergePolicy)
     }
 
     public mutating func replaceAttributes(_ attributes: AttributeContainer, with others: AttributeContainer) {
@@ -172,21 +178,18 @@ extension AttributedString { // AttributedStringAttributeMutation
         ensureUniqueReference()
         let hasConstrainedAttributes = attributes._hasConstrainedAttributes || others._hasConstrainedAttributes
         var fixupRanges: [Range<Int>] = []
-        _guts.enumerateRuns { run, location, _, modified in
-            guard run.matches(attributes) else {
-                modified = .guaranteedNotModified
-                return
-            }
-            modified = .guaranteedModified
-            for key in attributes.storage.keys {
-                run.attributes[key] = nil
-            }
-            run.attributes.mergeIn(others)
-            if hasConstrainedAttributes {
-                fixupRanges._extend(with: location ..< location + run.length)
-            }
-        }
 
+        _guts.runs(in: _guts.utf8OffsetRange).updateEach(
+            when: { $0.matches(attributes.storage) },
+            with: { runAttributes, utf8Range in
+                for key in attributes.storage.keys {
+                    runAttributes[key] = nil
+                }
+                runAttributes.mergeIn(others)
+                if hasConstrainedAttributes {
+                    fixupRanges._extend(with: utf8Range)
+                }
+            })
         for range in fixupRanges {
             // FIXME: Collect boundary constraints.
             _guts.enforceAttributeConstraintsAfterMutation(in: range, type: .attributes)
@@ -213,44 +216,50 @@ extension AttributedString: AttributedStringProtocol {
     }
     
     public var startIndex : Index {
-        return _guts.startIndex
+        Index(_guts.string.startIndex)
     }
     
     public var endIndex : Index {
-        return _guts.endIndex
+        Index(_guts.string.endIndex)
     }
     
     @preconcurrency
     public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
-        get { _guts.getValue(in: startIndex ..< endIndex, key: K.self)?.rawValue(as: K.self) }
+        get {
+            _guts.getUniformValue(in: _stringBounds, key: K.self)?.rawValue(as: K.self)
+        }
         set {
             ensureUniqueReference()
             if let v = newValue {
-                _guts.add(value: v, in: startIndex ..< endIndex, key: K.self)
+                _guts.setAttributeValue(v, forKey: K.self, in: _stringBounds)
             } else {
-                _guts.remove(attribute: K.self, in: startIndex ..< endIndex)
+                _guts.removeAttributeValue(forKey: K.self, in: _stringBounds)
             }
         }
     }
     
     @preconcurrency
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(
+        dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
+    ) -> K.Value? where K.Value: Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }
     
-    public subscript<S: AttributeScope>(dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>) -> ScopedAttributeContainer<S> {
+    public subscript<S: AttributeScope>(
+        dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>
+    ) -> ScopedAttributeContainer<S> {
         get {
-            return ScopedAttributeContainer(_guts.getValues(in: startIndex ..< endIndex))
+            return ScopedAttributeContainer(_guts.getUniformValues(in: _stringBounds))
         }
         _modify {
             ensureUniqueReference()
             var container = ScopedAttributeContainer<S>()
             defer {
                 if let removedKey = container.removedKey {
-                    _guts.remove(key: removedKey, in: startIndex ..< endIndex)
+                    _guts.removeAttributeValue(forKey: removedKey, in: _stringBounds)
                 } else {
-                    _guts.add(attributes: AttributeContainer(container.storage), in: startIndex ..< endIndex)
+                    _guts.mergeAttributes(AttributeContainer(container.storage), in: _stringBounds)
                 }
             }
             yield &container
@@ -267,35 +276,36 @@ extension AttributedString {
         }
     }
 
-    public mutating func append<S: AttributedStringProtocol>(_ s: S) {
+    public mutating func append(_ s: some AttributedStringProtocol) {
         replaceSubrange(endIndex ..< endIndex, with: s)
     }
 
-    public mutating func insert<S: AttributedStringProtocol>(_ s: S, at index: AttributedString.Index) {
+    public mutating func insert(_ s: some AttributedStringProtocol, at index: AttributedString.Index) {
         replaceSubrange(index ..< index, with: s)
     }
 
-    public mutating func removeSubrange<R: RangeExpression>(_ range: R) where R.Bound == Index {
+    public mutating func removeSubrange(_ range: some RangeExpression<Index>) {
         replaceSubrange(range, with: AttributedString())
     }
 
-    public mutating func replaceSubrange<R: RangeExpression, S: AttributedStringProtocol>(_ range: R, with s: S) where R.Bound == Index {
+    public mutating func replaceSubrange(_ range: some RangeExpression<Index>, with s: some AttributedStringProtocol) {
         ensureUniqueReference()
         // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
-        _guts.replaceSubrange(range.relative(to: unicodeScalars), with: s)
+        let subrange = range.relative(to: unicodeScalars)._bstringRange
+        _guts.replaceSubrange(subrange, with: s)
     }
 }
 
 // MARK: Concatenation operators
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    public static func + <T: AttributedStringProtocol> (lhs: AttributedString, rhs: T) -> AttributedString {
+    public static func +(lhs: AttributedString, rhs: some AttributedStringProtocol) -> AttributedString {
         var result = lhs
         result.append(rhs)
         return result
     }
     
-    public static func += <T: AttributedStringProtocol> (lhs: inout AttributedString, rhs: T) {
+    public static func +=(lhs: inout AttributedString, rhs: some AttributedStringProtocol) {
         lhs.append(rhs)
     }
     
@@ -316,17 +326,20 @@ extension AttributedString {
     public subscript(bounds: some RangeExpression<Index>) -> AttributedSubstring {
         get {
             // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
-            return AttributedSubstring(_guts, in: bounds.relative(to: unicodeScalars))
+            let bounds = bounds.relative(to: unicodeScalars)
+            return AttributedSubstring(_guts, in: bounds._bstringRange)
         }
         _modify {
             ensureUniqueReference()
             // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
-            var substr = AttributedSubstring(_guts, in: bounds.relative(to: unicodeScalars))
+            let bounds = bounds.relative(to: unicodeScalars)
+            var substr = AttributedSubstring(_guts, in: bounds._bstringRange)
             let ident = Self._nextModifyIdentity
             substr._identity = ident
-            _guts = Guts(string: "", runs: []) // Dummy guts so the substr has (hopefully) the sole reference
+            _guts = Guts() // Dummy guts to allow in-place mutations
             defer {
                 if substr._identity != ident {
+                    // FIXME: Why is this necessary?
                     fatalError("Mutating an AttributedSubstring by replacing it with another from a different source is unsupported")
                 }
                 _guts = substr._guts
@@ -357,11 +370,3 @@ extension Range where Bound == BigString.Index {
         Range<Int>(uncheckedBounds: (lowerBound.utf8Offset, upperBound.utf8Offset))
     }
 }
-
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension Range<AttributedString.Runs.Index> {
-    var _offsetRange: Range<Int> {
-        Range<Int>(uncheckedBounds: (lowerBound.rangeIndex, upperBound.rangeIndex))
-    }
-}
-

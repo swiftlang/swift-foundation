@@ -57,11 +57,11 @@ public protocol ObjectiveCConvertibleAttributedStringKey : AttributedStringKey {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == Int, ObjectiveCValue == NSNumber {
-    static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
+extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == Int, ObjectiveCValue == NSNumber {
+    public static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
         return NSNumber(value: value.rawValue)
     }
-    static func value(for object: ObjectiveCValue) throws -> Value {
+    public static func value(for object: ObjectiveCValue) throws -> Value {
         if let val = Value(rawValue: object.intValue) {
             return val
         }
@@ -70,11 +70,11 @@ public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepre
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == String, ObjectiveCValue == NSString {
-    static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
+extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == String, ObjectiveCValue == NSString {
+    public static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
         return value.rawValue as NSString
     }
-    static func value(for object: ObjectiveCValue) throws -> Value {
+    public static func value(for object: ObjectiveCValue) throws -> Value {
         if let val = Value(rawValue: object as String) {
             return val
         }
@@ -90,18 +90,17 @@ internal struct _AttributeConversionOptions : OptionSet {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension AttributeContainer {
-    init(_ dictionary: [NSAttributedString.Key : Any]) {
+extension AttributeContainer {
+    public init(_ dictionary: [NSAttributedString.Key : Any]) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(dictionary, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
-    
-    
-    init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: KeyPath<AttributeScopes, S.Type>) throws {
+
+    public init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(dictionary, including: S.self)
     }
     
-    init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: S.Type) throws {
+    public init<S: AttributeScope>(_ dictionary: [NSAttributedString.Key : Any], including scope: S.Type) throws {
         try self.init(dictionary, attributeTable: S.attributeKeyTypes())
     }
     
@@ -125,29 +124,29 @@ public extension AttributeContainer {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension Dictionary where Key == NSAttributedString.Key, Value == Any {
-    init(_ container: AttributeContainer) {
+extension Dictionary where Key == NSAttributedString.Key, Value == Any {
+    public init(_ container: AttributeContainer) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(container, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
     
-    init<S: AttributeScope>(_ container: AttributeContainer, including scope: KeyPath<AttributeScopes, S.Type>) throws {
+    public init<S: AttributeScope>(_ container: AttributeContainer, including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(container, including: S.self)
     }
     
-    init<S: AttributeScope>(_ container: AttributeContainer, including scope: S.Type) throws {
+    public init<S: AttributeScope>(_ container: AttributeContainer, including scope: S.Type) throws {
         try self.init(container, attributeTable: S.attributeKeyTypes())
     }
     
     // These includingOnly SPI initializers were provided originally when conversion boxed attributes outside of the given scope as an AnyObject
     // After rdar://80201634, these SPI initializers have the same behavior as the API initializers
     @_spi(AttributedString)
-    init<S: AttributeScope>(_ container: AttributeContainer, includingOnly scope: KeyPath<AttributeScopes, S.Type>) throws {
+    public init<S: AttributeScope>(_ container: AttributeContainer, includingOnly scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(container, including: S.self)
     }
     
     @_spi(AttributedString)
-    init<S: AttributeScope>(_ container: AttributeContainer, includingOnly scope: S.Type) throws {
+    public init<S: AttributeScope>(_ container: AttributeContainer, includingOnly scope: S.Type) throws {
         try self.init(container, including: S.self)
     }
     
@@ -171,27 +170,27 @@ public extension Dictionary where Key == NSAttributedString.Key, Value == Any {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension NSAttributedString {
-    convenience init(_ attrStr: AttributedString) {
+extension NSAttributedString {
+    public convenience init(_ attrStr: AttributedString) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(attrStr, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
     
-    convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: KeyPath<AttributeScopes, S.Type>) throws {
+    public convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(attrStr, including: S.self)
     }
     
-    convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: S.Type) throws {
+    public convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: S.Type) throws {
         try self.init(attrStr, attributeTable: scope.attributeKeyTypes())
     }
     
     @_spi(AttributedString)
-    convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: KeyPath<AttributeScopes, S.Type>) throws {
+    public convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(attrStr, including: S.self)
     }
     
     @_spi(AttributedString)
-    convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: S.Type) throws {
+    public convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: S.Type) throws {
         try self.init(attrStr, including: scope)
     }
     
@@ -219,28 +218,39 @@ public extension NSAttributedString {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension AttributedString {
-    init(_ nsStr: NSAttributedString) {
+extension AttributedString {
+    public init(_ nsStr: NSAttributedString) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
         try! self.init(nsStr, attributeTable: _loadDefaultAttributes(), options: .dropThrowingAttributes)
     }
     
-    init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: KeyPath<AttributeScopes, S.Type>) throws {
+    public init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: KeyPath<AttributeScopes, S.Type>) throws {
         try self.init(nsStr, including: S.self)
     }
     
-    init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: S.Type) throws {
+    public init<S: AttributeScope>(_ nsStr: NSAttributedString, including scope: S.Type) throws {
         try self.init(nsStr, attributeTable: S.attributeKeyTypes())
     }
     
-    private init(_ nsStr: NSAttributedString, attributeTable: [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
-        var string = nsStr.string
-        // Eagerly bridge to a native string since AttributedString will do this anyways and this guarantees string's contents are well-formed (no unpaired surrogate characters)
-        string.makeContiguousUTF8()
-        var runs: [_InternalRun] = []
+    private init(
+        _ nsStr: NSAttributedString,
+        attributeTable: [String: any AttributedStringKey.Type],
+        options: _AttributeConversionOptions = []
+    ) throws {
+        let string = BigString(nsStr.string)
+        var runs = _InternalRuns.Storage()
         var conversionError: Error?
-        var endOfLastRange = string.utf16.startIndex
+
+        /// String index addressing the end of the previous run. Unicode scalar aligned.
+        var unalignedEnd = string.startIndex
+        var alignedEnd = unalignedEnd
+
+        /// The last run we've processed. This isn't appended to `runs` yet in case we need to
+        /// merge subsequent runs into this one -- it is easier to do that outside the rope.
+        var pendingRun = _InternalRun(length: 0, attributes: .init())
+
         var hasConstrainedAttributes = false
+
         // Enumerated ranges are guaranteed to be contiguous and have non-zero length
         nsStr.enumerateAttributes(in: NSMakeRange(0, nsStr.length), options: []) { (nsAttrs, range, stop) in
             let container: AttributeContainer
@@ -252,38 +262,36 @@ public extension AttributedString {
                 return
             }
             
-            var startOfCurrentRun = endOfLastRange
-            var endOfCurrentRun = string.utf16.index(startOfCurrentRun, offsetBy: range.length)
-            endOfLastRange = endOfCurrentRun
-            
-            // If the run ends in the middle of a surrogate pair, extend it to the full range of the pair
-            if UTF16.isLeadSurrogate(string.utf16[string.utf16.index(before: endOfCurrentRun)]) {
-                endOfCurrentRun = string.utf16.index(after: endOfCurrentRun)
-            }
-            
-            // If the run begins in the middle of a surrogate pair, compress it forward to exclude the initial low character
-            // Note: this can result in a zero-length run which is guarded against below
-            if UTF16.isTrailSurrogate(string.utf16[startOfCurrentRun]) {
-                startOfCurrentRun = string.utf16.index(after: startOfCurrentRun)
-            }
-            
-            let runLength = string.utf8.distance(from: startOfCurrentRun, to: endOfCurrentRun)
+            let alignedStart = alignedEnd
+            unalignedEnd = string.utf16.index(unalignedEnd, offsetBy: range.length)
+            // Note: we should be rounding down here, as unaligned indices are supposed to be
+            // universally equivalent to the nearest aligned index _downward_. However, this
+            // conversion method initially shipped rounding scalar-unaligned indices upwards, so
+            // we're stuck with that choice. :-(
+            alignedEnd = string.unicodeScalars.index(roundingUp: unalignedEnd)
+
+            let runLength = string.utf8.distance(from: alignedStart, to: alignedEnd)
             guard runLength > 0 else { return }
             
-            let attrStorage = container.storage
-            if let previous = runs.last, previous.attributes == attrStorage {
-                runs[runs.endIndex - 1].length += runLength
+            if pendingRun.length > 0, pendingRun.attributes == container.storage {
+                pendingRun.length += runLength
             } else {
-                runs.append(_InternalRun(length: runLength, attributes: attrStorage))
+                if pendingRun.length > 0 {
+                    runs.append(pendingRun)
+                }
+                pendingRun = _InternalRun(length: runLength, attributes: container.storage)
                 if !hasConstrainedAttributes {
-                    hasConstrainedAttributes = attrStorage.hasConstrainedAttributes
+                    hasConstrainedAttributes = container.storage.hasConstrainedAttributes
                 }
             }
         }
         if let error = conversionError {
             throw error
         }
-        self = AttributedString(Guts(string: string, runs: runs))
+        if pendingRun.length > 0 {
+            runs.append(pendingRun)
+        }
+        self = AttributedString(Guts(string: string, runs: _InternalRuns(runs)))
         if hasConstrainedAttributes {
             self._guts.adjustConstrainedAttributesForUntrustedRuns()
         }

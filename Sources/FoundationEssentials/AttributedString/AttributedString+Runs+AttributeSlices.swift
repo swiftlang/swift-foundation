@@ -19,7 +19,8 @@ package import _RopeModule
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
     @preconcurrency
-    public struct AttributesSlice1<T : AttributedStringKey> : BidirectionalCollection, Sendable where T.Value : Sendable {
+    public struct AttributesSlice1<T : AttributedStringKey> : BidirectionalCollection, Sendable
+    where T.Value : Sendable {
         public typealias Index = AttributedString.Index
 
         // FIXME: Why no labels?
@@ -27,7 +28,7 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
+        let runs: Runs
         let _names: [String]
         let _constraints: [AttributeRunBoundaries]
 
@@ -68,10 +69,11 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            runs._range.lowerBound
+            Index(runs._strBounds.lowerBound)
         }
+
         public var endIndex: Index {
-            runs._range.upperBound
+            Index(runs._strBounds.upperBound)
         }
 
         public func index(before i: Index) -> Index {
@@ -94,9 +96,14 @@ extension AttributedString.Runs {
                 attributeNames: _names,
                 constraints: _constraints)
             let end = self.index(after: position)
-            let attributes = runs._guts.runs[runIndex.rangeIndex].attributes
+            let attributes = runs._guts.runs[runIndex].attributes
             return (attributes[T.self], start ..< end)
         }
+
+        // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
+        // SubSequence. Slicing the collection on such an index will produce spurious crashes.
+        // Add a custom implementation for the range subscript that forcibly rounds the given bounds
+        // down to the nearest valid indices.
     }
 
     public subscript<T : AttributedStringKey>(_ keyPath: KeyPath<AttributeDynamicLookup, T>) -> AttributesSlice1<T> {
@@ -167,10 +174,11 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            runs._range.lowerBound
+            Index(runs._strBounds.lowerBound)
         }
+
         public var endIndex: Index {
-            runs._range.upperBound
+            Index(runs._strBounds.upperBound)
         }
 
         public func index(before i: Index) -> Index {
@@ -193,9 +201,14 @@ extension AttributedString.Runs {
                 attributeNames: _names,
                 constraints: _constraints)
             let end = self.index(after: position)
-            let attributes = runs._guts.runs[runIndex.rangeIndex].attributes
+            let attributes = runs._guts.runs[runIndex].attributes
             return (attributes[T.self], attributes[U.self], start ..< end)
         }
+
+        // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
+        // SubSequence. Slicing the collection on such an index will produce spurious crashes.
+        // Add a custom implementation for the range subscript that forcibly rounds the given bounds
+        // down to the nearest valid indices.
     }
 
     public subscript <
@@ -284,10 +297,11 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            runs._range.lowerBound
+            Index(runs._strBounds.lowerBound)
         }
+
         public var endIndex: Index {
-            runs._range.upperBound
+            Index(runs._strBounds.upperBound)
         }
 
         public func index(before i: Index) -> Index {
@@ -310,9 +324,14 @@ extension AttributedString.Runs {
                 attributeNames: _names,
                 constraints: _constraints)
             let end = self.index(after: position)
-            let attributes = runs._guts.runs[runIndex.rangeIndex].attributes
+            let attributes = runs._guts.runs[runIndex].attributes
             return (attributes[T.self], attributes[U.self], attributes[V.self], start ..< end)
         }
+
+        // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
+        // SubSequence. Slicing the collection on such an index will produce spurious crashes.
+        // Add a custom implementation for the range subscript that forcibly rounds the given bounds
+        // down to the nearest valid indices.
     }
 
     public subscript <
@@ -409,10 +428,11 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            runs._range.lowerBound
+            Index(runs._strBounds.lowerBound)
         }
+
         public var endIndex: Index {
-            runs._range.upperBound
+            Index(runs._strBounds.upperBound)
         }
 
         public func index(before i: Index) -> Index {
@@ -435,7 +455,7 @@ extension AttributedString.Runs {
                 attributeNames: _names,
                 constraints: _constraints)
             let end = self.index(after: position)
-            let attributes = runs._guts.runs[runIndex.rangeIndex].attributes
+            let attributes = runs._guts.runs[runIndex].attributes
             return (
                 attributes[T.self],
                 attributes[U.self],
@@ -443,6 +463,11 @@ extension AttributedString.Runs {
                 attributes[W.self],
                 start ..< end)
         }
+
+        // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
+        // SubSequence. Slicing the collection on such an index will produce spurious crashes.
+        // Add a custom implementation for the range subscript that forcibly rounds the given bounds
+        // down to the nearest valid indices.
     }
 
     public subscript <
@@ -548,10 +573,11 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            runs._range.lowerBound
+            Index(runs._strBounds.lowerBound)
         }
+
         public var endIndex: Index {
-            runs._range.upperBound
+            Index(runs._strBounds.upperBound)
         }
 
         public func index(before i: Index) -> Index {
@@ -574,7 +600,7 @@ extension AttributedString.Runs {
                 attributeNames: _names,
                 constraints: _constraints)
             let end = self.index(after: position)
-            let attributes = runs._guts.runs[runIndex.rangeIndex].attributes
+            let attributes = runs._guts.runs[runIndex].attributes
             return (
                 attributes[T.self],
                 attributes[U.self],
@@ -583,6 +609,11 @@ extension AttributedString.Runs {
                 attributes[X.self],
                 start ..< end)
         }
+
+        // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
+        // SubSequence. Slicing the collection on such an index will produce spurious crashes.
+        // Add a custom implementation for the range subscript that forcibly rounds the given bounds
+        // down to the nearest valid indices.
     }
 
     public subscript <
@@ -631,15 +662,12 @@ extension AttributedString.Runs {
 
         internal typealias Runs = AttributedString.Runs
 
-        let runs : Runs
-        let keys : [NSAttributedString.Key]
-
+        internal let _runs: Runs
         private let _names: [String]
 
-        internal init(runs: Runs, keys: [NSAttributedString.Key]) {
-            self.runs = runs
-            self.keys = keys
-            self._names = keys.map { $0.rawValue }
+        internal init(runs: Runs, names: [String]) {
+            self._runs = runs
+            self._names = names
         }
 
         public struct Iterator: IteratorProtocol, Sendable {
@@ -659,7 +687,7 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                let run = _slice.runs[_index]
+                let run = _slice._runs[_index]
                 let next = _slice.index(after: _index)
                 let range = _index ..< next
                 _index = next
@@ -672,44 +700,50 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            runs._range.lowerBound
+            Index(_runs._strBounds.lowerBound)
         }
+
         public var endIndex: Index {
-            runs._range.upperBound
+            Index(_runs._strBounds.upperBound)
         }
 
         public func index(before i: Index) -> Index {
-            runs._slicedRunBoundary(
+            _runs._slicedRunBoundary(
                 before: i,
                 attributeNames: _names,
                 constraints: [])
         }
 
         public func index(after i: Index) -> Index {
-            runs._slicedRunBoundary(
+            _runs._slicedRunBoundary(
                 after: i,
                 attributeNames: _names,
                 constraints: [])
         }
 
         public subscript(position: AttributedString.Index) -> Element {
-            let (start, runIndex) = runs._slicedRunBoundary(
+            let (start, runIndex) = _runs._slicedRunBoundary(
                 roundingDown: position,
                 attributeNames: _names,
                 constraints: [])
             let end = self.index(after: position)
-            let attributes = runs._guts.runs[runIndex.rangeIndex].attributes
+            let attributes = _runs._guts.runs[runIndex].attributes
             return (buildContainer(from: attributes), start ..< end)
         }
 
+        // FIXME: This is a collection with potentially unaligned indices that uses Slice as its
+        // SubSequence. Slicing the collection on such an index will produce spurious crashes.
+        // Add a custom implementation for the range subscript that forcibly rounds the given bounds
+        // down to the nearest valid indices.
+
         private func buildContainer(from storage: AttributedString._AttributeStorage) -> AttributeContainer {
-            AttributeContainer(storage.filter { _names.contains($0.key) })
+            AttributeContainer(storage.filterWithoutInvalidatingDependents { _names.contains($0.key) })
         }
     }
 
     @_spi(AttributedString)
     public subscript(nsAttributedStringKeys keys: NSAttributedString.Key...) -> NSAttributesSlice {
-        return NSAttributesSlice(runs: self, keys: keys)
+        return NSAttributesSlice(runs: self, names: keys.map { $0.rawValue })
     }
 }
 

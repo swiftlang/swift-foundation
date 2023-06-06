@@ -64,7 +64,9 @@ extension AttributedString {
             return Self(value, for: K.self)
         }
         
-        func rawValue<K: AttributedStringKey>(as key: K.Type) -> K.Value where K.Value : Sendable {
+        func rawValue<K: AttributedStringKey>(
+            as key: K.Type
+        ) -> K.Value where K.Value: Sendable {
             rawValue as! K.Value
         }
         
@@ -110,7 +112,7 @@ internal extension Dictionary where Key == String, Value == AttributedString._At
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
-    internal struct _AttributeStorage : Hashable, Sendable {
+    internal struct _AttributeStorage: Hashable, Sendable {
         internal typealias AttributeMergePolicy = AttributedString.AttributeMergePolicy
         internal typealias _AttributeValue = AttributedString._AttributeValue
 
@@ -131,7 +133,7 @@ extension AttributedString {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString._AttributeStorage: CustomStringConvertible {
-    var description : String {
+    var description: String {
         contents._attrStrDescription
     }
 }
@@ -144,6 +146,15 @@ extension AttributedString._AttributeStorage {
     
     var keys: Dictionary<String, _AttributeValue>.Keys {
         contents.keys
+    }
+
+    func matches(_ other: Self) -> Bool {
+        for (key, value) in other.contents {
+            if self[key] != value {
+                return false
+            }
+        }
+        return true
     }
 }
 
@@ -231,7 +242,11 @@ extension AttributedString._AttributeStorage {
         self.mergeIn(other.storage, mergePolicy: mergePolicy)
     }
 
-    func filter(_ isIncluded: (Dictionary<String, _AttributeValue>.Element) -> Bool) -> Self {
+    /// Note: This is intentionally not doing recursive removal of attributes that have a
+    /// `attributeChanged` constrained on one of the filtered out keys.
+    func filterWithoutInvalidatingDependents(
+        _ isIncluded: (Dictionary<String, _AttributeValue>.Element) -> Bool
+    ) -> Self {
         var storage = Self()
         storage.contents = self.contents.filter(isIncluded)
         storage.invalidatableKeys = self.invalidatableKeys

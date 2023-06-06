@@ -1660,7 +1660,7 @@ E {
             let nsStr = NSAttributedString(string: str, attributes: [.testInt: 2])
             
             let convertedAttrStr = try AttributedString(nsStr, including: AttributeScopes.TestAttributes.self)
-            XCTAssertEqual(str.utf8.count, convertedAttrStr._guts.runs[0].length)
+            XCTAssertEqual(str.utf8.count, convertedAttrStr._guts.runs.first!.length)
             XCTAssertEqual(attrStr, convertedAttrStr)
             
             let convertedNSStr = try NSAttributedString(attrStr, including: AttributeScopes.TestAttributes.self)
@@ -1889,9 +1889,9 @@ E {
             XCTAssertEqual(str.index(beforeRun: index), runIndices[i - 1])
         }
         
-        for (i, index) in runIndices.enumerated() {
-            for (otherI, otherIndex) in runIndices.enumerated() {
-                XCTAssertEqual(str.index(index, offsetByRuns: otherI - i), otherIndex)
+        for (i, a) in runIndices.enumerated() {
+            for (j, b) in runIndices.enumerated() {
+                XCTAssertEqual(str.index(a, offsetByRuns: j - i), b)
             }
         }
     }

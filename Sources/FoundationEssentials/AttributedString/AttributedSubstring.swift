@@ -30,20 +30,20 @@ public struct AttributedSubstring: Sendable {
     /// accessing characters, the end points are unconditionally and implicitly rounded down
     /// to character boundaries. (This is to prevent having to resync grapheme breaks on slicing
     /// operations -- otherwise substring slicing would be an O(n) operation.)
-    internal var _range: Range<AttributedString.Index>
+    internal var _range: Range<BigString.Index>
 
     internal var _identity: Int = 0
 
-    internal init(_ guts: AttributedString.Guts, in range: Range<AttributedString.Index>) {
+    internal init(_ guts: AttributedString.Guts, in range: Range<BigString.Index>) {
         self._guts = guts
         // Forcibly resolve bounds and round them down to nearest scalar boundary.
-        let slice = _guts.string.unicodeScalars[range._bstringRange]
-        self._range = Range(uncheckedBounds: (.init(slice.startIndex), .init(slice.endIndex)))
+        let slice = _guts.string.unicodeScalars[range]
+        self._range = Range(uncheckedBounds: (slice.startIndex, slice.endIndex))
     }
 
     public init() {
         let str = AttributedString()
-        self.init(str._guts, in: str._bounds)
+        self.init(str._guts, in: str._stringBounds)
     }
 }
 
@@ -53,26 +53,21 @@ extension AttributedSubstring {
         return AttributedString(_guts)
     }
 
-
     internal var _unicodeScalars: BigSubstring.UnicodeScalarView {
-        _guts.string.unicodeScalars[_range._bstringRange]
+        _guts.string.unicodeScalars[_range]
     }
 
     internal var _characters: BigSubstring {
-        _guts.string[_range._bstringRange]
+        _guts.string[_range]
     }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring { // CustomStringConvertible
     public var description: String {
-        var result = ""
-        self._guts.enumerateRuns(containing: self._guts.utf8OffsetRange(from: _range)) { run, loc, _, modified in
-            let range = self._guts.utf8IndexRange(from: loc ..< loc + run.length)
-            result += (result.isEmpty ? "" : "\n") + "\(String(self.characters[range])) \(run.attributes)"
-            modified = .guaranteedNotModified
-        }
-        return result
+        // FIXME: Why have a custom definition for this if AttributedString falls back
+        // on the default implementation in AttributedStringProtocol?
+        _guts.description(in: _range)
     }
 }
 
@@ -91,11 +86,11 @@ extension AttributedSubstring { // Equatable
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring : AttributedStringProtocol {
     public var startIndex: AttributedString.Index {
-        _range.lowerBound
+        .init(_range.lowerBound)
     }
 
     public var endIndex: AttributedString.Index {
-        _range.upperBound
+        .init(_range.upperBound)
     }
 
     internal mutating func ensureUniqueReference() {
@@ -112,12 +107,12 @@ extension AttributedSubstring : AttributedStringProtocol {
 
     public mutating func setAttributes(_ attributes: AttributeContainer) {
         ensureUniqueReference()
-        _guts.set(attributes: attributes, in: _range)
+        _guts.setAttributes(attributes, in: _range)
     }
 
     public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) {
         ensureUniqueReference()
-        _guts.add(attributes: attributes, in: _range, mergePolicy:  mergePolicy)
+        _guts.mergeAttributes(attributes, in: _range, mergePolicy:  mergePolicy)
     }
 
     public mutating func replaceAttributes(_ attributes: AttributeContainer, with others: AttributeContainer) {
@@ -127,21 +122,17 @@ extension AttributedSubstring : AttributedStringProtocol {
         ensureUniqueReference()
         let hasConstrainedAttributes = attributes.storage.hasConstrainedAttributes || others.storage.hasConstrainedAttributes
         var fixupRanges = [Range<Int>]()
-        _guts.enumerateRuns(containing: _range._utf8OffsetRange) { run, location, _, modified in
-            guard run.matches(attributes) else {
-                modified = .guaranteedNotModified
-                return
-            }
-            modified = .guaranteedModified
-            for key in attributes.storage.keys {
-                run.attributes[key] = nil
-            }
-            run.attributes.mergeIn(others)
-            if hasConstrainedAttributes {
-                fixupRanges.append(location ..< location + run.length)
-            }
-        }
-
+        _guts.runs(in: _range._utf8OffsetRange).updateEach(
+            when: { $0.matches(attributes.storage) },
+            with: { runAttributes, utf8Range in
+                for key in attributes.storage.keys {
+                    runAttributes[key] = nil
+                }
+                runAttributes.mergeIn(others)
+                if hasConstrainedAttributes {
+                    fixupRanges.append(utf8Range)
+                }
+            })
         for range in fixupRanges {
             // FIXME: Collect boundary constraints.
             _guts.enforceAttributeConstraintsAfterMutation(in: range, type: .attributes)
@@ -149,7 +140,7 @@ extension AttributedSubstring : AttributedStringProtocol {
     }
 
     public var runs: AttributedString.Runs {
-        get { .init(_guts, _range) }
+        get { .init(_guts, in: _range) }
     }
 
     public var characters: AttributedString.CharacterView {
@@ -161,7 +152,8 @@ extension AttributedSubstring : AttributedStringProtocol {
     }
 
     public subscript(bounds: some RangeExpression<AttributedString.Index>) -> AttributedSubstring {
-        return AttributedSubstring(_guts, in: bounds.relative(to: characters))
+        let bounds = bounds.relative(to: characters)
+        return AttributedSubstring(_guts, in: bounds._bstringRange)
     }
 }
 
@@ -169,35 +161,41 @@ extension AttributedSubstring : AttributedStringProtocol {
 extension AttributedSubstring {
     @preconcurrency
     public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
-        get { _guts.getValue(in: _range, key: K.self)?.rawValue(as: K.self) }
+        get {
+            _guts.getUniformValue(in: _range, key: K.self)?.rawValue(as: K.self)
+        }
         set {
             ensureUniqueReference()
             if let v = newValue {
-                _guts.add(value: v, in: _range, key: K.self)
+                _guts.setAttributeValue(v, forKey: K.self, in: _range)
             } else {
-                _guts.remove(attribute: K.self, in: _range)
+                _guts.removeAttributeValue(forKey: K.self, in: _range)
             }
         }
     }
 
     @preconcurrency
-    public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
+    public subscript<K: AttributedStringKey>(
+        dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
+    ) -> K.Value? where K.Value : Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
     }
 
-    public subscript<S: AttributeScope>(dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>) -> ScopedAttributeContainer<S> {
+    public subscript<S: AttributeScope>(
+        dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>
+    ) -> ScopedAttributeContainer<S> {
         get {
-            return ScopedAttributeContainer(_guts.getValues(in: _range))
+            return ScopedAttributeContainer(_guts.getUniformValues(in: _range))
         }
         _modify {
             ensureUniqueReference()
             var container = ScopedAttributeContainer<S>()
             defer {
                 if let removedKey = container.removedKey {
-                    _guts.remove(key: removedKey, in: _range)
+                    _guts.removeAttributeValue(forKey: removedKey, in: _range)
                 } else {
-                    _guts.add(attributes: AttributeContainer(container.storage), in: _range)
+                    _guts.mergeAttributes(AttributeContainer(container.storage), in: _range)
                 }
             }
             yield &container

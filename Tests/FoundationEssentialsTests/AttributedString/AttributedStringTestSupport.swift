@@ -75,7 +75,7 @@ extension AttributeScopes.TestAttributes {
     enum TestUnicodeCharacterConstrained: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestUnicodeCharacterConstrained"
-        static let runBoundaries: AttributedString.AttributeRunBoundaries? = .character("👍🏻") // U+1F44D Thumbs Up Sign + U+1F3FB Emoji Modifier Fitzpatrick Type-1-2
+        static let runBoundaries: AttributedString.AttributeRunBoundaries? = .character("\u{FFFD}") // U+FFFD Replacement Character
     }
     
     enum TestAttributeDependent: CodableAttributedStringKey {
@@ -135,7 +135,7 @@ extension AttributeScopes {
         var testParagraphConstrained : TestParagraphConstrained
         var testSecondParagraphConstrained : TestSecondParagraphConstrained
         var testCharacterConstrained : TestCharacterConstrained
-        var testUnicodeCharacterConstrained : TestUnicodeCharacterConstrained
+        var testUnicodeScalarConstrained : TestUnicodeCharacterConstrained
         var testAttributeDependent : TestAttributeDependent
         var testCharacterDependent : TestCharacterDependent
     }

@@ -67,16 +67,24 @@ extension AttributeScopes {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension AttributeDynamicLookup {
-    subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes, T>) -> T {
+extension AttributeDynamicLookup {
+    public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes, T>) -> T {
         return self[T.self]
     }
 
-    subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes.NumberFormatAttributes, T>) -> T { self[T.self] }
-    
+    public subscript<T: AttributedStringKey>(
+        dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes.NumberFormatAttributes, T>
+    ) -> T {
+        self[T.self]
+    }
+
 #if FOUNDATION_FRAMEWORK
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes.LocalizedStringArgumentAttributes, T>) -> T { self[T.self] }
+    public subscript<T: AttributedStringKey>(
+        dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes.LocalizedStringArgumentAttributes, T>
+    ) -> T {
+        self[T.self]
+    }
 #endif // FOUNDATION_FRAMEWORK
 }
 
