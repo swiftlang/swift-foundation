@@ -227,3 +227,50 @@ extension PredicateExpressions.Value : Sendable where Output : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Value : StandardPredicateExpression where Output : Codable /*, Output : Sendable*/ {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.KeyPath {
+    public enum CommonKeyPathKind : Hashable, Sendable {
+        case collectionCount
+        case collectionIsEmpty
+        case collectionFirst
+        case bidirectionalCollectionLast
+    }
+    
+    public var kind: CommonKeyPathKind? {
+        guard let collectionType = Root.Output.self as? any Collection.Type else {
+            return nil
+        }
+        return Self.kind(keyPath, collectionType: collectionType)
+    }
+    
+    private static func kind<C: Collection, Root>(_ anyKP: PartialKeyPath<Root>, collectionType: C.Type) -> CommonKeyPathKind? {
+        let kp = anyKP as! PartialKeyPath<C>
+        switch kp {
+        case \String.count, \Substring.count, \Array<C.Element>.count:
+            return .collectionCount
+        case \String.isEmpty, \Substring.isEmpty, \Array<C.Element>.isEmpty:
+            return .collectionIsEmpty
+        case \Array<C.Element>.first:
+            return .collectionFirst
+        case \Array<C.Element>.last:
+            return .bidirectionalCollectionLast
+        default:
+            if let hashableElem = C.Element.self as? any Hashable.Type {
+                return Self.kind(kp, hashableElementType: hashableElem)
+            }
+            return nil
+        }
+    }
+    
+    private static func kind<C: Collection, Element: Hashable>(_ kp: PartialKeyPath<C>, hashableElementType: Element.Type) -> CommonKeyPathKind? {
+        switch kp {
+        case \Set<Element>.count:
+            return .collectionCount
+        case \Set<Element>.isEmpty:
+            return .collectionIsEmpty
+        default:
+            return nil
+        }
+    }
+}

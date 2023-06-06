@@ -153,15 +153,15 @@ extension PredicateExpressions.KeyPath : ConvertibleExpression {
         let countSyntax = (Root.Output.self == String.self || Root.Output.self == Substring.self) ? "length" : "@count"
         if let kvcString = keyPath._kvcKeyPathString {
             return .expression(keyPathExpr(for: kvcString))
-        } else if let kind = propertyKind {
+        } else if let kind = self.kind {
             switch kind {
-            case .count:
+            case .collectionCount:
                 return .expression(keyPathExpr(for: countSyntax))
-            case .isEmpty:
+            case .collectionIsEmpty:
                 return .predicate(NSComparisonPredicate(leftExpression: keyPathExpr(for: countSyntax), rightExpression: NSExpression(forConstantValue: 0), modifier: .direct, type: .equalTo))
-            case .arrayFirst:
+            case .collectionFirst:
                 return .expression(NSExpression(forFunction: rootExpr, selectorName: .subscriptSelector, arguments: [NSExpression(forSymbolicString: "FIRST")!]))
-            case .arrayLast:
+            case .bidirectionalCollectionLast:
                 return .expression(NSExpression(forFunction: rootExpr, selectorName: .subscriptSelector, arguments: [NSExpression(forSymbolicString: "LAST")!]))
             }
         } else {
@@ -329,52 +329,6 @@ extension NSPredicate {
             return nil
         }
         self.init(existing: converted as! Self)
-    }
-}
-
-fileprivate extension PredicateExpressions.KeyPath {
-    enum CollectionProperty {
-        case count
-        case isEmpty
-        case arrayFirst
-        case arrayLast
-    }
-    
-    var propertyKind: CollectionProperty? {
-        guard let collectionType = Root.Output.self as? any Collection.Type else {
-            return nil
-        }
-        return Self.kind_collection(keyPath, collectionType)
-    }
-    
-    private static func kind_collection<C: Collection, Root>(_ anyKP: PartialKeyPath<Root>, _ collType: C.Type) -> CollectionProperty? {
-        let kp = anyKP as! PartialKeyPath<C>
-        switch kp {
-        case \String.count, \Substring.count, \Array<C.Element>.count:
-            return .count
-        case \String.isEmpty, \Substring.isEmpty, \Array<C.Element>.isEmpty:
-            return .isEmpty
-        case \Array<C.Element>.first:
-            return .arrayFirst
-        case \Array<C.Element>.last:
-            return .arrayLast
-        default:
-            if let hashableElem = C.Element.self as? any Hashable.Type {
-                return Self.kind_collection_hashableElement(kp, hashableElem)
-            }
-            return nil
-        }
-    }
-    
-    private static func kind_collection_hashableElement<C: Collection, Element: Hashable>(_ kp: PartialKeyPath<C>, _ e: Element.Type) -> CollectionProperty? {
-        switch kp {
-        case \Set<Element>.count:
-            return .count
-        case \Set<Element>.isEmpty:
-            return .isEmpty
-        default:
-            return nil
-        }
     }
 }
 
