@@ -25,6 +25,12 @@ public struct Predicate<Input> : Sendable {
     }
 }
 
+#if !os(Linux) && !os(Windows)
+@freestanding(expression)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+public macro Predicate<Input>(_ body: (Input) -> Bool) -> Predicate<Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
+#endif
+
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension Predicate {
     private init(value: Bool) {
