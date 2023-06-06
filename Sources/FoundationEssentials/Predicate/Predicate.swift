@@ -25,6 +25,10 @@ public struct Predicate<Input> : Sendable {
     }
 }
 
+@freestanding(expression)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+public macro Predicate<Input>(_ body: (Input) -> Bool) -> Predicate<Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
+
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension Predicate {
     private init(value: Bool) {
