@@ -167,6 +167,36 @@ final class NSPredicateConversionTests: XCTestCase {
         XCTAssertFalse(converted!.evaluate(with: obj))
     }
     
+    func testEquality() {
+        var predicate = Predicate<ObjCObject> {
+            // $0.a == 0
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.a
+                ),
+                rhs: PredicateExpressions.build_Arg(0)
+            )
+        }
+        var converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "a == 0"))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        
+        predicate = Predicate<ObjCObject> {
+            // $0.a != 0
+            PredicateExpressions.build_NotEqual(
+                lhs: PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.a
+                ),
+                rhs: PredicateExpressions.build_Arg(0)
+            )
+        }
+        converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "a != 0"))
+        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+    }
+    
     func testNonObjC() {
         let predicate = Predicate<ObjCObject> {
             // $0.nonObjCKeypath == 2
