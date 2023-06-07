@@ -163,7 +163,7 @@ final class DateFormatStyleTests : XCTestCase {
 
     func test_createPatternMultithread() {
         let group = DispatchGroup()
-        let testLocales: [String] = [ "en_US", "en_US", "en_GB", "es_SP", "zh_TW", "fr_FR", "en_US", "en_GB", "fr_FR"]
+        let testLocales = [ "en_US", "en_US", "en_GB", "es_SP", "zh_TW", "fr_FR", "en_US", "en_GB", "fr_FR"].map { Locale(identifier: $0) }
         let expectations: [String : String] = [
             "en_US": "MMM d, y",
             "en_GB": "d MMM y",
@@ -172,14 +172,13 @@ final class DateFormatStyleTests : XCTestCase {
             "fr_FR": "d MMM y",
         ]
 
-        for localeIdentifier in testLocales {
+        let gregorian = Calendar(identifier: .gregorian)
+        let symbols = Date.FormatStyle.DateFieldCollection(year: .defaultDigits, month: .abbreviated, day: .defaultDigits)
+        for testLocale in testLocales {
             DispatchQueue.global(qos: .userInitiated).async(group:group) {
-                let locale = Locale(identifier: localeIdentifier)
-                XCTAssertNotNil(locale)
+                let pattern = ICUPatternGenerator.localizedPattern(symbols: symbols, locale: testLocale, calendar: gregorian)
 
-                let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: .gregorian, skeleton: "yMMMd", hourCycleOption: .default)
-
-                let expected = expectations[localeIdentifier]
+                let expected = expectations[testLocale.identifier]
                 XCTAssertEqual(pattern, expected)
             }
         }
@@ -397,6 +396,169 @@ final class DateFormatStyleTests : XCTestCase {
 
         decoded.locale = localeWithOverride
         XCTAssertEqual(decoded.format(date), "<complete> 1969-Dec-31")
+    }
+
+    func testConversationalDayPeriodsOverride() {
+        let middleOfNight = try! Date("2001-01-01T03:50:00Z", strategy: .iso8601)
+        let earlyMorning = try! Date("2001-01-01T06:50:00Z", strategy: .iso8601)
+        let morning = try! Date("2001-01-01T09:50:00Z", strategy: .iso8601)
+        let noon = try! Date("2001-01-01T12:50:00Z", strategy: .iso8601)
+        let afternoon = try! Date("2001-01-01T15:50:00Z", strategy: .iso8601)
+        let evening = try! Date("2001-01-01T21:50:00Z", strategy: .iso8601)
+
+        var locale: Locale
+        var format: Date.FormatStyle
+        func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #file, line: UInt = #line) {
+            let fmt = format.locale(locale)
+            let formatted = fmt.format(date)
+            XCTAssertEqual(formatted, expected, file: file, line: line)
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour()
+            verifyWithFormat(middleOfNight, expected: "凌晨3時")
+            verifyWithFormat(earlyMorning, expected: "清晨6時")
+            verifyWithFormat(morning, expected: "上午9時")
+            verifyWithFormat(noon, expected: "中午12時")
+            verifyWithFormat(afternoon, expected: "下午3時")
+            verifyWithFormat(evening, expected: "晚上9時")
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour(.defaultDigits(amPM: .abbreviated))
+            verifyWithFormat(middleOfNight, expected: "凌晨3時")
+            verifyWithFormat(earlyMorning, expected: "清晨6時")
+            verifyWithFormat(morning, expected: "上午9時")
+            verifyWithFormat(noon, expected: "中午12時")
+            verifyWithFormat(afternoon, expected: "下午3時")
+            verifyWithFormat(evening, expected: "晚上9時")
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour(.twoDigits(amPM: .abbreviated))
+            verifyWithFormat(middleOfNight, expected: "凌晨03時")
+            verifyWithFormat(earlyMorning, expected: "清晨06時")
+            verifyWithFormat(morning, expected: "上午09時")
+            verifyWithFormat(noon, expected: "中午12時")
+            verifyWithFormat(afternoon, expected: "下午03時")
+            verifyWithFormat(evening, expected: "晚上09時")
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour().minute()
+            verifyWithFormat(middleOfNight, expected: "凌晨3:50")
+            verifyWithFormat(earlyMorning, expected: "清晨6:50")
+            verifyWithFormat(morning, expected: "上午9:50")
+            verifyWithFormat(noon, expected: "中午12:50")
+            verifyWithFormat(afternoon, expected: "下午3:50")
+            verifyWithFormat(evening, expected: "晚上9:50")
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour(.defaultDigits(amPM: .wide)).minute()
+            verifyWithFormat(middleOfNight, expected: "凌晨3:50")
+            verifyWithFormat(earlyMorning, expected: "清晨6:50")
+            verifyWithFormat(morning, expected: "上午9:50")
+            verifyWithFormat(noon, expected: "中午12:50")
+            verifyWithFormat(afternoon, expected: "下午3:50")
+            verifyWithFormat(evening, expected: "晚上9:50")
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour(.twoDigits(amPM: .wide)).minute()
+            verifyWithFormat(middleOfNight, expected: "凌晨03:50")
+            verifyWithFormat(earlyMorning, expected: "清晨06:50")
+            verifyWithFormat(morning, expected: "上午09:50")
+            verifyWithFormat(noon, expected: "中午12:50")
+            verifyWithFormat(afternoon, expected: "下午03:50")
+            verifyWithFormat(evening, expected: "晚上09:50")
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour().minute().second()
+            verifyWithFormat(middleOfNight, expected: "凌晨3:50:00")
+            verifyWithFormat(earlyMorning, expected: "清晨6:50:00")
+            verifyWithFormat(morning, expected: "上午9:50:00")
+            verifyWithFormat(noon, expected: "中午12:50:00")
+            verifyWithFormat(afternoon, expected: "下午3:50:00")
+            verifyWithFormat(evening, expected: "晚上9:50:00")
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour(.defaultDigits(amPM: .wide)).minute().second()
+            verifyWithFormat(middleOfNight, expected: "凌晨3:50:00")
+            verifyWithFormat(earlyMorning, expected: "清晨6:50:00")
+            verifyWithFormat(morning, expected: "上午9:50:00")
+            verifyWithFormat(noon, expected: "中午12:50:00")
+            verifyWithFormat(afternoon, expected: "下午3:50:00")
+            verifyWithFormat(evening, expected: "晚上9:50:00")
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour(.twoDigits(amPM: .wide)).minute().second()
+            verifyWithFormat(middleOfNight, expected: "凌晨03:50:00")
+            verifyWithFormat(earlyMorning, expected: "清晨06:50:00")
+            verifyWithFormat(morning, expected: "上午09:50:00")
+            verifyWithFormat(noon, expected: "中午12:50:00")
+            verifyWithFormat(afternoon, expected: "下午03:50:00")
+            verifyWithFormat(evening, expected: "晚上09:50:00")
+        }
+
+        // Test for not showing day period
+        do {
+            locale = Locale(identifier: "zh_TW")
+            format = .init(timeZone: .gmt).hour(.defaultDigits(amPM: .omitted))
+            verifyWithFormat(middleOfNight, expected: "3時")
+            verifyWithFormat(earlyMorning, expected: "6時")
+            verifyWithFormat(morning, expected: "9時")
+            verifyWithFormat(noon, expected: "12時")
+            verifyWithFormat(afternoon, expected: "3時")
+            verifyWithFormat(evening, expected: "9時")
+        }
+
+        do {
+            locale = Locale(identifier: "zh_TW@hours=h24") // using 24-hour time
+            format = .init(timeZone: .gmt).hour()
+            verifyWithFormat(middleOfNight, expected: "3時")
+            verifyWithFormat(earlyMorning, expected: "6時")
+            verifyWithFormat(morning, expected: "9時")
+            verifyWithFormat(noon, expected: "12時")
+            verifyWithFormat(afternoon, expected: "15時")
+            verifyWithFormat(evening, expected: "21時")
+        }
+
+        do {
+            var custom24HourLocale = Locale.Components(identifier: "zh_TW")
+            custom24HourLocale.hourCycle = .zeroToTwentyThree // using 24-hour time
+            locale = Locale(components: custom24HourLocale)
+            format = .init(timeZone: .gmt).hour()
+            verifyWithFormat(middleOfNight, expected: "3時")
+            verifyWithFormat(earlyMorning, expected: "6時")
+            verifyWithFormat(morning, expected: "9時")
+            verifyWithFormat(noon, expected: "12時")
+            verifyWithFormat(afternoon, expected: "15時")
+            verifyWithFormat(evening, expected: "21時")
+        }
+
+        do {
+            locale = Locale.localeAsIfCurrent(name: "zh_TW", overrides: .init(force24Hour: true))
+            format = .init(timeZone: .gmt).hour()
+            verifyWithFormat(middleOfNight, expected: "3時")
+            verifyWithFormat(earlyMorning, expected: "6時")
+            verifyWithFormat(morning, expected: "9時")
+            verifyWithFormat(noon, expected: "12時")
+            verifyWithFormat(afternoon, expected: "15時")
+            verifyWithFormat(evening, expected: "21時")
+        }
     }
 }
 

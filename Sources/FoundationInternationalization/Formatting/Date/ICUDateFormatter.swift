@@ -22,11 +22,6 @@ package import FoundationICU
 
 typealias UChar = UInt16
 
-enum HourCycleOverride {
-    case force12hour
-    case force24hour
-}
-
 final class ICUDateFormatter {
 
     var udateFormat: UnsafeMutablePointer<UDateFormat?>
@@ -243,24 +238,16 @@ final class ICUDateFormatter {
     }
 
     static func cachedFormatter(for format: Date.FormatStyle) -> ICUDateFormatter {
-        let hourCycleOption: ICUPatternGenerator.HourCycleOption
-        if format.locale.force12Hour {
-            hourCycleOption = .force12Hour
-        } else if format.locale.force24Hour {
-            hourCycleOption = .force24Hour
-        } else {
-            hourCycleOption = .default
-        }
-        let localeIdentifier = format.locale.identifier
+
         let calendarIdentifier = format.calendar.identifier
         let pattern = patternCache.withLock { state in
             if let cachedPattern = state[format] {
                 return cachedPattern
             } else {
-                var pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier, skeleton: format.symbols.formatterTemplate, hourCycleOption: hourCycleOption)
+                var pattern = ICUPatternGenerator.localizedPattern(symbols: format.symbols, locale: format.locale, calendar: format.calendar)
                 if let dateStyle = format._dateStyle, let datePatternOverride = format.locale.customDateFormat(dateStyle) {
                     // substitue date part from pattern with customDatePattern
-                    let datePattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier, skeleton: format.symbols.dateTemplate, hourCycleOption: hourCycleOption)
+                    let datePattern = ICUPatternGenerator.localizedPattern(symbols: format.symbols.dateFields, locale: format.locale, calendar: format.calendar)
                     pattern.replace(datePattern, with: datePatternOverride)
                 }
                 
@@ -276,7 +263,7 @@ final class ICUDateFormatter {
             firstWeekday = format.calendar.firstWeekday
         }
 
-        let info = DateFormatInfo(localeIdentifier: localeIdentifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
+        let info = DateFormatInfo(localeIdentifier: format.locale.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
 
         return cachedFormatter(for: info)
     }

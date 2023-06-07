@@ -97,7 +97,59 @@ extension Date.FormatStyle {
         var secondFraction: Symbol.SymbolType.SecondFractionOption?
         var timeZoneSymbol: Symbol.SymbolType.TimeZoneSymbolOption?
 
-        var formatterTemplate : String {
+        // Swap regular hour for conversational-style hour option if needed
+        func preferredHour(withLocale locale: Locale?) -> Symbol.SymbolType.HourOption? {
+            guard let hour, let locale else {
+                return nil
+            }
+
+            var showingDayPeriod: Bool
+            switch locale.hourCycle {
+            case .zeroToEleven:
+                showingDayPeriod = true
+            case .oneToTwelve:
+                showingDayPeriod = true
+            case .zeroToTwentyThree:
+                showingDayPeriod = false
+            case .oneToTwentyFour:
+                showingDayPeriod = false
+            }
+
+            // default options (template "J" or "j") may display the hour as
+            // 12-hour and 24-hour depending on regional preferences, while
+            // conversational options (template "C") always shows 12-hour.
+            // Only proceed to override J/j with C if displaying 12-hour.
+            guard showingDayPeriod else {
+                return hour
+            }
+
+            var preferredHour: Symbol.SymbolType.HourOption?
+
+            if locale.region == .taiwan {
+                switch hour {
+                case .defaultDigitsWithAbbreviatedAMPM:
+                    preferredHour = .conversationalDefaultDigitsWithAbbreviatedAMPM
+                case .twoDigitsWithAbbreviatedAMPM:
+                    preferredHour = .conversationalTwoDigitsWithAbbreviatedAMPM
+                case .defaultDigitsWithWideAMPM:
+                    preferredHour = .conversationalDefaultDigitsWithWideAMPM
+                case .twoDigitsWithWideAMPM:
+                    preferredHour = .conversationalTwoDigitsWithWideAMPM
+                case .defaultDigitsWithNarrowAMPM:
+                    preferredHour = .conversationalDefaultDigitsWithNarrowAMPM
+                case .twoDigitsWithNarrowAMPM:
+                    preferredHour = .conversationalTwoDigitsWithNarrowAMPM
+                case .defaultDigitsNoAMPM, .twoDigitsNoAMPM, .conversationalDefaultDigitsWithAbbreviatedAMPM, .conversationalTwoDigitsWithAbbreviatedAMPM, .conversationalDefaultDigitsWithWideAMPM, .conversationalTwoDigitsWithWideAMPM, .conversationalDefaultDigitsWithNarrowAMPM, .conversationalTwoDigitsWithNarrowAMPM:
+                    preferredHour = hour
+                }
+            } else {
+                preferredHour = hour
+            }
+
+            return preferredHour
+        }
+
+        func formatterTemplate(overridingDayPeriodWithLocale locale: Locale?) -> String {
             var ret = ""
             ret.append(era?.rawValue ?? "")
             ret.append(year?.rawValue ?? "")
@@ -108,7 +160,8 @@ extension Date.FormatStyle {
             ret.append(dayOfYear?.rawValue ?? "")
             ret.append(weekday?.rawValue ?? "")
             ret.append(dayPeriod?.rawValue ?? "")
-            ret.append(hour?.rawValue ?? "")
+            let preferredHour = preferredHour(withLocale: locale)
+            ret.append(preferredHour?.rawValue ?? "")
             ret.append(minute?.rawValue ?? "")
             ret.append(second?.rawValue ?? "")
             ret.append(secondFraction?.rawValue ?? "")
@@ -116,18 +169,9 @@ extension Date.FormatStyle {
             return ret
         }
 
-        var dateTemplate : String {
-            var ret = ""
-            ret.append(era?.rawValue ?? "")
-            ret.append(year?.rawValue ?? "")
-            ret.append(quarter?.rawValue ?? "")
-            ret.append(month?.rawValue ?? "")
-            ret.append(week?.rawValue ?? "")
-            ret.append(day?.rawValue ?? "")
-            ret.append(dayOfYear?.rawValue ?? "")
-            ret.append(weekday?.rawValue ?? "")
-            ret.append(dayPeriod?.rawValue ?? "")
-            return ret
+        // Only contains fields greater or equal than `day`, excluding time parts.
+        var dateFields: Self {
+            DateFieldCollection(era: era, year: year, quarter: quarter, month: month, week: week, day: day, dayOfYear: dayOfYear, weekday: weekday, dayPeriod: dayPeriod)
         }
 
         mutating func add(_ rhs: Self) {
