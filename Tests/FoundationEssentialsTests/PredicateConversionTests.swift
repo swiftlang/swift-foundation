@@ -24,6 +24,7 @@ final class NSPredicateConversionTests: XCTestCase {
         @objc var i: Date
         @objc var j: String?
         @objc var k: UUID
+        @objc var l: Data
         var nonObjCKeypath: Int
         
         override init() {
@@ -37,6 +38,7 @@ final class NSPredicateConversionTests: XCTestCase {
             i = Date.distantFuture
             j = nil
             k = UUID()
+            l = Data([1, 2, 3])
             nonObjCKeypath = 8
             super.init()
         }
@@ -439,6 +441,22 @@ final class NSPredicateConversionTests: XCTestCase {
         
         let converted = NSPredicate(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "i > %@", now as NSDate))
+        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+    }
+    
+    func testData() {
+        let data = Data([1, 2, 3])
+        let predicate = Predicate<ObjCObject> {
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.l
+                ),
+                rhs: PredicateExpressions.build_Arg(data)
+            )
+        }
+        let converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "l == %@", data as NSData))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
 }
