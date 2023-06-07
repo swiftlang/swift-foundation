@@ -1139,8 +1139,8 @@ final class JSONEncoderTests : XCTestCase {
     }
 
     func test_JSONUnicodeEscapes() throws {
-#if os(Linux)
-        throw XCTSkip("current development swift builds cause a stack overflow")
+#if os(Linux) || os(Windows)
+        throw XCTSkip("#148 - current development swift builds cause a stack overflow")
 #endif
         let testCases = [
             // e-acute and greater-than-or-equal-to
