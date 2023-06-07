@@ -356,7 +356,7 @@ final class PredicateTests: XCTestCase {
             PredicateExpressions.build_Equal(
                 lhs: PredicateExpressions.build_Arg(
                     PredicateExpressions.build_ForcedUnwrap(
-                        lhs: PredicateExpressions.build_KeyPath(
+                        PredicateExpressions.build_KeyPath(
                             root: $0,
                             keyPath: \.wrapped
                         )
