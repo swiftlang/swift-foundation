@@ -190,7 +190,7 @@ extension PredicateExpressions.Equal : ConvertibleExpression {
 
 extension PredicateExpressions.NotEqual : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
-        .predicate(NSComparisonPredicate(leftExpression: try lhs.convertToExpression(state: &state), rightExpression: try rhs.convertToExpression(state: &state), modifier: .direct, type: .equalTo))
+        .predicate(NSComparisonPredicate(leftExpression: try lhs.convertToExpression(state: &state), rightExpression: try rhs.convertToExpression(state: &state), modifier: .direct, type: .notEqualTo))
     }
 }
 
