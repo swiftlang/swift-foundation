@@ -263,7 +263,8 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         var info = tm()
 #if os(Windows)
         var time = __time64_t(self.timeIntervalSince1970)
-        _gmtime64_s(&info, &time)
+        let errno: errno_t = _gmtime64_s(&info, &time)
+        guard errno == 0 else { return unavailable }
 #else
         var time = time_t(self.timeIntervalSince1970)
         gmtime_r(&time, &info)
