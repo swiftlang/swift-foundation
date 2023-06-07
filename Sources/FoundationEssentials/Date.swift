@@ -214,8 +214,13 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 extension Date {
     private static func getCurrentAbsoluteTime() -> TimeInterval {
 #if canImport(WinSDK)
-        // TODO: WinSDK Implementation
-        fatalError("getCurrentAbsoluteTime not implemented for Windows yet")
+        var ft: FILETIME = FILETIME()
+        var li: ULARGE_INTEGER = ULARGE_INTEGER()
+        GetSystemTimePreciseAsFileTime(&ft)
+        li.LowPart = ft.dwLowDateTime
+        li.HighPart = ft.dwHighDateTime
+        // FILETIME represents 100-ns intervals since January 1, 1601 (UTC)
+        return TimeInterval((li.QuadPart - 1164447360_000_000) / 1_000_000_000)
 #else
         var ts: timespec = timespec()
         clock_gettime(CLOCK_REALTIME, &ts)
