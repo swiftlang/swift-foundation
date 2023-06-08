@@ -83,22 +83,22 @@ extension PredicateExpressions {
     }
     
     public struct ForcedUnwrap<
-        LHS : PredicateExpression,
+        Inner : PredicateExpression,
         Wrapped
     > : PredicateExpression
     where
-    LHS.Output == Optional<Wrapped>
+        Inner.Output == Optional<Wrapped>
     {
         public typealias Output = Wrapped
         
-        public let lhs: LHS
+        public let inner: Inner
         
-        public init(lhs: LHS) {
-            self.lhs = lhs
+        public init(_ inner: Inner) {
+            self.inner = inner
         }
         
         public func evaluate(_ bindings: PredicateBindings) throws -> Wrapped {
-            let input = try lhs.evaluate(bindings)
+            let input = try inner.evaluate(bindings)
             if let result = input {
                 return result
             }
@@ -106,8 +106,8 @@ extension PredicateExpressions {
         }
     }
     
-    public static func build_ForcedUnwrap<LHS, Wrapped>(lhs: LHS) -> ForcedUnwrap<LHS, Wrapped> where LHS.Output == Optional<Wrapped> {
-        ForcedUnwrap(lhs: lhs)
+    public static func build_ForcedUnwrap<Inner, Wrapped>(_ inner: Inner) -> ForcedUnwrap<Inner, Wrapped> where Inner.Output == Optional<Wrapped> {
+        ForcedUnwrap(inner)
     }
 }
 
@@ -118,7 +118,7 @@ extension PredicateExpressions.OptionalFlatMap : StandardPredicateExpression whe
 extension PredicateExpressions.NilCoalesce : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.ForcedUnwrap : StandardPredicateExpression where LHS : StandardPredicateExpression {}
+extension PredicateExpressions.ForcedUnwrap : StandardPredicateExpression where Inner : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.OptionalFlatMap : Codable where LHS : Codable, RHS : Codable {
@@ -153,15 +153,15 @@ extension PredicateExpressions.NilCoalesce : Codable where LHS : Codable, RHS : 
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.ForcedUnwrap : Codable where LHS : Codable {
+extension PredicateExpressions.ForcedUnwrap : Codable where Inner : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        try container.encode(lhs)
+        try container.encode(inner)
     }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        lhs = try container.decode(LHS.self)
+        inner = try container.decode(Inner.self)
     }
 }
 
@@ -172,4 +172,4 @@ extension PredicateExpressions.OptionalFlatMap : Sendable where LHS : Sendable, 
 extension PredicateExpressions.NilCoalesce : Sendable where LHS : Sendable, RHS : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.ForcedUnwrap : Sendable where LHS : Sendable {}
+extension PredicateExpressions.ForcedUnwrap : Sendable where Inner : Sendable {}
