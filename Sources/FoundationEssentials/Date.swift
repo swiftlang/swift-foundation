@@ -233,24 +233,14 @@ extension Date {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
-// For backwards compatibility, the Darwin version of this method is left alone
-// because it uses `NSDateFormatter` and may behave slightly differently.
-#if !FOUNDATION_FRAMEWORK
     /// A string representation of the date object (read-only).
-    /// The representation is useful for debugging only.
+    /// The representation is useful for debugging only and might change over time. It currently returns
+    /// a representation in UTC time with a Gregorian calendar.
     /// There are a number of options to acquire a formatted string for a date including: date formatters
     /// (see [NSDateFormatter](//apple_ref/occ/cl/NSDateFormatter) and
     /// [Data Formatting Guide](//apple_ref/doc/uid/10000029i)), and the `Date`
     /// function `description(locale:)`.
     public var description: String {
-        // NSDate uses the constant format `uuuu-MM-dd HH:mm:ss '+0000'`
-
-        // Glibc needs a non-standard format option to pad %Y to 4 digits
-#if canImport(Glibc)
-        let format = "%4Y-%m-%d %H:%M:%S +0000"
-#else
-        let format = "%Y-%m-%d %H:%M:%S +0000"
-#endif
         let unavailable = "<description unavailable>"
 
         guard self >= Date.distantPast else {
@@ -260,36 +250,15 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
             return unavailable
         }
 
-        var info = tm()
-#if os(Windows)
-        var time = __time64_t(self.timeIntervalSince1970)
-        let errno: errno_t = _gmtime64_s(&info, &time)
-        guard errno == 0 else { return unavailable }
-#else
-        var time = time_t(self.timeIntervalSince1970)
-        gmtime_r(&time, &info)
-#endif
-
-        // This allocates stack space for range of 10^102 years
-        // That's more than Date currently supports.
-        let bufferSize = 128
-        return withUnsafeTemporaryAllocation(of: CChar.self, capacity: bufferSize) { buffer in
-            guard let ptr = buffer.baseAddress else {
-                return unavailable
-            }
-
-            guard strftime(ptr, bufferSize, format, &info) != 0 else {
-                return unavailable
-            }
-
-            guard let result = String(validatingUTF8: ptr) else {
-                return unavailable
-            }
-
-            return result
-        }
+        return Date.ISO8601FormatStyle(
+            dateSeparator: .dash,
+            dateTimeSeparator: .space,
+            timeSeparator: .colon,
+            timeZoneSeparator: .omitted,
+            includingFractionalSeconds: false,
+            timeZone: .gmt
+        ).format(self)
     }
-#endif // !FOUNDATION_FRAMEWORK
 
     public var debugDescription: String {
         return description
@@ -386,5 +355,17 @@ extension Date {
     
     package var isValidForEnumeration: Bool {
         Date.validCalendarRange.contains(self)
+    }
+}
+// MARK: - String interpolation helper for description property
+extension DefaultStringInterpolation {
+    fileprivate mutating func appendInterpolation(_zeroPad value: Int, _toWidth width: Int) {
+      precondition(width > 0)
+      let representation = String(value)
+      let padding = width &- representation.utf8.count
+      if padding > 0 {
+          appendLiteral(String(repeating: "0", count: padding))
+      }
+      appendLiteral(representation)
     }
 }

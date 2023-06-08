@@ -91,11 +91,7 @@ final class DateTests : XCTestCase {
     }
 
     func testDescriptionDistantPast() {
-#if FOUNDATION_FRAMEWORK
-        XCTAssertEqual("0001-01-01 00:00:00 +0000", Date.distantPast.description)
-#else
         XCTAssertEqual("0000-12-30 00:00:00 +0000", Date.distantPast.description)
-#endif
     }
 
     func testDescriptionDistantFuture() {
@@ -104,20 +100,12 @@ final class DateTests : XCTestCase {
 
     func testDescriptionBeyondDistantPast() {
         let date = Date.distantPast.addingTimeInterval(TimeInterval(-1))
-#if FOUNDATION_FRAMEWORK
-        XCTAssertEqual("0000-12-31 23:59:59 +0000", date.description)
-#else
         XCTAssertEqual("<description unavailable>", date.description)
-#endif
     }
 
     func testDescriptionBeyondDistantFuture() {
         let date = Date.distantFuture.addingTimeInterval(TimeInterval(1))
-#if FOUNDATION_FRAMEWORK
-        XCTAssertEqual("4001-01-01 00:00:01 +0000", date.description)
-#else
         XCTAssertEqual("<description unavailable>", date.description)
-#endif
     }
 }
 
