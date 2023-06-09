@@ -237,7 +237,7 @@ internal final class _TimeZone: Sendable {
 
     static var timeZoneDataVersion: String {
         var status = U_ZERO_ERROR
-        guard let version = ucal_getTZDataVersion(&status), status.isSuccess, let str = String(utf8String: version) else {
+        guard let version = ucal_getTZDataVersion(&status), status.isSuccess, let str = String(validatingUTF8: version) else {
             return ""
         }
         return str

@@ -123,7 +123,7 @@ internal final class ICULegacyNumberFormatter {
         }
         guard status.isSuccess else { return nil }
 
-        guard let str = String(utf8String: decNumChars) else {
+        guard let str = String(validatingUTF8: decNumChars) else {
             return nil
         }
 
