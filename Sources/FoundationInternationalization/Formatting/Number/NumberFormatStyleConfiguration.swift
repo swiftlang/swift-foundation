@@ -483,10 +483,8 @@ extension FloatingPointRoundingRule {
     }
 }
 
-#if os(Linux) || os(Windows) || FOUNDATION_FRAMEWORK
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointRoundingRule : Codable { }
-#endif
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.RoundingIncrement: Codable {

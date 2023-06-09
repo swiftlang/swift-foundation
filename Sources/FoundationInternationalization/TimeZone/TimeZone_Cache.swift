@@ -86,7 +86,7 @@ struct TimeZoneCache : Sendable {
         /// Reads from environment variables `TZFILE`, `TZ` and finally the symlink pointed at by the C macro `TZDEFAULT` to figure out what the current (aka "system") time zone is.
         mutating func findCurrentTimeZone() -> TimeZone {
             if let tzenv = getenv("TZFILE") {
-                if let name = String(utf8String: tzenv) {
+                if let name = String(validatingUTF8: tzenv) {
                     if let result = fixed(name) {
                         return result
                     }
@@ -94,7 +94,7 @@ struct TimeZoneCache : Sendable {
             }
 
             if let tz = getenv("TZ") {
-                if let name = String(utf8String: tz) {
+                if let name = String(validatingUTF8: tz) {
                     // Try as an abbreviation first
                     // Use cached function here to avoid recursive lock
                     if let name2 = timeZoneAbbreviations()[name] {
@@ -135,7 +135,7 @@ struct TimeZoneCache : Sendable {
             if ret >= 0 {
                 // Null-terminate the value
                 buffer[ret] = 0
-                if let file = String(utf8String: buffer.baseAddress!) {
+                if let file = String(validatingUTF8: buffer.baseAddress!) {
 #if targetEnvironment(simulator) && (os(iOS) || os(tvOS) || os(watchOS))
                     let lookFor = "zoneinfo/"
 #else

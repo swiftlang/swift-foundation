@@ -25,7 +25,7 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
     }
 
     var debugDescription: String {
-        String(utf8String: u_errorName(code)) ?? "Unknown ICU error \(code.rawValue)"
+        String(validatingUTF8: u_errorName(code)) ?? "Unknown ICU error \(code.rawValue)"
     }
 }
 
@@ -123,7 +123,7 @@ internal func _withFixedCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_K
         if let len = body(buffer.baseAddress!, size, &status) {
             if status.isSuccess && len > 0 {
                 buffer[Int(len + 1)] = 0
-                return String(utf8String: buffer.baseAddress!)
+                return String(validatingUTF8: buffer.baseAddress!)
             }
         }
         

@@ -603,7 +603,7 @@ extension Locale {
                 return nil
             }
 
-            guard let code = String(utf8String: uregion_getRegionCode(containingRegion)) else {
+            guard let code = String(validatingUTF8: uregion_getRegionCode(containingRegion)) else {
                 return nil
             }
 
@@ -623,7 +623,7 @@ extension Locale {
                 return nil
             }
 
-            guard let code = String(utf8String: uregion_getRegionCode(containingContinent)) else {
+            guard let code = String(validatingUTF8: uregion_getRegionCode(containingContinent)) else {
                 return nil
             }
 
