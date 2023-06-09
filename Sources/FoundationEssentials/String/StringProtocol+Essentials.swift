@@ -149,54 +149,96 @@ extension StringProtocol {
     /// Returns the range of characters representing the line or lines
     /// containing a given range.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public func lineRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
-        return String(self).lineRange(for: aRange)
+    public func lineRange(for range: some RangeExpression<Index>) -> Range<Index> {
+        let r = _lineBounds(around: range)
+        return r.start ..< r.end
     }
 
     /// Returns the range of characters representing the
     /// paragraph or paragraphs containing a given range.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public func paragraphRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
-        return String(self).paragraphRange(for: aRange)
+    public func paragraphRange(for range: some RangeExpression<Index>) -> Range<Index> {
+        let r = _paragraphBounds(around: range)
+        return r.start ..< r.end
     }
 }
 
-extension String {
-    internal func lineRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
+extension StringProtocol {
+    @inline(never)
+    internal func _lineBounds(
+        around range: some RangeExpression<Index>
+    ) -> (start: Index, end: Index, contentsEnd: Index) {
+        // Avoid generic paths in the common case by manually specializing on `String` and
+        // `Substring`. Note that we're only ever calling `_lineBounds` on a `Substring`; this is
+        // to reduce the code size overhead of having to specialize it multiple times (at a slight
+        // cost to runtime performance).
+        if let s = _specializingCast(self, to: String.self) {
+            let range = s.unicodeScalars._boundaryAlignedRange(range)
+            return s[...].utf8._lineBounds(around: range)
+        } else if let s = _specializingCast(self, to: Substring.self) {
+            let range = s.unicodeScalars._boundaryAlignedRange(range)
+            return s.utf8._lineBounds(around: range)
+        } else {
+            // Unexpected case. `StringProtocol`'s UTF-8 view is not properly constrained, so we
+            // need to convert `self` to a Substring and carefully convert indices between the two
+            // collections before & after the _lineBounds call.
+            let range = self.unicodeScalars._boundaryAlignedRange(range)
 
-        // It's possible that passed-in indices are not on unicode scalar boundaries, such as when they're UTF-16 indices.
-        // Expand the bounds to ensure they are so we can meaningfully iterate their UTF8 views.
-        let r = unicodeScalars._boundaryAlignedRange(aRange)
-        let result = utf8._getBlock(for: [.findStart, .findEnd, .stopAtLineSeparators], in: r)
+            let startUTF8Offset = self.utf8.distance(from: self.startIndex, to: range.lowerBound)
+            let utf8Count = self.utf8.distance(from: range.lowerBound, to: range.upperBound)
 
-        guard let start = result.start else {
-            guard let end = result.end else {
-                return startIndex ..< endIndex
-            }
-            return startIndex ..< end
+            let s = Substring(self)
+            let start = s.utf8.index(s.startIndex, offsetBy: startUTF8Offset)
+            let end = s.utf8.index(start, offsetBy: utf8Count)
+            let r = s.utf8._lineBounds(around: start ..< end)
+
+            let resultUTF8Offsets = (
+                start: s.utf8.distance(from: s.startIndex, to: r.start),
+                end: s.utf8.distance(from: s.startIndex, to: r.end),
+                contentsEnd: s.utf8.distance(from: s.startIndex, to: r.contentsEnd))
+            return (
+                start: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.start),
+                end: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.end),
+                contentsEnd: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.contentsEnd))
         }
-
-        guard let upper = result.end else {
-            return start ..< endIndex
-        }
-
-        return start..<upper
     }
 
-    internal func paragraphRange<R : RangeExpression>(for aRange: R) -> Range<Index> where R.Bound == Index {
-        let r = unicodeScalars._boundaryAlignedRange(aRange)
-        let result = utf8._getBlock(for: [.findStart, .findEnd], in: r)
-        guard let start = result.start else {
-            guard let end = result.end else {
-                return startIndex ..< endIndex
-            }
-            return startIndex ..< end
-        }
+    @inline(never)
+    internal func _paragraphBounds(
+        around range: some RangeExpression<Index>
+    ) -> (start: Index, end: Index, contentsEnd: Index) {
+        // Avoid generic paths in the common case by manually specializing on `String` and
+        // `Substring`. Note that we're only ever calling `_paragraphBounds` on a `Substring`; this is
+        // to reduce the code size overhead of having to specialize it multiple times (at a slight
+        // cost to runtime performance).
+        if let s = _specializingCast(self, to: String.self) {
+            let range = s.unicodeScalars._boundaryAlignedRange(range)
+            return s[...].utf8._paragraphBounds(around: range) // Note: We use [...] to get a Substring
+        } else if let s = _specializingCast(self, to: Substring.self) {
+            let range = s.unicodeScalars._boundaryAlignedRange(range)
+            return s.utf8._paragraphBounds(around: range)
+        } else {
+            // Unexpected case. `StringProtocol`'s UTF-8 view is not properly constrained, so we
+            // need to convert `self` to a Substring and carefully convert indices between the two
+            // collections before & after the _lineBounds call.
+            let range = self.unicodeScalars._boundaryAlignedRange(range)
 
-        guard let upper = result.end else {
-            return start ..< endIndex
-        }
+            let startUTF8Offset = self.utf8.distance(from: self.startIndex, to: range.lowerBound)
+            let utf8Count = self.utf8.distance(from: range.lowerBound, to: range.upperBound)
 
-        return start..<upper
+            let s = Substring(self)
+            let start = s.utf8.index(s.startIndex, offsetBy: startUTF8Offset)
+            let end = s.utf8.index(start, offsetBy: utf8Count)
+            let r = s.utf8._paragraphBounds(around: start ..< end)
+
+            let resultUTF8Offsets = (
+                start: s.utf8.distance(from: s.startIndex, to: r.start),
+                end: s.utf8.distance(from: s.startIndex, to: r.end),
+                contentsEnd: s.utf8.distance(from: s.startIndex, to: r.contentsEnd))
+            return (
+                start: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.start),
+                end: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.end),
+                contentsEnd: self.utf8.index(self.startIndex, offsetBy: resultUTF8Offsets.contentsEnd))
+        }
     }
 }

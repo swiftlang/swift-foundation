@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2023 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -12,19 +12,16 @@
 
 extension BidirectionalCollection where Index == String.Index {
     internal func _alignIndex(roundingDown i: Index) -> Index {
-        return i < endIndex ? index(before: index(after: i)) : i
+        index(i, offsetBy: 0)
     }
 
     internal func _alignIndex(roundingUp i: Index) -> Index {
         let truncated = _alignIndex(roundingDown: i)
-        if i > truncated && i < endIndex {
-            return index(after: i)
-        } else {
-            return i
-        }
+        guard i > truncated && truncated < endIndex else { return truncated }
+        return index(after: truncated)
     }
 
-    internal func _boundaryAlignedRange<R: RangeExpression>(_ r: R) -> Range<Index> where R.Bound == String.Index {
+    internal func _boundaryAlignedRange(_ r: some RangeExpression<Index>) -> Range<Index> {
         let range = r.relative(to: self)
         return _alignIndex(roundingDown: range.lowerBound)..<_alignIndex(roundingUp: range.upperBound)
     }

@@ -181,3 +181,26 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
         return _StringBlock(start: start, end: end, contentsEnd: contentsEnd)
     }
 }
+
+extension Substring.UTF8View {
+    // Note: we could have these defined on BidirectionalCollection<UInt8>, like _getBlock.
+    // However, all current call sites are funneling through Substring.UTF8View, and it makes
+    // sense to avoid dealing with generics unless we're forced to. Feel free to convert these
+    // utilities to generic functions if needed.
+
+    internal func _lineBounds(
+        around range: Range<Index>
+    ) -> (start: Index, end: Index, contentsEnd: Index) {
+        let result = _getBlock(
+            for: [.findStart, .findEnd, .findContentsEnd, .stopAtLineSeparators], in: range)
+        return (result.start!, result.end!, result.contentsEnd!)
+    }
+
+    internal func _paragraphBounds(
+        around range: Range<Index>
+    ) -> (start: Index, end: Index, contentsEnd: Index) {
+        let result = _getBlock(
+            for: [.findStart, .findEnd, .findContentsEnd], in: range)
+        return (result.start!, result.end!, result.contentsEnd!)
+    }
+}
