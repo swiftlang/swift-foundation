@@ -238,7 +238,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone {
 #if !FOUNDATION_FRAMEWORK
- /// A way to represent  different  name style of a timezone
+/// A way to represent  different  name style of a timezone
 ///
 /// Consider you are living in a timeZone named `Asia/Kolkata` which you want to represent it in different form
 /// like `standard`,  `shortStandard`, `daylightSaving` etc.  `NameStyle` provide a convenience way
