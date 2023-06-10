@@ -238,6 +238,46 @@ public struct TimeZone : Hashable, Equatable, Sendable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone {
 #if !FOUNDATION_FRAMEWORK
+ /// A way to represent  different  name style of a timezone
+///
+/// Consider you are living in a timeZone named `Asia/Kolkata` which you want to represent it in different form
+/// like `standard`,  `shortStandard`, `daylightSaving` etc.  `NameStyle` provide a convenience way
+/// to represent the same.
+///
+/// ## Topics
+///
+/// ### NameStyle
+///
+/// - ``standard``
+/// - ``shortStandard``
+/// - ``daylightSaving``
+/// - ``shortDaylightSaving``
+/// - ``generic``
+/// - ``shortGeneric``
+///
+///  ```swift
+///  let currentTimeZone = TimeZone(identifier: "Asia/Kolkata")
+///  let currentLocale = Locale(identifier: "en_US"
+///  let currentTimeZoneLocalisedName = [
+///   currentTimeZone?.localizedName(for: .standard, locale: .current),
+///   currentTimeZone?.localizedName(for: .shortStandard, locale: .current),
+///   currentTimeZone?.localizedName(for: .daylightSaving, locale: .current),
+///   currentTimeZone?.localizedName(for: .shortDaylightSaving, locale: .current),
+///   currentTimeZone?.localizedName(for: .generic, locale: .current),
+///   currentTimeZone?.localizedName(for: .shortGeneric, locale: .current),
+/// ]
+///    currentTimeZoneLocalisedName.forEach{ print($0 ?? "")}
+///    ```
+///        /* Prints */
+///        India Standard Time
+///        GMT+5:30
+///        GMT+05:30
+///        GMT+5:30
+///        India Standard Time
+///        India Time
+///    ```
+///  ```
+///
     public enum NameStyle : Int, Sendable {
         /// Specifies a standard name style. For example, “Central Standard Time” for Central Time.
         case standard
