@@ -170,9 +170,13 @@ final class ICUPatternGeneratorTests: XCTestCase {
                  expectedPattern: "H時")
             test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
                  expectedPattern: "HH:mm")
-
+#if FOUNDATION_FRAMEWORK
+            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                 expectedPattern: "HH:mm")
+#else
             test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
                  expectedPattern: "HH:m")
+#endif
             test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
                  expectedPattern: "HH:mm:ss")
             test(symbols: .init(hour: .twoDigitsWithNarrowAMPM),
