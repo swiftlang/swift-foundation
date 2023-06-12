@@ -254,6 +254,27 @@ extension PredicateExpressions.SequenceContains : ConvertibleExpression {
     }
 }
 
+extension PredicateExpressions.SequenceContainsWhere : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        let local = state.makeLocalVariable(for: self.variable.key)
+        let subquery = NSExpression(forSubquery: try sequence.convertToExpression(state: &state), usingIteratorVariable: local, predicate: try test.convertToPredicate(state: &state))
+        let count = NSKeyPathExpression(operand: subquery, andKeyPath: NSExpression._newKeyPathExpression(for: "@count"))!
+        let equality = NSComparisonPredicate(leftExpression: count, rightExpression: NSExpression(forConstantValue: 0), modifier: .direct, type: .notEqualTo)
+        return .predicate(equality)
+    }
+}
+
+extension PredicateExpressions.SequenceAllSatisfy : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        let local = state.makeLocalVariable(for: self.variable.key)
+        let negatedTest = NSCompoundPredicate(notPredicateWithSubpredicate: try test.convertToPredicate(state: &state))
+        let subquery = NSExpression(forSubquery: try sequence.convertToExpression(state: &state), usingIteratorVariable: local, predicate: negatedTest)
+        let count = NSKeyPathExpression(operand: subquery, andKeyPath: NSExpression._newKeyPathExpression(for: "@count"))!
+        let equality = NSComparisonPredicate(leftExpression: count, rightExpression: NSExpression(forConstantValue: 0), modifier: .direct, type: .equalTo)
+        return .predicate(equality)
+    }
+}
+
 extension PredicateExpressions.Conditional : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
         let predicate = try test.convertToPredicate(state: &state)

@@ -489,6 +489,46 @@ final class NSPredicateConversionTests: XCTestCase {
         XCTAssertEqual(converted, NSPredicate(format: "l == %@", data as NSData))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
+    
+    func testSequenceContainsWhere() {
+        let predicate = Predicate<ObjCObject> {
+            // $0.g.contains { $0 == 2 }
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.g
+                )
+            ) {
+                PredicateExpressions.build_Equal(
+                    lhs: PredicateExpressions.build_Arg($0),
+                    rhs: PredicateExpressions.build_Arg(2)
+                )
+            }
+        }
+        let converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "SUBQUERY(g, $_local_1, $_local_1 == 2).@count != 0"))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+    }
+    
+    func testSequenceAllSatisfy() {
+        let predicate = Predicate<ObjCObject> {
+            // $0.g.allSatisfy { $0 == 2 }
+            PredicateExpressions.build_allSatisfy(
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.g
+                )
+            ) {
+                PredicateExpressions.build_Equal(
+                    lhs: PredicateExpressions.build_Arg($0),
+                    rhs: PredicateExpressions.build_Arg(2)
+                )
+            }
+        }
+        let converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "SUBQUERY(g, $_local_1, NOT ($_local_1 == 2)).@count == 0"))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+    }
 }
 
 #endif
