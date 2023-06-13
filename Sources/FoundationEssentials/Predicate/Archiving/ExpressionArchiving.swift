@@ -135,14 +135,26 @@ enum PredicateExpressionCodingKeys : CodingKey {
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+fileprivate extension PredicateCodableConfiguration {
+    mutating func allowInputs<each Input>(_ input: repeat (each Input).Type) {
+        var inputTypes = [Any.Type]()
+        _ = (repeat inputTypes.append((each Input).self))
+        for (index, type) in inputTypes.enumerated() {
+            allowType(type, identifier: "Foundation.Predicate.Input.\(index)")
+        }
+    }
+}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
-    mutating func _encode<T: PredicateExpression & Encodable, Input>(_ expression: T, variables: (PredicateExpressions.Variable<Input>), predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
+    mutating func _encode<T: PredicateExpression & Encodable, each Input>(_ expression: T, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
         var predicateConfiguration = predicateConfiguration
-        predicateConfiguration.allowType(Input.self, identifier: "Foundation.Predicate.Input.0")
+        predicateConfiguration.allowInputs(repeat (each Input).self)
         let structure = try ExpressionStructure(Type(expression), with: predicateConfiguration)
         var state = PredicateArchivingState(configuration: predicateConfiguration)
+        var variableContainer = self.nestedUnkeyedContainer(forKey: .variable)
+        _ = (repeat try variableContainer.encode(each variable))
         try _ThreadLocal.withValue(&state, for: .predicateArchivingState) {
-            try self.encode(variables, forKey: .variable)
             try self.encode(structure, forKey: .structure)
             try self.encode(expression, forKey: .expression)
         }
@@ -151,9 +163,9 @@ extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
-    mutating func _decode<Input>(inputs: (Input.Type), predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variables: (PredicateExpressions.Variable<Input>)) {
+    mutating func _decode<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var predicateConfiguration = predicateConfiguration
-        predicateConfiguration.allowType(Input.self, identifier: "Foundation.Predicate.Input.0")
+        predicateConfiguration.allowInputs(repeat (each Input).self)
         let structure = try self.decode(ExpressionStructure.self, forKey: .structure)
 
         func decode<E: Decodable & PredicateExpression>(_: E.Type) throws -> any PredicateExpression<Bool> where E.Output == Bool {
@@ -164,8 +176,9 @@ extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
             throw DecodingError.dataCorruptedError(forKey: .structure, in: self, debugDescription: "This expression is unsupported by this predicate")
         }
         var state = PredicateArchivingState(configuration: predicateConfiguration)
+        let container = try self.nestedUnkeyedContainer(forKey: .variable)
         return try _ThreadLocal.withValue(&state, for: .predicateArchivingState) {
-            let variable = try self.decode(PredicateExpressions.Variable<Input>.self, forKey: .variable)
+            let variable = (repeat try container.decode(PredicateExpressions.Variable<each Input>.self))
             return (try decode(exprType), variable)
         }
     }
