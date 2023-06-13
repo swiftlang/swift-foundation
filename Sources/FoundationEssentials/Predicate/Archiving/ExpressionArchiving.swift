@@ -176,7 +176,7 @@ extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
             throw DecodingError.dataCorruptedError(forKey: .structure, in: self, debugDescription: "This expression is unsupported by this predicate")
         }
         var state = PredicateArchivingState(configuration: predicateConfiguration)
-        let container = try self.nestedUnkeyedContainer(forKey: .variable)
+        var container = try self.nestedUnkeyedContainer(forKey: .variable)
         return try _ThreadLocal.withValue(&state, for: .predicateArchivingState) {
             let variable = (repeat try container.decode(PredicateExpressions.Variable<each Input>.self))
             return (try decode(exprType), variable)
