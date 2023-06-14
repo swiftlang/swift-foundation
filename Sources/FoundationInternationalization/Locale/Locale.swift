@@ -810,22 +810,12 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     // MARK: - Preferences support (Internal)
 
-    internal var force24Hour: Bool {
+    internal var forceHourCycle: HourCycle? {
         switch kind {
-        case .autoupdating: return LocaleCache.cache.current.force24Hour
-        case .fixed(let l): return l.force24Hour
+        case .autoupdating: return LocaleCache.cache.current.forceHourCycle
+        case .fixed(let l): return l.forceHourCycle
 #if FOUNDATION_FRAMEWORK
-        case .bridged(_): return false
-#endif
-        }
-    }
-
-    internal var force12Hour: Bool {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.force12Hour
-        case .fixed(let l): return l.force12Hour
-#if FOUNDATION_FRAMEWORK
-        case .bridged(_): return false
+        case .bridged(_): return nil
 #endif
         }
     }

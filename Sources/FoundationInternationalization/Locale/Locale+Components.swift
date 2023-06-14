@@ -298,14 +298,10 @@ extension Locale {
         }
 
         private mutating func applyPreferencesOverride(_ locale: Locale) {
-            if hourCycle == nil {
-                if locale.force24Hour {
-                    // Respect 24-hour override if both force24hour and force12hour are true
-                    hourCycle = .zeroToTwentyThree
-                } else if locale.force12Hour {
-                    hourCycle = .oneToTwelve
-                }
+            if hourCycle == nil, let hc = locale.forceHourCycle {
+                hourCycle = hc
             }
+            
             if measurementSystem == nil, let ms = locale.forceMeasurementSystem {
                 measurementSystem = ms
             }

@@ -812,25 +812,7 @@ internal final class _Locale: Sendable, Hashable {
 
     /// Will return nil if the measurement system is not set in the prefs, unlike `measurementSystem` which has a fallback value.
     internal var forceMeasurementSystem: Locale.MeasurementSystem? {
-        if let prefs {
-            let metricPref = prefs.metricUnits
-            let measurementPref = prefs.measurementUnits
-
-            if metricPref == nil && measurementPref == nil {
-                return nil
-            } else if let metricPref, metricPref == true, let measurementPref, measurementPref == .inches {
-                return Locale.MeasurementSystem(UMS_UK)
-            } else if let metricPref, metricPref == false {
-                return Locale.MeasurementSystem(UMS_US)
-            } else if let measurementPref, measurementPref == .centimeters {
-                return Locale.MeasurementSystem(UMS_SI)
-            } else {
-                // There isn't enough info
-                return nil
-            }
-        }
-
-        return nil
+        return prefs?.measurementSystem
     }
 
     internal var measurementSystem: Locale.MeasurementSystem {
@@ -1126,20 +1108,8 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: 24/12 hour
 
-    internal var force24Hour: Bool {
-        if let prefs {
-            return prefs.force24Hour ?? false
-        }
-
-        return false
-    }
-
-    internal var force12Hour: Bool {
-        if let prefs {
-            return prefs.force12Hour ?? false
-        }
-
-        return false
+    var forceHourCycle: Locale.HourCycle? {
+        return prefs?.hourCycle
     }
 
     internal var hourCycle: Locale.HourCycle {
@@ -1155,16 +1125,9 @@ internal final class _Locale: Sendable, Hashable {
                     }
                 }
 
-                if force24Hour {
-                    // Corresponds to the "H" symbol (0-23)
-                    state.hourCycle = .zeroToTwentyThree
-                    return .zeroToTwentyThree
-                }
-
-                if force12Hour {
-                    // Corresponds to the "h" symbol (1-12)
-                    state.hourCycle = .oneToTwelve
-                    return .oneToTwelve
+                if let hourCycleOverride = prefs?.hourCycle {
+                    state.hourCycle = hourCycleOverride
+                    return hourCycleOverride
                 }
 
                 let comps = Locale.Components(identifier: identifier)
@@ -1748,6 +1711,35 @@ internal struct LocalePreferences: Hashable {
         if let other = prefs.force12Hour { self.force12Hour = other }
         if let other = prefs.numberSymbols { self.numberSymbols = other }
         if let other = prefs.dateFormats { self.dateFormats = other }
+    }
+
+    var measurementSystem: Locale.MeasurementSystem? {
+        let metricPref = metricUnits
+        let measurementPref = measurementUnits
+
+        if metricPref == nil && measurementPref == nil {
+            return nil
+        } else if let metricPref, metricPref == true, let measurementPref, measurementPref == .inches {
+            return Locale.MeasurementSystem(UMS_UK)
+        } else if let metricPref, metricPref == false {
+            return Locale.MeasurementSystem(UMS_US)
+        } else if let measurementPref, measurementPref == .centimeters {
+            return Locale.MeasurementSystem(UMS_SI)
+        } else {
+            // There isn't enough info
+            return nil
+        }
+    }
+
+    var hourCycle: Locale.HourCycle? {
+        if let setForce24Hour = force24Hour, setForce24Hour  {
+        // Respect 24-hour override if both force24hour and force12hour are true
+            return .zeroToTwentyThree
+        } else if let setForce12Hour = force12Hour, setForce12Hour {
+            return .oneToTwelve
+        } else {
+            return nil
+        }
     }
 }
 
