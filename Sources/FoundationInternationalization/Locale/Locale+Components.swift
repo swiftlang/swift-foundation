@@ -280,7 +280,8 @@ extension Locale {
             if let id = firstDayOfWeek?.rawValue { keywords[Weekday.legacyKeywordKey] = id }
             if let id = hourCycle?.rawValue { keywords[HourCycle.legacyKeywordKey] = id }
             if let id = measurementSystem?._normalizedIdentifier { keywords[MeasurementSystem.legacyKeywordKey] = id }
-            if let region = region {
+            // No need for redundant region keyword
+            if let region = region, region != languageComponents.region {
                 // rg keyword value is actually a subdivision code
                 keywords[Region.legacyKeywordKey] = Subdivision.subdivision(for: region)._normalizedIdentifier
             }

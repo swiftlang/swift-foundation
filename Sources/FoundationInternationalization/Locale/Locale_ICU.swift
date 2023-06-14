@@ -45,6 +45,7 @@ internal final class _Locale: Sendable, Hashable {
         var subdivision: Locale.Subdivision??
         var timeZone: TimeZone??
         var variant: Locale.Variant??
+        var identifierCapturingPreferences: String?
 
         // If the key is present, the value has been calculated (and the result may or may not be nil).
         var identifierDisplayNames: [String : String?] = [:]
@@ -396,6 +397,46 @@ internal final class _Locale: Sendable, Hashable {
                 state.identifierTypes[type] = identifier
                 return identifier
             }
+        }
+    }
+
+    internal var identifierCapturingPreferences: String {
+        lock.withLock { state in
+            if let result = state.identifierCapturingPreferences {
+                return result
+            }
+
+            guard let prefs else {
+                state.identifierCapturingPreferences = identifier
+                return identifier
+            }
+
+            var components = Locale.Components(identifier: identifier)
+
+            if let id = prefs.collationOrder {
+                components.collation = .init(id)
+            }
+
+            let calendarID = _lockedCalendarIdentifier(&state)
+            if let weekdayNumber = prefs.firstWeekday?[calendarID], let weekday = Locale.Weekday(Int32(weekdayNumber)) {
+                components.firstDayOfWeek = weekday
+            }
+
+            if let country = prefs.country {
+                components.region = .init(country)
+            }
+
+            if let measurementSystem = prefs.measurementSystem {
+                components.measurementSystem = measurementSystem
+            }
+
+            if let hourCycle = prefs.hourCycle {
+                components.hourCycle = hourCycle
+            }
+
+            let completeID = components.identifier
+            state.identifierCapturingPreferences = completeID
+            return completeID
         }
     }
 

@@ -39,7 +39,7 @@ internal class ICUNumberFormatterBase {
         self.skeleton = skeleton
         let ustr = Array(skeleton.utf16)
         var status = U_ZERO_ERROR
-        let formatter = unumf_openForSkeletonAndLocale(ustr, Int32(ustr.count), locale.identifier, &status)
+        let formatter = unumf_openForSkeletonAndLocale(ustr, Int32(ustr.count), locale.identifierCapturingPreferences, &status)
 
         guard let formatter else {
             return nil

@@ -909,6 +909,18 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 #endif
 
+    // Returns an identifier that includes preferences as keywords, such as "en_US@measure=metric" or "en_GB@hours=h12"
+    internal var identifierCapturingPreferences: String {
+        switch kind {
+        case .autoupdating: return LocaleCache.cache.current.identifierCapturingPreferences
+        case .fixed(let l): return l.identifierCapturingPreferences
+#if FOUNDATION_FRAMEWORK
+        case .bridged(let l): return l.identifier
+#endif
+        }
+    }
+
+
     // MARK: -
     //
 

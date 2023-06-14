@@ -332,6 +332,35 @@ final class LocaleTests : XCTestCase {
         XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@aaa=bBb;calendar=gregorian;currency=xyz")
     }
     #endif
+
+    func test_identifierCapturingPreferences() {
+        func expectIdentifier(_ localeIdentifier: String, preferences: LocalePreferences, expectedFullIdentifier: String, file: StaticString = #file, line: UInt = #line) {
+            let locale = Locale.localeAsIfCurrent(name: localeIdentifier, overrides: preferences)
+            XCTAssertEqual(locale.identifier, localeIdentifier, file: file, line: line)
+            XCTAssertEqual(locale.identifierCapturingPreferences, expectedFullIdentifier, file: file, line: line)
+        }
+
+        expectIdentifier("en_US", preferences: .init(metricUnits: true, measurementUnits: .centimeters), expectedFullIdentifier: "en_US@measure=metric")
+        expectIdentifier("en_US", preferences: .init(metricUnits: true, measurementUnits: .inches), expectedFullIdentifier: "en_US@measure=uksystem")
+        expectIdentifier("en_US", preferences: .init(metricUnits: false, measurementUnits: .inches), expectedFullIdentifier: "en_US@measure=ussystem")
+        // We treat it as US system as long as `metricUnits` is false
+        expectIdentifier("en_US", preferences: .init(metricUnits: false, measurementUnits: .centimeters), expectedFullIdentifier: "en_US@measure=ussystem")
+
+        expectIdentifier("en_US", preferences: .init(country: "GB"), expectedFullIdentifier: "en_US@rg=gbzzzz")
+        // Preference's region code is the same as the language code; no need for the specific keyword
+        expectIdentifier("en_US", preferences: .init(country: "US"), expectedFullIdentifier: "en_US")
+
+        expectIdentifier("en_US", preferences: .init(firstWeekday: [.gregorian : 3]), expectedFullIdentifier: "en_US@fw=tue")
+        // en_US locale doesn't use islamic calendar; preference is ignored
+        expectIdentifier("en_US", preferences: .init(firstWeekday: [.islamic : 3]), expectedFullIdentifier: "en_US")
+
+        expectIdentifier("en_US", preferences: .init(force24Hour: true), expectedFullIdentifier: "en_US@hours=h23")
+        expectIdentifier("en_US", preferences: .init(force12Hour: true), expectedFullIdentifier: "en_US@hours=h12")
+
+        // Preferences not representable by locale identifier are ignored
+        expectIdentifier("en_US", preferences: .init(minDaysInFirstWeek: [.gregorian: 7]), expectedFullIdentifier: "en_US")
+        expectIdentifier("en_US", preferences: .init(dateFormats: [.abbreviated: "custom style"]), expectedFullIdentifier: "en_US")
+    }
 }
 
 final class LocalePropertiesTests : XCTestCase {
