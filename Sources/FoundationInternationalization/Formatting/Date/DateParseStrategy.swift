@@ -64,7 +64,7 @@ extension Date {
         }
 
         internal init(formatStyle: Date.FormatStyle, lenient: Bool, twoDigitStartDate: Date = Date(timeIntervalSince1970: 0)) {
-            let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: formatStyle.locale.identifier, calendarIdentifier: formatStyle.calendar.identifier, skeleton: formatStyle.symbols.formatterTemplate, hourCycleOption: .default)
+            let pattern = ICUPatternGenerator.localizedPattern(symbols: formatStyle.symbols, locale: formatStyle.locale, calendar: formatStyle.calendar)
             self.init(format: pattern, locale: formatStyle.locale, timeZone: formatStyle.timeZone, calendar: formatStyle.calendar, isLenient: lenient, twoDigitStartDate: twoDigitStartDate)
         }
     }

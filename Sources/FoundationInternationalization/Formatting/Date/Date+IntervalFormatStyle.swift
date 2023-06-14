@@ -54,29 +54,13 @@ extension Date {
 
         public func format(_ v: Range<Date>) -> String {
             let formatter = Self.cache.formatter(for: self) {
-                let option: ICUPatternGenerator.HourCycleOption?
-                if locale.force24Hour {
-                    option = .force24Hour
-                } else if locale.force12Hour {
-                    option = .force12Hour
-                } else {
-                    option = nil
-                }
+                var template = symbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
 
-                var template: String
-                if let option {
-                    let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: locale.identifier, calendarIdentifier: calendar.identifier, skeleton: symbols.formatterTemplate, hourCycleOption: option)
-                    template = pattern
-                } else {
-                    template = symbols.formatterTemplate
-                }
-
-                // If at this point template is empty, use a default style
                 if template.isEmpty {
                     let defaultSymbols = Date.FormatStyle.DateFieldCollection()
                         .collection(date: .numeric)
                         .collection(time: .shortened)
-                    template = defaultSymbols.formatterTemplate
+                    template = defaultSymbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
                 }
 
                 return ICUDateIntervalFormatter(locale: locale, calendar: calendar, timeZone: timeZone, dateTemplate: template)
