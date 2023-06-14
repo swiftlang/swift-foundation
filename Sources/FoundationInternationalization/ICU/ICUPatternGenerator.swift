@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
 #else
@@ -32,7 +36,7 @@ final class ICUPatternGenerator {
         udatpg_close(upatternGenerator)
     }
 
-    func _patternForSkeleton(_ skeleton: String, hourCycleOption: HourCycleOption) -> String {
+    func _patternForSkeleton(_ skeleton: String, hourCycleOverride: HourCycleOption?) -> String {
         var status = U_ZERO_ERROR
         try! status.checkSuccess()
         let clonedPatternGenerator = udatpg_clone(upatternGenerator, &status)
@@ -43,8 +47,8 @@ final class ICUPatternGenerator {
         let skeletonUChar = Array(skeleton.utf16)
         let pattern = _withResizingUCharBuffer { buffer, size, status in
             let options: UDateTimePatternMatchOptions
-            switch hourCycleOption {
-            case .default:
+            switch hourCycleOverride {
+            case nil:
                 options = UDATPG_MATCH_ALL_FIELDS_LENGTH
             case .force12Hour:
                 options = UDateTimePatternMatchOptions(rawValue: UADATPG_FORCE_12_HOUR_CYCLE.rawValue | UDATPG_MATCH_ALL_FIELDS_LENGTH.rawValue)
@@ -90,10 +94,21 @@ final class ICUPatternGenerator {
 
     static let _patternGeneratorCache = FormatterCache<PatternGeneratorInfo, ICUPatternGenerator>()
 
+    static func localizedPattern(symbols: Date.FormatStyle.DateFieldCollection, locale: Locale, calendar: Calendar) -> String {
+        let upatternGenerator = cachedPatternGenerator(localeIdentifier: locale.identifier, calendarIdentifier: calendar.identifier)
 
-    static func localizedPatternForSkeleton(localeIdentifier: String, calendarIdentifier: Calendar.Identifier, skeleton: String, hourCycleOption: HourCycleOption) -> String {
-        let upatternGenerator = cachedPatternGenerator(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier)
-        return upatternGenerator._patternForSkeleton(skeleton, hourCycleOption: hourCycleOption)
+        let skeleton = symbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
+
+        let resolvedHourCycleOption: HourCycleOption?
+        if locale.force24Hour {
+            resolvedHourCycleOption = .force24Hour
+        } else if locale.force12Hour {
+            resolvedHourCycleOption = .force12Hour
+        } else {
+            resolvedHourCycleOption = nil
+        }
+
+        return upatternGenerator._patternForSkeleton(skeleton, hourCycleOverride: resolvedHourCycleOption)
     }
 
     static func cachedPatternGenerator(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> ICUPatternGenerator {
@@ -102,7 +117,6 @@ final class ICUPatternGenerator {
     }
 
     enum HourCycleOption {
-        case `default`
         case force12Hour
         case force24Hour
     }
