@@ -31,6 +31,39 @@ extension UBool {
     }
 }
 
+extension UDateFormatSymbolType {
+    static let eras = UDAT_ERAS
+    static let months = UDAT_MONTHS
+    static let shortMonths = UDAT_SHORT_MONTHS
+    static let weekdays = UDAT_WEEKDAYS
+    static let shortWeekdays = UDAT_SHORT_WEEKDAYS
+    static let amPMs = UDAT_AM_PMS
+    static let localizedCharacters = UDAT_LOCALIZED_CHARS
+    static let eraNames = UDAT_ERA_NAMES
+    static let narrowMonths = UDAT_NARROW_MONTHS
+    static let narrowWeekdays = UDAT_NARROW_WEEKDAYS
+    static let standaloneMonths = UDAT_STANDALONE_MONTHS
+    static let standaloneShortMonths = UDAT_STANDALONE_SHORT_MONTHS
+    static let standaloneNarrowMonths = UDAT_STANDALONE_NARROW_MONTHS
+    static let standaloneWeekdays = UDAT_STANDALONE_WEEKDAYS
+    static let standaloneShortWeekdays = UDAT_STANDALONE_SHORT_WEEKDAYS
+    static let standaloneNarrowWeekdays = UDAT_STANDALONE_NARROW_WEEKDAYS
+    static let quarters = UDAT_QUARTERS
+    static let shortQuarters = UDAT_SHORT_QUARTERS
+    static let standaloneQuarters = UDAT_STANDALONE_QUARTERS
+    static let standaloneShortQuarters = UDAT_STANDALONE_SHORT_QUARTERS
+    static let shorterWeekdays = UDAT_SHORTER_WEEKDAYS
+    static let standaloneShorterWeekdays = UDAT_STANDALONE_SHORTER_WEEKDAYS
+    static let cyclicYearsWide = UDAT_CYCLIC_YEARS_WIDE
+    static let cyclicYearsAbbreviated = UDAT_CYCLIC_YEARS_ABBREVIATED
+    static let cyclicYearsNarrow = UDAT_CYCLIC_YEARS_NARROW
+    static let zodiacNamesWide = UDAT_ZODIAC_NAMES_WIDE
+    static let zodiacNamesAbbreviated = UDAT_ZODIAC_NAMES_ABBREVIATED
+    static let zodiacNamesNarrow = UDAT_ZODIAC_NAMES_NARROW
+    static let narrowQuarters = UDAT_NARROW_QUARTERS
+    static let standaloneNarrowQuarters = UDAT_STANDALONE_NARROW_QUARTERS
+}
+
 extension UDisplayContext {
     static let beginningOfSentence = UDISPCTX_CAPITALIZATION_FOR_BEGINNING_OF_SENTENCE
     static let listItem = UDISPCTX_CAPITALIZATION_FOR_UI_LIST_OR_MENU

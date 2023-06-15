@@ -191,6 +191,24 @@ final class ICUDateFormatter {
         })
     }
 
+    // MARK: - Getting symbols
+
+    func symbols(for key: UDateFormatSymbolType) -> [String] {
+        let symbolCount = udat_countSymbols(udateFormat, key)
+        var result = [String]()
+        for i in 0 ..< symbolCount {
+            let s = _withResizingUCharBuffer { buffer, size, status in
+                udat_getSymbols(udateFormat, key, i, buffer, size, &status)
+            }
+
+            if let s {
+                result.append(s)
+            }
+        }
+
+        return result
+    }
+
     // -- Caching support
 
     // A Date.VerbatimFormatStyle, Date.FormatStyle and Date.ParseStrategy might be able to share a ICUDateFormatter
@@ -270,6 +288,14 @@ final class ICUDateFormatter {
 
     static func cachedFormatter(for format: Date.VerbatimFormatStyle) -> ICUDateFormatter {
         let info = DateFormatInfo(localeIdentifier: format.locale?.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: format.calendar.identifier, firstWeekday: format.calendar.firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format.formatPattern)
+        return cachedFormatter(for: info)
+    }
+
+    // Returns a formatter to retrieve localized calendar symbols
+    static func cachedFormatter(for calendar: Calendar) -> ICUDateFormatter {
+        // Currently this always uses `.unknown` for capitalization. We should
+        // consider allowing customization with rdar://71815286 
+        let info = DateFormatInfo(localeIdentifier: calendar.locale?.identifier, timeZoneIdentifier: calendar.timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: "")
         return cachedFormatter(for: info)
     }
 }

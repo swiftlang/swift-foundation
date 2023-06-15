@@ -576,12 +576,7 @@ final class CalendarTests : XCTestCase {
         let expected = date.addingTimeInterval(86400*7)
         XCTAssertEqual(oneWeekAfter, expected)
     }
-}
 
-// MARK: - FoundationPreview Disabled Tests
-#if FOUNDATION_FRAMEWORK
-extension CalendarTests {
-    // Re-enable once (Calendar.symbols) is implemented
     func test_symbols() {
         var c = Calendar(identifier: .gregorian)
         // Use english localization
@@ -609,8 +604,57 @@ extension CalendarTests {
         XCTAssertEqual(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], c.standaloneWeekdaySymbols)
         XCTAssertEqual(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], c.weekdaySymbols)
     }
+
+    func test_symbols_not_gregorian() {
+        var c = Calendar(identifier: .hebrew)
+        c.locale = Locale(identifier: "en_US")
+        c.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+
+        XCTAssertEqual("AM", c.amSymbol)
+        XCTAssertEqual("PM", c.pmSymbol)
+        XCTAssertEqual( [ "1st quarter", "2nd quarter", "3rd quarter", "4th quarter" ], c.quarterSymbols)
+        XCTAssertEqual( [ "1st quarter", "2nd quarter", "3rd quarter", "4th quarter" ], c.standaloneQuarterSymbols)
+        XCTAssertEqual( [ "AM" ], c.eraSymbols)
+        XCTAssertEqual( [ "AM" ], c.longEraSymbols)
+        XCTAssertEqual( [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7" ], c.veryShortMonthSymbols)
+        XCTAssertEqual( [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7" ], c.veryShortStandaloneMonthSymbols)
+        XCTAssertEqual( [ "Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II" ], c.shortMonthSymbols)
+        XCTAssertEqual( [ "Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II" ], c.shortStandaloneMonthSymbols)
+        XCTAssertEqual( [ "Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II"  ], c.monthSymbols)
+        XCTAssertEqual( [ "Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul", "Adar II"  ], c.standaloneMonthSymbols)
+        XCTAssertEqual( [ "Q1", "Q2", "Q3", "Q4" ], c.shortQuarterSymbols)
+        XCTAssertEqual( [ "Q1", "Q2", "Q3", "Q4" ], c.shortStandaloneQuarterSymbols)
+        XCTAssertEqual( [ "S", "M", "T", "W", "T", "F", "S" ], c.veryShortStandaloneWeekdaySymbols)
+        XCTAssertEqual( [ "S", "M", "T", "W", "T", "F", "S" ], c.veryShortWeekdaySymbols)
+        XCTAssertEqual( [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ], c.shortStandaloneWeekdaySymbols)
+        XCTAssertEqual( [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ], c.shortWeekdaySymbols)
+        XCTAssertEqual( [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ], c.standaloneWeekdaySymbols)
+        XCTAssertEqual( [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ], c.weekdaySymbols)
+
+        c.locale = Locale(identifier: "es_ES")
+        XCTAssertEqual("a.\u{202f}m.", c.amSymbol)
+        XCTAssertEqual("p.\u{202f}m.", c.pmSymbol)
+        XCTAssertEqual( [ "1.er trimestre", "2.\u{00ba} trimestre", "3.er trimestre", "4.\u{00ba} trimestre" ], c.quarterSymbols)
+        XCTAssertEqual( [ "1.er trimestre", "2.\u{00ba} trimestre", "3.er trimestre", "4.\u{00ba} trimestre" ], c.standaloneQuarterSymbols)
+        XCTAssertEqual( [ "AM" ], c.eraSymbols)
+        XCTAssertEqual( [ "AM" ], c.longEraSymbols)
+        XCTAssertEqual( [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7" ], c.veryShortMonthSymbols)
+        XCTAssertEqual( [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "7" ], c.veryShortStandaloneMonthSymbols)
+        XCTAssertEqual( [ "tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II" ], c.shortMonthSymbols)
+        XCTAssertEqual( [ "tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II" ], c.shortStandaloneMonthSymbols)
+        XCTAssertEqual( [ "tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II" ], c.monthSymbols)
+        XCTAssertEqual( [ "tishri", "heshvan", "kislev", "tevet", "shevat", "adar I", "adar", "nisan", "iyar", "sivan", "tamuz", "av", "elul", "adar II" ], c.standaloneMonthSymbols)
+        XCTAssertEqual( [ "T1", "T2", "T3", "T4" ], c.shortQuarterSymbols)
+        XCTAssertEqual( [ "T1", "T2", "T3", "T4" ], c.shortStandaloneQuarterSymbols)
+        XCTAssertEqual( [ "D", "L", "M", "X", "J", "V", "S" ], c.veryShortStandaloneWeekdaySymbols)
+        XCTAssertEqual( [ "D", "L", "M", "X", "J", "V", "S" ], c.veryShortWeekdaySymbols)
+        XCTAssertEqual( [ "dom", "lun", "mar", "mi\u{00e9}", "jue", "vie", "s\u{00e1}b" ], c.shortStandaloneWeekdaySymbols)
+        XCTAssertEqual( [ "dom", "lun", "mar", "mi\u{00e9}", "jue", "vie", "s\u{00e1}b" ], c.shortWeekdaySymbols)
+        XCTAssertEqual( [ "domingo", "lunes", "martes", "mi\u{00e9}rcoles", "jueves", "viernes", "s\u{00e1}bado" ], c.standaloneWeekdaySymbols)
+        XCTAssertEqual( [ "domingo", "lunes", "martes", "mi\u{00e9}rcoles", "jueves", "viernes", "s\u{00e1}bado" ], c.weekdaySymbols)
+    }
 }
-#endif
+
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
