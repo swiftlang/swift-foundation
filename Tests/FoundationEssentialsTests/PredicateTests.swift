@@ -14,11 +14,8 @@
 import TestSupport
 #endif
 
-// Resolve ambiguity issues between Foundation.Predicate and FoundationEssentials.Predicate
-#if !FOUNDATION_FRAMEWORK
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-public typealias Predicate = FoundationEssentials.Predicate
-#endif
+// Predicate does not back-deploy to older Darwin versions
+#if FOUNDATION_FRAMEWORK || os(Linux) || os(Windows)
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 final class PredicateTests: XCTestCase {
@@ -575,3 +572,5 @@ final class PredicateTests: XCTestCase {
         try assertPredicate(.false, value: "Hello", expected: false)
     }
 }
+
+#endif
