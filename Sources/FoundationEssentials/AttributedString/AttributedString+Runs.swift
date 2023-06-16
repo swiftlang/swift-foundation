@@ -281,13 +281,9 @@ extension AttributedString.Runs: BidirectionalCollection {
     internal subscript(_unchecked i: (runIndex: _InternalRuns.Index, start: BigString.Index)) -> Run {
         let run = _guts.runs[i.runIndex]
         // Clamp the run into the bounds of self, using relative calculations.
-        let lowerBound = (
-            i.start.utf8Offset < _strBounds.lowerBound.utf8Offset
-            ? _guts.string.utf8.index(
-                i.start, offsetBy: _strBounds.lowerBound.utf8Offset - i.start.utf8Offset)
-            : i.start)
-        let length = Swift.min(run.length, _strBounds.upperBound.utf8Offset - i.start.utf8Offset)
-        let upperBound = _guts.string.utf8.index(i.start, offsetBy: length)
+        let lowerBound = Swift.max(i.start, _strBounds.lowerBound)
+        let upperUTF8 = Swift.min(i.start.utf8Offset + run.length, _strBounds.upperBound.utf8Offset)
+        let upperBound = _guts.string.utf8.index(lowerBound, offsetBy: upperUTF8 - lowerBound.utf8Offset)
         return Run(_attributes: run.attributes, lowerBound ..< upperBound, _guts)
     }
 
