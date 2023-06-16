@@ -564,6 +564,18 @@ final class CalendarTests : XCTestCase {
         XCTAssertTrue(c.date(d, matchesComponents: DateComponents(month: 7)))
         XCTAssertFalse(c.date(d, matchesComponents: DateComponents(month: 7, day: 31)))
     }
+
+    func test_addingDeprecatedWeek() throws {
+        let date = try Date("2024-02-24 01:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))
+        var dc = DateComponents()
+        dc.week = 1
+
+        let calendar = Calendar(identifier: .gregorian)
+        let oneWeekAfter = calendar.date(byAdding: dc, to: date)
+
+        let expected = date.addingTimeInterval(86400*7)
+        XCTAssertEqual(oneWeekAfter, expected)
+    }
 }
 
 // MARK: - FoundationPreview Disabled Tests
