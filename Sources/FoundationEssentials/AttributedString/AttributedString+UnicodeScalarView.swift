@@ -261,16 +261,6 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         _guts._finalizeStringMutation(state)
     }
     
-    internal mutating func _setAttributes(
-        in range: Range<BigString.Index>,
-        to attributes: AttributedString._AttributeStorage
-    ) {
-        let utf8Range = range._utf8OffsetRange
-        let run = AttributedString._InternalRun(length: utf8Range.count, attributes: attributes)
-        _guts.runs.replaceUTF8Subrange(utf8Range, with: CollectionOfOne(run))
-        _guts._finalizeAttributeMutation(in: range)
-    }
-    
     public mutating func replaceSubrange(
         _ subrange: Range<Index>, with newElements: some Collection<UnicodeScalar>
     ) {
@@ -294,30 +284,27 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         _ subrange: Range<BigString.Index>, with newElements: some Collection<UnicodeScalar>
     ) {
         _ensureUniqueReference()
-        
+
+        // Determine if this replacement is going to actively change character data by seeing if the
+        // replacement string slice is identical to our own storage. (If it is identical, then we
+        // don't need to touch string storage.)
+        //
+        // Note: this is intentionally not comparing actual string data.
         var hasStringChanges = true
         if let newElements = _specializingCast(newElements, to: BigSubstring.UnicodeScalarView.self) {
-            // Determine if this replacement is going to actively change character data, or if this
-            // is purely an attributes update, by seeing if the replacement string slice is
-            // identical to our own storage. (If it is identical, then we need to update attributes
-            // surrounding the affected bounds in a different way.)
-            //
-            // Note: this is intentionally not comparing actual string data.
             if newElements.isIdentical(to: _unicodeScalars[subrange]) {
                 hasStringChanges = false
             }
         }
-        
-        let attributes = _guts.attributesToUseForTextReplacement(
-            in: subrange,
-            includingCharacterDependentAttributes: !hasStringChanges)
-        
+
+        let attributes = _guts.attributesToUseForTextReplacement(in: subrange)
+
         if hasStringChanges {
             self._mutateStringContents(in: subrange, attributes: attributes) { string, range in
                 string.replaceSubrange(range, with: newElements)
             }
         } else {
-            self._setAttributes(in: subrange, to: attributes)
+            self._guts.setAttributes(attributes, in: subrange)
         }
     }
 

@@ -173,12 +173,10 @@ extension AttributedString._AttributeStorage {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString._AttributeStorage {
-    func attributesForAddedText(includingCharacterDependentAttributes: Bool) -> Self {
+    func attributesForAddedText() -> Self {
         var storage = Self()
         storage.contents = contents.filter {
-            guard $0.value.inheritedByAddedText else { return false }
-            if includingCharacterDependentAttributes { return true }
-            return !$0.value.isInvalidatedOnTextChange
+            $0.value.inheritedByAddedText && !$0.value.isInvalidatedOnTextChange
         }
         // FIXME: Why not set `invalidatableKeys` here?
         return storage

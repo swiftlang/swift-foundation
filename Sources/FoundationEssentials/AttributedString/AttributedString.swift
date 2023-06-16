@@ -165,7 +165,7 @@ extension AttributedString: ExpressibleByStringLiteral {
 extension AttributedString { // AttributedStringAttributeMutation
     public mutating func setAttributes(_ attributes: AttributeContainer) {
         ensureUniqueReference()
-        _guts.setAttributes(attributes, in: _stringBounds)
+        _guts.setAttributes(attributes.storage, in: _stringBounds)
     }
 
     public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributeMergePolicy = .keepNew) {

@@ -107,7 +107,7 @@ extension AttributedSubstring : AttributedStringProtocol {
 
     public mutating func setAttributes(_ attributes: AttributeContainer) {
         ensureUniqueReference()
-        _guts.setAttributes(attributes, in: _range)
+        _guts.setAttributes(attributes.storage, in: _range)
     }
 
     public mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) {

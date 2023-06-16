@@ -25,7 +25,7 @@ extension AttributedString.Runs {
         internal let _attributes: _AttributeStorage
         internal let _range: Range<BigString.Index>
 
-        // FIXME: Why do we need this reference?
+        // FIXME: Remove this and update description to only print attribute values
         internal let _guts: AttributedString.Guts
         
         internal init(

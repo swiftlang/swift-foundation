@@ -374,15 +374,14 @@ extension AttributedString.Guts {
         }
     }
 
-    func setAttributes(_ attributes: AttributeContainer, in range: Range<BigString.Index>) {
-        let new = attributes.storage
+    func setAttributes(_ attributes: _AttributeStorage, in range: Range<BigString.Index>) {
         let utf8Range = unicodeScalarRange(roundingDown: range)._utf8OffsetRange
-        let run = _InternalRun(length: utf8Range.count, attributes: new)
+        let run = _InternalRun(length: utf8Range.count, attributes: attributes)
         self.runs.replaceUTF8Subrange(utf8Range, with: CollectionOfOne(run))
         self.enforceAttributeConstraintsAfterMutation(
             in: utf8Range,
             type: .attributes,
-            constraintsInvolved: attributes.storage.constraintsInvolved)
+            constraintsInvolved: attributes.constraintsInvolved)
     }
 
     func removeAttributeValue<K: AttributedStringKey>(
@@ -436,10 +435,6 @@ extension AttributedString.Guts {
             type: .attributesAndCharacters)
     }
 
-    func _finalizeAttributeMutation(in range: Range<BigString.Index>) {
-        self.enforceAttributeConstraintsAfterMutation(in: range._utf8OffsetRange, type: .attributes)
-    }
-
     func replaceSubrange(
         _ range: Range<BigString.Index>,
         with replacement: some AttributedStringProtocol
@@ -468,14 +463,11 @@ extension AttributedString.Guts {
             _finalizeStringMutation(state)
         } else {
             self.runs.replaceUTF8Subrange(utf8TargetRange, with: replacementRuns)
-            _finalizeAttributeMutation(in: range)
+            self.enforceAttributeConstraintsAfterMutation(in: range._utf8OffsetRange, type: .attributes)
         }
     }
 
-    func attributesToUseForTextReplacement(
-        in range: Range<BigString.Index>,
-        includingCharacterDependentAttributes: Bool
-    ) -> _AttributeStorage {
+    func attributesToUseForTextReplacement(in range: Range<BigString.Index>) -> _AttributeStorage {
         guard !self.string.isEmpty else { return _AttributeStorage() }
 
         var position = range.lowerBound
@@ -485,7 +477,6 @@ extension AttributedString.Guts {
 
         let runIndex = self.runs.index(atUTF8Offset: position.utf8Offset).index
         let attributes = self.runs[runIndex].attributes
-        return attributes.attributesForAddedText(
-            includingCharacterDependentAttributes: includingCharacterDependentAttributes)
+        return attributes.attributesForAddedText()
     }
 }
