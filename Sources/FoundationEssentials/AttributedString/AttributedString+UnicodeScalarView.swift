@@ -286,25 +286,20 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
         _ensureUniqueReference()
 
         // Determine if this replacement is going to actively change character data by seeing if the
-        // replacement string slice is identical to our own storage. (If it is identical, then we
-        // don't need to touch string storage.)
-        //
-        // Note: this is intentionally not comparing actual string data.
+        // replacement string slice is identical to our own storage. If it is identical, then we
+        // don't need to touch string storage, but we still want to update attributes as if it was
+        // a full edit.
         var hasStringChanges = true
-        if let newElements = _specializingCast(newElements, to: BigSubstring.UnicodeScalarView.self) {
-            if newElements.isIdentical(to: _unicodeScalars[subrange]) {
-                hasStringChanges = false
-            }
+        if let newElements = _specializingCast(newElements, to: BigSubstring.UnicodeScalarView.self),
+           newElements.isIdentical(to: _unicodeScalars[subrange]) {
+            hasStringChanges = false
         }
 
         let attributes = _guts.attributesToUseForTextReplacement(in: subrange)
-
-        if hasStringChanges {
-            self._mutateStringContents(in: subrange, attributes: attributes) { string, range in
+        self._mutateStringContents(in: subrange, attributes: attributes) { string, range in
+            if hasStringChanges {
                 string.replaceSubrange(range, with: newElements)
             }
-        } else {
-            self._guts.setAttributes(attributes, in: subrange)
         }
     }
 

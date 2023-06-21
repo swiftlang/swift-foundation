@@ -513,11 +513,17 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         result.characters[result.startIndex] = "H"
         verify(string: result, matches: [("Hello, world", 1, nil)], for: \.testInt, \.testCharacterDependent)
 
-        // But simply assigning a sub-view back to itself should not invalidate any attributes.
-        result = str
-        result.characters[result.startIndex ..< result.index(afterCharacter: result.startIndex)] = str.characters[str.startIndex ..< str.index(afterCharacter: str.startIndex)]
-        verify(string: result, matches: [("Hello, world", 1, 2)], for: \.testInt, \.testCharacterDependent)
-        
+        do {
+            // The same is true when assigning a sub-view back to itself. Even though this doesn't
+            // touch text data at all, and we can quickly determine that we're in this case, we still
+            // want the operation to treat this as an edit. (Unlike the similar operation on
+            // `AttributedString` itself.)
+            result = str
+            let range = result.startIndex ..< result.index(afterCharacter: result.startIndex)
+            result.characters[range] = result.characters[range]
+            verify(string: result, matches: [("Hello, world", 1, nil)], for: \.testInt, \.testCharacterDependent)
+        }
+
         result = str
         result.unicodeScalars.replaceSubrange(result.startIndex ..< result.endIndex, with: ["A", "🎺", "C"])
         verify(string: result, matches: [("A🎺C", 1, nil)], for: \.testInt, \.testCharacterDependent)
