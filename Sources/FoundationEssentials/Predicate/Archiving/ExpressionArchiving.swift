@@ -179,8 +179,9 @@ extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
         var container = try self.nestedUnkeyedContainer(forKey: .variable)
         return try _ThreadLocal.withValue(&state, for: .predicateArchivingState) {
             let variable = (repeat try container.decode(PredicateExpressions.Variable<each Input>.self))
-            return (try decode(exprType), variable)
-        }
+            // Box as an Any to work around compiler bug with closures that return values with pack expansions (rdar://111219086)
+            return (try decode(exprType), variable) as Any
+        } as! (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>))
     }
 }
 
