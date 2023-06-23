@@ -424,13 +424,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         set {
             switch _kind {
             case .fixed:
+                guard newValue != _calendar.locale else {
+                    // Nothing to do
+                    return
+                }
+                
                 if isKnownUniquelyReferenced(&_calendar) {
                     _calendar.locale = newValue ?? Locale.system
                 } else {
                     _calendar = _calendar.copy(changingLocale: newValue)
                 }
             case .autoupdating:
-                // Make a new, non-autoupdating copy
+                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
                 let c = CalendarCache.cache.current
                 _kind = .fixed
                 _calendar = _Calendar(identifier: c.identifier, timeZone: c.timeZone, locale: newValue)
@@ -459,12 +464,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         set {
             switch _kind {
             case .fixed:
+                guard newValue != _calendar.timeZone else {
+                    // Nothing to do
+                    return
+                }
+                
                 if isKnownUniquelyReferenced(&_calendar) {
                     _calendar.timeZone = newValue
                 } else {
                     _calendar = _calendar.copy(changingTimeZone: newValue)
                 }
             case .autoupdating:
+                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
                 let c = CalendarCache.cache.current
                 _kind = .fixed
                 _calendar = _Calendar(identifier: c.identifier, timeZone: newValue, locale: c.locale)
@@ -493,12 +504,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         set {
             switch _kind {
             case .fixed:
+                guard newValue != _calendar.firstWeekday else {
+                    // Nothing to do
+                    return
+                }
+                
                 if isKnownUniquelyReferenced(&_calendar) {
                     _calendar.firstWeekday = newValue
                 } else {
                     _calendar = _calendar.copy(changingFirstWeekday: newValue)
                 }
             case .autoupdating:
+                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
                 let c = CalendarCache.cache.current
                 _kind = .fixed
                 _calendar = _Calendar(identifier: c.identifier, timeZone: c.timeZone, locale: c.locale, firstWeekday: newValue)
@@ -527,12 +544,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         set {
             switch _kind {
             case .fixed:
+                guard newValue != _calendar.minimumDaysInFirstWeek else {
+                    // Nothing to do
+                    return
+                }
+                
                 if isKnownUniquelyReferenced(&_calendar) {
                     _calendar.minimumDaysInFirstWeek = newValue
                 } else {
                     _calendar = _calendar.copy(changingMinimumDaysInFirstWeek: newValue)
                 }
             case .autoupdating:
+                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
                 let c = CalendarCache.cache.current
                 _kind = .fixed
                 _calendar = _Calendar(identifier: c.identifier, timeZone: c.timeZone, locale: c.locale, minimumDaysInFirstWeek: newValue)
