@@ -28,6 +28,7 @@ extension Predicate : CodableWithConfiguration {
     public typealias EncodingConfiguration = PredicateCodableConfiguration
     public typealias DecodingConfiguration = PredicateCodableConfiguration
     
+    @inline(never) // Avoid a compiler crash when inlining this function
     public func encode(to encoder: Encoder, configuration: EncodingConfiguration) throws {
         var container = encoder.unkeyedContainer()
         try container.encodePredicateExpression(expression, variable: repeat each variable.element, predicateConfiguration: configuration)
