@@ -799,7 +799,7 @@ extension JSON5Scanner {
 
         private mutating func skipEscapeSequence(quote: UInt8) throws {
             let firstChar = self.read()
-            precondition(firstChar == ._backslash, "Expected to have an backslash first")
+            precondition(firstChar == ._backslash, "Expected to have a backslash first")
 
             guard let ascii = self.read() else {
                 throw JSONError.unexpectedEndOfFile

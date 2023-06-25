@@ -268,7 +268,7 @@ internal final class ICULegacyNumberFormatter {
                 formatter.setRoundingIncrement(config.roundingIncrement)
 
                 // Decimal and percent style specific attributes
-                if let sign = config.signDisplayStrategy  {
+                if let sign = config.signDisplayStrategy {
                     switch sign.positive {
                     case .always:
                         formatter.setAttribute(.signAlwaysShown, value: true)

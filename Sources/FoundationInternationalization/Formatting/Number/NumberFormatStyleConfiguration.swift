@@ -183,7 +183,7 @@ public enum NumberFormatStyleConfiguration {
             return Precision(option: .integerAndFractionalLength(minInt: minInt, maxInt: maxInt, minFraction: nil, maxFraction: nil))
         }
 
-        public static func integerLength(_ length: Int) -> Self  {
+        public static func integerLength(_ length: Int) -> Self {
             return Precision(option: .integerAndFractionalLength(minInt: length, maxInt: length, minFraction: nil, maxFraction: nil))
         }
 

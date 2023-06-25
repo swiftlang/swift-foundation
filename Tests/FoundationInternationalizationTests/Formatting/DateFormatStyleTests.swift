@@ -629,7 +629,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         }
     }
 
-    func testCodable() throws  {
+    func testCodable() throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
 

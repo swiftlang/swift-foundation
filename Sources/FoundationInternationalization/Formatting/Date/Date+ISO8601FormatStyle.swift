@@ -32,7 +32,7 @@ extension Date {
             case omitted = ""
         }
 
-        public enum DateSeparator : String, Codable, Sendable  {
+        public enum DateSeparator : String, Codable, Sendable {
             case dash = "-"
             case omitted = ""
         }
@@ -150,7 +150,7 @@ extension Date {
 
 
         @_disfavoredOverload
-        public init(dateSeparator: DateSeparator = .dash, dateTimeSeparator: DateTimeSeparator = .standard, timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!)  {
+        public init(dateSeparator: DateSeparator = .dash, dateTimeSeparator: DateTimeSeparator = .standard, timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!) {
             self.dateSeparator = dateSeparator
             self.dateTimeSeparator = dateTimeSeparator
             self.timeZone = timeZone
