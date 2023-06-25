@@ -503,7 +503,9 @@ extension IntegerFormatStyle {
             self.style = .currency(style)
         }
 
-        /// Returns an attributed string with `NumberFormatAttributes.SymbolAttribute` and `NumberFormatAttributes.NumberPartAttribute`.
+        /// Returns an attributed string with `NumberFormatAttributes.SymbolAttribute` and `NumberFormatAttributes.NumberPartAttribute`. Values not representable by `Int64` are clamped.
+        /// - Parameter value: The value to be formatted.
+        /// - Returns: A localized attributed string for the given value.
         public func format(_ value: Value) -> AttributedString {
             // Formatting Int64 is the fastest option -- try that first.
             let numberValue: ICUNumberFormatterBase.Value
