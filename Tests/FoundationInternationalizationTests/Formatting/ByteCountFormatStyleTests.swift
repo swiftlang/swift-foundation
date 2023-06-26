@@ -247,6 +247,6 @@ extension Sequence where Element == Segment {
             }
 
             return attributed
-        }.reduce(AttributedString(), +)
+        }.reduce(into: AttributedString()) { $0 += $1 }
     }
 }

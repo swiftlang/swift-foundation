@@ -42,13 +42,17 @@ public protocol DecodableAttributedStringKey : AttributedStringKey {
 public typealias CodableAttributedStringKey = EncodableAttributedStringKey & DecodableAttributedStringKey
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension EncodableAttributedStringKey where Value : Encodable {
-    static func encode(_ value: Value, to encoder: Encoder) throws { try value.encode(to: encoder) }
+extension EncodableAttributedStringKey where Value : Encodable {
+    public static func encode(_ value: Value, to encoder: Encoder) throws {
+        try value.encode(to: encoder)
+    }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension DecodableAttributedStringKey where Value : Decodable {
-    static func decode(from decoder: Decoder) throws -> Value { return try Value.init(from: decoder) }
+extension DecodableAttributedStringKey where Value : Decodable {
+    public static func decode(from decoder: Decoder) throws -> Value {
+        return try Value.init(from: decoder)
+    }
 }
 
 
@@ -59,19 +63,21 @@ public protocol MarkdownDecodableAttributedStringKey : AttributedStringKey {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension MarkdownDecodableAttributedStringKey {
-    static var markdownName: String { name }
+extension MarkdownDecodableAttributedStringKey {
+    public static var markdownName: String { name }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension MarkdownDecodableAttributedStringKey where Self : DecodableAttributedStringKey {
-    static func decodeMarkdown(from decoder: Decoder) throws -> Value { try Self.decode(from: decoder) }
+extension MarkdownDecodableAttributedStringKey where Self : DecodableAttributedStringKey {
+    public static func decodeMarkdown(from decoder: Decoder) throws -> Value {
+        try Self.decode(from: decoder)
+    }
 }
 
 #if FOUNDATION_FRAMEWORK
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
-    static func encode(_ value: Value, to encoder: Encoder) throws {
+extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
+    public static func encode(_ value: Value, to encoder: Encoder) throws {
         let data = try NSKeyedArchiver.archivedData(withRootObject: value, requiringSecureCoding: true)
         var container = encoder.singleValueContainer()
         try container.encode(data)
@@ -79,8 +85,8 @@ public extension EncodableAttributedStringKey where Value : NSSecureCoding & NSO
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension DecodableAttributedStringKey where Value : NSSecureCoding & NSObject {
-    static func decode(from decoder: Decoder) throws -> Value {
+extension DecodableAttributedStringKey where Value : NSSecureCoding & NSObject {
+    public static func decode(from decoder: Decoder) throws -> Value {
         let container = try decoder.singleValueContainer()
         let data = try container.decode(Data.self)
         guard
@@ -117,9 +123,9 @@ public struct AttributeScopeCodableConfiguration : Sendable {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension AttributeScope {
-    static var encodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
-    static var decodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
+extension AttributeScope {
+    public static var encodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
+    public static var decodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
 }
 
 #if FOUNDATION_FRAMEWORK
@@ -160,7 +166,7 @@ extension AttributedString : CodableWithConfiguration {
     }
 
     public func encode(to encoder: Encoder, configuration: AttributeScopeCodableConfiguration) throws {
-        if self._guts.runs.count == 0 || (self._guts.runs.count == 1 && self._guts.runs[0].attributes.isEmpty) {
+        if self._guts.runs.count == 0 || (self._guts.runs.count == 1 && self._guts.runs.first!.attributes.isEmpty) {
             var container = encoder.singleValueContainer()
             try container.encode(String(self._guts.string))
             return
@@ -178,10 +184,10 @@ extension AttributedString : CodableWithConfiguration {
             attributeTableContainer = topLevelContainer.nestedUnkeyedContainer(forKey: .attributeTable)
         }
 
-        var currentIndex = self.startIndex
+        var currentIndex = self.startIndex._value
         for run in self._guts.runs {
-            let currentEndIndex = self._guts.utf8Index(currentIndex, offsetBy: run.length)
-            let range = (currentIndex ..< currentEndIndex)._bstringRange
+            let currentEndIndex = self._guts.string.utf8.index(currentIndex, offsetBy: run.length)
+            let range = currentIndex ..< currentEndIndex
             let text = String(self._guts.string.unicodeScalars[range])
             try runsContainer.encode(text)
 
@@ -248,11 +254,8 @@ extension AttributedString : CodableWithConfiguration {
         }
 
         var string: BigString = ""
-        var runs = [_InternalRun]()
+        var runs = Rope<_InternalRun>()
         var hasConstrainedAttributes = false
-        if let containerCount = runsContainer.count {
-            runs.reserveCapacity(containerCount / 2)
-        }
         while !runsContainer.isAtEnd {
             let substring = try runsContainer.decode(String.self)
             var attributes: _AttributeStorage
@@ -287,7 +290,8 @@ extension AttributedString : CodableWithConfiguration {
 
             string.append(contentsOf: substring)
             if let previous = runs.last, previous.attributes == attributes {
-                runs[runs.count - 1].length += substring.utf8.count
+                let last = runs.index(before: runs.endIndex)
+                runs[last].length += substring.utf8.count
             } else {
                 runs.append(_InternalRun(length: substring.utf8.count, attributes: attributes))
                 if !hasConstrainedAttributes {
@@ -298,7 +302,7 @@ extension AttributedString : CodableWithConfiguration {
         if runs.isEmpty {
             throw decoder._dataCorruptedError("Runs container must not be empty")
         }
-        self.init(Guts(string: string, runs: runs))
+        self.init(Guts(string: string, runs: _InternalRuns(runs)))
         self._guts.adjustConstrainedAttributesForUntrustedRuns()
     }
 
@@ -354,8 +358,8 @@ extension AttributeContainer : CodableWithConfiguration {
 #endif // FOUNDATION_FRAMEWORK
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension CodableConfiguration where ConfigurationProvider : AttributeScope {
-    init(wrappedValue: T, from keyPath: KeyPath<AttributeScopes, ConfigurationProvider.Type>) {
+extension CodableConfiguration where ConfigurationProvider : AttributeScope {
+    public init(wrappedValue: T, from keyPath: KeyPath<AttributeScopes, ConfigurationProvider.Type>) {
         self.wrappedValue = wrappedValue
     }
 }

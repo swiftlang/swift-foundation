@@ -23,20 +23,34 @@ package import _RopeModule
 extension AttributedString {
     public enum AttributeRunBoundaries : Hashable, Sendable {
         case paragraph
+
+        // FIXME: This is semantically wrong. We do not ever want to constrain attributes on
+        // characters (i.e., grapheme clusters) -- they are way too vague, and way
+        // too eager to accidentally merge with neighboring string data. (And they're also way
+        // too slow for this use case.)
+        //
+        // The entire point of this feature is to anchor attributes that describe attachments like
+        // custom views that should be embedded in the text. We do not _ever_ want the anchor text
+        // to accidentally compose with a subsequent combining character, losing the attachment.
+        //
+        // This needs to be deprecated and replaced by `case unicodeScalar(UnicodeScalar)`.
+        //
+        // The current implementation already works like that -- it ignores all but the first scalar
+        // of the specified `Character`, and does not engage in normalization or grapheme breaking.
         case character(Character)
     }
 }
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension AttributedString.AttributeRunBoundaries {
-    var _isCharacter: Bool {
+    var _isScalarConstrained: Bool {
         if case .character = self { return true }
         return false
     }
 
-    var _constrainedCharacter: Character? {
+    var _constrainedScalar: Unicode.Scalar? {
         switch self {
-        case .character(let char): return char
+        case .character(let char): return char.unicodeScalars.first
         default: return nil
         }
     }
@@ -103,17 +117,17 @@ public protocol AttributedStringKey {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension AttributedStringKey {
-    var description: String { Self.name }
-    
+extension AttributedStringKey {
+    public var description: String { Self.name }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var runBoundaries : AttributedString.AttributeRunBoundaries? { nil }
-    
+    public static var runBoundaries : AttributedString.AttributeRunBoundaries? { nil }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var inheritedByAddedText : Bool { true }
-    
+    public static var inheritedByAddedText : Bool { true }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { nil }
+    public static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { nil }
 }
 
 extension AttributedStringKey {

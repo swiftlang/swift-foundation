@@ -58,20 +58,25 @@ public protocol AttributedStringProtocol
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension AttributedStringProtocol {
-    func settingAttributes(_ attributes: AttributeContainer) -> AttributedString {
+extension AttributedStringProtocol {
+    public func settingAttributes(_ attributes: AttributeContainer) -> AttributedString {
         var new = AttributedString(self)
         new.setAttributes(attributes)
         return new
     }
 
-    func mergingAttributes(_ attributes: AttributeContainer, mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew) -> AttributedString {
+    public func mergingAttributes(
+        _ attributes: AttributeContainer,
+        mergePolicy:  AttributedString.AttributeMergePolicy = .keepNew
+    ) -> AttributedString {
         var new = AttributedString(self)
         new.mergeAttributes(attributes, mergePolicy:  mergePolicy)
         return new
     }
 
-    func replacingAttributes(_ attributes: AttributeContainer, with others: AttributeContainer) -> AttributedString {
+    public func replacingAttributes(
+        _ attributes: AttributeContainer, with others: AttributeContainer
+    ) -> AttributedString {
         var new = AttributedString(self)
         new.replaceAttributes(attributes, with: others)
         return new
@@ -127,31 +132,25 @@ extension AttributedSubstring {
     }
     
     internal var _bounds: Range<AttributedString.Index> {
-        _range
+        let lower = AttributedString.Index(_range.lowerBound)
+        let upper = AttributedString.Index(_range.upperBound)
+        return Range(uncheckedBounds: (lower, upper))
     }
 
     internal var _stringBounds: Range<BigString.Index> {
-        Range(uncheckedBounds: (_range.lowerBound._value, _range.upperBound._value))
+        _range
     }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AttributedStringProtocol {
-    public var description : String {
-        var result = ""
-        let guts = self.__guts
-        guts.enumerateRuns(containing: self._bounds._utf8OffsetRange) { run, loc, _, modified in
-            let range = guts.utf8IndexRange(from: loc ..< loc + run.length)
-            result += (result.isEmpty ? "" : "\n") + "\(String(self.characters[range])) \(run.attributes)"
-            modified = .guaranteedNotModified
-        }
-        return result
+extension AttributedStringProtocol { // CustomStringConvertible
+    public var description: String {
+        __guts.description(in: _stringBounds)
     }
+}
 
-    public func hash(into hasher: inout Hasher) {
-        __guts.characterwiseHash(in: _stringBounds, into: &hasher)
-    }
-
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributedStringProtocol { // Equatable, Hashable
     @_specialize(where Self == AttributedString, RHS == AttributedString)
     @_specialize(where Self == AttributedString, RHS == AttributedSubstring)
     @_specialize(where Self == AttributedSubstring, RHS == AttributedString)
@@ -161,71 +160,80 @@ extension AttributedStringProtocol {
             lhs.__guts, in: lhs._stringBounds,
             to: rhs.__guts, in: rhs._stringBounds)
     }
+
+    public func hash(into hasher: inout Hasher) {
+        __guts.characterwiseHash(in: _stringBounds, into: &hasher)
+    }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public extension AttributedStringProtocol {
-    func index(afterCharacter i: AttributedString.Index) -> AttributedString.Index {
+extension AttributedStringProtocol {
+    public func index(afterCharacter i: AttributedString.Index) -> AttributedString.Index {
         self.characters.index(after: i)
     }
-    func index(beforeCharacter i: AttributedString.Index) -> AttributedString.Index {
+    public func index(beforeCharacter i: AttributedString.Index) -> AttributedString.Index {
         self.characters.index(before: i)
     }
-    func index(_ i: AttributedString.Index, offsetByCharacters distance: Int) -> AttributedString.Index {
+    public func index(_ i: AttributedString.Index, offsetByCharacters distance: Int) -> AttributedString.Index {
         self.characters.index(i, offsetBy: distance)
     }
 
-    func index(afterUnicodeScalar i: AttributedString.Index) -> AttributedString.Index {
+    public func index(afterUnicodeScalar i: AttributedString.Index) -> AttributedString.Index {
         self.unicodeScalars.index(after: i)
     }
-    func index(beforeUnicodeScalar i: AttributedString.Index) -> AttributedString.Index {
+    public func index(beforeUnicodeScalar i: AttributedString.Index) -> AttributedString.Index {
         self.unicodeScalars.index(before: i)
     }
-    func index(_ i: AttributedString.Index, offsetByUnicodeScalars distance: Int) -> AttributedString.Index {
+    public func index(_ i: AttributedString.Index, offsetByUnicodeScalars distance: Int) -> AttributedString.Index {
         self.unicodeScalars.index(i, offsetBy: distance)
     }
 
-    func index(afterRun i: AttributedString.Index) -> AttributedString.Index {
+    public func index(afterRun i: AttributedString.Index) -> AttributedString.Index {
         // Expected semantics: Result is the end of the run that contains `i`.
-        precondition(i < endIndex, "Can't advance beyond end index")
-        precondition(i >= startIndex, "Invalid attributed string index")
-        let (_, range) = self.__guts.run(at: i, clampedBy: self._bounds)
-        assert(i < range.upperBound)
-        return range.upperBound
+        let guts = self.__guts
+        let bounds = self._stringBounds
+        precondition(i._value >= bounds.lowerBound, "Invalid attributed string index")
+        precondition(i._value < bounds.upperBound, "Can't advance beyond end index")
+        let next = guts.index(afterRun: i._value)
+        assert(next > i._value)
+        return AttributedString.Index(Swift.min(next, bounds.upperBound))
     }
 
-    func index(beforeRun i: AttributedString.Index) -> AttributedString.Index {
+    public func index(beforeRun i: AttributedString.Index) -> AttributedString.Index {
         // Expected semantics: result is the start of the run preceding the one that contains `i`.
         // (I.e., `i` needs to get implicitly rounded down to the nearest run boundary before we
         // step back.)
         let guts = self.__guts
-        let bounds = self._bounds
-        precondition(i <= bounds.upperBound, "Invalid attributed string index")
-        precondition(i > bounds.lowerBound, "Can't advance below start index")
-        let prev = guts.utf8Index(before: i)
-        let (_, range) = guts.run(at: prev, clampedBy: bounds)
-        if range.upperBound <= i {
-            // Fast path: `i` already addresses a run boundary.
-            return range.lowerBound
-        }
-        precondition(range.lowerBound > bounds.lowerBound, "Can't advance below start index")
-        let prev2 = guts.utf8Index(before: range.lowerBound)
-        let (_, range2) = guts.run(at: prev2, clampedBy: bounds)
-        assert(range2.upperBound == range.lowerBound)
-        return range2.lowerBound
+        let bounds = self._stringBounds
+        precondition(i._value > bounds.lowerBound, "Can't advance below start index")
+        precondition(i._value <= bounds.upperBound, "Invalid attributed string index")
+        let prev = guts.index(beforeRun: i._value)
+        assert(prev < i._value)
+        return AttributedString.Index(Swift.max(prev, bounds.lowerBound))
     }
 
-    func index(_ i: AttributedString.Index, offsetByRuns distance: Int) -> AttributedString.Index {
-        let runs = self.runs
-        let bounds = self._bounds
+    public func index(_ i: AttributedString.Index, offsetByRuns distance: Int) -> AttributedString.Index {
+        let guts = self.__guts
+        let bounds = self._stringBounds
         precondition(
-            i >= bounds.lowerBound && i <= bounds.upperBound,
+            i._value >= bounds.lowerBound && i._value <= bounds.upperBound,
             "Invalid attributed string index")
-        let runIndex = runs.indexOfRun(at: i)
-        let runIndex2 = runIndex.advanced(by: distance)
-        precondition(runIndex2.rangeIndex <= runs.count, "Attributed string index out of bounds")
-        guard runIndex2.rangeIndex < runs.count else { return self.endIndex }
-        return runs[runIndex2].range.lowerBound
+        let startRun = guts.runs.index(atUTF8Offset: i._value.utf8Offset).index
+        let run = guts.runs.index(startRun, offsetBy: distance)
+        let length = (run == guts.runs.endIndex ? 0 : guts.runs[run].length)
+
+        precondition(
+            bounds.lowerBound.utf8Offset <= run.utf8Offset + length,
+            "Attributed string index out of bounds")
+        if bounds.upperBound.utf8Offset <= run.utf8Offset {
+            let end = guts.runs.index(atUTF8Offset: bounds.upperBound.utf8Offset)
+            let endRunOffset = end.index.offset + (end.remainingUTF8 == 0 ? 0 : 1)
+            precondition(run.offset <= endRunOffset, "Attributed string index out of bounds")
+        }
+
+        let result = guts.string.utf8.index(i._value, offsetBy: run.utf8Offset - i._value.utf8Offset)
+        let clamped = Swift.min(Swift.max(result, bounds.lowerBound), bounds.upperBound)
+        return AttributedString.Index(clamped)
     }
 }
 
