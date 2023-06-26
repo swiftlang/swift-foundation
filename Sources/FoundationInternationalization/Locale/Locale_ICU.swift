@@ -400,6 +400,8 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
+    // This only includes a subset of preferences that are representable by
+    // CLDR keywords: https://www.unicode.org/reports/tr35/#Key_Type_Definitions
     internal var identifierCapturingPreferences: String {
         lock.withLock { state in
             if let result = state.identifierCapturingPreferences {
