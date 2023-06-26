@@ -339,7 +339,6 @@ extension AttributedString {
             _guts = Guts() // Dummy guts to allow in-place mutations
             defer {
                 if substr._identity != ident {
-                    // FIXME: Why is this necessary?
                     fatalError("Mutating an AttributedSubstring by replacing it with another from a different source is unsupported")
                 }
                 _guts = substr._guts

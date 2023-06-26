@@ -30,10 +30,13 @@ extension AttributedString {
         typealias _InternalRuns = AttributedString._InternalRuns
         typealias Storage = Rope<_InternalRun>
 
-        /// The underlying rope of attribute runs.
+        /// The guts of the underlying attributed string.
         var _guts: Guts
 
         /// The UTF-8 offset range of this slice.
+        ///
+        /// We cannot (easily) store actual indices for the bounds -- mutations via `update`
+        /// would invalidate them, and keeping them updated would be too much trouble.
         var _utf8Bounds: Range<Int>
 
         init(_ guts: Guts, utf8Bounds: Range<Int>) {
@@ -45,7 +48,15 @@ extension AttributedString {
 }
 
 extension AttributedString._InternalRunsSlice: BidirectionalCollection {
+    // Note: This is a true bidirectional collection, only supporting step-by-step access.
+    // (It would be possible to implement `index(_:offsetBy:)` in logarithmic time, but we have
+    // no use case for it -- this type is really just used to enumerate/mutate runs one by one
+    // within a certain range.
+
     typealias Element = _InternalRun
+
+    /// Runs slices share index values with their base collection -- even for indices that address
+    /// partial runs on the edges of the slice.
     typealias Index = _InternalRuns.Index
 
     var isEmpty: Bool {
@@ -56,6 +67,12 @@ extension AttributedString._InternalRunsSlice: BidirectionalCollection {
         _guts.runs.index(atUTF8Offset: _utf8Bounds.lowerBound).index
     }
 
+    /// For non-empty slices, we reuse the base collection's endIndex as the slice's end.
+    /// This is O(1) and avoids having to find an index representing the actual end position,
+    /// which would be annoying to do when the bounds slice the last run in two halves.
+    ///
+    /// For empty slices, we need to return the start index to avoid breaking Collection
+    /// expectations.
     var endIndex: Index {
         isEmpty ? startIndex : _guts.runs.endIndex
     }

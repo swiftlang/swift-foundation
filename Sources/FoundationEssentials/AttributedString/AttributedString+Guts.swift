@@ -228,7 +228,7 @@ extension AttributedString.Guts {
         at i: BigString.Index
     ) -> (runIndex: _InternalRuns.Index, start: BigString.Index) {
         let run = self.runs.index(atUTF8Offset: i.utf8Offset)
-        let start = self.string.utf8.index(i, offsetBy: -run.remaining)
+        let start = self.string.utf8.index(i, offsetBy: -run.remainingUTF8)
         return (run.index, start)
     }
 

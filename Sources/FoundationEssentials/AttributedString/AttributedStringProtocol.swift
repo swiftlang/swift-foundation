@@ -227,7 +227,7 @@ extension AttributedStringProtocol {
             "Attributed string index out of bounds")
         if bounds.upperBound.utf8Offset <= run.utf8Offset {
             let end = guts.runs.index(atUTF8Offset: bounds.upperBound.utf8Offset)
-            let endRunOffset = end.index.offset + (end.remaining == 0 ? 0 : 1)
+            let endRunOffset = end.index.offset + (end.remainingUTF8 == 0 ? 0 : 1)
             precondition(run.offset <= endRunOffset, "Attributed string index out of bounds")
         }
 

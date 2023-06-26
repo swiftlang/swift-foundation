@@ -199,7 +199,9 @@ extension AttributedString._InternalRuns {
         return Index(r.index, offset: runOffset, utf8Offset: utf8Offset)
     }
 
-    func index(atUTF8Offset utf8Offset: Int, preferEnd: Bool = false) -> (index: Index, remaining: Int) {
+    func index(
+        atUTF8Offset utf8Offset: Int, preferEnd: Bool = false
+    ) -> (index: Index, remainingUTF8: Int) {
         let r = _rope.find(at: utf8Offset, in: UTF8Metric(), preferEnd: preferEnd)
         let offset = _rope.offset(of: r.index, in: RunMetric())
         return (Index(r.index, offset: offset, utf8Offset: utf8Offset - r.remaining), r.remaining)
@@ -207,13 +209,13 @@ extension AttributedString._InternalRuns {
 
     func _exactIndex(atUTF8Offset utf8Offset: Int) -> Index {
         let r = index(atUTF8Offset: utf8Offset)
-        precondition(r.remaining == 0)
+        precondition(r.remainingUTF8 == 0)
         return r.index
     }
 
-    func index(containing i: AttributedString.Index) -> (index: Index, utf8Offset: Int) {
+    func index(containing i: AttributedString.Index) -> (index: Index, remainingUTF8: Int) {
         let r = index(atUTF8Offset: i._value.utf8Offset)
-        return (r.index, r.remaining)
+        return (r.index, r.remainingUTF8)
     }
 }
 

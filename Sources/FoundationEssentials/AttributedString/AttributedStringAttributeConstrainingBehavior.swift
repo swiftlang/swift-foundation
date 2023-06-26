@@ -38,15 +38,19 @@ extension AttributedString._AttributeStorage {
         return self.contents.values.compactMap(\.runBoundaries)
     }
     
-    fileprivate mutating func matchStyle(of other: Self, for constraint: AttributedString.AttributeRunBoundaries) {
+    fileprivate mutating func matchStyle(of other: Self, for constraint: AttributedString.AttributeRunBoundaries) -> Bool {
+        var modified = false
         for key in self.keys {
             if self[key]?.runBoundaries == constraint && other[key] == nil {
                 self[key] = nil
+                modified = true
             }
         }
         for key in other.keys where other[key]?.runBoundaries == constraint {
             self[key] = other[key]
+            modified = true
         }
+        return modified
     }
 }
 
@@ -107,7 +111,6 @@ extension AttributedString.Guts {
     private func _constrainedAttributes(
         at utf8Offset: Int, with constraint: AttributeRunBoundaries
     ) -> _AttributeStorage {
-        // Don't update the cache, because getting constrained attributes might look backwards very far and we'll just have to iterate the cache back to where we currently are
         let i = runs.index(atUTF8Offset: utf8Offset).index
         return runs[i]
             .attributes
@@ -150,8 +153,8 @@ extension AttributedString.Guts {
         to utf8Range: Range<Int>
     ) {
         let style = _constrainedAttributes(at: utf8Offset, with: type)
-        runs(in: utf8Range).updateEach { attributes, _, _ in
-            attributes.matchStyle(of: style, for: type)
+        runs(in: utf8Range).updateEach { attributes, _, modified in
+            modified = attributes.matchStyle(of: style, for: type)
         }
     }
     
@@ -259,17 +262,19 @@ extension AttributedString.Guts {
             // Attributes are always applied consistently, so we only need to expand outwards and not fix the range of the mutation itself
             let paragraphStyle = _constrainedAttributes(at: utf8Range.lowerBound, with: .paragraph)
             let paragraphRange = _paragraph(in: strRange)._utf8OffsetRange
-            // FIXME: It looks like this assumes that mutated attributes are consistent throughout
-            // FIXME: the mutated range. This expectation should be explicitly documented.
+
+            // Note: This assumes that mutated attributes are consistent throughout
+            // the mutated range. This holds for all current callers -- the mutated attributes tend
+            // to form a single run.
             self.runs(
                 in: paragraphRange.lowerBound ..< utf8Range.lowerBound
-            ).updateEach { attributes, _, _ in
-                attributes.matchStyle(of: paragraphStyle, for: .paragraph)
+            ).updateEach { attributes, _, modified in
+                modified = attributes.matchStyle(of: paragraphStyle, for: .paragraph)
             }
             self.runs(
                 in: utf8Range.upperBound ..< paragraphRange.upperBound
-            ).updateEach { attributes, _, _ in
-                attributes.matchStyle(of: paragraphStyle, for: .paragraph)
+            ).updateEach { attributes, _, modified in
+                modified = attributes.matchStyle(of: paragraphStyle, for: .paragraph)
             }
         } else if type == .attributesAndCharacters {
             // If any character mutations took place, we apply the constrained styles from the start of each paragraph to the remainder of the paragraph
@@ -374,8 +379,8 @@ extension AttributedString.Guts {
         while i < string.endIndex {
             let j = nextParagraphBreak(after: i)
             let paragraphStyle = self._constrainedAttributes(at: i.utf8Offset, with: .paragraph)
-            self.runs(in: i.utf8Offset ..< j.utf8Offset).updateEach { attributes, _, _ in
-                attributes.matchStyle(of: paragraphStyle , for: .paragraph)
+            self.runs(in: i.utf8Offset ..< j.utf8Offset).updateEach { attributes, _, modified in
+                modified = attributes.matchStyle(of: paragraphStyle , for: .paragraph)
             }
             i = j
         }
