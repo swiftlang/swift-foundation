@@ -148,17 +148,17 @@ public extension FormatStyle where Self == Date.IntervalFormatStyle {
 extension Range where Bound == Date {
     
     /// Formats the date range as an interval.
-    func formatted() -> String {
+    public func formatted() -> String {
         return Date.IntervalFormatStyle().format(self)
     }
     
     /// Formats the date range using the specified date and time format styles.
-    func formatted(date: Date.IntervalFormatStyle.DateStyle, time: Date.IntervalFormatStyle.TimeStyle) -> String {
+    public func formatted(date: Date.IntervalFormatStyle.DateStyle, time: Date.IntervalFormatStyle.TimeStyle) -> String {
         return Date.IntervalFormatStyle.init(date: date, time: time).format(self)
     }
     
     /// Formats the date range using the specified style.
-    func formatted<S>(_ style: S) -> S.FormatOutput where S : FormatStyle, S.FormatInput == Range<Date> {
+    public func formatted<S>(_ style: S) -> S.FormatOutput where S : FormatStyle, S.FormatInput == Range<Date> {
         return style.format(self)
     }
     
