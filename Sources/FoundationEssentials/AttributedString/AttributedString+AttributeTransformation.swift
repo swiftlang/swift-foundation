@@ -52,7 +52,7 @@ extension AttributedString {
         key: K.Type
     ) {
         if orig.range != changed.range || orig.attrName != changed.attrName {
-            attrStr._guts.remove(attribute: K.self, in: orig.range) // If the range changed, we need to remove from the old range first.
+            attrStr._guts.removeAttributeValue(forKey: K.self, in: orig.range._bstringRange) // If the range changed, we need to remove from the old range first.
         }
     }
 
@@ -65,9 +65,10 @@ extension AttributedString {
         if orig.range != changed.range || orig.attrName != changed.attrName || orig.attr != changed.attr {
             if let newVal = changed.attr { // Then if there's a new value, we add it in.
                 // Unfortunately, we can't use the attrStr[range].set() provided by the AttributedStringProtocol, because we *don't know* the new type statically!
-                attrStr._guts.add(value: newVal, in: changed.range, key: changed.attrName)
+                attrStr._guts.setAttributeValue(
+                    newVal, forKey: changed.attrName, in: changed.range._bstringRange)
             } else {
-                attrStr._guts.remove(attribute: K.self, in: changed.range) // ???: Is this right? Does changing the range of an attribute==nil run remove it from the new range?
+                attrStr._guts.removeAttributeValue(forKey: K.self, in: changed.range._bstringRange) // ???: Is this right? Does changing the range of an attribute==nil run remove it from the new range?
             }
         }
     }

@@ -30,22 +30,22 @@ extension AttributedString {
         /// same behavior would cause significant trouble for attributed strings, as the data
         /// structure caches the precise positions of grapheme breaks within the string. Allowing
         /// slices to diverge from that would make slicing an O(n) operation.)
-        internal var _range: Range<Index>
+        internal var _range: Range<BigString.Index>
 
         internal var _identity: Int = 0
 
         internal init(_ guts: Guts) {
             _guts = guts
             // The bounds of a whole attributed string are already character-aligned.
-            _range = Range(uncheckedBounds: (guts.startIndex, guts.endIndex))
+            _range = guts.stringBounds
         }
 
-        internal init(_ guts: Guts, in range: Range<Index>) {
+        internal init(_ guts: Guts, in range: Range<BigString.Index>) {
             _guts = guts
             // Forcibly round bounds down to nearest character boundary, to prevent grapheme breaks
             // in a substring from diverging from the base string.
-            let substring = _guts.string[range._bstringRange]
-            _range = Range(uncheckedBounds: (Index(substring.startIndex), Index(substring.endIndex)))
+            let substring = _guts.string[range]
+            _range = Range(uncheckedBounds: (substring.startIndex, substring.endIndex))
         }
         
         public init() {
@@ -81,13 +81,13 @@ extension AttributedString {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.CharacterView {
     internal var _characters: BigSubstring {
-        BigSubstring(_unchecked: _guts.string, in: _range._bstringRange)
+        BigSubstring(_unchecked: _guts.string, in: _range)
     }
 }
 
 extension Slice<AttributedString.CharacterView> {
     internal var _rebased: AttributedString.CharacterView {
-        let bounds = Range(uncheckedBounds: (self.startIndex, self.endIndex))
+        let bounds = Range(uncheckedBounds: (self.startIndex._value, self.endIndex._value))
         return AttributedString.CharacterView(base._guts, in: bounds)
     }
 
@@ -104,11 +104,11 @@ extension AttributedString.CharacterView: BidirectionalCollection {
     public typealias Index = AttributedString.Index
 
     public var startIndex: AttributedString.Index {
-        _range.lowerBound
+        .init(_range.lowerBound)
     }
 
     public var endIndex: AttributedString.Index {
-        _range.upperBound
+        .init(_range.upperBound)
     }
 
     @_alwaysEmitIntoClient
@@ -210,11 +210,12 @@ extension AttributedString.CharacterView: BidirectionalCollection {
             precondition(index >= startIndex && index < endIndex, "AttributedString index out of bounds")
             return _guts.string[index._value]
         }
+        // FIXME: Why is this settable?
         set {
             precondition(index >= startIndex && index < endIndex, "AttributedString index out of bounds")
-            let i = _guts.characterIndex(roundingDown: index)
-            let j = _guts.characterIndex(after: i)
-            self.replaceSubrange(i ..< j, with: String(newValue))
+            let i = _guts.string.index(roundingDown: index._value)
+            let j = _guts.string.index(after: i)
+            self._replaceSubrange(i ..< j, with: String(newValue))
         }
     }
     
@@ -224,9 +225,10 @@ extension AttributedString.CharacterView: BidirectionalCollection {
             precondition(
                 bounds.lowerBound >= startIndex && bounds.upperBound <= endIndex,
                 "AttributedString index range out of bounds")
-            let view = Self(_guts, in: bounds)
-            return Slice(base: view, bounds: view._range)
+            let view = Self(_guts, in: bounds._bstringRange)
+            return Slice(base: view, bounds: Range(uncheckedBounds: (view.startIndex, view.endIndex)))
         }
+        // FIXME: Why is this settable?
         set {
             self.replaceSubrange(bounds, with: newValue)
         }
@@ -242,7 +244,7 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
     }
 
     internal mutating func _mutateStringContents(
-        in range: Range<Index>,
+        in range: Range<BigString.Index>,
         attributes: AttributedString._AttributeStorage,
         with body: (inout BigSubstring, Range<BigString.Index>) -> Void
     ) {
@@ -258,31 +260,20 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         var characters = _characters
         _guts.string = BigString() // Preserve uniqueness
 
-        body(&characters, range._bstringRange)
+        body(&characters, range)
 
         self._guts.string = characters.base
-        let lower = AttributedString.Index(characters.startIndex)
-        let upper = AttributedString.Index(characters.endIndex)
-        self._range = Range(uncheckedBounds: (lower, upper))
+        self._range = Range(uncheckedBounds: (characters.startIndex, characters.endIndex))
 
         // Set attributes for the mutated range.
         let utf8Range = range._utf8OffsetRange
         let utf8Delta = _guts.string.utf8.count - state.oldUTF8Count
         let runLength = utf8Range.count + utf8Delta
         let run = AttributedString._InternalRun(length: runLength, attributes: attributes)
-        _guts.replaceRunsSubrange(locations: utf8Range, with: CollectionOfOne(run))
+        _guts.runs.replaceUTF8Subrange(utf8Range, with: CollectionOfOne(run))
 
         // Invalidate attributes surrounding the affected range. (Phase 2)
         _guts._finalizeStringMutation(state)
-    }
-
-    internal mutating func _setAttributes(
-        in range: Range<Index>,
-        to attributes: AttributedString._AttributeStorage
-    ) {
-        let utf8Range = range._utf8OffsetRange
-        let run = AttributedString._InternalRun(length: utf8Range.count, attributes: attributes)
-        _guts.replaceRunsSubrange(locations: utf8Range, with: CollectionOfOne(run))
     }
 
     public mutating func replaceSubrange(
@@ -292,7 +283,7 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
             subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex,
             "AttributedString index range out of bounds")
         
-        let subrange = _guts.characterRange(roundingDown: subrange)
+        let subrange = _guts.characterRange(roundingDown: subrange._bstringRange)
         
         // Prevent the BigString mutation below from falling back to Character-by-Character loops.
         if let newElements = _specializingCast(newElements, to: Self.self) {
@@ -305,33 +296,25 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
     }
 
     internal mutating func _replaceSubrange(
-        _ subrange: Range<Index>, with newElements: some Collection<Character>
+        _ subrange: Range<BigString.Index>, with newElements: some Collection<Character>
     ) {
         _ensureUniqueReference()
 
+        // Determine if this replacement is going to actively change character data by seeing if the
+        // replacement string slice is identical to our own storage. If it is identical, then we
+        // don't need to touch string storage, but we still want to update attributes as if it was
+        // a full edit.
         var hasStringChanges = true
-        if let newElements = _specializingCast(newElements, to: BigSubstring.self) {
-            // Determine if this replacement is going to actively change character data, or if this
-            // is purely an attributes update, by seeing if the replacement string slice is
-            // identical to our own storage. (If it is identical, then we need to update attributes
-            // surrounding the affected bounds in a different way.)
-            //
-            // Note: this is intentionally not comparing actual string data.
-            if newElements.isIdentical(to: _characters[subrange._bstringRange]) {
-                hasStringChanges = false
-            }
+        if let newElements = _specializingCast(newElements, to: BigSubstring.self),
+           newElements.isIdentical(to: _characters[subrange]) {
+            hasStringChanges = false
         }
 
-        let attributes = _guts.attributesToUseForTextReplacement(
-            in: subrange,
-            includingCharacterDependentAttributes: !hasStringChanges)
-
-        if hasStringChanges {
-            self._mutateStringContents(in: subrange, attributes: attributes) { string, range in
+        let attributes = _guts.attributesToUseForTextReplacement(in: subrange)
+        self._mutateStringContents(in: subrange, attributes: attributes) { string, range in
+            if hasStringChanges {
                 string.replaceSubrange(range, with: newElements)
             }
-        } else {
-            self._setAttributes(in: subrange, to: attributes)
         }
     }
 
