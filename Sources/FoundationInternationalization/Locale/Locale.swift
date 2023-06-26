@@ -1080,7 +1080,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     @available(watchOS, deprecated: 9, renamed: "identifier(_:from:)")
     public static func canonicalIdentifier(from string: String) -> String {
 #if FOUNDATION_FRAMEWORK
-        CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorSystemDefault, string as CFString).rawValue as String
+        return _canonicalLocaleIdentifier(from: string)
 #else
         // TODO: (Locale.canonicalIdentifier) implement in Swift: https://github.com/apple/swift-foundation/issues/45
         return string
