@@ -244,7 +244,7 @@ extension PredicateExpressions.KeyPath {
         return Self.kind(keyPath, collectionType: collectionType)
     }
     
-    private static func kind<C: Collection, Root>(_ anyKP: PartialKeyPath<Root>, collectionType: C.Type) -> CommonKeyPathKind? {
+    private static func kind<C: Collection>(_ anyKP: AnyKeyPath, collectionType: C.Type) -> CommonKeyPathKind? {
         let kp = anyKP as! PartialKeyPath<C>
         switch kp {
         case \String.count, \Substring.count, \Array<C.Element>.count:
