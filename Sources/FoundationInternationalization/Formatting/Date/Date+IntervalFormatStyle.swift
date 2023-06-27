@@ -143,3 +143,24 @@ public extension FormatStyle where Self == Date.IntervalFormatStyle {
         return Date.IntervalFormatStyle()
     }
 }
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Range where Bound == Date {
+    
+    /// Formats the date range as an interval.
+    public func formatted() -> String {
+        Date.IntervalFormatStyle().format(self)
+    }
+    
+    /// Formats the date range using the specified date and time format styles.
+    public func formatted(date: Date.IntervalFormatStyle.DateStyle, time: Date.IntervalFormatStyle.TimeStyle) -> String {
+        Date.IntervalFormatStyle(date: date, time: time).format(self)
+    }
+    
+    /// Formats the date range using the specified style.
+    public func formatted<S>(_ style: S) -> S.FormatOutput where S : FormatStyle, S.FormatInput == Range<Date> {
+        style.format(self)
+    }
+    
+}
+
