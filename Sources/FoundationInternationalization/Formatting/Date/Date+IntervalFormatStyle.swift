@@ -149,17 +149,17 @@ extension Range where Bound == Date {
     
     /// Formats the date range as an interval.
     public func formatted() -> String {
-        return Date.IntervalFormatStyle().format(self)
+        Date.IntervalFormatStyle().format(self)
     }
     
     /// Formats the date range using the specified date and time format styles.
     public func formatted(date: Date.IntervalFormatStyle.DateStyle, time: Date.IntervalFormatStyle.TimeStyle) -> String {
-        return Date.IntervalFormatStyle.init(date: date, time: time).format(self)
+        Date.IntervalFormatStyle(date: date, time: time).format(self)
     }
     
     /// Formats the date range using the specified style.
     public func formatted<S>(_ style: S) -> S.FormatOutput where S : FormatStyle, S.FormatInput == Range<Date> {
-        return style.format(self)
+        style.format(self)
     }
     
 }
