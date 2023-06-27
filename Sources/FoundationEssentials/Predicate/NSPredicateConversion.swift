@@ -111,7 +111,14 @@ private func _expressionCompatibleValue(for value: Any) throws -> Any? {
     switch value {
     case Optional<Any>.none:
         return nil
-    case _ as String, _ as Bool, _ as any Numeric, _ as UUID, _ as Date, _ as Data:
+    // Handle supported value types
+    case is String, is UUID, is Date, is Data:
+        return value
+    // Handle supported numeric types
+    case is Int, is Int8, is Int16, is Int32, is Int64,
+        is UInt, is UInt8, is UInt16, is UInt32, is UInt64,
+        is Float, is CGFloat, is Decimal, is Double,
+        is Bool:
         return value
     case let c as Character:
         return String(c)
