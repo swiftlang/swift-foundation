@@ -810,22 +810,12 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     // MARK: - Preferences support (Internal)
 
-    internal var force24Hour: Bool {
+    internal var forceHourCycle: HourCycle? {
         switch kind {
-        case .autoupdating: return LocaleCache.cache.current.force24Hour
-        case .fixed(let l): return l.force24Hour
+        case .autoupdating: return LocaleCache.cache.current.forceHourCycle
+        case .fixed(let l): return l.forceHourCycle
 #if FOUNDATION_FRAMEWORK
-        case .bridged(_): return false
-#endif
-        }
-    }
-
-    internal var force12Hour: Bool {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.force12Hour
-        case .fixed(let l): return l.force12Hour
-#if FOUNDATION_FRAMEWORK
-        case .bridged(_): return false
+        case .bridged(_): return nil
 #endif
         }
     }
@@ -918,6 +908,18 @@ public struct Locale : Hashable, Equatable, Sendable {
         }
     }
 #endif
+
+    // Returns an identifier that includes preferences as keywords, such as "en_US@measure=metric" or "en_GB@hours=h12"
+    internal var identifierCapturingPreferences: String {
+        switch kind {
+        case .autoupdating: return LocaleCache.cache.current.identifierCapturingPreferences
+        case .fixed(let l): return l.identifierCapturingPreferences
+#if FOUNDATION_FRAMEWORK
+        case .bridged(let l): return l.identifier
+#endif
+        }
+    }
+
 
     // MARK: -
     //
