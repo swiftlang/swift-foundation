@@ -36,7 +36,7 @@ final class ICUPatternGenerator {
         udatpg_close(upatternGenerator)
     }
 
-    func _patternForSkeleton(_ skeleton: String, hourCycleOverride: HourCycleOption?) -> String {
+    func _patternForSkeleton(_ skeleton: String, hourCycleOverride: Locale.HourCycle?) -> String {
         var status = U_ZERO_ERROR
         try! status.checkSuccess()
         let clonedPatternGenerator = udatpg_clone(upatternGenerator, &status)
@@ -50,9 +50,9 @@ final class ICUPatternGenerator {
             switch hourCycleOverride {
             case nil:
                 options = UDATPG_MATCH_ALL_FIELDS_LENGTH
-            case .force12Hour:
+            case .zeroToEleven, .oneToTwelve:
                 options = UDateTimePatternMatchOptions(rawValue: UADATPG_FORCE_12_HOUR_CYCLE.rawValue | UDATPG_MATCH_ALL_FIELDS_LENGTH.rawValue)
-            case .force24Hour:
+            case .zeroToTwentyThree, .oneToTwentyFour:
                 options = UDateTimePatternMatchOptions(rawValue: UADATPG_FORCE_24_HOUR_CYCLE.rawValue | UDATPG_MATCH_ALL_FIELDS_LENGTH.rawValue)
             }
 
@@ -98,26 +98,11 @@ final class ICUPatternGenerator {
         let upatternGenerator = cachedPatternGenerator(localeIdentifier: locale.identifier, calendarIdentifier: calendar.identifier)
 
         let skeleton = symbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
-
-        let resolvedHourCycleOption: HourCycleOption?
-        if locale.force24Hour {
-            resolvedHourCycleOption = .force24Hour
-        } else if locale.force12Hour {
-            resolvedHourCycleOption = .force12Hour
-        } else {
-            resolvedHourCycleOption = nil
-        }
-
-        return upatternGenerator._patternForSkeleton(skeleton, hourCycleOverride: resolvedHourCycleOption)
+        return upatternGenerator._patternForSkeleton(skeleton, hourCycleOverride: locale.forceHourCycle)
     }
 
     static func cachedPatternGenerator(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> ICUPatternGenerator {
         let patternInfo = PatternGeneratorInfo(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier)
         return _patternGeneratorCache.formatter(for: patternInfo, creator: patternInfo.createNSICUPatternGenerator)
-    }
-
-    enum HourCycleOption {
-        case force12Hour
-        case force24Hour
     }
 }

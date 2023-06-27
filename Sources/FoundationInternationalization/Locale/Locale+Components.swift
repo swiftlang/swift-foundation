@@ -280,7 +280,8 @@ extension Locale {
             if let id = firstDayOfWeek?.rawValue { keywords[Weekday.legacyKeywordKey] = id }
             if let id = hourCycle?.rawValue { keywords[HourCycle.legacyKeywordKey] = id }
             if let id = measurementSystem?._normalizedIdentifier { keywords[MeasurementSystem.legacyKeywordKey] = id }
-            if let region = region {
+            // No need for redundant region keyword
+            if let region = region, region != languageComponents.region {
                 // rg keyword value is actually a subdivision code
                 keywords[Region.legacyKeywordKey] = Subdivision.subdivision(for: region)._normalizedIdentifier
             }
@@ -298,14 +299,10 @@ extension Locale {
         }
 
         private mutating func applyPreferencesOverride(_ locale: Locale) {
-            if hourCycle == nil {
-                if locale.force24Hour {
-                    // Respect 24-hour override if both force24hour and force12hour are true
-                    hourCycle = .zeroToTwentyThree
-                } else if locale.force12Hour {
-                    hourCycle = .oneToTwelve
-                }
+            if hourCycle == nil, let hc = locale.forceHourCycle {
+                hourCycle = hc
             }
+            
             if measurementSystem == nil, let ms = locale.forceMeasurementSystem {
                 measurementSystem = ms
             }
