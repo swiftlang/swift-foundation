@@ -211,7 +211,7 @@ final class ICUDateFormatter {
 
     // -- Caching support
 
-    // A Date.VerbatimFormatStyle, Date.FormatStyle and Date.ParseStrategy might be able to share a ICUDateFormatter
+    // A Date.VerbatimFormatStyle, Date.FormatStyle and Date.ParseStrategy might be able to share an ICUDateFormatter
     struct DateFormatInfo: Hashable {
         // Use the bare identifier for locale, time zone and calendar instead of instances of their type so that `.current` and `.autoupdatingCurrent` special instances behaves the same as normal "fixed" ones.
         var localeIdentifier: String
@@ -264,7 +264,7 @@ final class ICUDateFormatter {
             } else {
                 var pattern = ICUPatternGenerator.localizedPattern(symbols: format.symbols, locale: format.locale, calendar: format.calendar)
                 if let dateStyle = format._dateStyle, let datePatternOverride = format.locale.customDateFormat(dateStyle) {
-                    // substitue date part from pattern with customDatePattern
+                    // substitute date part from pattern with customDatePattern
                     let datePattern = ICUPatternGenerator.localizedPattern(symbols: format.symbols.dateFields, locale: format.locale, calendar: format.calendar)
                     pattern.replace(datePattern, with: datePatternOverride)
                 }
