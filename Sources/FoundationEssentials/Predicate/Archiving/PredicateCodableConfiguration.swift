@@ -372,6 +372,7 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(PredicateExpressions.ForceCast<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.ForceCast")
         configuration.allowPartialType(PredicateExpressions.TypeCheck<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.TypeCheck")
         configuration.allowPartialType(PredicateExpressions.UnaryMinus<PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.UnaryMinus")
+        configuration.allowPartialType(PredicateExpressions.NilLiteral<Int>.self, identifier: "PredicateExpressions.NilLiteral")
         
         configuration.allowPartialType(PredicateExpressions.KeyPath<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.KeyPath")
         configuration.allowPartialType(PredicateExpressions.Variable<Int>.self, identifier: "PredicateExpressions.Variable")
