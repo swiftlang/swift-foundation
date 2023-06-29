@@ -24,7 +24,7 @@ extension String {
         for scalar in unicodeScalars {
             let properties = scalar.properties
             if uppercaseSet.contains(scalar) {
-                new += isLastCased ? properties.lowercaseMapping  : String(scalar)
+                new += isLastCased ? properties.lowercaseMapping : String(scalar)
                 isLastCased = true
             } else if lowercaseSet.contains(scalar) {
                 new += isLastCased ? String(scalar) : properties.titlecaseMapping

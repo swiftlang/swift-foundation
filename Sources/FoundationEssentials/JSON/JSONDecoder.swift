@@ -299,7 +299,7 @@ open class JSONDecoder {
 
     /// Set to `true` to assume the data is a top level Dictionary (no surrounding "{ }" required). Defaults to `false`. Compatible with both JSON5 and non-JSON5 mode.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    open var assumesTopLevelDictionary: Bool  {
+    open var assumesTopLevelDictionary: Bool {
         get {
             userInfo[assumesTopLevelDictionaryKey] as? Bool ?? false
         }

@@ -104,7 +104,7 @@ extension _StringCompareOptionsIterable {
         var value = initialValue
         while i < endIndex {
             let c = self[i]
-            guard let num = c.intValue else  {
+            guard let num = c.intValue else {
                 break
             }
             // equivalent to `value = value * 10 + num` but considering overflow
@@ -194,7 +194,7 @@ extension _StringCompareOptionsIterable {
                 }
             }
 
-            if c1 != c2  {
+            if c1 != c2 {
                 if !(toHalfWidth || diacriticsInsensitive || caseFold) {
                     return ComparisonResult(c1, c2)
                 }

@@ -63,7 +63,7 @@ extension BidirectionalCollection {
     func _index<S: BidirectionalCollection>(_ index: Index, backwardsOffsetByCountOf other: S) -> Index? {
         var idx = index
         var otherIdx = other.endIndex
-        while otherIdx > other.startIndex  {
+        while otherIdx > other.startIndex {
             guard idx > startIndex else {
                 // other.count > self.count: bail
                 return nil
