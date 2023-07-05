@@ -18,7 +18,10 @@ let package = Package(
             revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
         .package(
             url: "https://github.com/apple/swift-foundation-icu",
-            revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad")
+            revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
+        .package(
+            url: "https://github.com/apple/swift-format.git",
+            branch: "main")
     ],
     targets: [
         // Foundation (umbrella)
@@ -70,6 +73,30 @@ let package = Package(
                 .enableExperimentalFeature("AccessLevelOnImport")
             ]
         ),
+
+        // Plugins
+        .plugin(
+            name: "FoundationPreviewLinter",
+            capability: .command(
+                intent: .custom(verb: "lint", description: "Lint the source code"),
+                permissions: []
+            ),
+            dependencies: [
+                .product(name: "swift-format", package: "swift-format")
+            ]
+        ),
+        .plugin(
+            name: "FoundationPreviewFormatter",
+            capability: .command(
+                intent: .custom(verb: "format", description: "Format the source code in place"),
+                permissions: [
+                    .writeToPackageDirectory(reason: "This command formats source files in place.")
+                ]
+            ),
+            dependencies: [
+                .product(name: "swift-format", package: "swift-format")
+            ]
+        )
     ]
 )
 

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if ! command -v swift &> /dev/null; then
+    echo "Swift is not installed. Skip linting..."
+    exit 0
+fi
+
+echo "\033[0;32mLinting $(pwd)...\033[0m" >&2
+
+swift package lint
