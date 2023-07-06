@@ -337,6 +337,12 @@ extension PredicateExpressions.SequenceStartsWith : ConvertibleExpression where 
     }
 }
 
+extension PredicateExpressions.NilLiteral : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        .expression(NSExpression(forConstantValue: nil))
+    }
+}
+
 private protocol OverwritingInitializable {
     init(existing: Self)
 }

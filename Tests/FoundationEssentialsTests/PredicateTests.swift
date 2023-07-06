@@ -372,6 +372,19 @@ final class PredicateTests: XCTestCase {
         XCTAssert(try predicate2.evaluate(Wrapper<Int>(wrapped: 19)))
         XCTAssertThrowsError(try predicate2.evaluate(Wrapper<Int>(wrapped: nil)))
         
+        struct _NonCodableType : Equatable {}
+        let predicate3 = Predicate<Wrapper<_NonCodableType>> {
+            // $0.wrapped == nil
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.wrapped
+                ),
+                rhs: PredicateExpressions.build_NilLiteral()
+            )
+        }
+        XCTAssertFalse(try predicate3.evaluate(Wrapper(wrapped: _NonCodableType())))
+        XCTAssertTrue(try predicate3.evaluate(Wrapper(wrapped: nil)))
     }
     
     #if false // TODO: Re-enable with Variadic Generics

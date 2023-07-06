@@ -433,6 +433,20 @@ final class NSPredicateConversionTests: XCTestCase {
         converted = NSPredicate(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "TERNARY(TERNARY(j != nil, j.length, nil) != nil, TERNARY(j != nil, j.length, nil), -1) > 1"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        
+        predicate = Predicate<ObjCObject> {
+            // $0.j == nil
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.j
+                ),
+                rhs: PredicateExpressions.build_NilLiteral()
+            )
+        }
+        converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "j == nil"))
+        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
     
     func testUUID() {

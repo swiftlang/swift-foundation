@@ -173,3 +173,27 @@ extension PredicateExpressions.NilCoalesce : Sendable where LHS : Sendable, RHS 
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ForcedUnwrap : Sendable where Inner : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions {
+    public struct NilLiteral<Wrapped> : StandardPredicateExpression, Codable, Sendable {
+        public typealias Output = Optional<Wrapped>
+        
+        public init() {}
+        
+        public func evaluate(_ bindings: PredicateBindings) throws -> Output {
+            nil
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encodeNil()
+        }
+        
+        public init(from decoder: Decoder) throws {}
+    }
+    
+    public static func build_NilLiteral<Wrapped>() -> NilLiteral<Wrapped> {
+        NilLiteral()
+    }
+}
