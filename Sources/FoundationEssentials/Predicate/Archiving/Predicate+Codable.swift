@@ -28,19 +28,20 @@ extension Predicate : CodableWithConfiguration {
     public typealias EncodingConfiguration = PredicateCodableConfiguration
     public typealias DecodingConfiguration = PredicateCodableConfiguration
     
+    @inline(never) // Avoid a compiler crash when inlining this function
     public func encode(to encoder: Encoder, configuration: EncodingConfiguration) throws {
         var container = encoder.unkeyedContainer()
-        try container.encodePredicateExpression(expression, variables: variable, predicateConfiguration: configuration)
+        try container.encodePredicateExpression(expression, variable: repeat each variable.element, predicateConfiguration: configuration)
     }
     
     public init(from decoder: Decoder, configuration: DecodingConfiguration) throws {
         var container = try decoder.unkeyedContainer()
-        let result = try container.decodePredicateExpression(inputs: Input.self, predicateConfiguration: configuration)
+        let result = try container.decodePredicateExpression(input: repeat (each Input).self, predicateConfiguration: configuration)
         guard let trueExpression = result.expression as? any StandardPredicateExpression<Bool> else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "This expression is unsupported by this predicate")
         }
         self.expression = trueExpression
-        self.variable = result.variables
+        self.variable = result.variable
     }
 }
 

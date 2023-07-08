@@ -14,6 +14,9 @@
 import TestSupport
 #endif
 
+// Predicate does not back-deploy to older Darwin versions
+#if FOUNDATION_FRAMEWORK || os(Linux) || os(Windows)
+
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 final class PredicateTests: XCTestCase {
     
@@ -49,11 +52,9 @@ final class PredicateTests: XCTestCase {
         try XCTAssertTrue(predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
-    #if false // TODO: Re-enable with Variadic Generics
-    func testVariable() throws {
-        let variable = PredicateExpressions.Variable<Int>()
-        let predicate = Predicate<Object> {
-            // $0.a == variable + 1
+    func testVariadic() throws {
+        let predicate = Predicate<Object, Int> {
+            // $0.a == $1 + 1
             PredicateExpressions.build_Equal(
                 lhs: PredicateExpressions.build_Arg(
                     PredicateExpressions.build_KeyPath(
@@ -63,16 +64,15 @@ final class PredicateTests: XCTestCase {
                 ),
                 rhs: PredicateExpressions.build_Arg(
                     PredicateExpressions.build_Arithmetic(
-                        lhs: PredicateExpressions.build_Arg(variable),
+                        lhs: PredicateExpressions.build_Arg($1),
                         rhs: PredicateExpressions.build_Arg(1),
                         op: .add
                     )
                 )
             )
         }
-        XCTAssert(try predicate.evaluate(Object(a: 3, b: "", c: 0, d: 0, e: "c", f: true, g: []), bindings: PredicateBindings().binding(variable, to: 2)))
+        XCTAssert(try predicate.evaluate(Object(a: 3, b: "", c: 0, d: 0, e: "c", f: true, g: []), 2))
     }
-    #endif
     
     func testArithmetic() throws {
         let predicate = Predicate<Object> {
@@ -387,26 +387,22 @@ final class PredicateTests: XCTestCase {
         XCTAssertTrue(try predicate3.evaluate(Wrapper(wrapped: nil)))
     }
     
-    #if false // TODO: Re-enable with Variadic Generics
     func testConditional() throws {
-        let v1 = PredicateExpressions.Variable<String>()
-        let v2 = PredicateExpressions.Variable<String>()
-        let predicate = Predicate<Bool> {
-            // ($0 ? v1 : v2) == "if branch"
+        let predicate = Predicate<Bool, String, String> {
+            // ($0 ? $1 : $2) == "if branch"
             PredicateExpressions.build_Equal(
                 lhs: PredicateExpressions.build_Arg(
                     PredicateExpressions.build_Conditional(
                         $0,
-                        PredicateExpressions.build_Arg(v1),
-                        PredicateExpressions.build_Arg(v2)
+                        PredicateExpressions.build_Arg($1),
+                        PredicateExpressions.build_Arg($2)
                     )
                 ),
                 rhs: PredicateExpressions.build_Arg("if branch")
             )
         }
-        XCTAssert(try predicate.evaluate(true, bindings: PredicateBindings().binding(v1, to: "if branch").binding(v2, to: "else branch")))
+        XCTAssert(try predicate.evaluate(true, "if branch", "else branch"))
     }
-    #endif
     
     func testClosedRange() throws {
         let predicate = Predicate<Object> {
@@ -589,3 +585,5 @@ final class PredicateTests: XCTestCase {
         try assertPredicate(.false, value: "Hello", expected: false)
     }
 }
+
+#endif

@@ -358,7 +358,8 @@ extension NSPredicate : OverwritingInitializable {}
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension NSPredicate {
     public convenience init?<Input>(_ predicate: Predicate<Input>) where Input : NSObject {
-        var state = NSPredicateConversionState(object: predicate.variable.key)
+        let variable = predicate.variable
+        var state = NSPredicateConversionState(object: variable.key)
         guard let converted = try? predicate.expression.convertToPredicate(state: &state) else {
             return nil
         }
