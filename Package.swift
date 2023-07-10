@@ -20,8 +20,8 @@ let package = Package(
             url: "https://github.com/apple/swift-foundation-icu",
             revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
         .package(
-            url: "https://github.com/apple/swift-format.git",
-            branch: "main")
+            url: "https://github.com/nicklockwood/SwiftFormat",
+            from: "0.51.12"),
     ],
     targets: [
         // Foundation (umbrella)
@@ -82,7 +82,7 @@ let package = Package(
                 permissions: []
             ),
             dependencies: [
-                .product(name: "swift-format", package: "swift-format")
+                .product(name: "swiftformat", package: "SwiftFormat")
             ]
         ),
         .plugin(
@@ -94,7 +94,7 @@ let package = Package(
                 ]
             ),
             dependencies: [
-                .product(name: "swift-format", package: "swift-format")
+                .product(name: "swiftformat", package: "SwiftFormat")
             ]
         )
     ]

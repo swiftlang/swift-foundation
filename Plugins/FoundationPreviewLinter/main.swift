@@ -15,9 +15,9 @@ import Foundation
 @main
 struct FoundationPreviewLinter : CommandPlugin {
     func performCommand(context: PluginContext, arguments: [String]) async throws {
-        let swiftFormatTool = try context.tool(named: "swift-format")
+        let swiftFormatTool = try context.tool(named: "swiftformat")
         let toolExecURL = URL(fileURLWithPath: swiftFormatTool.path.string)
-        let configFile = context.package.directory.appending(["linter-rules.json"])
+        let configFile = context.package.directory.appending(["linter-rules"])
 
         for target in context.package.targets {
             guard let sourceTarget = target as? SourceModuleTarget else {
@@ -25,11 +25,10 @@ struct FoundationPreviewLinter : CommandPlugin {
             }
 
             let arguments = [
-                "lint",
-                "--recursive",
-                "--parallel",
-                "--strict",
-                "--configuration",
+                "--lint",
+                "--cache",
+                "ignore",
+                "--config",
                 "\(configFile)",
                 "\(sourceTarget.directory)",
             ]

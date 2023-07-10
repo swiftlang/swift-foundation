@@ -1,0 +1,58 @@
+# file options
+
+--swiftversion 5.9
+--exclude .build
+
+# Rules
+--disable all
+--enable anyObjectProtocol
+--enable isEmpty
+--enable assertionFailures
+--enable blankLineAfterImports
+--enable blankLinesAtEndOfScope
+--enable blankLinesBetweenScopes
+--enable consecutiveBlankLines
+--enable consecutiveSpaces
+--enable duplicateImports
+--enable emptyBraces
+--enable linebreakAtEndOfFile
+--enable redundantBreak
+--enable spaceAroundBraces
+--enable spaceAroundBrackets
+--enable spaceAroundComments
+--enable spaceAroundParens
+--enable spaceInsideBraces
+--enable spaceInsideBrackets
+--enable spaceInsideComments
+--enable spaceInsideGenerics
+--enable spaceInsideParens
+
+# Rules with options
+--enable indent
+--indent 4
+--ifdef no-indent
+
+--enable wrapAttributes
+--funcattributes prev-line
+--typeattributes prev-line
+--varattributes same-line
+
+--enable trailingCommas
+--commas always
+
+--enable elseOnSameLine
+--elseposition same-line
+--guardelse auto
+
+--enable wrap
+--maxwidth none
+
+--enable spaceAroundOperators
+--operatorfunc spaced
+--ranges spaced
+
+--enable trailingSpace
+--trimwhitespace always
+
+--enable braces
+--allman false
