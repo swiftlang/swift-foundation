@@ -197,6 +197,132 @@ final class NSPredicateConversionTests: XCTestCase {
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
     
+    func testRanges() {
+        let now = Date.now
+        let range = now ..< now
+        let intRange = 0 ..< 2
+        let closedRange = now ... now
+        let from = now...
+        let through = ...now
+        let upTo = ..<now
+        
+        // Closed Range Operator
+        var predicate = Predicate<ObjCObject> {
+            // ($0.i ... $0.i).contains($0.i)
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_ClosedRange(
+                    lower: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.i
+                    ),
+                    upper: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.i
+                    )
+                ),
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.i
+                )
+            )
+        }
+        var converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "i BETWEEN {i, i}"))
+        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        
+        // Non-closed Range Operator
+        predicate = Predicate<ObjCObject> {
+            // ($0.i ..< $0.i).contains($0.i)
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_Range(
+                    lower: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.i
+                    ),
+                    upper: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.i
+                    )
+                ),
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.i
+                )
+            )
+        }
+        converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "i >= i AND i < i"))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        
+        // Various values
+        predicate = Predicate<ObjCObject> {
+            // range.contains($0.i)
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_Arg(range),
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.i
+                )
+            )
+        }
+        converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "i >= %@ AND i < %@", now as NSDate, now as NSDate))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        predicate = Predicate<ObjCObject> {
+            // closedRange.contains($0.i)
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_Arg(closedRange),
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.i
+                )
+            )
+        }
+        converted = NSPredicate(predicate)
+        let other = NSPredicate(format: "i BETWEEN %@", [now, now])
+        XCTAssertEqual(converted, other)
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        predicate = Predicate<ObjCObject> {
+            // from.contains($0.i)
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_Arg(from),
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.i
+                )
+            )
+        }
+        converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "i >= %@", now as NSDate))
+        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        predicate = Predicate<ObjCObject> {
+            // through.contains($0.i)
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_Arg(through),
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.i
+                )
+            )
+        }
+        converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "i <= %@", now as NSDate))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        predicate = Predicate<ObjCObject> {
+            // upTo.contains($0.i)
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_Arg(upTo),
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.i
+                )
+            )
+        }
+        converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "i < %@", now as NSDate))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+    }
+    
     func testNonObjC() {
         let predicate = Predicate<ObjCObject> {
             // $0.nonObjCKeypath == 2

@@ -117,6 +117,16 @@ private extension String {
     static let divisionSelector = "divide:by:"
 }
 
+private protocol AnyClosedRange {
+    var _bounds: (any Comparable, any Comparable) { get }
+}
+
+extension ClosedRange : AnyClosedRange {
+    var _bounds: (any Comparable, any Comparable) {
+        (lowerBound, upperBound)
+    }
+}
+
 private func _expressionCompatibleValue(for value: Any) throws -> Any? {
     switch value {
     case Optional<Any>.none:
@@ -134,8 +144,8 @@ private func _expressionCompatibleValue(for value: Any) throws -> Any? {
         return String(c)
     case let sequence as any Sequence:
         return try sequence.map(_expressionCompatibleValue(for:))
-    case let range as ClosedRange<Int>:
-        return [range.lowerBound, range.upperBound]
+    case let range as any AnyClosedRange:
+        return [try _expressionCompatibleValue(for: range._bounds.0), try _expressionCompatibleValue(for: range._bounds.1)]
     default:
         throw NSPredicateConversionError.unsupportedConstant
     }
@@ -257,7 +267,106 @@ extension PredicateExpressions.ClosedRange : ConvertibleExpression {
 
 extension PredicateExpressions.SequenceContains : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
-        .predicate(NSComparisonPredicate(leftExpression: try element.convertToExpression(state: &state), rightExpression: try sequence.convertToExpression(state: &state), modifier: .direct, type: (LHS.Output.self is any RangeExpression<Int>.Type) ? .between : .in))
+        .predicate(NSComparisonPredicate(leftExpression: try element.convertToExpression(state: &state), rightExpression: try sequence.convertToExpression(state: &state), modifier: .direct, type: (LHS.Output.self is any RangeExpression.Type) ? .between : .in))
+    }
+}
+
+private protocol _RangeOperator {
+    var _lower: any PredicateExpression { get }
+    var _upper: any PredicateExpression { get }
+}
+
+extension PredicateExpressions.Range : _RangeOperator {
+    var _lower: any PredicateExpression { self.lower }
+    var _upper: any PredicateExpression { self.upper }
+}
+
+private enum AnyRange {
+    case range(lower: any Comparable, upper: any Comparable)
+    case closed(lower: any Comparable, upper: any Comparable)
+    case from(lower: any Comparable)
+    case through(upper: any Comparable)
+    case upTo(upper: any Comparable)
+}
+
+extension RangeExpression {
+    fileprivate var _anyRange: AnyRange? {
+        switch self {
+        case let range as Range<Bound>:
+            .range(lower: range.lowerBound, upper: range.upperBound)
+        case let closed as ClosedRange<Bound>:
+            .closed(lower: closed.lowerBound, upper: closed.upperBound)
+        case let from as PartialRangeFrom<Bound>:
+            .from(lower: from.lowerBound)
+        case let through as PartialRangeThrough<Bound>:
+            .through(upper: through.upperBound)
+        case let upTo as PartialRangeUpTo<Bound>:
+            .upTo(upper: upTo.upperBound)
+        default:
+            nil
+        }
+    }
+}
+
+private protocol _RangeValue {
+    var _anyRange: AnyRange? { get }
+}
+
+extension PredicateExpressions.Value : _RangeValue where Output : RangeExpression {
+    fileprivate var _anyRange: AnyRange? {
+        value._anyRange
+    }
+}
+
+extension PredicateExpressions.RangeExpressionContains : ConvertibleExpression {
+    private func _comparison(_ lhs: NSExpression, _ rhs: NSExpression, type: NSComparisonPredicate.Operator) -> NSPredicate {
+        NSComparisonPredicate(leftExpression: lhs, rightExpression: rhs, modifier: .direct, type: type)
+    }
+    
+    private func _expressionForBound(_ bound: any Comparable) throws -> NSExpression {
+        NSExpression(forConstantValue: try _expressionCompatibleValue(for: bound))
+    }
+    
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        let elementExpr = try element.convertToExpression(state: &state)
+        if let range = try? range.convertToExpression(state: &state) {
+            // If the range can be converted to NSPredicate syntax, just use the BETWEEN operator
+            return .predicate(_comparison(elementExpr, range, type: .between))
+        } else if let rangeOp = range as? _RangeOperator {
+            // Otherwise, if the range is formed via the range operator (..<) convert it to two comparison expressions
+            // Note, the ClosedRange operator will unconditionally pass the above conversion if possible
+            let lowerBoundExpr = try rangeOp._lower.convertToExpression(state: &state)
+            let upperBoundExpr = try rangeOp._upper.convertToExpression(state: &state)
+            return .predicate(NSCompoundPredicate(andPredicateWithSubpredicates: [
+                _comparison(elementExpr, lowerBoundExpr, type: .greaterThanOrEqualTo),
+                _comparison(elementExpr, upperBoundExpr, type: .lessThan)
+            ]))
+        } else if let rangeValue = (range as? _RangeValue)?._anyRange {
+            // Otherwise, if the range is a captured value then convert it to appropriate comparison expressions based on the range type
+            switch rangeValue {
+            case let .range(upper, lower):
+                let lowerBoundCondition = _comparison(elementExpr, try _expressionForBound(lower), type: .greaterThanOrEqualTo)
+                let upperBoundCondition = _comparison(elementExpr, try _expressionForBound(upper), type: .lessThan)
+                return .predicate(NSCompoundPredicate(andPredicateWithSubpredicates: [lowerBoundCondition, upperBoundCondition]))
+            case let .closed(upper, lower):
+                let lowerValue = try _expressionCompatibleValue(for: lower)
+                let upperValue = try _expressionCompatibleValue(for: upper)
+                return .predicate(NSComparisonPredicate(
+                    leftExpression: elementExpr,
+                    rightExpression: NSExpression(forConstantValue: [lowerValue, upperValue]),
+                    modifier: .direct,
+                    type: .between
+                ))
+            case let .from(lower):
+                return .predicate(_comparison(elementExpr, try _expressionForBound(lower), type: .greaterThanOrEqualTo))
+            case let .through(upper):
+                return .predicate(_comparison(elementExpr, try _expressionForBound(upper), type: .lessThanOrEqualTo))
+            case let .upTo(upper):
+                return .predicate(_comparison(elementExpr, try _expressionForBound(upper), type: .lessThan))
+            }
+        } else {
+            throw NSPredicateConversionError.unsupportedType
+        }
     }
 }
 

@@ -65,3 +65,106 @@ extension PredicateExpressions.Range : Codable where LHS : Codable, RHS : Codabl
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Range : Sendable where LHS : Sendable, RHS : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions {
+    public struct ClosedRange<
+        LHS : PredicateExpression,
+        RHS : PredicateExpression
+    > : PredicateExpression
+    where
+        LHS.Output == RHS.Output,
+        LHS.Output: Comparable
+    {
+        public typealias Output = Swift.ClosedRange<LHS.Output>
+        
+        public let lower: LHS
+        public let upper: RHS
+        
+        public init(lower: LHS, upper: RHS) {
+            self.lower = lower
+            self.upper = upper
+        }
+        
+        public func evaluate(_ bindings: PredicateBindings) throws -> Swift.ClosedRange<LHS.Output> {
+            let low = try lower.evaluate(bindings)
+            let high = try upper.evaluate(bindings)
+            return low...high
+        }
+    }
+    
+    public static func build_ClosedRange<LHS, RHS>(lower: LHS, upper: RHS) -> ClosedRange<LHS, RHS> {
+        ClosedRange(lower: lower, upper: upper)
+    }
+}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.ClosedRange : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.ClosedRange : Codable where LHS : Codable, RHS : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(lower)
+        try container.encode(upper)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        lower = try container.decode(LHS.self)
+        upper = try container.decode(RHS.self)
+    }
+}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.ClosedRange : Sendable where LHS : Sendable, RHS : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions {
+    public struct RangeExpressionContains<
+        RangeExpression : PredicateExpression,
+        Element : PredicateExpression
+    > : PredicateExpression where
+        RangeExpression.Output : Swift.RangeExpression,
+        Element.Output == RangeExpression.Output.Bound
+    {
+        public typealias Output = Bool
+        
+        public let range: RangeExpression
+        public let element: Element
+        
+        public init(range: RangeExpression, element: Element) {
+            self.range = range
+            self.element = element
+        }
+        
+        public func evaluate(_ bindings: PredicateBindings) throws -> Output {
+            try range.evaluate(bindings).contains(try element.evaluate(bindings))
+        }
+    }
+    
+    public static func build_contains<RangeExpression, Element>(_ range: RangeExpression, _ element: Element) -> RangeExpressionContains<RangeExpression, Element> {
+        RangeExpressionContains(range: range, element: element)
+    }
+}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.RangeExpressionContains : StandardPredicateExpression where RangeExpression : StandardPredicateExpression, Element : StandardPredicateExpression {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.RangeExpressionContains : Codable where RangeExpression : Codable, Element : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(range)
+        try container.encode(element)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        range = try container.decode(RangeExpression.self)
+        element = try container.decode(Element.self)
+    }
+}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.RangeExpressionContains : Sendable where RangeExpression : Sendable, Element : Sendable {}

@@ -28,6 +28,7 @@ final class PredicateTests: XCTestCase {
         var e: Character
         var f: Bool
         var g: [Int]
+        var h: Date = .now
     }
     
     struct Object2 {
@@ -491,6 +492,25 @@ final class PredicateTests: XCTestCase {
         }
         XCTAssert(try predicate.evaluate(Object(a: 4, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
         XCTAssert(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
+    }
+    
+    func testRangeContains() throws {
+        let date = Date.distantPast
+        let predicate = Predicate<Object> {
+            // (date ..< date).contains($0.h)
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_Range(
+                    lower: PredicateExpressions.build_Arg(date),
+                    upper: PredicateExpressions.build_Arg(date)
+                ),
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.h
+                )
+            )
+        }
+        
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
     
     func testTypes() throws {

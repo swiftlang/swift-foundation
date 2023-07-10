@@ -123,6 +123,7 @@ extension PredicateExpressions {
         }
     }
     
+    @_disfavoredOverload
     public static func build_contains<LHS, RHS>(_ lhs: LHS, _ rhs: RHS) -> SequenceContains<LHS, RHS> {
         SequenceContains(sequence: lhs, element: rhs)
     }
