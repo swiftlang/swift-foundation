@@ -126,3 +126,58 @@ extension PredicateExpressions.CollectionRangeSubscript : Codable where Wrapped 
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.CollectionRangeSubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Range : StandardPredicateExpression {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions {
+    public struct CollectionContainsCollection<
+        Base : PredicateExpression,
+        Other : PredicateExpression
+    > : PredicateExpression
+    where
+        Base.Output : Collection,
+        Other.Output : Collection,
+        Base.Output.Element == Other.Output.Element,
+        Base.Output.Element : Equatable
+    {
+        
+        public typealias Output = Bool
+        
+        public let base: Base
+        public let other: Other
+        
+        public init(base: Base, other: Other) {
+            self.base = base
+            self.other = other
+        }
+        
+        public func evaluate(_ bindings: PredicateBindings) throws -> Bool {
+            try base.evaluate(bindings).contains(try other.evaluate(bindings))
+        }
+    }
+    
+    public static func build_contains<Base, Other>(_ base: Base, _ other: Other) -> CollectionContainsCollection<Base, Other> {
+        CollectionContainsCollection(base: base, other: other)
+    }
+}
+
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.CollectionContainsCollection : Sendable where Base : Sendable, Other : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.CollectionContainsCollection : Codable where Base : Codable, Other : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(base)
+        try container.encode(other)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        self.base = try container.decode(Base.self)
+        self.other = try container.decode(Other.self)
+    }
+}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.CollectionContainsCollection : StandardPredicateExpression where Base : StandardPredicateExpression, Other : StandardPredicateExpression {}
