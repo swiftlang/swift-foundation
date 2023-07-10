@@ -584,6 +584,38 @@ final class PredicateTests: XCTestCase {
         try assertPredicate(.true, value: "Hello", expected: true)
         try assertPredicate(.false, value: "Hello", expected: false)
     }
+    
+    func testMaxMin() throws {
+        var predicate = Predicate<Object> {
+            // $0.g.max() == 2
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_max(
+                    PredicateExpressions.build_KeyPath(
+                        root: $0,
+                        keyPath: \.g
+                    )
+                ),
+                rhs: PredicateExpressions.build_Arg(2)
+            )
+        }
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 2])))
+        
+        predicate = Predicate<Object> {
+            // $0.g.min() == 2
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_min(
+                    PredicateExpressions.build_KeyPath(
+                        root: $0,
+                        keyPath: \.g
+                    )
+                ),
+                rhs: PredicateExpressions.build_Arg(2)
+            )
+        }
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3])))
+    }
 }
 
 #endif

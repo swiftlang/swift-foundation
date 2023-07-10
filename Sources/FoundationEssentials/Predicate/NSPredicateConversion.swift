@@ -58,6 +58,16 @@ private extension NSExpression {
     func asPredicate() -> NSPredicate {
         NSComparisonPredicate(leftExpression: self, rightExpression: NSExpression(forConstantValue: true), modifier: .direct, type: .equalTo)
     }
+    
+    func addingKeyPath(_ keyPath: String) -> NSExpression {
+        if self.expressionType == .evaluatedObject {
+            return NSExpression(forKeyPath: keyPath)
+        } else if self.expressionType == .keyPath && !self.keyPath.contains("@"){
+            return NSExpression(forKeyPath: "\(self.keyPath).\(keyPath)")
+        } else {
+            return NSKeyPathExpression(operand: self, andKeyPath: NSExpression._newKeyPathExpression(for: keyPath))
+        }
+    }
 }
 
 extension PredicateExpression {
@@ -147,25 +157,15 @@ extension PredicateExpressions.KeyPath : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
         let rootExpr = try root.convertToExpression(state: &state)
         
-        func keyPathExpr(for string: String) -> NSExpression {
-            if rootExpr.expressionType == .evaluatedObject {
-                return NSExpression(forKeyPath: string)
-            } else if rootExpr.expressionType == .keyPath {
-                return NSExpression(forKeyPath: "\(rootExpr.keyPath).\(string)")
-            } else {
-                return NSKeyPathExpression(operand: rootExpr, andKeyPath: NSExpression._newKeyPathExpression(for: string))
-            }
-        }
-        
         let countSyntax = (Root.Output.self == String.self || Root.Output.self == Substring.self) ? "length" : "@count"
         if let kvcString = keyPath._kvcKeyPathString {
-            return .expression(keyPathExpr(for: kvcString))
+            return .expression(rootExpr.addingKeyPath(kvcString))
         } else if let kind = self.kind {
             switch kind {
             case .collectionCount:
-                return .expression(keyPathExpr(for: countSyntax))
+                return .expression(rootExpr.addingKeyPath(countSyntax))
             case .collectionIsEmpty:
-                return .predicate(NSComparisonPredicate(leftExpression: keyPathExpr(for: countSyntax), rightExpression: NSExpression(forConstantValue: 0), modifier: .direct, type: .equalTo))
+                return .predicate(NSComparisonPredicate(leftExpression: rootExpr.addingKeyPath(countSyntax), rightExpression: NSExpression(forConstantValue: 0), modifier: .direct, type: .equalTo))
             case .collectionFirst:
                 return .expression(NSExpression(forFunction: rootExpr, selectorName: .subscriptSelector, arguments: [NSExpression(forSymbolicString: "FIRST")!]))
             case .bidirectionalCollectionLast:
@@ -265,7 +265,7 @@ extension PredicateExpressions.SequenceContainsWhere : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
         let local = state.makeLocalVariable(for: self.variable.key)
         let subquery = NSExpression(forSubquery: try sequence.convertToExpression(state: &state), usingIteratorVariable: local, predicate: try test.convertToPredicate(state: &state))
-        let count = NSKeyPathExpression(operand: subquery, andKeyPath: NSExpression._newKeyPathExpression(for: "@count"))!
+        let count = subquery.addingKeyPath("@count")
         let equality = NSComparisonPredicate(leftExpression: count, rightExpression: NSExpression(forConstantValue: 0), modifier: .direct, type: .notEqualTo)
         return .predicate(equality)
     }
@@ -276,9 +276,21 @@ extension PredicateExpressions.SequenceAllSatisfy : ConvertibleExpression {
         let local = state.makeLocalVariable(for: self.variable.key)
         let negatedTest = NSCompoundPredicate(notPredicateWithSubpredicate: try test.convertToPredicate(state: &state))
         let subquery = NSExpression(forSubquery: try sequence.convertToExpression(state: &state), usingIteratorVariable: local, predicate: negatedTest)
-        let count = NSKeyPathExpression(operand: subquery, andKeyPath: NSExpression._newKeyPathExpression(for: "@count"))!
+        let count = subquery.addingKeyPath("@count")
         let equality = NSComparisonPredicate(leftExpression: count, rightExpression: NSExpression(forConstantValue: 0), modifier: .direct, type: .equalTo)
         return .predicate(equality)
+    }
+}
+
+extension PredicateExpressions.SequenceMaximum : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        .expression(try elements.convertToExpression(state: &state).addingKeyPath("@max.self"))
+    }
+}
+
+extension PredicateExpressions.SequenceMinimum : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        .expression(try elements.convertToExpression(state: &state).addingKeyPath("@min.self"))
     }
 }
 

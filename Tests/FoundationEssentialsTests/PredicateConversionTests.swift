@@ -543,6 +543,29 @@ final class NSPredicateConversionTests: XCTestCase {
         XCTAssertEqual(converted, NSPredicate(format: "SUBQUERY(g, $_local_1, NOT ($_local_1 == 2)).@count == 0"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
+    
+    func testMaxMin() {
+        let predicate = Predicate<ObjCObject> {
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_max(
+                    PredicateExpressions.build_KeyPath(
+                        root: $0,
+                        keyPath: \.g
+                    )
+                ),
+                rhs: PredicateExpressions.build_min(
+                    PredicateExpressions.build_KeyPath(
+                        root: $0,
+                        keyPath: \.g
+                    )
+                )
+            )
+        }
+        
+        let converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "g.@max.#self == g.@min.#self"))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+    }
 }
 
 #endif
