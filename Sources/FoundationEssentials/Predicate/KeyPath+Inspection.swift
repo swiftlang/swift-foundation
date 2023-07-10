@@ -19,6 +19,8 @@ extension UInt32 {
     private static var COMPUTED_COMPONENT_PAYLOAD_ARGUMENTS_MASK: UInt32 { 0x0008_0000 }
     private static var COMPUTED_COMPONENT_PAYLOAD_SETTABLE_MASK: UInt32 { 0x0040_0000 }
     
+    fileprivate static var PROPERTY_OFFSET_TOO_LARGE: UInt32 { 0x00FF_FFFF }
+    
     fileprivate var _keyPathHeader_bufferSize: Int {
         Int(self & Self.KEYPATH_HEADER_BUFFER_SIZE_MASK)
     }
@@ -27,7 +29,7 @@ extension UInt32 {
         Int((self & Self.COMPONENT_HEADER_KIND_MASK) >> 24)
     }
     
-    private var _keyPathComponentHeader_payload: UInt32 {
+    fileprivate var _keyPathComponentHeader_payload: UInt32 {
         self & Self.COMPONENT_HEADER_PAYLOAD_MASK
     }
     
@@ -53,8 +55,9 @@ extension AnyKeyPath {
         case 1: // struct/tuple/self stored property
             fallthrough
         case 3: // class stored property
-            // Stored property components are each one word
-            if header._keyPathHeader_bufferSize > Self.WORD_SIZE {
+            // Stored property components are either just the payload, or the payload plus 32 bits if the payload is the sentinel value
+            let size = (firstComponentHeader._keyPathComponentHeader_payload == .PROPERTY_OFFSET_TOO_LARGE) ? MemoryLayout<UInt64>.size : MemoryLayout<UInt32>.size
+            if header._keyPathHeader_bufferSize > size {
                 fatalError("Predicate does not support keypaths with multiple components")
             }
         case 2: // computed
