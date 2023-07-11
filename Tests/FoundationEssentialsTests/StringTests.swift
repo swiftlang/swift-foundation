@@ -240,6 +240,21 @@ final class StringTests : XCTestCase {
         }
     }
 
+    func testRangeOfString_lineSeparator() {
+        func test(_ tested: String, _ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #file, line: UInt = #line) {
+            return _testRangeOfString(tested, string: string, anchored: anchored, backwards: backwards, expectation, file: file, line: line)
+        }
+        test("\r\n \r", "\r", anchored: false, backwards: false, 2..<3)
+        test("\r\n \r", "\r", anchored: true, backwards: false, nil)
+        test("\r\n \r", "\r", anchored: false, backwards: true, 2..<3)
+        test("\r\n \r", "\r", anchored: true, backwards: true, 2..<3)
+
+        test("\r \r\n \r", "\r", anchored: false, backwards: false, 0..<1)
+        test("\r \r\n \r", "\r", anchored: true, backwards: false, 0..<1)
+        test("\r \r\n \r", "\r", anchored: false, backwards: true, 4..<5)
+        test("\r \r\n \r", "\r", anchored: true, backwards: true, 4..<5)
+    }
+
     func testTryFromUTF16() {
         func test(_ utf16Buffer: [UInt16], expected: String?, file: StaticString = #file, line: UInt = #line) {
             let result = utf16Buffer.withUnsafeBufferPointer {
