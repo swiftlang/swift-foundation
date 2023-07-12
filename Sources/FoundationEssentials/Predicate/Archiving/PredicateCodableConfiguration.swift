@@ -383,6 +383,12 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(PredicateExpressions.UnaryMinus<PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.UnaryMinus")
         configuration.allowPartialType(PredicateExpressions.NilLiteral<Int>.self, identifier: "PredicateExpressions.NilLiteral")
         
+        #if FOUNDATION_FRAMEWORK
+        configuration.allowPartialType(PredicateExpressions.StringCaseInsensitiveCompare<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringCaseInsensitiveCompare")
+        configuration.allowPartialType(PredicateExpressions.StringLocalizedCompare<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringLocalizedCompare")
+        configuration.allowPartialType(PredicateExpressions.StringLocalizedStandardContains<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringLocalizedStandardContains")
+        #endif
+        
         configuration.allowPartialType(PredicateExpressions.KeyPath<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.KeyPath")
         configuration.allowPartialType(PredicateExpressions.Variable<Int>.self, identifier: "PredicateExpressions.Variable")
         configuration.allowPartialType(PredicateExpressions.Value<Int>.self, identifier: "PredicateExpressions.Value")
