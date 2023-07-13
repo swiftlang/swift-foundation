@@ -667,43 +667,11 @@ extension Substring {
         let result: Range<Index>?
         if options.contains(.literal) {
             result = unicodeScalars._range(of: strToFind.unicodeScalars, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
-        } else if !toHalfWidth && !diacriticsInsensitive && !caseFold {
-            // Fast path: iterate through UTF8 view when we don't need to transform string content
-            guard let utf8Result = utf8._range(of: strToFind.utf8, anchored: anchored, backwards: backwards) else {
-                 return nil
-            }
-
-            // Adjust the index to that of the original slice since we called `makeContiguousUTF8` before
-            guard let lower = String.Index(utf8Result.lowerBound, within: self), let upper = String.Index(utf8Result.upperBound, within: self) else {
-                return nil
-            }
-            result = lower..<upper
-
-        } else if _isASCII && strToFind._isASCII {
-            // Fast path: Iterate utf8 without having to decode as unicode scalars. In this case only case folding matters.
-
-            guard let utf8Result = utf8._range(of: strToFind.utf8, toHalfWidth: false, diacriticsInsensitive: false, caseFold: caseFold, anchored: anchored, backwards: backwards) else {
-                return nil
-            }
-
-            // Adjust the index to that of the original slice since we called `makeContiguousUTF8` before
-            guard let lower = String.Index(utf8Result.lowerBound, within: self), let upper = String.Index(utf8Result.upperBound, within: self) else {
-                return nil
-            }
-            result = lower..<upper
-
         } else {
             result = _range(of: strToFind, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
         }
 
         return result
-    }
-
-    var _isASCII: Bool {
-        var mutated = self
-        return mutated.withUTF8 {
-            _allASCII($0)
-        }
     }
 
     func _components(separatedBy separator: Substring, options: String.CompareOptions = []) throws -> [String] {
