@@ -76,3 +76,9 @@ extension PredicateExpressions.Comparison : Codable where LHS : Codable, RHS : C
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Comparison : Sendable where LHS : Sendable, RHS : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Comparison : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Comparison : Hashable where LHS : Hashable, RHS : Hashable {}

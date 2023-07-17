@@ -60,3 +60,9 @@ extension PredicateExpressions.NotEqual : Codable where LHS : Codable, RHS : Cod
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.NotEqual : Sendable where LHS : Sendable, RHS : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.NotEqual : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.NotEqual : Hashable where LHS : Hashable, RHS : Hashable {}

@@ -43,6 +43,12 @@ extension PredicateExpressions.SequenceMaximum : StandardPredicateExpression whe
 extension PredicateExpressions.SequenceMaximum : Codable where Elements : Codable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.SequenceMaximum : Equatable where Elements : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.SequenceMaximum : Hashable where Elements : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.SequenceMaximum : Sendable where Elements : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
@@ -73,6 +79,12 @@ extension PredicateExpressions {
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.SequenceMinimum : StandardPredicateExpression where Elements : StandardPredicateExpression {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.SequenceMinimum : Equatable where Elements : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.SequenceMinimum : Hashable where Elements : Hashable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.SequenceMinimum : Codable where Elements : Codable {}

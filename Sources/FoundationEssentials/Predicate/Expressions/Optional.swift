@@ -166,6 +166,24 @@ extension PredicateExpressions.ForcedUnwrap : Codable where Inner : Codable {
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.OptionalFlatMap : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.NilCoalesce : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.ForcedUnwrap : Equatable where Inner : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.OptionalFlatMap : Hashable where LHS : Hashable, RHS : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.NilCoalesce : Hashable where LHS : Hashable, RHS : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.ForcedUnwrap : Hashable where Inner : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.OptionalFlatMap : Sendable where LHS : Sendable, RHS : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)

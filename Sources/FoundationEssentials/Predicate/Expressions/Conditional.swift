@@ -70,3 +70,9 @@ extension PredicateExpressions.Conditional : Codable where Test : Codable, If : 
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Conditional : Sendable where Test : Sendable, If : Sendable, Else : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Conditional : Equatable where Test : Equatable, If : Equatable, Else : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Conditional: Hashable where Test : Hashable, If : Hashable, Else : Hashable {}

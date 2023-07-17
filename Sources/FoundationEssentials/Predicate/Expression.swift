@@ -19,7 +19,7 @@ public protocol PredicateExpression<Output> {
 
 // Only Foundation should add conformances to this protocol
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-public protocol StandardPredicateExpression<Output> : PredicateExpression, Codable, Sendable {}
+public protocol StandardPredicateExpression<Output> : PredicateExpression, Codable, Sendable, Hashable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
@@ -207,6 +207,12 @@ extension PredicateExpressions.KeyPath : Codable where Root : Codable {
 extension PredicateExpressions.KeyPath : Sendable where Root : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.KeyPath : Equatable where Root : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.KeyPath : Hashable where Root : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.KeyPath : StandardPredicateExpression where Root : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
@@ -226,7 +232,13 @@ extension PredicateExpressions.Value : Codable where Output : Codable {
 extension PredicateExpressions.Value : Sendable where Output : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.Value : StandardPredicateExpression where Output : Codable /*, Output : Sendable*/ {}
+extension PredicateExpressions.Value : Hashable where Output : Hashable{}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Value : Equatable where Output : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Value : StandardPredicateExpression where Output : Codable, Output: Hashable /*, Output : Sendable*/ {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.KeyPath {

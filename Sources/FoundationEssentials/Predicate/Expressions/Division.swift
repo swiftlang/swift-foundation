@@ -155,6 +155,24 @@ extension PredicateExpressions.IntDivision : Codable where LHS : Codable, RHS : 
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.FloatDivision : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.IntRemainder : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.IntDivision : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.FloatDivision : Hashable where LHS : Hashable, RHS : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.IntRemainder : Hashable where LHS : Hashable, RHS : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.IntDivision : Hashable where LHS : Hashable, RHS : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.FloatDivision : Sendable where LHS : Sendable, RHS : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)

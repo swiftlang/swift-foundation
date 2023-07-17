@@ -70,3 +70,9 @@ extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codab
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Filter : Sendable where LHS : Sendable, RHS : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Filter : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Filter : Hashable where LHS : Hashable, RHS : Hashable {}

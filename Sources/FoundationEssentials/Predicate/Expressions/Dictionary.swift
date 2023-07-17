@@ -59,6 +59,12 @@ extension PredicateExpressions.DictionaryKeySubscript : Codable where Wrapped : 
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.DictionaryKeySubscript : Equatable where Wrapped : Equatable, Key : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.DictionaryKeySubscript : Hashable where Wrapped : Hashable, Key : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.DictionaryKeySubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Key : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
@@ -113,6 +119,12 @@ extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : Codable wher
         self.`default` = try container.decode(Default.self)
     }
 }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : Equatable where Wrapped : Equatable, Key : Equatable , Default : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : Hashable where Wrapped : Hashable, Key : Hashable , Default : Hashable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Key : StandardPredicateExpression, Default : StandardPredicateExpression {}

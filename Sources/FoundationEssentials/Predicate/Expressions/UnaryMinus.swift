@@ -48,4 +48,10 @@ extension PredicateExpressions.UnaryMinus : Codable where Wrapped : Codable {
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.UnaryMinus : Equatable where Wrapped : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.UnaryMinus : Hashable where Wrapped : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.UnaryMinus : Sendable where Wrapped : Sendable {}

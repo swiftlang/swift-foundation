@@ -64,6 +64,12 @@ extension PredicateExpressions.Range : Codable where LHS : Codable, RHS : Codabl
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Range : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Range : Hashable where LHS : Hashable, RHS : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Range : Sendable where LHS : Sendable, RHS : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
@@ -97,6 +103,12 @@ extension PredicateExpressions {
         ClosedRange(lower: lower, upper: upper)
     }
 }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.ClosedRange : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.ClosedRange : Hashable where LHS : Hashable, RHS : Hashable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.ClosedRange : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
@@ -165,6 +177,12 @@ extension PredicateExpressions.RangeExpressionContains : Codable where RangeExpr
         element = try container.decode(Element.self)
     }
 }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.RangeExpressionContains : Equatable where RangeExpression : Equatable, Element : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.RangeExpressionContains : Hashable where RangeExpression : Hashable, Element : Hashable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.RangeExpressionContains : Sendable where RangeExpression : Sendable, Element : Sendable {}

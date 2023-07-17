@@ -60,3 +60,9 @@ extension PredicateExpressions.Equal : Codable where LHS : Codable, RHS : Codabl
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Equal : Sendable where LHS : Sendable, RHS : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Equal : Equatable where LHS : Equatable, RHS : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Equal : Hashable where LHS : Hashable, RHS : Hashable {}

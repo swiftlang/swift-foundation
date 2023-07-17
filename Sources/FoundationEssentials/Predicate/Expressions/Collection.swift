@@ -49,6 +49,12 @@ extension PredicateExpressions {
 extension PredicateExpressions.CollectionIndexSubscript : Sendable where Wrapped : Sendable, Index : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.CollectionIndexSubscript : Equatable where Wrapped : Equatable, Index : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.CollectionIndexSubscript : Hashable where Wrapped : Hashable, Index : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.CollectionIndexSubscript : Codable where Wrapped : Codable, Index : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -125,6 +131,12 @@ extension PredicateExpressions.CollectionRangeSubscript : Codable where Wrapped 
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.CollectionRangeSubscript : Equatable where Wrapped : Equatable, Range : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.CollectionRangeSubscript : Hashable where Wrapped : Hashable, Range : Hashable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.CollectionRangeSubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Range : StandardPredicateExpression {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
@@ -178,6 +190,12 @@ extension PredicateExpressions.CollectionContainsCollection : Codable where Base
         self.other = try container.decode(Other.self)
     }
 }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.CollectionContainsCollection : Equatable where Base : Equatable, Other : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.CollectionContainsCollection : Hashable where Base : Hashable, Other : Hashable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.CollectionContainsCollection : StandardPredicateExpression where Base : StandardPredicateExpression, Other : StandardPredicateExpression {}

@@ -49,3 +49,9 @@ extension PredicateExpressions.Negation : Codable where Wrapped : Codable {
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.Negation : Sendable where Wrapped : Sendable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Negation : Equatable where Wrapped : Equatable {}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension PredicateExpressions.Negation : Hashable where Wrapped : Hashable {}
