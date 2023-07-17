@@ -692,6 +692,60 @@ final class NSPredicateConversionTests: XCTestCase {
         XCTAssertEqual(converted, NSPredicate(format: "g.@max.#self == g.@min.#self"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
+    
+    func testStringComparison() {
+        let equal = ComparisonResult.orderedSame
+        var predicate = Predicate<ObjCObject> {
+            // $0.b.caseInsensitiveCompare("ABC") == equal
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_caseInsensitiveCompare(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.b
+                    ),
+                    PredicateExpressions.build_Arg("ABC")
+                ),
+                rhs: PredicateExpressions.build_Arg(equal)
+            )
+        }
+        
+        var converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(b ==[c] 'ABC', 0, TERNARY(b <[c] 'ABC', -1, 1)) == 0"))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        
+        predicate = Predicate<ObjCObject> {
+            // $0.string.localizedStandardCompare("ABC") == equal
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_localizedCompare(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.b
+                    ),
+                    PredicateExpressions.build_Arg("ABC")
+                ),
+                rhs: PredicateExpressions.build_Arg(equal)
+            )
+        }
+        
+        converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(b ==[l] 'ABC', 0, TERNARY(b <[l] 'ABC', -1, 1)) == 0"))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        
+        predicate = Predicate<ObjCObject> {
+            // $0.string.localizedStandardContains("ABC")
+            PredicateExpressions.build_localizedStandardContains(
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.b
+                ),
+                PredicateExpressions.build_Arg("ABC")
+            )
+        }
+        
+        converted = NSPredicate(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "b CONTAINS[cdl] 'ABC'"))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+    }
 }
 
 #endif

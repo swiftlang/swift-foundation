@@ -636,6 +636,29 @@ final class PredicateTests: XCTestCase {
         XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3])))
     }
+    
+    #if FOUNDATION_FRAMEWORK
+    
+    func testCaseInsensitiveCompare() throws {
+        let equal = ComparisonResult.orderedSame
+        let predicate = Predicate<Object> {
+            // $0.b.caseInsensitiveCompare("ABC") == equal
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_caseInsensitiveCompare(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.b
+                    ),
+                    PredicateExpressions.build_Arg("ABC")
+                ),
+                rhs: PredicateExpressions.build_Arg(equal)
+            )
+        }
+        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "def", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+    }
+    
+    #endif
 }
 
 #endif
