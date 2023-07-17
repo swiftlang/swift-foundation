@@ -369,7 +369,8 @@ struct LocaleCache : Sendable {
             return nil
         }
 
-        let inner = _Locale(identifier: identifier)
+        let (prefs, _) = preferences()
+        let inner = _Locale(identifier: identifier, prefs: prefs)
         return Locale(.fixed(inner))
     }
 }

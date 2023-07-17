@@ -773,6 +773,14 @@ extension LocaleTests {
         // Starting an ID with script code is an acceptable special case
         verify("Hant", cldr: "hant", bcp47: "hant", icu: "hant")
     }
+
+    func test_asIfCurrentWithBundleLocalizations() {
+        let currentLanguage = Locale.current.language.languageCode!
+        var localizations = Set([ "zh", "fr", "en" ])
+        localizations.insert(currentLanguage.identifier) // We're not sure what the current locale is when test runs. Ensure that it's always in the list of available localizations
+        let fakeCurrent = Locale.localeAsIfCurrentWithBundleLocalizations(Array(localizations), allowsMixedLocalizations: false)
+        XCTAssertEqual(fakeCurrent?.language.languageCode, currentLanguage)
+    }
 }
 
 #endif // FOUNDATION_FRAMEWORK
