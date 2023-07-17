@@ -13,6 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 
 @_implementationOnly import Foundation_Private.NSExpression
+@_implementationOnly import Foundation_Private.NSPredicate
 
 private struct NSPredicateConversionState {
     private var nextLocalVariable: UInt = 1
@@ -140,6 +141,8 @@ private func _expressionCompatibleValue(for value: Any) throws -> Any? {
         is Float, is CGFloat, is Decimal, is Double,
         is Bool:
         return value
+    case let result as ComparisonResult:
+        return result.rawValue
     case let c as Character:
         return String(c)
     case let sequence as any Sequence:
@@ -461,6 +464,46 @@ extension PredicateExpressions.SequenceStartsWith : ConvertibleExpression where 
 extension PredicateExpressions.NilLiteral : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
         .expression(NSExpression(forConstantValue: nil))
+    }
+}
+
+extension ComparisonResult {
+    fileprivate var expression: NSExpression {
+        get throws {
+            NSExpression(forConstantValue: try _expressionCompatibleValue(for: self))
+        }
+    }
+}
+
+extension NSComparisonPredicate.Options {
+    fileprivate static var localized: Self {
+        Self(rawValue: UInt(NSLocaleSensitivePredicateOption))
+    }
+}
+
+private func _expressionForComparisonResult(_ lhs: some PredicateExpression, _ rhs: some PredicateExpression, state: inout NSPredicateConversionState, options: NSComparisonPredicate.Options) throws -> ExpressionOrPredicate {
+    let equality = NSComparisonPredicate(leftExpression: try lhs.convertToExpression(state: &state), rightExpression: try rhs.convertToExpression(state: &state), modifier: .direct, type: .equalTo, options: options)
+    let comparison = NSComparisonPredicate(leftExpression: try lhs.convertToExpression(state: &state), rightExpression: try rhs.convertToExpression(state: &state), modifier: .direct, type: .lessThan, options: options)
+    let comparisonConditional = NSExpression(forConditional: comparison, trueExpression: try ComparisonResult.orderedAscending.expression, falseExpression: try ComparisonResult.orderedDescending.expression)
+    let conditional = NSExpression(forConditional: equality, trueExpression: try ComparisonResult.orderedSame.expression, falseExpression: comparisonConditional)
+    return .expression(conditional)
+}
+
+extension PredicateExpressions.StringCaseInsensitiveCompare : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        try _expressionForComparisonResult(root, other, state: &state, options: .caseInsensitive)
+    }
+}
+
+extension PredicateExpressions.StringLocalizedCompare : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        try _expressionForComparisonResult(root, other, state: &state, options: .localized)
+    }
+}
+
+extension PredicateExpressions.StringLocalizedStandardContains : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        .predicate(NSComparisonPredicate(leftExpression: try root.convertToExpression(state: &state), rightExpression: try other.convertToExpression(state: &state), modifier: .direct, type: .contains, options: [.caseInsensitive, .diacriticInsensitive, .localized]))
     }
 }
 
