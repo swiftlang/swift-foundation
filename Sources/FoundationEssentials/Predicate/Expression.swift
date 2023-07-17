@@ -127,9 +127,9 @@ extension PredicateExpressions {
     
     public struct KeyPath<Root : PredicateExpression, Output> : PredicateExpression {
         public let root: Root
-        public let keyPath: Swift.KeyPath<Root.Output, Output> & Sendable
+        public let keyPath: Swift.KeyPath<Root.Output, Output>
         
-        public init(root: Root, keyPath: Swift.KeyPath<Root.Output, Output> & Sendable) {
+        public init(root: Root, keyPath: Swift.KeyPath<Root.Output, Output>) {
             keyPath._validateForPredicateUsage()
             self.root = root
             self.keyPath = keyPath
@@ -203,8 +203,9 @@ extension PredicateExpressions.KeyPath : Codable where Root : Codable {
 #endif // FOUNDATION_FRAMEWORK
     }
 }
+
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-extension PredicateExpressions.KeyPath : Sendable where Root : Sendable {}
+extension PredicateExpressions.KeyPath : @unchecked Sendable where Root : Sendable {}
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension PredicateExpressions.KeyPath : Equatable where Root : Equatable {}
