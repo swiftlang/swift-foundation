@@ -659,6 +659,27 @@ final class PredicateTests: XCTestCase {
     }
     
     #endif
+    
+    func testBuildDynamically() throws {
+        func _build(_ equal: Bool) -> Predicate<Int> {
+            Predicate<Int> {
+                if equal {
+                    PredicateExpressions.Equal(
+                        lhs: $0,
+                        rhs: PredicateExpressions.Value(1)
+                    )
+                } else {
+                    PredicateExpressions.NotEqual(
+                        lhs: $0,
+                        rhs: PredicateExpressions.Value(1)
+                    )
+                }
+            }
+        }
+        
+        XCTAssertTrue(try _build(true).evaluate(1))
+        XCTAssertFalse(try _build(false).evaluate(1))
+    }
 }
 
 #endif
