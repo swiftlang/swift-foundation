@@ -125,7 +125,7 @@ extension Date.FormatStyle {
 
             var preferredHour: Symbol.SymbolType.HourOption?
 
-            if locale.region == .taiwan {
+            if locale.language.languageCode == .chinese && locale.region == .taiwan {
                 switch hour {
                 case .defaultDigitsWithAbbreviatedAMPM:
                     preferredHour = .conversationalDefaultDigitsWithAbbreviatedAMPM

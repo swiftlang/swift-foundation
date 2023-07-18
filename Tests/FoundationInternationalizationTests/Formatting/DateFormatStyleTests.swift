@@ -559,6 +559,23 @@ final class DateFormatStyleTests : XCTestCase {
             verifyWithFormat(afternoon, expected: "15時")
             verifyWithFormat(evening, expected: "21時")
         }
+
+        // Tests for when region matches the special case but language doesn't
+        do {
+            locale = Locale(identifier: "en_TW")
+            format = .init(timeZone: .gmt).hour(.twoDigits(amPM: .wide)).minute().second()
+#if FOUNDATION_FRAMEWORK
+    let separator = "\u{202f}"
+#else
+    let separator = " "
+#endif
+            verifyWithFormat(middleOfNight, expected: "03:50:00\(separator)AM")
+            verifyWithFormat(earlyMorning, expected: "06:50:00\(separator)AM")
+            verifyWithFormat(morning, expected: "09:50:00\(separator)AM")
+            verifyWithFormat(noon, expected: "12:50:00\(separator)PM")
+            verifyWithFormat(afternoon, expected: "03:50:00\(separator)PM")
+            verifyWithFormat(evening, expected: "09:50:00\(separator)PM")
+        }
     }
 }
 
