@@ -241,6 +241,22 @@ final class ICUPatternGeneratorTests: XCTestCase {
             test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits),
                  expectedPattern: "d/M/y")
         }
+
+        do {
+            // We do not override locales if language isn't Chinese
+            // So there should be no "B" in the pattern
+            locale = Locale(identifier: "en_TW")
+            calendar = Calendar(identifier: .gregorian)
+#if FOUNDATION_FRAMEWORK
+    let separator = "\u{202f}"
+#else
+    let separator = " "
+#endif
+            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
+                 expectedPattern: "h:mm\(separator)a")
+            test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
+                 expectedPattern: "h:mm:ss\(separator)a")
+        }
     }
 
 }
