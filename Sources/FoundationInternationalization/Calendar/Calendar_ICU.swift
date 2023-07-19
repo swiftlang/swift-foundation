@@ -1304,7 +1304,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         }
     }
 
-    func dateComponents(_ components: Calendar.ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {
+    func dateComponents(_ components: DateComponents.ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {
         if self.timeZone != timeZone {
             // Make a copy of ourselves with the new time zone set
             let withTz = copy(changingTimeZone: timeZone)
@@ -1314,7 +1314,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         }
     }
 
-    func dateComponents(_ components: Calendar.ComponentSet, from date: Date) -> DateComponents {
+    func dateComponents(_ components: DateComponents.ComponentSet, from date: Date) -> DateComponents {
         return lock.withLock {
             let capped = date.capped
             var status = U_ZERO_ERROR
@@ -1400,7 +1400,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         }
     }
 
-    func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
+    func dateComponents(_ components: DateComponents.ComponentSet, from start: Date, to end: Date) -> DateComponents {
         return lock.withLock {
             let cappedStart = start.capped
             let cappedEnd = end.capped

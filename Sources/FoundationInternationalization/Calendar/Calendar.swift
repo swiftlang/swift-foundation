@@ -149,95 +149,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
     }
 
-    /// Bitwise set of which components in a `DateComponents` are interesting to use. More efficient than`Set<Component>`.
-    internal struct ComponentSet: OptionSet {
-        let rawValue: UInt
-        init(rawValue: UInt) { self.rawValue = rawValue }
-
-        init(_ components: Set<Component>) {
-            self.rawValue = components.reduce(ComponentSet.RawValue(), { partialResult, c in
-                return partialResult | c.componentSetValue
-            })
-        }
-
-        init(_ components: Component...) {
-            self.rawValue = components.reduce(ComponentSet.RawValue(), { partialResult, c in
-                return partialResult | c.componentSetValue
-            })
-        }
-
-        init(single component: Component) {
-            self.rawValue = component.componentSetValue
-        }
-
-        static let era = ComponentSet(rawValue: 1 << 0)
-        static let year = ComponentSet(rawValue: 1 << 1)
-        static let month = ComponentSet(rawValue: 1 << 2)
-        static let day = ComponentSet(rawValue: 1 << 3)
-        static let hour = ComponentSet(rawValue: 1 << 4)
-        static let minute = ComponentSet(rawValue: 1 << 5)
-        static let second = ComponentSet(rawValue: 1 << 6)
-        static let weekday = ComponentSet(rawValue: 1 << 7)
-        static let weekdayOrdinal = ComponentSet(rawValue: 1 << 8)
-        static let quarter = ComponentSet(rawValue: 1 << 9)
-        static let weekOfMonth = ComponentSet(rawValue: 1 << 10)
-        static let weekOfYear = ComponentSet(rawValue: 1 << 11)
-        static let yearForWeekOfYear = ComponentSet(rawValue: 1 << 12)
-        static let nanosecond = ComponentSet(rawValue: 1 << 13)
-        static let calendar = ComponentSet(rawValue: 1 << 14)
-        static let timeZone = ComponentSet(rawValue: 1 << 15)
-        static let isLeapMonth = ComponentSet(rawValue: 1 << 16)
-
-        var count: Int {
-            rawValue.nonzeroBitCount
-        }
-
-        var set: Set<Component> {
-            var result: Set<Component> = Set()
-            if contains(.era) { result.insert(.era) }
-            if contains(.year) { result.insert(.year) }
-            if contains(.month) { result.insert(.month) }
-            if contains(.day) { result.insert(.day) }
-            if contains(.hour) { result.insert(.hour) }
-            if contains(.minute) { result.insert(.minute) }
-            if contains(.second) { result.insert(.second) }
-            if contains(.weekday) { result.insert(.weekday) }
-            if contains(.weekdayOrdinal) { result.insert(.weekdayOrdinal) }
-            if contains(.quarter) { result.insert(.quarter) }
-            if contains(.weekOfMonth) { result.insert(.weekOfMonth) }
-            if contains(.weekOfYear) { result.insert(.weekOfYear) }
-            if contains(.yearForWeekOfYear) { result.insert(.yearForWeekOfYear) }
-            if contains(.nanosecond) { result.insert(.nanosecond) }
-            if contains(.calendar) { result.insert(.calendar) }
-            if contains(.timeZone) { result.insert(.timeZone) }
-            if contains(.isLeapMonth) { result.insert(.isLeapMonth) }
-            return result
-        }
-
-        var highestSetUnit: Calendar.Component? {
-            if self.contains(.era) { return .era }
-            if self.contains(.year) { return .year }
-            if self.contains(.quarter) { return .quarter }
-            if self.contains(.month) { return .month }
-            if self.contains(.day) { return .day }
-            if self.contains(.hour) { return .hour }
-            if self.contains(.minute) { return .minute }
-            if self.contains(.second) { return .second }
-            if self.contains(.weekday) { return .weekday }
-            if self.contains(.weekdayOrdinal) { return .weekdayOrdinal }
-            if self.contains(.weekOfMonth) { return .weekOfMonth }
-            if self.contains(.weekOfYear) { return .weekOfYear }
-            if self.contains(.yearForWeekOfYear) { return .yearForWeekOfYear }
-            if self.contains(.nanosecond) { return .nanosecond }
-
-            // The algorithms that call this function assume that isLeapMonth counts as a 'highest unit set', but the order is after nanosecond.
-            if self.contains(.isLeapMonth) { return .isLeapMonth }
-
-            // The calendar and timeZone properties do not count as a 'highest unit set', since they are not ordered in time like the others are.
-            return nil
-        }
-    }
-
     /// An enumeration for the various components of a calendar date.
     ///
     /// Several `Calendar` APIs use either a single unit or a set of units as input to a search algorithm.
@@ -302,25 +213,25 @@ public struct Calendar : Hashable, Equatable, Sendable {
             }
         }
 
-        fileprivate var componentSetValue: ComponentSet.RawValue {
+        internal var componentSetValue: DateComponents.ComponentSet.RawValue {
             switch self {
-            case .era: return ComponentSet.era.rawValue
-            case .year: return ComponentSet.year.rawValue
-            case .month: return ComponentSet.month.rawValue
-            case .day: return ComponentSet.day.rawValue
-            case .hour: return ComponentSet.hour.rawValue
-            case .minute: return ComponentSet.minute.rawValue
-            case .second: return ComponentSet.second.rawValue
-            case .weekday: return ComponentSet.weekday.rawValue
-            case .weekdayOrdinal: return ComponentSet.weekdayOrdinal.rawValue
-            case .quarter: return ComponentSet.quarter.rawValue
-            case .weekOfMonth: return ComponentSet.weekOfMonth.rawValue
-            case .weekOfYear: return ComponentSet.weekOfYear.rawValue
-            case .yearForWeekOfYear: return ComponentSet.yearForWeekOfYear.rawValue
-            case .nanosecond: return ComponentSet.nanosecond.rawValue
-            case .calendar: return ComponentSet.calendar.rawValue
-            case .timeZone: return ComponentSet.timeZone.rawValue
-            case .isLeapMonth: return ComponentSet.isLeapMonth.rawValue
+            case .era: return DateComponents.ComponentSet.era.rawValue
+            case .year: return DateComponents.ComponentSet.year.rawValue
+            case .month: return DateComponents.ComponentSet.month.rawValue
+            case .day: return DateComponents.ComponentSet.day.rawValue
+            case .hour: return DateComponents.ComponentSet.hour.rawValue
+            case .minute: return DateComponents.ComponentSet.minute.rawValue
+            case .second: return DateComponents.ComponentSet.second.rawValue
+            case .weekday: return DateComponents.ComponentSet.weekday.rawValue
+            case .weekdayOrdinal: return DateComponents.ComponentSet.weekdayOrdinal.rawValue
+            case .quarter: return DateComponents.ComponentSet.quarter.rawValue
+            case .weekOfMonth: return DateComponents.ComponentSet.weekOfMonth.rawValue
+            case .weekOfYear: return DateComponents.ComponentSet.weekOfYear.rawValue
+            case .yearForWeekOfYear: return DateComponents.ComponentSet.yearForWeekOfYear.rawValue
+            case .nanosecond: return DateComponents.ComponentSet.nanosecond.rawValue
+            case .calendar: return DateComponents.ComponentSet.calendar.rawValue
+            case .timeZone: return DateComponents.ComponentSet.timeZone.rawValue
+            case .isLeapMonth: return DateComponents.ComponentSet.isLeapMonth.rawValue
             }
         }
     }
@@ -966,9 +877,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
         var dc: DateComponents
         switch _kind {
         case .autoupdating:
-            dc = CalendarCache.cache.current.dateComponents(Calendar.ComponentSet(components), from: date)
+            dc = CalendarCache.cache.current.dateComponents(DateComponents.ComponentSet(components), from: date)
         case .fixed:
-            dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: date)
+            dc = _calendar.dateComponents(DateComponents.ComponentSet(components), from: date)
         #if FOUNDATION_FRAMEWORK
         case .bridged:
             dc = _bridged.dateComponents(components, from: date)
@@ -985,7 +896,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
     /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
     /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
-    internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
+    internal func _dateComponents(_ components: DateComponents.ComponentSet, from date: Date) -> DateComponents {
         var dc: DateComponents
         switch _kind {
         case .fixed:
@@ -1047,9 +958,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
         var dc: DateComponents
         switch _kind {
         case .autoupdating:
-            dc = CalendarCache.cache.current.dateComponents(Calendar.ComponentSet(components), from: start, to: end)
+            dc = CalendarCache.cache.current.dateComponents(DateComponents.ComponentSet(components), from: start, to: end)
         case .fixed:
-            dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: start, to: end)
+            dc = _calendar.dateComponents(DateComponents.ComponentSet(components), from: start, to: end)
         #if FOUNDATION_FRAMEWORK
         case .bridged:
             dc = _bridged.dateComponents(components, from: start, to: end)
@@ -1106,7 +1017,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     public func component(_ component: Component, from date: Date) -> Int {
         // struct Calendar API probably should have marked this optional, as some components are not integers. For now, we just return 0 instead for things like time zone or calendar.
         // Avoid an unneeded creation of an array and set by calling the internal version
-        let dc = self._dateComponents(ComponentSet(single: component), from: date)
+        let dc = self._dateComponents(DateComponents.ComponentSet(single: component), from: date)
         if let result = dc.value(for: component) {
             return result
         } else {
