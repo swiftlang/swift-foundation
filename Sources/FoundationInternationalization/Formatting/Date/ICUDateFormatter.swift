@@ -249,27 +249,42 @@ final class ICUDateFormatter {
     }
 
     static let formatterCache = FormatterCache<DateFormatInfo, ICUDateFormatter>()
-    static var patternCache = LockedState<[Date.FormatStyle : String]>(initialState: [:])
+    static var patternCache = LockedState<[PatternCacheKey : String]>(initialState: [:])
 
     static func cachedFormatter(for dateFormatInfo: DateFormatInfo) -> ICUDateFormatter {
         return Self.formatterCache.formatter(for: dateFormatInfo, creator: dateFormatInfo.createICUDateFormatter)
     }
 
+    struct PatternCacheKey : Hashable {
+        var localeIdentifier: String
+        var calendarIdentifier: Calendar.Identifier
+        var symbols: Date.FormatStyle.DateFieldCollection
+        var datePatternOverride: String?
+    }
+
     static func cachedFormatter(for format: Date.FormatStyle) -> ICUDateFormatter {
 
         let calendarIdentifier = format.calendar.identifier
+        let datePatternOverride: String?
+        if let dateStyle = format._dateStyle {
+            datePatternOverride = format.locale.customDateFormat(dateStyle)
+        } else {
+            datePatternOverride = nil
+        }
+
+        let key = PatternCacheKey(localeIdentifier: format.locale.identifierCapturingPreferences, calendarIdentifier: format.calendar.identifier, symbols: format.symbols, datePatternOverride: datePatternOverride)
         let pattern = patternCache.withLock { state in
-            if let cachedPattern = state[format] {
+            if let cachedPattern = state[key] {
                 return cachedPattern
             } else {
                 var pattern = ICUPatternGenerator.localizedPattern(symbols: format.symbols, locale: format.locale, calendar: format.calendar)
-                if let dateStyle = format._dateStyle, let datePatternOverride = format.locale.customDateFormat(dateStyle) {
+                if let datePatternOverride {
                     // substitute date part from pattern with customDatePattern
                     let datePattern = ICUPatternGenerator.localizedPattern(symbols: format.symbols.dateFields, locale: format.locale, calendar: format.calendar)
                     pattern.replace(datePattern, with: datePatternOverride)
                 }
                 
-                state[format] = pattern
+                state[key] = pattern
                 return pattern
             }
         }

@@ -36,7 +36,7 @@ final class ICUPatternGenerator {
         udatpg_close(upatternGenerator)
     }
 
-    func _patternForSkeleton(_ skeleton: String, hourCycleOverride: Locale.HourCycle?) -> String {
+    func _patternForSkeleton(_ skeleton: String) -> String {
         var status = U_ZERO_ERROR
         try! status.checkSuccess()
         let clonedPatternGenerator = udatpg_clone(upatternGenerator, &status)
@@ -46,17 +46,7 @@ final class ICUPatternGenerator {
 
         let skeletonUChar = Array(skeleton.utf16)
         let pattern = _withResizingUCharBuffer { buffer, size, status in
-            let options: UDateTimePatternMatchOptions
-            switch hourCycleOverride {
-            case nil:
-                options = UDATPG_MATCH_ALL_FIELDS_LENGTH
-            case .zeroToEleven, .oneToTwelve:
-                options = UDateTimePatternMatchOptions(rawValue: UADATPG_FORCE_12_HOUR_CYCLE.rawValue | UDATPG_MATCH_ALL_FIELDS_LENGTH.rawValue)
-            case .zeroToTwentyThree, .oneToTwentyFour:
-                options = UDateTimePatternMatchOptions(rawValue: UADATPG_FORCE_24_HOUR_CYCLE.rawValue | UDATPG_MATCH_ALL_FIELDS_LENGTH.rawValue)
-            }
-
-            return udatpg_getBestPatternWithOptions(clonedPatternGenerator, skeletonUChar, Int32(skeletonUChar.count), options, buffer, size, &status)
+            udatpg_getBestPatternWithOptions(clonedPatternGenerator, skeletonUChar, Int32(skeletonUChar.count), UDATPG_MATCH_ALL_FIELDS_LENGTH, buffer, size, &status)
         }
 
         return pattern ?? skeleton
@@ -86,23 +76,21 @@ final class ICUPatternGenerator {
     struct PatternGeneratorInfo: Hashable {
         let localeIdentifier: String
         let calendarIdentifier: Calendar.Identifier
-
-        func createNSICUPatternGenerator() -> ICUPatternGenerator {
-            ICUPatternGenerator(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier)
-        }
     }
 
     static let _patternGeneratorCache = FormatterCache<PatternGeneratorInfo, ICUPatternGenerator>()
 
     static func localizedPattern(symbols: Date.FormatStyle.DateFieldCollection, locale: Locale, calendar: Calendar) -> String {
-        let upatternGenerator = cachedPatternGenerator(localeIdentifier: locale.identifier, calendarIdentifier: calendar.identifier)
+        let upatternGenerator = cachedPatternGenerator(localeIdentifier: locale.identifierCapturingPreferences, calendarIdentifier: calendar.identifier)
 
         let skeleton = symbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
-        return upatternGenerator._patternForSkeleton(skeleton, hourCycleOverride: locale.forceHourCycle)
+        return upatternGenerator._patternForSkeleton(skeleton)
     }
 
     static func cachedPatternGenerator(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> ICUPatternGenerator {
         let patternInfo = PatternGeneratorInfo(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier)
-        return _patternGeneratorCache.formatter(for: patternInfo, creator: patternInfo.createNSICUPatternGenerator)
+        return _patternGeneratorCache.formatter(for: patternInfo) {
+            ICUPatternGenerator(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier)
+        }
     }
 }
