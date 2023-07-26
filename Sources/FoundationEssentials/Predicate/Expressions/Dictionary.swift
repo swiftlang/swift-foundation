@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions {
     public struct DictionaryKeySubscript<
         Wrapped : PredicateExpression,
@@ -40,10 +40,10 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.DictionaryKeySubscript : Sendable where Wrapped : Sendable, Key : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.DictionaryKeySubscript : Codable where Wrapped : Codable, Key : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -58,10 +58,10 @@ extension PredicateExpressions.DictionaryKeySubscript : Codable where Wrapped : 
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.DictionaryKeySubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Key : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions {
     public struct DictionaryKeyDefaultValueSubscript<
         Wrapped : PredicateExpression,
@@ -94,10 +94,10 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : Sendable where Wrapped : Sendable, Key : Sendable, Default : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : Codable where Wrapped : Codable, Key : Codable, Default : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -114,5 +114,5 @@ extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : Codable wher
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Key : StandardPredicateExpression, Default : StandardPredicateExpression {}

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions {
     public struct CollectionIndexSubscript<
         Wrapped : PredicateExpression,
@@ -45,10 +45,10 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.CollectionIndexSubscript : Sendable where Wrapped : Sendable, Index : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.CollectionIndexSubscript : Codable where Wrapped : Codable, Index : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -63,10 +63,10 @@ extension PredicateExpressions.CollectionIndexSubscript : Codable where Wrapped 
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.CollectionIndexSubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Index : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions {
     public struct CollectionRangeSubscript<
         Wrapped : PredicateExpression,
@@ -106,10 +106,10 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.CollectionRangeSubscript : Sendable where Wrapped : Sendable, Range : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.CollectionRangeSubscript : Codable where Wrapped : Codable, Range : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -124,10 +124,10 @@ extension PredicateExpressions.CollectionRangeSubscript : Codable where Wrapped 
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.CollectionRangeSubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Range : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions {
     public struct CollectionContainsCollection<
         Base : PredicateExpression,
@@ -161,10 +161,10 @@ extension PredicateExpressions {
 }
 
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.CollectionContainsCollection : Sendable where Base : Sendable, Other : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.CollectionContainsCollection : Codable where Base : Codable, Other : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -179,5 +179,5 @@ extension PredicateExpressions.CollectionContainsCollection : Codable where Base
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.CollectionContainsCollection : StandardPredicateExpression where Base : StandardPredicateExpression, Other : StandardPredicateExpression {}

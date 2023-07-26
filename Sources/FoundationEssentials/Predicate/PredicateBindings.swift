@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 @_nonSendable
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public struct PredicateBindings {
     // Store as a values as an array instead of a dictionary (since it is almost always very few elements, this reduces heap allocation and hashing overhead)
     private var storage: [(id: PredicateExpressions.VariableID, value: Any)]

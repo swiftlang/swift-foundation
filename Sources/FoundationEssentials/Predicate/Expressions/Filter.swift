@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions {
     public struct Filter<
         LHS : PredicateExpression,
@@ -48,10 +48,10 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.Filter : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -68,5 +68,5 @@ extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codab
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension PredicateExpressions.Filter : Sendable where LHS : Sendable, RHS : Sendable {}

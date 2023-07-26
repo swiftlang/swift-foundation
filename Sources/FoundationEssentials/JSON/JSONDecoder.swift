@@ -350,14 +350,14 @@ open class JSONDecoder {
         }, from: data)
     }
     
-    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+    @available(Future, *)
     open func decode<T: DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
         try _decode({
             try $0.unwrap($1, as: type, configuration: configuration, for: .root, _JSONKey?.none)
         }, from: data)
     }
     
-    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+    @available(Future, *)
     open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C : DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, configuration: C.decodingConfiguration)
     }

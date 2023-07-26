@@ -3,6 +3,13 @@
 
 import PackageDescription
 
+let availabilityMacros: [SwiftSetting] = [
+    "Future:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+    "SwiftRuntime 5.9:macOS 14.0, iOS 17.0, tvOS 17.0, watchOS 10.0",
+].map {
+    .enableExperimentalFeature("AvailabilityMacro=\($0)")
+}
+
 let package = Package(
     name: "FoundationPreview",
     platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
@@ -39,7 +46,7 @@ let package = Package(
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
             "FoundationInternationalization",
-        ]),
+        ], swiftSettings: availabilityMacros),
 
         // FoundationEssentials
         .target(
@@ -51,12 +58,12 @@ let package = Package(
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
-          ]
+          ] + availabilityMacros
         ),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
             "FoundationEssentials"
-        ]),
+        ], swiftSettings: availabilityMacros),
 
         // FoundationInternationalization
         .target(
@@ -68,7 +75,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ]
+            ] + availabilityMacros
         ),
     ]
 )
@@ -78,6 +85,6 @@ package.targets.append(contentsOf: [
     .testTarget(name: "FoundationInternationalizationTests", dependencies: [
         "TestSupport",
         "FoundationInternationalization"
-    ]),
+    ], swiftSettings: availabilityMacros),
 ])
 #endif

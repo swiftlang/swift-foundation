@@ -87,19 +87,19 @@ public typealias EncodingConfigurationProviding = Foundation.EncodingConfigurati
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias DecodingConfigurationProviding = Foundation.DecodingConfigurationProviding
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias Predicate = Foundation.Predicate
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias PredicateBindings = Foundation.PredicateBindings
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias PredicateExpression = Foundation.PredicateExpression
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias PredicateExpressions = Foundation.PredicateExpressions
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias StandardPredicateExpression = Foundation.StandardPredicateExpression
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias PredicateError = Foundation.PredicateError
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias PredicateCodableConfiguration = Foundation.PredicateCodableConfiguration
 
 #else
@@ -184,17 +184,17 @@ public typealias TimeZone = FoundationInternationalization.TimeZone
 public typealias Locale = FoundationInternationalization.Locale
 public typealias DateComponents = FoundationInternationalization.DateComponents
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias Predicate = FoundationEssentials.Predicate
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias PredicateBindings = FoundationEssentials.PredicateBindings
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias PredicateExpression = FoundationEssentials.PredicateExpression
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias PredicateExpressions = FoundationEssentials.PredicateExpressions
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias StandardPredicateExpression = FoundationEssentials.StandardPredicateExpression
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 public typealias PredicateError = FoundationEssentials.PredicateError
 
 #endif // FOUNDATION_FRAMEWORK

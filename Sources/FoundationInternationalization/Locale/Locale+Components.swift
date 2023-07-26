@@ -314,31 +314,31 @@ extension Locale {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(Future, *)
 extension Locale.LanguageCode : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(Future, *)
 extension Locale.Script : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(Future, *)
 extension Locale.Region : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(Future, *)
 extension Locale.Currency : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(Future, *)
 extension Locale.Collation : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(Future, *)
 extension Locale.NumberingSystem : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(Future, *)
 extension Locale.Subdivision : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(Future, *)
 extension Locale.Variant : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(Future, *)
 extension Locale.MeasurementSystem : CustomDebugStringConvertible { }
 
 extension Locale {
@@ -359,7 +359,7 @@ extension Locale {
         internal var _identifier: String
         internal var _normalizedIdentifier: String
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(Future, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -499,7 +499,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(Future, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -570,7 +570,7 @@ extension Locale {
         internal var _identifier: String
         internal var _normalizedIdentifier: String
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(Future, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -744,7 +744,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(Future, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -838,7 +838,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(Future, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -950,7 +950,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(Future, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -1140,7 +1140,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(Future, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -1231,7 +1231,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(Future, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -1303,7 +1303,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(Future, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }

@@ -120,7 +120,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return _defaultCount
     }
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(Future, *)
     @usableFromInline
     internal var _count: Int {
         _unicodeScalars.count
@@ -159,7 +159,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(Future, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,

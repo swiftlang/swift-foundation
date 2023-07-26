@@ -39,7 +39,7 @@ extension String {
     }
     #endif
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(Future, *)
     @usableFromInline
     internal init(_characters: AttributedString.CharacterView) {
         self.init(_characters._characters)

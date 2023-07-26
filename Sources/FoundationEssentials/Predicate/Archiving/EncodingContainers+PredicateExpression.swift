@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension KeyedEncodingContainer {
     public mutating func encodePredicateExpression<T: PredicateExpression & Encodable, each Input>(_ expression: T, forKey key: Self.Key, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
         var container = self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self, forKey: key)
@@ -25,7 +25,7 @@ extension KeyedEncodingContainer {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension KeyedDecodingContainer {
     public mutating func decodePredicateExpression<each Input>(forKey key: Self.Key, input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self, forKey: key)
@@ -38,7 +38,7 @@ extension KeyedDecodingContainer {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension UnkeyedEncodingContainer {
     public mutating func encodePredicateExpression<T: PredicateExpression & Encodable, each Input>(_ expression: T, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
         var container = self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self)
@@ -54,7 +54,7 @@ extension UnkeyedEncodingContainer {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(SwiftRuntime 5.9, *)
 extension UnkeyedDecodingContainer {
     public mutating func decodePredicateExpression<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self)
