@@ -542,6 +542,95 @@ final class PredicateCodableTests: XCTestCase {
         XCTAssertThrowsError(try _encodeDecode(predicate, for: EmptyConfig.self))
         XCTAssertThrowsError(try _encodeDecode(predicate))
     }
+    
+    func testCapturedVariadicTypes() throws {
+#if !canImport(ReflectionInternal, _version: "18")
+        throw XCTSkip("Insufficient ReflectionInternal version for this test")
+#else
+        struct A<each T> : Equatable, Codable {
+            init(_: repeat (each T).Type) {}
+            
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                try container.encodeNil()
+            }
+            
+            init(from decoder: Decoder) throws {
+                var container = try decoder.singleValueContainer()
+                guard container.decodeNil() else {
+                    throw DecodingError.dataCorrupted(.init(codingPath: container.codingPath, debugDescription: "Did not find encoded nil"))
+                }
+            }
+        }
+
+        let a = A(String.self, Int.self)
+
+        let predicate = Predicate<Int> { _ in
+            // a == a
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_Arg(a),
+                rhs: PredicateExpressions.build_Arg(a)
+            )
+        }
+
+        let encoder = JSONEncoder()
+        var config = PredicateCodableConfiguration.standardConfiguration
+        config.allowPartialType(A< >.self, identifier: "PredicateCodableTests.A")
+        XCTAssertThrowsError(try encoder.encode(predicate, configuration: config)) {
+            XCTAssertTrue(String(describing: $0).contains("type is not allowed because it contains type pack parameters"))
+        }
+        
+        let json = """
+        [
+          {
+            "expression" : [
+              null,
+              null
+            ],
+            "structure" : {
+              "identifier" : "PredicateExpressions.Equal",
+              "args" : [
+                {
+                  "identifier" : "PredicateExpressions.Value",
+                  "args" : [
+                    {
+                      "identifier": "PredicateCodableTests.A",
+                      "args": [
+                        "Swift.String",
+                        "Swift.Int"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "args" : [
+                    {
+                      "identifier": "PredicateCodableTests.A",
+                      "args": [
+                        "Swift.String",
+                        "Swift.Int"
+                      ]
+                    }
+                  ],
+                  "identifier" : "PredicateExpressions.Value"
+                }
+              ]
+            },
+            "variable" : [
+              {
+                "key" : 0
+              }
+            ]
+          }
+        ]
+        """
+        
+        let decoder = JSONDecoder()
+        XCTAssertThrowsError(try decoder.decode(Predicate<Int>.self, from: json.data(using: .utf8)!, configuration: config)) {
+            XCTAssertTrue(String(describing: $0).contains("type is not allowed because it contains type pack parameters"))
+        }
+#endif
+    }
 }
 
 #endif // FOUNDATION_FRAMEWORK
