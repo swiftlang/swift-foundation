@@ -20,12 +20,14 @@ enum PredicateCodableError : Error, CustomStringConvertible {
     case disallowedType(typeName: String, path: String)
     case disallowedIdentifier(String, path: String)
     case reconstructionFailure(PartialType, [Type])
+    case variadicType(typeName: String, path: String)
     
     var description: String {
         switch self {
         case .disallowedType(let typeName, let path): return "The '\(typeName)' type is not in the provided allowlist (required by \(path))"
         case .disallowedIdentifier(let id, let path): return "The '\(id)' identifier is not in the provided allowlist (required by \(path))"
         case .reconstructionFailure(let partial, let args): return "Reconstruction of '\(partial.name)' with the arguments \(args.map(\.swiftType)) failed"
+        case .variadicType(let typeName, let path): return "The '\(typeName)' type is not allowed because it contains type pack parameters (required by \(path))"
         }
     }
 }
@@ -63,6 +65,11 @@ private struct ExpressionStructure : Codable {
     }
     
     init(_ type: Type, with configuration: PredicateCodableConfiguration, path: [String] = []) throws {
+#if canImport(ReflectionInternal, _version: "18")
+        if type.partial?.hasParameterPacks ?? false {
+            throw PredicateCodableError.variadicType(typeName: _typeName(type.swiftType), path: "/\(path.joined(separator: "/"))")
+        }
+#endif
         guard let result = configuration._identifier(for: type) else {
             throw PredicateCodableError.disallowedType(typeName: _typeName(type.swiftType), path: "/\(path.joined(separator: "/"))")
         }
@@ -90,6 +97,12 @@ private struct ExpressionStructure : Codable {
         case .partial(let partialType):
             partial = partialType
         }
+        
+#if canImport(ReflectionInternal, _version: "18")
+        if partial.hasParameterPacks {
+            throw PredicateCodableError.variadicType(typeName: partial.name, path: "/\(path.joined(separator: "/"))")
+        }
+#endif
         
         let argTypes = try args.map {
             try $0.reconstruct(with: configuration, path: path + [identifier])
