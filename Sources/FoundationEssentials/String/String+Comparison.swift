@@ -676,6 +676,14 @@ extension Substring {
 
     func _components(separatedBy separator: Substring, options: String.CompareOptions = []) throws -> [String] {
         var result = [String]()
+        try _enumerateComponents(separatedBy: separator, options: options) { substr, _ in
+            result.append(String(substr))
+        }
+        return result
+    }
+
+    // Only throws when using `.regularExpression` option
+    func _enumerateComponents(separatedBy separator: Substring, options: String.CompareOptions = [], withBlock block: (_ component: Substring, _ isLastComponent: Bool) -> ()) throws {
         var searchStart = startIndex
         while searchStart < endIndex {
             let r = try self[searchStart...]._range(of: separator, options: options)
@@ -683,13 +691,11 @@ extension Substring {
                 break
             }
 
-            result.append(String(self[searchStart ..< r.lowerBound]))
+            block(self[searchStart ..< r.lowerBound], false)
             searchStart = r.upperBound
         }
 
-        result.append(String(self[searchStart..<endIndex]))
-
-        return result
+        block(self[searchStart..<endIndex], true)
     }
 }
 

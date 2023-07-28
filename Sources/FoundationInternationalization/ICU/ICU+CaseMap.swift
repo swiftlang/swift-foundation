@@ -71,6 +71,19 @@ extension ICU {
                 }
             }
         }
+        
+        func titlecase(_ s: Substring) -> String? {
+            lock.withLock {
+                var s = s
+                return s.withUTF8 { srcBuf in
+                    srcBuf.withMemoryRebound(to: CChar.self) { buffer in
+                        _withResizingCharBuffer { destBuf, destSize, status in
+                            ucasemap_utf8ToTitle(casemap, destBuf, destSize, buffer.baseAddress!, Int32(buffer.count), &status)
+                        }
+                    }
+                }
+            }
+        }
 
         func titlecase(_ s: String) -> String? {
             // `ucasemap_utf8ToTitle` isn't thread-safe

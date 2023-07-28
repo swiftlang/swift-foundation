@@ -45,6 +45,7 @@ final class StringLocaleTests: XCTestCase {
             test("İİ", "İi")
             test("II", "Iı")
             test("«ijs»", "«İjs»")
+            test("ijs.ıi", "İjs.Ii")
         }
 
         do {
@@ -55,11 +56,30 @@ final class StringLocaleTests: XCTestCase {
             test("II", "Ii")
             test("«ijs»", "«IJs»")
             test("ijssEl iglOo IJSSEL", "IJssel Igloo IJssel")
+            test("ijssEl.ijSSEL", "IJssel.IJssel")
         }
 
         do {
             locale = Locale(identifier: "el")
             test("άυλος", "Άυλος")
+        }
+
+        do {
+            locale = Locale(identifier: "en_US")
+            test("washington d.c.", "Washington D.C.")
+            test("washington D.c.", "Washington D.C.")
+            test("washington d.C.", "Washington D.C.")
+
+            test("washington d. c.", "Washington D. C.")
+            test("washington d. C.", "Washington D. C.")
+
+            test("washington.D.C.", "Washington.D.C.")
+
+            test("u.s.a.", "U.S.A.")
+            test("U.S.A.", "U.S.A.")
+
+            test("example county. happy. SOC'y, INC. V. COMM'R, 123 F.24d 314 (2d Cir. 1990).", "Example County. Happy. Soc'y, Inc. V. Comm'r, 123 F.24d 314 (2d Cir. 1990).")
+            test("3.dollars", "3.Dollars")
         }
     }
 
