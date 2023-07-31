@@ -2131,16 +2131,3 @@ extension Calendar.Component {
     }
 }
 
-#if !FOUNDATION_FRAMEWORK
-extension ComparisonResult {
-    init<T: Comparable>(_ t1: T, _ t2: T) {
-        if t1 < t2 {
-            self = .orderedAscending
-        } else if t1 > t2 {
-            self = .orderedDescending
-        } else {
-            self = .orderedSame
-        }
-    }
-}
-#endif

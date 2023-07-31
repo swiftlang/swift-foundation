@@ -10,46 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// MARK: - Exported Types
-@available(macOS 10.0, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension String {
-#if FOUNDATION_FRAMEWORK
-    public typealias CompareOptions = NSString.CompareOptions
-#else
-    /// These options apply to the various search/find and comparison methods (except where noted).
-    public struct CompareOptions : OptionSet, Sendable {
-        public let rawValue: UInt
-
-        public init(rawValue: UInt) {
-            self.rawValue = rawValue
-        }
-
-        static let caseInsensitive = CompareOptions(rawValue: 1)
-        /// Exact character-by-character equivalence
-        static let literal = CompareOptions(rawValue: 2)
-        /// Search from end of source string
-        static let backwards = CompareOptions(rawValue: 4)
-        /// Search is limited to start (or end, if `.backwards`) of source string
-        static let anchored  = CompareOptions(rawValue: 8)
-        /// Numbers within strings are compared using numeric value, that is,
-        /// Foo2.txt < Foo7.txt < Foo25.txt;
-        /// only applies to compare methods, not find
-        static let numeric   = CompareOptions(rawValue: 64)
-        /// If specified, ignores diacritics (o-umlaut == o)
-        static let diacriticInsensitive = CompareOptions(rawValue: 128)
-        /// If specified, ignores width differences ('a' == UFF41)
-        static let widthInsensitive = CompareOptions(rawValue: 256)
-        /// If specified, comparisons are forced to return either `.orderedAscending`
-        /// or `.orderedDescending` if the strings are equivalent but not strictly equal,
-        /// for stability when sorting (e.g. "aaa" > "AAA" with `.caseInsensitive` specified)
-        static let forcedOrdering = CompareOptions(rawValue: 512)
-        /// The search string is treated as an ICU-compatible regular expression;
-        /// if set, no other options can apply except `.caseInsensitive` and `.anchored`
-        static let regularExpression = CompareOptions(rawValue: 1024)
-    }
-#endif // FOUNDATION_FRAMEWORK
-}
-
 extension UTF8.CodeUnit {
     static let newline: Self = 0x0A
     static let carriageReturn: Self = 0x0D
@@ -676,6 +636,14 @@ extension Substring {
 
     func _components(separatedBy separator: Substring, options: String.CompareOptions = []) throws -> [String] {
         var result = [String]()
+        try _enumerateComponents(separatedBy: separator, options: options) { substr, _ in
+            result.append(String(substr))
+        }
+        return result
+    }
+
+    // Only throws when using `.regularExpression` option
+    func _enumerateComponents(separatedBy separator: Substring, options: String.CompareOptions = [], withBlock block: (_ component: Substring, _ isLastComponent: Bool) -> ()) throws {
         var searchStart = startIndex
         while searchStart < endIndex {
             let r = try self[searchStart...]._range(of: separator, options: options)
@@ -683,13 +651,11 @@ extension Substring {
                 break
             }
 
-            result.append(String(self[searchStart ..< r.lowerBound]))
+            block(self[searchStart ..< r.lowerBound], false)
             searchStart = r.upperBound
         }
 
-        result.append(String(self[searchStart..<endIndex]))
-
-        return result
+        block(self[searchStart..<endIndex], true)
     }
 }
 

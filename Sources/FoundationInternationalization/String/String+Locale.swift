@@ -21,11 +21,21 @@ extension String {
         return lowered
     }
 
-    func _capitalized(with  locale: Locale?) -> String {
-        guard let casemap = ICU.CaseMap.caseMappingForLocale(locale?.identifier), let titled = casemap.titlecase(self) else {
+    func _capitalized(with locale: Locale?) -> String {
+        guard let casemap = ICU.CaseMap.caseMappingForLocale(locale?.identifier) else {
             return capitalized
         }
-        return titled
+        
+        // Theoretically "." is a case-ignorable character, so the character after "." is not uppercased. This results in "D.c." for "D.C".
+        // Handle this special case by splitting the string with "." and titlecasing each substring individually.
+        var result = ""
+        try! self[...]._enumerateComponents(separatedBy: ".", options: []) { substr, isLastComponent in
+            result += casemap.titlecase(substr) ?? substr.capitalized
+            if !isLastComponent {
+                result += "."
+            }
+        }
+        return result
     }
 
     func _uppercased(with locale: Locale?) -> String {
