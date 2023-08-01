@@ -319,7 +319,8 @@ final class CalendarTests : XCTestCase {
         let date = Date(timeIntervalSinceReferenceDate: 682898558.712307)
 
         // Explicitly shared amongst all the below threads
-        let calendar = Calendar(identifier: .gregorian)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
 
         let group = DispatchGroup()
         let queue = DispatchQueue(label: "calendar test", qos: .default, attributes: .concurrent, autoreleaseFrequency: .workItem)
