@@ -354,8 +354,8 @@ final class LocaleTests : XCTestCase {
         // We treat it as US system as long as `metricUnits` is false
         expectIdentifier("en_US", preferences: .init(metricUnits: false, measurementUnits: .centimeters), expectedFullIdentifier: "en_US@measure=ussystem")
 
-        expectIdentifier("en_US", preferences: .init(country: "GB"), expectedFullIdentifier: "en_US@rg=gbzzzz")
-        // Preference's region code is the same as the language code; no need for the specific keyword
+        // 112778892: Country pref is intentionally ignored
+        expectIdentifier("en_US", preferences: .init(country: "GB"), expectedFullIdentifier: "en_US")
         expectIdentifier("en_US", preferences: .init(country: "US"), expectedFullIdentifier: "en_US")
 
         expectIdentifier("en_US", preferences: .init(firstWeekday: [.gregorian : 3]), expectedFullIdentifier: "en_US@fw=tue")
