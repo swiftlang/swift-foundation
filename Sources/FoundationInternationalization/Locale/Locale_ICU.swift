@@ -402,6 +402,9 @@ internal final class _Locale: Sendable, Hashable {
 
     // This only includes a subset of preferences that are representable by
     // CLDR keywords: https://www.unicode.org/reports/tr35/#Key_Type_Definitions
+    //
+    // Intentionally ignore `prefs.country`: Locale identifier should already contain
+    // that information. Do not override it.
     internal var identifierCapturingPreferences: String {
         lock.withLock { state in
             if let result = state.identifierCapturingPreferences {
@@ -422,10 +425,6 @@ internal final class _Locale: Sendable, Hashable {
             let calendarID = _lockedCalendarIdentifier(&state)
             if let weekdayNumber = prefs.firstWeekday?[calendarID], let weekday = Locale.Weekday(Int32(weekdayNumber)) {
                 components.firstDayOfWeek = weekday
-            }
-
-            if let country = prefs.country {
-                components.region = .init(country)
             }
 
             if let measurementSystem = prefs.measurementSystem {
