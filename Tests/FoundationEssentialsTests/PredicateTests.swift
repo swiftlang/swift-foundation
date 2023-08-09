@@ -680,6 +680,38 @@ final class PredicateTests: XCTestCase {
         XCTAssertTrue(try _build(true).evaluate(1))
         XCTAssertFalse(try _build(false).evaluate(1))
     }
+    
+    func testResilientKeyPaths() {
+        // Local, non-resilient type
+        struct Foo {
+            let a: String   // Non-resilient
+            let b: Date     // Resilient (in Foundation)
+            let c: String   // Non-resilient
+        }
+        
+        let now = Date.now
+        let _ = Predicate<Foo> {
+            PredicateExpressions.build_Conjunction(
+                lhs: PredicateExpressions.build_Equal(
+                    lhs: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.a
+                    ),
+                    rhs: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.c
+                    )
+                ),
+                rhs: PredicateExpressions.build_Equal(
+                    lhs: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.b
+                    ),
+                    rhs: PredicateExpressions.build_Arg(now)
+                )
+            )
+        }
+    }
 }
 
 #endif
