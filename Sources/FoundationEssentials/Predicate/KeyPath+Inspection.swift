@@ -40,7 +40,7 @@ extension UInt32 {
     }
 }
 
-private func _keyPathOffset<T>(_ root: T, _ keyPath: AnyKeyPath) -> Int? {
+private func _keyPathOffset<T>(_ root: T.Type, _ keyPath: AnyKeyPath) -> Int? {
     MemoryLayout<T>.offset(of: keyPath as! PartialKeyPath<T>)
 }
 
@@ -58,7 +58,10 @@ extension AnyKeyPath {
             fallthrough
         case 3: // class stored property
             // Key paths to stored properties are only single-component if MemoryLayout.offset(of:) returns an offset
-            if _keyPathOffset(Self.rootType, self) == nil {
+            func project<T>(_: T.Type) -> Bool {
+                _keyPathOffset(T.self, self) == nil
+            }
+            if _openExistential(Self.rootType, do: project) {
                 fatalError("Predicate does not support keypaths with multiple components")
             }
         case 2: // computed
