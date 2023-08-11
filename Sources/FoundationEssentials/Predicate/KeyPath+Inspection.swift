@@ -19,8 +19,6 @@ extension UInt32 {
     private static var COMPUTED_COMPONENT_PAYLOAD_ARGUMENTS_MASK: UInt32 { 0x0008_0000 }
     private static var COMPUTED_COMPONENT_PAYLOAD_SETTABLE_MASK: UInt32 { 0x0040_0000 }
     
-    fileprivate static var PROPERTY_OFFSET_TOO_LARGE: UInt32 { 0x00FF_FFFF }
-    
     fileprivate var _keyPathHeader_bufferSize: Int {
         Int(self & Self.KEYPATH_HEADER_BUFFER_SIZE_MASK)
     }
@@ -42,6 +40,10 @@ extension UInt32 {
     }
 }
 
+private func _keyPathOffset<T>(_ root: T.Type, _ keyPath: AnyKeyPath) -> Int? {
+    MemoryLayout<T>.offset(of: keyPath as! PartialKeyPath<T>)
+}
+
 extension AnyKeyPath {
     private static var WORD_SIZE: Int { MemoryLayout<Int>.size }
     
@@ -55,9 +57,11 @@ extension AnyKeyPath {
         case 1: // struct/tuple/self stored property
             fallthrough
         case 3: // class stored property
-            // Stored property components are either just the payload, or the payload plus 32 bits if the payload is the sentinel value
-            let size = (firstComponentHeader._keyPathComponentHeader_payload == .PROPERTY_OFFSET_TOO_LARGE) ? MemoryLayout<UInt64>.size : MemoryLayout<UInt32>.size
-            if header._keyPathHeader_bufferSize > size {
+            // Key paths to stored properties are only single-component if MemoryLayout.offset(of:) returns an offset
+            func project<T>(_: T.Type) -> Bool {
+                _keyPathOffset(T.self, self) == nil
+            }
+            if _openExistential(Self.rootType, do: project) {
                 fatalError("Predicate does not support keypaths with multiple components")
             }
         case 2: // computed
