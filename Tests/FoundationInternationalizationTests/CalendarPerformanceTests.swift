@@ -10,11 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
-
 #if FOUNDATION_FRAMEWORK
+import Foundation
+import XCTest
+
 final class TestCalendarPerformance: XCTestCase {
 
     var metrics: [XCTMetric] {

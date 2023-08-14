@@ -12,9 +12,10 @@
 
 #if FOUNDATION_FRAMEWORK
 // TODO: Support AttributedString performance tests in FoundationPreview
-#if canImport(TestSupport)
-import TestSupport
-#endif
+//       (see https://github.com/apple/swift-foundation/issues/254)
+
+import Foundation
+import XCTest
 
 /// Performance tests for `AttributedString` and its associated objects
 final class TestAttributedStringPerformance: XCTestCase {
