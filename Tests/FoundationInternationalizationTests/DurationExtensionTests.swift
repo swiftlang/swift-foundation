@@ -22,18 +22,18 @@ import TestSupport
 @testable import Foundation
 #endif
 
-final class BinaryIntegerExtensionTests : XCTestCase {
+final class DurationExtensionTests : XCTestCase {
 
     func testRoundingMode() {
 
         func verify(_ tests: [Int64], increment: Int64, expected: [FloatingPointRoundingRule: [Int64]], file: StaticString = #file, line: UInt = #line) {
             let modes: [FloatingPointRoundingRule] = [.down, .up, .towardZero, .awayFromZero, .toNearestOrEven, .toNearestOrAwayFromZero]
             for mode in modes {
-                var actual: [Int64] = []
+                var actual: [Duration] = []
                 for test in tests {
-                    actual.append(test.rounded(increment: increment, rule: mode))
+                    actual.append(Duration.seconds(test).rounded(increment: Duration.seconds(increment), rule: mode))
                 }
-                XCTAssertEqual(actual, expected[mode], "\(mode) does not match", file: file, line: line)
+                XCTAssertEqual(actual, expected[mode]?.map { Duration.seconds($0) }, "\(mode) does not match", file: file, line: line)
             }
         }
 
@@ -99,47 +99,5 @@ final class BinaryIntegerExtensionTests : XCTestCase {
             .toNearestOrEven:           [9223372036854775807, 0, 0, 0, 0, 0, 0, 0],
             .toNearestOrAwayFromZero:   [9223372036854775807, 0, 0, 0, 0, 0, 0, 0]
         ])
-    }
-
-    func testRoundingToSignificantDigits() {
-
-        func verify(_ test: Int64, mode: FloatingPointRoundingRule, expected: [Int64: Int64], file: StaticString = #file, line: UInt = #line) {
-            for (digit, expectation) in expected {
-                let actual = test.roundedToSignificantDigits(digit, rule: mode)
-                XCTAssertEqual(actual, expectation, "\(digit) significant digits does not match", file: file, line: line)
-            }
-        }
-
-        // should be 10000000000000000000, but this overflows
-        verify(9_223_372_036_854_775_018, mode: .up, expected: [
-            1: 9_223_372_036_854_775_807,
-            2: 9_223_372_036_854_775_807,
-            3: 9_223_372_036_854_775_807,
-            4: 9_223_372_036_854_775_807
-        ])
-
-        verify(9_223_372_036_854_775_018, mode: .down, expected: [
-            1: 9_000_000_000_000_000_000,
-            2: 9_200_000_000_000_000_000,
-            3: 9_220_000_000_000_000_000,
-            4: 9_223_000_000_000_000_000
-        ])
-
-        verify(9999, mode: .up, expected: [
-            1: 10000,
-            2: 10000,
-            3: 10000,
-            4: 9999
-        ])
-
-        verify(2468, mode: .toNearestOrEven, expected: [
-            1: 2000,
-            2: 2500,
-            3: 2470,
-            4: 2468
-        ])
-
-
-
     }
 }
