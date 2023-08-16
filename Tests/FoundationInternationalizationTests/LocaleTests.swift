@@ -369,6 +369,12 @@ final class LocaleTests : XCTestCase {
         expectIdentifier("en_US", preferences: .init(minDaysInFirstWeek: [.gregorian: 7]), expectedFullIdentifier: "en_US")
         expectIdentifier("en_US", preferences: .init(dateFormats: [.abbreviated: "custom style"]), expectedFullIdentifier: "en_US")
     }
+    
+    func test_badWindowsLocaleID() {
+        // Negative values are invalid
+        let result = Locale.identifier(fromWindowsLocaleCode: -1)
+        XCTAssertNil(result)
+    }
 }
 
 final class LocalePropertiesTests : XCTestCase {

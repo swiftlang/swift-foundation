@@ -124,7 +124,10 @@ extension NSLocale {
 
     @objc(_localeIdentifierFromWindowsLocaleCode:)
     class func _localeIdentifier(fromWindowsLocaleCode: UInt32) -> String? {
-        Locale.identifier(fromWindowsLocaleCode: Int(fromWindowsLocaleCode))
+        guard let code = Int(exactly: fromWindowsLocaleCode) else {
+            return nil
+        }
+        return Locale.identifier(fromWindowsLocaleCode: code)
     }
 
     @objc(_windowsLocaleCodeFromLocaleIdentifier:)
