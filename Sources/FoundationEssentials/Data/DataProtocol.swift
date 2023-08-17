@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS)
+#if canImport(Darwin)
 import Darwin
-#elseif os(Linux)
+#elseif canImport(Glibc)
 import Glibc
-#elseif os(Windows)
+#elseif canImport(ucrt)
 import ucrt
 #endif
 
