@@ -176,7 +176,7 @@ extension NSLocale {
 
     @objc(_localeWithNewCalendarIdentifier:)
     func _localeWithNewCalendarIdentifier(_ calendarIdentifier: String?) -> NSLocale? {
-        guard let calendarIdentifier else {
+        guard calendarIdentifier != nil else {
             // No real need to copy here; Locale is immutable
             return self
         }
@@ -489,7 +489,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
 #if FOUNDATION_FRAMEWORK
         case .exemplarCharacterSet: return nil
 #endif
-        case .calendar: return self.localizedString(forCalendarIdentifier: value)
+        case .calendarIdentifier, .calendar: return self.localizedString(forCalendarIdentifier: value)
         case .collationIdentifier: return self.localizedString(forCollationIdentifier: value)
         case .usesMetricSystem: return nil
         case .measurementSystem: return nil
