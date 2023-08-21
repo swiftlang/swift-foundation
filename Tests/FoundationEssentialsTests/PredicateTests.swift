@@ -596,6 +596,34 @@ final class PredicateTests: XCTestCase {
         XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
     }
     
+    func testLazyDefaultValueSubscript() throws {
+        struct Foo : Codable, Sendable {
+            static var num = 1
+            
+            var property: Int {
+                defer { Foo.num += 1 }
+                return Foo.num
+            }
+        }
+        
+        var foo = Foo()
+        let predicate = Predicate<[String : Int]> {
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_subscript(
+                    PredicateExpressions.build_Arg($0),
+                    PredicateExpressions.build_Arg("key"),
+                    default: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg(foo),
+                        keyPath: \.property
+                    )
+                ),
+                rhs: PredicateExpressions.build_Arg(1)
+            )
+        }
+        XCTAssertFalse(try predicate.evaluate(["key" : 2]))
+        XCTAssertEqual(Foo.num, 1)
+    }
+    
     func testStaticValues() throws {
         func assertPredicate<T>(_ pred: Predicate<T>, value: T, expected: Bool) throws {
             XCTAssertEqual(try pred.evaluate(value), expected)

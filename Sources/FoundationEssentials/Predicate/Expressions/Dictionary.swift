@@ -84,8 +84,10 @@ extension PredicateExpressions {
         }
         
         public func evaluate(_ bindings: PredicateBindings) throws -> Output {
-            let defaultValue = try `default`.evaluate(bindings)
-            return try wrapped.evaluate(bindings)[try key.evaluate(bindings), default: defaultValue]
+            guard let value =  try wrapped.evaluate(bindings)[try key.evaluate(bindings)] else {
+                return try `default`.evaluate(bindings)
+            }
+            return value
         }
     }
     
