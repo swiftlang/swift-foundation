@@ -1,0 +1,21 @@
+//===----------------------------------------------------------------------===//
+ //
+ // This source file is part of the Swift.org open source project
+ //
+ // Copyright (c) 2023 Apple Inc. and the Swift project authors
+ // Licensed under Apache License v2.0 with Runtime Library Exception
+ //
+ // See https://swift.org/LICENSE.txt for license information
+ //
+ //===----------------------------------------------------------------------===//
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
+// MARK: Duration Compatibility
+extension TimeInterval {
+    init(_ duration: Duration) {
+        self = Double(duration.components.seconds) + 1e-18 * Double(duration.components.attoseconds)
+    }
+}
