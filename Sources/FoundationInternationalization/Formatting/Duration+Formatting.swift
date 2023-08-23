@@ -10,10 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
+
 @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
 extension Duration {
     @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-    public func formatted<S: Foundation.FormatStyle>(_ v: S) -> S.FormatOutput where S.FormatInput == Self {
+    public func formatted<S: FormatStyle>(_ v: S) -> S.FormatOutput where S.FormatInput == Self {
         v.format(self)
     }
 

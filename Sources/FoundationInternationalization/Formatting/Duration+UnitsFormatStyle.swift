@@ -10,15 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_implementationOnly import _ForSwiftFoundation
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
+
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Duration {
 
     /// A `FormatStyle` that displays a duration as a list of duration units, such as "2 hours, 43 minutes, 26 seconds" in English.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public struct UnitsFormatStyle : Foundation.FormatStyle, Sendable {
+    public struct UnitsFormatStyle : FormatStyle, Sendable {
 
         /// Specifies the width of the unit and the spacing of the value and the unit.
         public struct UnitWidth : Codable, Hashable, Sendable {
@@ -244,7 +252,7 @@ extension Duration {
             let formattedFields = _formatFields(duration)
             var result = _getFullListPattern(length: formattedFields.count)
             for formattedField in formattedFields.reversed() {
-                let range = result.range(of: "{0}", options: .backwards)!
+                let range = result._range(of: "{0}", backwards: true)!
                 result.replaceSubrange(range, with: formattedField)
             }
             return result
@@ -292,7 +300,7 @@ extension Duration {
             if units.count == 0, let smallest = allowedUnits.sorted(by: { $0.unit.rawValue < $1.unit.rawValue }).last {
                 // Fallback to the smallest allowed unit when there is no units to show, such as when the duration is 0 and client wants to hide zero fields
 
-                let skeleton = Measurement<UnitDuration>.FormatStyle.skeleton(smallest.icuSkeleton, width: unitWidth.width, usage: .general, numberFormatStyle: numberFormatStyleWithFraction)
+                let skeleton = ICUMeasurementNumberFormatter.skeleton(smallest.icuSkeleton, width: .init(unitWidth), usage: .general, numberFormatStyle: numberFormatStyleWithFraction)
 
                 return [(skeleton, measurementUnit: smallest, measurementValue: 0)]
             }
@@ -327,7 +335,7 @@ extension Duration {
                 }
 
 
-                let skeleton = Measurement<UnitDuration>.FormatStyle.skeleton(unit.icuSkeleton, width: unitWidth.width, usage: .general, numberFormatStyle: numberFormatStyle)
+                let skeleton = ICUMeasurementNumberFormatter.skeleton(unit.icuSkeleton, width: .init(unitWidth), usage: .general, numberFormatStyle: numberFormatStyle)
 
                 result.append((skeleton: skeleton, measurementUnit: unit, measurementValue: value))
             }
@@ -367,7 +375,7 @@ extension Duration {
                 pattern = placeholder
             } else if length == 2 {
                 pattern = _getListPattern(UATIMEUNITLISTPAT_TWO_ONLY)
-                pattern = pattern.replacingOccurrences(of: lastPlaceholder, with: placeholder)
+                pattern.replace(lastPlaceholder, with: placeholder)
             } else {
                 let start = _getListPattern(UATIMEUNITLISTPAT_START_PIECE)
                 let middle = _getListPattern(UATIMEUNITLISTPAT_MIDDLE_PIECE)
@@ -377,12 +385,12 @@ extension Duration {
                     if i == 0 {
                         pattern = start
                     } else if i != length - 1 {
-                        pattern = pattern.replacingOccurrences(of: lastPlaceholder, with: middle)
+                        pattern.replace(lastPlaceholder, with: middle)
                     } else {
-                        pattern = pattern.replacingOccurrences(of: lastPlaceholder, with: end)
+                        pattern.replace(lastPlaceholder, with: end)
                     }
                 }
-                pattern = pattern.replacingOccurrences(of: lastPlaceholder, with: placeholder)
+                pattern.replace(lastPlaceholder, with: placeholder)
             }
             return pattern
         }
@@ -468,7 +476,7 @@ extension Duration {
 
 // `FormatStyle` static membership lookup
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Foundation.FormatStyle where Self == Duration.UnitsFormatStyle {
+extension FormatStyle where Self == Duration.UnitsFormatStyle {
     /// A factory function to create a units format style to format a duration.
     /// - Parameters:
     ///   - units: The units that may be included in the output string.
@@ -526,7 +534,7 @@ extension Duration.UnitsFormatStyle {
             let formattedFields = _formatFields(duration)
             var result = AttributedString(innerStyle._getFullListPattern(length: formattedFields.count))
             for formattedField in formattedFields.reversed() {
-                let range = result.range(of: "{0}", options: .backwards)!
+                let range = result.range(of: "{0}", options: [.backwards])!
                 result.replaceSubrange(range, with: formattedField)
             }
 
@@ -582,9 +590,12 @@ extension Duration.UnitsFormatStyle {
                     default:
                         component = .value
                     }
-                    if let range = Range(.init(location: attr.begin, length: attr.end - attr.begin), in: attrStr) {
+
+                    let strRange = String.Index(utf16Offset: attr.begin, in: str)..<String.Index(utf16Offset: attr.end, in: str)
+                    if let range = Range(strRange, in: attrStr) {
                         attrStr[range].measurement = component
                     }
+
                 }
                 return attrStr
             }

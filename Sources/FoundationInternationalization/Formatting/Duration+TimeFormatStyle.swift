@@ -10,8 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_implementationOnly import _ForSwiftFoundation
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
+#else
+package import FoundationICU
+#endif
 
 let hourSymbol: Character = "h"
 let minuteSymbol: Character = "m"
@@ -118,7 +125,7 @@ extension Duration {
         /// - Parameter value: The value to format.
         /// - Returns: A string representation of the duration.
         public func format(_ value: Duration) -> String {
-            String(_attributed.format(value)._guts.string)
+            String(_attributed.format(value).characters[...])
         }
 
         /// Modifies the format style to use the specified locale.
@@ -134,7 +141,7 @@ extension Duration {
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Foundation.FormatStyle where Self == Duration.TimeFormatStyle {
+extension FormatStyle where Self == Duration.TimeFormatStyle {
     /// A factory variable to create a time format style to format a duration.
     /// - Parameter pattern: A `Pattern` to specify the units to include in the displayed string and the behavior of the units.
     /// - Returns: A format style to format a duration.
@@ -144,6 +151,7 @@ extension Foundation.FormatStyle where Self == Duration.TimeFormatStyle {
 }
 
 // MARK: - Attributed style
+
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Duration.TimeFormatStyle {
@@ -208,11 +216,12 @@ extension Duration.TimeFormatStyle {
             withUnsafeTemporaryAllocation(of: UChar.self, capacity: capacity) { ptr in
                 var status = U_ZERO_ERROR
                 let len = uatmufmt_getTimePattern(locale.identifier, uPattern, ptr.baseAddress!, Int32(capacity), &status)
-                guard status.isSuccess, let bufferStart = ptr.baseAddress else {
+                guard status.isSuccess, let bufferStart = ptr.baseAddress, let str = String(_utf16: bufferStart, count: Int(len)) else {
                     patternString = fallbackPattern
                     return
                 }
-                patternString = String(utf16CodeUnits: bufferStart, count: Int(len)).lowercased()
+
+                patternString = str.lowercased()
             }
 
             let units: [Duration.UnitsFormatStyle.Unit]
