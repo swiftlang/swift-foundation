@@ -19,7 +19,10 @@ let package = Package(
             revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
         .package(
             url: "https://github.com/apple/swift-foundation-icu",
-            revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad")
+            revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
+        .package(
+            url: "https://github.com/apple/swift-syntax.git",
+            from: "509.0.0-swift-5.9-DEVELOPMENT-SNAPSHOT-2023-08-15-a")
     ],
     targets: [
         // Foundation (umbrella)
@@ -71,6 +74,29 @@ let package = Package(
                 .enableExperimentalFeature("AccessLevelOnImport")
             ]
         ),
+        
+        // FoundationMacros
+        .macro(
+            name: "FoundationMacros",
+            dependencies: [
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftOperators", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax"),
+                .product(name: "SwiftParserDiagnostics", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("AccessLevelOnImport")
+            ]
+        ),
+        .testTarget(
+            name: "FoundationMacrosTests",
+            dependencies: [
+                "FoundationMacros",
+                "TestSupport"
+            ]
+        )
     ]
 )
 
@@ -84,36 +110,7 @@ package.targets.append(contentsOf: [
 #endif
 
 #if !os(Linux) && !os(Windows)
-// FoundationMacros
-package.dependencies.append(
-    .package(
-        url: "https://github.com/apple/swift-syntax.git",
-        from: "509.0.0-swift-5.9-DEVELOPMENT-SNAPSHOT-2023-08-15-a")
-)
-package.targets.append(contentsOf: [
-    .macro(
-        name: "FoundationMacros",
-        dependencies: [
-            .product(name: "SwiftSyntax", package: "swift-syntax"),
-            .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-            .product(name: "SwiftOperators", package: "swift-syntax"),
-            .product(name: "SwiftParser", package: "swift-syntax"),
-            .product(name: "SwiftParserDiagnostics", package: "swift-syntax"),
-            .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
-        ],
-        swiftSettings: [
-            .enableExperimentalFeature("AccessLevelOnImport")
-        ]
-    ),
-    .testTarget(
-        name: "FoundationMacrosTests",
-        dependencies: [
-            "FoundationMacros",
-            "TestSupport"
-        ]
-    )
-])
-
+// Using macros at build-time is only supported on Darwin platforms
 if let index = package.targets.firstIndex(where: { $0.name == "FoundationEssentials" }) {
     package.targets[index].dependencies.append("FoundationMacros")
 }
