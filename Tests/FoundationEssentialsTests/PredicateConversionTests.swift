@@ -13,6 +13,10 @@
 #if FOUNDATION_FRAMEWORK
 
 final class NSPredicateConversionTests: XCTestCase {
+    private func convert<T: NSObject>(_ predicate: Predicate<T>) -> NSPredicate? {
+        NSPredicate(predicate)
+    }
+    
     @objc class ObjCObject: NSObject {
         @objc var a: Int
         @objc var b: String
@@ -64,7 +68,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(compareTo)
             )
         }
-        var converted = NSPredicate(predicate)
+        var converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "a == 2"))
         XCTAssertFalse(converted!.evaluate(with: obj))
         
@@ -86,7 +90,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(4)
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "a + 2 == 4"))
         XCTAssertFalse(converted!.evaluate(with: obj))
         
@@ -105,7 +109,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(5)
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "b.length == 5"))
         XCTAssertTrue(converted!.evaluate(with: obj))
         
@@ -124,7 +128,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(5)
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "g.@count == 5"))
         XCTAssertTrue(converted!.evaluate(with: obj))
         
@@ -162,7 +166,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 op: .greaterThan
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "SUBQUERY(g, $_local_1, $_local_1 == d).@count > 0"))
         XCTAssertFalse(converted!.evaluate(with: obj))
     }
@@ -178,7 +182,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(0)
             )
         }
-        var converted = NSPredicate(predicate)
+        var converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "a == 0"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
         
@@ -192,7 +196,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(0)
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "a != 0"))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
@@ -226,7 +230,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             )
         }
-        var converted = NSPredicate(predicate)
+        var converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "i BETWEEN {i, i}"))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
         
@@ -250,7 +254,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "i >= i AND i < i"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
         
@@ -265,7 +269,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "i >= %@ AND i < %@", now as NSDate, now as NSDate))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
         predicate = Predicate<ObjCObject> {
@@ -278,7 +282,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         let other = NSPredicate(format: "i BETWEEN %@", [now, now])
         XCTAssertEqual(converted, other)
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
@@ -292,7 +296,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "i >= %@", now as NSDate))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
         predicate = Predicate<ObjCObject> {
@@ -305,7 +309,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "i <= %@", now as NSDate))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
         predicate = Predicate<ObjCObject> {
@@ -318,7 +322,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "i < %@", now as NSDate))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
@@ -336,7 +340,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(2)
             )
         }
-        XCTAssertNil(NSPredicate(predicate))
+        XCTAssertNil(convert(predicate))
     }
     
     func testNonObjCConstantKeyPath() {
@@ -354,7 +358,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             )
         }
-        var converted = NSPredicate(predicate)
+        var converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "a == 1"))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
         
@@ -375,7 +379,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "f == YES"))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
@@ -395,7 +399,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(2)
             )
         }
-        var converted = NSPredicate(predicate)
+        var converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "(SELF.g)[0] == 2"))
         XCTAssertFalse(converted!.evaluate(with: obj))
         
@@ -412,7 +416,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(1)
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "(SELF.h)['A'] == 1"))
         XCTAssertTrue(converted!.evaluate(with: obj))
     }
@@ -429,7 +433,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 PredicateExpressions.build_Arg("foo")
             )
         }
-        var converted = NSPredicate(predicate)
+        var converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "b CONTAINS 'foo'"))
         XCTAssertFalse(converted!.evaluate(with: obj))
         
@@ -444,7 +448,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 with: PredicateExpressions.build_Arg("foo")
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "b BEGINSWITH 'foo'"))
         XCTAssertFalse(converted!.evaluate(with: obj))
     }
@@ -453,14 +457,14 @@ final class NSPredicateConversionTests: XCTestCase {
         var predicate = Predicate<ObjCObject> { _ in
             PredicateExpressions.build_Arg(true)
         }
-        var converted = NSPredicate(predicate)
+        var converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "YES == YES"))
         XCTAssertTrue(converted!.evaluate(with: "Hello"))
         
         predicate = Predicate<ObjCObject> { _ in
             PredicateExpressions.build_Arg(false)
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "NO == YES"))
         XCTAssertFalse(converted!.evaluate(with: "Hello"))
         
@@ -470,7 +474,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(false)
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "(YES == YES) && (NO == YES)"))
         XCTAssertFalse(converted!.evaluate(with: "Hello"))
         
@@ -480,7 +484,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 keyPath: \.f
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "f == YES"))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
         
@@ -496,7 +500,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(false)
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "TERNARY(f == YES AND YES == YES, YES, NO) == NO"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
@@ -512,7 +516,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 PredicateExpressions.build_Arg(false)
             )
         }
-        let converted = NSPredicate(predicate)
+        let converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "TERNARY(f == YES, YES, NO) == YES"))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
@@ -530,7 +534,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 keyPath: \.isEmpty
             )
         }
-        var converted = NSPredicate(predicate)
+        var converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "TERNARY(j != NULL, j, '').length == 0"))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
         
@@ -556,7 +560,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 op: .greaterThan
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "TERNARY(TERNARY(j != nil, j.length, nil) != nil, TERNARY(j != nil, j.length, nil), -1) > 1"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
         
@@ -570,7 +574,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_NilLiteral()
             )
         }
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "j == nil"))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
@@ -588,7 +592,7 @@ final class NSPredicateConversionTests: XCTestCase {
             )
         }
         
-        let converted = NSPredicate(predicate)
+        let converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "k == %@", uuid as NSUUID))
         XCTAssertTrue(converted!.evaluate(with: obj))
         let obj2 = ObjCObject()
@@ -609,7 +613,7 @@ final class NSPredicateConversionTests: XCTestCase {
             )
         }
         
-        let converted = NSPredicate(predicate)
+        let converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "i > %@", now as NSDate))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
@@ -625,7 +629,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 rhs: PredicateExpressions.build_Arg(data)
             )
         }
-        let converted = NSPredicate(predicate)
+        let converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "l == %@", data as NSData))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
@@ -645,7 +649,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             }
         }
-        let converted = NSPredicate(predicate)
+        let converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "SUBQUERY(g, $_local_1, $_local_1 == 2).@count != 0"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
@@ -665,7 +669,7 @@ final class NSPredicateConversionTests: XCTestCase {
                 )
             }
         }
-        let converted = NSPredicate(predicate)
+        let converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "SUBQUERY(g, $_local_1, NOT ($_local_1 == 2)).@count == 0"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
@@ -688,7 +692,7 @@ final class NSPredicateConversionTests: XCTestCase {
             )
         }
         
-        let converted = NSPredicate(predicate)
+        let converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "g.@max.#self == g.@min.#self"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
@@ -709,7 +713,7 @@ final class NSPredicateConversionTests: XCTestCase {
             )
         }
         
-        var converted = NSPredicate(predicate)
+        var converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "TERNARY(b ==[c] 'ABC', 0, TERNARY(b <[c] 'ABC', -1, 1)) == 0"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
         
@@ -727,7 +731,7 @@ final class NSPredicateConversionTests: XCTestCase {
             )
         }
         
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "TERNARY(b ==[l] 'ABC', 0, TERNARY(b <[l] 'ABC', -1, 1)) == 0"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
         
@@ -742,7 +746,7 @@ final class NSPredicateConversionTests: XCTestCase {
             )
         }
         
-        converted = NSPredicate(predicate)
+        converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "b CONTAINS[cdl] 'ABC'"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
