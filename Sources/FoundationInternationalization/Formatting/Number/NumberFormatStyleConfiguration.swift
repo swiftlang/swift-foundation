@@ -316,6 +316,9 @@ public enum CurrencyFormatStyleConfiguration {
     public typealias Precision = NumberFormatStyleConfiguration.Precision
     public typealias DecimalSeparatorDisplayStrategy = NumberFormatStyleConfiguration.DecimalSeparatorDisplayStrategy
     public typealias RoundingRule = NumberFormatStyleConfiguration.RoundingRule
+    /// The type used to configure notation for currency format styles.
+    @available(FoundationPreview 0.4, *)
+    public typealias Notation = NumberFormatStyleConfiguration.Notation
 
     internal typealias RoundingIncrement = NumberFormatStyleConfiguration.RoundingIncrement
     internal struct Collection : Codable, Hashable {
@@ -327,6 +330,7 @@ public enum CurrencyFormatStyleConfiguration {
         var rounding: RoundingRule?
         var roundingIncrement: RoundingIncrement?
         var presentation: Presentation
+        var notation: Notation?
     }
 
     public struct SignDisplayStrategy: Codable, Hashable, Sendable {
@@ -845,6 +849,9 @@ extension CurrencyFormatStyleConfiguration.Collection {
         }
         if let rounding = rounding {
             s += rounding.skeleton + " "
+        }
+        if let notation = notation {
+            s += notation.skeleton + " "
         }
 
         return s._trimmingWhitespace()

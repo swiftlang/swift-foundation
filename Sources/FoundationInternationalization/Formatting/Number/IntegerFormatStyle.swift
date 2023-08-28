@@ -201,6 +201,17 @@ extension IntegerFormatStyle {
             new.collection.presentation = p
             return new
         }
+
+        /// Modifies the format style to use the specified notation.
+        ///
+        /// - Parameter notation: The notation to apply to the format style.
+        /// - Returns: An integer currency format style modified to use the specified notation.
+        @available(FoundationPreview 0.4, *)
+        public func notation(_ notation: Configuration.Notation) -> Self {
+            var new = self
+            new.collection.notation = notation
+            return new
+        }
     }
 }
 
