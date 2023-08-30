@@ -1167,6 +1167,27 @@ final class JSONEncoderTests : XCTestCase {
             XCTAssertThrowsError(try JSONDecoder().decode(String.self, from: data))
         }
     }
+    
+    func test_nullByte() throws {
+        let string = "abc\u{0000}def"
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        
+        let data = try encoder.encode([string])
+        let decoded = try decoder.decode([String].self, from: data)
+        XCTAssertEqual([string], decoded)
+        
+        let data2 = try encoder.encode([string:string])
+        let decoded2 = try decoder.decode([String:String].self, from: data2)
+        XCTAssertEqual([string:string], decoded2)
+        
+        struct Container: Codable {
+            let s: String
+        }
+        let data3 = try encoder.encode(Container(s: string))
+        let decoded3 = try decoder.decode(Container.self, from: data3)
+        XCTAssertEqual(decoded3.s, string)
+    }
 
     func test_superfluouslyEscapedCharacters() {
         let json = "[\"\\h\\e\\l\\l\\o\"]"

@@ -18,63 +18,64 @@ extension String {
         bytes.reserveCapacity(self.utf8.count + 2)
         bytes.append(._quote)
         
-        self.withCString {
-            $0.withMemoryRebound(to: UInt8.self, capacity: 1) {
-                var cursor = $0
-                var mark = cursor
-                while cursor.pointee != 0 {
-                    let escapeString: String
-                    switch cursor.pointee {
-                    case ._quote:
-                        escapeString = "\\\""
-                        break
-                    case ._backslash:
-                        escapeString = "\\\\"
-                        break
-                    case ._slash where !withoutEscapingSlashes:
-                        escapeString = "\\/"
-                        break
-                    case 0x8:
-                        escapeString = "\\b"
-                        break
-                    case 0xc:
-                        escapeString = "\\f"
-                        break
-                    case ._newline:
-                        escapeString = "\\n"
-                        break
-                    case ._return:
-                        escapeString = "\\r"
-                        break
-                    case ._tab:
-                        escapeString = "\\t"
-                        break
-                    case 0x0...0xf:
-                        escapeString = "\\u000\(String(cursor.pointee, radix: 16))"
-                        break
-                    case 0x10...0x1f:
-                        escapeString = "\\u00\(String(cursor.pointee, radix: 16))"
-                        break
-                    default:
-                        // Accumulate this byte
-                        cursor += 1
-                        continue
-                    }
-                    
-                    // Append accumulated bytes
-                    if cursor > mark {
-                        bytes.append(contentsOf: UnsafeBufferPointer(start: mark, count: cursor-mark))
-                    }
-                    bytes.append(contentsOf: escapeString.utf8)
-                    
+        var mutStr = self
+        mutStr.withUTF8 {
+            var cursor = $0.baseAddress!
+            let end = $0.baseAddress! + $0.count
+            var mark = cursor
+            while cursor < end {
+                let escapeString: String
+                switch cursor.pointee {
+                case ._quote:
+                    escapeString = "\\\""
+                    break
+                case ._backslash:
+                    escapeString = "\\\\"
+                    break
+                case ._slash where !withoutEscapingSlashes:
+                    escapeString = "\\/"
+                    break
+                case 0x8:
+                    escapeString = "\\b"
+                    break
+                case 0xc:
+                    escapeString = "\\f"
+                    break
+                case ._newline:
+                    escapeString = "\\n"
+                    break
+                case ._return:
+                    escapeString = "\\r"
+                    break
+                case ._tab:
+                    escapeString = "\\t"
+                    break
+                case 0x0...0xf:
+                    escapeString = "\\u000\(String(cursor.pointee, radix: 16))"
+                    break
+                case 0x10...0x1f:
+                    escapeString = "\\u00\(String(cursor.pointee, radix: 16))"
+                    break
+                default:
+                    // Accumulate this byte
                     cursor += 1
-                    mark = cursor // Start accumulating bytes starting after this escaped byte.
+                    continue
                 }
+                
                 
                 // Append accumulated bytes
                 if cursor > mark {
                     bytes.append(contentsOf: UnsafeBufferPointer(start: mark, count: cursor-mark))
                 }
+                bytes.append(contentsOf: escapeString.utf8)
+                
+                cursor += 1
+                mark = cursor // Start accumulating bytes starting after this escaped byte.
+            }
+            
+            // Append accumulated bytes
+            if cursor > mark {
+                bytes.append(contentsOf: UnsafeBufferPointer(start: mark, count: cursor-mark))
             }
         }
         bytes.append(._quote)
@@ -87,7 +88,7 @@ extension String {
 }
 
 extension JSONReference {
-    static func number(from num: any (FixedWidthInteger & CustomStringConvertible)) -> JSONReference {
+    static func number(from num: some (FixedWidthInteger & CustomStringConvertible)) -> JSONReference {
         return .number(num.description)
     }
 
@@ -156,7 +157,7 @@ internal struct JSONWriter {
         case .nonPrettyDirectArray(let arrayRepresentation):
             writer(arrayRepresentation)
         case .directArray(let strings):
-            try serializeStringArray(strings, depth: depth + 1)
+            try serializePreformattedStringArray(strings, depth: depth + 1)
         case .object(let object):
             try serializeObject(object, depth: depth + 1)
         case .null:
@@ -192,63 +193,63 @@ internal struct JSONWriter {
     mutating func serializeString(_ str: String) throws {
         writer("\"")
 
-        str.withCString {
-            $0.withMemoryRebound(to: UInt8.self, capacity: 1) {
-                var cursor = $0
-                var mark = cursor
-                while cursor.pointee != 0 {
-                    let escapeString: String
-                    switch cursor.pointee {
-                    case ._quote:
-                        escapeString = "\\\""
-                        break
-                    case ._backslash:
-                        escapeString = "\\\\"
-                        break
-                    case ._slash where !withoutEscapingSlashes:
-                        escapeString = "\\/"
-                        break
-                    case 0x8:
-                        escapeString = "\\b"
-                        break
-                    case 0xc:
-                        escapeString = "\\f"
-                        break
-                    case ._newline:
-                        escapeString = "\\n"
-                        break
-                    case ._return:
-                        escapeString = "\\r"
-                        break
-                    case ._tab:
-                        escapeString = "\\t"
-                        break
-                    case 0x0...0xf:
-                        escapeString = "\\u000\(String(cursor.pointee, radix: 16))"
-                        break
-                    case 0x10...0x1f:
-                        escapeString = "\\u00\(String(cursor.pointee, radix: 16))"
-                        break
-                    default:
-                        // Accumulate this byte
-                        cursor += 1
-                        continue
-                    }
-
-                    // Append accumulated bytes
-                    if cursor > mark {
-                        writer(pointer: mark, count: cursor-mark)
-                    }
-                    writer(escapeString)
-
+        var mutStr = str
+        mutStr.withUTF8 {
+            var cursor = $0.baseAddress!
+            let end = $0.baseAddress! + $0.count
+            var mark = cursor
+            while cursor < end {
+                let escapeString: String
+                switch cursor.pointee {
+                case ._quote:
+                    escapeString = "\\\""
+                    break
+                case ._backslash:
+                    escapeString = "\\\\"
+                    break
+                case ._slash where !withoutEscapingSlashes:
+                    escapeString = "\\/"
+                    break
+                case 0x8:
+                    escapeString = "\\b"
+                    break
+                case 0xc:
+                    escapeString = "\\f"
+                    break
+                case ._newline:
+                    escapeString = "\\n"
+                    break
+                case ._return:
+                    escapeString = "\\r"
+                    break
+                case ._tab:
+                    escapeString = "\\t"
+                    break
+                case 0x0...0xf:
+                    escapeString = "\\u000\(String(cursor.pointee, radix: 16))"
+                    break
+                case 0x10...0x1f:
+                    escapeString = "\\u00\(String(cursor.pointee, radix: 16))"
+                    break
+                default:
+                    // Accumulate this byte
                     cursor += 1
-                    mark = cursor // Start accumulating bytes starting after this escaped byte.
+                    continue
                 }
 
                 // Append accumulated bytes
                 if cursor > mark {
                     writer(pointer: mark, count: cursor-mark)
                 }
+                writer(escapeString)
+
+                cursor += 1
+                mark = cursor // Start accumulating bytes starting after this escaped byte.
+            }
+
+            // Append accumulated bytes
+            if cursor > mark {
+                writer(pointer: mark, count: cursor-mark)
             }
         }
         writer("\"")
@@ -286,7 +287,7 @@ internal struct JSONWriter {
         writer("]")
     }
     
-    mutating func serializeStringArray(_ array: [String], depth: Int) throws {
+    mutating func serializePreformattedStringArray(_ array: [String], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
@@ -309,6 +310,7 @@ internal struct JSONWriter {
             if pretty {
                 writeIndent()
             }
+            // Do NOT call `serializeString` here! The input strings have already been formatted exactly as they need to be for direct JSON output, including any requisite quotes or escaped characters for strings.
             writer(elem)
         }
         if pretty {
