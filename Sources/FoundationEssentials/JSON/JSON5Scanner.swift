@@ -1124,14 +1124,16 @@ extension JSON5Scanner {
             preconditionFailure("Why was this function called, if there is no 0...9 or +/-")
         }
 
-        // Explicitly exclude a trailing 'e'. JSON5 and strtod both disallow it, but Decimal unfortunately accepts it so we need to prevent it in advance.
-        let lastIndex = jsonBytes.index(before: jsonBytes.endIndex)
-        let lastByte = jsonBytes[unchecked: lastIndex]
-        switch lastByte {
-        case UInt8(ascii: "e"), UInt8(ascii: "E"):
-            throw JSONError.unexpectedCharacter(context: "at end of number", ascii: lastByte, location: .sourceLocation(at: lastIndex, fullSource: fullSource))
-        default:
-            break
+        if (!isHex) {
+            // Explicitly exclude a trailing 'e'. JSON5 and strtod both disallow it, but Decimal unfortunately accepts it so we need to prevent it in advance.
+            let lastIndex = jsonBytes.index(before: jsonBytes.endIndex)
+            let lastByte = jsonBytes[unchecked: lastIndex]
+            switch lastByte {
+            case UInt8(ascii: "e"), UInt8(ascii: "E"):
+                throw JSONError.unexpectedCharacter(context: "at end of number", ascii: lastByte, location: .sourceLocation(at: lastIndex, fullSource: fullSource))
+            default:
+                break
+            }
         }
 
         return (firstDigitIndex, isHex, isSpecialValue)
