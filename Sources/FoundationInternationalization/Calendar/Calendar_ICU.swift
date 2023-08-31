@@ -1710,7 +1710,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     }
 
     private func _locked_nextDaylightSavingTimeTransition(startingAt: Date, limit: Date) -> Date? {
-        _TimeZone.nextDaylightSavingTimeTransition(forLocked: ucalendar, startingAt: startingAt, limit: limit)
+        _TimeZoneICU.nextDaylightSavingTimeTransition(forLocked: ucalendar, startingAt: startingAt, limit: limit)
     }
 
     private func _locked_timeZoneTransitionInterval(at date: Date) -> DateInterval? {

@@ -25,20 +25,7 @@ import FoundationEssentials
  */
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct TimeZone : Hashable, Equatable, Sendable {
-    private enum Kind: Sendable {
-        // NSTimeZone uses the terminology 'system' for what Locale/Calendar call 'current'. When TimeZone.current is used, we create a `fixed` time zone reflecting the current settings.
-        case fixed // aka 'system'
-        case autoupdating // aka 'local'
-        #if FOUNDATION_FRAMEWORK
-        case bridged
-        #endif
-    }
-
-    private var _kind: Kind
-    private var _timeZone: _TimeZone!
-    #if FOUNDATION_FRAMEWORK
-    private var _bridged: _NSTimeZoneSwiftWrapper!
-    #endif
+    private var _tz: _TimeZoneBase
 
     // MARK: -
     //
@@ -54,14 +41,12 @@ public struct TimeZone : Hashable, Equatable, Sendable {
             return nil
         }
 
-        _kind = .fixed
-        _timeZone = cached._timeZone
+        _tz = cached
     }
 
-    /// Called by TimeZoneCache to directly instantiate a time zone without causing infinite recursion.
-    internal init(fixed: _TimeZone) {
-        _kind = .fixed
-        _timeZone = fixed
+    /// Directly instantiates a time zone without causing infinite recursion by checking the cache.
+    internal init(inner: _TimeZoneBase) {
+        _tz = inner
     }
 
     /// Returns a time zone initialized with a specific number of seconds from GMT.
@@ -75,27 +60,15 @@ public struct TimeZone : Hashable, Equatable, Sendable {
             return nil
         }
 
-        _kind = .fixed
-        _timeZone = cached._timeZone
+        _tz = cached
     }
 
-    internal init?(name: String, data: Data?) {
-        if data == nil {
-            // Try the cache first
-            if let cached = TimeZoneCache.cache.fixed(name) {
-                _kind = .fixed
-                _timeZone = cached._timeZone
-            } else {
-                return nil
-            }
+    internal init?(name: String) {
+        // Try the cache first
+        if let cached = TimeZoneCache.cache.fixed(name) {
+            _tz = cached
         } else {
-            // We don't cache Data-based time zones
-            guard let tz = _TimeZone(identifier: name, data: data) else {
-                return nil
-            }
-
-            _kind = .fixed
-            _timeZone = tz
+            return nil
         }
     }
 
@@ -130,25 +103,17 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     #if FOUNDATION_FRAMEWORK
     private init(reference: NSTimeZone) {
         if let swift = reference as? _NSSwiftTimeZone {
-            let refTZ = swift.timeZone
-            _kind = refTZ._kind
-            _timeZone = refTZ._timeZone
+            _tz = swift.timeZone._tz
         } else {
             // This is a custom NSTimeZone subclass
-            _kind = .bridged
-            _bridged = _NSTimeZoneSwiftWrapper(adoptingReference: reference)
+            _tz = _TimeZoneBridged(adoptingReference: reference)
         }
     }
     #endif
 
-    enum CurrentKind {
-        case current
-        case autoupdating
-    }
-
     /// The time zone currently used by the system.
     public static var current : TimeZone {
-        TimeZone(current: .current)
+        TimeZone(inner: TimeZoneCache.cache.current._tz)
     }
 
     /// The time zone currently used by the system, automatically updating to the user's current preference.
@@ -157,7 +122,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     ///
     /// The autoupdating time zone only compares equal to itself.
     public static var autoupdatingCurrent : TimeZone {
-        TimeZone(current: .autoupdating)
+        TimeZone(inner: TimeZoneCache.cache.autoupdatingCurrent())
     }
 
     /// The default time zone, settable via ObjC but not available in Swift API (because it's global mutable state).
@@ -171,61 +136,24 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         }
     }
 
-    private init(current: CurrentKind) {
-        switch current {
-        case .current:
-            _kind = .fixed
-            _timeZone = TimeZoneCache.cache.current._timeZone
-        case .autoupdating:
-            _kind = .autoupdating
-        }
-    }
-
     // MARK: -
     //
 
     /// The geopolitical region identifier that identifies the time zone.
     public var identifier: String {
-        switch _kind {
-        case .fixed:
-            return _timeZone.identifier
-        case .autoupdating:
-            return TimeZoneCache.cache.current.identifier
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.identifier
-        #endif
-        }
+        _tz.identifier
     }
 
-    /// Used by `==` and also for compatibility with `NSTimeZone`.
-    internal var data: Data {
-        switch _kind {
-        case .fixed:
-            return _timeZone.data
-        case .autoupdating:
-            return TimeZoneCache.cache.current.data
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.data
-        #endif
-        }
+    /// Used for compatibility with `NSTimeZone`.
+    internal var data: Data? {
+        _tz.data
     }
 
     /// The current difference in seconds between the time zone and Greenwich Mean Time.
     ///
     /// - parameter date: The date to use for the calculation. The default value is the current date.
     public func secondsFromGMT(for date: Date = Date()) -> Int {
-        switch _kind {
-        case .fixed:
-            return _timeZone.secondsFromGMT(for: date)
-        case .autoupdating:
-            return TimeZoneCache.cache.current.secondsFromGMT(for: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.secondsFromGMT(for: date)
-        #endif
-        }
+        _tz.secondsFromGMT(for: date)
     }
 
     /// Returns the abbreviation for the time zone at a given date.
@@ -233,48 +161,21 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     /// Note that the abbreviation may be different at different dates. For example, during daylight saving time the US/Eastern time zone has an abbreviation of "EDT." At other times, its abbreviation is "EST."
     /// - parameter date: The date to use for the calculation. The default value is the current date.
     public func abbreviation(for date: Date = Date()) -> String? {
-        switch _kind {
-        case .fixed:
-            return _timeZone.abbreviation(for: date)
-        case .autoupdating:
-            return TimeZoneCache.cache.current.abbreviation(for: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.abbreviation(for: date)
-        #endif
-        }
+        _tz.abbreviation(for: date)
     }
 
     /// Returns a Boolean value that indicates whether the receiver uses daylight saving time at a given date.
     ///
     /// - parameter date: The date to use for the calculation. The default value is the current date.
     public func isDaylightSavingTime(for date: Date = Date()) -> Bool {
-        switch _kind {
-        case .fixed:
-            return _timeZone.isDaylightSavingTime(for: date)
-        case .autoupdating:
-            return TimeZoneCache.cache.current.isDaylightSavingTime(for: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.isDaylightSavingTime(for: date)
-        #endif
-        }
+        _tz.isDaylightSavingTime(for: date)
     }
 
     /// Returns the daylight saving time offset for a given date.
     ///
     /// - parameter date: The date to use for the calculation. The default value is the current date.
     public func daylightSavingTimeOffset(for date: Date = Date()) -> TimeInterval {
-        switch _kind {
-        case .fixed:
-            return _timeZone.daylightSavingTimeOffset(for: date)
-        case .autoupdating:
-            return TimeZoneCache.cache.current.daylightSavingTimeOffset(for: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.daylightSavingTimeOffset(for: date)
-        #endif
-        }
+        _tz.daylightSavingTimeOffset(for: date)
     }
 
     /// Returns the next daylight saving time transition after a given date.
@@ -282,16 +183,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     /// - parameter date: A date.
     /// - returns: The next daylight saving time transition after `date`. Depending on the time zone, this function may return a change of the time zone's offset from GMT. Returns `nil` if the time zone of the receiver does not observe daylight savings time as of `date`.
     public func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
-        switch _kind {
-        case .fixed:
-            return _timeZone.nextDaylightSavingTimeTransition(after: date)
-        case .autoupdating:
-            return TimeZoneCache.cache.current.nextDaylightSavingTimeTransition(after: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.nextDaylightSavingTimeTransition(after: date)
-        #endif
-        }
+        _tz.nextDaylightSavingTimeTransition(after: date)
     }
 
     /// Returns an array of strings listing the identifier of all the time zones known to the system.
@@ -309,35 +201,22 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         }
     }
 
+#if FOUNDATION_FRAMEWORK
     /// Returns the time zone data version.
     public static var timeZoneDataVersion : String {
-        _TimeZone.timeZoneDataVersion
+        // At this time only available in Framework build because of dependency on ICU. When TimeZone sinks to FoundationEssentials, we can make this available everywhere as an extension on TimeZone from FoundationInternationalization.
+        _TimeZoneICU.timeZoneDataVersion
     }
+#endif
 
     /// Returns the date of the next (after the current instant) daylight saving time transition for the time zone. Depending on the time zone, the value of this property may represent a change of the time zone's offset from GMT. Returns `nil` if the time zone does not currently observe daylight saving time.
     public var nextDaylightSavingTimeTransition: Date? {
-        switch _kind {
-        case .fixed, .autoupdating:
-            return self.nextDaylightSavingTimeTransition(after: Date.now)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.nextDaylightSavingTimeTransition(after: Date.now)
-        #endif
-        }
+        _tz.nextDaylightSavingTimeTransition(after: Date.now)
     }
 
     /// Returns the name of the receiver localized for a given locale.
     public func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
-        switch _kind {
-        case .fixed:
-            return _timeZone.localizedName(style, for: locale)
-        case .autoupdating:
-            return TimeZoneCache.cache.current.localizedName(for: style, locale: locale)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.localizedName(for: style, locale: locale)
-        #endif
-        }
+        _tz.localizedName(for: style, locale: locale)
     }
 
     @_alwaysEmitIntoClient @_disfavoredOverload
@@ -350,26 +229,23 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     // MARK: -
 
     public func hash(into hasher: inout Hasher) {
-        switch _kind {
-        case .fixed:
-            hasher.combine(_timeZone.identifier)
-        case .autoupdating:
-            hasher.combine(1)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            _bridged.hash(into: &hasher)
-        #endif
-        }
+        _tz.hash(into: &hasher)
     }
 
     public static func ==(lhs: TimeZone, rhs: TimeZone) -> Bool {
         // Autoupdating is only ever equal to autoupdating. Other time zones compare their values.
-        if lhs._kind == .autoupdating && rhs._kind == .autoupdating {
+        if lhs._tz.isAutoupdating && rhs._tz.isAutoupdating {
             return true
-        } else if lhs._kind == .autoupdating || rhs._kind == .autoupdating {
+        } else if lhs._tz.isAutoupdating || rhs._tz.isAutoupdating {
             return false
         } else {
-            return lhs.identifier == rhs.identifier && lhs.data == rhs.data
+            // If both have been initialized with data, then use it for comparison. Otherwise ignore it. Swift TimeZones, including autoupdating and current, do not set it.
+            if let lhsData = lhs.data, let rhsData = rhs.data {
+                return lhs.identifier == rhs.identifier && lhsData == rhsData
+            } else {
+                // Compare based on identifier only
+                return lhs.identifier == rhs.identifier
+            }
         }
     }
 }
@@ -399,23 +275,10 @@ extension TimeZone {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
-    private var _kindDescription : String {
-        switch _kind {
-        case .fixed:
-            return "fixed"
-        case .autoupdating:
-            return "autoupdatingCurrent"
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return "bridged"
-        #endif
-        }
-    }
-
     public var customMirror : Mirror {
         let c: [(label: String?, value: Any)] = [
           ("identifier", identifier),
-          ("kind", _kindDescription),
+          ("tz", _tz),
           ("abbreviation", abbreviation() as Any),
           ("secondsFromGMT", secondsFromGMT()),
           ("isDaylightSavingTime", isDaylightSavingTime()),
@@ -424,11 +287,11 @@ extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, Cust
     }
 
     public var description: String {
-        return "\(identifier) (\(_kindDescription))"
+        return _tz.debugDescription
     }
 
     public var debugDescription : String {
-        return "\(identifier) (\(_kindDescription))"
+        return _tz.debugDescription
     }
 }
 
@@ -460,161 +323,8 @@ extension TimeZone : Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         // Even if we are autoupdatingCurrent, encode the identifier for backward compatibility
         try container.encode(self.identifier, forKey: .identifier)
-        switch _kind {
-        case .autoupdating:
+        if _tz.isAutoupdating {
             try container.encode(true, forKey: .autoupdating)
-        default:
-            break
-        }
-    }
-}
-
-extension TimeZone {
-    internal static func nameForSecondsFromGMT(_ seconds: Int) -> String? {
-        if seconds < -18 * 3600 || 18 * 3600 < seconds {
-            return nil
-        }
-
-        // Move up by half a minute so that rounding down via division gets us the right answer
-        let at = abs(seconds) + 30
-        let hour = at / 3600
-        let second = at % 3600
-        let minute = second / 60
-
-        if hour == 0 && minute == 0 {
-            return "GMT"
-        } else {
-            let formattedHour = hour < 10 ? "0\(hour)" : "\(hour)"
-            let formattedMinute = minute < 10 ? "0\(minute)" : "\(minute)"
-            let negative = seconds < 0
-            return "GMT\(negative ? "-" : "+")\(formattedHour)\(formattedMinute)"
-        }
-    }
-
-    // Returns seconds offset (positive or negative or zero) from GMT on success, nil on failure
-    internal static func tryParseGMTName(_ name: String) -> Int? {
-        // GMT, GMT{+|-}H, GMT{+|-}HH, GMT{+|-}HHMM, GMT{+|-}{H|HH}{:|.}MM
-        // UTC, UTC{+|-}H, UTC{+|-}HH, UTC{+|-}HHMM, UTC{+|-}{H|HH}{:|.}MM
-        //   where "00" <= HH <= "18", "00" <= MM <= "59", and if HH==18, then MM must == 00
-
-        let len = name.count
-        guard len >= 3 && len <= 9 else {
-            return nil
-        }
-
-        let isGMT = name.starts(with: "GMT")
-        let isUTC = name.starts(with: "UTC")
-
-        guard isGMT || isUTC else {
-            return nil
-        }
-
-        if len == 3 {
-            // GMT or UTC, exactly
-            return 0
-        }
-
-        guard len >= 5 else {
-            return nil
-        }
-
-        var idx = name.index(name.startIndex, offsetBy: 3)
-        let plusOrMinus = name[idx]
-        let positive = plusOrMinus == "+"
-        let negative = plusOrMinus == "-"
-        guard positive || negative else {
-            return nil
-        }
-
-        let zero: UInt8 = 0x30
-        let five: UInt8 = 0x35
-        let nine: UInt8 = 0x39
-
-        idx = name.index(after: idx)
-        let oneHourDigit = name[idx].asciiValue ?? 0
-        guard oneHourDigit >= zero && oneHourDigit <= nine else {
-            return nil
-        }
-
-        let hourOne = Int(oneHourDigit - zero)
-
-        if len == 5 {
-            // GMT{+|-}H
-            if negative {
-                return -hourOne * 3600
-            } else {
-                return hourOne * 3600
-            }
-        }
-
-        idx = name.index(after: idx)
-        let twoHourDigitOrPunct = name[idx].asciiValue ?? 0
-        let colon: UInt8 = 0x3a
-        let period: UInt8 = 0x2e
-
-        let secondHourIsTwoHourDigit = (twoHourDigitOrPunct >= zero && twoHourDigitOrPunct <= nine)
-        let secondHourIsPunct = twoHourDigitOrPunct == colon || twoHourDigitOrPunct == period
-        guard secondHourIsTwoHourDigit || secondHourIsPunct else {
-            return nil
-        }
-
-        let hours: Int
-        if secondHourIsTwoHourDigit {
-            hours = 10 * hourOne + Int(twoHourDigitOrPunct - zero)
-        } else { // secondHourIsPunct
-            // The above advance of idx 'consumed' the punctuation
-            hours = hourOne
-        }
-
-        if 18 < hours {
-            return nil
-        }
-
-        if secondHourIsTwoHourDigit && len == 6 {
-            // GMT{+|-}HH
-            if negative {
-                return -hours * 3600
-            } else {
-                return hours * 3600
-            }
-        }
-
-        if len < 8 {
-            return nil
-        }
-
-        idx = name.index(after: idx)
-        let firstMinuteDigitOrPunct = name[idx].asciiValue ?? 0
-        let firstMinuteIsDigit = (firstMinuteDigitOrPunct >= zero && firstMinuteDigitOrPunct <= five)
-        let firstMinuteIsPunct = firstMinuteDigitOrPunct == colon || firstMinuteDigitOrPunct == period
-        guard (firstMinuteIsDigit && len == 8) || (firstMinuteIsPunct && len == 9) else {
-            return nil
-        }
-
-        if firstMinuteIsPunct {
-            // Skip the punctuation
-            idx = name.index(after: idx)
-        }
-
-        let firstMinute = name[idx].asciiValue ?? 0
-
-        // Next character must also be a digit, no single-minutes allowed
-        idx = name.index(after: idx)
-        let secondMinute = name[idx].asciiValue ?? 0
-        guard secondMinute >= zero && secondMinute <= nine else {
-            return nil
-        }
-
-        let minutes = Int(10 * (firstMinute - zero) + (secondMinute - zero))
-        if hours == 18 && minutes != 0 {
-            // 18 hours requires 0 minutes
-            return nil
-        }
-
-        if negative {
-            return -(hours * 3600 + minutes * 60)
-        } else {
-            return hours * 3600 + minutes * 60
         }
     }
 }
@@ -628,14 +338,7 @@ extension TimeZone : ReferenceConvertible, _ObjectiveCBridgeable {
 
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSTimeZone {
-        switch _kind {
-        case .fixed:
-            return _NSSwiftTimeZone(timeZone: self)
-        case .autoupdating:
-            return _NSSwiftTimeZone(timeZone: self)
-        case .bridged:
-            return _bridged.bridgeToObjectiveC()
-        }
+        _tz.bridgeToNSTimeZone()
     }
 
     public static func _forceBridgeFromObjectiveC(_ input: NSTimeZone, result: inout TimeZone?) {
@@ -666,3 +369,18 @@ extension NSTimeZone : _HasCustomAnyHashableRepresentation {
     }
 }
 #endif
+
+extension TimeZone {
+    // Defines from tzfile.h
+#if targetEnvironment(simulator)
+    internal static let TZDIR = "/usr/share/zoneinfo"
+#else
+    internal static let TZDIR = "/var/db/timezone/zoneinfo"
+#endif // targetEnvironment(simulator)
+
+#if os(macOS) || targetEnvironment(simulator)
+    internal static let TZDEFAULT = "/etc/localtime"
+#else
+    internal static let TZDEFAULT = "/var/db/timezone/localtime"
+#endif // os(macOS) || targetEnvironment(simulator)
+}
