@@ -260,7 +260,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case nanosecond
         case calendar
         case timeZone
-        @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         case isLeapMonth
 
         internal var icuFieldCode: UCalendarDateFields? {
