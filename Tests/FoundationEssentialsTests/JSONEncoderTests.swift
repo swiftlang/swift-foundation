@@ -1684,6 +1684,7 @@ final class JSONEncoderTests : XCTestCase {
             ("+1", +1),
             ("+10", +10),
             ("0x1F", 0x1F),
+            ("0x0000000E", 0xE),
             ("-0X1f", -0x1f),
             ("+0X1f", +0x1f),
             ("1.", 1),
