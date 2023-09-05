@@ -441,12 +441,12 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal static func identifierFromWindowsLocaleCode(_ code: UInt32) -> String {
+    internal static func identifierFromWindowsLocaleCode(_ code: UInt32) -> String? {
         let result = _withFixedCharBuffer(size: MAX_ICU_NAME_SIZE) { buffer, size, status in
             return uloc_getLocaleForLCID(code, buffer, size, &status)
         }
 
-        return result ?? ""
+        return result
     }
 
     internal static func windowsLocaleCode(from identifier: String) -> Int? {

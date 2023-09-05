@@ -1119,7 +1119,10 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// Returns the `Locale` identifier from a given Windows locale code, or nil if it could not be converted.
     public static func identifier(fromWindowsLocaleCode code: Int) -> String? {
-        _Locale.identifierFromWindowsLocaleCode(UInt32(code))
+        guard let unsigned = UInt32(exactly: code) else {
+            return nil
+        }
+        return _Locale.identifierFromWindowsLocaleCode(unsigned)
     }
 
     /// Returns the Windows locale code from a given identifier, or nil if it could not be converted.
