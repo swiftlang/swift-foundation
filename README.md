@@ -48,7 +48,7 @@ Later this year, the porting effort will continue. It will bring high quality Sw
 
 ## Building and Testing
 
-Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download/#swift-59-development) on or later than May 3rd 2023 (607f4eb), on macOS and Linux. 
+Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download/#swift-59-development) on or later than September 1st, 2023 (46a3b41), on macOS and Linux. 
 ### macOS
 
 macOS Ventura 13.3.1 is the minimum supported version.

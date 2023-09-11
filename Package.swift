@@ -109,8 +109,8 @@ package.targets.append(contentsOf: [
 ])
 #endif
 
-#if !os(Linux) && !os(Windows)
-// Using macros at build-time is only supported on Darwin platforms
+#if !os(Windows)
+// Using macros at build-time is not yet supported on Windows
 if let index = package.targets.firstIndex(where: { $0.name == "FoundationEssentials" }) {
     package.targets[index].dependencies.append("FoundationMacros")
 }

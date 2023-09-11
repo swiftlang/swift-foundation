@@ -33,7 +33,7 @@ public struct Predicate<each Input> : Sendable {
     }
 }
 
-#if !os(Linux) && !os(Windows)
+#if compiler(>=5.9) && !os(Windows)
 @freestanding(expression)
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 public macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")

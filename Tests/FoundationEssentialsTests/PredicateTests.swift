@@ -55,7 +55,7 @@ final class PredicateTests: XCTestCase {
     
 #if !FOUNDATION_FRAMEWORK
     func testBasicMacro() throws {
-#if os(Linux) || os(Windows)
+#if compiler(<5.9) || os(Windows)
         throw XCTSkip("Macros are not supported on this platform")
 #else
         let compareTo = 2
