@@ -193,10 +193,6 @@ final class PredicateMacroBasicTests: XCTestCase {
     }
     
     func testComments() {
-#if !FOUNDATION_FRAMEWORK
-        func expansionPreservesSurroundings() -> Bool { true }
-#endif
-        
         AssertPredicateExpansion(
             """
             // comment
@@ -205,11 +201,12 @@ final class PredicateMacroBasicTests: XCTestCase {
             } // comment
             """,
             """
-            \(expansionPreservesSurroundings() ? "// comment\n" : "")\(foundationModuleName).Predicate<Object>({ input in
+            // comment
+            \(foundationModuleName).Predicate<Object>({ input in
                 return PredicateExpressions.build_Arg(
                     true // comment
                 )
-            })\(expansionPreservesSurroundings() ? " // comment" : "")
+            }) // comment
             """
         )
     }
