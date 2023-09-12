@@ -151,7 +151,7 @@ enum PredicateExpressionCodingKeys : CodingKey {
 fileprivate extension PredicateCodableConfiguration {
     mutating func allowInputs<each Input>(_ input: repeat (each Input).Type) {
         var inputTypes = [Any.Type]()
-        _ = (repeat inputTypes.append((each Input).self))
+        repeat inputTypes.append((each Input).self)
         for (index, type) in inputTypes.enumerated() {
             allowType(type, identifier: "Foundation.Predicate.Input.\(index)")
         }
@@ -166,7 +166,7 @@ extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
         let structure = try ExpressionStructure(Type(expression), with: predicateConfiguration)
         var state = PredicateArchivingState(configuration: predicateConfiguration)
         var variableContainer = self.nestedUnkeyedContainer(forKey: .variable)
-        _ = (repeat try variableContainer.encode(each variable))
+        repeat try variableContainer.encode(each variable)
         try _ThreadLocal.withValue(&state, for: .predicateArchivingState) {
             try self.encode(structure, forKey: .structure)
             try self.encode(expression, forKey: .expression)
@@ -192,9 +192,8 @@ extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
         var container = try self.nestedUnkeyedContainer(forKey: .variable)
         return try _ThreadLocal.withValue(&state, for: .predicateArchivingState) {
             let variable = (repeat try container.decode(PredicateExpressions.Variable<each Input>.self))
-            // Box as an Any to work around compiler bug with closures that return values with pack expansions (rdar://111219086)
-            return (try decode(exprType), variable) as Any
-        } as! (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>))
+            return (try decode(exprType), variable)
+        }
     }
 }
 
