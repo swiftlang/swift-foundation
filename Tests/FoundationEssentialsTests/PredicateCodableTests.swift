@@ -195,15 +195,8 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testBasicEncodeDecode() throws {
-        let predicate = Predicate<Object> {
-            // $0.a == 2
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: $0,
-                    keyPath: \.a
-                ),
-                rhs: PredicateExpressions.build_Arg(2)
-            )
+        let predicate = #Predicate<Object> {
+            $0.a == 2
         }
         
         let decoded = try _encodeDecode(predicate, for: StandardConfig.self)
@@ -219,26 +212,15 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testDisallowedKeyPath() throws {
-        var predicate = Predicate<Object> {
-            // $0.f
-            PredicateExpressions.build_KeyPath(
-                root: $0,
-                keyPath: \.f
-            )
+        var predicate = #Predicate<Object> {
+            $0.f
         }
         
         XCTAssertThrowsError(try _encodeDecode(predicate))
         XCTAssertThrowsError(try _encodeDecode(predicate, for: StandardConfig.self))
         
-        predicate = Predicate<Object> {
-            // $0.a == 1
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: $0,
-                    keyPath: \.a
-                ),
-                rhs: PredicateExpressions.build_Arg(1)
-            )
+        predicate = #Predicate<Object> {
+            $0.a == 1
         }
         XCTAssertThrowsError(try _encodeDecode(predicate, encoding: StandardConfig.self, decoding: MinimalConfig.self)) {
             guard let decodingError = $0 as? DecodingError else {
@@ -250,15 +232,8 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testKeyPathTypeMismatch() throws {
-        let predicate = Predicate<Object> {
-            // $0.a == 2
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: $0,
-                    keyPath: \.a
-                ),
-                rhs: PredicateExpressions.build_Arg(2)
-            )
+        let predicate = #Predicate<Object> {
+            $0.a == 2
         }
         
         try _encodeDecode(predicate, for: StandardConfig.self)
@@ -272,9 +247,9 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testDisallowedType() throws {
-        let predicate = Predicate<Object> {
-            // $0 is UUID
-            PredicateExpressions.TypeCheck<_, UUID>(PredicateExpressions.build_Arg($0))
+        let uuid = UUID()
+        let predicate = #Predicate<Object> { obj in
+            uuid == uuid
         }
         
         XCTAssertThrowsError(try _encodeDecode(predicate))
@@ -288,29 +263,15 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testProvidedProperties() throws {
-        var predicate = Predicate<Object> {
-            // $0.a == 2
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: $0,
-                    keyPath: \.a
-                ),
-                rhs: PredicateExpressions.build_Arg(2)
-            )
+        var predicate = #Predicate<Object> {
+            $0.a == 2
         }
         
         XCTAssertThrowsError(try _encodeDecode(predicate, for: ProvidedKeyPathConfig.self))
         XCTAssertThrowsError(try _encodeDecode(predicate, for: RecursiveProvidedKeyPathConfig.self))
         
-        predicate = Predicate<Object> {
-            // $0.f == false
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: $0,
-                    keyPath: \.f
-                ),
-                rhs: PredicateExpressions.build_Arg(false)
-            )
+        predicate = #Predicate<Object> {
+            $0.f == false
         }
         
         var decoded = try _encodeDecode(predicate, for: ProvidedKeyPathConfig.self)
@@ -318,18 +279,8 @@ final class PredicateCodableTests: XCTestCase {
         decoded = try _encodeDecode(predicate, for: RecursiveProvidedKeyPathConfig.self)
         XCTAssertEqual(try decoded.evaluate(.example), try predicate.evaluate(.example))
         
-        predicate = Predicate<Object> {
-            // $0.h.a == 1
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.h
-                    ),
-                    keyPath: \.a
-                ),
-                rhs: PredicateExpressions.build_Arg(1)
-            )
+        predicate = #Predicate<Object> {
+            $0.h.a == 1
         }
         
         XCTAssertThrowsError(try _encodeDecode(predicate, for: ProvidedKeyPathConfig.self))
@@ -338,83 +289,45 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testDefaultAllowlist() throws {
-        var predicate = Predicate<String> {
-            // $0.isEmpty
-            PredicateExpressions.build_KeyPath(
-                root: $0,
-                keyPath: \.isEmpty
-            )
+        var predicate = #Predicate<String> {
+            $0.isEmpty
         }
         var decoded = try _encodeDecode(predicate)
         XCTAssertEqual(try decoded.evaluate("Hello world"), try predicate.evaluate("Hello world"))
         
-        predicate = Predicate<String> {
-            // $0.count > 2
-            PredicateExpressions.build_Comparison(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: $0,
-                    keyPath: \.count
-                ),
-                rhs: PredicateExpressions.build_Arg(2),
-                op: .greaterThan
-            )
+        predicate = #Predicate<String> {
+            $0.count > 2
         }
         decoded = try _encodeDecode(predicate)
         XCTAssertEqual(try decoded.evaluate("Hello world"), try predicate.evaluate("Hello world"))
         
-        let predicate2 = Predicate<Object> {
-            // $0 == $0
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg($0),
-                rhs: PredicateExpressions.build_Arg($0)
-            )
+        let predicate2 = #Predicate<Object> {
+            $0 == $0
         }
         let decoded2 = try _encodeDecode(predicate2)
         XCTAssertEqual(try decoded2.evaluate(.example), try predicate2.evaluate(.example))
         
         
-        var predicate3 = Predicate<Array<String>> {
-            // $0.isEmpty
-            PredicateExpressions.build_KeyPath(
-                root: $0,
-                keyPath: \.isEmpty
-            )
+        var predicate3 = #Predicate<Array<String>> {
+            $0.isEmpty
         }
         var decoded3 = try _encodeDecode(predicate3)
         XCTAssertEqual(try decoded3.evaluate(["A", "B", "C"]), try predicate3.evaluate(["A", "B", "C"]))
         
-        predicate3 = Predicate<Array<String>> {
-            // $0.count == 2
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: $0,
-                    keyPath: \.count
-                ),
-                rhs: PredicateExpressions.build_Arg(2)
-            )
+        predicate3 = #Predicate<Array<String>> {
+            $0.count == 2
         }
         decoded3 = try _encodeDecode(predicate3)
         XCTAssertEqual(try decoded3.evaluate(["A", "B", "C"]), try predicate3.evaluate(["A", "B", "C"]))
         
-        var predicate4 = Predicate<Dictionary<String, Int>> {
-            // $0.isEmpty
-            PredicateExpressions.build_KeyPath(
-                root: $0,
-                keyPath: \.isEmpty
-            )
+        var predicate4 = #Predicate<Dictionary<String, Int>> {
+            $0.isEmpty
         }
         var decoded4 = try _encodeDecode(predicate4)
         XCTAssertEqual(try decoded4.evaluate(["A": 1, "B": 2, "C": 3]), try predicate4.evaluate(["A": 1, "B": 2, "C": 3]))
         
-        predicate4 = Predicate<Dictionary<String, Int>> {
-            // $0.count == 2
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: $0,
-                    keyPath: \.count
-                ),
-                rhs: PredicateExpressions.build_Arg(2)
-            )
+        predicate4 = #Predicate<Dictionary<String, Int>> {
+            $0.count == 2
         }
         decoded4 = try _encodeDecode(predicate4)
         XCTAssertEqual(try decoded4.evaluate(["A": 1, "B": 2, "C": 3]), try predicate4.evaluate(["A": 1, "B": 2, "C": 3]))
@@ -510,24 +423,8 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testBasicVariadic() throws {
-        let predicate = Predicate<Object, Object> {
-            // $0.a == 2 && $1.a == 3
-            PredicateExpressions.build_Conjunction(
-                lhs: PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.a
-                    ),
-                    rhs: PredicateExpressions.build_Arg(2)
-                ),
-                rhs: PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_KeyPath(
-                        root: $1,
-                        keyPath: \.a
-                    ),
-                    rhs: PredicateExpressions.build_Arg(2)
-                )
-            )
+        let predicate = #Predicate<Object, Object> {
+            $0.a == 2 && $1.a == 3
         }
         
         let decoded = try _encodeDecode(predicate, for: StandardConfig.self)
@@ -544,9 +441,6 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testCapturedVariadicTypes() throws {
-#if !canImport(ReflectionInternal, _version: "18")
-        throw XCTSkip("Insufficient ReflectionInternal version for this test")
-#else
         struct A<each T> : Equatable, Codable {
             init(_: repeat (each T).Type) {}
             
@@ -556,7 +450,7 @@ final class PredicateCodableTests: XCTestCase {
             }
             
             init(from decoder: Decoder) throws {
-                var container = try decoder.singleValueContainer()
+                let container = try decoder.singleValueContainer()
                 guard container.decodeNil() else {
                     throw DecodingError.dataCorrupted(.init(codingPath: container.codingPath, debugDescription: "Did not find encoded nil"))
                 }
@@ -565,12 +459,8 @@ final class PredicateCodableTests: XCTestCase {
 
         let a = A(String.self, Int.self)
 
-        let predicate = Predicate<Int> { _ in
-            // a == a
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(a),
-                rhs: PredicateExpressions.build_Arg(a)
-            )
+        let predicate = #Predicate<Int> { _ in
+            a == a
         }
 
         let encoder = JSONEncoder()
@@ -629,7 +519,6 @@ final class PredicateCodableTests: XCTestCase {
         XCTAssertThrowsError(try decoder.decode(Predicate<Int>.self, from: json.data(using: .utf8)!, configuration: config)) {
             XCTAssertTrue(String(describing: $0).contains("type is not allowed because it contains type pack parameters"))
         }
-#endif
     }
 }
 

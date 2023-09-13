@@ -53,7 +53,6 @@ final class PredicateTests: XCTestCase {
         try XCTAssertTrue(predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
-#if !FOUNDATION_FRAMEWORK
     func testBasicMacro() throws {
 #if compiler(<5.9) || os(Windows)
         throw XCTSkip("Macros are not supported on this platform")
@@ -66,7 +65,6 @@ final class PredicateTests: XCTestCase {
         try XCTAssertTrue(predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
 #endif
     }
-#endif
     
     func testVariadic() throws {
         let predicate = Predicate<Object, Int> {
