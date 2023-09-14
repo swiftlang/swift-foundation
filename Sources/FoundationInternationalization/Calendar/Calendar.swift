@@ -323,6 +323,28 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .isLeapMonth: return ComponentSet.isLeapMonth.rawValue
             }
         }
+        
+        internal var debugDescription: String {
+            switch self {
+            case .era: "era"
+            case .year: "year"
+            case .month: "month"
+            case .day: "day"
+            case .hour: "hour"
+            case .minute: "minute"
+            case .second: "second"
+            case .weekday: "weekday"
+            case .weekdayOrdinal: "weekdayOrdinal"
+            case .quarter: "quarter"
+            case .weekOfMonth: "weekOfMonth"
+            case .weekOfYear: "weekOfYear"
+            case .yearForWeekOfYear: "yearForWeekOfYear"
+            case .nanosecond: "nanosecond"
+            case .calendar: "calendar"
+            case .timeZone: "timeZone"
+            case .isLeapMonth: "isLeapMonth"
+            }
+        }
     }
 
     /// Returns the user's current calendar.
@@ -1470,6 +1492,13 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         /// Search for a date earlier in time than the start date.
         case backward
+        
+        internal var debugDescription: String {
+            switch self {
+            case .forward: "forward"
+            case .backward: "backward"
+            }
+        }
     }
 
     /// Determines which result to use when a time is repeated on a day in a calendar (for example, during a daylight saving transition when the times between 2:00am and 3:00am may happen twice).
@@ -1479,6 +1508,13 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         /// If there are two or more matching times (all the components are the same, including isLeapMonth) before the end of the next instance of the next higher component to the highest specified component, then the algorithm will return the last occurrence.
         case last
+        
+        internal var debugDescription: String {
+            switch self {
+            case .first: "first"
+            case .last: "last"
+            }
+        }
     }
 
     /// A hint to the search algorithm to control the method used for searching for dates.
@@ -1501,6 +1537,15 @@ public struct Calendar : Hashable, Equatable, Sendable {
         /// For example, if searching for Feb 29 in the Gregorian calendar, the algorithm may choose March 1 instead (for example, if the year is not a leap year). If you wish to find the next Feb 29 without the algorithm adjusting the next higher component in the specified `DateComponents`, then use the `strict` option.
         /// - note: There are ultimately implementation-defined limits in how far distant the search will go.
         case strict
+        
+        internal var debugDescription: String {
+            switch self {
+            case .nextTime: "nextTime"
+            case .nextTimePreservingSmallerComponents: "nextTimePreservingSmallerComponents"
+            case .previousTimePreservingSmallerComponents: "previousTimePreservingSmallerComponents"
+            case .strict: "strict"
+            }
+        }
     }
 
     /// Computes the dates which match (or most closely match) a given set of components, and calls the closure once for each of them, until the enumeration is stopped.
