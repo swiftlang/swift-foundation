@@ -14,21 +14,15 @@
 public struct Predicate<each Input> : Sendable {
     public let expression : any StandardPredicateExpression<Bool>
     public let variable: (repeat PredicateExpressions.Variable<each Input>)
-
-    @usableFromInline // Preserve ABI for older initializer
-    internal init<E: StandardPredicateExpression<Bool>>(_ builder: (repeat PredicateExpressions.Variable<each Input>) -> E) {
-        self.variable = (repeat PredicateExpressions.Variable<each Input>())
-        self.expression = builder(repeat each variable.element)
-    }
     
     public init(_ builder: (repeat PredicateExpressions.Variable<each Input>) -> any StandardPredicateExpression<Bool>) {
         self.variable = (repeat PredicateExpressions.Variable<each Input>())
-        self.expression = builder(repeat each variable.element)
+        self.expression = builder(repeat each variable)
     }
     
     public func evaluate(_ input: repeat each Input) throws -> Bool {
         try expression.evaluate(
-            .init(repeat (each variable.element, each input))
+            .init(repeat (each variable, each input))
         )
     }
 }

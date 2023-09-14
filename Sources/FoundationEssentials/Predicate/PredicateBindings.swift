@@ -18,7 +18,7 @@ public struct PredicateBindings {
     
     public init<each T>(_ value: repeat (PredicateExpressions.Variable<each T>, each T)) {
         storage = []
-        _ = (repeat storage.append(((each value).0.key, (each value).1)))
+        repeat storage.append(((each value).0.key, (each value).1))
     }
     
     public subscript<T>(_ variable: PredicateExpressions.Variable<T>) -> T? {
