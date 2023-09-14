@@ -71,18 +71,18 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
             }
         }
         for separator in separators {
-            var matches = true
             var strIdx = start
             var separatorIdx = reverse ? separator.count - 1 : 0
-            while strIdx >= startIndex && strIdx < endIndex && separatorIdx >= 0 && separatorIdx < separator.count {
-                if separator[separatorIdx] != self[strIdx] {
-                    matches = false
+            let offset = reverse ? -1 : 1
+            let strLimit = reverse ? startIndex : index(before: endIndex)
+            let sepLimit = reverse ? 0 : separator.count - 1
+            while separator[separatorIdx] == self[strIdx] {
+                if !formIndex(&strIdx, offsetBy: offset, limitedBy: strLimit) ||
+                    !separator.formIndex(&separatorIdx, offsetBy: offset, limitedBy: sepLimit) {
                     break
                 }
-                strIdx = reverse ? index(before: strIdx) : index(after: strIdx)
-                separatorIdx += reverse ? -1 : 1
             }
-            if matches {
+            if separatorIdx == sepLimit {
                 return reverse ? index(after: strIdx)..<index(after: start) : start ..< strIdx
             }
         }
