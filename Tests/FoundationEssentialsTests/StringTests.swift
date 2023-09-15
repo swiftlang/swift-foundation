@@ -307,5 +307,23 @@ final class StringTests : XCTestCase {
         test("\u{1F425}")
         test("🏳️‍🌈AB👩‍👩‍👧‍👦ab🕵️‍♀️")
     }
+    
+    func testParagraphLineRangeOfSeparator() {
+        for separator in ["\n", "\r", "\r\n", "\u{2029}", "\u{2028}", "\u{85}"] {
+            let range = separator.startIndex ..< separator.endIndex
+            let paragraphResult = separator._paragraphBounds(around: range)
+            let lineResult = separator._lineBounds(around: range)
+            XCTAssertEqual(paragraphResult.start ..< paragraphResult.end, range)
+            XCTAssertEqual(lineResult.start ..< lineResult.end, range)
+        }
+    }
+    
+    func testAlmostMatchingSeparator() {
+        let string = "A\u{200D}B" // U+200D Zero Width Joiner (ZWJ) matches U+2028 Line Separator except for the final UTF-8 scalar
+        let lineResult = string._lineBounds(around: string.startIndex ..< string.startIndex)
+        XCTAssertEqual(lineResult.start, string.startIndex)
+        XCTAssertEqual(lineResult.end, string.endIndex)
+        XCTAssertEqual(lineResult.contentsEnd, string.endIndex)
+    }
 
 }
