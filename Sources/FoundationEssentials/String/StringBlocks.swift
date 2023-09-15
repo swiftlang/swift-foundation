@@ -77,13 +77,15 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
             let strLimit = reverse ? startIndex : index(before: endIndex)
             let sepLimit = reverse ? 0 : separator.count - 1
             while separator[separatorIdx] == self[strIdx] {
-                if !formIndex(&strIdx, offsetBy: offset, limitedBy: strLimit) ||
-                    !separator.formIndex(&separatorIdx, offsetBy: offset, limitedBy: sepLimit) {
+                if !separator.formIndex(&separatorIdx, offsetBy: offset, limitedBy: sepLimit) {
+                    // We've fully matched the separator, return the appropriate range
+                    return (reverse ? strIdx ... start : start ... strIdx).relative(to: self)
+                }
+                
+                if !formIndex(&strIdx, offsetBy: offset, limitedBy: strLimit) {
+                    // We've run off the end of the string and haven't finished the separator, break out
                     break
                 }
-            }
-            if separatorIdx == sepLimit {
-                return reverse ? index(after: strIdx)..<index(after: start) : start ..< strIdx
             }
         }
         return nil
