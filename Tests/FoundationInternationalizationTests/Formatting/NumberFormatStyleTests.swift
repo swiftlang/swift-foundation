@@ -141,6 +141,45 @@ final class NumberFormatStyleTests: XCTestCase {
         testIntValues(IntegerFormatStyle<Int>(locale: locale).sign(strategy: .always()), expected: [ "+87,650,000", "+8,765,000", "+876,500", "+87,650", "+8,765", "+876", "+87", "+8", "+0" ])
     }
 
+    func testIntegerFormatStyleFixedWidthLimits() throws {
+        func test<I: FixedWidthInteger>(type: I.Type = I.self, min: String, max: String) {
+            do {
+                let style: IntegerFormatStyle<I> = .init(locale: Locale(identifier: "en_US_POSIX"))
+                XCTAssertEqual(style.format(I.min), I.min.description)
+                XCTAssertEqual(style.format(I.max), I.max.description)
+            }
+
+            do {
+                let style: IntegerFormatStyle<I> = .init(locale: Locale(identifier: "en_US"))
+                XCTAssertEqual(style.format(I.min), min)
+                XCTAssertEqual(style.format(I.max), max)
+            }
+
+            do {
+                let style: IntegerFormatStyle<I>.Percent = .init(locale: Locale(identifier: "en_US"))
+                XCTAssertEqual(style.format(I.min), min + "%")
+                XCTAssertEqual(style.format(I.max), max + "%")
+            }
+
+            do {
+                let style: IntegerFormatStyle<I>.Currency = .init(code: "USD", locale: Locale(identifier: "en_US")).presentation(.narrow)
+                let negativeSign = (min.first == "-" ? "-" : "")
+                XCTAssertEqual(style.format(I.min), "\(negativeSign)$\(min.drop(while: { $0 == "-" })).00")
+                XCTAssertEqual(style.format(I.max), "$\(max).00")
+            }
+        }
+
+        test(type: Int8.self, min: "-128", max: "127")
+        test(type: Int16.self, min: "-32,768", max: "32,767")
+        test(type: Int32.self, min: "-2,147,483,648", max: "2,147,483,647")
+        test(type: Int64.self, min: "-9,223,372,036,854,775,808", max: "9,223,372,036,854,775,807")
+
+        test(type: UInt8.self, min: "0", max: "255")
+        test(type: UInt16.self, min: "0", max: "65,535")
+        test(type: UInt32.self, min: "0", max: "4,294,967,295")
+        test(type: UInt64.self, min: "0", max: "18,446,744,073,709,551,615")
+    }
+
     func testInteger_Precision() throws {
         let style: IntegerFormatStyle<Int> = .init(locale: Locale(identifier: "en_US"))
         _testNegativePositiveInt(style.precision(.significantDigits(3...3)), [ "-98.0", "-9.00", "0.00", "9.00", "98.0" ], "exact significant digits")

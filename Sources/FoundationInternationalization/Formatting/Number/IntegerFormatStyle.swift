@@ -221,7 +221,7 @@ extension IntegerFormatStyle : FormatStyle {
             } else if let decimal = Decimal(exactly: value) {
                 str = nf.format(decimal)
             } else {
-                str = nf.format(Int64(clamping: value))
+                str = nf.format(value.description) // TODO: reconsider relying on the `description` to exactly match ICU's decimal string formatting expectations.
             }
 
             if let str {
@@ -253,7 +253,7 @@ extension IntegerFormatStyle.Percent : FormatStyle {
             } else if let decimal = Decimal(exactly: value) {
                 str = nf.format(decimal)
             } else {
-                str = nf.format(Int64(clamping: value))
+                str = nf.format(value.description) // TODO: reconsider relying on the `description` to exactly match ICU's decimal string formatting expectations.
             }
 
             if let str {
@@ -285,7 +285,7 @@ extension IntegerFormatStyle.Currency : FormatStyle {
             } else if let decimal = Decimal(exactly: value) {
                 str = nf.format(decimal)
             } else {
-                str = nf.format(Int64(clamping: value))
+                str = nf.format(value.description) // TODO: reconsider relying on the `description` to exactly match ICU's decimal string formatting expectations.
             }
 
             if let str {
