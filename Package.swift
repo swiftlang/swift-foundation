@@ -22,7 +22,7 @@ let package = Package(
             revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
-            from: "509.0.0-swift-5.9-DEVELOPMENT-SNAPSHOT-2023-08-15-a")
+            from: "509.0.0")
     ],
     targets: [
         // Foundation (umbrella)
