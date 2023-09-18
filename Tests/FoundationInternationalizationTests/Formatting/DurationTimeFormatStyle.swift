@@ -10,8 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import Foundation
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
+#if canImport(FoundationInternationalization)
+@testable import FoundationInternationalization
+#endif
 
 extension Duration {
     init(weeks: Int64 = 0, days: Int64 = 0, hours: Int64 = 0, minutes: Int64 = 0, seconds: Int64 = 0, milliseconds: Int64 = 0, microseconds: Int64 = 0) {
@@ -20,8 +25,8 @@ extension Duration {
     }
 }
 
-final class TestDurationToMeasurementAddition : XCTestCase {
-    typealias Unit = Duration.UnitsFormatStyle.Unit
+final class DurationToMeasurementAdditionTests : XCTestCase {
+    typealias Unit = Duration._UnitsFormatStyle.Unit
     func assertEqualDurationUnitValues(_ duration: Duration, units: [Unit], rounding: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalLength: Int = .max, roundingIncrement: Double? = nil, expectation values: [Double], file: StaticString = #file, line: UInt = #line) {
         let result = duration.valuesForUnits(units, trailingFractionalLength: trailingFractionalLength, smallestUnitRounding: rounding, roundingIncrement: roundingIncrement)
         XCTAssertEqual(result, values, file: file, line: line)
@@ -285,7 +290,7 @@ final class TestDurationToMeasurementAddition : XCTestCase {
 
 final class TestDurationTimeFormatStyle : XCTestCase {
     let enUS = Locale(identifier: "en_US")
-    func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration.TimeFormatStyle.Pattern, expected: String, file: StaticString = #file, line: UInt = #line) {
+    func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, expected: String, file: StaticString = #file, line: UInt = #line) {
         XCTAssertEqual(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(.time(pattern: pattern).locale(enUS)), expected, file: file, line: line)
     }
 
@@ -448,7 +453,7 @@ final class TestDurationTimeFormatStyle : XCTestCase {
 
 // MARK: - Attributed string test
 
-extension Sequence where Element == TestDurationTimeAttributedStyle.Segment {
+extension Sequence where Element == DurationTimeAttributedStyleTests.Segment {
     var attributedString: AttributedString {
         self.map { tuple in
             var attrs = AttributeContainer()
@@ -461,12 +466,12 @@ extension Sequence where Element == TestDurationTimeAttributedStyle.Segment {
     }
 }
 
-final class TestDurationTimeAttributedStyle : XCTestCase {
+final class DurationTimeAttributedStyleTests : XCTestCase {
 
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DurationFieldAttribute.Field?)
     let enUS = Locale(identifier: "en_US")
 
-    func assertWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration.TimeFormatStyle.Pattern, expected: [Segment], locale: Locale = Locale(identifier: "en_US"), file: StaticString = #file, line: UInt = #line) {
+    func assertWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, expected: [Segment], locale: Locale = Locale(identifier: "en_US"), file: StaticString = #file, line: UInt = #line) {
         XCTAssertEqual(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(.time(pattern: pattern).locale(locale).attributed), expected.attributedString, file: file, line: line)
     }
 

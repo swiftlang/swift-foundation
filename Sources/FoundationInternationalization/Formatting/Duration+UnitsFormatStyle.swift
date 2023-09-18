@@ -300,7 +300,7 @@ extension Duration {
             if units.count == 0, let smallest = allowedUnits.sorted(by: { $0.unit.rawValue < $1.unit.rawValue }).last {
                 // Fallback to the smallest allowed unit when there is no units to show, such as when the duration is 0 and client wants to hide zero fields
 
-                let skeleton = ICUMeasurementNumberFormatter.skeleton(smallest.icuSkeleton, width: .init(unitWidth), usage: .general, numberFormatStyle: numberFormatStyleWithFraction)
+                let skeleton = ICUMeasurementNumberFormatter.skeleton(smallest.icuSkeleton, width: .init(unitWidth), usage: nil, numberFormatStyle: numberFormatStyleWithFraction)
 
                 return [(skeleton, measurementUnit: smallest, measurementValue: 0)]
             }
@@ -335,7 +335,7 @@ extension Duration {
                 }
 
 
-                let skeleton = ICUMeasurementNumberFormatter.skeleton(unit.icuSkeleton, width: .init(unitWidth), usage: .general, numberFormatStyle: numberFormatStyle)
+                let skeleton = ICUMeasurementNumberFormatter.skeleton(unit.icuSkeleton, width: .init(unitWidth), usage: nil, numberFormatStyle: numberFormatStyle)
 
                 result.append((skeleton: skeleton, measurementUnit: unit, measurementValue: value))
             }
@@ -472,6 +472,9 @@ extension Duration {
             Attributed(innerStyle: self)
         }
     }
+
+    // For testing purpose. See notes about String._Encoding
+    internal typealias _UnitsFormatStyle = UnitsFormatStyle
 }
 
 // `FormatStyle` static membership lookup

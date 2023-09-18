@@ -10,15 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import Foundation
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
+#if canImport(FoundationInternationalization)
+@testable import FoundationInternationalization
+#endif
 
 let week = 604800
 let day = 86400
 let hour = 3600
 let minute = 60
 
-final class TestDurationUnitsFormatStyle : XCTestCase {
+final class DurationUnitsFormatStyleTests : XCTestCase {
     let enUS = Locale(identifier: "en_US")
 
     func testDurationUnitsFormatStyleAPI() {
@@ -66,7 +71,7 @@ final class TestDurationUnitsFormatStyle : XCTestCase {
         XCTAssertEqual(Duration(minutes: 43, seconds: 24, milliseconds: 490).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)), "43 minutes, 24.49 seconds")
     }
 
-    func verify(seconds: Int, milliseconds: Int, allowedUnits: Set<Duration.UnitsFormatStyle.Unit>, fractionalSecondsLength: Int = 0, rounding: FloatingPointRoundingRule = .toNearestOrEven, increment: Double? = nil, expected: String, file: StaticString = #file, line: UInt = #line) {
+    func verify(seconds: Int, milliseconds: Int, allowedUnits: Set<Duration._UnitsFormatStyle.Unit>, fractionalSecondsLength: Int = 0, rounding: FloatingPointRoundingRule = .toNearestOrEven, increment: Double? = nil, expected: String, file: StaticString = #file, line: UInt = #line) {
         let d = Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds))
         XCTAssertEqual(d.formatted(.units(allowed: allowedUnits, zeroValueUnits: .show(length: 1), fractionalPart: .show(length: fractionalSecondsLength, rounded: rounding, increment: increment)).locale(enUS)), expected, file: file, line: line)
     }
@@ -280,13 +285,13 @@ final class TestDurationUnitsFormatStyle : XCTestCase {
     func testDurationUnitsFormatStyleAPI_largerThanDay() {
 
         var duration: Duration!
-        let allowedUnits: Set<Duration.UnitsFormatStyle.Unit> = [.weeks, .days, .hours]
-        func assertZeroValueUnit(_ zeroFormat: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
+        let allowedUnits: Set<Duration._UnitsFormatStyle.Unit> = [.weeks, .days, .hours]
+        func assertZeroValueUnit(_ zeroFormat: Duration._UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
                                   file: StaticString = #file, line: UInt = #line) {
             XCTAssertEqual(duration.formatted(.units(allowed: allowedUnits, width: .wide, zeroValueUnits: zeroFormat).locale(enUS)), expected, file: file, line: line)
         }
 
-        func assertMaxUnitCount(_ maxUnitCount: Int, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy, _ expected: String,
+        func assertMaxUnitCount(_ maxUnitCount: Int, fractionalPart: Duration._UnitsFormatStyle.FractionalPartDisplayStrategy, _ expected: String,
                                   file: StaticString = #file, line: UInt = #line) {
             XCTAssertEqual(duration.formatted(.units(allowed: allowedUnits, width: .wide, maximumUnitCount: maxUnitCount, fractionalPart: fractionalPart).locale(enUS)), expected, file: file, line: line)
         }
@@ -324,8 +329,8 @@ final class TestDurationUnitsFormatStyle : XCTestCase {
 
     func testZeroValueUnits() {
         var duration: Duration
-        var allowedUnits: Set<Duration.UnitsFormatStyle.Unit>
-        func test(_ zeroFormat: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
+        var allowedUnits: Set<Duration._UnitsFormatStyle.Unit>
+        func test(_ zeroFormat: Duration._UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
                                   file: StaticString = #file, line: UInt = #line) {
             XCTAssertEqual(duration.formatted(.units(allowed: allowedUnits, width: .wide, zeroValueUnits: zeroFormat).locale(enUS)), expected, file: file, line: line)
         }
@@ -424,11 +429,11 @@ final class TestDurationUnitsFormatStyle : XCTestCase {
     }
 
     func assertEqual(_ duration: Duration,
-                     allowedUnits: Set<Duration.UnitsFormatStyle.Unit>, maximumUnitCount: Int? = nil, roundSmallerParts: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalPartLength: Int = Int.max, roundingIncrement: Double? = nil, dropZeroUnits: Bool = false,
-                     expected: (units: [Duration.UnitsFormatStyle.Unit], values: [Double]),
+                     allowedUnits: Set<Duration._UnitsFormatStyle.Unit>, maximumUnitCount: Int? = nil, roundSmallerParts: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalPartLength: Int = Int.max, roundingIncrement: Double? = nil, dropZeroUnits: Bool = false,
+                     expected: (units: [Duration._UnitsFormatStyle.Unit], values: [Double]),
                      file: StaticString = #file, line: UInt = #line) {
 
-        let (units, values) = Duration.UnitsFormatStyle.unitsToUse(duration: duration, allowedUnits: allowedUnits, maximumUnitCount: maximumUnitCount, roundSmallerParts: roundSmallerParts, trailingFractionalPartLength: trailingFractionalPartLength, roundingIncrement: roundingIncrement, dropZeroUnits: dropZeroUnits)
+        let (units, values) = Duration._UnitsFormatStyle.unitsToUse(duration: duration, allowedUnits: allowedUnits, maximumUnitCount: maximumUnitCount, roundSmallerParts: roundSmallerParts, trailingFractionalPartLength: trailingFractionalPartLength, roundingIncrement: roundingIncrement, dropZeroUnits: dropZeroUnits)
         guard values.count == expected.values.count else {
             XCTFail("\(values) is not equal to \(expected.values)", file: file, line: line)
             return
@@ -484,10 +489,10 @@ final class TestDurationUnitsFormatStyle : XCTestCase {
     func testLengthRangeExpression() {
 
         var duration: Duration
-        var allowedUnits: Set<Duration.UnitsFormatStyle.Unit>
+        var allowedUnits: Set<Duration._UnitsFormatStyle.Unit>
 
         func verify<R: RangeExpression, R2: RangeExpression>(intLimits: R, fracLimits: R2, _ expected: String, file: StaticString = #file, line: UInt = #line) where R.Bound == Int, R2.Bound == Int {
-            let style = Duration.UnitsFormatStyle(allowedUnits: allowedUnits, width: .abbreviated, valueLengthLimits: intLimits, fractionalPart: .init(lengthLimits: fracLimits)).locale(enUS)
+            let style = Duration._UnitsFormatStyle(allowedUnits: allowedUnits, width: .abbreviated, valueLengthLimits: intLimits, fractionalPart: .init(lengthLimits: fracLimits)).locale(enUS)
             let formatted = style.format(duration)
             XCTAssertEqual(formatted, expected, file: file, line: line)
         }
@@ -896,7 +901,7 @@ final class TestDurationUnitsFormatStyle : XCTestCase {
 
 // MARK: - Attributed string test
 
-extension Sequence where Element == TestDurationUnitAttributedFormatStyle.Segment {
+extension Sequence where Element == DurationUnitAttributedFormatStyleTests.Segment {
     var attributedString: AttributedString {
         self.map { tuple in
             var attrs = AttributeContainer()
@@ -912,7 +917,7 @@ extension Sequence where Element == TestDurationUnitAttributedFormatStyle.Segmen
     }
 }
 
-final class TestDurationUnitAttributedFormatStyle : XCTestCase {
+final class DurationUnitAttributedFormatStyleTests : XCTestCase {
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DurationFieldAttribute.Field?, AttributeScopes.FoundationAttributes.MeasurementAttribute.Component?)
     let enUS = Locale(identifier: "en_US")
     let frFR = Locale(identifier: "fr_FR")
