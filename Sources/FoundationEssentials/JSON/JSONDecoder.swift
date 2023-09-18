@@ -784,7 +784,7 @@ extension JSONDecoderImpl: Decoder {
     }
 
     private func unwrapString(from value: JSONMap.Value, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> String {
-        try checkNotNull(value, expectedType: [String].self, for: codingPathNode, additionalKey)
+        try checkNotNull(value, expectedType: String.self, for: codingPathNode, additionalKey)
 
         guard case .string(let region, let isSimple) = value else {
             throw self.createTypeMismatchError(type: String.self, for: codingPathNode.path(with: additionalKey), value: value)

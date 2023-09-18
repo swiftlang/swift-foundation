@@ -2154,6 +2154,17 @@ extension JSONEncoderTests {
         XCTAssertEqual("{\"this_is_camel_case\":\"test\"}", resultString)
     }
 
+    func testDecodingStringExpectedType() {
+        let input = #"{"thisIsCamelCase": null}"#.data(using: String._Encoding.utf8)!
+        do {
+            _ = try JSONDecoder().decode(DecodeMe3.self, from: input)
+        } catch DecodingError.valueNotFound(let expected, _) {
+            XCTAssertTrue(expected == String.self)
+        } catch {
+            XCTFail("Unexpected error: \(String(describing: error))")
+        }
+    }
+
     func testEncodingKeyStrategySnakeGenerated() {
         // Test that this works with a struct that has automatically generated keys
         let input = "{\"this_is_camel_case\":\"test\"}".data(using: String._Encoding.utf8)!
