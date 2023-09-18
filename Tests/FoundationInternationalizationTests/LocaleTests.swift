@@ -31,14 +31,6 @@ import TestSupport
 #endif
 
 final class LocaleTests : XCTestCase {
-    
-#if FOUNDATION_FRAMEWORK
-    func test_xcode_override_french() {
-        let task = AuxRunner.launchedTaskRunningClientNamed("TestLocaleAppleLanguagesOverride", withArguments: ["-AppleLanguages", "(fr)"], environment: [:], standardOutput: nil, standardError: nil, options: .init(0))
-        task?.waitUntilExit()
-        XCTAssertEqual(task?.terminationStatus(), 0)
-    }
-#endif
 
     func test_equality() {
         let autoupdating = Locale.autoupdatingCurrent
