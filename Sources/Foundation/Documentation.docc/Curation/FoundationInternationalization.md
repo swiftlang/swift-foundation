@@ -1,4 +1,4 @@
-# ``FoundationInternationalization``
+# Foundation Internationalization
 
 Features for managing and representing locale-specific information.
 
@@ -47,4 +47,4 @@ Formatting works with both the `String` type from the Swift standard library and
 
 ### Supporting types
 
-- ``ComparisonResult``
+- ``ComparisonResult-881ui``

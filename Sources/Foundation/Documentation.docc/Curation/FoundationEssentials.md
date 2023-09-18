@@ -1,10 +1,10 @@
-# ``FoundationEssentials``
+# Foundation Essentials
 
 Core types and essential functionality used by most applications.
 
 ## Overview
 
-The Foundation Essentials package provides the most important types for everyday development:
+The FoundationEssentials package provides the most important types for everyday development:
 
 * Core types beyond those provided by the Swift standard library: ``Data``, ``Decimal``, and ``UUID``.
 * Dates and time intervals.
