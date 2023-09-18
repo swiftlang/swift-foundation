@@ -50,7 +50,7 @@ final class TimeZoneTests : XCTestCase {
     func testPredefinedTimeZone() {
         XCTAssertEqual(TimeZone.gmt, TimeZone(identifier: "GMT"))
     }
-
+    
     func testLocalizedName_103036605() {
         func test(_ tzIdentifier: String, _ localeIdentifier: String, _ style: TimeZone.NameStyle, _ expected: String?, file: StaticString = #file, line: UInt = #line) {
             let tz = TimeZone(identifier: tzIdentifier)
@@ -123,6 +123,75 @@ final class TimeZoneTests : XCTestCase {
         testAbbreviation("GMT+8:00", 28800, "GMT+0800")
         testAbbreviation("GMT+0800", 28800, "GMT+0800")
         testAbbreviation("UTC", 0, "GMT")
+    }
+}
+
+final class TimeZoneGMTTests : XCTestCase {
+    var tz: TimeZone {
+        TimeZone(identifier: "GMT")!
+    }
+    
+    func testIdentifier() {
+        XCTAssertEqual(tz.identifier, "GMT")
+    }
+
+    func testSecondsFromGMT() {
+        XCTAssertEqual(tz.secondsFromGMT(), 0)
+    }
+
+    func testSecondsFromGMTForDate() {
+        XCTAssertEqual(tz.secondsFromGMT(for: Date.now), 0)
+        XCTAssertEqual(tz.secondsFromGMT(for: Date.distantFuture), 0)
+        XCTAssertEqual(tz.secondsFromGMT(for: Date.distantPast), 0)
+    }
+    
+    func testAbbreviationForDate() {
+        XCTAssertEqual(tz.abbreviation(for: Date.now), "GMT")
+        XCTAssertEqual(tz.abbreviation(for: Date.distantFuture), "GMT")
+        XCTAssertEqual(tz.abbreviation(for: Date.distantPast), "GMT")
+    }
+    
+    func testDaylightSavingTimeOffsetForDate() {
+        XCTAssertEqual(tz.daylightSavingTimeOffset(for: Date.now), 0)
+        XCTAssertEqual(tz.daylightSavingTimeOffset(for: Date.distantFuture), 0)
+        XCTAssertEqual(tz.daylightSavingTimeOffset(for: Date.distantPast), 0)
+    }
+    
+    func testNextDaylightSavingTimeTransitionAfterDate() {
+        XCTAssertNil(tz.nextDaylightSavingTimeTransition(after: Date.now))
+        XCTAssertNil(tz.nextDaylightSavingTimeTransition(after: Date.distantFuture))
+        XCTAssertNil(tz.nextDaylightSavingTimeTransition(after: Date.distantPast))
+    }
+
+    func testNextDaylightSavingTimeTransition() {
+        XCTAssertNil(tz.nextDaylightSavingTimeTransition)
+        XCTAssertNil(tz.nextDaylightSavingTimeTransition)
+        XCTAssertNil(tz.nextDaylightSavingTimeTransition)
+    }
+
+    func testLocalizedName() {
+        XCTAssertEqual(tz.localizedName(for: .standard, locale: Locale(identifier: "en_US")), "Greenwich Mean Time")
+        XCTAssertEqual(tz.localizedName(for: .shortStandard, locale: Locale(identifier: "en_US")), "GMT")
+        XCTAssertEqual(tz.localizedName(for: .daylightSaving, locale: Locale(identifier: "en_US")), "Greenwich Mean Time")
+        XCTAssertEqual(tz.localizedName(for: .shortDaylightSaving, locale: Locale(identifier: "en_US")), "GMT")
+        XCTAssertEqual(tz.localizedName(for: .generic, locale: Locale(identifier: "en_US")), "Greenwich Mean Time")
+        XCTAssertEqual(tz.localizedName(for: .shortGeneric, locale: Locale(identifier: "en_US")), "GMT")
+        
+        // TODO: In non-framework, no FoundationInternationalization cases, return nil for all of tehse
+    }
+    
+    func testEqual() {
+        XCTAssertEqual(TimeZone(identifier: "UTC"), TimeZone(identifier: "UTC"))
+    }
+    
+    func test_abbreviated() {
+        // A sampling of expected values for abbreviated GMT names
+        let expected : [(Int, String)] = [(-64800, "GMT-18"), (-64769, "GMT-17:59"), (-64709, "GMT-17:58"),  (-61769, "GMT-17:09"), (-61229, "GMT-17"), (-36029, "GMT-10"), (-35969, "GMT-9:59"), (-35909, "GMT-9:58"), (-32489, "GMT-9:01"), (-32429, "GMT-9"), (-3629, "GMT-1"), (-1829, "GMT-0:30"), (-89, "GMT-0:01"), (-29, "GMT"), (-1, "GMT"), (0, "GMT"), (29, "GMT"), (30, "GMT+0:01"), (90, "GMT+0:02"), (1770, "GMT+0:30"), (3570, "GMT+1"), (3630, "GMT+1:01"), (34170, "GMT+9:30"), (35910, "GMT+9:59"), (35970, "GMT+10"), (36030, "GMT+10:01"), (64650, "GMT+17:58"), (64710, "GMT+17:59"), (64770, "GMT+18")]
+
+        for (offset, expect) in expected {
+            let tz = TimeZone(secondsFromGMT: offset)!
+            XCTAssertEqual(tz.abbreviation(), expect)
+        }
     }
 }
 
