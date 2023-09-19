@@ -2027,4 +2027,8 @@ extension Date {
     internal var capped: Date {
         return max(min(self, Date.validCalendarRange.upperBound), Date.validCalendarRange.lowerBound)
     }
+
+    internal var isValidForEnumeration: Bool {
+        Date.validCalendarRange.contains(self)
+    }
 }
