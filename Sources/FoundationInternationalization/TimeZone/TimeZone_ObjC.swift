@@ -111,7 +111,7 @@ extension NSTimeZone {
 
     @objc
     static func _knownTimeZoneIdentifiers() -> [String] {
-        TimeZoneCache.cache.knownTimeZoneIdentifiers()
+        TimeZone.knownTimeZoneIdentifiers
     }
 
     @objc

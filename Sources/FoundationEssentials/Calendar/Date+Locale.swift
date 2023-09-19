@@ -9,10 +9,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
 extension Date {
 #if !FOUNDATION_FRAMEWORK
     /**

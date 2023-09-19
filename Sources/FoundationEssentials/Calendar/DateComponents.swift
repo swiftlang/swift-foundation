@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
 /**
  `DateComponents` encapsulates the components of a date in an extendable, structured manner.
 
@@ -211,7 +207,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     }
 
     /// This exists only for compatibility with NSDateComponents deprecated `week` value.
-    internal var week: Int? {
+    package var week: Int? {
         get { _week }
         set { _week = converted(newValue) }
     }

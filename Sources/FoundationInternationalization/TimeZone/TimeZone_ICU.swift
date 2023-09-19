@@ -31,7 +31,11 @@ package import FoundationICU
 let MIN_TIMEZONE_UDATE = -2177452800000.0  // 1901-01-01 00:00:00 +0000
 let MAX_TIMEZONE_UDATE = 4133980800000.0  // 2101-01-01 00:00:00 +0000
 
-internal final class _TimeZoneICU: _TimeZoneBase, Sendable {
+internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
+    init?(secondsFromGMT: Int) {
+        fatalError("Unexpected init")
+    }
+    
     struct State {
         /// Access must be serialized
         private var _calendar: UnsafeMutablePointer<UCalendar?>?
@@ -70,7 +74,7 @@ internal final class _TimeZoneICU: _TimeZoneBase, Sendable {
         }
     }
 
-    init?(identifier: String) {
+    required init?(identifier: String) {
         guard !identifier.isEmpty else {
             return nil
         }
@@ -88,17 +92,17 @@ internal final class _TimeZoneICU: _TimeZoneBase, Sendable {
         self.name = name
         lock = LockedState(initialState: State())
     }
-
+    
     // MARK: -
-    override var identifier: String {
+    var identifier: String {
         self.name
     }
     
-    override var data: Data? {
+    var data: Data? {
         nil
     }
 
-    override func secondsFromGMT(for date: Date) -> Int {
+    func secondsFromGMT(for date: Date) -> Int {
         return lock.withLock {
             var udate = date.udate
             // make answers agree with nextDaylightSavingTimeTransitionAfterDate
@@ -120,7 +124,7 @@ internal final class _TimeZoneICU: _TimeZoneBase, Sendable {
         }
     }
 
-    override func abbreviation(for date: Date) -> String? {
+    func abbreviation(for date: Date) -> String? {
         let dst = daylightSavingTimeOffset(for: date) != 0.0
         return lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }
@@ -128,11 +132,11 @@ internal final class _TimeZoneICU: _TimeZoneBase, Sendable {
         }
     }
 
-    override func isDaylightSavingTime(for date: Date) -> Bool {
+    func isDaylightSavingTime(for date: Date) -> Bool {
         return daylightSavingTimeOffset(for: date) != 0.0
     }
 
-    override func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
+    func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
         lock.withLock {
             var udate = date.udate
             if udate < MIN_TIMEZONE_UDATE { udate = MIN_TIMEZONE_UDATE }
@@ -150,14 +154,14 @@ internal final class _TimeZoneICU: _TimeZoneBase, Sendable {
         }
     }
 
-    override func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
+    func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
         lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }
             return Self.nextDaylightSavingTimeTransition(forLocked: c, startingAt: date, limit: Date(udate: MAX_TIMEZONE_UDATE))
         }
     }
 
-    override func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
+    func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
         let locID = locale?.identifier ?? ""
         return lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }
@@ -443,3 +447,24 @@ internal final class _TimeZoneICU: _TimeZoneBase, Sendable {
     }
 }
 
+// MARK: -
+
+var icuTZIdentifiers: [String] = {
+    _TimeZoneICU.timeZoneNamesFromICU()
+}()
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension TimeZone {
+    /// Returns an array of strings listing the identifier of all the time zones known to the system.
+    public static var knownTimeZoneIdentifiers : [String] {
+        icuTZIdentifiers
+    }
+
+#if FOUNDATION_FRAMEWORK
+    /// Returns the time zone data version.
+    public static var timeZoneDataVersion : String {
+        // At this time only available in Framework build because of dependency on ICU. When TimeZone sinks to FoundationEssentials, we can make this available everywhere as an extension on TimeZone from FoundationInternationalization.
+        _TimeZoneICU.timeZoneDataVersion
+    }
+#endif
+}

@@ -29,6 +29,37 @@ import WinSDK
 
 /// Singleton which listens for notifications about preference changes for TimeZone and holds cached values for current, fixed time zones, etc.
 struct TimeZoneCache : Sendable {
+    
+    // MARK: - Concrete Classes
+    
+    // _TimeZoneICU, if present
+    static var timeZoneICUClass: _TimeZoneProtocol.Type? = {
+#if FOUNDATION_FRAMEWORK
+        _TimeZoneICU.self
+#else
+        if let name = _typeByName("FoundationInternationalization._TimeZoneICU"), let t = name as? _TimeZoneProtocol.Type {
+            return t
+        } else {
+            return nil
+        }
+#endif
+    }()
+    
+    // _TimeZoneGMTICU or _TimeZoneGMT
+    static var timeZoneGMTClass: _TimeZoneProtocol.Type = {
+#if FOUNDATION_FRAMEWORK
+        _TimeZoneGMTICU.self
+#else
+        if let name = _typeByName("FoundationInternationalization._TimeZoneGMTICU"), let t = name as? _TimeZoneProtocol.Type {
+            return t
+        } else {
+            return _TimeZoneGMT.self
+        }
+#endif
+    }()
+
+    // MARK: - State
+    
     struct State {
         // a.k.a. `systemTimeZone`
         private var currentTimeZone: TimeZone!
@@ -39,10 +70,10 @@ struct TimeZoneCache : Sendable {
         private var defaultTimeZone: TimeZone?
 
         // This cache is not cleared, but only holds validly named time zones.
-        private var fixedTimeZones: [String: _TimeZoneICU] = [:]
+        private var fixedTimeZones: [String: any _TimeZoneProtocol] = [:]
 
         // This cache holds offset-specified time zones, but only a subset of the universe of possible values. See the implementation below for the policy.
-        private var offsetTimeZones: [Int: _TimeZoneGMT] = [:]
+        private var offsetTimeZones: [Int: any _TimeZoneProtocol] = [:]
 
         private var noteCount = -1
         private var identifiers: [String]?
@@ -74,7 +105,7 @@ struct TimeZoneCache : Sendable {
 #endif // FOUNDATION_FRAMEWORK
             }
         }
-
+        
         mutating func reset() -> TimeZone? {
             let oldTimeZone = currentTimeZone
 
@@ -185,15 +216,15 @@ struct TimeZoneCache : Sendable {
 #endif // FOUNDATION_FRAMEWORK
             return old
         }
-
-        mutating func fixed(_ identifier: String) -> _TimeZoneBase? {
+        
+        mutating func fixed(_ identifier: String) -> (any _TimeZoneProtocol)? {
             // Check for GMT/UTC
             if identifier == "GMT" {
                 return offsetFixed(0)
             } else if let cached = fixedTimeZones[identifier] {
                 return cached
             } else {
-                if let innerTz = _TimeZoneICU(identifier: identifier) {
+                if let innerTz = TimeZoneCache.timeZoneICUClass?.init(identifier: identifier) {
                     fixedTimeZones[identifier] = innerTz
                     return innerTz
                 } else {
@@ -202,13 +233,13 @@ struct TimeZoneCache : Sendable {
             }
         }
         
-        mutating func offsetFixed(_ offset: Int) -> _TimeZoneBase? {
+        mutating func offsetFixed(_ offset: Int) -> (any _TimeZoneProtocol)? {
             if let cached = offsetTimeZones[offset] {
                 return cached
             } else {
                 // In order to avoid bloating a cache with weird time zones, only cache values that are 30min offsets (including 1hr offsets).
                 let doCache = abs(offset) % 1800 == 0
-                if let innerTz = _TimeZoneGMTICU(secondsFromGMT: offset) {
+                if let innerTz = TimeZoneCache.timeZoneGMTClass.init(secondsFromGMT: offset) {
                     if doCache {
                         offsetTimeZones[offset] = innerTz
                     }
@@ -226,13 +257,6 @@ struct TimeZoneCache : Sendable {
                 autoupdatingCurrentTimeZone = _TimeZoneAutoupdating()
                 return autoupdatingCurrentTimeZone
             }
-        }
-
-        mutating func knownTimeZoneIdentifiers() -> [String] {
-            if identifiers == nil {
-                identifiers = _TimeZoneICU.timeZoneNamesFromICU()
-            }
-            return identifiers!
         }
 
         mutating func timeZoneAbbreviations() -> [String : String] {
@@ -409,20 +433,16 @@ struct TimeZoneCache : Sendable {
 #endif // FOUNDATION_FRAMEWORK
     }
 
-    func fixed(_ identifier: String) -> _TimeZoneBase? {
+    func fixed(_ identifier: String) -> _TimeZoneProtocol? {
         lock.withLock { $0.fixed(identifier) }
     }
 
-    func offsetFixed(_ seconds: Int) -> _TimeZoneBase? {
+    func offsetFixed(_ seconds: Int) -> (any _TimeZoneProtocol)? {
         lock.withLock { $0.offsetFixed(seconds) }
     }
     
-    func autoupdatingCurrent() -> _TimeZoneBase {
+    func autoupdatingCurrent() -> _TimeZoneAutoupdating {
         lock.withLock { $0.autoupdatingCurrent() }
-    }
-
-    func knownTimeZoneIdentifiers() -> [String] {
-        lock.withLock { $0.knownTimeZoneIdentifiers() }
     }
 
     func timeZoneAbbreviations() -> [String : String] {

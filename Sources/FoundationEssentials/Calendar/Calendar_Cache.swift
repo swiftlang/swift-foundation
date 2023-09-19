@@ -13,21 +13,39 @@
 
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import FoundationICU
 import CoreFoundation
 #else
-package import FoundationICU
 #endif
 
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.
 struct CalendarCache : Sendable {
-    struct State {
+    
+    // MARK: - Concrete Classes
+    
+    // _CalendarICU, if present
+    static var calendarICUClass: _CalendarProtocol.Type = {
+#if FOUNDATION_FRAMEWORK
+        _CalendarICU.self
+#else
+        if let name = _typeByName("FoundationInternationalization._CalendarICU"), let t = name as? _CalendarProtocol.Type {
+            return t
+        } else {
+            // Use the default gregorian class
+            return _CalendarGregorian.self
+        }
+#endif
+    }()
+
+    // MARK: - State
+    
+    struct State : Sendable {
         // If nil, the calendar has been invalidated and will be created next time State.current() is called
-        private var currentCalendar: _Calendar?
-        private var fixedCalendars: [Calendar.Identifier: _Calendar] = [:]
+        private var currentCalendar: (any _CalendarProtocol)?
+        private var autoupdatingCurrentCalendar: _CalendarAutoupdating?
+        private var fixedCalendars: [Calendar.Identifier: any _CalendarProtocol] = [:]
         private var noteCount = -1
         private var wasResetManually = false
-
+                
         mutating func check() {
 #if FOUNDATION_FRAMEWORK
             // On Darwin we listen for certain distributed notifications to reset the current Calendar.
@@ -49,29 +67,39 @@ struct CalendarCache : Sendable {
             }
         }
 
-        mutating func current() -> _Calendar {
+        mutating func current() -> any _CalendarProtocol {
             check()
             if let currentCalendar {
                 return currentCalendar
             } else {
                 let id = Locale.current._calendarIdentifier
-                let calendar = _Calendar(identifier: id, locale: Locale.current)
+                let calendar = CalendarCache.calendarICUClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 currentCalendar = calendar
                 return calendar
             }
         }
+        
+        mutating func autoupdatingCurrent() -> any _CalendarProtocol {
+            if let autoupdatingCurrentCalendar {
+                return autoupdatingCurrentCalendar
+            } else {
+                let calendar = _CalendarAutoupdating()
+                autoupdatingCurrentCalendar = calendar
+                return calendar
+            }
+        }
 
-        mutating func fixed(_ id: Calendar.Identifier) -> _Calendar {
+        mutating func fixed(_ id: Calendar.Identifier) -> any _CalendarProtocol {
             check()
             if let cached = fixedCalendars[id] {
                 return cached
             } else {
-                let new = _Calendar(identifier: id)
+                let new = CalendarCache.calendarICUClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 fixedCalendars[id] = new
                 return new
             }
         }
-
+        
         mutating func reset() {
             wasResetManually = true
         }
@@ -89,11 +117,20 @@ struct CalendarCache : Sendable {
         lock.withLock { $0.reset() }
     }
 
-    var current: _Calendar {
+    var current: any _CalendarProtocol {
         lock.withLock { $0.current() }
     }
-
-    func fixed(_ id: Calendar.Identifier) -> _Calendar {
+    
+    var autoupdatingCurrent: any _CalendarProtocol {
+        lock.withLock { $0.autoupdatingCurrent() }
+    }
+    
+    func fixed(_ id: Calendar.Identifier) -> any _CalendarProtocol {
         lock.withLock { $0.fixed(id) }
+    }
+    
+    func fixed(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
+        // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
+        return CalendarCache.calendarICUClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 }

@@ -24,11 +24,15 @@ import FoundationEssentials
 package import FoundationICU
 #endif
 
+#if canImport(Glibc)
+import Glibc
+#endif
+
 let MAX_ICU_NAME_SIZE: Int32 = 1024
 
-internal final class _Locale: Sendable, Hashable {
-    // Double-nil values are caches where the result may be nil. If the outer value is nil, the result has not yet been calculated.
-    // Single-nil values are caches where the result may not be nil. If the value is nil, the result has not yet been calculated.
+internal final class _LocaleICU: _LocaleProtocol, Sendable {
+    // Double-optional values are caches where the result may be nil. If the outer value is nil, the result has not yet been calculated.
+    // Single-optional values are caches where the result may not be nil. If the value is nil, the result has not yet been calculated.
     struct State: Hashable, Sendable {
         var languageComponents: Locale.Language.Components?
         var calendarId: Calendar.Identifier?
@@ -104,10 +108,15 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - ivar
 
-    internal let identifier: String
-    internal let doesNotRequireSpecialCaseHandling: Bool
-    internal let prefs: LocalePreferences?
+    let identifier: String
+    
+    let doesNotRequireSpecialCaseHandling: Bool
+    
+    let prefs: LocalePreferences?
+    
     private let lock: LockedState<State>
+
+    var debugDescription: String { "fixed \(identifier)" }
 
     // MARK: - Logging
 #if FOUNDATION_FRAMEWORK
@@ -116,19 +125,24 @@ internal final class _Locale: Sendable, Hashable {
     }()
 #endif // FOUNDATION_FRAMEWORK
     
-
+#if FOUNDATION_FRAMEWORK
+    func bridgeToNSLocale() -> NSLocale {
+        LocaleCache.cache.fixedNSLocale(self)
+    }
+#endif
+    
     // MARK: - init
 
-    init(identifier: String, prefs: LocalePreferences? = nil) {
+    required init(identifier: String, prefs: LocalePreferences? = nil) {
         self.identifier = Locale._canonicalLocaleIdentifier(from: identifier)
-        doesNotRequireSpecialCaseHandling = Self.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
+        doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
         lock = LockedState(initialState: State())
     }
 
-    init(components: Locale.Components) {
-        self.identifier = components.identifier
-        doesNotRequireSpecialCaseHandling = Self.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
+    required init(components: Locale.Components) {
+        self.identifier = components.icuIdentifier
+        doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         prefs = nil
 
         // Copy over the component values into our internal state - if they are set
@@ -150,7 +164,7 @@ internal final class _Locale: Sendable, Hashable {
     }
 
     /// Use to create a current-like Locale, with preferences.
-    init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) {
+    required init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) {
         var ident: String?
         if let name {
             ident = Locale._canonicalLocaleIdentifier(from: name)
@@ -170,10 +184,11 @@ internal final class _Locale: Sendable, Hashable {
             ident = Locale._canonicalLocaleIdentifier(from: identSet)
         } else {
             let preferredLocale = prefs.locale
-
+            
             // If CFBundleAllowMixedLocalizations is set, don't do any checking of the user's preferences for locale-matching purposes (32264371)
 #if FOUNDATION_FRAMEWORK
-            let allowMixed = Bundle.main.infoDictionary?["CFBundleAllowMixedLocalizations"] as? Bool ?? false
+            // Do not call the usual 'objectForInfoDictionaryKey' method, as it localizes the Info.plist content, which recurisvely calls back into Locale
+            let allowMixed = _generouslyInterpretedInfoDictionaryBoolean(Bundle.main._object(forUnlocalizedInfoDictionaryKey: "CFBundleAllowMixedLocalizations"))
 #else
             let allowMixed = false
 #endif
@@ -194,9 +209,9 @@ internal final class _Locale: Sendable, Hashable {
             if let preferredLocale, let preferredLanguages, performBundleMatching {
                 let mainBundle = Bundle.main
                 let availableLocalizations = mainBundle.localizations
-                canonicalizedLocalizations = Self.canonicalizeLocalizations(availableLocalizations)
+                canonicalizedLocalizations = Locale.canonicalizeLocalizations(availableLocalizations)
 
-                ident = Self.localeIdentifierForCanonicalizedLocalizations(canonicalizedLocalizations!, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocale)
+                ident = Locale.localeIdentifierForCanonicalizedLocalizations(canonicalizedLocalizations!, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocale)
             }
 
             if ident == nil {
@@ -205,7 +220,7 @@ internal final class _Locale: Sendable, Hashable {
                     ident = Locale._canonicalLocaleIdentifier(from: preferredLocale)
                 } else if let preferredLanguages {
                     if canonicalizedLocalizations == nil {
-                        canonicalizedLocalizations = Self.canonicalizeLocalizations(preferredLanguages)
+                        canonicalizedLocalizations = Locale.canonicalizeLocalizations(preferredLanguages)
                     }
 
                     if canonicalizedLocalizations!.count > 0 {
@@ -245,7 +260,7 @@ internal final class _Locale: Sendable, Hashable {
         }
         
         self.identifier = Locale._canonicalLocaleIdentifier(from: fixedIdent)
-        doesNotRequireSpecialCaseHandling = Self.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
+        doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
         lock = LockedState(initialState: State())
     }
@@ -258,24 +273,13 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: -
 
-    internal func copy(newCalendarIdentifier id: Calendar.Identifier) -> _Locale {
+    func copy(newCalendarIdentifier id: Calendar.Identifier) -> any _LocaleProtocol {
         // Update the identifier to respect the new calendar ID
         var comps = Locale.Components(identifier: identifier)
         comps.calendar = id
-        let newIdentifier = comps.identifier
+        let newIdentifier = comps.icuIdentifier
 
-        return _Locale(identifier: newIdentifier, prefs: prefs)
-    }
-
-    // MARK: -
-
-    static func ==(lhs: _Locale, rhs: _Locale) -> Bool {
-        return lhs.identifier == rhs.identifier && lhs.prefs == rhs.prefs
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(identifier)
-        hasher.combine(prefs)
+        return _LocaleICU(identifier: newIdentifier, prefs: prefs)
     }
 
     // MARK: - Direct Prefs Access
@@ -327,7 +331,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - Identifier
 
-    internal func identifierDisplayName(for value: String) -> String? {
+    func identifierDisplayName(for value: String) -> String? {
         lock.withLock { state in
             if let result = state.identifierDisplayNames[value] {
                 return result
@@ -354,7 +358,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal static func identifier(forType type: Locale.IdentifierType, from string: String) -> String? {
+    private static func identifier(forType type: Locale.IdentifierType, from string: String) -> String? {
         var result: String?
         switch type {
         case .icu:
@@ -384,13 +388,13 @@ internal final class _Locale: Sendable, Hashable {
         return result
     }
 
-    internal func identifier(_ type: Locale.IdentifierType) -> String {
+    func identifier(_ type: Locale.IdentifierType) -> String {
         lock.withLock { state in
             if let result = state.identifierTypes[type] {
                 return result
             }
 
-            if let result = _Locale.identifier(forType: type, from: identifier) {
+            if let result = _LocaleICU.identifier(forType: type, from: identifier) {
                 state.identifierTypes[type] = result
                 return result
             } else {
@@ -405,7 +409,7 @@ internal final class _Locale: Sendable, Hashable {
     //
     // Intentionally ignore `prefs.country`: Locale identifier should already contain
     // that information. Do not override it.
-    internal var identifierCapturingPreferences: String {
+    var identifierCapturingPreferences: String {
         lock.withLock { state in
             if let result = state.identifierCapturingPreferences {
                 return result
@@ -435,32 +439,15 @@ internal final class _Locale: Sendable, Hashable {
                 components.hourCycle = hourCycle
             }
 
-            let completeID = components.identifier
+            let completeID = components.icuIdentifier
             state.identifierCapturingPreferences = completeID
             return completeID
         }
     }
 
-    internal static func identifierFromWindowsLocaleCode(_ code: UInt32) -> String? {
-        let result = _withFixedCharBuffer(size: MAX_ICU_NAME_SIZE) { buffer, size, status in
-            return uloc_getLocaleForLCID(code, buffer, size, &status)
-        }
-
-        return result
-    }
-
-    internal static func windowsLocaleCode(from identifier: String) -> Int? {
-        let result = uloc_getLCID(identifier)
-        if result == 0 {
-            return nil
-        } else {
-            return Int(result)
-        }
-    }
-
     // MARK: - Language Code
 
-    internal var languageCode: String? {
+    var languageCode: String? {
         lock.withLock { state in
             if let comps = state.languageComponents {
                 return comps.languageCode?.identifier
@@ -472,7 +459,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal func languageCodeDisplayName(for value: String) -> String? {
+    func languageCodeDisplayName(for value: String) -> String? {
         lock.withLock { state in
             if let result = state.languageCodeDisplayNames[value] {
                 return result
@@ -488,13 +475,13 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal var language: Locale.Language {
+    var language: Locale.Language {
         Locale.Language(identifier: identifier)
     }
 
     // MARK: - Country, Region, Subdivision, Variant
 
-    internal func countryCodeDisplayName(for value: String) -> String? {
+    func countryCodeDisplayName(for value: String) -> String? {
         lock.withLock { state in
             if let result = state.countryCodeDisplayNames[value] {
                 return result
@@ -516,7 +503,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal func _lockedRegion(_ state: inout State) -> Locale.Region? {
+    private func _lockedRegion(_ state: inout State) -> Locale.Region? {
         if let region = state.region {
             // Cached value available, either a value or nil
             if let region {
@@ -540,13 +527,13 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal var region: Locale.Region? {
+    var region: Locale.Region? {
         lock.withLock { state in
             _lockedRegion(&state)
         }
     }
 
-    internal var subdivision: Locale.Subdivision? {
+    var subdivision: Locale.Subdivision? {
         lock.withLock { state in
             if let subdivision = state.subdivision {
                 return subdivision
@@ -564,7 +551,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal var variant: Locale.Variant? {
+    var variant: Locale.Variant? {
         lock.withLock { state in
             if let variant = state.variant {
                 return variant
@@ -589,7 +576,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - Script Code
 
-    internal var scriptCode: String? {
+    var scriptCode: String? {
         lock.withLock { state in
             if let comps = state.languageComponents {
                 return comps.script?.identifier
@@ -601,7 +588,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal func scriptCodeDisplayName(for value: String) -> String? {
+    func scriptCodeDisplayName(for value: String) -> String? {
         lock.withLock { state in
             if let result = state.scriptCodeDisplayNames[value] {
                 return result
@@ -625,11 +612,11 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - Variant Code
 
-    internal var variantCode: String? {
+    var variantCode: String? {
         return variant?.identifier
     }
 
-    internal func variantCodeDisplayName(for value: String) -> String? {
+    func variantCodeDisplayName(for value: String) -> String? {
         lock.withLock { state in
             if let result = state.variantCodeDisplayNames[value] {
                 return result
@@ -653,7 +640,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - Exemplar Character Set
 #if FOUNDATION_FRAMEWORK
-    internal var exemplarCharacterSet: CharacterSet? {
+    var exemplarCharacterSet: CharacterSet? {
         var status = U_ZERO_ERROR
         let data = ulocdata_open(identifier, &status)
         guard status.isSuccess else { return nil }
@@ -708,7 +695,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - LocaleCalendarIdentifier
 
-    func _lockedCalendarIdentifier(_ state: inout State) -> Calendar.Identifier {
+    private func _lockedCalendarIdentifier(_ state: inout State) -> Calendar.Identifier {
         if let calendarId = state.calendarId {
             return calendarId
         } else {
@@ -744,13 +731,13 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal var calendarIdentifier: Calendar.Identifier {
+    var calendarIdentifier: Calendar.Identifier {
         lock.withLock { state in
             _lockedCalendarIdentifier(&state)
         }
     }
 
-    internal func calendarIdentifierDisplayName(for value: Calendar.Identifier) -> String? {
+    func calendarIdentifierDisplayName(for value: Calendar.Identifier) -> String? {
         lock.withLock { state in
             if let result = state.calendarIdentifierDisplayNames[value] {
                 return result
@@ -767,7 +754,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - LocaleCalendar
 
-    internal var calendar: Calendar {
+    var calendar: Calendar {
         lock.withLock { state in
             let id = _lockedCalendarIdentifier(&state)
             var calendar = Calendar(identifier: id)
@@ -784,7 +771,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal var timeZone: TimeZone? {
+    var timeZone: TimeZone? {
         lock.withLock { state in
             if let timeZone = state.timeZone {
                 return timeZone
@@ -803,11 +790,11 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - LocaleCollationIdentifier
 
-    internal var collationIdentifier: String? {
+    var collationIdentifier: String? {
         collation.identifier
     }
 
-    internal func collationIdentifierDisplayName(for value: String) -> String? {
+    func collationIdentifierDisplayName(for value: String) -> String? {
         lock.withLock { state in
             if let result = state.collationIdentifierDisplayNames[value] {
                 return result
@@ -822,7 +809,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal var collation: Locale.Collation {
+    var collation: Locale.Collation {
         lock.withLock { state in
             if let collation = state.collation {
                 return collation
@@ -841,7 +828,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - LocaleUsesMetricSystem
 
-    internal var usesMetricSystem: Bool {
+    var usesMetricSystem: Bool {
         let ms = measurementSystem
         if ms != .us {
             return true
@@ -853,11 +840,11 @@ internal final class _Locale: Sendable, Hashable {
     // MARK: - LocaleMeasurementSystem
 
     /// Will return nil if the measurement system is not set in the prefs, unlike `measurementSystem` which has a fallback value.
-    internal var forceMeasurementSystem: Locale.MeasurementSystem? {
+    var forceMeasurementSystem: Locale.MeasurementSystem? {
         return prefs?.measurementSystem
     }
 
-    internal var measurementSystem: Locale.MeasurementSystem {
+    var measurementSystem: Locale.MeasurementSystem {
         return lock.withLock { state in
             if let ms = state.measurementSystem {
                 return ms
@@ -885,13 +872,17 @@ internal final class _Locale: Sendable, Hashable {
                 var status = U_ZERO_ERROR
                 let output = ulocdata_getMeasurementSystem(identifier, &status)
                 if status.isSuccess {
-                    let ms = Locale.MeasurementSystem(output)
+                    let ms = switch output {
+                    case UMS_US: Locale.MeasurementSystem.us
+                    case UMS_UK: Locale.MeasurementSystem.uk
+                    default: Locale.MeasurementSystem.metric
+                    }
                     state.measurementSystem = ms
                     return ms
                 }
 
                 // Fallback to SI
-                let ms = Locale.MeasurementSystem(UMS_SI)
+                let ms = Locale.MeasurementSystem.metric
                 state.measurementSystem = ms
                 return ms
             }
@@ -899,21 +890,11 @@ internal final class _Locale: Sendable, Hashable {
     }
 
     // MARK: - LocaleTemperatureUnit
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once `UnitTemperature` is moved
-    internal var forceTemperatureUnit: UnitTemperature? {
-        if let prefs, let unit = prefs.temperatureUnit {
-            switch unit {
-            case .celsius:
-                return .celsius
-            case .fahrenheit:
-                return .fahrenheit
-            }
-        }
-
-        return nil
+    var forceTemperatureUnit: LocalePreferences.TemperatureUnit? {
+        prefs?.temperatureUnit
     }
 
-    internal var temperatureUnit: UnitTemperature {
+    var temperatureUnit: LocalePreferences.TemperatureUnit {
         if let unit = forceTemperatureUnit {
             return unit
         }
@@ -942,10 +923,10 @@ internal final class _Locale: Sendable, Hashable {
 
         return usesCelsius ? .celsius : .fahrenheit
     }
-#endif // FOUNDATION_FRAMEWORK
+
     // MARK: - LocaleDecimalSeparator
 
-    internal var decimalSeparator: String? {
+    var decimalSeparator: String? {
         lock.withLock { state in
             guard let nf = state.formatter(for: UNUM_DECIMAL, identifier: identifier, numberSymbols: prefs?.numberSymbols) else {
                 return nil
@@ -959,7 +940,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - LocaleGroupingSeparator
 
-    internal var groupingSeparator: String? {
+    var groupingSeparator: String? {
         lock.withLock { state in
             guard let nf = state.formatter(for: UNUM_DECIMAL, identifier: identifier, numberSymbols: prefs?.numberSymbols) else {
                 return nil
@@ -1011,7 +992,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal var currencySymbol: String? {
+    var currencySymbol: String? {
         lock.withLock { state in
             guard let nf = state.formatter(for: UNUM_DECIMAL, identifier: identifier, numberSymbols: prefs?.numberSymbols) else {
                 return nil
@@ -1023,7 +1004,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal func currencySymbolDisplayName(for value: String) -> String? {
+    func currencySymbolDisplayName(for value: String) -> String? {
         lock.withLock { state in
             if let result = state.currencySymbolDisplayNames[value] {
                 return result
@@ -1040,7 +1021,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - CurrencyCodeKey
 
-    internal var currencyCode: String? {
+    var currencyCode: String? {
         lock.withLock { state in
             guard let nf = state.formatter(for: UNUM_CURRENCY, identifier: identifier, numberSymbols: prefs?.numberSymbols) else {
                 return nil
@@ -1054,7 +1035,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal func currencyCodeDisplayName(for value: String) -> String? {
+    func currencyCodeDisplayName(for value: String) -> String? {
         lock.withLock { state in
             if let result = state.currencyCodeDisplayNames[value] {
                 return result
@@ -1069,7 +1050,7 @@ internal final class _Locale: Sendable, Hashable {
         }
     }
 
-    internal var currency: Locale.Currency? {
+    var currency: Locale.Currency? {
         lock.withLock { state in
             if let currency = state.currency {
                 return currency
@@ -1093,7 +1074,7 @@ internal final class _Locale: Sendable, Hashable {
     // MARK: - CollatorIdentifierKey
 
     // "kCFLocaleCollatorIdentifierKey" aka "locale:collator id"
-    internal var collatorIdentifier: String {
+    var collatorIdentifier: String? {
         if let prefs {
             if let order = prefs.collationOrder {
                 return Locale.canonicalLanguageIdentifier(from: order)
@@ -1106,14 +1087,14 @@ internal final class _Locale: Sendable, Hashable {
         return identifier
     }
 
-    internal func collatorIdentifierDisplayName(for value: String) -> String? {
+    func collatorIdentifierDisplayName(for value: String) -> String? {
         // Unsupported
         return nil
     }
 
     // MARK: - QuotationBeginDelimiterKey
 
-    func delimiterString(_ type: ULocaleDataDelimiterType) -> String? {
+    private func delimiterString(_ type: ULocaleDataDelimiterType) -> String? {
         var status = U_ZERO_ERROR
         let uld = ulocdata_open(identifier, &status)
         defer { ulocdata_close(uld) }
@@ -1129,22 +1110,22 @@ internal final class _Locale: Sendable, Hashable {
         return result
     }
 
-    internal var quotationBeginDelimiter: String? {
+    var quotationBeginDelimiter: String? {
         delimiterString(ULOCDATA_QUOTATION_START)
     }
 
     // MARK: - QuotationEndDelimiterKey
-    internal var quotationEndDelimiter: String? {
+    var quotationEndDelimiter: String? {
         delimiterString(ULOCDATA_QUOTATION_END)
     }
 
     // MARK: - AlternateQuotationBeginDelimiterKey
-    internal var alternateQuotationBeginDelimiter: String? {
+    var alternateQuotationBeginDelimiter: String? {
         delimiterString(ULOCDATA_ALT_QUOTATION_START)
     }
 
     // MARK: - AlternateQuotationEndDelimiterKey
-    internal var alternateQuotationEndDelimiter: String? {
+    var alternateQuotationEndDelimiter: String? {
         delimiterString(ULOCDATA_ALT_QUOTATION_END)
     }
 
@@ -1154,7 +1135,7 @@ internal final class _Locale: Sendable, Hashable {
         return prefs?.hourCycle
     }
 
-    internal var hourCycle: Locale.HourCycle {
+    var hourCycle: Locale.HourCycle {
         lock.withLock { state in
             if let hourCycle = state.hourCycle {
                 return hourCycle
@@ -1199,7 +1180,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: First weekday
 
-    internal func forceFirstWeekday(in calendar: Calendar.Identifier) -> Locale.Weekday? {
+    func forceFirstWeekday(_ calendar: Calendar.Identifier) -> Locale.Weekday? {
         if let weekdayNumber = prefs?.firstWeekday?[calendar] {
             // 1 is Sunday
             return Locale.Weekday(Int32(weekdayNumber))
@@ -1208,7 +1189,7 @@ internal final class _Locale: Sendable, Hashable {
         return nil
     }
 
-    internal var firstDayOfWeek: Locale.Weekday {
+    var firstDayOfWeek: Locale.Weekday {
         lock.withLock { state in
             if let first = state.firstDayOfWeek {
                 return first
@@ -1222,7 +1203,7 @@ internal final class _Locale: Sendable, Hashable {
                 }
 
                 // Check prefs
-                if let first = forceFirstWeekday(in: _lockedCalendarIdentifier(&state)) {
+                if let first = forceFirstWeekday(_lockedCalendarIdentifier(&state)) {
                     state.firstDayOfWeek = first
                     return first
                 }
@@ -1250,7 +1231,7 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: Min days in first week
 
-    internal func forceMinDaysInFirstWeek(in calendar: Calendar.Identifier) -> Int? {
+    func forceMinDaysInFirstWeek(_ calendar: Calendar.Identifier) -> Int? {
         if let prefs {
             return prefs.minDaysInFirstWeek?[calendar]
         }
@@ -1276,13 +1257,13 @@ internal final class _Locale: Sendable, Hashable {
         return Locale.NumberingSystem(localeIdentifier: identifier)
     }
 
-    internal var numberingSystem: Locale.NumberingSystem {
+    var numberingSystem: Locale.NumberingSystem {
         lock.withLock { state in
             _lockedNumberingSystem(&state)
         }
     }
 
-    internal var availableNumberingSystems: [Locale.NumberingSystem] {
+    var availableNumberingSystems: [Locale.NumberingSystem] {
         lock.withLock { state in
             if let systems = state.availableNumberingSystems {
                 return systems
@@ -1309,10 +1290,12 @@ internal final class _Locale: Sendable, Hashable {
 
     // MARK: - Date/Time Formats
 
-    internal func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
+#if FOUNDATION_FRAMEWORK
+    func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
         guard let dateFormatStrings = prefs?.dateFormats else { return nil }
         return dateFormatStrings[style]
     }
+#endif
 
     // MARK: -
 
@@ -1336,7 +1319,7 @@ internal final class _Locale: Sendable, Hashable {
         if let prefs, let override = prefs.languages {
             langs = override
         } else {
-            langs = LocaleCache.cache.preferredLanguages(forCurrentUser: false)
+            langs = Locale.preferredLanguages
         }
 
         for l in langs {
@@ -1358,21 +1341,130 @@ internal final class _Locale: Sendable, Hashable {
             uloc_getDisplayKeywordValue(lid, keyword, identifier, buffer, size, &status)
         }
     }
+}
 
-    // MARK: -
+// MARK: - ICU Extensions on Locale
 
-    static func identifierDoesNotRequireSpecialCaseHandling(_ identifier: String) -> Bool {
-        guard identifier.count >= 2 else { return true }
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Locale {
+    /// Returns the `Locale` identifier from a given Windows locale code, or nil if it could not be converted.
+    public static func identifier(fromWindowsLocaleCode code: Int) -> String? {
+        guard let unsigned = UInt32(exactly: code) else {
+            return nil
+        }
+        
+        let result = _withFixedCharBuffer(size: MAX_ICU_NAME_SIZE) { buffer, size, status in
+            return uloc_getLocaleForLCID(unsigned, buffer, size, &status)
+        }
 
-        let first = identifier.prefix(2)
-        switch first {
-        case "az", "lt", "tr", "nl", "el":
-            return false // Does require special handling
+        return result
+    }
+
+    /// Returns the Windows locale code from a given identifier, or nil if it could not be converted.
+    public static func windowsLocaleCode(fromIdentifier identifier: String) -> Int? {
+        let result = uloc_getLCID(identifier)
+        if result == 0 {
+            return nil
+        } else {
+            return Int(result)
+        }
+    }
+    
+    /// Returns the identifier conforming to the specified standard for the specified string.
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    public static func identifier(_ type: IdentifierType, from string: String) -> String {
+        Locale(identifier: string).identifier(type)
+    }
+
+    /// Returns a list of available `Locale` identifiers.
+    public static var availableIdentifiers: [String] {
+        var working = Set<String>()
+        let localeCount = uloc_countAvailable()
+        for locale in 0..<localeCount {
+            let localeID = String(cString: uloc_getAvailable(locale))
+            working.insert(localeID)
+        }
+        return Array(working)
+    }
+
+    /// Returns a list of common `Locale` currency codes.
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    public static var commonISOCurrencyCodes: [String] {
+        Locale.Currency.commonISOCurrencies
+    }
+}
+
+extension Locale {
+    // Helper
+    internal static func legacyKey(forKey key: String) -> ICULegacyKey? {
+        // Calling into ICU for these values requires quite a bit of I/O. We can precalculate the most important ones here.
+        let legacyKey: String
+        switch key {
+        case "calendar", "colalternate", "colbackwards", "colcasefirst", "colcaselevel", "colhiraganaquaternary", "collation", "colnormalization", "colnumeric", "colreorder", "colstrength", "currency", "hours", "measure", "numbers", "timezone", "variabletop", "cf", "d0", "dx", "em", "fw", "h0", "i0", "k0", "kv", "lb", "lw", "m0", "rg", "s0", "sd", "ss", "t0", "va", "x0":
+            legacyKey = key
+        case "ca": legacyKey = "calendar"
+        case "ka": legacyKey = "colalternate"
+        case "kb": legacyKey = "colbackwards"
+        case "kf": legacyKey = "colcasefirst"
+        case "kc": legacyKey = "colcaselevel"
+        case "kh": legacyKey = "colhiraganaquaternary"
+        case "co": legacyKey = "collation"
+        case "kk": legacyKey = "colnormalization"
+        case "kn": legacyKey = "colnumeric"
+        case "kr": legacyKey = "colreorder"
+        case "ks": legacyKey = "colstrength"
+        case "cu": legacyKey = "currency"
+        case "hc": legacyKey = "hours"
+        case "ms": legacyKey = "measure"
+        case "nu": legacyKey = "numbers"
+        case "tz": legacyKey = "timezone"
+        case "vt": legacyKey = "variabletop"
         default:
-            return true // Does not require special handling
+            let ulocLegacyKey = _withStringAsCString(key) { uloc_toLegacyKey($0) }
+            guard let ulocLegacyKey else {
+                return nil
+            }
+
+            legacyKey = ulocLegacyKey
+        }
+        return ICULegacyKey(legacyKey)
+    }
+
+    internal static func keywordValue(identifier: String, key: String) -> String? {
+        return _withFixedCharBuffer(size: ULOC_KEYWORD_AND_VALUES_CAPACITY) { buffer, size, status in
+            return uloc_getKeywordValue(identifier, key, buffer, size, &status)
         }
     }
 
+    internal static func keywordValue(identifier: String, key: ICULegacyKey) -> String? {
+        return keywordValue(identifier: identifier, key: key.key)
+    }
+
+    internal static func identifierWithKeywordValue(_ identifier: String, key: ICULegacyKey, value: String) -> String {
+        var identifierWithKeywordValue: String?
+        withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(ULOC_FULLNAME_CAPACITY) + 1) { buffer in
+            guard let buf: UnsafeMutablePointer<CChar> = buffer.baseAddress else {
+                return
+            }
+            var status = U_ZERO_ERROR
+            #if canImport(Glibc) || canImport(ucrt)
+            // Glibc doesn't support strlcpy
+            strcpy(buf, identifier)
+            #else
+            strlcpy(buf, identifier, Int(ULOC_FULLNAME_CAPACITY))
+            #endif
+
+            // TODO: This could probably be lifted out of ICU; it is mostly string concatenation
+            let len = uloc_setKeywordValue(key.key, value, buf, ULOC_FULLNAME_CAPACITY, &status)
+            if status.isSuccess && len > 0 {
+                let last = buf.advanced(by: Int(len))
+                last.pointee = 0
+                identifierWithKeywordValue = String(cString: buf)
+            }
+        }
+
+        return identifierWithKeywordValue ?? identifier
+    }
     // MARK: -
 
     static func numberingSystemForLocaleIdentifier(_ localeID: String) -> Locale.NumberingSystem {
@@ -1460,7 +1552,7 @@ internal final class _Locale: Sendable, Hashable {
 
         // 3. Construct & Canonicalize
         // The locale constructed from the components will be over-specified for many cases, such as `en_Latn_US`. Before returning it, we should canonicalize it, which will remove any script code that is already implicit in the definition of the locale, yielding `en_US` instead.
-        let idFromComponents = localeIDComponents.identifier
+        let idFromComponents = localeIDComponents.icuIdentifier
         return Locale._canonicalLocaleIdentifier(from: idFromComponents)
     }
 
@@ -1499,290 +1591,10 @@ internal final class _Locale: Sendable, Hashable {
         return nil
     }
 
-    static private func canonicalizeLocalizations(_ locs: [String]) -> [String] {
+    static fileprivate func canonicalizeLocalizations(_ locs: [String]) -> [String] {
         locs.compactMap {
             Locale.canonicalLanguageIdentifier(from: $0)
         }
     }
+
 }
-
-// MARK: -
-
-/// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identifier locales never have preferences.
-internal struct LocalePreferences: Hashable {
-    enum MeasurementUnit {
-        case centimeters
-        case inches
-
-        /// Init with the value of a user defaults string
-        init?(_ string: String?) {
-            guard let string else { return nil }
-            if string == "Centimeters" { self = .centimeters }
-            else if string == "Inches" { self = .inches }
-            else { return nil }
-        }
-
-        /// Get the value as a user defaults string
-        var userDefaultString: String {
-            switch self {
-            case .centimeters: return "Centimeters"
-            case .inches: return "Inches"
-            }
-        }
-    }
-
-    enum TemperatureUnit {
-        case fahrenheit
-        case celsius
-
-        /// Init with the value of a user defaults string
-        init?(_ string: String?) {
-            guard let string else { return nil }
-            if string == "Celsius" { self = .celsius }
-            else if string == "Fahrenheit" { self = .fahrenheit }
-            else { return nil }
-        }
-
-        /// Get the value as a user defaults string
-        var userDefaultString: String {
-            switch self {
-            case .celsius: return "Celsius"
-            case .fahrenheit: return "Fahrenheit"
-            }
-        }
-    }
-
-    var metricUnits: Bool?
-    var languages: [String]?
-    var locale: String?
-    var collationOrder: String?
-    var firstWeekday: [Calendar.Identifier : Int]?
-    var minDaysInFirstWeek: [Calendar.Identifier : Int]?
-#if FOUNDATION_FRAMEWORK
-    // The following `CFDictionary` ivars are used directly by `CFDateFormatter`. Keep them as `CFDictionary` to avoid bridging them into and out of Swift. We don't need to access them from Swift at all.
-    
-    var icuDateTimeSymbols: CFDictionary?
-    var icuDateFormatStrings: CFDictionary?
-    var icuTimeFormatStrings: CFDictionary?
-    
-    // The OS no longer writes out this preference, but we keep it here for compatibility with CFDateFormatter behavior.
-    var icuNumberFormatStrings: CFDictionary?
-    var icuNumberSymbols: CFDictionary?
-#endif
-    var numberSymbols: [UInt32 : String]? // Bridged version of `icuNumberSymbols`
-    var dateFormats: [Date.FormatStyle.DateStyle: String]? // Bridged version of `icuDateFormatStrings`
-
-    var country: String?
-    var measurementUnits: MeasurementUnit?
-    var temperatureUnit: TemperatureUnit?
-    var force24Hour: Bool?
-    var force12Hour: Bool?
-
-    init() { }
-    
-    init(metricUnits: Bool? = nil,
-         languages: [String]? = nil,
-         locale: String? = nil,
-         collationOrder: String? = nil,
-         firstWeekday: [Calendar.Identifier : Int]? = nil,
-         minDaysInFirstWeek: [Calendar.Identifier : Int]? = nil,
-         country: String? = nil,
-         measurementUnits: MeasurementUnit? = nil,
-         temperatureUnit: TemperatureUnit? = nil,
-         force24Hour: Bool? = nil,
-         force12Hour: Bool? = nil,
-         numberSymbols: [UInt32 : String]? = nil,
-         dateFormats: [Date.FormatStyle.DateStyle: String]? = nil) {
-
-        self.metricUnits = metricUnits
-        self.languages = languages
-        self.locale = locale
-        self.collationOrder = collationOrder
-        self.firstWeekday = firstWeekday
-        self.minDaysInFirstWeek = minDaysInFirstWeek
-        self.country = country
-        self.measurementUnits = measurementUnits
-        self.temperatureUnit = temperatureUnit
-        self.force24Hour = force24Hour
-        self.force12Hour = force12Hour
-        self.numberSymbols = numberSymbols
-        self.dateFormats = dateFormats
-
-#if FOUNDATION_FRAMEWORK
-        icuDateTimeSymbols = nil
-        icuDateFormatStrings = nil
-        icuTimeFormatStrings = nil
-        icuNumberFormatStrings = nil
-        icuNumberSymbols = nil
-#endif
-    }
-
-#if FOUNDATION_FRAMEWORK
-    /// Interpret a dictionary (from user defaults) according to a predefined set of strings and convert it into the more strongly-typed `LocalePreferences` values.
-    /// Several dictionaries may need to be applied to the same instance, which is why this is structured as a mutating setter rather than an initializer.
-    /// Why use a `CFDictionary` instead of a Swift dictionary here? The input prefs may be a complete copy of the user's prefs, and we don't want to bridge a ton of unrelated data into Swift just to extract a few keys. Keeping it as a `CFDictionary` avoids that overhead, and we call into small CF helper functions to get the data we need, if it is there.
-    mutating func apply(_ prefs: CFDictionary) {
-        var exists: DarwinBoolean = false
-        
-        guard CFDictionaryGetCount(prefs) > 0 else { return }
-        
-        if let langs = __CFLocalePrefsCopyAppleLanguages(prefs)?.takeRetainedValue() as? [String] {
-            self.languages = langs
-        }
-        if let locale = __CFLocalePrefsCopyAppleLocale(prefs)?.takeRetainedValue() as? String {
-            self.locale = locale
-        }
-        
-        let isMetric = __CFLocalePrefsAppleMetricUnitsIsMetric(prefs, &exists)
-        if exists.boolValue {
-            self.metricUnits = isMetric
-        }
-
-        let isCentimeters = __CFLocalePrefsAppleMeasurementUnitsIsCm(prefs, &exists)
-        if exists.boolValue {
-            self.measurementUnits = isCentimeters ? .centimeters : .inches
-        }
-
-        let isCelsius = __CFLocalePrefsAppleTemperatureUnitIsC(prefs, &exists)
-        if exists.boolValue {
-            self.temperatureUnit = isCelsius ? .celsius : .fahrenheit
-        }
-
-        let is24Hour = __CFLocalePrefsAppleForce24HourTime(prefs, &exists)
-        if exists.boolValue {
-            self.force24Hour = is24Hour
-        }
-        
-        let is12Hour = __CFLocalePrefsAppleForce12HourTime(prefs, &exists)
-        if exists.boolValue {
-            self.force12Hour = is12Hour
-        }
-        
-        if let collationOrder = __CFLocalePrefsCopyAppleCollationOrder(prefs)?.takeRetainedValue() as? String {
-            self.collationOrder = collationOrder
-        }
-
-        if let country = __CFLocalePrefsCopyCountry(prefs)?.takeRetainedValue() as? String {
-            self.country = country
-        }
-
-        if let icuDateTimeSymbols = __CFLocalePrefsCopyAppleICUDateTimeSymbols(prefs)?.takeRetainedValue() {
-            self.icuDateTimeSymbols = icuDateTimeSymbols
-        }
-
-        if let icuDateFormatStrings = __CFLocalePrefsCopyAppleICUDateFormatStrings(prefs)?.takeRetainedValue() {
-            self.icuDateFormatStrings = icuDateFormatStrings
-            // Bridge the mapping for Locale's usage
-            if let dateFormatPrefs = icuDateFormatStrings as? [String: String] {
-                var mapped: [Date.FormatStyle.DateStyle : String] = [:]
-                for (key, value) in dateFormatPrefs {
-                    if let k = UInt(key) {
-                        mapped[Date.FormatStyle.DateStyle(rawValue: k)] = value
-                    }
-                }
-                self.dateFormats = mapped
-            }
-        }
-        
-        if let icuTimeFormatStrings = __CFLocalePrefsCopyAppleICUTimeFormatStrings(prefs)?.takeRetainedValue() {
-            self.icuTimeFormatStrings = icuTimeFormatStrings
-        }
-        
-        if let icuNumberFormatStrings = __CFLocalePrefsCopyAppleICUNumberFormatStrings(prefs)?.takeRetainedValue() {
-            self.icuNumberFormatStrings = icuNumberFormatStrings
-        }
-        
-        if let icuNumberSymbols = __CFLocalePrefsCopyAppleICUNumberSymbols(prefs)?.takeRetainedValue() {
-            // Store the CFDictionary for passing back to CFDateFormatter
-            self.icuNumberSymbols = icuNumberSymbols
-            
-            // And bridge the mapping for our own usage in Locale
-            if let numberSymbolsPrefs = icuNumberSymbols as? [UInt32 : String] {
-                self.numberSymbols = numberSymbolsPrefs
-            }
-        }
-        
-
-        if let firstWeekdaysPrefs = __CFLocalePrefsCopyAppleFirstWeekday(prefs)?.takeRetainedValue() as? [String: Int] {
-            var mapped: [Calendar.Identifier : Int] = [:]
-            for (key, value) in firstWeekdaysPrefs {
-                if let id = Calendar.Identifier(identifierString: key) {
-                    mapped[id] = value
-                }
-            }
-
-            if !mapped.isEmpty {
-                self.firstWeekday = mapped
-            }
-        }
-
-        if let minDaysPrefs = __CFLocalePrefsCopyAppleMinDaysInFirstWeek(prefs)?.takeRetainedValue() as? [String: Int] {
-            var mapped: [Calendar.Identifier : Int] = [:]
-            for (key, value) in minDaysPrefs {
-                if let id = Calendar.Identifier(identifierString: key) {
-                    mapped[id] = value
-                }
-            }
-
-            if !mapped.isEmpty {
-                self.minDaysInFirstWeek = mapped
-            }
-        }
-    }
-#endif // FOUNDATION_FRAMEWORK
-    
-    /// For testing purposes, merge a set of override prefs into this one.
-    mutating func apply(_ prefs: LocalePreferences) {
-        if let other = prefs.metricUnits { self.metricUnits = other }
-        if let other = prefs.languages { self.languages = other }
-        if let other = prefs.locale { self.locale = other }
-        if let other = prefs.collationOrder { self.collationOrder = other }
-        if let other = prefs.firstWeekday { self.firstWeekday = other }
-        if let other = prefs.minDaysInFirstWeek { self.minDaysInFirstWeek = other }
-#if FOUNDATION_FRAMEWORK
-        if let other = prefs.icuDateTimeSymbols { self.icuDateTimeSymbols = other }
-        if let other = prefs.icuDateFormatStrings { self.icuDateFormatStrings = other }
-        if let other = prefs.icuTimeFormatStrings { self.icuTimeFormatStrings = other }
-        if let other = prefs.icuNumberFormatStrings { self.icuNumberFormatStrings = other }
-        if let other = prefs.icuNumberSymbols { self.icuNumberSymbols = other }
-#endif
-        if let other = prefs.country { self.country = other }
-        if let other = prefs.measurementUnits { self.measurementUnits = other }
-        if let other = prefs.temperatureUnit { self.temperatureUnit = other }
-        if let other = prefs.force24Hour { self.force24Hour = other }
-        if let other = prefs.force12Hour { self.force12Hour = other }
-        if let other = prefs.numberSymbols { self.numberSymbols = other }
-        if let other = prefs.dateFormats { self.dateFormats = other }
-    }
-
-    var measurementSystem: Locale.MeasurementSystem? {
-        let metricPref = metricUnits
-        let measurementPref = measurementUnits
-
-        if metricPref == nil && measurementPref == nil {
-            return nil
-        } else if let metricPref, metricPref == true, let measurementPref, measurementPref == .inches {
-            return Locale.MeasurementSystem(UMS_UK)
-        } else if let metricPref, metricPref == false {
-            return Locale.MeasurementSystem(UMS_US)
-        } else if let measurementPref, measurementPref == .centimeters {
-            return Locale.MeasurementSystem(UMS_SI)
-        } else {
-            // There isn't enough info
-            return nil
-        }
-    }
-
-    var hourCycle: Locale.HourCycle? {
-        if let setForce24Hour = force24Hour, setForce24Hour  {
-        // Respect 24-hour override if both force24hour and force12hour are true
-            return .zeroToTwentyThree
-        } else if let setForce12Hour = force12Hour, setForce12Hour {
-            return .oneToTwelve
-        } else {
-            return nil
-        }
-    }
-}
-
-

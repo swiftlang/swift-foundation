@@ -17,6 +17,7 @@
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
+@testable import FoundationEssentials
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 

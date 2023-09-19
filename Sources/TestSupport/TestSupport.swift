@@ -87,19 +87,19 @@ public typealias EncodingConfigurationProviding = Foundation.EncodingConfigurati
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias DecodingConfigurationProviding = Foundation.DecodingConfigurationProviding
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias Predicate = Foundation.Predicate
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateBindings = Foundation.PredicateBindings
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateExpression = Foundation.PredicateExpression
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateExpressions = Foundation.PredicateExpressions
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias StandardPredicateExpression = Foundation.StandardPredicateExpression
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateError = Foundation.PredicateError
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateCodableConfiguration = Foundation.PredicateCodableConfiguration
 
 #else
@@ -124,7 +124,7 @@ public typealias JSONEncoder = FoundationEssentials.JSONEncoder
 public typealias JSONDecoder = FoundationEssentials.JSONDecoder
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public typealias FormatStyle = FoundationInternationalization.FormatStyle
+public typealias FormatStyle = FoundationEssentials.FormatStyle
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias ByteCountFormatStyle = FoundationInternationalization.ByteCountFormatStyle
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
@@ -179,22 +179,22 @@ public typealias EncodingConfigurationProviding = FoundationEssentials.EncodingC
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias DecodingConfigurationProviding = FoundationEssentials.DecodingConfigurationProviding
 
-public typealias Calendar = FoundationInternationalization.Calendar
-public typealias TimeZone = FoundationInternationalization.TimeZone
-public typealias Locale = FoundationInternationalization.Locale
-public typealias DateComponents = FoundationInternationalization.DateComponents
+public typealias Calendar = FoundationEssentials.Calendar
+public typealias TimeZone = FoundationEssentials.TimeZone
+public typealias Locale = FoundationEssentials.Locale
+public typealias DateComponents = FoundationEssentials.DateComponents
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias Predicate = FoundationEssentials.Predicate
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateBindings = FoundationEssentials.PredicateBindings
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateExpression = FoundationEssentials.PredicateExpression
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateExpressions = FoundationEssentials.PredicateExpressions
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias StandardPredicateExpression = FoundationEssentials.StandardPredicateExpression
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateError = FoundationEssentials.PredicateError
 
 #endif // FOUNDATION_FRAMEWORK

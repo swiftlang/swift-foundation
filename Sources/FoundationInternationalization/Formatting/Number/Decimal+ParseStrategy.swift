@@ -14,7 +14,6 @@
 import FoundationEssentials
 #endif
 
-
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal {
 #if FOUNDATION_FRAMEWORK
@@ -27,7 +26,7 @@ extension Decimal {
         }
     }
 #else
-    public struct ParseStrategy<Format> : FoundationInternationalization.ParseStrategy, Codable, Hashable where Format : FoundationInternationalization.FormatStyle, Format.FormatInput == Decimal {
+    public struct ParseStrategy<Format> : FoundationEssentials.ParseStrategy, Codable, Hashable where Format : FoundationEssentials.FormatStyle, Format.FormatInput == Decimal {
         public var formatStyle: Format
         public var lenient: Bool
         internal init(formatStyle: Format, lenient: Bool) {
@@ -108,7 +107,7 @@ public extension Decimal {
     }
 #else
     /// Initialize an instance by parsing `value` with the given `strategy`.
-    init<S: FoundationInternationalization.ParseStrategy>(_ value: S.ParseInput, strategy: S) throws where S.ParseOutput == Self {
+    init<S: FoundationEssentials.ParseStrategy>(_ value: S.ParseInput, strategy: S) throws where S.ParseOutput == Self {
         self = try strategy.parse(value)
     }
 #endif // FOUNDATION_FRAMEWORK
