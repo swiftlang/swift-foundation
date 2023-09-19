@@ -20,11 +20,3 @@
 - ``variable``
 - ``PredicateExpressions/Variable``
 
-### Encoding and decoding
-
-- ``init(from:)``
-- ``init(from:configuration:)``
-- ``DecodingConfiguration``
-- ``encode(to:)``
-- ``encode(to:configuration:)``
-- ``EncodingConfiguration``

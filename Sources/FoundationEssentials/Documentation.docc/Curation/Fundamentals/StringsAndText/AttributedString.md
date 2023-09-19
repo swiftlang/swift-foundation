@@ -106,10 +106,7 @@
 
 ### Encoding and decoding
 
-- ``init(from:)``
-- ``init(from:configuration:)``
 - <doc:EncodingAndDecodingAttributedStringKeys>
-
 
 ### Describing an attributed string
 

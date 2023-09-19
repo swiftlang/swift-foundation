@@ -1,6 +1,6 @@
 # Foundation Essentials
 
-Core types and essential functionality used by most applications.
+Access core types and essential functionality used by most applications.
 
 ## Overview
 
@@ -20,36 +20,19 @@ Foundation Essentials provides these features without system dependencies, so de
 
 - <doc:NumbersDataAndBasicValues>
 - <doc:StringsAndText>
-- <doc:Collections>
 - <doc:DatesAndTimes>
-- <doc:UnitsAndMeasurement>
-- <doc:DataFormatting>
 - <doc:FiltersAndSorting>
 
 ### App support
 
-- <doc:TaskManagement>
 - <doc:Resources>
-- <doc:Notifications>
-- <doc:AppExtensionSupport>
 - <doc:ErrorsAndExceptions>
-- <doc:ScriptingSupport>
 
 ### Files and data persistence
 
-- <doc:FileSystem>
 - <doc:ArchivesAndSerialization>
-- <doc:Preferences>
-- <doc:Spotlight>
-- <doc:iCloud>
 
 ### Networking
 
 - <doc:URLLoadingSystem>
 
-### Low-level utilities
-
-- <doc:XPC>
-- <doc:ObjectRuntime>
-- <doc:ProcessesAndThreads>
-- <doc:StreamsSocketsAndPorts>

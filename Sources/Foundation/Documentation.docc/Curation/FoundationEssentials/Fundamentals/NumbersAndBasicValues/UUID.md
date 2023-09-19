@@ -15,10 +15,6 @@
 - ``uuid``
 - ``uuidString``
 
-### Comparing UUIDs
-
-- ``==(lhs:rhs:)``
-
 ### Encoding and decoding
 
 - ``init(from:)``

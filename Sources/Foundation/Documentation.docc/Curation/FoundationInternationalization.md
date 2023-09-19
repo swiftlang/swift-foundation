@@ -1,6 +1,6 @@
 # Foundation Internationalization
 
-Features for managing and representing locale-specific information.
+Manage and represent locale-specific information like dates, currencies, measurements, and numeric values.
 
 ## Overview
 

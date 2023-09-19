@@ -16,8 +16,6 @@
 ### URLs
 
 - ``URL``
-- ``URLComponents``
-- ``URLQueryItem``
 
 ### Unique identifiers
 

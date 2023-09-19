@@ -1,6 +1,0 @@
-# Spotlight
-
-## Topics
-
-### Queries
-

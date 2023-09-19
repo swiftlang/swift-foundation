@@ -1,6 +1,0 @@
-# Collections
-
-## Topics
-
-### Basic collections
-

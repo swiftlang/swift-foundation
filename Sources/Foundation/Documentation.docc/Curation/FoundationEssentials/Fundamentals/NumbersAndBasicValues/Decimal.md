@@ -38,7 +38,6 @@
 ### Encoding and decoding
 
 - ``init(from:)``
-- ``encode(to:)``
 
 ### Describing a decimal
 
