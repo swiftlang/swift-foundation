@@ -128,7 +128,9 @@ internal struct JSONWriter {
 
     private var indent = 0
     private let pretty: Bool
+#if FOUNDATION_FRAMEWORK
     private let sortedKeys: Bool
+#endif
     private let withoutEscapingSlashes: Bool
 
     var data = Data()
@@ -137,8 +139,6 @@ internal struct JSONWriter {
         pretty = options.contains(.prettyPrinted)
 #if FOUNDATION_FRAMEWORK
         sortedKeys = options.contains(.sortedKeys)
-#else
-        sortedKeys = false
 #endif
         withoutEscapingSlashes = options.contains(.withoutEscapingSlashes)
         data = Data()
@@ -349,26 +349,31 @@ internal struct JSONWriter {
             pretty ? writer(" : ") : writer(":")
             try serializeJSON(value, depth: depth)
         }
-
+#if FOUNDATION_FRAMEWORK
         if sortedKeys {
-            let elems = dict.sorted(by: { a, b in
+            // TODO: Until we have a solution for sorting like Locale.system in FoundationEssentials or with the help of FoundationLocalization, this comparison requires bridging back to NSString. To avoid the extreme overhead of bridging the strings on every comparison, we'll do it up front instead.
+            let nsKeysAndValues = dict.map {
+                (key: $0.key as NSString, value: $0.value)
+            }
+            let elems = nsKeysAndValues.sorted(by: { a, b in
                 let options: String.CompareOptions = [.numeric, .caseInsensitive, .forcedOrdering]
-                let range: Range<String.Index>  = a.key.startIndex..<a.key.endIndex
-                #if FOUNDATION_FRAMEWORK
-                let locale = NSLocale.system
-                return a.key.compare(b.key, options: options, range: range, locale: locale) == .orderedAscending
-                #else
-                return a.key.compare(b.key, options: options, range: range) == .orderedAscending
-                #endif // FOUNDATION_FRAMEWORK
+                let range = NSMakeRange(0, a.key.length)
+                let locale = Locale.system
+                return a.key.compare(b.key as String, options: options, range: range, locale: locale) == .orderedAscending
             })
             for elem in elems {
-                try serializeObjectElement(key: elem.key, value: elem.value, depth: depth)
+                try serializeObjectElement(key: elem.key as String, value: elem.value, depth: depth)
             }
         } else {
             for (key, value) in dict {
                 try serializeObjectElement(key: key, value: value, depth: depth)
             }
         }
+#else
+        for (key, value) in dict {
+            try serializeObjectElement(key: key, value: value, depth: depth)
+        }
+#endif // FOUNDATION_FRAMEWORK
 
         if pretty {
             writer("\n")
