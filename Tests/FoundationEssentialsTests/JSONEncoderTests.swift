@@ -1073,7 +1073,9 @@ final class JSONEncoderTests : XCTestCase {
         }
 
         if let expectedJSON = json {
-            XCTAssertEqual(expectedJSON, payload, "Produced JSON not identical to expected JSON.")
+            let expected = String(data: expectedJSON, encoding: .utf8)!
+            let actual = String(data: payload, encoding: .utf8)!
+            XCTAssertEqual(expected, actual, "Produced JSON not identical to expected JSON.")
         }
 
         do {
