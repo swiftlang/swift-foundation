@@ -32,6 +32,17 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         }
     }
 
+    @inline(__always)
+    internal func withUUIDBytes<R>(_ work: (UnsafeBufferPointer<UInt8>) throws -> R) rethrows -> R {
+        return try withExtendedLifetime(self) {
+            try withUnsafeBytes(of: uuid) { rawBuffer in
+                return try rawBuffer.withMemoryRebound(to: UInt8.self) { buffer in
+                    return try work(buffer)
+                }
+            }
+        }
+    }
+
     /// Create a UUID from a string such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".
     ///
     /// Returns nil for invalid strings.
@@ -54,13 +65,11 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     /// Returns a string created from the UUID, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
     public var uuidString: String {
         var bytes: uuid_string_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        return withUnsafePointer(to: uuid) { valPtr in
-            valPtr.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<uuid_t>.size) { val in
-                withUnsafeMutablePointer(to: &bytes) { strPtr in
-                    strPtr.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<uuid_string_t>.size) { str in
-                        uuid_unparse_upper(val, str)
-                        return String(cString: str)
-                    }
+        return withUUIDBytes { valBuffer in
+            withUnsafeMutablePointer(to: &bytes) { strPtr in
+                strPtr.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<uuid_string_t>.size) { str in
+                    uuid_unparse_upper(valBuffer.baseAddress!, str)
+                    return String(cString: str)
                 }
             }
         }

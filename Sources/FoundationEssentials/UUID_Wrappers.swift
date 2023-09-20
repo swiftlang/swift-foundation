@@ -116,16 +116,11 @@ internal class __NSConcreteUUID : _NSUUIDBridge {
         super.init()
     }
 
-    #if false // rdar://106792309
     override func encode(with coder: NSCoder) {
-        var uuid = _storage.uuid
-        withUnsafeBytes(of: &uuid) { buffer in
-            buffer.withMemoryRebound(to: UInt8.self) { buffer in
-                coder.encodeBytes(buffer.baseAddress, length: MemoryLayout<uuid_t>.size, forKey: "NS.uuidbytes")
-            }
+        _storage.withUUIDBytes { buffer in
+            coder.encodeBytes(buffer.baseAddress, length: buffer.count, forKey: "NS.uuidbytes")
         }
     }
-    #endif
     
     override public init?(uuidString: String) {
         guard let swiftUUID = Foundation.UUID(uuidString: uuidString) else {
@@ -151,11 +146,8 @@ internal class __NSConcreteUUID : _NSUUIDBridge {
     }
 
     override open func getBytes(_ bytes: UnsafeMutablePointer<UInt8>) {
-        let size = MemoryLayout<uuid_t>.size
-        withUnsafePointer(to: _storage.uuid) { source in
-            source.withMemoryRebound(to: UInt8.self, capacity: size) { buffer in
-                bytes.initialize(from: buffer, count: size)
-            }
+        _storage.withUUIDBytes { buffer in
+            bytes.initialize(from: buffer.baseAddress!, count: buffer.count)
         }
     }
 
