@@ -221,7 +221,7 @@ final class NSPredicateConversionTests: XCTestCase {
         
         
         predicate = #Predicate<ObjCObject> {
-            $0.b.contains("foo")
+            $0.b.starts(with: "foo")
         }
         converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "b BEGINSWITH 'foo'"))
@@ -258,7 +258,7 @@ final class NSPredicateConversionTests: XCTestCase {
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
         
         predicate = #Predicate<ObjCObject> {
-            $0.f && true && false
+            ($0.f && true) == false
         }
         converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "TERNARY(f == YES AND YES == YES, YES, NO) == NO"))
@@ -286,7 +286,7 @@ final class NSPredicateConversionTests: XCTestCase {
             ($0.j?.count ?? -1) > 1
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(TERNARY(j != nil, j.length, nil) != nil, TERNARY(j != nil, j.length, nil), -1) > 1"))
+        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(TERNARY(j != nil, j.length, nil) != nil, TERNARY(j != nil, j.length, nil), 1 * -1) > 1"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
         
         predicate = #Predicate<ObjCObject> {
