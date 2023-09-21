@@ -139,6 +139,9 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
 
     /// `NSCalendar`'s `+allocWithZone:` returns `_NSSwiftCalendar`, which results in the following implementation being called when initializing an instance from an archive.
     required init?(coder: NSCoder) {
+        // Ensure _lock is populated first in case of a re-entrant call from the unarchiver.
+        _lock = OSAllocatedUnfairLock(initialState: Calendar(identifier: .gregorian))
+
         guard coder.allowsKeyedCoding else {
             coder.failWithError(CocoaError(CocoaError.coderReadCorrupt, userInfo: [NSDebugDescriptionErrorKey : "Cannot be decoded without keyed coding"]))
             return nil
@@ -170,7 +173,10 @@ internal class _NSSwiftCalendar: _NSCalendarBridge {
 
         let tz = encodedTimeZone as? TimeZone
 
-        _lock = OSAllocatedUnfairLock(initialState: Calendar(identifier: id, locale: locale as Locale, timeZone: tz, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minDays, gregorianStartDate: gregStartDate as Date?))
+        // Reset the state with the correctly decoded Calendar instance
+        _lock.withLock { state in
+            state = Calendar(identifier: id, locale: locale as Locale, timeZone: tz, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minDays, gregorianStartDate: gregStartDate as Date?)
+        }
 
         // This doesn't do anything in the abstract superclass, but we have to call it anyway.
         super.init(checkedCalendarIdentifier: .init(encodedIdentifier))

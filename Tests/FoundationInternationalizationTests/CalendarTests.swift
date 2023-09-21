@@ -654,6 +654,16 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual( [ "domingo", "lunes", "martes", "mi\u{00e9}rcoles", "jueves", "viernes", "s\u{00e1}bado" ], c.standaloneWeekdaySymbols)
         XCTAssertEqual( [ "domingo", "lunes", "martes", "mi\u{00e9}rcoles", "jueves", "viernes", "s\u{00e1}bado" ], c.weekdaySymbols)
     }
+
+    func test_weekOfMonthLoop() {
+        // This test simply needs to not hang or crash
+        let date = Date(timeIntervalSinceReferenceDate: 2.4499581972890255e+18)
+        let calendar = Calendar(identifier: .gregorian)
+        let components = DateComponents(weekOfMonth: 3)
+        let next = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTime)
+        let nextSmaller = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents)
+        let previous = calendar.nextDate(after: date, matching: components, matchingPolicy: .previousTimePreservingSmallerComponents)
+    }
 }
 
 
