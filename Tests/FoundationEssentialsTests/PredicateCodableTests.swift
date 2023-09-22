@@ -255,7 +255,7 @@ final class PredicateCodableTests: XCTestCase {
         XCTAssertThrowsError(try _encodeDecode(predicate))
         XCTAssertThrowsError(try _encodeDecode(predicate, for: StandardConfig.self))
         XCTAssertThrowsError(try _encodeDecode(predicate, encoding: UUIDConfig.self, decoding: MinimalConfig.self)) {
-            XCTAssertEqual(String(describing: $0), "The 'Foundation.UUID' identifier is not in the provided allowlist (required by /PredicateExpressions.TypeCheck)")
+            XCTAssertEqual(String(describing: $0), "The 'Foundation.UUID' identifier is not in the provided allowlist (required by /PredicateExpressions.Equal/PredicateExpressions.Value)")
         }
         
         let decoded = try _encodeDecode(predicate, for: UUIDConfig.self)
