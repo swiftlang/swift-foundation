@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
 #if FOUNDATION_FRAMEWORK
 // For Logger
 @_implementationOnly import os

@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
-internal class _TimeZoneGMT : _TimeZoneBase {
+package final class _TimeZoneGMT : _TimeZoneProtocol, @unchecked Sendable {
     let offset: Int
     let name: String
     
-    init?(secondsFromGMT: Int) {
+    required package init?(identifier: String) {
+        fatalError("Unexpected init")
+    }
+
+    required package init?(secondsFromGMT: Int) {
         guard let name = TimeZone.nameForSecondsFromGMT(secondsFromGMT) else {
             return nil
         }
@@ -27,15 +27,42 @@ internal class _TimeZoneGMT : _TimeZoneBase {
         offset = secondsFromGMT
     }
 
-    override var identifier: String {
+    package var identifier: String {
         self.name
     }
     
-    override func secondsFromGMT(for date: Date) -> Int {
+    package func secondsFromGMT(for date: Date) -> Int {
         offset
     }
     
-    override func abbreviation(for date: Date) -> String? {
+    package func abbreviation(for date: Date) -> String? {
+        _TimeZoneGMT.abbreviation(for: offset)
+    }
+    
+    package func isDaylightSavingTime(for date: Date) -> Bool {
+        false
+    }
+    
+    package func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
+        0.0
+    }
+    
+    package func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
+        nil
+    }
+    
+    package func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
+        // _TimeZoneGMTICU has localization support, if required.
+        nil
+    }
+
+    package var debugDescription: String {
+        "gmt offset \(offset)"
+    }    
+}
+
+extension _TimeZoneGMT {
+    package static func abbreviation(for offset: Int) -> String? {
         guard !(offset < -18 * 3600 || 18 * 3600 < offset) else {
             return nil
         }
@@ -87,32 +114,11 @@ internal class _TimeZoneGMT : _TimeZoneBase {
 
         return result
     }
-    
-    override func isDaylightSavingTime(for date: Date) -> Bool {
-        false
-    }
-    
-    override func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
-        0.0
-    }
-    
-    override func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
-        nil
-    }
-    
-    override func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
-        // Subclass _TimeZoneGMTICU has localization support, if required.
-        nil
-    }
-
-    override var debugDescription: String {
-        "gmt offset \(offset)"
-    }    
 }
 
 extension TimeZone {
     /// A time zone name, not the same as the abbreviated name above. e.g., that one includes a `:`.
-    internal static func nameForSecondsFromGMT(_ seconds: Int) -> String? {
+    package static func nameForSecondsFromGMT(_ seconds: Int) -> String? {
         guard !(seconds < -18 * 3600 || 18 * 3600 < seconds) else {
             return nil
         }
@@ -134,7 +140,7 @@ extension TimeZone {
     }
 
     // Returns seconds offset (positive or negative or zero) from GMT on success, nil on failure
-    internal static func tryParseGMTName(_ name: String) -> Int? {
+    package static func tryParseGMTName(_ name: String) -> Int? {
         // GMT, GMT{+|-}H, GMT{+|-}HH, GMT{+|-}HHMM, GMT{+|-}{H|HH}{:|.}MM
         // UTC, UTC{+|-}H, UTC{+|-}HH, UTC{+|-}HHMM, UTC{+|-}{H|HH}{:|.}MM
         //   where "00" <= HH <= "18", "00" <= MM <= "59", and if HH==18, then MM must == 00

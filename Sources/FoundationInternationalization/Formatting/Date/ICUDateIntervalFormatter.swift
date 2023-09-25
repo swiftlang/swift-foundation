@@ -36,7 +36,7 @@ final class ICUDateIntervalFormatter : Hashable {
 
         var comps = Locale.Components(locale: locale)
         comps.calendar = calendar.identifier
-        let id = comps.identifier
+        let id = comps.icuIdentifier
 
         let tz16 = Array(timeZone.identifier.utf16)
         let dateTemplate16 = Array(dateTemplate.utf16)

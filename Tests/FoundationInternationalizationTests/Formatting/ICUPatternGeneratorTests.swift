@@ -11,6 +11,7 @@ import TestSupport
 #endif
 
 #if canImport(FoundationInternationalization)
+@testable import FoundationEssentials
 @testable import FoundationInternationalization
 #endif
 
@@ -247,6 +248,7 @@ final class ICUPatternGeneratorTests: XCTestCase {
             // So there should be no "B" in the pattern
             locale = Locale(identifier: "en_TW")
             calendar = Calendar(identifier: .gregorian)
+
 #if FOUNDATION_FRAMEWORK
     let separator = "\u{202f}"
 #else

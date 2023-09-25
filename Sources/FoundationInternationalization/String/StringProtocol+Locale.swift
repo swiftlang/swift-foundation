@@ -9,6 +9,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import _ForSwiftFoundation
 #endif

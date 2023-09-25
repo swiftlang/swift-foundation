@@ -18,7 +18,15 @@ import CoreFoundation
 
 /// Wraps an `NSTimeZone` with a more Swift-like `TimeZone` API.
 /// This is only used in the case where we have a custom Objective-C subclass of `NSTimeZone`.
-internal final class _TimeZoneBridged: _TimeZoneBase, @unchecked Sendable {
+internal final class _TimeZoneBridged: _TimeZoneProtocol, @unchecked Sendable {
+    init?(secondsFromGMT: Int) {
+        fatalError("Unexpected init")
+    }
+    
+    init?(identifier: String) {
+        fatalError("Unexpected init")
+    }
+    
     let _timeZone: NSTimeZone
 
     // MARK: -
@@ -27,8 +35,8 @@ internal final class _TimeZoneBridged: _TimeZoneBase, @unchecked Sendable {
     internal init(adoptingReference reference: NSTimeZone) {
         _timeZone = reference
     }
-
-    override func hash(into hasher: inout Hasher) {
+    
+    func hash(into hasher: inout Hasher) {
         hasher.combine(_timeZone)
     }
 
@@ -43,39 +51,39 @@ internal final class _TimeZoneBridged: _TimeZoneBase, @unchecked Sendable {
     // MARK: -
     //
 
-    override var identifier: String {
+    var identifier: String {
         _timeZone.name
     }
 
-    override var data: Data {
+    var data: Data {
         _timeZone.data
     }
 
-    override func secondsFromGMT(for date: Date) -> Int {
+    func secondsFromGMT(for date: Date) -> Int {
         _timeZone.secondsFromGMT(for: date)
     }
 
-    override func abbreviation(for date: Date) -> String? {
+    func abbreviation(for date: Date) -> String? {
         _timeZone.abbreviation(for: date)
     }
 
-    override func isDaylightSavingTime(for date: Date) -> Bool {
+    func isDaylightSavingTime(for date: Date) -> Bool {
         _timeZone.isDaylightSavingTime(for: date)
     }
 
-    override func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
+    func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
         _timeZone.daylightSavingTimeOffset(for: date)
     }
 
-    override func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
+    func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
         _timeZone.nextDaylightSavingTimeTransition(after: date)
     }
 
-    override func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
+    func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
         _timeZone.localizedName(style, locale: locale)
     }
     
-    override func bridgeToNSTimeZone() -> NSTimeZone {
+    func bridgeToNSTimeZone() -> NSTimeZone {
         _timeZone.copy() as! NSTimeZone
     }
 }

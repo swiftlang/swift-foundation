@@ -20,8 +20,52 @@ import FoundationEssentials
 package import FoundationICU
 #endif
 
-internal final class _TimeZoneGMTICU : _TimeZoneGMT {
-    override func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
+internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
+    let offset: Int
+    let name: String
+    
+    init?(identifier: String) {
+        fatalError("Unexpected init")
+    }
+    
+    init?(secondsFromGMT: Int) {
+        guard let name = TimeZone.nameForSecondsFromGMT(secondsFromGMT) else {
+            return nil
+        }
+
+        self.name = name
+        offset = secondsFromGMT
+    }
+
+    var identifier: String {
+        self.name
+    }
+    
+    func secondsFromGMT(for date: Date) -> Int {
+        offset
+    }
+    
+    func abbreviation(for date: Date) -> String? {
+        _TimeZoneGMT.abbreviation(for: offset)
+    }
+    
+    func isDaylightSavingTime(for date: Date) -> Bool {
+        false
+    }
+    
+    func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
+        0.0
+    }
+    
+    func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
+        nil
+    }
+    
+    var debugDescription: String {
+        "gmt icu offset \(offset)"
+    }
+    
+    package func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
         // The GMT localized name is always the 'generic' one, as there is no variation for daylight vs standard time. Short or not depends on the style.
         let isShort = switch style {
         case .shortStandard, .shortDaylightSaving, .shortGeneric: true

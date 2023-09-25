@@ -10,49 +10,56 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
 /// A time zone which always reflects what the currently set time zone is. Aka `local` in Objective-C.
-internal final class _TimeZoneAutoupdating : _TimeZoneBase, Sendable {
-    override var identifier: String {
+internal final class _TimeZoneAutoupdating : _TimeZoneProtocol, Sendable {
+    init() {
+    }
+    
+    init?(secondsFromGMT: Int) {
+        fatalError("Unexpected init call")
+    }
+    
+    init?(identifier: String) {
+        fatalError("Unexpected init call")
+    }
+    
+    var identifier: String {
         TimeZoneCache.cache.current.identifier
     }
     
-    override func secondsFromGMT(for date: Date = Date()) -> Int {
+    func secondsFromGMT(for date: Date = Date()) -> Int {
         TimeZoneCache.cache.current.secondsFromGMT(for: date)
     }
     
-    override func abbreviation(for date: Date = Date()) -> String? {
+    func abbreviation(for date: Date = Date()) -> String? {
         TimeZoneCache.cache.current.abbreviation(for: date)
     }
     
-    override func isDaylightSavingTime(for date: Date = Date()) -> Bool {
+    func isDaylightSavingTime(for date: Date = Date()) -> Bool {
         TimeZoneCache.cache.current.isDaylightSavingTime(for: date)
     }
     
-    override func daylightSavingTimeOffset(for date: Date = Date()) -> TimeInterval {
+    func daylightSavingTimeOffset(for date: Date = Date()) -> TimeInterval {
         TimeZoneCache.cache.current.daylightSavingTimeOffset(for: date)
     }
     
-    override func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
+    func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
         TimeZoneCache.cache.current.nextDaylightSavingTimeTransition(after: date)
     }
         
-    override func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
+    func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
         TimeZoneCache.cache.current.localizedName(for: style, locale: locale)
     }
     
-    override var isAutoupdating: Bool {
+    var isAutoupdating: Bool {
         true
     }
     
-    override var debugDescription: String {
+    var debugDescription: String {
         "autoupdating \(identifier)"
     }
     
-    override func hash(into hasher: inout Hasher) {
+    func hash(into hasher: inout Hasher) {
         hasher.combine(1)
     }    
 }

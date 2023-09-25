@@ -15,7 +15,7 @@ import TestSupport
 #endif
 
 #if canImport(FoundationEssentials)
-import FoundationEssentials
+@testable import FoundationEssentials
 @testable import FoundationInternationalization
 #endif
 
@@ -302,7 +302,7 @@ final class DateFormatStyleTests : XCTestCase {
         guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
             throw XCTSkip("This test can only be run with the system set to the en_US language")
         }
-
+        
         let fixedTimeZone = TimeZone(identifier: TimeZone.current.identifier)!
         let fixedCalendar = Calendar(identifier: Calendar.current.identifier)
 
@@ -318,6 +318,8 @@ final class DateFormatStyleTests : XCTestCase {
     }
 #endif
 
+// Only Foundation framework supports the DateStyle override
+#if FOUNDATION_FRAMEWORK
     func testFormattingWithPrefsOverride() {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
@@ -364,6 +366,7 @@ final class DateFormatStyleTests : XCTestCase {
         test(dateStyle: .complete, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<complete> 1969-Dec-31 at \(expectTimeString) PST")
 
     }
+#endif
 
     func testFormattingWithPrefsOverride_firstweekday() {
         let date = Date(timeIntervalSince1970: 0)
@@ -372,6 +375,7 @@ final class DateFormatStyleTests : XCTestCase {
         XCTAssertEqual(style.format(date), "Wednesday, December 31, 1969 (week: 53)") // First day is Thursday, so `date`, which is Wednesday, falls into the 53th week of the previous year.
     }
 
+#if FOUNDATION_FRAMEWORK
     func testEncodingDecodingWithPrefsOverride() {
         let date = Date(timeIntervalSince1970: 0)
         let dateFormatOverride: [Date.FormatStyle.DateStyle: String] = [
@@ -397,6 +401,7 @@ final class DateFormatStyleTests : XCTestCase {
         decoded.locale = localeWithOverride
         XCTAssertEqual(decoded.format(date), "<complete> 1969-Dec-31")
     }
+#endif
 
     func testConversationalDayPeriodsOverride() {
         let middleOfNight = try! Date("2001-01-01T03:50:00Z", strategy: .iso8601)
@@ -676,6 +681,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         test(date.formatted(.dateTime.weekday().attributed.locale(zhTW)),  [("週一", .weekday)])
     }
 
+#if FOUNDATION_FRAMEWORK
     func testFormattingWithPrefsOverride() {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
@@ -837,6 +843,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             ("PST", .timeZone),
         ])
     }
+#endif
 }
 
 final class DateVerbatimFormatStyleTests : XCTestCase {
@@ -1109,6 +1116,8 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
         verify("15:35", matches: "\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)):\(minute: .defaultDigits)", expectedDate: nil)
     }
 
+#if FOUNDATION_FRAMEWORK
+    // Disabled in package because _range is imported twice, once from Essentials, once from Internationalization
     func testMatchPartialRangesFromBeginning() {
         func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, file: StaticString = #file, line: UInt = #line) {
             let occurrenceRange = string._range(of: expectedMatch)!
@@ -1123,6 +1132,7 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
         verify("Feb_28Mar_30Apr_2", matches: "\(month: .abbreviated)_\(day: .defaultDigits)", expectedMatch: "Feb_28", expectedDate: -973296000.0) // "1970-02-28 00:00:00"
         verify("Feb_28_Mar_30_Apr_2", matches: "\(month: .abbreviated)_\(day: .defaultDigits)", expectedMatch: "Feb_28", expectedDate: -973296000.0)
     }
+#endif
 
     func testMatchPartialRangesWithinLegitimateString() {
         func verify(_ string: String, in range: Range<Int>,  matches format: Date.FormatString, expectedDate: TimeInterval, file: StaticString = #file, line: UInt = #line) {

@@ -22,20 +22,45 @@ package import _CShims
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
 struct LocaleCache : Sendable {
+    // MARK: - Concrete Classes
+    
+    // _LocaleICU, if present. Otherwise we use _LocaleUnlocalized. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
+    static var localeICUClass: _LocaleProtocol.Type = {
+#if FOUNDATION_FRAMEWORK
+        return _LocaleICU.self
+#else
+        if let name = _typeByName("FoundationInternationalization._LocaleICU"), let t = name as? _LocaleProtocol.Type {
+            return t
+        } else {
+            return _LocaleUnlocalized.self
+        }
+#endif
+    }()
+
+    // MARK: - State
+    
     struct State {
-        private var cachedCurrentLocale: _Locale!
-        private var cachedSystemLocale: _Locale!
-        private var cachedFixedLocales: [String : _Locale] = [:]
-        private var cachedFixedComponentsLocales: [Locale.Components : _Locale] = [:]
+        private var cachedCurrentLocale: (any _LocaleProtocol)!
+        private var cachedSystemLocale: (any _LocaleProtocol)!
+        private var cachedFixedLocales: [String : any _LocaleProtocol] = [:]
+        private var cachedFixedComponentsLocales: [Locale.Components : any _LocaleProtocol] = [:]
 
 #if FOUNDATION_FRAMEWORK
         private var cachedCurrentNSLocale: _NSSwiftLocale!
         private var cachedAutoupdatingNSLocale: _NSSwiftLocale!
         private var cachedSystemNSLocale: _NSSwiftLocale!
         private var cachedFixedIdentifierToNSLocales: [String : _NSSwiftLocale] = [:]
-        private var cachedFixedLocaleToNSLocales: [_Locale : _NSSwiftLocale] = [:]
+        
+        struct IdentifierAndPrefs : Hashable {
+            let identifier: String
+            let prefs: LocalePreferences?
+        }
+        
+        private var cachedFixedLocaleToNSLocales: [IdentifierAndPrefs : _NSSwiftLocale] = [:]
 #endif
 
+        private var cachedAutoupdatingLocale: _LocaleAutoupdating!
+        
         private var noteCount = -1
         private var wasResetManually = false
 
@@ -60,7 +85,7 @@ struct LocaleCache : Sendable {
             }
         }
 
-        mutating func current(preferences: LocalePreferences?, cache: Bool) -> _Locale? {
+        mutating func current(preferences: LocalePreferences?, cache: Bool) -> (any _LocaleProtocol)? {
             resetCurrentIfNeeded()
 
             if let cachedCurrentLocale {
@@ -73,7 +98,7 @@ struct LocaleCache : Sendable {
                 return nil
             }
 
-            let locale = _Locale(name: nil, prefs: preferences, disableBundleMatching: false)
+            let locale = LocaleCache.localeICUClass.init(name: nil, prefs: preferences, disableBundleMatching: false)
             if cache {
                 // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
                 self.cachedCurrentLocale = locale
@@ -81,20 +106,29 @@ struct LocaleCache : Sendable {
 
             return locale
         }
+        
+        mutating func autoupdatingCurrent() -> _LocaleAutoupdating {
+            if let cached = cachedAutoupdatingLocale {
+                return cached
+            } else {
+                cachedAutoupdatingLocale = _LocaleAutoupdating()
+                return cachedAutoupdatingLocale
+            }
+        }
 
-        mutating func fixed(_ id: String) -> _Locale {
+        mutating func fixed(_ id: String) -> any _LocaleProtocol {
             // Note: Even if the currentLocale's identifier is the same, currentLocale may have preference overrides which are not reflected in the identifier itself.
             if let locale = cachedFixedLocales[id] {
                 return locale
             } else {
-                let locale = _Locale(identifier: id)
+                let locale = LocaleCache.localeICUClass.init(identifier: id, prefs: nil)
                 cachedFixedLocales[id] = locale
                 return locale
             }
         }
 
 #if FOUNDATION_FRAMEWORK
-        mutating func fixedNSLocale(_ id: String) -> _NSSwiftLocale {
+        mutating func fixedNSLocale(identifier id: String) -> _NSSwiftLocale {
             if let locale = cachedFixedIdentifierToNSLocales[id] {
                 return locale
             } else {
@@ -106,14 +140,15 @@ struct LocaleCache : Sendable {
             }
         }
         
-        mutating func fixedNSLocale(_ locale: _Locale) -> _NSSwiftLocale {
-            if let locale = cachedFixedLocaleToNSLocales[locale] {
+        mutating func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
+            let id = IdentifierAndPrefs(identifier: locale.identifier, prefs: locale.prefs)
+            if let locale = cachedFixedLocaleToNSLocales[id] {
                 return locale
             } else {
                 let inner = Locale(inner: locale)
                 let nsLocale = _NSSwiftLocale(inner)
                 // We have found ObjC clients that rely upon an immortal lifetime for these `Locale`s, so we do not clear this cache.
-                cachedFixedLocaleToNSLocales[locale] = nsLocale
+                cachedFixedLocaleToNSLocales[id] = nsLocale
                 return nsLocale
             }
         }
@@ -138,7 +173,7 @@ struct LocaleCache : Sendable {
             }
 
             // We have neither a Swift Locale nor an NSLocale. Recalculate and set both.
-            let locale = _Locale(name: nil, prefs: preferences, disableBundleMatching: false)
+            let locale = _LocaleICU(name: nil, prefs: preferences, disableBundleMatching: false)
             let nsLocale = _NSSwiftLocale(Locale(inner: locale))
             if cache {
                 // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
@@ -154,7 +189,8 @@ struct LocaleCache : Sendable {
                 return result
             }
 
-            cachedAutoupdatingNSLocale = _NSSwiftLocale(Locale.autoupdatingCurrent)
+            // Don't call Locale.autoupdatingCurrent directly to avoid a recursive lock
+            cachedAutoupdatingNSLocale = _NSSwiftLocale(Locale(inner: autoupdatingCurrent()))
             return cachedAutoupdatingNSLocale
         }
 
@@ -169,22 +205,23 @@ struct LocaleCache : Sendable {
         }
 #endif // FOUNDATION_FRAMEWORK
 
-        mutating func fixedComponents(_ comps: Locale.Components) -> _Locale {
+        mutating func fixedComponents(_ comps: Locale.Components) -> any _LocaleProtocol {
             if let l = cachedFixedComponentsLocales[comps] {
                 return l
             } else {
-                let new = _Locale(components: comps)
+                let new = LocaleCache.localeICUClass.init(components: comps)
+                
                 cachedFixedComponentsLocales[comps] = new
                 return new
             }
         }
 
-        mutating func system() -> _Locale {
+        mutating func system() -> any _LocaleProtocol {
             if let locale = cachedSystemLocale {
                 return locale
             }
 
-            let locale = _Locale(identifier: "")
+            let locale = LocaleCache.localeICUClass.init(identifier: "", prefs: nil)
             cachedSystemLocale = locale
             return locale
         }
@@ -206,7 +243,7 @@ struct LocaleCache : Sendable {
         lock.withLock { $0.reset() }
     }
 
-    var current: _Locale {
+    var current: any _LocaleProtocol {
         var result = lock.withLock {
             $0.current(preferences: nil, cache: false)
         }
@@ -226,21 +263,25 @@ struct LocaleCache : Sendable {
         
         return result
     }
+    
+    var autoupdatingCurrent: _LocaleAutoupdating {
+        lock.withLock { $0.autoupdatingCurrent() }
+    }
 
-    var system: _Locale {
+    var system: any _LocaleProtocol {
         lock.withLock { $0.system() }
     }
 
-    func fixed(_ id: String) -> _Locale {
+    func fixed(_ id: String) -> any _LocaleProtocol {
         lock.withLock { $0.fixed(id) }
     }
 
 #if FOUNDATION_FRAMEWORK
-    func fixedNSLocale(_ id: String) -> _NSSwiftLocale {
-        lock.withLock { $0.fixedNSLocale(id) }
+    func fixedNSLocale(identifier id: String) -> _NSSwiftLocale {
+        lock.withLock { $0.fixedNSLocale(identifier: id) }
     }
 
-    func fixedNSLocale(_ locale: _Locale) -> _NSSwiftLocale {
+    func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
         lock.withLock { $0.fixedNSLocale(locale) }
     }
 
@@ -274,7 +315,7 @@ struct LocaleCache : Sendable {
     }
 #endif // FOUNDATION_FRAMEWORK
 
-    func fixedComponents(_ comps: Locale.Components) -> _Locale {
+    func fixedComponents(_ comps: Locale.Components) -> any _LocaleProtocol {
         lock.withLock { $0.fixedComponents(comps) }
     }
     
@@ -338,8 +379,8 @@ struct LocaleCache : Sendable {
         var (prefs, _) = preferences()
         if let cfOverrides { prefs.apply(cfOverrides) }
         
-        let inner = _Locale(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
-        return Locale(.fixed(inner))
+        let inner = _LocaleICU(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        return Locale(inner: inner)
     }
 #endif
     
@@ -348,29 +389,38 @@ struct LocaleCache : Sendable {
         var (prefs, _) = preferences()
         if let overrides { prefs.apply(overrides) }
         
-        let inner = _Locale(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
-        return Locale(.fixed(inner))
+        let inner = LocaleCache.localeICUClass.init(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        return Locale(inner: inner)
     }
 
+    func localeWithPreferences(identifier: String, prefs: LocalePreferences?) -> Locale {
+        let inner = LocaleCache.localeICUClass.init(identifier: identifier, prefs: prefs)
+        return Locale(inner: inner)
+    }
 
     func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
+#if FOUNDATION_FRAMEWORK
         guard !allowsMixedLocalizations else {
             let (prefs, _) = preferences()
-            let inner = _Locale(name: nil, prefs: prefs, disableBundleMatching: true)
-            return Locale(.fixed(inner))
+            let inner = _LocaleICU(name: nil, prefs: prefs, disableBundleMatching: true)
+            return Locale(inner: inner)
         }
 
         let preferredLanguages = preferredLanguages(forCurrentUser: false)
         guard let preferredLocaleID = preferredLocale() else { return nil }
         
         let canonicalizedLocalizations = availableLocalizations.compactMap { Locale.canonicalLanguageIdentifier(from: $0) }
-        let identifier = _Locale.localeIdentifierForCanonicalizedLocalizations(canonicalizedLocalizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
+        let identifier = Locale.localeIdentifierForCanonicalizedLocalizations(canonicalizedLocalizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
         guard let identifier else {
             return nil
         }
 
         let (prefs, _) = preferences()
-        let inner = _Locale(identifier: identifier, prefs: prefs)
-        return Locale(.fixed(inner))
+        let inner = _LocaleICU(identifier: identifier, prefs: prefs)
+        return Locale(inner: inner)
+#else
+        // No way to canonicalize on this platform
+        return nil
+#endif
     }
 }

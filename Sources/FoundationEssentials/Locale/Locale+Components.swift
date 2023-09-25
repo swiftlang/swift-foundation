@@ -14,120 +14,6 @@
 import Glibc
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
-
-extension Locale {
-
-    // Identifier canonicalization
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public enum IdentifierType : Sendable {
-        /* This canonicalizes the identifier */
-        /// Identifier following ICU (International Components for Unicode) convention. Unlike the `posix` type, does not include character set
-        /// For example: "th_TH@calendar=gregorian;numbers=thai"
-        case icu
-
-        /* This would be a canonicalized "Unicode BCP 47 locale identifier", not a "BCP 47 language tag", per https://www.unicode.org/reports/tr35/#BCP_47_Language_Tag_Conversion */
-        /// The identifier is also a valid BCP47 language tag
-        /// For example: "th-TH-u-ca-gregory-nu-thai"
-        case bcp47
-
-        /// The components are the same as `icu`, but does not use the key-value type keyword list
-        /// For example: "th_TH_u_ca_gregory_nu_thai"
-        case cldr
-    }
-
-
-    /// Returns the identifier conforming to the specified standard for the specified string.
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public static func identifier(_ type: IdentifierType, from string: String) -> String {
-        Locale(identifier: string).identifier(type)
-    }
-
-    // Helper
-    static func legacyKey(forKey key: String) -> ICULegacyKey? {
-        // Calling into ICU for these values requires quite a bit of I/O. We can precalculate the most important ones here.
-        let legacyKey: String
-        switch key {
-        case "calendar", "colalternate", "colbackwards", "colcasefirst", "colcaselevel", "colhiraganaquaternary", "collation", "colnormalization", "colnumeric", "colreorder", "colstrength", "currency", "hours", "measure", "numbers", "timezone", "variabletop", "cf", "d0", "dx", "em", "fw", "h0", "i0", "k0", "kv", "lb", "lw", "m0", "rg", "s0", "sd", "ss", "t0", "va", "x0":
-            legacyKey = key
-        case "ca": legacyKey = "calendar"
-        case "ka": legacyKey = "colalternate"
-        case "kb": legacyKey = "colbackwards"
-        case "kf": legacyKey = "colcasefirst"
-        case "kc": legacyKey = "colcaselevel"
-        case "kh": legacyKey = "colhiraganaquaternary"
-        case "co": legacyKey = "collation"
-        case "kk": legacyKey = "colnormalization"
-        case "kn": legacyKey = "colnumeric"
-        case "kr": legacyKey = "colreorder"
-        case "ks": legacyKey = "colstrength"
-        case "cu": legacyKey = "currency"
-        case "hc": legacyKey = "hours"
-        case "ms": legacyKey = "measure"
-        case "nu": legacyKey = "numbers"
-        case "tz": legacyKey = "timezone"
-        case "vt": legacyKey = "variabletop"
-        default:
-            let ulocLegacyKey = _withStringAsCString(key) { uloc_toLegacyKey($0) }
-            guard let ulocLegacyKey else {
-                return nil
-            }
-
-            legacyKey = ulocLegacyKey
-        }
-        return ICULegacyKey(legacyKey)
-    }
-
-    static func keywordValue(identifier: String, key: String) -> String? {
-        return _withFixedCharBuffer(size: ULOC_KEYWORD_AND_VALUES_CAPACITY) { buffer, size, status in
-            return uloc_getKeywordValue(identifier, key, buffer, size, &status)
-        }
-    }
-
-    static func keywordValue(identifier: String, key: ICULegacyKey) -> String? {
-        return keywordValue(identifier: identifier, key: key.key)
-    }
-
-    static func identifierWithKeywordValue(_ identifier: String, key: ICULegacyKey, value: String) -> String {
-        var identifierWithKeywordValue: String?
-        withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(ULOC_FULLNAME_CAPACITY) + 1) { buffer in
-            guard let buf: UnsafeMutablePointer<CChar> = buffer.baseAddress else {
-                return
-            }
-            var status = U_ZERO_ERROR
-            #if canImport(Glibc) || canImport(ucrt)
-            // Glibc doesn't support strlcpy
-            strcpy(buf, identifier)
-            #else
-            strlcpy(buf, identifier, Int(ULOC_FULLNAME_CAPACITY))
-            #endif
-
-            let len = uloc_setKeywordValue(key.key, value, buf, ULOC_FULLNAME_CAPACITY, &status)
-            if status.isSuccess && len > 0 {
-                let last = buf.advanced(by: Int(len))
-                last.pointee = 0
-                identifierWithKeywordValue = String(cString: buf)
-            }
-        }
-
-        return identifierWithKeywordValue ?? identifier
-    }
-
-    static var availableLocaleIdentifiers: [String] {
-        var working = Set<String>()
-        let localeCount = uloc_countAvailable()
-        for locale in 0..<localeCount {
-            let localeID = String(cString: uloc_getAvailable(locale))
-            working.insert(localeID)
-        }
-        return Array(working)
-    }
-}
-
 extension Locale {
 
     /// Represents locale-related attributes. You can use `Locale.Components` to create a `Locale` with specific overrides.
@@ -195,150 +81,38 @@ extension Locale {
 
         // MARK: - Initializers
 
-        /// - Parameter identifier: Unicode language identifier such as "en-u-nu-thai-ca-buddhist-kk-true"
-        public init(identifier: String) {
-            self.languageComponents = Language.Components(identifier: identifier)
-
-            let s = _withFixedCharBuffer { buffer, size, status in
-                return uloc_getVariant(identifier, buffer, size, &status)
-            }
-            if let s {
-                variant = Variant(s)
-            }
-
-            var status = U_ZERO_ERROR
-            let uenum = uloc_openKeywords(identifier, &status)
-            guard status.isSuccess, let uenum else { return }
-
-            let enumator = ICU.Enumerator(enumerator: uenum)
-            for key in enumator.elements {
-                guard let legacyKey = Locale.legacyKey(forKey: key) else {
-                    continue
-                }
-
-                guard let value = Locale.keywordValue(identifier: identifier, key: legacyKey) else {
-                    continue
-                }
-
-                switch legacyKey {
-                case Calendar.Identifier.legacyKeywordKey:
-                    calendar = Calendar.Identifier(identifierString: value)
-                case Collation.legacyKeywordKey:
-                    collation = Collation(value)
-                case Currency.legacyKeywordKey:
-                    currency = Currency(value)
-                case NumberingSystem.legacyKeywordKey:
-                    numberingSystem = NumberingSystem(value)
-                case Weekday.legacyKeywordKey:
-                    firstDayOfWeek = Weekday(rawValue: value)
-                case HourCycle.legacyKeywordKey:
-                    hourCycle = HourCycle(rawValue: value)
-                case MeasurementSystem.legacyKeywordKey:
-                    if value == "imperial" {
-                        // Legacy alias for "uksystem"
-                        measurementSystem = .uk
-                    } else {
-                        measurementSystem = MeasurementSystem(value)
-                    }
-                case Region.legacyKeywordKey:
-                    if value.count > 2 {
-                        // A valid `regionString` is a unicode subdivision id that consists of a region subtag suffixed either by "zzzz" ("uszzzz") for whole region, or by a subdivision suffix for a partial subdivision ("usca").
-                        // Retrieve the region part ("us").
-                        region = Locale.Region(String(value.prefix(2).uppercased()))
-                    }
-                case Subdivision.legacyKeywordKey:
-                    subdivision = Subdivision(value)
-                case TimeZone.legacyKeywordKey:
-                    timeZone = TimeZone(identifier: value)
-                default:
-                    break
-                }
-            }
-        }
-
-        /// Creates a `Locale.Components` with the identifier of the specified `locale`.
-        /// - Parameter locale: The locale whose identifier is used to create the component. If `Locale.current` or `Locale.autoupdatingCurrent` is specified, the created `Locale.Components` will contain user's preferred values as set in the system settings if available.
-        public init(locale: Locale) {
-            self = .init(identifier: locale.identifier)
-
-            // Special case: the current locale may have user preferences override. These values should be reflected in the created Locale.Components too.
-            applyPreferencesOverride(locale)
-        }
-
         /// Creates a `Locale.Components` with the specified language code, script and region for the language
         public init(languageCode: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil) {
             self.languageComponents = Language.Components(languageCode: languageCode, script: script, region: languageRegion)
         }
-
-        // Returns an ICU-style identifier like "de_DE@calendar=gregorian"
-        internal var identifier: String {
-            var keywords: [ICULegacyKey: String] = [:]
-            if let id = calendar?.cldrIdentifier { keywords[Calendar.Identifier.legacyKeywordKey] = id }
-            if let id = collation?._normalizedIdentifier { keywords[Collation.legacyKeywordKey] = id }
-            if let id = currency?._normalizedIdentifier { keywords[Currency.legacyKeywordKey] = id }
-            if let id = numberingSystem?._normalizedIdentifier { keywords[NumberingSystem.legacyKeywordKey] = id }
-            if let id = firstDayOfWeek?.rawValue { keywords[Weekday.legacyKeywordKey] = id }
-            if let id = hourCycle?.rawValue { keywords[HourCycle.legacyKeywordKey] = id }
-            if let id = measurementSystem?._normalizedIdentifier { keywords[MeasurementSystem.legacyKeywordKey] = id }
-            // No need for redundant region keyword
-            if let region = region, region != languageComponents.region {
-                // rg keyword value is actually a subdivision code
-                keywords[Region.legacyKeywordKey] = Subdivision.subdivision(for: region)._normalizedIdentifier
-            }
-            if let id = subdivision?._normalizedIdentifier { keywords[Subdivision.legacyKeywordKey] = id }
-            if let id = timeZone?.identifier { keywords[TimeZone.legacyKeywordKey] = id }
-            if let id = variant?._normalizedIdentifier { keywords[Variant.legacyKeywordKey] = id }
-
-            var locID = languageComponents.identifier
-            for (key, val) in keywords {
-                // This uses legacy key-value pairs, like "collation=phonebook" instead of "-cu-phonebk", so be sure that the above values are `legacyKeywordKey`
-                // See Locale.Components.legacyKey(forKey:) for more info on performance costs
-                locID = Locale.identifierWithKeywordValue(locID, key: key, value: val)
-            }
-            return locID
-        }
-
-        private mutating func applyPreferencesOverride(_ locale: Locale) {
-            if hourCycle == nil, let hc = locale.forceHourCycle {
-                hourCycle = hc
-            }
-            
-            if measurementSystem == nil, let ms = locale.forceMeasurementSystem {
-                measurementSystem = ms
-            }
-
-            if firstDayOfWeek == nil, let weekday = locale.forceFirstWeekday(locale._calendarIdentifier) {
-                firstDayOfWeek = weekday
-            }
-        }
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.LanguageCode : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Script : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Region : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Currency : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Collation : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.NumberingSystem : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Subdivision : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.Variant : CustomDebugStringConvertible { }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Locale.MeasurementSystem : CustomDebugStringConvertible { }
 
 extension Locale {
@@ -356,10 +130,10 @@ extension Locale {
             _normalizedIdentifier = identifier.lowercased()
         }
 
-        internal var _identifier: String
-        internal var _normalizedIdentifier: String
+        package var _identifier: String
+        package var _normalizedIdentifier: String
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -384,47 +158,6 @@ extension Locale {
             case alpha3
         }
 
-        /// Returns the ISO code of the given identifier type.
-        /// Returns nil if the language isn't a valid ISO language,
-        /// or if the specified identifier type isn't available to
-        /// the language.
-        public func identifier(_ type: IdentifierType) -> String? {
-            switch type {
-            case .alpha2:
-                var alpha2: String?
-                let tmp = _withFixedCharBuffer { buffer, size, status in
-                    return uloc_getLanguage(_normalizedIdentifier, buffer, size, &status)
-                }
-                if let tmp, LanguageCode._isoLanguageCodeStrings.contains(tmp) {
-                    alpha2 = tmp
-                }
-                return alpha2
-            case .alpha3:
-                var alpha3: String?
-                let str = _withStringAsCString(_normalizedIdentifier) {
-                    uloc_getISO3Language($0)
-                }
-                if let str, !str.isEmpty {
-                    alpha3 = str
-                }
-                return alpha3
-            }
-        }
-
-        /// Returns if the language is an ISO-639 language
-        public var isISOLanguage: Bool {
-            if LanguageCode._isoLanguageCodeStrings.contains(_normalizedIdentifier) {
-                return true
-            } else {
-                return identifier(.alpha2) != nil
-            }
-        }
-
-        /// Returns a list of `Locale` language codes that are two-letter language codes defined in ISO 639 and two-letter codes without a two-letter equivalent
-        public static var isoLanguageCodes: [LanguageCode] {
-            return _isoLanguageCodeStrings.map { LanguageCode($0) }
-        }
-
         /// The `und` code: used in cases where the language has not been identified
         public static let unidentified: LanguageCode = LanguageCode("und")
 
@@ -436,20 +169,6 @@ extension Locale {
 
         /// The `zxx` code: used in cases when the content is not in any particular languages, such as images, symbols, etc.
         public static let unavailable: LanguageCode = LanguageCode("zxx")
-
-        // This is sorted
-        internal static var _isoLanguageCodeStrings: [String] = {
-            var result: [String] = []
-            let langs = uloc_getISOLanguages()
-            guard var langs else { return [] }
-            while let p = langs.pointee {
-                let str = String(cString: p)
-                result.append(str)
-                langs = langs.advanced(by: 1)
-            }
-
-            return result
-        }()
 
         public func hash(into hasher: inout Hasher) {
             hasher.combine(_normalizedIdentifier)
@@ -499,7 +218,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -510,17 +229,8 @@ extension Locale {
             _identifier = identifier
             _normalizedIdentifier = identifier.capitalized
         }
-        internal var _identifier: String
-        internal var _normalizedIdentifier: String
-
-        /// Returns if the script is an ISO 15924 script
-        public var isISOScript: Bool {
-            withUnsafeTemporaryAllocation(of: UScriptCode.self, capacity: Int(USCRIPT_CODE_LIMIT.rawValue)) { buffer in
-                var status = U_ZERO_ERROR
-                let len = uscript_getCode(_normalizedIdentifier, buffer.baseAddress!, USCRIPT_CODE_LIMIT.rawValue, &status)
-                return status.isSuccess && len > 0 && buffer[0] != USCRIPT_INVALID_CODE
-            }
-        }
+        package var _identifier: String
+        package var _normalizedIdentifier: String
 
         /// Represents an uncoded script
         public static let unknown = Script("Zzzz")
@@ -560,17 +270,17 @@ extension Locale {
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct Region : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
-        internal static let cldrKeywordKey = ICUCLDRKey("rg")
-        internal static let legacyKeywordKey = ICULegacyKey("rg")
+        package static let cldrKeywordKey = ICUCLDRKey("rg")
+        package static let legacyKeywordKey = ICULegacyKey("rg")
 
         public init(stringLiteral value: String) {
             self.init(value)
         }
 
-        internal var _identifier: String
-        internal var _normalizedIdentifier: String
+        package var _identifier: String
+        package var _normalizedIdentifier: String
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -592,103 +302,8 @@ extension Locale {
             _normalizedIdentifier = identifier.uppercased()
         }
 
-        public var isISORegion: Bool {
-            var status = U_ZERO_ERROR
-            let region = uregion_getRegionFromCode(identifier, &status)
-            return status.isSuccess && region != nil
-        }
-
         /// Represents an unknown or invalid region
         public static let unknown = Region("ZZ")
-
-        /// Returns all the sub-regions of the region
-        public var subRegions : [Region] {
-            var status = U_ZERO_ERROR
-            let icuRegion = uregion_getRegionFromCode(identifier, &status)
-            guard status.isSuccess, let icuRegion else {
-                return []
-            }
-
-            let values = uregion_getContainedRegions(icuRegion, &status)
-            guard status.isSuccess, let values else {
-                return []
-            }
-
-            let e = ICU.Enumerator(enumerator: values)
-            return e.elements.map { Region($0) }
-        }
-
-        /// Returns the region within which the region is contained, e.g. for `US`, returns `Northern America`
-        public var containingRegion: Region? {
-            var status = U_ZERO_ERROR
-            let icuRegion = uregion_getRegionFromCode(identifier, &status)
-            guard status.isSuccess, let icuRegion else {
-                return nil
-            }
-
-            guard let containingRegion = uregion_getContainingRegion(icuRegion) else {
-                return nil
-            }
-
-            guard let code = String(validatingUTF8: uregion_getRegionCode(containingRegion)) else {
-                return nil
-            }
-
-            return Region(code)
-        }
-
-        /// Returns the continent of the region. Returns `nil` if the continent cannot be determined, such as when the region isn't an ISO region
-        public var continent: Region? {
-            var status = U_ZERO_ERROR
-            let icuRegion = uregion_getRegionFromCode(identifier, &status)
-
-            guard status.isSuccess, let icuRegion else {
-                return nil
-            }
-
-            guard let containingContinent = uregion_getContainingRegionOfType(icuRegion, URGN_CONTINENT) else {
-                return nil
-            }
-
-            guard let code = String(validatingUTF8: uregion_getRegionCode(containingContinent)) else {
-                return nil
-            }
-
-            return Region(code)
-        }
-
-        /// Returns a list of regions of a specified type defined by ISO
-        public static var isoRegions: [Region] {
-            _isoRegionCodes.map { Region($0) }
-        }
-
-        /// Used for deprecated ISO Country Code
-        internal static var isoCountries: [String] = {
-            var result: [String] = []
-            let langs = uloc_getISOCountries()
-            guard var langs else { return [] }
-            while let p = langs.pointee {
-                let str = String(cString: p)
-                result.append(str)
-                langs = langs.advanced(by: 1)
-            }
-            return result
-        }()
-
-        internal static var _isoRegionCodes: [String] {
-            var status = U_ZERO_ERROR
-            let types = [URGN_WORLD, URGN_CONTINENT, URGN_SUBCONTINENT, URGN_TERRITORY]
-            var codes: [String] = []
-            for t in types {
-                status = U_ZERO_ERROR
-                let values = uregion_getAvailable(t, &status)
-                if status.isSuccess, let values {
-                    let e = ICU.Enumerator(enumerator: values)
-                    codes.append(contentsOf: e.elements)
-                }
-            }
-            return codes
-        }
 
         public func hash(into hasher: inout Hasher) {
             hasher.combine(_normalizedIdentifier)
@@ -725,15 +340,15 @@ extension Locale {
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct Collation : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
-        internal static let cldrKeywordKey = ICUCLDRKey("co")
-        internal static let legacyKeywordKey = ICULegacyKey("collation")
+        package static let cldrKeywordKey = ICUCLDRKey("co")
+        package static let legacyKeywordKey = ICULegacyKey("collation")
 
         public init(stringLiteral value: String) {
             self.init(value)
         }
 
-        internal var _identifier: String
-        internal var _normalizedIdentifier: String
+        package var _identifier: String
+        package var _normalizedIdentifier: String
         public var identifier: String {
             get {
                 _identifier
@@ -744,7 +359,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -759,28 +374,6 @@ extension Locale {
         public static let searchRules = Collation("search")
         /// The default ordering for each language
         public static let standard = Collation("standard")
-
-        /// A list of available collations on the system.
-        public static var availableCollations: [Collation] {
-            var status = U_ZERO_ERROR
-            let values = ucol_getKeywordValues("collation", &status)
-            guard let values, status.isSuccess else {
-                return []
-            }
-
-            return ICU.Enumerator(enumerator: values).elements.map { Collation($0) }
-        }
-
-        /// A list of available collations for the specified `language` in the order that it is most likely to make a difference.
-        public static func availableCollations(for language: Locale.Language) -> [Collation] {
-            var status = U_ZERO_ERROR
-            let values = ucol_getKeywordValuesForLocale("collation", language.components.identifier, UBool.true, &status)
-            guard let values, status.isSuccess else {
-                return []
-            }
-
-            return ICU.Enumerator(enumerator: values).elements.map { Collation($0) }
-        }
 
         public func hash(into hasher: inout Hasher) {
             hasher.combine(_normalizedIdentifier)
@@ -818,15 +411,15 @@ extension Locale {
     /// The complete list of currency codes can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/currency.xml), under the key with the name "cu"
     public struct Currency : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
-        fileprivate static let cldrKeywordKey = ICUCLDRKey("cu")
-        fileprivate static let legacyKeywordKey = ICULegacyKey("currency")
+        package static let cldrKeywordKey = ICUCLDRKey("cu")
+        package static let legacyKeywordKey = ICULegacyKey("currency")
 
         public init(stringLiteral value: String) {
             self.init(value)
         }
 
-        internal var _identifier: String
-        internal var _normalizedIdentifier: String
+        package var _identifier: String
+        package var _normalizedIdentifier: String
 
         public var identifier: String {
             get {
@@ -838,7 +431,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -846,31 +439,6 @@ extension Locale {
         public init(_ identifier: String) {
             _identifier = identifier
             _normalizedIdentifier = identifier.lowercased()
-        }
-
-        public var isISOCurrency: Bool {
-            return ucurr_getNumericCode(Array(identifier.utf16)) != 0
-        }
-
-        /// Represents an unknown currency, used when no currency is involved in a transaction
-        public static let unknown = Currency("xxx")
-
-        /// Returns a list of `Locale` currency codes defined in ISO-4217
-        public static var isoCurrencies: [Currency] {
-            var status = U_ZERO_ERROR
-            let values = ucurr_openISOCurrencies(UInt32(UCURR_ALL.rawValue), &status)
-            guard status.isSuccess, let values else { return [] }
-            let e = ICU.Enumerator(enumerator: values)
-            return e.elements.map { Currency($0) }
-        }
-
-        /// For `Locale.commonISOCurrencyCodes`
-        internal static var commonISOCurrencies: [String] {
-            var status = U_ZERO_ERROR
-            let values = ucurr_openISOCurrencies(UInt32(UCURR_COMMON.rawValue | UCURR_NON_DEPRECATED.rawValue), &status)
-            guard status.isSuccess, let values else { return [] }
-            let e = ICU.Enumerator(enumerator: values)
-            return e.elements.map { $0 }
         }
 
         public func hash(into hasher: inout Hasher) {
@@ -909,36 +477,15 @@ extension Locale {
     /// Defines representations for numeric values. Also known as numeral system
     public struct NumberingSystem : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
-        internal static let cldrKeywordKey = ICUCLDRKey("nu")
-        internal static let legacyKeywordKey = ICULegacyKey("numbers")
+        package static let cldrKeywordKey = ICUCLDRKey("nu")
+        package static let legacyKeywordKey = ICULegacyKey("numbers")
 
         public init(stringLiteral value: String) {
             self.init(value)
         }
 
-        /// Create a `NumberingSystem` from a complete Locale identifier, or nil if does not explicitly specify one.
-        internal init?(localeIdentifierIfSpecified localeIdentifier: String) {
-            // Just verify it has a value at all, but pass the whole identifier to `NumberingSystem`
-            guard let _ = Locale.keywordValue(identifier: localeIdentifier, key: NumberingSystem.legacyKeywordKey) else {
-                return nil
-            }
-
-            self = NumberingSystem(localeIdentifier: localeIdentifier)
-        }
-
-        internal init(localeIdentifier: String) {
-            var status = U_ZERO_ERROR
-            let numberingSystem = unumsys_open(localeIdentifier, &status)
-            defer { unumsys_close(numberingSystem) }
-            if let numberingSystem, status.isSuccess {
-                self.init(String(cString: unumsys_getName(numberingSystem)))
-            } else {
-                self = .latn
-            }
-        }
-
-        internal var _identifier: String
-        internal var _normalizedIdentifier: String
+        package var _identifier: String
+        package var _normalizedIdentifier: String
 
         public var identifier: String {
             get {
@@ -950,7 +497,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -961,82 +508,7 @@ extension Locale {
             _normalizedIdentifier = identifier.lowercased()
         }
 
-        internal static let latn = NumberingSystem("latn")
-
-        /// A list of available numbering systems on the system.
-        public static var availableNumberingSystems: [NumberingSystem] {
-            var status = U_ZERO_ERROR
-            let values = unumsys_openAvailableNames(&status)
-            guard let values, status.isSuccess else { return [] }
-
-            let e = ICU.Enumerator(enumerator: values)
-            return e.elements.map { NumberingSystem($0) }
-        }
-
-        internal static func defaultNumberingSystem(for localeId: String) -> NumberingSystem? {
-            var comps = Components(identifier: localeId)
-            comps.numberingSystem = NumberingSystem("default")
-            var status = U_ZERO_ERROR
-            let sys = unumsys_open(comps.identifier, &status)
-            defer { unumsys_close(sys) }
-            guard status.isSuccess else { return nil }
-            guard let name = unumsys_getName(sys) else { return nil }
-            return NumberingSystem(String(cString: name))
-        }
-
-        internal static func validNumberingSystems(for localeId: String) -> [NumberingSystem] {
-            // The result is ordered
-            var result: [NumberingSystem] = []
-            var components = Locale.Components(identifier: localeId)
-
-            // 1. If there is an explicitly defined override numbering system, add it first to the list.
-            if let numbers = components.numberingSystem {
-                result.append(numbers)
-            }
-
-            // 2. Query ICU for additional supported numbering systems
-            let queryList: [String]
-            // For Chinese & Thai, although there is a traditional numbering system, it is not one that users will expect to use as a numbering system in the system. (cf. <rdar://problem/19742123&20068835>)
-            if let languageCode = components.languageComponents.languageCode, !(languageCode == .thai || languageCode == .chinese || languageCode.identifier == "wuu" || languageCode == .cantonese) {
-                queryList = ["default", "native", "traditional", "finance"]
-            } else {
-                queryList = ["default"]
-            }
-
-            for q in queryList {
-                components.numberingSystem = .init(q)
-                let localeIDWithNumbers = components.identifier
-
-                var status = U_ZERO_ERROR
-                let numberingSystem = unumsys_open(localeIDWithNumbers, &status)
-                defer { unumsys_close(numberingSystem) }
-                guard status.isSuccess else {
-                    continue
-                }
-
-                // We do not support numbering systems that are algorithmic (like the traditional ones for Hebrew, etc.) and ones that are not base 10.
-                guard !unumsys_isAlgorithmic(numberingSystem).boolValue && unumsys_getRadix(numberingSystem) == 10 else {
-                    continue
-                }
-
-                guard let name = unumsys_getName(numberingSystem) else {
-                    continue
-                }
-
-                let ns = NumberingSystem(String(cString: name))
-                if !result.contains(ns) {
-                    result.append(ns)
-                }
-            }
-
-             // 3. Add `latn` (if required) which we support that for all languages.
-            let latn = NumberingSystem("latn")
-            if !result.contains(latn) {
-                result.append(latn)
-            }
-
-            return result
-        }
+        package static let latn = NumberingSystem("latn")
 
         public func hash(into hasher: inout Hasher) {
             hasher.combine(_normalizedIdentifier)
@@ -1080,13 +552,13 @@ extension Locale {
         case friday = "fri"
         case saturday = "sat"
 
-        internal static let cldrKeywordKey = ICUCLDRKey("fw")
-        internal static let legacyKeywordKey = ICULegacyKey("fw")
+        package static let cldrKeywordKey = ICUCLDRKey("fw")
+        package static let legacyKeywordKey = ICULegacyKey("fw")
 
         // Conforming to ICU index: 1 is Sunday
-        static let weekdays : [Weekday] = [.sunday, .monday, .tuesday, .wednesday, .thursday, .friday, .saturday]
+        package static let weekdays : [Weekday] = [.sunday, .monday, .tuesday, .wednesday, .thursday, .friday, .saturday]
 
-        init?(_ icuIndex: Int32) {
+        package init?(_ icuIndex: Int32) {
             guard icuIndex >= 1, icuIndex <= 7 else {
                 return nil
             }
@@ -1094,7 +566,7 @@ extension Locale {
             self = Self.weekdays[Int(icuIndex) - 1]
         }
 
-        var icuIndex: Int {
+        package var icuIndex: Int {
             Self.weekdays.firstIndex(of: self)! + 1
         }
     }
@@ -1113,22 +585,22 @@ extension Locale {
         /// 24-hour clock. Hour ranges from 1 to 24
         case oneToTwentyFour = "h24"
 
-        internal static let cldrKeywordKey = ICUCLDRKey("hc")
-        internal static let legacyKeywordKey = ICULegacyKey("hours")
+        package static let cldrKeywordKey = ICUCLDRKey("hc")
+        package static let legacyKeywordKey = ICULegacyKey("hours")
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct MeasurementSystem: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
 
-        internal static let cldrKeywordKey = ICUCLDRKey("ms")
-        internal static let legacyKeywordKey = ICULegacyKey("measure")
+        package static let cldrKeywordKey = ICUCLDRKey("ms")
+        package static let legacyKeywordKey = ICULegacyKey("measure")
 
         public init(stringLiteral value: String) {
             self.init(value)
         }
 
-        internal var _identifier: String
-        internal var _normalizedIdentifier: String
+        package var _identifier: String
+        package var _normalizedIdentifier: String
 
         public var identifier: String {
             get {
@@ -1140,7 +612,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -1171,18 +643,6 @@ extension Locale {
             return lhs._normalizedIdentifier == rhs._normalizedIdentifier
         }
 
-        internal init(_ icuMeasurementSystem: UMeasurementSystem) {
-            if icuMeasurementSystem == UMS_US {
-                self = .us
-            } else if icuMeasurementSystem == UMS_UK {
-                self = .uk
-            } else if icuMeasurementSystem == UMS_SI {
-                self = .metric
-            } else {
-                self = .metric
-            }
-        }
-
         // Codable conformance
         enum CodingKeys: CodingKey {
             case _normalizedIdentifier
@@ -1211,15 +671,15 @@ extension Locale {
     /// A subdivision of a country or region, such as a state in the United States, or a province in Canada.
     public struct Subdivision : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
-        internal static let cldrKeywordKey = ICUCLDRKey("sd")
-        internal static let legacyKeywordKey = ICULegacyKey("sd")
+        package static let cldrKeywordKey = ICUCLDRKey("sd")
+        package static let legacyKeywordKey = ICULegacyKey("sd")
 
         public init(stringLiteral value: String) {
             self.init(value)
         }
 
-        internal var _identifier: String
-        internal var _normalizedIdentifier: String
+        package var _identifier: String
+        package var _normalizedIdentifier: String
 
         public var identifier: String {
             get {
@@ -1231,7 +691,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -1283,15 +743,15 @@ extension Locale {
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct Variant: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
 
-        internal static let cldrKeywordKey = ICUCLDRKey("va")
-        internal static let legacyKeywordKey = ICULegacyKey("va")
+        package static let cldrKeywordKey = ICUCLDRKey("va")
+        package static let legacyKeywordKey = ICULegacyKey("va")
 
         public init(stringLiteral value: String) {
             self.init(value)
         }
 
-        internal var _identifier: String
-        internal var _normalizedIdentifier: String
+        package var _identifier: String
+        package var _normalizedIdentifier: String
 
         public var identifier: String {
             get {
@@ -1303,7 +763,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -1353,15 +813,15 @@ extension Locale {
 
 /// Use to represent an ICU legacy key.
 /// Some ICU API only accepts these, so we have a type-safe wrapper to catch a potential bug.
-internal struct ICULegacyKey : Hashable {
-    let key: String
-    init(_ key: String) { self.key = key }
+package struct ICULegacyKey : Hashable {
+    package let key: String
+    package init(_ key: String) { self.key = key }
 }
 
 /// Use to represent a modern ICU key.
-internal struct ICUCLDRKey : Hashable {
-    let key: String
-    init(_ key: String) { self.key = key }
+package struct ICUCLDRKey : Hashable {
+    package let key: String
+    package init(_ key: String) { self.key = key }
 }
 
 // MARK: - Constants

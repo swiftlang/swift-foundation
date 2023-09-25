@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
 /**
  `TimeZone` defines the behavior of a time zone. Time zone values represent geopolitical regions. Consequently, these values have names for these regions. Time zone values also represent a temporal offset, either plus or minus, from Greenwich Mean Time (GMT) and an abbreviation (such as PST for Pacific Standard Time).
 
@@ -25,7 +21,7 @@ import FoundationEssentials
  */
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct TimeZone : Hashable, Equatable, Sendable {
-    private var _tz: _TimeZoneBase
+    private var _tz: _TimeZoneProtocol
 
     // MARK: -
     //
@@ -45,7 +41,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     }
 
     /// Directly instantiates a time zone without causing infinite recursion by checking the cache.
-    internal init(inner: _TimeZoneBase) {
+    internal init(inner: some _TimeZoneProtocol) {
         _tz = inner
     }
 
@@ -127,7 +123,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
 
     /// The default time zone, settable via ObjC but not available in Swift API (because it's global mutable state).
     /// The default time zone is not autoupdating, but it can change at any time when the ObjC `setDefaultTimeZone:` API is called.
-    internal static var `default` : TimeZone! {
+    package static var `default` : TimeZone! {
         get {
             TimeZoneCache.cache.default
         }
@@ -186,28 +182,16 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz.nextDaylightSavingTimeTransition(after: date)
     }
 
-    /// Returns an array of strings listing the identifier of all the time zones known to the system.
-    public static var knownTimeZoneIdentifiers : [String] {
-        TimeZoneCache.cache.knownTimeZoneIdentifiers()
-    }
-
     /// Returns the mapping of abbreviations to time zone identifiers.
     public static var abbreviationDictionary : [String : String] {
         get {
+            // TODO: We may want to consider changing this for Essentials, as it returns a list of abbreviations which only Internationalization supports
             TimeZoneCache.cache.timeZoneAbbreviations()
         }
         set {
             TimeZoneCache.cache.setTimeZoneAbbreviations(newValue)
         }
     }
-
-#if FOUNDATION_FRAMEWORK
-    /// Returns the time zone data version.
-    public static var timeZoneDataVersion : String {
-        // At this time only available in Framework build because of dependency on ICU. When TimeZone sinks to FoundationEssentials, we can make this available everywhere as an extension on TimeZone from FoundationInternationalization.
-        _TimeZoneICU.timeZoneDataVersion
-    }
-#endif
 
     /// Returns the date of the next (after the current instant) daylight saving time transition for the time zone. Depending on the time zone, the value of this property may represent a change of the time zone's offset from GMT. Returns `nil` if the time zone does not currently observe daylight saving time.
     public var nextDaylightSavingTimeTransition: Date? {
@@ -223,8 +207,8 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public static var gmt: TimeZone { TimeZone(secondsFromGMT: 0)! }
 
-    internal static let cldrKeywordKey = ICUCLDRKey("tz")
-    internal static let legacyKeywordKey = ICULegacyKey("timezone")
+    package static let cldrKeywordKey = ICUCLDRKey("tz")
+    package static let legacyKeywordKey = ICULegacyKey("timezone")
 
     // MARK: -
 
