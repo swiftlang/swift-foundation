@@ -23,25 +23,463 @@ import FoundationEssentials
 */
 @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct DateComponents : Hashable, Equatable, Sendable {
-    internal var _calendar: Calendar?
-    internal var _timeZone: TimeZone?
-    internal var _era: Int?
-    internal var _year: Int?
-    internal var _month: Int?
-    internal var _day: Int?
-    internal var _hour: Int?
-    internal var _minute: Int?
-    internal var _second: Int?
-    internal var _nanosecond: Int?
-    internal var _weekday: Int?
-    internal var _weekdayOrdinal: Int?
-    internal var _quarter: Int?
-    internal var _week: Int?
-    internal var _weekOfMonth: Int?
-    internal var _weekOfYear: Int?
-    internal var _yearForWeekOfYear: Int?
-    internal var _isLeapMonth: Bool?
+    internal enum Storage: Sendable {
+        case none
+        case inline(_InlineStorage)
+        case full(_FullStorage)
+    }
 
+    var components: ComponentSet
+    var storage: Storage
+}
+
+@available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension DateComponents {
+    var areComponentsInline: Bool {
+        components.isStrictSubset(
+            of: [.era, .year, .month, .day, .hour, .minute, .second]
+        )
+    }
+
+    mutating func withStorage(
+        forcePromote: Bool = false,
+        inline: ((inout _InlineStorage) -> ())? = nil,
+        full: (_FullStorage) -> ()
+    ) {
+        var fullStorage: _FullStorage
+
+        switch storage {
+        case .none:
+            if areComponentsInline, !forcePromote {
+                var inlineStorage = _InlineStorage()
+
+                inline?(&inlineStorage)
+
+                storage = .inline(inlineStorage)
+                return
+            }
+
+            fullStorage = _FullStorage()
+
+        case .inline(let inlineStorage):
+            if areComponentsInline, !forcePromote {
+                var inlineStorage = inlineStorage
+
+                inline?(&inlineStorage)
+
+                storage = .inline(inlineStorage)
+                return
+            }
+
+            fullStorage = _FullStorage(from: inlineStorage)
+
+        case .full(let previousFullStorage):
+            fullStorage = previousFullStorage
+
+            // Ensure uniqueness of the local copy.
+            storage = .none
+        }
+
+        guard isKnownUniquelyReferenced(&fullStorage) else {
+            let newStorage = fullStorage.copy()
+
+            full(newStorage)
+
+            storage = .full(newStorage)
+            return
+        }
+
+        full(fullStorage)
+
+        storage = .full(fullStorage)
+    }
+
+    subscript(_ component: ComponentSet) -> Int? {
+        get {
+            guard component.isSubset(of: components) else {
+                return nil
+            }
+
+            switch storage {
+            case .none:
+                return nil
+
+            case .inline(let value):
+                switch component {
+                case .era:
+                    return Int(value.era)
+                case .year:
+                    return Int(value.year)
+                case .month:
+                    return Int(value.month)
+                case .day:
+                    return Int(value.day)
+                case .hour:
+                    return Int(value.hour)
+                case .minute:
+                    return Int(value.minute)
+                case .second:
+                    return Int(value.second)
+                default:
+                    return nil
+                }
+
+            case .full(let fullStorage):
+                switch component {
+                case .era:
+                    return fullStorage.era
+                case .year:
+                    return fullStorage.year
+                case .month:
+                    return fullStorage.month
+                case .day:
+                    return fullStorage.day
+                case .hour:
+                    return fullStorage.hour
+                case .minute:
+                    return fullStorage.minute
+                case .second:
+                    return fullStorage.second
+                case .nanosecond:
+                    return fullStorage.nanosecond
+                case .weekday:
+                    return fullStorage.weekday
+                case .weekdayOrdinal:
+                    return fullStorage.weekdayOrdinal
+                case .quarter:
+                    return fullStorage.quarter
+                case .week:
+                    return fullStorage.week
+                case .weekOfMonth:
+                    return fullStorage.weekOfMonth
+                case .weekOfYear:
+                    return fullStorage.weekOfYear
+                case .yearForWeekOfYear:
+                    return fullStorage.yearForWeekOfYear
+                default:
+                    return nil
+                }
+            }
+        }
+
+        set {
+            guard let value = newValue else {
+                components.remove(component)
+                return
+            }
+
+            components.insert(component)
+
+            var shouldPromoteToFull = false
+
+            // If the value we're setting is larger than a UInt16 and we're
+            // still inline, then we need more storage for the value, so upgrade
+            // to full storage.
+            if areComponentsInline, UInt16(exactly: value) == nil {
+                shouldPromoteToFull = true
+            }
+
+            withStorage(forcePromote: shouldPromoteToFull) {
+                switch component {
+                case .era:
+                    $0.era = UInt16(value)
+                case .year:
+                    $0.year = UInt16(value)
+                case .month:
+                    $0.month = UInt16(value)
+                case .day:
+                    $0.day = UInt16(value)
+                case .hour:
+                    $0.hour = UInt16(value)
+                case .minute:
+                    $0.minute = UInt16(value)
+                case .second:
+                    $0.second = UInt16(value)
+                default:
+                    break
+                }
+            } full: {
+                switch component {
+                case .era:
+                    $0.era = value
+                case .year:
+                    $0.year = value
+                case .month:
+                    $0.month = value
+                case .day:
+                    $0.day = value
+                case .hour:
+                    $0.hour = value
+                case .minute:
+                    $0.minute = value
+                case .second:
+                    $0.second = value
+                case .nanosecond:
+                    $0.nanosecond = value
+                case .weekday:
+                    $0.weekday = value
+                case .weekdayOrdinal:
+                    $0.weekdayOrdinal = value
+                case .quarter:
+                    $0.quarter = value
+                case .week:
+                    $0.week = value
+                case .weekOfMonth:
+                    $0.weekOfMonth = value
+                case .weekOfYear:
+                    $0.weekOfYear = value
+                case .yearForWeekOfYear:
+                    $0.yearForWeekOfYear = value
+                default:
+                    break
+                }
+            }
+        }
+    }
+
+    var _calendar: Calendar? {
+        get {
+            guard components.contains(.calendar),
+                  case .full(let fullStorage) = storage else {
+                return nil
+            }
+
+            return fullStorage.calendar
+        }
+
+        set {
+            guard let value = newValue else {
+                components.remove(.calendar)
+                return
+            }
+
+            components.insert(.calendar)
+
+            withStorage {
+                $0.calendar = value
+            }
+        }
+    }
+
+    var _timeZone: TimeZone? {
+        get {
+            guard components.contains(.timeZone),
+                  case .full(let fullStorage) = storage else {
+                return nil
+            }
+
+            return fullStorage.timeZone
+        }
+
+        set {
+            guard let value = newValue else {
+                components.remove(.timeZone)
+                return
+            }
+
+            components.insert(.timeZone)
+
+            withStorage {
+                $0.timeZone = value
+            }
+        }
+    }
+
+    var _isLeapMonth: Bool? {
+        get {
+            guard components.contains(.isLeapMonth),
+                  case .full(let fullStorage) = storage else {
+                return nil
+            }
+
+            return fullStorage.isLeapMonth
+        }
+
+        set {
+            guard let value = newValue else {
+                components.remove(.isLeapMonth)
+                return
+            }
+
+            components.insert(.isLeapMonth)
+
+            withStorage {
+                $0.isLeapMonth = value
+            }
+        }
+    }
+}
+
+@available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension DateComponents {
+    internal struct _InlineStorage: Sendable {
+        var era: UInt16 = 0
+        var second: UInt16 = 0
+        var minute: UInt16 = 0
+        var hour: UInt16 = 0
+        var day: UInt16 = 0
+        var month: UInt16 = 0
+        var year: UInt16 = 0
+    }
+
+    // This is marked unchecked because by itself it is not sendable, but we do
+    // uniqueness checks within date components to ensure the full storage we're
+    // mutating is always unique.
+    internal final class _FullStorage: @unchecked Sendable {
+        var calendar: Calendar? = nil
+        var timeZone: TimeZone? = nil
+        var era: Int? = nil
+        var year: Int? = nil
+        var month: Int? = nil
+        var day: Int? = nil
+        var hour: Int? = nil
+        var minute: Int? = nil
+        var second: Int? = nil
+        var nanosecond: Int? = nil
+        var weekday: Int? = nil
+        var weekdayOrdinal: Int? = nil
+        var quarter: Int? = nil
+        var week: Int? = nil
+        var weekOfMonth: Int? = nil
+        var weekOfYear: Int? = nil
+        var yearForWeekOfYear: Int? = nil
+        var isLeapMonth: Bool? = nil
+
+        init() {}
+
+        init(from inline: _InlineStorage) {
+            era = Int(inline.era)
+            year = Int(inline.year)
+            month = Int(inline.month)
+            day = Int(inline.day)
+            hour = Int(inline.hour)
+            minute = Int(inline.minute)
+            second = Int(inline.second)
+        }
+
+        func copy() -> _FullStorage {
+            let newInstance = _FullStorage()
+
+            newInstance.calendar = calendar
+            newInstance.timeZone = timeZone
+            newInstance.era = era
+            newInstance.year = year
+            newInstance.month = month
+            newInstance.day = day
+            newInstance.hour = hour
+            newInstance.minute = minute
+            newInstance.second = second
+            newInstance.nanosecond = nanosecond
+            newInstance.weekday = weekday
+            newInstance.weekdayOrdinal = weekdayOrdinal
+            newInstance.quarter = quarter
+            newInstance.week = week
+            newInstance.weekOfMonth = weekOfMonth
+            newInstance.weekOfYear = weekOfYear
+            newInstance.yearForWeekOfYear = yearForWeekOfYear
+            newInstance.isLeapMonth = isLeapMonth
+
+            return newInstance
+        }
+    }
+}
+
+@available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension DateComponents {
+    /// Bitwise set of which components in a `DateComponents` are interesting to use. More efficient than`Set<Component>`.
+    internal struct ComponentSet: OptionSet {
+        let rawValue: UInt32
+
+        static let era = ComponentSet(rawValue: 1 << 0)
+        static let year = ComponentSet(rawValue: 1 << 1)
+        static let month = ComponentSet(rawValue: 1 << 2)
+        static let day = ComponentSet(rawValue: 1 << 3)
+        static let hour = ComponentSet(rawValue: 1 << 4)
+        static let minute = ComponentSet(rawValue: 1 << 5)
+        static let second = ComponentSet(rawValue: 1 << 6)
+        static let weekday = ComponentSet(rawValue: 1 << 7)
+        static let weekdayOrdinal = ComponentSet(rawValue: 1 << 8)
+        static let quarter = ComponentSet(rawValue: 1 << 9)
+        static let weekOfMonth = ComponentSet(rawValue: 1 << 10)
+        static let weekOfYear = ComponentSet(rawValue: 1 << 11)
+        static let yearForWeekOfYear = ComponentSet(rawValue: 1 << 12)
+        static let nanosecond = ComponentSet(rawValue: 1 << 13)
+        static let calendar = ComponentSet(rawValue: 1 << 14)
+        static let timeZone = ComponentSet(rawValue: 1 << 15)
+        static let isLeapMonth = ComponentSet(rawValue: 1 << 16)
+        static let week = ComponentSet(rawValue: 1 << 17)
+
+        init(rawValue: UInt32) { self.rawValue = rawValue }
+
+        init(_ components: Set<Calendar.Component>) {
+            self.rawValue = components.reduce(ComponentSet.RawValue(), { partialResult, c in
+                return partialResult | c.componentSetValue
+            })
+        }
+
+        init(_ components: Calendar.Component...) {
+            self.rawValue = components.reduce(ComponentSet.RawValue(), { partialResult, c in
+                return partialResult | c.componentSetValue
+            })
+        }
+
+        init(single component: Calendar.Component) {
+            self.rawValue = component.componentSetValue
+        }
+
+        var count: Int {
+            rawValue.nonzeroBitCount
+        }
+
+        var set: Set<Calendar.Component> {
+            var result: Set<Calendar.Component> = Set()
+            if contains(.era) { result.insert(.era) }
+            if contains(.year) { result.insert(.year) }
+            if contains(.month) { result.insert(.month) }
+            if contains(.day) { result.insert(.day) }
+            if contains(.hour) { result.insert(.hour) }
+            if contains(.minute) { result.insert(.minute) }
+            if contains(.second) { result.insert(.second) }
+            if contains(.weekday) { result.insert(.weekday) }
+            if contains(.weekdayOrdinal) { result.insert(.weekdayOrdinal) }
+            if contains(.quarter) { result.insert(.quarter) }
+            if contains(.weekOfMonth) { result.insert(.weekOfMonth) }
+            if contains(.weekOfYear) { result.insert(.weekOfYear) }
+            if contains(.yearForWeekOfYear) { result.insert(.yearForWeekOfYear) }
+            if contains(.nanosecond) { result.insert(.nanosecond) }
+            if contains(.calendar) { result.insert(.calendar) }
+            if contains(.timeZone) { result.insert(.timeZone) }
+            if contains(.isLeapMonth) { result.insert(.isLeapMonth) }
+            return result
+        }
+
+        var highestSetUnit: Calendar.Component? {
+            if self.contains(.era) { return .era }
+            if self.contains(.year) { return .year }
+            if self.contains(.quarter) { return .quarter }
+            if self.contains(.month) { return .month }
+            if self.contains(.day) { return .day }
+            if self.contains(.hour) { return .hour }
+            if self.contains(.minute) { return .minute }
+            if self.contains(.second) { return .second }
+            if self.contains(.weekday) { return .weekday }
+            if self.contains(.weekdayOrdinal) { return .weekdayOrdinal }
+            if self.contains(.weekOfMonth) { return .weekOfMonth }
+            if self.contains(.weekOfYear) { return .weekOfYear }
+            if self.contains(.yearForWeekOfYear) { return .yearForWeekOfYear }
+            if self.contains(.nanosecond) { return .nanosecond }
+
+            // The algorithms that call this function assume that isLeapMonth counts as a 'highest unit set', but the order is after nanosecond.
+            if self.contains(.isLeapMonth) { return .isLeapMonth }
+
+            // The calendar and timeZone properties do not count as a 'highest unit set', since they are not ordered in time like the others are.
+            return nil
+        }
+    }
+}
+
+@available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension DateComponents {
     /// Initialize a `DateComponents`, optionally specifying values for its fields.
     public init(calendar: Calendar? = nil,
          timeZone: TimeZone? = nil,
@@ -59,6 +497,9 @@ public struct DateComponents : Hashable, Equatable, Sendable {
          weekOfMonth: Int? = nil,
          weekOfYear: Int? = nil,
          yearForWeekOfYear: Int? = nil) {
+
+        self.components = []
+        self.storage = .none
 
         self.calendar = calendar
         self.timeZone = timeZone
@@ -121,99 +562,99 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     /// An era or count of eras.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var era: Int? {
-        get { _era }
-        set { _era = converted(newValue) }
+        get { self[.era] }
+        set { self[.era] = converted(newValue) }
     }
 
     /// A year or count of years.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var year: Int? {
-        get { _year }
-        set { _year = converted(newValue) }
+        get { self[.year] }
+        set { self[.year] = converted(newValue) }
     }
 
     /// A month or count of months.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var month: Int? {
-        get { _month }
-        set { _month = converted(newValue) }
+        get { self[.month] }
+        set { self[.month] = converted(newValue) }
     }
 
     /// A day or count of days.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var day: Int? {
-        get { _day }
-        set { _day = converted(newValue) }
+        get { self[.day] }
+        set { self[.day] = converted(newValue) }
     }
 
     /// An hour or count of hours.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var hour: Int? {
-        get { _hour }
-        set { _hour = converted(newValue) }
+        get { self[.hour] }
+        set { self[.hour] = converted(newValue) }
     }
 
     /// A minute or count of minutes.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var minute: Int? {
-        get { _minute }
-        set { _minute = converted(newValue) }
+        get { self[.minute] }
+        set { self[.minute] = converted(newValue) }
     }
 
     /// A second or count of seconds.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var second: Int? {
-        get { _second }
-        set { _second = converted(newValue) }
+        get { self[.second] }
+        set { self[.second] = converted(newValue) }
     }
 
     /// A nanosecond or count of nanoseconds.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var nanosecond: Int? {
-        get { _nanosecond }
-        set { _nanosecond = converted(newValue) }
+        get { self[.nanosecond] }
+        set { self[.nanosecond] = converted(newValue) }
     }
 
     /// A weekday or count of weekdays.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var weekday: Int? {
-        get { _weekday }
-        set { _weekday = converted(newValue) }
+        get { self[.weekday] }
+        set { self[.weekday] = converted(newValue) }
     }
 
     /// A weekday ordinal or count of weekday ordinals.
     /// Weekday ordinal units represent the position of the weekday within the next larger calendar unit, such as the month. For example, 2 is the weekday ordinal unit for the second Friday of the month.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var weekdayOrdinal: Int? {
-        get { _weekdayOrdinal }
-        set { _weekdayOrdinal = converted(newValue) }
+        get { self[.weekdayOrdinal] }
+        set { self[.weekdayOrdinal] = converted(newValue) }
     }
 
     /// A quarter or count of quarters.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var quarter: Int? {
-        get { _quarter }
-        set { _quarter = converted(newValue) }
+        get { self[.quarter] }
+        set { self[.quarter] = converted(newValue) }
     }
 
     /// A week of the month or a count of weeks of the month.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var weekOfMonth: Int? {
-        get { _weekOfMonth }
-        set { _weekOfMonth = converted(newValue) }
+        get { self[.weekOfMonth] }
+        set { self[.weekOfMonth] = converted(newValue) }
     }
 
     /// A week of the year or count of the weeks of the year.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var weekOfYear: Int? {
-        get { _weekOfYear }
-        set { _weekOfYear = converted(newValue) }
+        get { self[.weekOfYear] }
+        set { self[.weekOfYear] = converted(newValue) }
     }
 
     /// This exists only for compatibility with NSDateComponents deprecated `week` value.
     internal var week: Int? {
-        get { _week }
-        set { _week = converted(newValue) }
+        get { self[.week] }
+        set { self[.week] = converted(newValue) }
     }
 
     /// The ISO 8601 week-numbering year of the receiver.
@@ -223,8 +664,8 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     /// You can use the yearForWeekOfYear property with the weekOfYear and weekday properties to get the date corresponding to a particular weekday of a given week of a year. For example, the 6th day of the 53rd week of the year 2005 (ISO 2005-W53-6) corresponds to Sat 1 January 2005 on the Gregorian calendar.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
     public var yearForWeekOfYear: Int? {
-        get { _yearForWeekOfYear }
-        set { _yearForWeekOfYear = converted(newValue) }
+        get { self[.yearForWeekOfYear] }
+        set { self[.yearForWeekOfYear] = converted(newValue) }
     }
 
     /// Set to true if these components represent a leap month.
@@ -325,13 +766,13 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     /// If the time zone property is set in the `DateComponents`, it is used.
     @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func isValidDate(in calendar: Calendar) -> Bool {
-        if let ns = _nanosecond, 1000 * 1000 * 1000 <= ns {
+        if let ns = nanosecond, 1000 * 1000 * 1000 <= ns {
             return false
         }
 
         var date: Date?
 
-        if let ns = _nanosecond, ns >= 0 {
+        if let ns = nanosecond, ns >= 0 {
             // If we have nanoseconds set, clear it temporarily
             var components = self
             components.nanosecond = 0
@@ -349,19 +790,19 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 
         let newComponents = calendar.dateComponents(Set(units), from: date)
 
-        if let era = _era, era != newComponents.era { return false }
-        if let year = _year, year != newComponents.year { return false }
-        if let quarter = _quarter, quarter != newComponents.quarter { return false }
-        if let month = _month, month != newComponents.month { return false }
-        if let day = _day, day != newComponents.day { return false }
-        if let hour = _hour, hour != newComponents.hour { return false }
-        if let minute = _minute, minute != newComponents.minute { return false }
-        if let second = _second, second != newComponents.second { return false }
-        if let weekday = _weekday, weekday != newComponents.weekday { return false }
-        if let weekdayOrdinal = _weekdayOrdinal, weekdayOrdinal != newComponents.weekdayOrdinal { return false }
-        if let weekOfMonth = _weekOfMonth, weekOfMonth != newComponents.weekOfMonth { return false }
-        if let weekOfYear = _weekOfYear, weekOfYear != newComponents.weekOfYear { return false }
-        if let yearForWeekOfYear = _yearForWeekOfYear, yearForWeekOfYear != newComponents.yearForWeekOfYear { return false }
+        if let era, era != newComponents.era { return false }
+        if let year, year != newComponents.year { return false }
+        if let quarter, quarter != newComponents.quarter { return false }
+        if let month, month != newComponents.month { return false }
+        if let day, day != newComponents.day { return false }
+        if let hour, hour != newComponents.hour { return false }
+        if let minute, minute != newComponents.minute { return false }
+        if let second, second != newComponents.second { return false }
+        if let weekday, weekday != newComponents.weekday { return false }
+        if let weekdayOrdinal, weekdayOrdinal != newComponents.weekdayOrdinal { return false }
+        if let weekOfMonth, weekOfMonth != newComponents.weekOfMonth { return false }
+        if let weekOfYear, weekOfYear != newComponents.weekOfYear { return false }
+        if let yearForWeekOfYear, yearForWeekOfYear != newComponents.yearForWeekOfYear { return false }
 
         return true
     }
@@ -369,23 +810,23 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     // MARK: -
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(_calendar)
-        hasher.combine(_timeZone)
-        hasher.combine(_era)
-        hasher.combine(_year)
-        hasher.combine(_month)
-        hasher.combine(_day)
-        hasher.combine(_hour)
-        hasher.combine(_minute)
-        hasher.combine(_second)
-        hasher.combine(_nanosecond)
-        hasher.combine(_weekday)
-        hasher.combine(_weekdayOrdinal)
-        hasher.combine(_quarter)
-        hasher.combine(_weekOfMonth)
-        hasher.combine(_weekOfYear)
-        hasher.combine(_yearForWeekOfYear)
-        hasher.combine(_isLeapMonth)
+        hasher.combine(calendar)
+        hasher.combine(timeZone)
+        hasher.combine(era)
+        hasher.combine(year)
+        hasher.combine(month)
+        hasher.combine(day)
+        hasher.combine(hour)
+        hasher.combine(minute)
+        hasher.combine(second)
+        hasher.combine(nanosecond)
+        hasher.combine(weekday)
+        hasher.combine(weekdayOrdinal)
+        hasher.combine(quarter)
+        hasher.combine(weekOfMonth)
+        hasher.combine(weekOfYear)
+        hasher.combine(yearForWeekOfYear)
+        hasher.combine(isLeapMonth)
     }
 
     // MARK: - Bridging Helpers
@@ -562,24 +1003,24 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSDateComponents {
         let ns = NSDateComponents()
-        if let _calendar { ns.calendar = _calendar }
-        if let _timeZone { ns.timeZone = _timeZone }
-        if let _era { ns.era = _era }
-        if let _year { ns.year = _year }
-        if let _month { ns.month = _month }
-        if let _day { ns.day = _day }
-        if let _hour { ns.hour = _hour }
-        if let _minute { ns.minute = _minute }
-        if let _second { ns.second = _second }
-        if let _nanosecond { ns.nanosecond = _nanosecond }
-        if let _weekday { ns.weekday = _weekday }
-        if let _weekdayOrdinal { ns.weekdayOrdinal = _weekdayOrdinal }
-        if let _quarter { ns.quarter = _quarter }
-        if let _weekOfMonth { ns.weekOfMonth = _weekOfMonth }
-        if let _weekOfYear { ns.weekOfYear = _weekOfYear }
-        if let _yearForWeekOfYear { ns.yearForWeekOfYear = _yearForWeekOfYear }
-        if let _isLeapMonth { ns.isLeapMonth = _isLeapMonth }
-        if let _week { __NSDateComponentsSetWeek(ns, _week) }
+        if let calendar { ns.calendar = calendar }
+        if let timeZone { ns.timeZone = timeZone }
+        if let era { ns.era = era }
+        if let year { ns.year = year }
+        if let month { ns.month = month }
+        if let day { ns.day = day }
+        if let hour { ns.hour = hour }
+        if let minute { ns.minute = minute }
+        if let second { ns.second = second }
+        if let nanosecond { ns.nanosecond = nanosecond }
+        if let weekday { ns.weekday = weekday }
+        if let weekdayOrdinal { ns.weekdayOrdinal = weekdayOrdinal }
+        if let quarter { ns.quarter = quarter }
+        if let weekOfMonth { ns.weekOfMonth = weekOfMonth }
+        if let weekOfYear { ns.weekOfYear = weekOfYear }
+        if let yearForWeekOfYear { ns.yearForWeekOfYear = yearForWeekOfYear }
+        if let isLeapMonth { ns.isLeapMonth = isLeapMonth }
+        if let week { __NSDateComponentsSetWeek(ns, week) }
         return ns
     }
 

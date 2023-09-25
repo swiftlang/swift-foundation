@@ -77,76 +77,62 @@ extension Calendar {
 extension DateComponents {
     fileprivate func _validate(for calendar: Calendar) -> Bool {
         var dcValuesAreValid = true
-        var hasAtLeastOneFieldSet = false
+        let hasAtLeastOneFieldSet = components.rawValue != 0
 
-        if let v = self.era {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .era) { dcValuesAreValid = false }
+        if let v = self.era, !calendar.value(v, isValidFor: .era) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.year {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .year) { dcValuesAreValid = false }
+        if let v = self.year, !calendar.value(v, isValidFor: .year) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.quarter {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .quarter) { dcValuesAreValid = false }
+        if let v = self.quarter, !calendar.value(v, isValidFor: .quarter) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.month {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .month) { dcValuesAreValid = false }
+        if let v = self.month, !calendar.value(v, isValidFor: .month) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.day {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .day) { dcValuesAreValid = false }
+        if let v = self.day, !calendar.value(v, isValidFor: .day) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.hour {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .hour) { dcValuesAreValid = false }
+        if let v = self.hour, !calendar.value(v, isValidFor: .hour) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.minute {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .minute) { dcValuesAreValid = false }
+        if let v = self.minute, !calendar.value(v, isValidFor: .minute) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.second {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .second) { dcValuesAreValid = false }
+        if let v = self.second, !calendar.value(v, isValidFor: .second) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.weekday {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .weekday) { dcValuesAreValid = false }
+        if let v = self.weekday, !calendar.value(v, isValidFor: .weekday) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.weekdayOrdinal {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .weekdayOrdinal) { dcValuesAreValid = false }
+        if let v = self.weekdayOrdinal, !calendar.value(v, isValidFor: .weekdayOrdinal) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.weekOfMonth {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .weekOfMonth) { dcValuesAreValid = false }
+        if let v = self.weekOfMonth, !calendar.value(v, isValidFor: .weekOfMonth) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.weekOfYear {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .weekOfYear) { dcValuesAreValid = false }
+        if let v = self.weekOfYear, !calendar.value(v, isValidFor: .weekOfYear) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.yearForWeekOfYear {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .yearForWeekOfYear) { dcValuesAreValid = false }
+        if let v = self.yearForWeekOfYear, !calendar.value(v, isValidFor: .yearForWeekOfYear) {
+            dcValuesAreValid = false
         }
 
-        if let v = self.nanosecond {
-            hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .nanosecond) { dcValuesAreValid = false }
+        if let v = self.nanosecond, !calendar.value(v, isValidFor: .nanosecond) {
+            dcValuesAreValid = false
         }
 
         if !hasAtLeastOneFieldSet && (isLeapMonth ?? false) {
@@ -157,64 +143,47 @@ extension DateComponents {
     }
 
     var highestSetUnit: Calendar.Component? {
-        // A note on performance: this approach is much faster than using key paths, which require a lot more allocations.
-        if self.era != nil { return .era }
-        if self.year != nil { return .year }
-        if self.quarter != nil { return .quarter }
-        if self.month != nil { return .month }
-        if self.day != nil { return .day }
-        if self.hour != nil { return .hour }
-        if self.minute != nil { return .minute }
-        if self.second != nil { return .second }
+        if components.contains(.era) { return .era }
+        if components.contains(.year) { return .year }
+        if components.contains(.quarter) { return .quarter }
+        if components.contains(.month) { return .month }
+        if components.contains(.day) { return .day }
+        if components.contains(.hour) { return .hour }
+        if components.contains(.minute) { return .minute }
+        if components.contains(.second) { return .second }
 
         // It may seem a bit odd to check in this order, but it's been a longstanding behavior
-        if self.weekday != nil { return .weekday }
-        if self.weekdayOrdinal != nil { return .weekdayOrdinal }
-        if self.weekOfMonth != nil { return .weekOfMonth }
-        if self.weekOfYear != nil { return .weekOfYear }
-        if self.yearForWeekOfYear != nil { return .yearForWeekOfYear }
-        if self.nanosecond != nil { return .nanosecond }
+        if components.contains(.weekday) { return .weekday }
+        if components.contains(.weekdayOrdinal) { return .weekdayOrdinal }
+        if components.contains(.weekOfMonth) { return .weekOfMonth }
+        if components.contains(.weekOfYear) { return .weekOfYear }
+        if components.contains(.yearForWeekOfYear) { return .yearForWeekOfYear }
+        if components.contains(.nanosecond) { return .nanosecond }
         return nil
     }
 
     var lowestSetUnit: Calendar.Component? {
-        // A note on performance: this approach is much faster than using key paths, which require a lot more allocations.
-        if self.nanosecond != nil { return .nanosecond }
+        if components.contains(.nanosecond) { return .nanosecond }
 
         // It may seem a bit odd to check in this order, but it's been a longstanding behavior
-        if self.yearForWeekOfYear != nil { return .yearForWeekOfYear }
-        if self.weekOfYear != nil { return .weekOfYear }
-        if self.weekOfMonth != nil { return .weekOfMonth }
-        if self.weekdayOrdinal != nil { return .weekdayOrdinal }
-        if self.weekday != nil { return .weekday }
-        if self.second != nil { return .second }
-        if self.minute != nil { return .minute }
-        if self.hour != nil { return .hour }
-        if self.day != nil { return .day }
-        if self.month != nil { return .month }
-        if self.quarter != nil { return .quarter }
-        if self.year != nil { return .year }
-        if self.era != nil { return .era }
+        if components.contains(.yearForWeekOfYear) { return .yearForWeekOfYear }
+        if components.contains(.weekOfYear) { return .weekOfYear }
+        if components.contains(.weekOfMonth) { return .weekOfMonth }
+        if components.contains(.weekdayOrdinal) { return .weekdayOrdinal }
+        if components.contains(.weekday) { return .weekday }
+        if components.contains(.second) { return .second }
+        if components.contains(.minute) { return .minute }
+        if components.contains(.hour) { return .hour }
+        if components.contains(.day) { return .day }
+        if components.contains(.month) { return .month }
+        if components.contains(.quarter) { return .quarter }
+        if components.contains(.year) { return .year }
+        if components.contains(.era) { return .era }
         return nil
     }
 
-    var setUnits: Calendar.ComponentSet {
-        var units = Calendar.ComponentSet()
-        if self.era != nil { units.insert(.era) }
-        if self.year != nil { units.insert(.year) }
-        if self.quarter != nil { units.insert(.quarter) }
-        if self.month != nil { units.insert(.month) }
-        if self.day != nil { units.insert(.day) }
-        if self.hour != nil { units.insert(.hour) }
-        if self.minute != nil { units.insert(.minute) }
-        if self.second != nil { units.insert(.second) }
-        if self.weekday != nil { units.insert(.weekday) }
-        if self.weekdayOrdinal != nil { units.insert(.weekdayOrdinal) }
-        if self.weekOfMonth != nil { units.insert(.weekOfMonth) }
-        if self.weekOfYear != nil { units.insert(.weekOfYear) }
-        if self.yearForWeekOfYear != nil { units.insert(.yearForWeekOfYear) }
-        if self.nanosecond != nil { units.insert(.nanosecond) }
-        return units
+    var setUnits: DateComponents.ComponentSet {
+        components
     }
 
     var setUnitCount: Int {
@@ -222,8 +191,8 @@ extension DateComponents {
     }
 
     /// Mismatched units compared to another `DateComponents`, in highest-to-lowest order. Includes `isLeapMonth`, which is the last element if present. An empty array indicates no mismatched units.
-    func mismatchedUnits(comparedTo other: DateComponents) -> Calendar.ComponentSet {
-        var mismatched = Calendar.ComponentSet()
+    func mismatchedUnits(comparedTo other: DateComponents) -> DateComponents.ComponentSet {
+        var mismatched = DateComponents.ComponentSet()
 
         if self.era != other.era { mismatched.insert(.era) }
         if self.year != other.year { mismatched.insert(.year) }
@@ -2193,7 +2162,7 @@ extension Calendar {
 
     // MARK: -
 
-    private func date(_ date: Date, containsMatchingComponents compsToMatch: DateComponents) -> (mismatchedUnits: Calendar.ComponentSet, contains: Bool) {
+    private func date(_ date: Date, containsMatchingComponents compsToMatch: DateComponents) -> (mismatchedUnits: DateComponents.ComponentSet, contains: Bool) {
         var dateMatchesComps = true
         var compsFromDate = _dateComponents(compsToMatch.setUnits, from: date)
 

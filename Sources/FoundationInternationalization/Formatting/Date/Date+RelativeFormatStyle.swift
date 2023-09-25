@@ -226,10 +226,12 @@ extension Date.RelativeFormatStyle : FormatStyle {}
 
 extension DateComponents {
     var nonZeroComponentsAndValue: [CalendarComponentAndValue] {
-        return ICURelativeDateFormatter.sortedAllowedComponents.filter({
-            self.value(for: $0) != 0
-        }).map { component in
-            return (component, self.value(for: component)!)
+        ICURelativeDateFormatter.sortedAllowedComponents.compactMap {
+            guard let value = self.value(for: $0), value != 0 else {
+                return nil
+            }
+
+            return ($0, value)
         }
     }
 }
