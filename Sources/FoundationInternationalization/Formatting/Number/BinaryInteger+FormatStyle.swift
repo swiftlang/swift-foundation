@@ -48,7 +48,7 @@ extension BinaryInteger {
             return fastForm.numericStringRepresentation
         }
 
-        assert(0 != self) // Zero isn't handled correctly in the algorithm below (it will result in an empty array) because it's more work to do so, which is unnecessary as the fast path above should handle that case.
+        assert(.zero != self) // Zero isn't handled correctly in the algorithm below (it will result in an empty array) because it's more work to do so, which is unnecessary as the fast path above should handle that case.
 
         // The algorithm here is a little complicated in the details, but conceptually it's fairly simple.  In a nutshell, the value of self is repeatedly divided by a special constant (wordMagnitude) and the remainder at each step is converted to its numeric string representation, and then those are glued together for the final result.  The details are mostly just about dealing with things like negative values and buffer sizing.
         //
@@ -69,7 +69,7 @@ extension BinaryInteger {
         let wordStrings = ContiguousArray<ContiguousArray<UInt8>>(unsafeUninitializedCapacity: wordCount) { buffer, initialisedCount in
             var tmp = self
 
-            while 0 != tmp {
+            while .zero != tmp {
                 let (quotient, remainder) = tmp.quotientAndRemainder(dividingBy: wordMagnitude)
 
                 // By definition the remainder has to be a single word, so we can avoid working on a BinaryInteger generically and just use the first word directly, which is concretely UInt.
@@ -133,7 +133,7 @@ extension BinaryInteger {
                 overflowed = true
             }
 
-            if !overflowed || 0 == nextValue {
+            if !overflowed || .zero == nextValue {
                 count += 1
             }
 
@@ -179,7 +179,7 @@ extension BinaryInteger where Self == UInt {
             var tmp = self
 
             // Keep dividing by ten until the value disappears.  Each time we divide, we get one more digit for the output as the remainder of the division.  Since with this approach digits "pop off" from least significant to most, the output buffer is filled in reverse.
-            while 0 != tmp {
+            while .zero != tmp {
                 let (quotient, remainderAsSelf) = tmp.quotientAndRemainder(dividingBy: 10)
 
                 initialisedCount += 1
