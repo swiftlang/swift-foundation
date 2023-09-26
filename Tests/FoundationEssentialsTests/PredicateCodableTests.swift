@@ -57,7 +57,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 final class PredicateCodableTests: XCTestCase {
     
     struct Object : Equatable, PredicateCodableKeyPathProviding {

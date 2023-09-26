@@ -17,7 +17,7 @@ import TestSupport
 // Predicate does not back-deploy to older Darwin versions
 #if FOUNDATION_FRAMEWORK || os(Linux) || os(Windows)
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 final class PredicateInternationalizationTests: XCTestCase {
     
     struct Object {

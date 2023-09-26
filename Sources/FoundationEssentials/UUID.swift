@@ -138,9 +138,9 @@ extension UUID : Codable {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension UUID : Comparable {
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public static func < (lhs: UUID, rhs: UUID) -> Bool {
         var leftUUID = lhs.uuid
         var rightUUID = rhs.uuid

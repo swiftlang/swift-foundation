@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct StringLocalizedStandardContains<
         Root : PredicateExpression,
@@ -41,10 +41,10 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.StringLocalizedStandardContains : StandardPredicateExpression where Root : StandardPredicateExpression, Other : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.StringLocalizedStandardContains : Codable where Root : Codable, Other : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -59,10 +59,10 @@ extension PredicateExpressions.StringLocalizedStandardContains : Codable where R
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.StringLocalizedStandardContains : Sendable where Root : Sendable, Other : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct StringLocalizedCompare<
         Root : PredicateExpression,
@@ -91,10 +91,10 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.StringLocalizedCompare : StandardPredicateExpression where Root : StandardPredicateExpression, Other : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.StringLocalizedCompare : Codable where Root : Codable, Other : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -109,7 +109,7 @@ extension PredicateExpressions.StringLocalizedCompare : Codable where Root : Cod
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.StringLocalizedCompare : Sendable where Root : Sendable, Other : Sendable {}
 
 #endif

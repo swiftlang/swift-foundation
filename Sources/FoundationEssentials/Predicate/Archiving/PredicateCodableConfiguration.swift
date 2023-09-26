@@ -15,12 +15,12 @@
 @_implementationOnly
 import ReflectionInternal
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public protocol PredicateCodableKeyPathProviding {
     static var predicateCodableKeyPaths : [String : PartialKeyPath<Self>] { get }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConvertible {
     enum AllowListType : Equatable, Sendable {
         case concrete(Type)
@@ -256,7 +256,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateCodableConfiguration {
     func _identifier(for keyPath: AnyKeyPath) -> String? {
         let concreteIdentifier = allowedKeyPaths.first {
@@ -330,7 +330,7 @@ extension PredicateCodableConfiguration {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateCodableConfiguration {
     public static let standardConfiguration: Self = {
         var configuration = Self()

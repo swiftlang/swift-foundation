@@ -241,7 +241,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
-                if #available(macOS 9999, *) {
+                if #available(macOS 14, *) {
                     input.foo
                 } else {
                     input.bar

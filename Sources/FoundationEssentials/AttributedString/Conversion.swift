@@ -29,7 +29,7 @@ extension String {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     @_alwaysEmitIntoClient
     public init(_ characters: AttributedString.CharacterView) {
-        if #available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *) {
+        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             self.init(_characters: characters)
             return
         }
@@ -39,7 +39,7 @@ extension String {
     }
     #endif
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal init(_characters: AttributedString.CharacterView) {
         self.init(_characters._characters)
