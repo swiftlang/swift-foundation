@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct ListFormatStyle<Style: FormatStyle, Base: Sequence>: FormatStyle where Base.Element == Style.FormatInput, Style.FormatOutput == String {
     private(set) var memberStyle: Style

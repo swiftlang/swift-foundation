@@ -30,7 +30,7 @@ extension Date {
         format.format(self)
     }
 #else
-    public func formatted<F: FoundationInternationalization.FormatStyle>(_ format: F) -> F.FormatOutput where F.FormatInput == Date {
+    public func formatted<F: FoundationEssentials.FormatStyle>(_ format: F) -> F.FormatOutput where F.FormatInput == Date {
         format.format(self)
     }
 #endif // FOUNDATION_FRAMEWORK
@@ -60,7 +60,7 @@ extension Date {
         self = try strategy.parse(value)
     }
 #else
-    public init<T: FoundationInternationalization.ParseStrategy>(_ value: T.ParseInput, strategy: T) throws where T.ParseOutput == Self {
+    public init<T: FoundationEssentials.ParseStrategy>(_ value: T.ParseInput, strategy: T) throws where T.ParseOutput == Self {
         self = try strategy.parse(value)
     }
 #endif // FOUNDATION_FRAMEWORK
@@ -73,7 +73,7 @@ extension Date {
     }
 #else
     @_disfavoredOverload
-    public init<T: FoundationInternationalization.ParseStrategy, Value: StringProtocol>(_ value: Value, strategy: T) throws where T.ParseOutput == Self, T.ParseInput == String {
+    public init<T: FoundationEssentials.ParseStrategy, Value: StringProtocol>(_ value: Value, strategy: T) throws where T.ParseOutput == Self, T.ParseInput == String {
         self = try strategy.parse(String(value))
     }
 #endif // FOUNDATION_FRAMEWORK

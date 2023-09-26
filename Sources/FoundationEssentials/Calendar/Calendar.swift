@@ -10,11 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
+#if canImport(Darwin)
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly import os
+#else
+package import os
 #endif
-
-#if canImport(Glibc)
+#elseif canImport(Glibc)
 import Glibc
 #endif
 
@@ -22,32 +24,13 @@ import Glibc
 import CRT
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
-
 /**
  `Calendar` encapsulates information about systems of reckoning time in which the beginning, length, and divisions of a year are defined. It provides information about the calendar and support for calendrical computations such as determining the range of a given calendrical unit and adding units to a given absolute time.
 */
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Calendar : Hashable, Equatable, Sendable {
-    // It'd be nice to use associated values here, but that ruins our ability to perform uniqueness checks on `_Calendar` for efficient copy-on-write behavior.
-    private enum Kind: Sendable {
-        case fixed
-        case autoupdating
-        #if FOUNDATION_FRAMEWORK
-        case bridged
-        #endif
-    }
-
-    private var _kind: Kind
-    private var _calendar: _Calendar!
-    #if FOUNDATION_FRAMEWORK
-    private var _bridged: _NSCalendarSwiftWrapper!
-    #endif
-
+    private var _calendar: any _CalendarProtocol & AnyObject
+    
     /// Calendar supports many different kinds of calendars. Each is identified by an identifier here.
     public enum Identifier : Sendable, CustomDebugStringConvertible {
         /// The common calendar in Europe, the Western Hemisphere, and elsewhere.
@@ -74,8 +57,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
         @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
         case islamicUmmAlQura
 
-        static let cldrKeywordKey = "ca"
-        static let legacyKeywordKey = ICULegacyKey("calendar")
+        package static let cldrKeywordKey = "ca"
+        package static let legacyKeywordKey = ICULegacyKey("calendar")
 
         public var debugDescription: String {
             self.cldrIdentifier
@@ -83,7 +66,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         /// Converts both CLDR and CF `String` identifiers to `Calendar.Identifier`.
         /// Note: The strings for both are equal except for `.ethiopicAmeteAlem` -- that is `ethioaa` for CLDR and `ethiopic-amete-alem` for CF.
-        internal init?(identifierString id: String) {
+        package init?(identifierString id: String) {
             switch id {
             case "gregorian": self = .gregorian
             case "buddhist": self = .buddhist
@@ -105,7 +88,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             }
         }
 
-        internal var cldrIdentifier: String {
+        package var cldrIdentifier: String {
             switch self {
             case .gregorian: return "gregorian"
             case .buddhist: return "buddhist"
@@ -127,7 +110,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
 
         /// Same as CLDR identifiers except for `.ethiopicAmeteAlem`.
-        internal var cfCalendarIdentifier: String {
+        package var cfCalendarIdentifier: String {
             switch self {
             case .gregorian: return "gregorian"
             case .buddhist: return "buddhist"
@@ -150,49 +133,49 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// Bitwise set of which components in a `DateComponents` are interesting to use. More efficient than`Set<Component>`.
-    internal struct ComponentSet: OptionSet {
-        let rawValue: UInt
-        init(rawValue: UInt) { self.rawValue = rawValue }
+    package struct ComponentSet: OptionSet {
+        package let rawValue: UInt
+        package init(rawValue: UInt) { self.rawValue = rawValue }
 
-        init(_ components: Set<Component>) {
+        package init(_ components: Set<Component>) {
             self.rawValue = components.reduce(ComponentSet.RawValue(), { partialResult, c in
                 return partialResult | c.componentSetValue
             })
         }
 
-        init(_ components: Component...) {
+        package init(_ components: Component...) {
             self.rawValue = components.reduce(ComponentSet.RawValue(), { partialResult, c in
                 return partialResult | c.componentSetValue
             })
         }
 
-        init(single component: Component) {
+        package init(single component: Component) {
             self.rawValue = component.componentSetValue
         }
 
-        static let era = ComponentSet(rawValue: 1 << 0)
-        static let year = ComponentSet(rawValue: 1 << 1)
-        static let month = ComponentSet(rawValue: 1 << 2)
-        static let day = ComponentSet(rawValue: 1 << 3)
-        static let hour = ComponentSet(rawValue: 1 << 4)
-        static let minute = ComponentSet(rawValue: 1 << 5)
-        static let second = ComponentSet(rawValue: 1 << 6)
-        static let weekday = ComponentSet(rawValue: 1 << 7)
-        static let weekdayOrdinal = ComponentSet(rawValue: 1 << 8)
-        static let quarter = ComponentSet(rawValue: 1 << 9)
-        static let weekOfMonth = ComponentSet(rawValue: 1 << 10)
-        static let weekOfYear = ComponentSet(rawValue: 1 << 11)
-        static let yearForWeekOfYear = ComponentSet(rawValue: 1 << 12)
-        static let nanosecond = ComponentSet(rawValue: 1 << 13)
-        static let calendar = ComponentSet(rawValue: 1 << 14)
-        static let timeZone = ComponentSet(rawValue: 1 << 15)
-        static let isLeapMonth = ComponentSet(rawValue: 1 << 16)
+        package static let era = ComponentSet(rawValue: 1 << 0)
+        package static let year = ComponentSet(rawValue: 1 << 1)
+        package static let month = ComponentSet(rawValue: 1 << 2)
+        package static let day = ComponentSet(rawValue: 1 << 3)
+        package static let hour = ComponentSet(rawValue: 1 << 4)
+        package static let minute = ComponentSet(rawValue: 1 << 5)
+        package static let second = ComponentSet(rawValue: 1 << 6)
+        package static let weekday = ComponentSet(rawValue: 1 << 7)
+        package static let weekdayOrdinal = ComponentSet(rawValue: 1 << 8)
+        package static let quarter = ComponentSet(rawValue: 1 << 9)
+        package static let weekOfMonth = ComponentSet(rawValue: 1 << 10)
+        package static let weekOfYear = ComponentSet(rawValue: 1 << 11)
+        package static let yearForWeekOfYear = ComponentSet(rawValue: 1 << 12)
+        package static let nanosecond = ComponentSet(rawValue: 1 << 13)
+        package static let calendar = ComponentSet(rawValue: 1 << 14)
+        package static let timeZone = ComponentSet(rawValue: 1 << 15)
+        package static let isLeapMonth = ComponentSet(rawValue: 1 << 16)
 
-        var count: Int {
+        package var count: Int {
             rawValue.nonzeroBitCount
         }
 
-        var set: Set<Component> {
+        package var set: Set<Component> {
             var result: Set<Component> = Set()
             if contains(.era) { result.insert(.era) }
             if contains(.year) { result.insert(.year) }
@@ -210,11 +193,15 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if contains(.nanosecond) { result.insert(.nanosecond) }
             if contains(.calendar) { result.insert(.calendar) }
             if contains(.timeZone) { result.insert(.timeZone) }
-            if contains(.isLeapMonth) { result.insert(.isLeapMonth) }
+            if contains(.isLeapMonth) { 
+                if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
+                    result.insert(.isLeapMonth)
+                }
+            }
             return result
         }
 
-        var highestSetUnit: Calendar.Component? {
+        package var highestSetUnit: Calendar.Component? {
             if self.contains(.era) { return .era }
             if self.contains(.year) { return .year }
             if self.contains(.quarter) { return .quarter }
@@ -231,7 +218,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if self.contains(.nanosecond) { return .nanosecond }
 
             // The algorithms that call this function assume that isLeapMonth counts as a 'highest unit set', but the order is after nanosecond.
-            if self.contains(.isLeapMonth) { return .isLeapMonth }
+            if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
+                if self.contains(.isLeapMonth) { return .isLeapMonth }
+            }
 
             // The calendar and timeZone properties do not count as a 'highest unit set', since they are not ordered in time like the others are.
             return nil
@@ -260,47 +249,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case nanosecond
         case calendar
         case timeZone
-        @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         case isLeapMonth
-
-        internal var icuFieldCode: UCalendarDateFields? {
-            switch self {
-            case .era:
-                return UCAL_ERA
-            case .year:
-                return UCAL_YEAR
-            case .month:
-                return UCAL_MONTH
-            case .day:
-                return UCAL_DAY_OF_MONTH
-            case .hour:
-                return UCAL_HOUR_OF_DAY
-            case .minute:
-                return UCAL_MINUTE
-            case .second:
-                return UCAL_SECOND
-            case .weekday:
-                return UCAL_DAY_OF_WEEK
-            case .weekdayOrdinal:
-                return UCAL_DAY_OF_WEEK_IN_MONTH
-            case .quarter:
-                return UCalendarDateFields(rawValue: 4444)
-            case .weekOfMonth:
-                return UCAL_WEEK_OF_MONTH
-            case .weekOfYear:
-                return UCAL_WEEK_OF_YEAR
-            case .yearForWeekOfYear:
-                return UCAL_YEAR_WOY
-            case .isLeapMonth:
-                return UCAL_IS_LEAP_MONTH
-            case .nanosecond:
-                return nil
-            case .calendar:
-                return nil
-            case .timeZone:
-                return nil
-            }
-        }
 
         fileprivate var componentSetValue: ComponentSet.RawValue {
             switch self {
@@ -323,13 +273,35 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .isLeapMonth: return ComponentSet.isLeapMonth.rawValue
             }
         }
+        
+        internal var debugDescription: String {
+            switch self {
+            case .era: "era"
+            case .year: "year"
+            case .month: "month"
+            case .day: "day"
+            case .hour: "hour"
+            case .minute: "minute"
+            case .second: "second"
+            case .weekday: "weekday"
+            case .weekdayOrdinal: "weekdayOrdinal"
+            case .quarter: "quarter"
+            case .weekOfMonth: "weekOfMonth"
+            case .weekOfYear: "weekOfYear"
+            case .yearForWeekOfYear: "yearForWeekOfYear"
+            case .nanosecond: "nanosecond"
+            case .calendar: "calendar"
+            case .timeZone: "timeZone"
+            case .isLeapMonth: "isLeapMonth"
+            }
+        }
     }
 
     /// Returns the user's current calendar.
     ///
     /// This calendar does not track changes that the user makes to their preferences.
     public static var current : Calendar {
-        Calendar(current: .current)
+        Calendar(inner: CalendarCache.cache.current)
     }
 
     /// A Calendar that tracks changes to user's preferred calendar.
@@ -338,7 +310,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: The autoupdating Calendar will only compare equal to another autoupdating Calendar.
     public static var autoupdatingCurrent : Calendar {
-        Calendar(current: .autoupdating)
+        Calendar(inner: CalendarCache.cache.autoupdatingCurrent)
     }
 
     // MARK: -
@@ -348,44 +320,28 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - parameter identifier: The kind of calendar to use.
     public init(identifier: __shared Identifier) {
-        _kind = .fixed
         _calendar = CalendarCache.cache.fixed(identifier)
     }
 
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
     internal init(identifier: Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
-        _kind = .fixed
-        _calendar = _Calendar(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+        _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 
-    enum CurrentKind {
-        case current
-        case autoupdating
+    internal init(inner: any _CalendarProtocol) {
+        _calendar = inner
     }
-
-    private init(current: CurrentKind) {
-        switch current {
-        case .current:
-            _kind = .fixed
-            _calendar = CalendarCache.cache.current
-        case .autoupdating:
-            _kind = .autoupdating
-        }
-    }
-
+    
     // MARK: -
     // MARK: Bridging
 
     #if FOUNDATION_FRAMEWORK
     fileprivate init(reference : __shared NSCalendar) {
         if let swift = reference as? _NSSwiftCalendar {
-            let refCalendar = swift.calendar
-            _kind = refCalendar._kind
-            _calendar = refCalendar._calendar
+            _calendar = swift.calendar._calendar
         } else {
             // This is a custom NSCalendar subclass
-            _kind = .bridged
-            _bridged = _NSCalendarSwiftWrapper(adoptingReference: reference)
+            _calendar = _CalendarBridged(adoptingReference: reference)
         }
     }
     #endif
@@ -395,364 +351,75 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
     /// The identifier of the calendar.
     public var identifier : Identifier {
-        switch _kind {
-        case .autoupdating:
-            return CalendarCache.cache.current.identifier
-        case .fixed:
-            return _calendar.identifier
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.identifier
-        #endif
-        }
+        _calendar.identifier
     }
 
     /// The locale of the calendar.
     public var locale : Locale? {
         get {
-            switch _kind {
-            case .autoupdating:
-                return CalendarCache.cache.current.locale
-            case .fixed:
-                return _calendar.locale
-            #if FOUNDATION_FRAMEWORK
-            case .bridged:
-                return _bridged.locale
-            #endif
-            }
+            _calendar.locale
         }
         set {
-            switch _kind {
-            case .fixed:
-                guard newValue != _calendar.locale else {
-                    // Nothing to do
-                    return
-                }
-                
-                if isKnownUniquelyReferenced(&_calendar) {
-                    _calendar.locale = newValue ?? Locale.system
-                } else {
-                    _calendar = _calendar.copy(changingLocale: newValue)
-                }
-            case .autoupdating:
-                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
-                let c = CalendarCache.cache.current
-                _kind = .fixed
-                _calendar = _Calendar(identifier: c.identifier, timeZone: c.timeZone, locale: newValue)
-            #if FOUNDATION_FRAMEWORK
-            case .bridged:
-                _bridged.locale = newValue
-            #endif
+            guard newValue != _calendar.locale else {
+                // Nothing to do
+                return
             }
+            
+            // TODO: We can't use isKnownUniquelyReferenced on an existential. For now we must always copy. n.b. we must also always copy if _calendar.isAutoupdating is true.
+            _calendar = _calendar.copy(changingLocale: newValue, changingTimeZone: nil, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: nil)
         }
     }
 
     /// The time zone of the calendar.
     public var timeZone : TimeZone {
         get {
-            switch _kind {
-            case .autoupdating:
-                return CalendarCache.cache.current.timeZone
-            case .fixed:
-                return _calendar.timeZone
-            #if FOUNDATION_FRAMEWORK
-            case .bridged:
-                return _bridged.timeZone
-            #endif
-            }
+            _calendar.timeZone
         }
         set {
-            switch _kind {
-            case .fixed:
-                guard newValue != _calendar.timeZone else {
-                    // Nothing to do
-                    return
-                }
-                
-                if isKnownUniquelyReferenced(&_calendar) {
-                    _calendar.timeZone = newValue
-                } else {
-                    _calendar = _calendar.copy(changingTimeZone: newValue)
-                }
-            case .autoupdating:
-                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
-                let c = CalendarCache.cache.current
-                _kind = .fixed
-                _calendar = _Calendar(identifier: c.identifier, timeZone: newValue, locale: c.locale)
-            #if FOUNDATION_FRAMEWORK
-            case .bridged:
-                _bridged.timeZone = newValue
-            #endif
+            guard newValue != _calendar.timeZone else {
+                // Nothing to do
+                return
             }
+                
+            // TODO: We can't use isKnownUniquelyReferenced on an existential. For now we must always copy. n.b. we must also always copy if _calendar.isAutoupdating is true.
+            _calendar = _calendar.copy(changingLocale: nil, changingTimeZone: newValue, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: nil)
         }
     }
 
+    func isUnique<T: AnyObject>(_ x: inout T) -> Bool {
+        isKnownUniquelyReferenced(&x)
+    }
+    
     /// The first weekday of the calendar.
     public var firstWeekday : Int {
         get {
-            switch _kind {
-            case .autoupdating:
-                return CalendarCache.cache.current.firstWeekday
-            case .fixed:
-                return _calendar.firstWeekday
-            #if FOUNDATION_FRAMEWORK
-            case .bridged:
-                return _bridged.firstWeekday
-            #endif
-            }
+            _calendar.firstWeekday
         }
         set {
-            switch _kind {
-            case .fixed:
-                guard newValue != _calendar.firstWeekday else {
-                    // Nothing to do
-                    return
-                }
-                
-                if isKnownUniquelyReferenced(&_calendar) {
-                    _calendar.firstWeekday = newValue
-                } else {
-                    _calendar = _calendar.copy(changingFirstWeekday: newValue)
-                }
-            case .autoupdating:
-                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
-                let c = CalendarCache.cache.current
-                _kind = .fixed
-                _calendar = _Calendar(identifier: c.identifier, timeZone: c.timeZone, locale: c.locale, firstWeekday: newValue)
-            #if FOUNDATION_FRAMEWORK
-            case .bridged:
-                _bridged.firstWeekday = newValue
-            #endif
+            guard newValue != _calendar.firstWeekday else {
+                // Nothing to do
+                return
             }
+            
+            // TODO: We can't use isKnownUniquelyReferenced on an existential. For now we must always copy. n.b. we must also always copy if _calendar.isAutoupdating is true.
+            _calendar = _calendar.copy(changingLocale: nil, changingTimeZone: nil, changingFirstWeekday: newValue, changingMinimumDaysInFirstWeek: nil)
         }
     }
 
     /// The number of minimum days in the first week.
     public var minimumDaysInFirstWeek : Int {
         get {
-            switch _kind {
-            case .autoupdating:
-                return CalendarCache.cache.current.minimumDaysInFirstWeek
-            case .fixed:
-                return _calendar.minimumDaysInFirstWeek
-            #if FOUNDATION_FRAMEWORK
-            case .bridged:
-                return _bridged.minimumDaysInFirstWeek
-            #endif
-            }
+            _calendar.minimumDaysInFirstWeek
         }
         set {
-            switch _kind {
-            case .fixed:
-                guard newValue != _calendar.minimumDaysInFirstWeek else {
-                    // Nothing to do
-                    return
-                }
-                
-                if isKnownUniquelyReferenced(&_calendar) {
-                    _calendar.minimumDaysInFirstWeek = newValue
-                } else {
-                    _calendar = _calendar.copy(changingMinimumDaysInFirstWeek: newValue)
-                }
-            case .autoupdating:
-                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
-                let c = CalendarCache.cache.current
-                _kind = .fixed
-                _calendar = _Calendar(identifier: c.identifier, timeZone: c.timeZone, locale: c.locale, minimumDaysInFirstWeek: newValue)
-            #if FOUNDATION_FRAMEWORK
-            case .bridged:
-                _bridged.minimumDaysInFirstWeek = newValue
-            #endif
+            guard newValue != _calendar.minimumDaysInFirstWeek else {
+                // Nothing to do
+                return
             }
+                
+            // TODO: We can't use isKnownUniquelyReferenced on an existential. For now we must always copy. n.b. we must also always copy if _calendar.isAutoupdating is true.
+            _calendar = _calendar.copy(changingLocale: nil, changingTimeZone: nil, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: newValue)
         }
-    }
-
-    // MARK: - Symbols
-
-    private func symbols(for key: UDateFormatSymbolType) -> [String] {
-        ICUDateFormatter.cachedFormatter(for: self).symbols(for: key)
-    }
-
-    /// A list of eras in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["BC", "AD"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var eraSymbols: [String] {
-        symbols(for: .eras)
-    }
-
-    /// A list of longer-named eras in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["Before Christ", "Anno Domini"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var longEraSymbols: [String] {
-        symbols(for: .eraNames)
-    }
-
-    /// A list of months in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var monthSymbols: [String] {
-        symbols(for: .months)
-    }
-
-    /// A list of shorter-named months in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var shortMonthSymbols: [String] {
-        symbols(for: .shortMonths)
-    }
-
-    /// A list of very-shortly-named months in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var veryShortMonthSymbols: [String] {
-        symbols(for: .narrowMonths)
-    }
-
-    /// A list of standalone months in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]`.
-    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var standaloneMonthSymbols: [String] {
-        symbols(for: .standaloneMonths)
-    }
-
-    /// A list of shorter-named standalone months in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]`.
-    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var shortStandaloneMonthSymbols: [String] {
-        symbols(for: .standaloneShortMonths)
-    }
-
-    /// A list of very-shortly-named standalone months in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"]`.
-    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var veryShortStandaloneMonthSymbols: [String] {
-        symbols(for: .standaloneNarrowMonths)
-    }
-
-    /// A list of weekdays in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var weekdaySymbols: [String] {
-        symbols(for: .weekdays)
-    }
-
-    /// A list of shorter-named weekdays in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var shortWeekdaySymbols: [String] {
-        symbols(for: .shortWeekdays)
-    }
-
-    /// A list of very-shortly-named weekdays in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["S", "M", "T", "W", "T", "F", "S"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var veryShortWeekdaySymbols: [String] {
-        symbols(for: .narrowWeekdays)
-    }
-
-    /// A list of standalone weekday names in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]`.
-    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var standaloneWeekdaySymbols: [String] {
-        symbols(for: .standaloneWeekdays)
-    }
-
-    /// A list of shorter-named standalone weekdays in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]`.
-    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var shortStandaloneWeekdaySymbols: [String] {
-        symbols(for: .standaloneShortWeekdays)
-    }
-
-    /// A list of very-shortly-named weekdays in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["S", "M", "T", "W", "T", "F", "S"]`.
-    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var veryShortStandaloneWeekdaySymbols: [String] {
-        symbols(for: .standaloneNarrowWeekdays)
-    }
-
-    /// A list of quarter names in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["1st quarter", "2nd quarter", "3rd quarter", "4th quarter"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var quarterSymbols: [String] {
-        symbols(for: .quarters)
-    }
-
-    /// A list of shorter-named quarters in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["Q1", "Q2", "Q3", "Q4"]`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var shortQuarterSymbols: [String] {
-        symbols(for: .shortQuarters)
-    }
-
-    /// A list of standalone quarter names in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["1st quarter", "2nd quarter", "3rd quarter", "4th quarter"]`.
-    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var standaloneQuarterSymbols: [String] {
-        symbols(for: .standaloneQuarters)
-    }
-
-    /// A list of shorter-named standalone quarters in this calendar, localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `["Q1", "Q2", "Q3", "Q4"]`.
-    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var shortStandaloneQuarterSymbols: [String] {
-        symbols(for: .standaloneShortQuarters)
-    }
-
-    /// The symbol used to represent "AM", localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `"AM"`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var amSymbol: String {
-        let amPMs = symbols(for: .amPMs)
-        return amPMs[0]
-    }
-
-    /// The symbol used to represent "PM", localized to the Calendar's `locale`.
-    ///
-    /// For example, for English in the Gregorian calendar, returns `"PM"`.
-    ///
-    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
-    public var pmSymbol: String {
-        let amPMs = symbols(for: .amPMs)
-        return amPMs[1]
     }
 
     // MARK: -
@@ -764,16 +431,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter component: A component to calculate a range for.
     /// - returns: The range, or nil if it could not be calculated.
     public func minimumRange(of component: Component) -> Range<Int>? {
-        switch _kind {
-        case .autoupdating:
-            return CalendarCache.cache.current.minimumRange(of: component)
-        case .fixed:
-            return _calendar.minimumRange(of: component)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.minimumRange(of: component)
-        #endif
-        }
+        _calendar.minimumRange(of: component)
     }
 
     /// The maximum range limits of the values that a given component can take on in the receive
@@ -782,16 +440,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter component: A component to calculate a range for.
     /// - returns: The range, or nil if it could not be calculated.
     public func maximumRange(of component: Component) -> Range<Int>? {
-        switch _kind {
-        case .autoupdating:
-            return CalendarCache.cache.current.maximumRange(of: component)
-        case .fixed:
-            return _calendar.maximumRange(of: component)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.maximumRange(of: component)
-        #endif
-        }
+        _calendar.maximumRange(of: component)
     }
 
 
@@ -803,16 +452,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The absolute time for which the calculation is performed.
     /// - returns: The range of absolute time values smaller can take on in larger at the time specified by date. Returns `nil` if larger is not logically bigger than smaller in the calendar, or the given combination of components does not make sense (or is a computation which is undefined).
     public func range(of smaller: Component, in larger: Component, for date: Date) -> Range<Int>? {
-        switch _kind {
-        case .autoupdating:
-            return CalendarCache.cache.current.range(of: smaller, in: larger, for: date)
-        case .fixed:
-            return _calendar.range(of: smaller, in: larger, for: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.range(of: smaller, in: larger, for: date)
-        #endif
-        }
+        _calendar.range(of: smaller, in: larger, for: date)
     }
 
     /// Returns, via two inout parameters, the starting time and duration of a given calendar component that contains a given date.
@@ -841,16 +481,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A new `DateInterval` if the starting time and duration of a component could be calculated, otherwise `nil`.
     @available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *)
     public func dateInterval(of component: Component, for date: Date) -> DateInterval? {
-        switch _kind {
-        case .autoupdating:
-            return CalendarCache.cache.current.dateInterval(of: component, for: date)
-        case .fixed:
-            return _calendar.dateInterval(of: component, for: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.dateInterval(of: component, for: date)
-        #endif
-        }
+        _calendar.dateInterval(of: component, for: date)
     }
 
     /// Returns, for a given absolute time, the ordinal number of a smaller calendar component (such as a day) within a specified larger calendar component (such as a week).
@@ -863,16 +494,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The absolute time for which the calculation is performed.
     /// - returns: The ordinal number of smaller within larger at the time specified by date. Returns `nil` if larger is not logically bigger than smaller in the calendar, or the given combination of components does not make sense (or is a computation which is undefined).
     public func ordinality(of smaller: Component, in larger: Component, for date: Date) -> Int? {
-        switch _kind {
-        case .autoupdating:
-            return CalendarCache.cache.current.ordinality(of: smaller, in: larger, for: date)
-        case .fixed:
-            return _calendar.ordinality(of: smaller, in: larger, for: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.ordinality(of: smaller, in: larger, for: date)
-        #endif
-        }
+        _calendar.ordinality(of: smaller, in: larger, for: date)
     }
 
     /// Returns a new `Date` representing the date calculated by adding components to a given date.
@@ -882,16 +504,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
     /// - returns: A new date, or nil if a date could not be calculated with the given input.
     public func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool = false) -> Date? {
-        switch _kind {
-        case .autoupdating:
-            return CalendarCache.cache.current.date(byAdding: components, to: date, wrappingComponents: wrappingComponents)
-        case .fixed:
-            return _calendar.date(byAdding: components, to: date, wrappingComponents: wrappingComponents)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.date(byAdding: components, to: date, wrappingComponents: wrappingComponents)
-        #endif
-        }
+        _calendar.date(byAdding: components, to: date, wrappingComponents: wrappingComponents)
     }
 
     /// Returns a new `Date` representing the date calculated by adding an amount of a specific component to a given date.
@@ -945,16 +558,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter components: Used as input to the search algorithm for finding a corresponding date.
     /// - returns: A new `Date`, or nil if a date could not be found which matches the components.
     public func date(from components: DateComponents) -> Date? {
-        switch _kind {
-        case .autoupdating:
-            return CalendarCache.cache.current.date(from: components)
-        case .fixed:
-            return _calendar.date(from: components)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.date(from: components)
-        #endif
-        }
+        _calendar.date(from: components)
     }
 
     /// Returns all the date components of a date, using the calendar time zone.
@@ -963,17 +567,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The `Date` to use.
     /// - returns: The date components of the specified date.
     public func dateComponents(_ components: Set<Component>, from date: Date) -> DateComponents {
-        var dc: DateComponents
-        switch _kind {
-        case .autoupdating:
-            dc = CalendarCache.cache.current.dateComponents(Calendar.ComponentSet(components), from: date)
-        case .fixed:
-            dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            dc = _bridged.dateComponents(components, from: date)
-        #endif
-        }
+        var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: date)
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -986,17 +580,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
     /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
     internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
-        var dc: DateComponents
-        switch _kind {
-        case .fixed:
-            dc = _calendar.dateComponents(components, from: date)
-        case .autoupdating:
-            dc = CalendarCache.cache.current.dateComponents(components, from: date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            dc = _bridged.dateComponents(components.set, from: date)
-        #endif
-        }
+        var dc = _calendar.dateComponents(components, from: date)
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -1015,22 +599,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: All components, calculated using the `Calendar` and `TimeZone`.
     @available(iOS 8.0, *)
     public func dateComponents(in timeZone: TimeZone, from date: Date) -> DateComponents {
-        var dc: DateComponents
-        switch _kind {
-        case .fixed:
-            dc = _calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date, in: timeZone)
-        case .autoupdating:
-            dc = CalendarCache.cache.current.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date, in: timeZone)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            // This is mutating, but was not marked mutating in struct Calendar. NSCalendar will have to handle it correctly.
-            let originalTimeZone = _bridged.timeZone
-            _bridged.timeZone = timeZone
-            defer { _bridged.timeZone = originalTimeZone }
-
-            dc = _bridged.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date)
-        #endif
-        }
+        var dc = _calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date, in: timeZone)
 
         // Fill out the Calendar field of dateComponents (the above calls cannot insert this struct into the date components, because they don't know the right value).
         dc.calendar = self
@@ -1044,17 +613,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter end: The ending date.
     /// - returns: The result of calculating the difference from start to end.
     public func dateComponents(_ components: Set<Component>, from start: Date, to end: Date) -> DateComponents {
-        var dc: DateComponents
-        switch _kind {
-        case .autoupdating:
-            dc = CalendarCache.cache.current.dateComponents(Calendar.ComponentSet(components), from: start, to: end)
-        case .fixed:
-            dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: start, to: end)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            dc = _bridged.dateComponents(components, from: start, to: end)
-        #endif
-        }
+        var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: start, to: end)
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -1321,16 +880,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: `true` if the given date is within a weekend.
     @available(iOS 8.0, *)
     public func isDateInWeekend(_ date: Date) -> Bool {
-        switch _kind {
-        case .autoupdating:
-            return CalendarCache.cache.current.isDateInWeekend(date)
-        case .fixed:
-            return _calendar.isDateInWeekend(date)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.isDateInWeekend(date)
-        #endif
-        }
+        _calendar.isDateInWeekend(date)
     }
 
     /// Finds the range of the weekend around the given date, and returns the starting date and duration of the weekend via two inout parameters.
@@ -1411,17 +961,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A `DateInterval`, or nil if weekends do not exist in the specific calendar or locale.
     @available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *)
     public func nextWeekend(startingAfter date: Date, direction: SearchDirection = .forward) -> DateInterval? {
-        let weekend: WeekendRange?
-        switch _kind {
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return _bridged.nextWeekend(startingAfter: date, direction: direction)
-        #endif
-        case .autoupdating:
-            weekend = CalendarCache.cache.current.weekendRange()
-        case .fixed:
-            weekend = _calendar.weekendRange()
-        }
+        let weekend = _calendar.weekendRange()
 
         guard let weekend else {
             return nil
@@ -1470,6 +1010,13 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         /// Search for a date earlier in time than the start date.
         case backward
+        
+        internal var debugDescription: String {
+            switch self {
+            case .forward: "forward"
+            case .backward: "backward"
+            }
+        }
     }
 
     /// Determines which result to use when a time is repeated on a day in a calendar (for example, during a daylight saving transition when the times between 2:00am and 3:00am may happen twice).
@@ -1479,6 +1026,13 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         /// If there are two or more matching times (all the components are the same, including isLeapMonth) before the end of the next instance of the next higher component to the highest specified component, then the algorithm will return the last occurrence.
         case last
+        
+        internal var debugDescription: String {
+            switch self {
+            case .first: "first"
+            case .last: "last"
+            }
+        }
     }
 
     /// A hint to the search algorithm to control the method used for searching for dates.
@@ -1501,6 +1055,15 @@ public struct Calendar : Hashable, Equatable, Sendable {
         /// For example, if searching for Feb 29 in the Gregorian calendar, the algorithm may choose March 1 instead (for example, if the year is not a leap year). If you wish to find the next Feb 29 without the algorithm adjusting the next higher component in the specified `DateComponents`, then use the `strict` option.
         /// - note: There are ultimately implementation-defined limits in how far distant the search will go.
         case strict
+        
+        internal var debugDescription: String {
+            switch self {
+            case .nextTime: "nextTime"
+            case .nextTimePreservingSmallerComponents: "nextTimePreservingSmallerComponents"
+            case .previousTimePreservingSmallerComponents: "previousTimePreservingSmallerComponents"
+            case .strict: "strict"
+            }
+        }
     }
 
     /// Computes the dates which match (or most closely match) a given set of components, and calls the closure once for each of them, until the enumeration is stopped.
@@ -1678,16 +1241,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     // MARK: -
 
     public func hash(into hasher: inout Hasher) {
-        switch _kind {
-        case .fixed:
-            _calendar.hash(into: &hasher)
-        case .autoupdating:
-            hasher.combine(1)
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            _bridged.hash(into: &hasher)
-        #endif
-        }
+        _calendar.hash(into: &hasher)
     }
 
     // MARK: -
@@ -1773,74 +1327,29 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
     // MARK: - Private helpers
 
-    static func localeIdentifierWithCalendar(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> String? {
-        var comps = Locale.Components(identifier: localeIdentifier)
-        comps.calendar = calendarIdentifier
-        return comps.identifier
-    }
-
     public static func ==(lhs: Calendar, rhs: Calendar) -> Bool {
-        switch lhs._kind {
-        case .autoupdating:
-            switch rhs._kind {
-            case .autoupdating:
-                return true
-            default:
-                return false
-            }
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            switch rhs._kind {
-            case .autoupdating:
-                return false
-            case .bridged:
-                return lhs._bridged == rhs._bridged
-            case .fixed:
-                // compare swift/objc
-                return lhs._bridged.identifier == rhs._calendar.identifier &&
-                lhs._bridged.locale == rhs._calendar.locale &&
-                lhs._bridged.timeZone == rhs._calendar.timeZone &&
-                lhs._bridged.firstWeekday == rhs._calendar.firstWeekday &&
-                lhs._bridged.minimumDaysInFirstWeek == rhs._calendar.minimumDaysInFirstWeek
-            }
-        #endif
-        case .fixed:
-            switch rhs._kind {
-            case .autoupdating:
-                return false
-            #if FOUNDATION_FRAMEWORK
-            case .bridged:
-                // compare swift/objc
-                return lhs._calendar.identifier == rhs._bridged.identifier &&
-                lhs._calendar.locale == rhs._bridged.locale &&
-                lhs._calendar.timeZone == rhs._bridged.timeZone &&
-                lhs._calendar.firstWeekday == rhs._bridged.firstWeekday &&
-                lhs._calendar.minimumDaysInFirstWeek == rhs._bridged.minimumDaysInFirstWeek
-            #endif
-            case .fixed:
-                return lhs._calendar == rhs._calendar
-            }
+        // Autoupdating compares == to only itself
+        if lhs._calendar.isAutoupdating || rhs._calendar.isAutoupdating {
+            return lhs._calendar.isAutoupdating == rhs._calendar.isAutoupdating
         }
+        
+        // Otherwise, compare properties
+        // n.b. this comparison doesn't take a lock on all the state for both calendars. If the firstWeekday, locale, timeZone et. al. change in the middle then we could get an inconsistent result. This is however the same race that could happen if the values of the properties changed after a lock was released and before the function returns.
+        // For Locale, it's important to compare only the properties that affect the Calendar itself. That allows e.g. currentLocale (with an irrelevant pref about something like preferred metric unit) to compare equal to a different locale.
+        return lhs.identifier == rhs.identifier &&
+            lhs.timeZone == rhs.timeZone &&
+            lhs.firstWeekday == rhs.firstWeekday &&
+            lhs.minimumDaysInFirstWeek == rhs.minimumDaysInFirstWeek &&
+        lhs._calendar.localeIdentifier == rhs._calendar.localeIdentifier &&
+        lhs._calendar.preferredFirstWeekday == rhs._calendar.preferredFirstWeekday &&
+        lhs._calendar.preferredMinimumDaysInFirstweek  == rhs._calendar.preferredMinimumDaysInFirstweek
     }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
-    private var _kindDescription : String {
-        switch _kind {
-        case .fixed:
-            return "fixed"
-        case .autoupdating:
-            return "autoupdating"
-        #if FOUNDATION_FRAMEWORK
-        case .bridged:
-            return "bridged"
-        #endif
-        }
-    }
-
     public var description: String {
-        return "\(identifier) (\(_kindDescription)) locale: \(locale?.identifier ?? "") time zone: \(timeZone) firstWeekday: \(firstWeekday) minDaysInFirstWeek: \(minimumDaysInFirstWeek)"
+        return "\(identifier) (\(_calendar)) locale: \(locale?.identifier ?? "") time zone: \(timeZone) firstWeekday: \(firstWeekday) minDaysInFirstWeek: \(minimumDaysInFirstWeek)"
     }
 
     public var debugDescription: String {
@@ -1850,7 +1359,7 @@ extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, Cust
     public var customMirror: Mirror {
         let c: [(label: String?, value: Any)] = [
           ("identifier", identifier),
-          ("kind", _kindDescription),
+          ("calendar", _calendar),
           ("locale", locale as Any),
           ("timeZone", timeZone),
           ("firstWeekday", firstWeekday),
@@ -1934,11 +1443,18 @@ extension Calendar : Codable {
 extension Calendar.Identifier : Codable {}
 
 /// Internal-use struct for holding the range of a Weekend
-internal struct WeekendRange {
-    var onsetTime: TimeInterval?
-    var ceaseTime: TimeInterval?
-    var start: Int
-    var end: Int
+package struct WeekendRange {
+    package var onsetTime: TimeInterval?
+    package var ceaseTime: TimeInterval?
+    package var start: Int
+    package var end: Int
+    
+    package init(onsetTime: TimeInterval? = nil, ceaseTime: TimeInterval? = nil, start: Int, end: Int) {
+        self.onsetTime = onsetTime
+        self.ceaseTime = ceaseTime
+        self.start = start
+        self.end = end
+    }
 }
 
 // MARK: - Bridging
@@ -1952,14 +1468,7 @@ extension Calendar : ReferenceConvertible {
 extension Calendar : _ObjectiveCBridgeable {
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSCalendar {
-        switch _kind {
-        case .fixed:
-            return _NSSwiftCalendar(calendar: self)
-        case .autoupdating:
-            return _NSSwiftCalendar(calendar: self)
-        case .bridged:
-            return _bridged.bridgeToObjectiveC()
-        }
+        _calendar.bridgeToNSCalendar()
     }
 
     public static func _forceBridgeFromObjectiveC(_ input: NSCalendar, result: inout Calendar?) {

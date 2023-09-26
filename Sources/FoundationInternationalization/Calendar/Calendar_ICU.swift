@@ -28,7 +28,7 @@ import CRT
 package import FoundationICU
 #endif
 
-internal final class _Calendar: Equatable, @unchecked Sendable {
+internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     let lock: LockedState<Void>
     let identifier: Calendar.Identifier
 
@@ -41,18 +41,19 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     private var customMinimumFirstDaysInWeek: Int?
 
     // Identifier of any locale used
-    private var localeIdentifier: String
+    var localeIdentifier: String
+    
     // Custom user preferences of any locale used (current locale or current locale imitation only). We need to store this to correctly rebuild a Locale that has been stored inside Calendar as an identifier.
     private var localePrefs: LocalePreferences?
     
     let customGregorianStartDate: Date?
 
-    internal init(identifier: Calendar.Identifier,
-                  timeZone: TimeZone? = nil,
-                  locale: Locale? = nil,
-                  firstWeekday: Int? = nil,
-                  minimumDaysInFirstWeek: Int? = nil,
-                  gregorianStartDate: Date? = nil)
+    init(identifier: Calendar.Identifier,
+                  timeZone: TimeZone?,
+                  locale: Locale?,
+                  firstWeekday: Int?,
+                  minimumDaysInFirstWeek: Int?,
+                  gregorianStartDate: Date?)
     {
         self.identifier = identifier
 
@@ -85,7 +86,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         // TODO: I think this may be a waste; we always override the calendar, the rest is ignored
         var localeComponents = Locale.Components(identifier: localeIdentifier)
         localeComponents.calendar = identifier
-        let calendarLocale = localeComponents.identifier
+        let calendarLocale = localeComponents.icuIdentifier
 
         let timeZoneIdentifier = Array(timeZone.identifier.utf16)
         var status = U_ZERO_ERROR
@@ -143,14 +144,14 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             gregorianStartDate: customGregorianStartDate)
     }
 
-    var locale: Locale {
+    var locale: Locale? {
         get {
-            return Locale(identifier: localeIdentifier, calendarIdentifier: identifier, prefs: localePrefs)
+            Locale(identifier: localeIdentifier, preferences: localePrefs)
         }
         set {
             lock.withLock {
-                localeIdentifier = newValue.identifier
-                localePrefs = newValue.prefs
+                localeIdentifier = newValue?.identifier ?? ""
+                localePrefs = newValue?.prefs
                 _locked_regenerate()
             }
         }
@@ -185,6 +186,14 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     private var _locked_firstWeekday: Int {
         customFirstWeekday ?? Int(ucal_getAttribute(ucalendar, UCAL_FIRST_DAY_OF_WEEK))
     }
+    
+    var preferredFirstWeekday: Int? {
+        localePrefs?.firstWeekday?[identifier]
+    }
+    
+    var gregorianStartDate: Date? {
+        customGregorianStartDate
+    }
 
     var minimumDaysInFirstWeek: Int {
         get {
@@ -199,6 +208,10 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             }
         }
     }
+    
+    var preferredMinimumDaysInFirstweek: Int? {
+        localePrefs?.minDaysInFirstWeek?[identifier]
+    }
 
     private var _locked_minimumDaysInFirstWeek: Int {
         customMinimumFirstDaysInWeek ?? Int(ucal_getAttribute(ucalendar, UCAL_MINIMAL_DAYS_IN_FIRST_WEEK))
@@ -209,7 +222,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     func copy(changingLocale: Locale? = nil,
               changingTimeZone: TimeZone? = nil,
               changingFirstWeekday: Int? = nil,
-              changingMinimumDaysInFirstWeek: Int? = nil) -> _Calendar {
+              changingMinimumDaysInFirstWeek: Int? = nil) -> any _CalendarProtocol {
         return lock.withLock {
             var newLocale = self.locale
             var newTimeZone = self.timeZone
@@ -240,21 +253,8 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
                 newMinDays = nil
             }
 
-            return _Calendar(identifier: identifier, timeZone: newTimeZone, locale: newLocale, firstWeekday: newFirstWeekday, minimumDaysInFirstWeek: newMinDays)
+            return _CalendarICU(identifier: identifier, timeZone: newTimeZone, locale: newLocale, firstWeekday: newFirstWeekday, minimumDaysInFirstWeek: newMinDays, gregorianStartDate: nil)
         }
-    }
-
-    static func ==(lhs: _Calendar, rhs: _Calendar) -> Bool {
-        // n.b. this comparison doesn't take a lock on all the state for both calendars. If the firstWeekday, locale, timeZone et. al. change in the middle then we could get an inconsistent result. This is however the same race that could happen if the values of the properties changed after a lock was released and before the function returns.
-        // For Locale, it's important to compare only the properties that affect the Calendar itself. That allows e.g. currentLocale (with an irrelevant pref about something like preferred metric unit) to compare equal to a different locale.
-        return
-            lhs.identifier == rhs.identifier &&
-            lhs.timeZone == rhs.timeZone &&
-            lhs.firstWeekday == rhs.firstWeekday &&
-            lhs.minimumDaysInFirstWeek == rhs.minimumDaysInFirstWeek &&
-            lhs.localeIdentifier == rhs.localeIdentifier &&
-            lhs.localePrefs?.firstWeekday?[lhs.identifier] == rhs.localePrefs?.firstWeekday?[rhs.identifier] &&
-            lhs.localePrefs?.minDaysInFirstWeek?[lhs.identifier] == rhs.localePrefs?.minDaysInFirstWeek?[rhs.identifier]
     }
 
     func hash(into hasher: inout Hasher) {
@@ -265,10 +265,16 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
         hasher.combine(_locked_minimumDaysInFirstWeek)
         hasher.combine(localeIdentifier)
         // It's important to include only properties that affect the Calendar itself. That allows e.g. currentLocale (with an irrelevant pref about something like preferred metric unit) to compare equal to a different locale.
-        hasher.combine(localePrefs?.firstWeekday?[identifier])
-        hasher.combine(localePrefs?.minDaysInFirstWeek?[identifier])
+        hasher.combine(preferredFirstWeekday)
+        hasher.combine(preferredMinimumDaysInFirstweek)
         lock.unlock()
     }
+    
+#if FOUNDATION_FRAMEWORK
+    func bridgeToNSCalendar() -> NSCalendar {
+        _NSSwiftCalendar(calendar: Calendar(inner: self))
+    }
+#endif
 
     // MARK: -
 
@@ -1182,13 +1188,13 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             if let onset {
                 var status = U_ZERO_ERROR
                 // onsetTime is milliseconds after midnight at which the weekend starts. Divide to get to TimeInterval (seconds)
-                result.onsetTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(CInt(onset)), &status)) / 1000.0
+                result.onsetTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(rawValue: onset), &status)) / 1000.0
             }
 
             if let cease {
                 var status = U_ZERO_ERROR
                 // onsetTime is milliseconds after midnight at which the weekend ends. Divide to get to TimeInterval (seconds)
-                result.ceaseTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(CInt(cease)), &status)) / 1000.0
+                result.ceaseTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(rawValue: cease), &status)) / 1000.0
             }
 
             var weekendStart: UInt32?
@@ -1710,7 +1716,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     }
 
     private func _locked_nextDaylightSavingTimeTransition(startingAt: Date, limit: Date) -> Date? {
-        _TimeZone.nextDaylightSavingTimeTransition(forLocked: ucalendar, startingAt: startingAt, limit: limit)
+        _TimeZoneICU.nextDaylightSavingTimeTransition(forLocked: ucalendar, startingAt: startingAt, limit: limit)
     }
 
     private func _locked_timeZoneTransitionInterval(at date: Date) -> DateInterval? {
@@ -2019,12 +2025,241 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     }
 }
 
-extension Date {
-    // Julian day 0 (-4713-01-01 12:00:00 +0000) in CFAbsoluteTime to 50000-01-01 00:00:00 +0000, smaller than the max time ICU supported.
-    internal static let validCalendarRange = Date(timeIntervalSinceReferenceDate: TimeInterval(-211845067200.0))...Date(timeIntervalSinceReferenceDate: TimeInterval(15927175497600.0))
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Calendar {
+    private func symbols(for key: UDateFormatSymbolType) -> [String] {
+        ICUDateFormatter.cachedFormatter(for: self).symbols(for: key)
+    }
 
-    // aka __CFCalendarValidateAndCapTimeRange
-    internal var capped: Date {
-        return max(min(self, Date.validCalendarRange.upperBound), Date.validCalendarRange.lowerBound)
+    /// A list of eras in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["BC", "AD"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var eraSymbols: [String] {
+        symbols(for: .eras)
+    }
+
+    /// A list of longer-named eras in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["Before Christ", "Anno Domini"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var longEraSymbols: [String] {
+        symbols(for: .eraNames)
+    }
+
+    /// A list of months in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var monthSymbols: [String] {
+        symbols(for: .months)
+    }
+
+    /// A list of shorter-named months in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var shortMonthSymbols: [String] {
+        symbols(for: .shortMonths)
+    }
+
+    /// A list of very-shortly-named months in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var veryShortMonthSymbols: [String] {
+        symbols(for: .narrowMonths)
+    }
+
+    /// A list of standalone months in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]`.
+    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var standaloneMonthSymbols: [String] {
+        symbols(for: .standaloneMonths)
+    }
+
+    /// A list of shorter-named standalone months in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]`.
+    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var shortStandaloneMonthSymbols: [String] {
+        symbols(for: .standaloneShortMonths)
+    }
+
+    /// A list of very-shortly-named standalone months in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"]`.
+    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var veryShortStandaloneMonthSymbols: [String] {
+        symbols(for: .standaloneNarrowMonths)
+    }
+
+    /// A list of weekdays in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var weekdaySymbols: [String] {
+        symbols(for: .weekdays)
+    }
+
+    /// A list of shorter-named weekdays in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var shortWeekdaySymbols: [String] {
+        symbols(for: .shortWeekdays)
+    }
+
+    /// A list of very-shortly-named weekdays in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["S", "M", "T", "W", "T", "F", "S"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var veryShortWeekdaySymbols: [String] {
+        symbols(for: .narrowWeekdays)
+    }
+
+    /// A list of standalone weekday names in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]`.
+    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var standaloneWeekdaySymbols: [String] {
+        symbols(for: .standaloneWeekdays)
+    }
+
+    /// A list of shorter-named standalone weekdays in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]`.
+    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var shortStandaloneWeekdaySymbols: [String] {
+        symbols(for: .standaloneShortWeekdays)
+    }
+
+    /// A list of very-shortly-named weekdays in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["S", "M", "T", "W", "T", "F", "S"]`.
+    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var veryShortStandaloneWeekdaySymbols: [String] {
+        symbols(for: .standaloneNarrowWeekdays)
+    }
+
+    /// A list of quarter names in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["1st quarter", "2nd quarter", "3rd quarter", "4th quarter"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var quarterSymbols: [String] {
+        symbols(for: .quarters)
+    }
+
+    /// A list of shorter-named quarters in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["Q1", "Q2", "Q3", "Q4"]`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var shortQuarterSymbols: [String] {
+        symbols(for: .shortQuarters)
+    }
+
+    /// A list of standalone quarter names in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["1st quarter", "2nd quarter", "3rd quarter", "4th quarter"]`.
+    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var standaloneQuarterSymbols: [String] {
+        symbols(for: .standaloneQuarters)
+    }
+
+    /// A list of shorter-named standalone quarters in this calendar, localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `["Q1", "Q2", "Q3", "Q4"]`.
+    /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var shortStandaloneQuarterSymbols: [String] {
+        symbols(for: .standaloneShortQuarters)
+    }
+
+    /// The symbol used to represent "AM", localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `"AM"`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var amSymbol: String {
+        let amPMs = symbols(for: .amPMs)
+        return amPMs[0]
+    }
+
+    /// The symbol used to represent "PM", localized to the Calendar's `locale`.
+    ///
+    /// For example, for English in the Gregorian calendar, returns `"PM"`.
+    ///
+    /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
+    public var pmSymbol: String {
+        let amPMs = symbols(for: .amPMs)
+        return amPMs[1]
+    }
+
+}
+
+extension Calendar.Component {
+    internal var icuFieldCode: UCalendarDateFields? {
+        switch self {
+        case .era:
+            return UCAL_ERA
+        case .year:
+            return UCAL_YEAR
+        case .month:
+            return UCAL_MONTH
+        case .day:
+            return UCAL_DAY_OF_MONTH
+        case .hour:
+            return UCAL_HOUR_OF_DAY
+        case .minute:
+            return UCAL_MINUTE
+        case .second:
+            return UCAL_SECOND
+        case .weekday:
+            return UCAL_DAY_OF_WEEK
+        case .weekdayOrdinal:
+            return UCAL_DAY_OF_WEEK_IN_MONTH
+        case .quarter:
+            return UCalendarDateFields(rawValue: 4444)
+        case .weekOfMonth:
+            return UCAL_WEEK_OF_MONTH
+        case .weekOfYear:
+            return UCAL_WEEK_OF_YEAR
+        case .yearForWeekOfYear:
+            return UCAL_YEAR_WOY
+        case .isLeapMonth:
+            return UCAL_IS_LEAP_MONTH
+        case .nanosecond:
+            return nil
+        case .calendar:
+            return nil
+        case .timeZone:
+            return nil
+        }
+    }
+}
+
+extension Calendar {
+    static func localeIdentifierWithCalendar(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> String? {
+        var comps = Locale.Components(identifier: localeIdentifier)
+        comps.calendar = calendarIdentifier
+        return comps.icuIdentifier
     }
 }

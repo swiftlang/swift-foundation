@@ -133,7 +133,7 @@ final class LocaleComponentsTests: XCTestCase {
         ]
         for (key, value) in expectations {
             let comps = Locale.Components(identifier: key)
-            XCTAssertEqual(comps.identifier, value, "locale identifier: \(key)")
+            XCTAssertEqual(comps.icuIdentifier, value, "locale identifier: \(key)")
         }
     }
 
@@ -141,7 +141,7 @@ final class LocaleComponentsTests: XCTestCase {
         func verify(_ identifier: String, file: StaticString = #file, line: UInt = #line, expected components: () -> Locale.Components ) {
             let comps = Locale.Components(identifier: identifier)
             let expected = components()
-            XCTAssertEqual(comps, expected, "expect: \"\(expected.identifier)\", actual: \"\(comps.identifier)\"", file: file, line: line)
+            XCTAssertEqual(comps, expected, "expect: \"\(expected.icuIdentifier)\", actual: \"\(comps.icuIdentifier)\"", file: file, line: line)
         }
 
         // keywords
@@ -306,7 +306,7 @@ final class LocaleComponentsTests: XCTestCase {
         XCTAssertEqual(customLocale.measurementSystem, .metric)
 
         let components = Locale.Components(locale: customLocale)
-        XCTAssertEqual(components.identifier, "en_US@fw=wed;hours=h23;measure=metric")
+        XCTAssertEqual(components.icuIdentifier, "en_US@fw=wed;hours=h23;measure=metric")
         XCTAssertEqual(components.hourCycle, .zeroToTwentyThree)
         XCTAssertEqual(components.firstDayOfWeek, .wednesday)
         XCTAssertEqual(components.measurementSystem, .metric)

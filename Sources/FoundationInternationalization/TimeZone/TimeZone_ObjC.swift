@@ -23,10 +23,10 @@ extension NSTimeZone {
     static func _timeZoneWith(name: String, data: Data?) -> _NSSwiftTimeZone? {
         if let data {
             // We don't cache data-based TimeZones
-            guard let tz = TimeZone(name: name, data: data) else {
+            guard let tz = TimeZone(name: name) else {
                 return nil
             }
-            return _NSSwiftTimeZone(timeZone: tz)
+            return _NSSwiftTimeZone(timeZone: tz, data: data)
         } else {
             return _timeZoneWith(name: name)
         }
@@ -111,7 +111,7 @@ extension NSTimeZone {
 
     @objc
     static func _knownTimeZoneIdentifiers() -> [String] {
-        TimeZoneCache.cache.knownTimeZoneIdentifiers()
+        TimeZone.knownTimeZoneIdentifiers
     }
 
     @objc
@@ -126,9 +126,15 @@ extension NSTimeZone {
 @objc(_NSSwiftTimeZone)
 final class _NSSwiftTimeZone: _NSTimeZoneBridge {
     var timeZone: TimeZone
+    struct State {
+        var data: Data?
+    }
 
-    init(timeZone: TimeZone) {
+    let lock: LockedState<State>
+
+    init(timeZone: TimeZone, data: Data? = nil) {
         self.timeZone = timeZone
+        lock = LockedState(initialState: State(data: data))
         super.init()
     }
     
@@ -166,7 +172,16 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge {
     }
 
     override var data: Data {
-        timeZone.data
+        let name = timeZone.identifier
+        return lock.withLock {
+            if let data = $0.data {
+                return data
+            }
+            
+            let data = Self.dataFromTZFile(name)
+            $0.data = data
+            return data
+        }
     }
 
     override func secondsFromGMT(for aDate: Date) -> Int {
@@ -212,74 +227,62 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge {
     override func localizedName(_ style: TimeZone.NameStyle, locale: Locale?) -> String? {
         timeZone.localizedName(for: style, locale: locale)
     }
-}
-
-// MARK: -
-
-/// Wraps an `NSTimeZone` with a more Swift-like `TimeZone` API.
-/// This is only used in the case where we have a custom Objective-C subclass of `NSTimeZone`.
-internal final class _NSTimeZoneSwiftWrapper: @unchecked Sendable {
-    let _timeZone: NSTimeZone
-
-    // MARK: -
-    // MARK: Bridging
-
-    internal init(adoptingReference reference: NSTimeZone) {
-        _timeZone = reference
-    }
-
-    func bridgeToObjectiveC() -> NSTimeZone {
-        return _timeZone.copy() as! NSTimeZone
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(_timeZone)
-    }
-
-    func isEqual(to other: Any) -> Bool {
-        if let other = other as? _NSTimeZoneSwiftWrapper {
-            return _timeZone == other._timeZone
-        } else if let other = other as? _TimeZone {
-            return self.identifier == other.identifier && self.data == other.data
-        } else {
-            return false
+    
+    private static func dataFromTZFile(_ name: String) -> Data {
+        let path = TimeZone.TZDIR + "/" + name
+        guard !path.contains("..") else {
+            // No good reason for .. to be present anywhere in the path
+            return Data()
         }
+
+        #if os(Windows)
+        let fd: CInt = path.withCString(encodedAs: UTF16.self) {
+            var fd: CInt = -1
+            let errno: errno_t =
+                _wsopen_s(&fd, $0, _O_RDONLY | _O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE)
+            guard errno == 0 else { return -1 }
+            return fd
+        }
+        #else
+        let fd = open(path, O_RDONLY, 0666)
+        #endif
+
+        guard fd >= 0 else { return Data() }
+        defer { close(fd) }
+
+#if os(Windows)
+        var stat: _stat64 = _stat64()
+        let res = _fstat64(fd, &stat)
+#else
+        var stat: stat = stat()
+        let res = fstat(fd, &stat)
+#endif
+        guard res >= 0 else { return Data() }
+
+#if os(Windows)
+        guard (CInt(stat.st_mode) & _S_IFMT) == S_IFREG else { return Data() }
+        guard stat.st_size < Int64.max else { return Data() }
+#else
+        guard (stat.st_mode & S_IFMT) == S_IFREG else { return Data() }
+        guard stat.st_size < Int.max else { return Data() }
+#endif
+
+        let sz = Int(stat.st_size)
+
+        let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: sz, alignment: 0)
+        defer { bytes.deallocate() }
+
+#if os(Windows)
+        let ret = _read(fd, bytes.baseAddress!, CUnsignedInt(sz))
+#else
+        let ret = read(fd, bytes.baseAddress!, sz)
+#endif
+        guard ret >= sz else { return Data() }
+
+        return Data(bytes: bytes.baseAddress!, count: sz)
     }
 
-    // MARK: -
-    //
-
-    var identifier: String {
-        _timeZone.name
-    }
-
-    var data: Data {
-        _timeZone.data
-    }
-
-    func secondsFromGMT(for date: Date) -> Int {
-        _timeZone.secondsFromGMT(for: date)
-    }
-
-    func abbreviation(for date: Date) -> String? {
-        _timeZone.abbreviation(for: date)
-    }
-
-    func isDaylightSavingTime(for date: Date) -> Bool {
-        _timeZone.isDaylightSavingTime(for: date)
-    }
-
-    func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
-        _timeZone.daylightSavingTimeOffset(for: date)
-    }
-
-    func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
-        _timeZone.nextDaylightSavingTimeTransition(after: date)
-    }
-
-    func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
-        _timeZone.localizedName(style, locale: locale)
-    }
 }
 
-#endif // FOUNDATION_FRAMEWORK
+#endif
+

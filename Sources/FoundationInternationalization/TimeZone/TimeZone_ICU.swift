@@ -31,28 +31,12 @@ package import FoundationICU
 let MIN_TIMEZONE_UDATE = -2177452800000.0  // 1901-01-01 00:00:00 +0000
 let MAX_TIMEZONE_UDATE = 4133980800000.0  // 2101-01-01 00:00:00 +0000
 
-internal final class _TimeZone: Sendable {
-    // Defines from tzfile.h
-#if targetEnvironment(simulator)
-    internal static let TZDIR = "/usr/share/zoneinfo"
-#else
-    internal static let TZDIR = "/var/db/timezone/zoneinfo"
-#endif // targetEnvironment(simulator)
-
-#if os(macOS) || targetEnvironment(simulator)
-    internal static let TZDEFAULT = "/etc/localtime"
-#else
-    internal static let TZDEFAULT = "/var/db/timezone/localtime"
-#endif // os(macOS) || targetEnvironment(simulator)
-
+internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
+    init?(secondsFromGMT: Int) {
+        fatalError("Unexpected init")
+    }
+    
     struct State {
-        init() {
-
-        }
-
-        /// ObjC `initWithName:data` or `timeZoneWithName:data:` can set this on init. Swift code will always initialize with `nil`. When the `data` function is called, reads from the TZ file and sets this property.
-        var data: Data?
-
         /// Access must be serialized
         private var _calendar: UnsafeMutablePointer<UCalendar?>?
 
@@ -78,15 +62,11 @@ internal final class _TimeZone: Sendable {
 
             return calendar
         }
-
-
     }
 
-    /// Set if created with `TimeZone(secondsFromGMT:)`. These kinds of time zones do not calculate offset any differently for different inputs.
-    let offset: Int?
     let lock: LockedState<State>
-    let identifier: String
-
+    let name: String
+    
     deinit {
         lock.withLock {
             guard let c = $0.calendar(identifier) else { return }
@@ -94,7 +74,7 @@ internal final class _TimeZone: Sendable {
         }
     }
 
-    init?(identifier: String) {
+    required init?(identifier: String) {
         guard !identifier.isEmpty else {
             return nil
         }
@@ -104,54 +84,25 @@ internal final class _TimeZone: Sendable {
         if let offset = TimeZone.tryParseGMTName(name), let offsetName = TimeZone.nameForSecondsFromGMT(offset) {
             name = offsetName
         } else {
-            guard _TimeZone.getCanonicalTimeZoneID(for: name) != nil else {
+            guard Self.getCanonicalTimeZoneID(for: name) != nil else {
                 return nil
             }
         }
 
-        self.identifier = name
-        self.offset = nil
+        self.name = name
         lock = LockedState(initialState: State())
     }
-
-    init?(secondsFromGMT: Int) {
-        guard let name = TimeZone.nameForSecondsFromGMT(secondsFromGMT) else {
-            return nil
-        }
-
-        self.identifier = name
-        offset = secondsFromGMT
-        lock = LockedState(initialState: State())
-    }
-
-    // FIXME: Data isn't actually used??
-    init?(identifier: String, data: Data?) {
-        guard !identifier.isEmpty else {
-            return nil
-        }
-
-        self.identifier = identifier
-        offset = nil
-        lock = LockedState(initialState: State())
-    }
-
+    
     // MARK: -
-
-    var data: Data {
-        lock.withLock {
-            if let data = $0.data {
-                return data
-            }
-
-            let data = _TimeZone.dataFromTZFile(identifier)
-            $0.data = data
-            return data
-        }
+    var identifier: String {
+        self.name
+    }
+    
+    var data: Data? {
+        nil
     }
 
     func secondsFromGMT(for date: Date) -> Int {
-        if let offset { return offset }
-
         return lock.withLock {
             var udate = date.udate
             // make answers agree with nextDaylightSavingTimeTransitionAfterDate
@@ -174,14 +125,10 @@ internal final class _TimeZone: Sendable {
     }
 
     func abbreviation(for date: Date) -> String? {
-        abbreviation(for: date, locale: .current)
-    }
-
-    func abbreviation(for date: Date, locale: Locale) -> String? {
         let dst = daylightSavingTimeOffset(for: date) != 0.0
         return lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }
-            return _TimeZone.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locale.identifier, isShort: true, isGeneric: false, isDaylight: dst)
+            return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: Locale.current.identifier, isShort: true, isGeneric: false, isDaylight: dst)
         }
     }
 
@@ -210,27 +157,27 @@ internal final class _TimeZone: Sendable {
     func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
         lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }
-            return _TimeZone.nextDaylightSavingTimeTransition(forLocked: c, startingAt: date, limit: Date(udate: MAX_TIMEZONE_UDATE))
+            return Self.nextDaylightSavingTimeTransition(forLocked: c, startingAt: date, limit: Date(udate: MAX_TIMEZONE_UDATE))
         }
     }
 
-    func localizedName(_ style: TimeZone.NameStyle, for locale: Locale?) -> String? {
+    func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
         let locID = locale?.identifier ?? ""
         return lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }
             switch style {
             case .standard:
-                return _TimeZone.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: false, isDaylight: false)
+                return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: false, isDaylight: false)
             case .shortStandard:
-                return _TimeZone.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: true, isGeneric: false, isDaylight: false)
+                return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: true, isGeneric: false, isDaylight: false)
             case .daylightSaving:
-                return _TimeZone.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: false, isDaylight: true)
+                return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: false, isDaylight: true)
             case .shortDaylightSaving:
-                return _TimeZone.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: true, isGeneric: false, isDaylight: true)
+                return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: true, isGeneric: false, isDaylight: true)
             case .generic:
-                return _TimeZone.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: true, isDaylight: false)
+                return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: true, isDaylight: false)
             case .shortGeneric:
-                return _TimeZone.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: true, isGeneric: true, isDaylight: false)
+                return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: true, isGeneric: true, isDaylight: false)
             }
         }
     }
@@ -498,59 +445,26 @@ internal final class _TimeZone: Sendable {
 
         return result
     }
-
-    private static func dataFromTZFile(_ name: String) -> Data {
-        let path = _TimeZone.TZDIR + "/" + name
-        guard !path.contains("..") else {
-            // No good reason for .. to be present anywhere in the path
-            return Data()
-        }
-
-        #if os(Windows)
-        let fd: CInt = path.withCString(encodedAs: UTF16.self) {
-            var fd: CInt = -1
-            let errno: errno_t =
-                _wsopen_s(&fd, $0, _O_RDONLY | _O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE)
-            guard errno == 0 else { return -1 }
-            return fd
-        }
-        #else
-        let fd = open(path, O_RDONLY, 0666)
-        #endif
-
-        guard fd >= 0 else { return Data() }
-        defer { close(fd) }
-
-#if os(Windows)
-        var stat: _stat64 = _stat64()
-        let res = _fstat64(fd, &stat)
-#else
-        var stat: stat = stat()
-        let res = fstat(fd, &stat)
-#endif
-        guard res >= 0 else { return Data() }
-
-#if os(Windows)
-        guard (CInt(stat.st_mode) & _S_IFMT) == S_IFREG else { return Data() }
-        guard stat.st_size < Int64.max else { return Data() }
-#else
-        guard (stat.st_mode & S_IFMT) == S_IFREG else { return Data() }
-        guard stat.st_size < Int.max else { return Data() }
-#endif
-
-        let sz = Int(stat.st_size)
-
-        let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: sz, alignment: 0)
-        defer { bytes.deallocate() }
-
-#if os(Windows)
-        let ret = _read(fd, bytes.baseAddress!, CUnsignedInt(sz))
-#else
-        let ret = read(fd, bytes.baseAddress!, sz)
-#endif
-        guard ret >= sz else { return Data() }
-
-        return Data(bytes: bytes.baseAddress!, count: sz)
-    }
 }
 
+// MARK: -
+
+var icuTZIdentifiers: [String] = {
+    _TimeZoneICU.timeZoneNamesFromICU()
+}()
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension TimeZone {
+    /// Returns an array of strings listing the identifier of all the time zones known to the system.
+    public static var knownTimeZoneIdentifiers : [String] {
+        icuTZIdentifiers
+    }
+
+#if FOUNDATION_FRAMEWORK
+    /// Returns the time zone data version.
+    public static var timeZoneDataVersion : String {
+        // At this time only available in Framework build because of dependency on ICU. When TimeZone sinks to FoundationEssentials, we can make this available everywhere as an extension on TimeZone from FoundationInternationalization.
+        _TimeZoneICU.timeZoneDataVersion
+    }
+#endif
+}

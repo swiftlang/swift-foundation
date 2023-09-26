@@ -23,6 +23,7 @@
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #elseif canImport(FoundationInternationalization)
+@testable import FoundationEssentials
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
@@ -31,14 +32,6 @@ import TestSupport
 #endif
 
 final class LocaleTests : XCTestCase {
-    
-#if FOUNDATION_FRAMEWORK
-    func test_xcode_override_french() {
-        let task = AuxRunner.launchedTaskRunningClientNamed("TestLocaleAppleLanguagesOverride", withArguments: ["-AppleLanguages", "(fr)"], environment: [:], standardOutput: nil, standardError: nil, options: .init(0))
-        task?.waitUntilExit()
-        XCTAssertEqual(task?.terminationStatus(), 0)
-    }
-#endif
 
     func test_equality() {
         let autoupdating = Locale.autoupdatingCurrent
@@ -367,7 +360,9 @@ final class LocaleTests : XCTestCase {
 
         // Preferences not representable by locale identifier are ignored
         expectIdentifier("en_US", preferences: .init(minDaysInFirstWeek: [.gregorian: 7]), expectedFullIdentifier: "en_US")
+#if FOUNDATION_FRAMEWORK
         expectIdentifier("en_US", preferences: .init(dateFormats: [.abbreviated: "custom style"]), expectedFullIdentifier: "en_US")
+#endif
     }
     
     func test_badWindowsLocaleID() {
@@ -592,7 +587,7 @@ extension NSLocale {
     }
 }
 
-final class LocalBridgingTests : XCTestCase {
+final class LocaleBridgingTests : XCTestCase {
     
     @available(macOS, deprecated: 13)
     @available(iOS, deprecated: 16)
@@ -792,6 +787,7 @@ extension LocaleTests {
         let currentLanguage = Locale.current.language.languageCode!
         var localizations = Set([ "zh", "fr", "en" ])
         localizations.insert(currentLanguage.identifier) // We're not sure what the current locale is when test runs. Ensure that it's always in the list of available localizations
+        // Foundation framework-only test
         let fakeCurrent = Locale.localeAsIfCurrentWithBundleLocalizations(Array(localizations), allowsMixedLocalizations: false)
         XCTAssertEqual(fakeCurrent?.language.languageCode, currentLanguage)
     }

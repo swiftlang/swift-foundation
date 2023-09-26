@@ -1073,7 +1073,9 @@ final class JSONEncoderTests : XCTestCase {
         }
 
         if let expectedJSON = json {
-            XCTAssertEqual(expectedJSON, payload, "Produced JSON not identical to expected JSON.")
+            let expected = String(data: expectedJSON, encoding: .utf8)!
+            let actual = String(data: payload, encoding: .utf8)!
+            XCTAssertEqual(expected, actual, "Produced JSON not identical to expected JSON.")
         }
 
         do {
@@ -2152,6 +2154,17 @@ extension JSONEncoderTests {
         let resultData = try! encoder.encode(encoded)
         let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
         XCTAssertEqual("{\"this_is_camel_case\":\"test\"}", resultString)
+    }
+
+    func testDecodingStringExpectedType() {
+        let input = #"{"thisIsCamelCase": null}"#.data(using: String._Encoding.utf8)!
+        do {
+            _ = try JSONDecoder().decode(DecodeMe3.self, from: input)
+        } catch DecodingError.valueNotFound(let expected, _) {
+            XCTAssertTrue(expected == String.self)
+        } catch {
+            XCTFail("Unexpected error: \(String(describing: error))")
+        }
     }
 
     func testEncodingKeyStrategySnakeGenerated() {

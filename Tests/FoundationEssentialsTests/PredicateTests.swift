@@ -619,7 +619,7 @@ final class PredicateTests: XCTestCase {
             }
         }
         
-        var foo = Foo()
+        let foo = Foo()
         let predicate = Predicate<[String : Int]> {
             PredicateExpressions.build_Equal(
                 lhs: PredicateExpressions.build_subscript(

@@ -15,6 +15,7 @@ import TestSupport
 #endif
 
 #if canImport(FoundationInternationalization)
+@testable import FoundationEssentials
 @testable import FoundationInternationalization
 #endif
 
@@ -108,7 +109,7 @@ final class FormatterCacheTests: XCTestCase {
 
         XCTAssertEqual(group.wait(timeout: .now().advanced(by: .seconds(3))), .success)
     }
-#endif
+#endif // FOUNDATION_FRAMEWORK
 }
 
 

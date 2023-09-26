@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal struct FormatterCache<Format : Hashable & Sendable, FormattingType: Sendable>: Sendable {
+package struct FormatterCache<Format : Hashable & Sendable, FormattingType: Sendable>: Sendable {
 
     let countLimit = 100
 
     private let _lock: LockedState<[Format: FormattingType]>
-    internal func formatter(for config: Format, creator: () -> FormattingType) -> FormattingType {
+    package func formatter(for config: Format, creator: () -> FormattingType) -> FormattingType {
         let existed = _lock.withLock { cache in
             return cache [config]
         }
@@ -37,19 +37,19 @@ internal struct FormatterCache<Format : Hashable & Sendable, FormattingType: Sen
         return df
     }
 
-    func removeAllObjects() {
+    package func removeAllObjects() {
         _lock.withLockExtendingLifetimeOfState { cache in
             cache.removeAll()
         }
     }
 
-    subscript(key: Format) -> FormattingType? {
+    package subscript(key: Format) -> FormattingType? {
         _lock.withLock {
             $0[key]
         }
     }
 
-    init() {
+    package init() {
         _lock = LockedState(initialState: [Format: FormattingType]())
     }
 }

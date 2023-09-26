@@ -266,11 +266,15 @@ final class ICUDateFormatter {
 
         let calendarIdentifier = format.calendar.identifier
         let datePatternOverride: String?
+#if FOUNDATION_FRAMEWORK
         if let dateStyle = format._dateStyle {
             datePatternOverride = format.locale.customDateFormat(dateStyle)
         } else {
             datePatternOverride = nil
         }
+#else
+        datePatternOverride = nil
+#endif
 
         let key = PatternCacheKey(localeIdentifier: format.locale.identifierCapturingPreferences, calendarIdentifier: format.calendar.identifier, symbols: format.symbols, datePatternOverride: datePatternOverride)
         let pattern = patternCache.withLock { state in

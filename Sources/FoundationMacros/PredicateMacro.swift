@@ -119,15 +119,15 @@ private struct FunctionStructure: Hashable {
         if sourceHasTrailingClosure {
             guard supportsTrailingClosure else { return nil }
         }
-        let sourceArgumentTotalCount = source.argumentList.count + (sourceHasTrailingClosure ? 1 : 0)
+        let sourceArgumentTotalCount = source.arguments.count + (sourceHasTrailingClosure ? 1 : 0)
         let argumentTotalCount = self.arguments.count + (hasTrailingClosure ? 1 : 0)
         guard argumentTotalCount == sourceArgumentTotalCount,
               let calledExpr = source.calledExpression.as(MemberAccessExprSyntax.self) else {
             return nil
         }
         var newFunctionCall = source
-        newFunctionCall.calledExpression = ExprSyntax(calledExpr.with(\.name, .identifier(name)))
-        newFunctionCall.argumentList = TupleExprElementListSyntax(zip(source.argumentList, arguments).map {
+        newFunctionCall.calledExpression = ExprSyntax(calledExpr.with(\.declName, DeclReferenceExprSyntax(baseName: .identifier(name))))
+        newFunctionCall.arguments = LabeledExprListSyntax(zip(source.arguments, arguments).map {
             if let newLabel = $1.label {
                 return $0.with(\.label, .identifier(newLabel)).with(\.colon, .colonToken()).with(\.expression, $0.expression.with(\.leadingTrivia, [.spaces(1)]))
             } else {
@@ -136,7 +136,7 @@ private struct FunctionStructure: Hashable {
         })
         newFunctionCall.leadingTrivia = []
         newFunctionCall.trailingTrivia = []
-        if self.hasTrailingClosure && source.trailingClosure == nil, let newTrailingClosure = source.argumentList.last?.expression.as(ClosureExprSyntax.self) {
+        if self.hasTrailingClosure && source.trailingClosure == nil, let newTrailingClosure = source.arguments.last?.expression.as(ClosureExprSyntax.self) {
             newFunctionCall.trailingClosure = newTrailingClosure
         }
         return [.replace(oldNode: Syntax(source), newNode: Syntax(newFunctionCall))]
@@ -159,9 +159,9 @@ private func _suggestionForUnknownFunction(_ structure: FunctionStructure) -> Fu
 private class ShorthandArgumentIdentifierDetector: SyntaxVisitor {
     var found = false
 
-    override func visit(_ node: IdentifierExprSyntax) -> SyntaxVisitorContinueKind {
+    override func visit(_ node: DeclReferenceExprSyntax) -> SyntaxVisitorContinueKind {
         // Look for identifiers such as $0, $1, etc.
-        if case let .dollarIdentifier(identifier) = node.identifier.tokenKind, identifier.dropFirst().allSatisfy(\.isNumber) {
+        if case let .dollarIdentifier(identifier) = node.baseName.tokenKind, identifier.dropFirst().allSatisfy(\.isNumber) {
             found = true
             return .skipChildren
         } else {
@@ -219,7 +219,7 @@ private class OptionalChainRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             let visited = self.visit(input)
             let closure = ClosureExprSyntax(statements: [CodeBlockItemSyntax(item: CodeBlockItemSyntax.Item(node))])
             let functionMember = MemberAccessExprSyntax(base: visited, name: "flatMap")
-            let functionCall = FunctionCallExprSyntax(calledExpression: functionMember, argumentList: [], trailingClosure: closure)
+            let functionCall = FunctionCallExprSyntax(calledExpression: functionMember, arguments: [], trailingClosure: closure)
             return ExprSyntax(functionCall)
         }
         return node
@@ -244,7 +244,7 @@ private class OptionalChainRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         let priorValidTreeStart = withinValidChainingTreeStart
         defer { withinValidChainingTreeStart = priorValidTreeStart }
         
-        if node.argumentList.containsShorthandArgumentIdentifiers {
+        if node.arguments.containsShorthandArgumentIdentifiers {
             withinValidChainingTreeStart = false
         }
         
@@ -273,7 +273,7 @@ private class OptionalChainRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         }
         // Capture the optional input, and replace it in the output expression with a "$0"
         optionalInput = node.expression
-        return .init(IdentifierExprSyntax(identifier: .dollarIdentifier("$0")))
+        return .init(DeclReferenceExprSyntax(baseName: .dollarIdentifier("$0")))
     }
 }
 
@@ -319,66 +319,29 @@ extension KeyPathExprSyntax {
         case unknownKeypathComponentType
     }
     
-    fileprivate func asDirectExpression<E: ExprSyntaxProtocol>(on base: E) -> ExprSyntax? {
-        try? self.components.reduce(ExprSyntax(base)) {
-            switch $1.component {
+    fileprivate func asDirectExpression(on base: some ExprSyntaxProtocol) -> ExprSyntax? {
+        var result = ExprSyntax(base)
+        for item in components {
+            switch item.component {
             case .property(let prop):
-                ExprSyntax(MemberAccessExprSyntax(_base: $0, prop: prop))
+                result = ExprSyntax(MemberAccessExprSyntax(base: result, declName: prop.declName))
             case .optional(let opt):
                 if opt.questionOrExclamationMark.tokenKind == .exclamationMark {
-                    ExprSyntax(ForcedValueExprSyntax(expression: $0))
+                    result = ExprSyntax(ForceUnwrapExprSyntax(expression: result))
                 } else {
-                    ExprSyntax(OptionalChainingExprSyntax(expression: $0))
+                    result = ExprSyntax(OptionalChainingExprSyntax(expression: result))
                 }
             case .subscript(let sub):
-                ExprSyntax(SubscriptExprSyntax(calledExpression: $0, argumentList: sub.argumentList))
+                result = ExprSyntax(SubscriptCallExprSyntax(calledExpression: result, arguments: sub.arguments))
+#if FOUNDATION_FRAMEWORK
             default:
-                throw KeyPathDirectExpressionRewritingError.unknownKeypathComponentType
+                return nil
+#endif
             }
         }
+        return result
     }
 }
-
-extension PrefixOperatorExprSyntax {
-    // Work around the TokenSyntax? -> TokenSyntax source breaking change
-    var _operatorToken: TokenSyntax? {
-        self.operatorToken
-    }
-}
-
-extension DoStmtSyntax {
-    // Work around the CatchClauseListSyntax? -> CatchClauseListSyntax source breaking change
-    var _catchClauses: CatchClauseListSyntax? {
-        self.catchClauses
-    }
-}
-
-#if !FOUNDATION_FRAMEWORK
-extension KeyPathPropertyComponentSyntax {
-    init(_identifier id: TokenSyntax) {
-        self.init(declName: DeclReferenceExprSyntax(baseName: id))
-    }
-}
-
-extension ClosureSignatureSyntax.Input {
-    var _parameterClause: ClosureParameterClauseSyntax? {
-        if case let .parameterClause(paramClause) = self {
-            return paramClause
-        }
-        return nil
-    }
-    
-    init(_parameterClause parameterClause: ClosureParameterClauseSyntax) {
-        self = .parameterClause(parameterClause)
-    }
-}
-
-extension MemberAccessExprSyntax {
-    init(_base base: some ExprSyntaxProtocol, prop: KeyPathPropertyComponentSyntax) {
-        self.init(base: base, declName: prop.declName)
-    }
-}
-#endif
 
 private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     private let indentWidth: Trivia = .spaces(4)
@@ -394,7 +357,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         diagnostics.append(.init(node: Syntax(node), message: message, fixIts: fixIts))
     }
     
-    private func makeArgument(label: String?, _ expression: ExprSyntax, shouldVisit: Bool = true, shouldIndent: Bool = true) -> TupleExprElementSyntax {
+    private func makeArgument(label: String?, _ expression: ExprSyntax, shouldVisit: Bool = true, shouldIndent: Bool = true) -> LabeledExprSyntax {
         if shouldIndent {
             indentLevel += 1
         }
@@ -426,17 +389,12 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     }
     
     override func visit(_ node: PrefixOperatorExprSyntax) -> ExprSyntax {
-        guard let opToken = node._operatorToken else {
-            diagnose(node: node, message: "This unknown operator is not supported in this predicate")
-            return ExprSyntax(node)
-        }
-
-        switch opToken.text {
+        switch node.operator.text {
         case "!":
             let syntax: ExprSyntax =
                 """
                 \(raw: indent)PredicateExpressions.build_Negation(
-                \(makeArgument(label: nil, node.postfixExpression))
+                \(makeArgument(label: nil, node.expression))
                 \(raw: indent))
                 """
             
@@ -445,13 +403,13 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             let syntax: ExprSyntax =
                 """
                 \(raw: indent)PredicateExpressions.build_UnaryMinus(
-                \(makeArgument(label: nil, node.postfixExpression))
+                \(makeArgument(label: nil, node.expression))
                 \(raw: indent))
                 """
             
             return syntax
         default:
-            diagnose(node: opToken, message: "The '\(opToken.text)' operator is not supported in this predicate")
+            diagnose(node: node.operator, message: "The '\(node.operator.text)' operator is not supported in this predicate")
             return ExprSyntax(node)
         }
     }
@@ -459,14 +417,14 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     override func visit(_ node: InfixOperatorExprSyntax) -> ExprSyntax {
         let lhsOp =  node.leftOperand
         let rhsOp = node.rightOperand
-        let opExpr = node.operatorOperand
+        let opExpr = node.operator
         
         guard let opSyntax = opExpr.as(BinaryOperatorExprSyntax.self) else {
             diagnose(node: opExpr, message: "The '\(opExpr.description)' operator is not supported in this predicate")
             return ExprSyntax(node)
         }
         
-        let (lhsLabel, rhsLabel) = switch opSyntax.operatorToken.text {
+        let (lhsLabel, rhsLabel) = switch opSyntax.operator.text {
         case "...", "..<": ("lower", "upper")
         default: ("lhs", "rhs")
         }
@@ -474,7 +432,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         let lhsArgument = makeArgument(label: lhsLabel, lhsOp).with(\.trailingTrivia, [])
         let rhsArgument = makeArgument(label: rhsLabel, rhsOp).with(\.trailingTrivia, [])
         
-        switch (opSyntax.operatorToken.text) {
+        switch (opSyntax.operator.text) {
         case "==":
             let syntax: ExprSyntax =
                 """
@@ -645,7 +603,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             
             return syntax
         default:
-            diagnose(node: opSyntax, message: "The '\(opSyntax.operatorToken.text)' operator is not supported in this predicate")
+            diagnose(node: opSyntax, message: "The '\(opSyntax.operator.text)' operator is not supported in this predicate")
             return ExprSyntax(node)
         }
     }
@@ -656,7 +614,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         return .init(node)
     }
     
-    override func visit(_ node: ForcedValueExprSyntax) -> ExprSyntax {
+    override func visit(_ node: ForceUnwrapExprSyntax) -> ExprSyntax {
         return """
                 \(raw: indent)PredicateExpressions.build_ForcedUnwrap(
                 \(makeArgument(label: nil, node.expression))
@@ -674,7 +632,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             return .init(node)
         }
         
-        let newPropertyComponent = KeyPathPropertyComponentSyntax(_identifier: node.name)
+        let newPropertyComponent = KeyPathPropertyComponentSyntax(declName: node.declName)
         let keyPath = KeyPathExprSyntax(components: [.init(period: TokenSyntax.periodToken(), component: .property(newPropertyComponent))])
         return """
                 \(raw: indent)PredicateExpressions.build_KeyPath(
@@ -687,28 +645,28 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     override func visit(_ node: FunctionCallExprSyntax) -> ExprSyntax {
         let memberAccess = node.calledExpression.as(MemberAccessExprSyntax.self)
         let base = memberAccess?.base
-        let funcName = memberAccess?.name.with(\.leadingTrivia, []).with(\.trailingTrivia, []).text ?? node.calledExpression.as(IdentifierExprSyntax.self)!.identifier.text
+        let funcName = memberAccess?.declName.baseName.with(\.leadingTrivia, []).with(\.trailingTrivia, []).text ?? node.calledExpression.as(DeclReferenceExprSyntax.self)!.baseName.text
         return _processFunction(
             base: base,
             functionName: funcName,
-            argumentList: node.argumentList,
+            argumentList: node.arguments,
             trailingClosure: node.trailingClosure,
-            diagnosticPoint: .init(memberAccess?.name) ?? .init(node),
+            diagnosticPoint: .init(memberAccess?.declName) ?? .init(node),
             functionCallExpr: node)
         ?? .init(node)
     }
     
-    override func visit(_ node: SubscriptExprSyntax) -> ExprSyntax {
+    override func visit(_ node: SubscriptCallExprSyntax) -> ExprSyntax {
         return _processFunction(
             base: node.calledExpression,
             functionName: "subscript",
-            argumentList: node.argumentList,
+            argumentList: node.arguments,
             trailingClosure: node.trailingClosure,
-            diagnosticPoint: .init(node.leftBracket))
+            diagnosticPoint: .init(node.leftSquare))
         ?? .init(node)
     }
     
-    private func _processFunction(base: ExprSyntax?, functionName: String, argumentList: TupleExprElementListSyntax, trailingClosure: ClosureExprSyntax?, diagnosticPoint: Syntax, functionCallExpr: FunctionCallExprSyntax? = nil) -> ExprSyntax? {
+    private func _processFunction(base: ExprSyntax?, functionName: String, argumentList: LabeledExprListSyntax, trailingClosure: ClosureExprSyntax?, diagnosticPoint: Syntax, functionCallExpr: FunctionCallExprSyntax? = nil) -> ExprSyntax? {
         // The provided base is nil when calling global functions functions
         guard let base else {
             diagnose(node: diagnosticPoint, message: "Global functions are not supported in this predicate")
@@ -733,7 +691,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             return nil
         }
         
-        var arguments: [TupleExprElementSyntax] = []
+        var arguments: [LabeledExprSyntax] = []
         func addArgument(_ argument: ExprSyntax, label: String?, withComma: Bool) {
             arguments.append(
                 makeArgument(label: label, argument)
@@ -753,7 +711,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             var expression = sourceArg.expression
             if knownArgStructure.isClosure, let kpExpr = sourceArg.expression.as(KeyPathExprSyntax.self) {
                 guard !kpExpr.containsShorthandArgumentIdentifiers,
-                      let memberAccess = kpExpr.asDirectExpression(on: IdentifierExprSyntax(identifier: .dollarIdentifier("$0"))),
+                      let memberAccess = kpExpr.asDirectExpression(on: DeclReferenceExprSyntax(baseName: .dollarIdentifier("$0"))),
                       let preparedMemberAccess = try? memberAccess.rewrite(with: OptionalChainRewriter()) else {
                     diagnose(node: kpExpr, message: "This key path is not supported here in this predicate. Use an explicit closure instead.")
                     return nil
@@ -768,20 +726,20 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             let closureArg = makeArgument(label: nil, ExprSyntax(closure), shouldIndent: false)
             return """
              \(raw: indent)PredicateExpressions.build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
-             \(TupleExprElementListSyntax(arguments))
+             \(LabeledExprListSyntax(arguments))
              \(raw: indent))\(raw: Trivia.space)\(closureArg.with(\.leadingTrivia, []).with(\.trailingTrivia, []))
              """
         } else {
             return """
              \(raw: indent)PredicateExpressions.build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
-             \(TupleExprElementListSyntax(arguments))
+             \(LabeledExprListSyntax(arguments))
              \(raw: indent))
              """
         }
     }
     
     override func visit(_ node: TupleExprSyntax) -> ExprSyntax {
-        guard node.elementList.count == 1, let element = node.elementList.first else {
+        guard node.elements.count == 1, let element = node.elements.first else {
             diagnose(node: node, message: "Tuples are not supported in this predicate")
             return ExprSyntax(node)
         }
@@ -831,10 +789,10 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         var resultingSignature = node.signature
         if let signature = node.signature {
             var visited = signature
-            visited.output = nil
-            if let paramClause = signature.input?._parameterClause {
-                let newParamClause = paramClause.with(\.parameterList, paramClause.parameterList.withVariableWrappedTypes)
-                visited.input = .init(_parameterClause: newParamClause)
+            visited.returnClause = nil
+            if case .parameterClause(let paramClause) = signature.parameterClause {
+                let newParamClause = paramClause.with(\.parameters, paramClause.parameters.withVariableWrappedTypes)
+                visited.parameterClause = .parameterClause(newParamClause)
             }
             resultingSignature = visited
         }
@@ -849,9 +807,9 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     }
     
     override func visit(_ node: TernaryExprSyntax) -> ExprSyntax {
-        let condition = node.conditionExpression
-        let firstChoice = node.firstChoice
-        let secondChoice = node.secondChoice
+        let condition = node.condition
+        let firstChoice = node.thenExpression
+        let secondChoice = node.elseExpression
         
         return """
          \(raw: indent)PredicateExpressions.build_Conditional(
@@ -864,7 +822,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     
     override func visit(_ node: IsExprSyntax) -> ExprSyntax {
         return """
-         \(raw: indent)PredicateExpressions.TypeCheck<_, \(node.typeName)>(
+         \(raw: indent)PredicateExpressions.TypeCheck<_, \(node.type)>(
          \(makeArgument(label: nil, node.expression).with(\.trailingTrivia, []))
          \(raw: indent))
          """
@@ -883,7 +841,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         }
         
         return """
-         \(raw: indent)PredicateExpressions.\(raw: castType)Cast<_, \(node.typeName)>(
+         \(raw: indent)PredicateExpressions.\(raw: castType)Cast<_, \(node.type)>(
          \(makeArgument(label: nil, node.expression).with(\.trailingTrivia, []))
          \(raw: indent))
          """
@@ -944,7 +902,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             guard let restRewritten = _rewriteConditionsAsExpression(rest, in: expr) else {
                 return nil
             }
-            return .init(InfixOperatorExprSyntax(leftOperand: restRewritten, operatorOperand: BinaryOperatorExprSyntax(operatorToken: .binaryOperator("&&")), rightOperand: lastExpr))
+            return .init(InfixOperatorExprSyntax(leftOperand: restRewritten, operator: BinaryOperatorExprSyntax(operator: .binaryOperator("&&")), rightOperand: lastExpr))
         }
     }
     
@@ -957,7 +915,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
                 self.diagnose(node: binding.pattern, message: "This optional binding condition is not supported in this predicate")
                 return nil
             }
-            let initializer = binding.initializer?.value ?? ExprSyntax(IdentifierExprSyntax(identifier: identifier))
+            let initializer = binding.initializer?.value ?? ExprSyntax(DeclReferenceExprSyntax(baseName: identifier))
             
             prior = """
              \(raw: indent)PredicateExpressions.build_flatMap(
@@ -1052,7 +1010,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         return .init(node)
     }
     
-    override func visit(_ node: ForInStmtSyntax) -> StmtSyntax {
+    override func visit(_ node: ForStmtSyntax) -> StmtSyntax {
         self.diagnose(node: node, message: "For-in loops are not supported in this predicate")
         return .init(node)
     }
@@ -1067,7 +1025,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         return node
     }
     
-    override func visit(_ node: RepeatWhileStmtSyntax) -> StmtSyntax {
+    override func visit(_ node: RepeatStmtSyntax) -> StmtSyntax {
         self.diagnose(node: node, message: "Repeat-while loops are not supported in this predicate")
         return .init(node)
     }
@@ -1084,7 +1042,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         if case let .stmt(statement) = node.item {
             // Unwrap a do statement with valid expression bodies
             if let doStatement = statement.as(DoStmtSyntax.self) {
-                if let catchClause = doStatement._catchClauses?.first {
+                if let catchClause = doStatement.catchClauses.first {
                     diagnose(node: catchClause, message: "Catch clauses are not supported in this predicate")
                     return node
                 }
@@ -1149,7 +1107,7 @@ public struct PredicateMacro: ExpressionMacro, Sendable {
         }
         
         let translatedClosure = try closure.rewrite(with: OptionalChainRewriter()).rewrite(with: PredicateQueryRewriter()).with(\.leadingTrivia, []).with(\.trailingTrivia, [])
-        if let genericArgs = node.genericArguments {
+        if let genericArgs = node.genericArgumentClause {
             return "\(raw: moduleName).Predicate\(genericArgs.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(\(translatedClosure))"
         } else {
             // When the macro is specified without generic args (ex. "#Predicate { ... }") initialize a Predicate without generic args so they can be inferred from context

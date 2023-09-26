@@ -384,7 +384,7 @@ extension Decimal {
     }
 #else
     /// Format `self` with the given format.
-    public func formatted<S: FoundationInternationalization.FormatStyle>(_ format: S) -> S.FormatOutput where Self == S.FormatInput {
+    public func formatted<S: FoundationEssentials.FormatStyle>(_ format: S) -> S.FormatOutput where Self == S.FormatInput {
         format.format(self)
     }
 #endif

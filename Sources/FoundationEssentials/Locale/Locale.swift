@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif // canImport(FoundationEssentials)
-
 /**
  `Locale` encapsulates information about linguistic, cultural, and technological conventions and standards. Examples of information encapsulated by a locale include the symbol used for the decimal separator in numbers and the way dates are formatted.
 
@@ -43,62 +39,25 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 #endif
 
-    internal enum Kind: Equatable, CustomDebugStringConvertible {
-        case fixed(_Locale)
-        case autoupdating
-        #if FOUNDATION_FRAMEWORK
-        case bridged(_NSLocaleSwiftWrapper)
-        #endif
+    // Identifier canonicalization
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    public enum IdentifierType : Sendable {
+        /* This canonicalizes the identifier */
+        /// Identifier following ICU (International Components for Unicode) convention. Unlike the `posix` type, does not include character set
+        /// For example: "th_TH@calendar=gregorian;numbers=thai"
+        case icu
 
-        public static func ==(lhs: Kind, rhs: Kind) -> Bool {
-            switch lhs {
-            case .autoupdating:
-                switch rhs {
-                case .autoupdating:
-                    return true
-                default:
-                    return false
-                }
-            case .fixed(let lhsLocale):
-                switch rhs {
-                case .autoupdating:
-                    return false
-                case .fixed(let rhsLocale):
-                    return lhsLocale == rhsLocale
-#if FOUNDATION_FRAMEWORK
-                case .bridged(let wrapper):
-                    return lhsLocale.identifier == wrapper.identifier
-#endif
-                }
-#if FOUNDATION_FRAMEWORK
-            case .bridged(let wrapper):
-                switch rhs {
-                case .autoupdating:
-                    return false
-                case .fixed(let rhsLocale):
-                    return rhsLocale.identifier == wrapper.identifier
-                case .bridged(let rhsWrapper):
-                    return wrapper == rhsWrapper
-                }
-#endif
-            }
-        }
+        /* This would be a canonicalized "Unicode BCP 47 locale identifier", not a "BCP 47 language tag", per https://www.unicode.org/reports/tr35/#BCP_47_Language_Tag_Conversion */
+        /// The identifier is also a valid BCP47 language tag
+        /// For example: "th-TH-u-ca-gregory-nu-thai"
+        case bcp47
 
-        var debugDescription: String {
-            switch self {
-            case .fixed(_):
-                return "fixed"
-            case .autoupdating:
-                return "autoupdating"
-#if FOUNDATION_FRAMEWORK
-            case .bridged(let wrapper):
-                return wrapper.debugDescription
-#endif
-            }
-        }
+        /// The components are the same as `icu`, but does not use the key-value type keyword list
+        /// For example: "th_TH_u_ca_gregory_nu_thai"
+        case cldr
     }
 
-    internal var kind: Kind
+    internal var _locale: any _LocaleProtocol
 
     /// Returns a locale which tracks the user's current preferences.
     ///
@@ -106,17 +65,17 @@ public struct Locale : Hashable, Equatable, Sendable {
     ///
     /// - note: The autoupdating Locale will only compare equal to another autoupdating Locale.
     public static var autoupdatingCurrent : Locale {
-        return Locale(.autoupdating)
+        Locale(inner: LocaleCache.cache.autoupdatingCurrent)
     }
 
     /// Returns the user's current locale.
     public static var current : Locale {
-        return Locale(.fixed(LocaleCache.cache.current))
+        Locale(inner: LocaleCache.cache.current)
     }
 
     /// System locale.
     internal static var system : Locale {
-        return Locale(.fixed(LocaleCache.cache.system))
+        Locale(inner: LocaleCache.cache.system)
     }
 
 #if FOUNDATION_FRAMEWORK
@@ -140,13 +99,13 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// Return a locale with the specified identifier.
     public init(identifier: String) {
-        kind = .fixed(LocaleCache.cache.fixed(identifier))
+        _locale = LocaleCache.cache.fixed(identifier)
     }
 
     /// Creates a `Locale` with the specified locale components
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public init(components: Locale.Components) {
-        kind = .fixed(LocaleCache.cache.fixedComponents(components))
+        _locale = LocaleCache.cache.fixedComponents(components)
     }
 
     /// Creates a `Locale` with the specified language components
@@ -161,46 +120,30 @@ public struct Locale : Hashable, Equatable, Sendable {
         self = .init(components: comps)
     }
 
-    /// To be used only by `LocaleCache`.
-    internal init(_ kind: Kind) {
-        self.kind = kind
-    }
-
-
-    internal init(identifier: String, calendarIdentifier: Calendar.Identifier, prefs: LocalePreferences?) {
-        self.kind = .fixed(_Locale(identifier: identifier, prefs: prefs))
-    }
-
     #if FOUNDATION_FRAMEWORK
     internal init(reference: __shared NSLocale) {
         if let swift = reference as? _NSSwiftLocale {
-            kind = swift.locale.kind
+            _locale = swift.locale._locale
         } else {
             // This is a custom NSLocale subclass
-            kind = .bridged(_NSLocaleSwiftWrapper(adoptingReference: reference))
+            _locale = _LocaleBridged(adoptingReference: reference)
         }
-    }
-
-    /// Used by `Locale_Cache` for creating fixed `NSLocale` instances.
-    internal init(inner: _Locale) {
-        self.kind = .fixed(inner)
     }
     #endif
 
+    /// Used by `Locale_Cache` for creating fixed `NSLocale` instances.
+    internal init(inner: any _LocaleProtocol) {
+        _locale = inner
+    }
+
+    /// Used by `Calendar` to get a `Locale` with a specific identifier and preferences.
+    package init(identifier: String, preferences: LocalePreferences?) {
+        self = LocaleCache.cache.localeWithPreferences(identifier: identifier, prefs: preferences)
+    }
+    
     /// Produce a copy of the `Locale` (including `LocalePreferences`, if present), but with a different `Calendar.Identifier`. Date formatting uses this.
     internal func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> Locale {
-        switch kind {
-        case .fixed(let l):
-            return Locale(.fixed(l.copy(newCalendarIdentifier: identifier)))
-        case .autoupdating:
-            return Locale(.fixed(LocaleCache.cache.current.copy(newCalendarIdentifier: identifier)))
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            var comps = Locale.Components(identifier: l.identifier)
-            comps.calendar = identifier
-            return Locale(components: comps)
-#endif
-        }
+        Locale(inner: _locale.copy(newCalendarIdentifier: identifier))
     }
 
     // MARK: -
@@ -210,96 +153,42 @@ public struct Locale : Hashable, Equatable, Sendable {
     ///
     /// For example, in the "en" locale, the result for `"es"` is `"Spanish"`.
     public func localizedString(forIdentifier identifier: String) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.identifierDisplayName(for: identifier)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.identifierDisplayName(for: identifier)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.identifierDisplayName(for: identifier)
-        }
+        _locale.identifierDisplayName(for: identifier)
     }
 
     /// Returns a localized string for a specified language code.
     ///
     /// For example, in the "en" locale, the result for `"es"` is `"Spanish"`.
     public func localizedString(forLanguageCode languageCode: String) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.languageCodeDisplayName(for: languageCode)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.languageCodeDisplayName(for: languageCode)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.languageCodeDisplayName(for: languageCode)
-        }
+        _locale.languageCodeDisplayName(for: languageCode)
     }
 
     /// Returns a localized string for a specified region code.
     ///
     /// For example, in the "en" locale, the result for `"fr"` is `"France"`.
     public func localizedString(forRegionCode regionCode: String) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.countryCodeDisplayName(for: regionCode)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.countryCodeDisplayName(for: regionCode)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.countryCodeDisplayName(for: regionCode)
-        }
+        _locale.countryCodeDisplayName(for: regionCode)
     }
 
     /// Returns a localized string for a specified script code.
     ///
     /// For example, in the "en" locale, the result for `"Hans"` is `"Simplified Han"`.
     public func localizedString(forScriptCode scriptCode: String) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.scriptCodeDisplayName(for: scriptCode)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.scriptCodeDisplayName(for: scriptCode)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.scriptCodeDisplayName(for: scriptCode)
-        }
+        _locale.scriptCodeDisplayName(for: scriptCode)
     }
 
     /// Returns a localized string for a specified variant code.
     ///
     /// For example, in the "en" locale, the result for `"POSIX"` is `"Computer"`.
     public func localizedString(forVariantCode variantCode: String) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.variantCodeDisplayName(for: variantCode)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.variantCodeDisplayName(for: variantCode)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.variantCodeDisplayName(for: variantCode)
-        }
+        _locale.variantCodeDisplayName(for: variantCode)
     }
 
     /// Returns a localized string for a specified `Calendar.Identifier`.
     ///
     /// For example, in the "en" locale, the result for `.buddhist` is `"Buddhist Calendar"`.
     public func localizedString(for calendarIdentifier: Calendar.Identifier) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.calendarIdentifierDisplayName(for: calendarIdentifier)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.calendarIdentifierDisplayName(for: calendarIdentifier)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.calendarIdentifierDisplayName(for: calendarIdentifier)
-        }
+        _locale.calendarIdentifierDisplayName(for: calendarIdentifier)
     }
 
     /// Returns a localized string for a specified ISO 4217 currency code.
@@ -307,60 +196,24 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// For example, in the "en" locale, the result for `"USD"` is `"US Dollar"`.
     /// - seealso: `Locale.isoCurrencyCodes`
     public func localizedString(forCurrencyCode currencyCode: String) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.currencyCodeDisplayName(for: currencyCode)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.currencyCodeDisplayName(for: currencyCode)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.currencyCodeDisplayName(for: currencyCode)
-        }
+        _locale.currencyCodeDisplayName(for: currencyCode)
     }
 
     /// This exists in `NSLocale` via the `displayName` API, using the currency *symbol* key instead of *code*.
     internal func localizedString(forCurrencySymbol currencySymbol: String) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.currencySymbolDisplayName(for: currencySymbol)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.currencySymbolDisplayName(for: currencySymbol)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.currencySymbolDisplayName(for: currencySymbol)
-        }
+        _locale.currencySymbolDisplayName(for: currencySymbol)
     }
     
     /// Returns a localized string for a specified ICU collation identifier.
     ///
     /// For example, in the "en" locale, the result for `"phonebook"` is `"Phonebook Sort Order"`.
     public func localizedString(forCollationIdentifier collationIdentifier: String) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.collationIdentifierDisplayName(for: collationIdentifier)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.collationIdentifierDisplayName(for: collationIdentifier)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.collationIdentifierDisplayName(for: collationIdentifier)
-        }
+        _locale.collationIdentifierDisplayName(for: collationIdentifier)
     }
 
     /// Returns a localized string for a specified ICU collator identifier.
     public func localizedString(forCollatorIdentifier collatorIdentifier: String) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.collatorIdentifierDisplayName(for: collatorIdentifier)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return l.collatorIdentifierDisplayName(for: collatorIdentifier)
-#endif
-        case .autoupdating:
-            return LocaleCache.cache.current.collatorIdentifierDisplayName(for: collatorIdentifier)
-        }
+        _locale.collatorIdentifierDisplayName(for: collatorIdentifier)
     }
 
     // MARK: -
@@ -368,13 +221,7 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// Returns the identifier of the locale.
     public var identifier: String {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.identifier
-        case .fixed(let l): return l.identifier
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.identifier
-#endif
-        }
+        _locale.identifier
     }
 
     /// Returns the language code of the locale, or nil if has none.
@@ -385,32 +232,19 @@ public struct Locale : Hashable, Equatable, Sendable {
     @available(tvOS, deprecated: 16, renamed: "language.languageCode.identifier")
     @available(watchOS, deprecated: 9, renamed: "language.languageCode.identifier")
     public var languageCode: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.languageCode
-        case .fixed(let l): return l.languageCode
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.languageCode
-#endif
-        }
+        _locale.languageCode
     }
 
     /// Returns the region code of the locale, or nil if it has none.
     ///
     /// For example, for the locale "zh-Hant-HK", returns "HK".
-    @available(macOS, deprecated: 13, renamed: "language.region.identifier")
-    @available(iOS, deprecated: 16, renamed: "language.region.identifier")
-    @available(tvOS, deprecated: 16, renamed: "language.region.identifier")
-    @available(watchOS, deprecated: 9, renamed: "language.region.identifier")
+    @available(macOS, deprecated: 13, renamed: "region.identifier")
+    @available(iOS, deprecated: 16, renamed: "region.identifier")
+    @available(tvOS, deprecated: 16, renamed: "region.identifier")
+    @available(watchOS, deprecated: 9, renamed: "region.identifier")
     public var regionCode: String? {
         // n.b. this is called countryCode in ObjC
-        let result: String?
-        switch kind {
-        case .autoupdating: result = LocaleCache.cache.current.region?.identifier
-        case .fixed(let l): result = l.region?.identifier
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): result = l.countryCode
-#endif
-        }
+        let result = _locale.regionCode
         if let result, result.isEmpty {
             return nil
         }
@@ -425,13 +259,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     @available(tvOS, deprecated: 16, renamed: "language.script.identifier")
     @available(watchOS, deprecated: 9, renamed: "language.script.identifier")
     public var scriptCode: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.scriptCode
-        case .fixed(let l): return l.scriptCode
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.scriptCode
-#endif
-        }
+        _locale.scriptCode
     }
 
     /// Returns the variant code for the locale, or nil if it has none.
@@ -442,14 +270,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     @available(tvOS, deprecated: 16, renamed: "variant.identifier")
     @available(watchOS, deprecated: 9, renamed: "variant.identifier")
     public var variantCode: String? {
-        let result: String?
-        switch kind {
-        case .autoupdating: result = LocaleCache.cache.current.variantCode
-        case .fixed(let l): result = l.variantCode
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): result = l.variantCode
-#endif
-        }
+        let result = _locale.variantCode
         if let result, result.isEmpty {
             return nil
         }
@@ -459,24 +280,13 @@ public struct Locale : Hashable, Equatable, Sendable {
 #if FOUNDATION_FRAMEWORK
     /// Returns the exemplar character set for the locale, or nil if has none.
     public var exemplarCharacterSet: CharacterSet? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.exemplarCharacterSet
-        case .fixed(let l): return l.exemplarCharacterSet
-        case .bridged(let l): return l.exemplarCharacterSet
-        }
+        _locale.exemplarCharacterSet
     }
 #endif
 
     /// Returns the calendar for the locale, or the Gregorian calendar as a fallback.
     public var calendar: Calendar {
-        var cal: Calendar
-        switch kind {
-        case .autoupdating: cal = LocaleCache.cache.current.calendar
-        case .fixed(let l): cal = l.calendar
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): cal = l.calendar
-#endif
-        }
+        var cal = _locale.calendar
         // TODO: This is a fairly expensive operation, because it recreates the Calendar's backing ICU object. However, we can't cache the value or we risk creating a retain cycle between _Calendar/_Locale. We'll need to sort out some way around this.
         // TODO: Calendar doesn't store a Locale anymore!
         cal.locale = self
@@ -485,14 +295,8 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// Returns the calendar identifier for the locale, or the Gregorian identifier as a fallback.
     /// Useful if you need the identifier but not a full instance of the `Calendar`.
-    internal var _calendarIdentifier: Calendar.Identifier {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.calendarIdentifier
-        case .fixed(let l): return l.calendarIdentifier
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.calendarIdentifier
-#endif
-        }
+    package var _calendarIdentifier: Calendar.Identifier {
+        _locale.calendarIdentifier
     }
 
     /// Returns the collation identifier for the locale, or nil if it has none.
@@ -503,13 +307,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     @available(tvOS, deprecated: 16, renamed: "collation.identifier")
     @available(watchOS, deprecated: 9, renamed: "collation.identifier")
     public var collationIdentifier: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.collationIdentifier
-        case .fixed(let l): return l.collationIdentifier
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.collationIdentifier
-#endif
-        }
+        _locale.collationIdentifier
     }
 
     /// Returns true if the locale uses the metric system.
@@ -520,52 +318,28 @@ public struct Locale : Hashable, Equatable, Sendable {
     @available(tvOS, deprecated: 16, message: "Use `measurementSystem` instead")
     @available(watchOS, deprecated: 9, message: "Use `measurementSystem` instead")
     public var usesMetricSystem: Bool {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.usesMetricSystem
-        case .fixed(let l): return l.usesMetricSystem
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.usesMetricSystem
-#endif
-        }
+        _locale.usesMetricSystem
     }
 
     /// Returns the decimal separator of the locale.
     ///
     /// For example, for "en_US", returns ".".
     public var decimalSeparator: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.decimalSeparator
-        case .fixed(let l): return l.decimalSeparator
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.decimalSeparator
-#endif
-        }
+        _locale.decimalSeparator
     }
 
     /// Returns the grouping separator of the locale.
     ///
     /// For example, for "en_US", returns ",".
     public var groupingSeparator: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.groupingSeparator
-        case .fixed(let l): return l.groupingSeparator
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.groupingSeparator
-#endif
-        }
+        _locale.groupingSeparator
     }
 
     /// Returns the currency symbol of the locale.
     ///
     /// For example, for "zh-Hant-HK", returns "HK$".
     public var currencySymbol: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.currencySymbol
-        case .fixed(let l): return l.currencySymbol
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.currencySymbol
-#endif
-        }
+        _locale.currencySymbol
     }
 
     /// Returns the currency code of the locale.
@@ -576,76 +350,40 @@ public struct Locale : Hashable, Equatable, Sendable {
     @available(tvOS, deprecated: 16, renamed: "currency.identifier")
     @available(watchOS, deprecated: 9, renamed: "currency.identifier")
     public var currencyCode: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.currencyCode
-        case .fixed(let l): return l.currencyCode
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.currencyCode
-#endif
-        }
+        _locale.currencyCode
     }
 
     /// Returns the collator identifier of the locale.
     public var collatorIdentifier: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.collatorIdentifier
-        case .fixed(let l): return l.collatorIdentifier
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.collatorIdentifier
-#endif
-        }
+        _locale.collatorIdentifier
     }
 
     /// Returns the quotation begin delimiter of the locale.
     ///
     /// For example, returns `“` for "en_US", and `「` for "zh-Hant-HK".
     public var quotationBeginDelimiter: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.quotationBeginDelimiter
-        case .fixed(let l): return l.quotationBeginDelimiter
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.quotationBeginDelimiter
-#endif
-        }
+        _locale.quotationBeginDelimiter
     }
 
     /// Returns the quotation end delimiter of the locale.
     ///
     /// For example, returns `”` for "en_US", and `」` for "zh-Hant-HK".
     public var quotationEndDelimiter: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.quotationEndDelimiter
-        case .fixed(let l): return l.quotationEndDelimiter
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.quotationEndDelimiter
-#endif
-        }
+        _locale.quotationEndDelimiter
     }
 
     /// Returns the alternate quotation begin delimiter of the locale.
     ///
     /// For example, returns `‘` for "en_US", and `『` for "zh-Hant-HK".
     public var alternateQuotationBeginDelimiter: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.alternateQuotationBeginDelimiter
-        case .fixed(let l): return l.alternateQuotationBeginDelimiter
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.alternateQuotationBeginDelimiter
-#endif
-        }
+        _locale.alternateQuotationBeginDelimiter
     }
 
     /// Returns the alternate quotation end delimiter of the locale.
     ///
     /// For example, returns `’` for "en_US", and `』` for "zh-Hant-HK".
     public var alternateQuotationEndDelimiter: String? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.alternateQuotationEndDelimiter
-        case .fixed(let l): return l.alternateQuotationEndDelimiter
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.alternateQuotationEndDelimiter
-#endif
-        }
+        _locale.alternateQuotationEndDelimiter
     }
 
     // MARK: - Components
@@ -653,109 +391,55 @@ public struct Locale : Hashable, Equatable, Sendable {
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     /// Returns the measurement system of the locale. Returns `metric` as the default value if the data isn't available.
     public var measurementSystem: MeasurementSystem {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.measurementSystem
-        case .fixed(let l): return l.measurementSystem
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).measurementSystem
-#endif
-        }
+        _locale.measurementSystem
     }
 
     /// Returns the currency of the locale. Returns nil if the data isn't available.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var currency: Currency? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.currency
-        case .fixed(let l): return l.currency
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).currency
-#endif
-        }
+        _locale.currency
     }
 
     /// Returns the numbering system of the locale. If the locale has an explicitly specified numbering system in the identifier (e.g. `bn_BD@numbers=latn`) or in the associated `Locale.Components`, that numbering system is returned. Otherwise, returns the default numbering system of the locale. Returns `"latn"` as the default value if the data isn't available.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var numberingSystem: NumberingSystem {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.numberingSystem
-        case .fixed(let l): return l.numberingSystem
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).numberingSystem
-#endif
-        }
+        _locale.numberingSystem
     }
 
     /// Returns all the valid numbering systems for the locale. For example, `"ar-AE (Arabic (United Arab Emirates)"` has both `"latn" (Latin digits)` and `"arab" (Arabic-Indic digits)` numbering system.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var availableNumberingSystems: [NumberingSystem] {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.availableNumberingSystems
-        case .fixed(let l): return l.availableNumberingSystems
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).availableNumberingSystems
-#endif
-        }
+        _locale.availableNumberingSystems
     }
 
     /// Returns the first day of the week of the locale. Returns `.sunday` as the default value if the data isn't available to the requested locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var firstDayOfWeek: Weekday {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.firstDayOfWeek
-        case .fixed(let l): return l.firstDayOfWeek
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).firstDayOfWeek
-#endif
-        }
+        _locale.firstDayOfWeek
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var language: Language {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.language
-        case .fixed(let l): return l.language
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).language
-#endif
-        }
+        _locale.language
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     /// Returns the identifier conforming to the specified standard
     public func identifier(_ type: IdentifierType) -> String {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.identifier(type)
-        case .fixed(let l): return l.identifier(type)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).identifier(type)
-#endif
-        }
+        _locale.identifier(type)
     }
 
     /// Returns the hour cycle such as whether it uses 12-hour clock or 24-hour clock. Default is `.zeroToTwentyThree` if the data isn't available.
     /// Calling this on `.current` or `.autoupdatingCurrent` returns user's preference values as set in the system settings if available, overriding the default value of the user's locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var hourCycle: HourCycle {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.hourCycle
-        case .fixed(let l): return l.hourCycle
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).hourCycle
-#endif
-        }
+        _locale.hourCycle
     }
 
     /// Returns the default collation used by the locale. Default is `.standard`.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var collation: Collation {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.collation
-        case .fixed(let l): return l.collation
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).collation
-#endif
-        }
+        _locale.collation
     }
 
     /// Returns the region of the locale. For example, "US" for "en_US", "GB" for "en_GB", "PT" for "pt_PT".
@@ -764,176 +448,81 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// note: Typically this is equivalent to the language region, unless there's an `rg` override in the locale identifier. For example, for "en_GB@rg=USzzzz", the language region is "GB", while the locale region is "US". `Language.region` represents the region variant of the language, such as "British English" in this example, while `Locale.region` controls the region-specific default values, such as measuring system and first day of the week.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var region: Region? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.region
-        case .fixed(let l): return l.region
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).region
-#endif
-        }
+        _locale.region
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var timeZone: TimeZone? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.timeZone
-        case .fixed(let l): return l.timeZone
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).timeZone
-#endif
-        }
+        _locale.timeZone
     }
 
     /// Returns the regional subdivision for the locale, or nil if there is none.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var subdivision: Subdivision? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.subdivision
-        case .fixed(let l): return l.subdivision
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).subdivision
-#endif
-        }
+        _locale.subdivision
     }
 
     /// Returns the variant for the locale, or nil if it has none. For example, for the locale "en_POSIX", returns "POSIX".
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public var variant: Variant? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.variant
-        case .fixed(let l): return l.variant
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).variant
-#endif
-        }
+        _locale.variant
     }
 
     // MARK: - Preferences support (Internal)
 
-    internal var forceHourCycle: HourCycle? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.forceHourCycle
-        case .fixed(let l): return l.forceHourCycle
-#if FOUNDATION_FRAMEWORK
-        case .bridged(_): return nil
-#endif
-        }
+    package var forceHourCycle: HourCycle? {
+        _locale.forceHourCycle
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    internal func forceFirstWeekday(_ calendar: Calendar.Identifier) -> Weekday? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.forceFirstWeekday(in: calendar)
-        case .fixed(let l): return l.forceFirstWeekday(in: calendar)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(_): return nil
-#endif
-        }
+    package func forceFirstWeekday(_ calendar: Calendar.Identifier) -> Weekday? {
+        _locale.forceFirstWeekday(calendar)
     }
 
-    internal func forceMinDaysInFirstWeek(_ calendar: Calendar.Identifier) -> Int? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.forceMinDaysInFirstWeek(in: calendar)
-        case .fixed(let l): return l.forceMinDaysInFirstWeek(in: calendar)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(_): return nil
-#endif
-        }
+    package func forceMinDaysInFirstWeek(_ calendar: Calendar.Identifier) -> Int? {
+        _locale.forceMinDaysInFirstWeek(calendar)
     }
 
-    internal func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
-        switch kind {
-        case .fixed(let l):
-            return l.customDateFormat(style)
-        case .autoupdating:
-            return LocaleCache.cache.current.customDateFormat(style)
 #if FOUNDATION_FRAMEWORK
-        case .bridged(_):
-            return nil
-#endif
-        }
+    // This is framework-only because Date.FormatStyle.DateStyle is Internationalization-only.
+    package func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
+        _locale.customDateFormat(style)
     }
+#endif
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    internal var forceMeasurementSystem: Locale.MeasurementSystem? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.forceMeasurementSystem
-        case .fixed(let l): return l.forceMeasurementSystem
-#if FOUNDATION_FRAMEWORK
-        case .bridged(_): return nil
-#endif
-        }
+    package var forceMeasurementSystem: Locale.MeasurementSystem? {
+        _locale.forceMeasurementSystem
     }
 
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once UnitTemperature is moved
-    internal var forceTemperatureUnit: UnitTemperature? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.forceTemperatureUnit
-        case .fixed(let l): return l.forceTemperatureUnit
-#if FOUNDATION_FRAMEWORK
-        case .bridged(_): return nil
-#endif
-        }
+    package var forceTemperatureUnit: LocalePreferences.TemperatureUnit? {
+        _locale.forceTemperatureUnit
     }
 
-    internal var temperatureUnit: UnitTemperature {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.temperatureUnit
-        case .fixed(let l): return l.temperatureUnit
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return _Locale(identifier: l.identifier).temperatureUnit
-#endif
-        }
+    package var temperatureUnit: LocalePreferences.TemperatureUnit {
+        _locale.temperatureUnit
     }
-#endif // FOUNDATION_FRAMEWORK
     
     /// The whole bucket of preferences.
     /// For use by `Calendar`, which wants to keep these values without a circular retain cycle with `Locale`. Only `current` locales and current-alikes have prefs.
-    internal var prefs: LocalePreferences? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.prefs
-        case .fixed(let l): return l.prefs
-#if FOUNDATION_FRAMEWORK
-        case .bridged(_): return nil
-#endif
-        }
+    package var prefs: LocalePreferences? {
+        _locale.prefs
     }
     
 #if FOUNDATION_FRAMEWORK
     internal func pref(for key: String) -> Any? {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.pref(for: key)
-        case .fixed(let l): return l.pref(for: key)
-        case .bridged(_): return nil
-        }
+        _locale.pref(for: key)
     }
 #endif
 
     // Returns an identifier that includes preferences as keywords, such as "en_US@measure=metric" or "en_GB@hours=h12"
-    internal var identifierCapturingPreferences: String {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.identifierCapturingPreferences
-        case .fixed(let l): return l.identifierCapturingPreferences
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l): return l.identifier
-#endif
-        }
+    package var identifierCapturingPreferences: String {
+        _locale.identifierCapturingPreferences
     }
 
 
     // MARK: -
     //
-
-    /// Returns a list of available `Locale` identifiers.
-    public static var availableIdentifiers: [String] {
-        return Locale.availableLocaleIdentifiers
-    }
-
-    /// Returns a list of common `Locale` currency codes.
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public static var commonISOCurrencyCodes: [String] {
-        Locale.Currency.commonISOCurrencies
-    }
 
     /// Returns a list of the user's preferred languages.
     ///
@@ -1090,7 +679,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 
     /// Same as `canonicalIdentifier` but not deprecated, for internal usage. Also, it handles a nil result (e.g. non-ASCII identifier input) correctly.
-    internal static func _canonicalLocaleIdentifier(from string: String) -> String {
+    package static func _canonicalLocaleIdentifier(from string: String) -> String {
 #if FOUNDATION_FRAMEWORK
         if let id = CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorSystemDefault, string as CFString) {
             return id.rawValue as String
@@ -1117,19 +706,6 @@ public struct Locale : Hashable, Equatable, Sendable {
 #endif // FOUNDATION_FRAMEWORK
     }
 
-    /// Returns the `Locale` identifier from a given Windows locale code, or nil if it could not be converted.
-    public static func identifier(fromWindowsLocaleCode code: Int) -> String? {
-        guard let unsigned = UInt32(exactly: code) else {
-            return nil
-        }
-        return _Locale.identifierFromWindowsLocaleCode(unsigned)
-    }
-
-    /// Returns the Windows locale code from a given identifier, or nil if it could not be converted.
-    public static func windowsLocaleCode(fromIdentifier identifier: String) -> Int? {
-        _Locale.windowsLocaleCode(from: identifier)
-    }
-
     // MARK: -
 
     /// Returns `true` if the locale is one of the "special" languages that requires special handling during case mapping.
@@ -1140,13 +716,19 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// - "el": Greek
     /// For all other locales such as en_US, this is `false`.
     internal var doesNotRequireSpecialCaseHandling: Bool {
-        switch kind {
-        case .autoupdating: return LocaleCache.cache.current.doesNotRequireSpecialCaseHandling
-        case .fixed(let l): return l.doesNotRequireSpecialCaseHandling
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let l):
-            return _Locale.identifierDoesNotRequireSpecialCaseHandling(l.identifier)
-#endif
+        // We call into the _LocaleBase because this value is cached in many cases. They will defer the initial calculation to the below helper function.
+        _locale.doesNotRequireSpecialCaseHandling
+    }
+    
+    package static func identifierDoesNotRequireSpecialCaseHandling(_ identifier: String) -> Bool {
+        guard identifier.count >= 2 else { return true }
+
+        let first = identifier.prefix(2)
+        switch first {
+        case "az", "lt", "tr", "nl", "el":
+            return false // Does require special handling
+        default:
+            return true // Does not require special handling
         }
     }
 
@@ -1154,22 +736,35 @@ public struct Locale : Hashable, Equatable, Sendable {
     //
 
     public func hash(into hasher: inout Hasher) {
-        switch kind {
-        case .fixed(let inner):
-            hasher.combine(true)
-            hasher.combine(inner)
-        case .autoupdating:
-            hasher.combine(false)
-#if FOUNDATION_FRAMEWORK
-        case .bridged(let inner):
-            hasher.combine(false)
-            inner.hash(into: &hasher)
-#endif
-        }
+        hasher.combine(!_locale.isAutoupdating)
+        hasher.combine(_locale.identifier)
+        hasher.combine(_locale.prefs)
     }
 
     public static func ==(lhs: Locale, rhs: Locale) -> Bool {
-        lhs.kind == rhs.kind
+        if lhs._locale.isAutoupdating {
+            if rhs._locale.isAutoupdating {
+                return true
+            } else {
+                return false
+            }
+        } else if !lhs._locale.isBridged /* fixed, 'normal' */ {
+            if rhs._locale.isAutoupdating {
+                return false
+            } else if rhs._locale.isBridged {
+                // Only compare identifier
+                return lhs.identifier == rhs.identifier
+            } else {
+                // Compare identifiers and prefs
+                return lhs.identifier == rhs.identifier && lhs.prefs == rhs.prefs
+            }
+        } else /* lhs.isBridged */ {
+            if rhs._locale.isAutoupdating {
+                return false
+            } else {
+                return lhs.identifier == rhs.identifier
+            }
+        }
     }
 }
 
@@ -1178,12 +773,12 @@ extension Locale : CustomDebugStringConvertible, CustomStringConvertible, Custom
     public var customMirror : Mirror {
         var c: [(label: String?, value: Any)] = []
         c.append((label: "identifier", value: identifier))
-        c.append((label: "kind", value: kind.debugDescription))
+        c.append((label: "locale", value: _locale.debugDescription))
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 
     public var description: String {
-        return "\(identifier) (\(kind))"
+        return "\(identifier) (\(_locale.debugDescription))"
     }
 
     public var debugDescription : String {

@@ -38,7 +38,7 @@ extension NSLocale {
 
     @objc
     private class func _newLocaleWithIdentifier(_ idStr: String) -> NSLocale {
-        LocaleCache.cache.fixedNSLocale(idStr)
+        LocaleCache.cache.fixedNSLocale(identifier: idStr)
     }
 
     @objc
@@ -67,7 +67,7 @@ extension NSLocale {
 
     @objc
     class var _availableLocaleIdentifiers: [String] {
-        Locale.availableLocaleIdentifiers
+        Locale.availableIdentifiers
     }
 
     // This is internal, but silence the compiler's warnings about deprecation by deprecating this, too.
@@ -169,12 +169,12 @@ extension NSLocale {
 
     @objc(_localeIdentifierByReplacingLanguageCodeAndScriptCodeForLangCode:desiredComponents:)
     class func _localeIdentifierByReplacingLanguageCodeAndScriptCode(_ localeIDWithDesiredLangCode: String, desiredComponents localeIDWithDesiredComponents: String) -> String? {
-        _Locale.localeIdentifierByReplacingLanguageCodeAndScriptCode(localeIDWithDesiredLangCode: localeIDWithDesiredLangCode, localeIDWithDesiredComponents: localeIDWithDesiredComponents)
+        Locale.localeIdentifierByReplacingLanguageCodeAndScriptCode(localeIDWithDesiredLangCode: localeIDWithDesiredLangCode, localeIDWithDesiredComponents: localeIDWithDesiredComponents)
     }
 
     @objc(_localeIdentifierByAddingLikelySubtags:)
     class func _localeIdentifierByAddingLikelySubtags(_ localeID: String) -> String {
-        _Locale.localeIdentifierWithLikelySubtags(localeID)
+        Locale.localeIdentifierWithLikelySubtags(localeID)
     }
 
     @objc(_localeWithNewCalendarIdentifier:)
@@ -193,188 +193,6 @@ extension NSLocale {
         // Unable to use cached locale; create a new one. Subclass `_NSSwiftLocale` implements a better version
         return Locale(identifier: localeIdentifier).doesNotRequireSpecialCaseHandling
     }
-}
-
-/// Wraps an NSLocale with a more Swift-like `Locale` API.
-/// This is only used in the case where we have custom Objective-C subclasses of `NSLocale`. It is assumed that the subclass is Sendable.
-/// TODO: It is a bit of a TBD if this extra effort to preserve a subclass sent to Swift from ObjC is worth it for `struct Locale`.
-internal final class _NSLocaleSwiftWrapper: @unchecked Sendable, Hashable, CustomDebugStringConvertible {
-    let _wrapped: NSLocale
-
-    init(adoptingReference reference: NSLocale) {
-        self._wrapped = reference
-    }
-
-    func bridgeToObjectiveC() -> NSLocale {
-        return _wrapped.copy() as! NSLocale
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(_wrapped.hash)
-    }
-
-    public static func ==(lhs: _NSLocaleSwiftWrapper, rhs: _NSLocaleSwiftWrapper) -> Bool {
-        lhs.identifier == rhs.identifier
-    }
-
-    public var debugDescription: String {
-        _wrapped.debugDescription
-    }
-
-    // MARK: -
-
-    func identifierDisplayName(for identifier: String) -> String? {
-        return _wrapped.displayName(forKey: .identifier, value: identifier)
-    }
-
-    func languageCodeDisplayName(for languageCode: String) -> String? {
-        return _wrapped.displayName(forKey: .languageCode, value: languageCode)
-    }
-
-    func countryCodeDisplayName(for regionCode: String) -> String? {
-        return _wrapped.displayName(forKey: .countryCode, value: regionCode)
-    }
-
-    func scriptCodeDisplayName(for scriptCode: String) -> String? {
-        return _wrapped.displayName(forKey: .scriptCode, value: scriptCode)
-    }
-
-    func variantCodeDisplayName(for variantCode: String) -> String? {
-        return _wrapped.displayName(forKey: .variantCode, value: variantCode)
-    }
-
-    func calendarIdentifierDisplayName(for calendarIdentifier: Calendar.Identifier) -> String? {
-        // NSLocale doesn't export a constant for this
-        let result = CFLocaleCopyDisplayNameForPropertyValue(unsafeBitCast(_wrapped, to: CFLocale.self), .calendarIdentifier, Calendar._toNSCalendarIdentifier(calendarIdentifier).rawValue as CFString) as String?
-        return result
-    }
-
-    func currencyCodeDisplayName(for currencyCode: String) -> String? {
-        return _wrapped.displayName(forKey: .currencyCode, value: currencyCode)
-    }
-    
-    func currencySymbolDisplayName(for currencySymbol: String) -> String? {
-        return _wrapped.displayName(forKey: .currencySymbol, value: currencySymbol)
-    }
-
-    func collationIdentifierDisplayName(for collationIdentifier: String) -> String? {
-        return _wrapped.displayName(forKey: .collationIdentifier, value: collationIdentifier)
-    }
-
-    func collatorIdentifierDisplayName(for collatorIdentifier: String) -> String? {
-        return _wrapped.displayName(forKey: .collatorIdentifier, value: collatorIdentifier)
-    }
-
-    // MARK: -
-    //
-
-    var identifier: String {
-        return _wrapped.localeIdentifier
-    }
-
-    var languageCode: String? {
-        return _wrapped.object(forKey: .languageCode) as? String
-    }
-
-    var countryCode: String? {
-        if let result = _wrapped.object(forKey: .countryCode) as? String {
-            if result.isEmpty {
-                return nil
-            } else {
-                return result
-            }
-        } else {
-            return nil
-        }
-    }
-
-    var scriptCode: String? {
-        return _wrapped.object(forKey: .scriptCode) as? String
-    }
-
-    var variantCode: String? {
-        if let result = _wrapped.object(forKey: .variantCode) as? String {
-            if result.isEmpty {
-                return nil
-            } else {
-                return result
-            }
-        } else {
-            return nil
-        }
-    }
-#if FOUNDATION_FRAMEWORK
-    var exemplarCharacterSet: CharacterSet? {
-        return _wrapped.object(forKey: .exemplarCharacterSet) as? CharacterSet
-    }
-#endif
-    
-    var calendar: Calendar {
-        if let result = _wrapped.object(forKey: .calendar) as? Calendar {
-            // NSLocale should not return nil here
-            return result
-        } else {
-            return Calendar(identifier: .gregorian)
-        }
-    }
-
-    var calendarIdentifier: Calendar.Identifier {
-        return Calendar._fromNSCalendarIdentifier(NSCalendar.Identifier(rawValue: _wrapped.calendarIdentifier)) ?? .gregorian
-    }
-
-    var collationIdentifier: String? {
-        return _wrapped.object(forKey: .collationIdentifier) as? String
-    }
-
-    var usesMetricSystem: Bool {
-        // NSLocale should not return nil here, but just in case
-        if let result = (_wrapped.object(forKey: .usesMetricSystem) as? NSNumber)?.boolValue {
-            return result
-        } else {
-            return false
-        }
-    }
-
-    var decimalSeparator: String? {
-        return _wrapped.object(forKey: .decimalSeparator) as? String
-    }
-
-    var groupingSeparator: String? {
-        return _wrapped.object(forKey: .groupingSeparator) as? String
-    }
-
-    var currencySymbol: String? {
-        return _wrapped.object(forKey: .currencySymbol) as? String
-    }
-
-    var currencyCode: String? {
-        return _wrapped.object(forKey: .currencyCode) as? String
-    }
-
-    var collatorIdentifier: String? {
-        return _wrapped.object(forKey: .collatorIdentifier) as? String
-    }
-
-    var quotationBeginDelimiter: String? {
-        return _wrapped.object(forKey: .quotationBeginDelimiterKey) as? String
-    }
-
-    var quotationEndDelimiter: String? {
-        return _wrapped.object(forKey: .quotationEndDelimiterKey) as? String
-    }
-
-    var alternateQuotationBeginDelimiter: String? {
-        return _wrapped.object(forKey: .alternateQuotationBeginDelimiterKey) as? String
-    }
-
-    var alternateQuotationEndDelimiter: String? {
-        return _wrapped.object(forKey: .alternateQuotationEndDelimiterKey) as? String
-    }
-}
-
-extension NSLocale.Key {
-    // Extra keys used by CoreFoundation
-    static var cfLocaleCollatorID = NSLocale.Key(rawValue: "locale:collator id")
 }
 
 /// Wraps a Swift `struct Locale` with an `NSLocale`, so that it can be used from Objective-C.
@@ -473,6 +291,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         case .quotationEndDelimiterKey: return self.quotationEndDelimiter
         case .alternateQuotationBeginDelimiterKey: return self.alternateQuotationBeginDelimiter
         case .alternateQuotationEndDelimiterKey: return self.alternateQuotationEndDelimiter
+        case .languageIdentifier: return self.languageIdentifier
         default:
             return nil
         }
@@ -611,7 +430,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
     private func _nullableLocalizedString(forLocaleIdentifier localeIdentifier: String) -> String? {
         locale.localizedString(forIdentifier: localeIdentifier)
     }
-    
+
     override func localizedString(forLanguageCode languageCode: String) -> String? {
         locale.localizedString(forLanguageCode: languageCode)
     }
@@ -689,14 +508,7 @@ extension Locale : ReferenceConvertible {
 extension Locale : _ObjectiveCBridgeable {
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSLocale {
-        switch kind {
-        case .autoupdating:
-            return LocaleCache.cache.autoupdatingCurrentNSLocale()
-        case .fixed(let l):
-            return LocaleCache.cache.fixedNSLocale(l)
-        case .bridged(let wrapper):
-            return wrapper._wrapped
-        }
+        _locale.bridgeToNSLocale()
     }
 
     public static func _forceBridgeFromObjectiveC(_ input: NSLocale, result: inout Locale?) {
@@ -794,6 +606,12 @@ extension Locale {
         return language.lineLayoutDirection
     }
 
+}
+
+extension NSLocale.Key {
+    // Extra keys used by CoreFoundation
+    static var cfLocaleCollatorID = NSLocale.Key(rawValue: "locale:collator id")
+    static var languageIdentifier = NSLocale.Key(rawValue: "locale:languageIdentifier")
 }
 
 #endif
