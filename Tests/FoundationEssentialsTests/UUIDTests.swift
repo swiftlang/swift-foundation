@@ -90,7 +90,7 @@ final class UUIDTests : XCTestCase {
         XCTAssertEqual(String(reflecting: uuid), "89E90DC6-5EBA-41A8-A64D-81D3576EE46E")
     }
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func test_UUID_Comparable() throws {
         var uuid1 = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
         var uuid2 = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))

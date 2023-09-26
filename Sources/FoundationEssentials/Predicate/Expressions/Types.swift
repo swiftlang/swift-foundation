@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct ConditionalCast<
         Input : PredicateExpression,
@@ -68,16 +68,16 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ConditionalCast : StandardPredicateExpression where Input : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ForceCast : StandardPredicateExpression where Input : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.TypeCheck : StandardPredicateExpression where Input : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ConditionalCast : Codable where Input : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -90,7 +90,7 @@ extension PredicateExpressions.ConditionalCast : Codable where Input : Codable {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ForceCast : Codable where Input : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -103,7 +103,7 @@ extension PredicateExpressions.ForceCast : Codable where Input : Codable {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.TypeCheck : Codable where Input : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -116,11 +116,11 @@ extension PredicateExpressions.TypeCheck : Codable where Input : Codable {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ConditionalCast : Sendable where Input : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ForceCast : Sendable where Input : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.TypeCheck : Sendable where Input : Sendable {}

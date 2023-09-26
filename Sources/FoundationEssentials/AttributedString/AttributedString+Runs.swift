@@ -236,13 +236,13 @@ extension AttributedString.Runs: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
-        if #available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *) {
+        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance)
         }
         return i.advanced(by: distance)
     }
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(_ index: Index, offsetBy distance: Int) -> Index {
         let i = _guts.runs.index(_resolveRun(index), offsetBy: distance)

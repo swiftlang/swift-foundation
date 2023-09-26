@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct IntDivision<
         LHS : PredicateExpression,
@@ -100,16 +100,16 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.FloatDivision : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.IntRemainder : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.IntDivision : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.FloatDivision : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -124,7 +124,7 @@ extension PredicateExpressions.FloatDivision : Codable where LHS : Codable, RHS 
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.IntRemainder : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -139,7 +139,7 @@ extension PredicateExpressions.IntRemainder : Codable where LHS : Codable, RHS :
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.IntDivision : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -154,11 +154,11 @@ extension PredicateExpressions.IntDivision : Codable where LHS : Codable, RHS : 
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.FloatDivision : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.IntRemainder : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.IntDivision : Sendable where LHS : Sendable, RHS : Sendable {}
