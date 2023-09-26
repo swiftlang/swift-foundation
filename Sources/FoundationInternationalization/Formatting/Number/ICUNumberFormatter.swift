@@ -172,7 +172,7 @@ internal class ICUNumberFormatterBase {
         try? FormatResult(formatter: uformatter, value: v).string
     }
 
-    func format(_ v: String) -> String? {
+    func format(_ v: ContiguousArray<UInt8>) -> String? {
         try? FormatResult(formatter: uformatter, value: v).string
     }
 
@@ -213,24 +213,17 @@ internal class ICUNumberFormatterBase {
             try status.checkSuccess()
         }
 
-        init(formatter: OpaquePointer, value: String) throws {
+        init(formatter: OpaquePointer, value: ContiguousArray<UInt8>) throws {
             var status = U_ZERO_ERROR
             result = unumf_openResult(&status)
             try status.checkSuccess()
 
-            if nil == value.withContiguousStorageIfAvailable({ unumf_formatDecimal(formatter,
-                                                                                   $0.baseAddress,
-                                                                                   Int32($0.count),
-                                                                                   result,
-                                                                                   &status) }) {
-                var str = value
-                str.withUTF8 {
-                    unumf_formatDecimal(formatter,
-                                        $0.baseAddress,
-                                        Int32($0.count),
-                                        result,
-                                        &status)
-                }
+            value.withUnsafeBufferPointer {
+                unumf_formatDecimal(formatter,
+                                    $0.baseAddress,
+                                    Int32($0.count),
+                                    result,
+                                    &status)
             }
 
             try status.checkSuccess()
