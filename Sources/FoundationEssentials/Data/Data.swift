@@ -353,6 +353,9 @@ internal final class __DataStorage : @unchecked Sendable {
         UnsafeMutableRawBufferPointer(start: pointer, count: range.upperBound - range.lowerBound).copyMemory(from: offsetPointer)
     }
 
+    #if FOUNDATION_FRAMEWORK
+    @available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
+    #endif
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     func replaceBytes(in range_: Range<Int>, with replacementBytes: UnsafeRawPointer?, length replacementLength: Int) {
         let range = range_.lowerBound - _offset ..< range_.upperBound - _offset
@@ -918,7 +921,23 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             assert(endIndex + buffer.count < HalfInt.max)
             ensureUniqueReference()
             let upperbound = storage.length + storage._offset
+        #if FOUNDATION_FRAMEWORK
+            if #available(macOS 14, iOS 17, watchOS 10, tvOS 17, *) {
+                storage.replaceBytes(
+                    in: range.upperBound ..< upperbound,
+                    with: buffer.baseAddress,
+                    length: buffer.count)
+            } else {
+                storage.replaceBytes(
+                    in: NSRange(
+                        location: range.upperBound,
+                        length: storage.length - (range.upperBound - storage._offset)),
+                    with: buffer.baseAddress,
+                    length: buffer.count)
+            }
+        #else
             storage.replaceBytes(in: range.upperBound ..< upperbound, with: buffer.baseAddress, length: buffer.count)
+        #endif
             slice = slice.lowerBound..<HalfInt(Int(slice.upperBound) + buffer.count)
         }
 
@@ -960,7 +979,18 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 
             ensureUniqueReference()
             let upper = range.upperBound
+        #if FOUNDATION_FRAMEWORK
+            if #available(macOS 14, iOS 17, watchOS 10, tvOS 17, *) {
+                storage.replaceBytes(in: subrange, with: bytes, length: cnt)
+            } else {
+                let nsRange = NSRange(
+                    location: subrange.lowerBound,
+                    length: subrange.upperBound - subrange.lowerBound)
+                storage.replaceBytes(in: nsRange, with: bytes, length: cnt)
+            }
+        #else
             storage.replaceBytes(in: subrange, with: bytes, length: cnt)
+        #endif
             let resultingUpper = upper - (subrange.upperBound - subrange.lowerBound) + cnt
             slice = slice.lowerBound..<HalfInt(resultingUpper)
         }
@@ -1127,7 +1157,23 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         mutating func append(contentsOf buffer: UnsafeRawBufferPointer) {
             ensureUniqueReference()
             let upperbound = storage.length + storage._offset
+        #if FOUNDATION_FRAMEWORK
+            if #available(macOS 14, iOS 17, watchOS 10, tvOS 17, *) {
+                storage.replaceBytes(
+                    in: range.upperBound ..< upperbound,
+                    with: buffer.baseAddress,
+                    length: buffer.count)
+            } else {
+                storage.replaceBytes(
+                    in: NSRange(
+                        location: range.upperBound,
+                        length: storage.length - (range.upperBound - storage._offset)),
+                    with: buffer.baseAddress,
+                    length: buffer.count)
+            }
+        #else
             storage.replaceBytes(in: range.upperBound ..< upperbound, with: buffer.baseAddress, length: buffer.count)
+        #endif
             slice.range = slice.range.lowerBound..<slice.range.upperBound + buffer.count
         }
 
@@ -1165,7 +1211,18 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 
             ensureUniqueReference()
             let upper = range.upperBound
+        #if FOUNDATION_FRAMEWORK
+            if #available(macOS 14, iOS 17, watchOS 10, tvOS 17, *) {
+                storage.replaceBytes(in: subrange, with: bytes, length: cnt)
+            } else {
+                let nsRange = NSRange(
+                    location: subrange.lowerBound,
+                    length: subrange.upperBound - subrange.lowerBound)
+                storage.replaceBytes(in: nsRange, with: bytes, length: cnt)
+            }
+        #else
             storage.replaceBytes(in: subrange, with: bytes, length: cnt)
+        #endif
             let resultingUpper = upper - (subrange.upperBound - subrange.lowerBound) + cnt
             slice.range = slice.range.lowerBound..<resultingUpper
         }
