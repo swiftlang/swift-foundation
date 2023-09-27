@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct OptionalFlatMap<
         LHS : PredicateExpression,
@@ -111,16 +111,16 @@ extension PredicateExpressions {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.OptionalFlatMap : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.NilCoalesce : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ForcedUnwrap : StandardPredicateExpression where Inner : StandardPredicateExpression {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.OptionalFlatMap : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -137,7 +137,7 @@ extension PredicateExpressions.OptionalFlatMap : Codable where LHS : Codable, RH
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.NilCoalesce : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -152,7 +152,7 @@ extension PredicateExpressions.NilCoalesce : Codable where LHS : Codable, RHS : 
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ForcedUnwrap : Codable where Inner : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -165,16 +165,16 @@ extension PredicateExpressions.ForcedUnwrap : Codable where Inner : Codable {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.OptionalFlatMap : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.NilCoalesce : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ForcedUnwrap : Sendable where Inner : Sendable {}
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct NilLiteral<Wrapped> : StandardPredicateExpression, Codable, Sendable {
         public typealias Output = Optional<Wrapped>

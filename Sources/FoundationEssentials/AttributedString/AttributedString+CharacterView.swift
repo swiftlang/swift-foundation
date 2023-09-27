@@ -113,13 +113,13 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public var count: Int {
-        if #available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *) {
+        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _count
         }
         return _defaultCount
     }
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal var _count: Int {
         _characters.count
@@ -141,13 +141,13 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public func index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
-        if #available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *) {
+        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance)
         }
         return _defaultIndex(i, offsetBy: distance)
     }
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
@@ -162,13 +162,13 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         offsetBy distance: Int,
         limitedBy limit: AttributedString.Index
     ) -> AttributedString.Index? {
-        if #available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *) {
+        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance, limitedBy: limit)
         }
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,
@@ -189,7 +189,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public func distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
-        if #available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *) {
+        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _distance(from: start, to: end)
         }
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
@@ -197,7 +197,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultDistance(from: start, to: end)
     }
 
-    @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")

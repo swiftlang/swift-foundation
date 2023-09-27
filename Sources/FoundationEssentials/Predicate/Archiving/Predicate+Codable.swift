@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Predicate : Codable {
     public func encode(to encoder: Encoder) throws {
         try self.encode(to: encoder, configuration: .standardConfiguration)
@@ -23,7 +23,7 @@ extension Predicate : Codable {
     }
 }
 
-@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Predicate : CodableWithConfiguration {
     public typealias EncodingConfiguration = PredicateCodableConfiguration
     public typealias DecodingConfiguration = PredicateCodableConfiguration
