@@ -736,34 +736,20 @@ public struct Locale : Hashable, Equatable, Sendable {
     //
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(!_locale.isAutoupdating)
-        hasher.combine(_locale.identifier)
-        hasher.combine(_locale.prefs)
+        if _locale.isAutoupdating {
+            hasher.combine(true)
+        } else {
+            hasher.combine(false)
+            hasher.combine(_locale.identifier)
+            hasher.combine(prefs)
+        }
     }
 
     public static func ==(lhs: Locale, rhs: Locale) -> Bool {
-        if lhs._locale.isAutoupdating {
-            if rhs._locale.isAutoupdating {
-                return true
-            } else {
-                return false
-            }
-        } else if !lhs._locale.isBridged /* fixed, 'normal' */ {
-            if rhs._locale.isAutoupdating {
-                return false
-            } else if rhs._locale.isBridged {
-                // Only compare identifier
-                return lhs.identifier == rhs.identifier
-            } else {
-                // Compare identifiers and prefs
-                return lhs.identifier == rhs.identifier && lhs.prefs == rhs.prefs
-            }
-        } else /* lhs.isBridged */ {
-            if rhs._locale.isAutoupdating {
-                return false
-            } else {
-                return lhs.identifier == rhs.identifier
-            }
+        if lhs._locale.isAutoupdating || rhs._locale.isAutoupdating {
+            return lhs._locale.isAutoupdating && rhs._locale.isAutoupdating
+        } else {
+            return lhs.identifier == rhs.identifier && lhs.prefs == rhs.prefs
         }
     }
 }
