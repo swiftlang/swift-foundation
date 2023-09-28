@@ -257,13 +257,12 @@ extension AttributedStringProtocol {
 
         return self._utf8Index(at: startOffset) ..< self._utf8Index(at: endOffset) // O(log(n))
     }
-    
-#if FOUNDATION_FRAMEWORK
+
     public func range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = [], locale: Locale? = nil) -> Range<AttributedString.Index>? {
         if locale == nil {
             return _range(of: stringToFind, options: options)
         }
-
+#if FOUNDATION_FRAMEWORK
         // TODO: Implement localized AttributedStringProtocol.range(of:) for FoundationPreview
         // Since we have secret access to the String property, go ahead and use the full implementation given by Foundation rather than the limited reimplementation we needed for CharacterView.
         // FIXME: There is no longer a `String` property. This is going to be terribly slow.
@@ -281,12 +280,10 @@ extension AttributedStringProtocol {
         let end = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8End)
 
         return AttributedString.Index(start) ..< AttributedString.Index(end)
-    }
 #else
-    public func range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = []) -> Range<AttributedString.Index>? {
-        _range(of: stringToFind, options: options)
-
-    }
+        // TODO: Implement localized AttributedStringProtocol.range(of:) for FoundationPreview
+        return _range(of: stringToFind, options: options)
 #endif // FOUNDATION_FRAMEWORK
+    }
 }
 
