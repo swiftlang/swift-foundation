@@ -57,22 +57,23 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt64.self, magnitude: "10000000000000000000", oneLess: "9999999999999999999", oneMore: "10000000000000000001")
     }
 
-    func testDecimalDigitsAndMagnitudePerWord() throws {
-        func test<I: FixedWidthInteger>(type: I.Type = I.self, digits: Int, magnitude: I) {
-            let actual = I.decimalDigitsAndMagnitudePerWord()
+    func check<I: BinaryInteger>(type: I.Type = I.self, digits: Int, magnitude: UInt) {
+        let actual = I.decimalDigitsAndMagnitudePerWord()
 
-            XCTAssertEqual(actual.digits, digits)
-            XCTAssertEqual(actual.magnitude, magnitude)
-        }
+        XCTAssertEqual(actual.digits, digits)
+        XCTAssertEqual(actual.magnitude, I(exactly: magnitude))
+    }
 
-        test(type: Int8.self, digits: 3, magnitude: 100)
-        test(type: Int16.self, digits: 5, magnitude: 10_000)
-        test(type: Int32.self, digits: 10, magnitude: 1_000_000_000)
-        test(type: Int64.self, digits: 19, magnitude: 1_000_000_000_000_000_000)
+    func testDecimalDigitsAndMagnitudePerWord_builtinIntegers() throws {
+        check(type: Int8.self, digits: 3, magnitude: 100)
+        check(type: Int16.self, digits: 5, magnitude: 10_000)
+        check(type: Int32.self, digits: 10, magnitude: 1_000_000_000)
+        check(type: Int64.self, digits: 19, magnitude: 1_000_000_000_000_000_000)
 
-        test(type: UInt8.self, digits: 3, magnitude: 100)
-        test(type: UInt16.self, digits: 5, magnitude: 10_000)
-        test(type: UInt32.self, digits: 10, magnitude: 1_000_000_000)
-        test(type: UInt64.self, digits: 20, magnitude: 10_000_000_000_000_000_000)
+        check(type: UInt8.self, digits: 3, magnitude: 100)
+        check(type: UInt16.self, digits: 5, magnitude: 10_000)
+        check(type: UInt32.self, digits: 10, magnitude: 1_000_000_000)
+        check(type: UInt64.self, digits: 20, magnitude: 10_000_000_000_000_000_000)
+
     }
 }
