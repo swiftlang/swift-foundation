@@ -74,7 +74,7 @@ final class DateComponentsTests : XCTestCase {
         let dateWithNS = cal.date(from: comps)!
         let newComps = cal.dateComponents([.nanosecond], from: dateWithNS)
 
-        let nanosecondsApproximatelyEqual = labs(newComps.nanosecond! - 123456789) <= 500
+        let nanosecondsApproximatelyEqual = labs(CLong(newComps.nanosecond!) - 123456789) <= 500
         XCTAssertTrue(nanosecondsApproximatelyEqual)
     }
 
