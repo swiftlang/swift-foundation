@@ -97,8 +97,10 @@
 #include <string.h>
 #endif
 
+#if !defined(_WIN32)
 #if __has_include(<tgmath.h>)
 #include <tgmath.h>
+#endif
 #endif
 
 #if __has_include(<time.h>)
