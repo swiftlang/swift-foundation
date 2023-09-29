@@ -15,45 +15,46 @@ import FoundationEssentials
 @testable import FoundationInternationalization
 
 final class BinaryIntegerFormatStyleTests: XCTestCase {
-    func check(value: some BinaryInteger, expected: String) {
+    // NSR == numericStringRepresentation
+    func checkNSR(value: some BinaryInteger, expected: String) {
         XCTAssertEqual(String(decoding: value.numericStringRepresentation, as: Unicode.ASCII.self), expected)
     }
 
-    func testNumericStringRepresentation_fixedWidthLimits() throws {
-        func test<I: FixedWidthInteger>(type: I.Type = I.self, min: String, max: String) {
-            check(value: I.min, expected: min)
-            check(value: I.max, expected: max)
+    func testNumericStringRepresentation_builtinIntegersLimits() throws {
+        func check<I: FixedWidthInteger>(type: I.Type = I.self, min: String, max: String) {
+            checkNSR(value: I.min, expected: min)
+            checkNSR(value: I.max, expected: max)
         }
 
-        test(type: Int8.self, min: "-128", max: "127")
-        test(type: Int16.self, min: "-32768", max: "32767")
-        test(type: Int32.self, min: "-2147483648", max: "2147483647")
-        test(type: Int64.self, min: "-9223372036854775808", max: "9223372036854775807")
+        check(type: Int8.self, min: "-128", max: "127")
+        check(type: Int16.self, min: "-32768", max: "32767")
+        check(type: Int32.self, min: "-2147483648", max: "2147483647")
+        check(type: Int64.self, min: "-9223372036854775808", max: "9223372036854775807")
 
-        test(type: UInt8.self, min: "0", max: "255")
-        test(type: UInt16.self, min: "0", max: "65535")
-        test(type: UInt32.self, min: "0", max: "4294967295")
-        test(type: UInt64.self, min: "0", max: "18446744073709551615")
+        check(type: UInt8.self, min: "0", max: "255")
+        check(type: UInt16.self, min: "0", max: "65535")
+        check(type: UInt32.self, min: "0", max: "4294967295")
+        check(type: UInt64.self, min: "0", max: "18446744073709551615")
     }
 
-    func testNumericStringRepresentation_fixedWidthAroundDecimalMagnitude() throws {
-        func test<I: FixedWidthInteger>(type: I.Type = I.self, magnitude: String, oneLess: String, oneMore: String) {
+    func testNumericStringRepresentation_buildinIntegersAroundDecimalMagnitude() throws {
+        func check<I: FixedWidthInteger>(type: I.Type = I.self, magnitude: String, oneLess: String, oneMore: String) {
             let mag = I.decimalDigitsAndMagnitudePerWord().magnitude
 
-            check(value: mag, expected: magnitude)
-            check(value: mag - 1, expected: oneLess)
-            check(value: mag + 1, expected: oneMore)
+            checkNSR(value: mag, expected: magnitude)
+            checkNSR(value: mag - 1, expected: oneLess)
+            checkNSR(value: mag + 1, expected: oneMore)
         }
 
-        test(type: Int8.self, magnitude: "100", oneLess: "99", oneMore: "101")
-        test(type: Int16.self, magnitude: "10000", oneLess: "9999", oneMore: "10001")
-        test(type: Int32.self, magnitude: "1000000000", oneLess: "999999999", oneMore: "1000000001")
-        test(type: Int64.self, magnitude: "1000000000000000000", oneLess: "999999999999999999", oneMore: "1000000000000000001")
+        check(type: Int8.self, magnitude: "100", oneLess: "99", oneMore: "101")
+        check(type: Int16.self, magnitude: "10000", oneLess: "9999", oneMore: "10001")
+        check(type: Int32.self, magnitude: "1000000000", oneLess: "999999999", oneMore: "1000000001")
+        check(type: Int64.self, magnitude: "1000000000000000000", oneLess: "999999999999999999", oneMore: "1000000000000000001")
 
-        test(type: UInt8.self, magnitude: "100", oneLess: "99", oneMore: "101")
-        test(type: UInt16.self, magnitude: "10000", oneLess: "9999", oneMore: "10001")
-        test(type: UInt32.self, magnitude: "1000000000", oneLess: "999999999", oneMore: "1000000001")
-        test(type: UInt64.self, magnitude: "10000000000000000000", oneLess: "9999999999999999999", oneMore: "10000000000000000001")
+        check(type: UInt8.self, magnitude: "100", oneLess: "99", oneMore: "101")
+        check(type: UInt16.self, magnitude: "10000", oneLess: "9999", oneMore: "10001")
+        check(type: UInt32.self, magnitude: "1000000000", oneLess: "999999999", oneMore: "1000000001")
+        check(type: UInt64.self, magnitude: "10000000000000000000", oneLess: "9999999999999999999", oneMore: "10000000000000000001")
     }
 
     func testDecimalDigitsAndMagnitudePerWord() throws {
