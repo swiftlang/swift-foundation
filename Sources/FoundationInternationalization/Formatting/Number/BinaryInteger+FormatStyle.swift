@@ -57,16 +57,11 @@ extension BinaryInteger {
         // The reason that nice & simple approach isn't taken is performance - division is expensive, but especially-so with BinaryInteger generically since it can be arbitrarily large.  So instead, we divide by the largest multiple of ten that fits in a single word (UInt), and then (in a specialisation of this method for UInt) divide that simple word down into digits.  More complicated, but it reduces how many complex divisions are needed by at least an order of magnitude (a "complex" division being a division of self, with arbitrarily large size & execution cost, vs a series of "simple" divisions on UInt).
 
         let (decimalDigitsPerWord, wordMagnitude) = Self.decimalDigitsAndMagnitudePerWord()
+        let log10_of_2: Double = 0.3010299956639812 // Precomputed to avoid having to pull in Glibc/Darwin for the log10 function.
+        let maximumDigits = (Double(self.bitWidth) * log10_of_2).rounded(.up) + 1 // https://www.exploringbinary.com/number-of-decimal-digits-in-a-binary-integer
+        let maximumWordStringsCount = Int((maximumDigits / (Double(decimalDigitsPerWord) - 1)).rounded(.up))
 
-        let positive = 0 <= self.signum()
-
-        let wordCount = words.count + ((positive
-                                        ? wordMagnitude <= self
-                                        : 0 - wordMagnitude >= self)
-                                       ? 1
-                                       : 0)
-
-        let wordStrings = ContiguousArray<ContiguousArray<UInt8>>(unsafeUninitializedCapacity: wordCount) { buffer, initialisedCount in
+        let wordStrings = ContiguousArray<ContiguousArray<UInt8>>(unsafeUninitializedCapacity: maximumWordStringsCount) { buffer, initialisedCount in
             var tmp = self
 
             while .zero != tmp {
@@ -91,6 +86,7 @@ extension BinaryInteger {
             }
         }
 
+        let positive = 0 <= self.signum()
         let resultDigits = (positive ? 0 : 1) + (wordStrings.last ?? []).count + ((wordStrings.count - 1) * (decimalDigitsPerWord - 1))
 
         return ContiguousArray<UInt8>(unsafeUninitializedCapacity: resultDigits) { buffer, initialisedCount in
