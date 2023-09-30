@@ -67,10 +67,9 @@ extension BinaryInteger {
             while .zero != tmp {
                 let (quotient, remainder) = tmp.quotientAndRemainder(dividingBy: wordMagnitude)
 
-                // By definition the remainder has to be a single word, so we can avoid working on a BinaryInteger generically and just use the first word directly, which is concretely UInt.
-                precondition(Words.Element.self == UInt.self)
                 let remainderIsNegative = 0 > remainder.signum()
 
+                // By definition the remainder has to be a single word (since the divisor, `wordMagnitude`, fits in a single word), so we can avoid working on a BinaryInteger generically and just use the first word directly, which is concretely UInt.
                 assert(remainder.bitWidth <= Words.Element.max.bitWidth + (remainderIsNegative ? 1 : 0)) // When we're working with negative values the reported `bitWidth` will be one greater than that of the magnitude because it counts the sign bit, but we don't care about that sign bit.
                 var word = remainder.words.first ?? 0
 
@@ -79,7 +78,8 @@ extension BinaryInteger {
                     word = ~word &+ 1
                 }
 
-                // This is not recursive - it's utilising the specialisation for UInt that's defined a little later in this file.  The precondition a few lines up is ensuring this invariant is never broken.
+                // This is not recursive - it's utilising the specialisation for UInt that's defined a little later in this file.  The precondition it a bit paranoid but just ensures this invariant is never broken (or at least that this code will have to be proactively reworked if the invariant is broken).
+                precondition(Words.Element.self == UInt.self)
                 buffer.initializeElement(at: buffer.startIndex.advanced(by: initialisedCount),
                                          to: word.numericStringRepresentation)
                 initialisedCount += 1
