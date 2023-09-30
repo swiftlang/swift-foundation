@@ -68,11 +68,13 @@ extension BinaryInteger {
                 let (quotient, remainder) = tmp.quotientAndRemainder(dividingBy: wordMagnitude)
 
                 // By definition the remainder has to be a single word, so we can avoid working on a BinaryInteger generically and just use the first word directly, which is concretely UInt.
-                assert(remainder.bitWidth <= Words.Element.max.bitWidth)
                 precondition(Words.Element.self == UInt.self)
+                let remainderIsNegative = 0 > remainder.signum()
+
+                assert(remainder.bitWidth <= Words.Element.max.bitWidth + (remainderIsNegative ? 1 : 0)) // When we're working with negative values the reported `bitWidth` will be one greater than that of the magnitude because it counts the sign bit, but we don't care about that sign bit.
                 var word = remainder.words.first ?? 0
 
-                if 0 > remainder.signum() {
+                if remainderIsNegative {
                     // The remainder is negative, but luckily for us `words` is defined to be in two's complement form, so we can manually flip the sign.  This doesn't normally work because two's complement cannot represent the positive version of its most negative value, but we know we won't have that here because it's the remainder from division by `wordMagnitude`, which is always going to be less than UInt.max because it's decimal.
                     word = ~word &+ 1
                 }
