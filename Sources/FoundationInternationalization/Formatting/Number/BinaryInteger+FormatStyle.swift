@@ -82,7 +82,9 @@ extension BinaryInteger {
                     word = ~word &+ 1
                 }
 
-                buffer[initialisedCount] = word.numericStringRepresentation // This is not recursive - it's utilising the specialisation for UInt that's defined a little later in this file.  The precondition a few lines up is ensuring this invariant is never broken.
+                // This is not recursive - it's utilising the specialisation for UInt that's defined a little later in this file.  The precondition a few lines up is ensuring this invariant is never broken.
+                buffer.initializeElement(at: buffer.startIndex.advanced(by: initialisedCount),
+                                         to: word.numericStringRepresentation)
                 initialisedCount += 1
 
                 tmp = quotient
