@@ -172,7 +172,7 @@ internal class ICUNumberFormatterBase {
         try? FormatResult(formatter: uformatter, value: v).string
     }
 
-    func format(_ v: ContiguousArray<UInt8>) -> String? {
+    func format(_ v: ArraySlice<UInt8>) -> String? {
         try? FormatResult(formatter: uformatter, value: v).string
     }
 
@@ -213,7 +213,7 @@ internal class ICUNumberFormatterBase {
             try status.checkSuccess()
         }
 
-        init(formatter: OpaquePointer, value: ContiguousArray<UInt8>) throws {
+        init(formatter: OpaquePointer, value: ArraySlice<UInt8>) throws {
             var status = U_ZERO_ERROR
             result = unumf_openResult(&status)
             try status.checkSuccess()
