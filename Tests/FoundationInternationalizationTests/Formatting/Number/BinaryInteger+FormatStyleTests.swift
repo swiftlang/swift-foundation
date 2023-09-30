@@ -14,6 +14,8 @@ import XCTest
 import FoundationEssentials
 @testable import FoundationInternationalization
 
+import BigInt
+
 final class BinaryIntegerFormatStyleTests: XCTestCase {
     // NSR == numericStringRepresentation
     func checkNSR(value: some BinaryInteger, expected: String) {
@@ -57,6 +59,58 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt64.self, magnitude: "10000000000000000000", oneLess: "9999999999999999999", oneMore: "10000000000000000001")
     }
 
+    func testNumericStringRepresentation_arbitraryPrecisionIntegers() throws {
+        // An initialiser has to be passed manually because BinaryInteger doesn't actually provide a way to initialise an instance from a string representation (that's functional for non-builtin integers).
+        func check<I: BinaryInteger>(type: I.Type = I.self, initialiser: (String) -> I) {
+            // Just some real basic sanity checks first.
+            checkNSR(value: I(0), expected: "0")
+            checkNSR(value: I(1), expected: "1")
+
+            if I.isSigned {
+                checkNSR(value: I(-1), expected: "-1")
+            }
+
+            for valueAsString in ["9223372036854775807", // Int64.max
+                                  "9223372036854775808", // Int64.max + 1 (and Int64.min when negated).
+
+                                  "9999999999999999999", // Test around the magnitude.
+                                  "10000000000000000000",
+                                  "10000000000000000001",
+
+
+                                  "18446744073709551615", // UInt64.max
+                                  "18446744073709551616", // UInt64.max + 1
+
+                                  "170141183460469231731687303715884105727", // Int128.max
+                                  "170141183460469231731687303715884105728", // Int128.max + 1
+                                  "340282366920938463463374607431768211455", // UInt128.max
+                                  "340282366920938463463374607431768211456", // UInt128.max + 1
+
+                                  // Some arbitrary, *very* large numbers to ensure there's no egregious scaling issues nor fatal inaccuracies in things like sizing of preallocated buffers.
+                                  "1" + String(repeating: "0", count: 99),
+                                  "1" + String(repeating: "0", count: 999),
+                                  "1" + String(repeating: "0", count: 1406), // First power of ten value at which an earlier implementation crashed due to underestimating how many wordStrings would be needed.
+                                  String(repeating: "1234567890", count: 10),
+                                  String(repeating: "1234567890", count: 100)] {
+                let value = initialiser(valueAsString)
+
+                XCTAssertEqual(value.description, valueAsString) // Sanity check that it initialised from the string correctly.
+                checkNSR(value: value, expected: valueAsString)
+
+                if I.isSigned {
+                    let negativeValueAsString = "-" + valueAsString
+                    let negativeValue = initialiser(negativeValueAsString)
+
+                    XCTAssertEqual(negativeValue.description, negativeValueAsString) // Sanity check that it initialised from the string correctly.
+                    checkNSR(value: negativeValue, expected: negativeValueAsString)
+                }
+            }
+        }
+
+        check(type: BigInt.self, initialiser: { BigInt($0)! })
+        check(type: BigUInt.self, initialiser: { BigUInt($0)! })
+    }
+
     func check<I: BinaryInteger>(type: I.Type = I.self, digits: Int, magnitude: UInt) {
         let actual = I.decimalDigitsAndMagnitudePerWord()
 
@@ -74,6 +128,10 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt16.self, digits: 5, magnitude: 10_000)
         check(type: UInt32.self, digits: 10, magnitude: 1_000_000_000)
         check(type: UInt64.self, digits: 20, magnitude: 10_000_000_000_000_000_000)
+    }
 
+    func testDecimalDigitsAndMagnitudePerWord_arbitraryPrecisionIntegers() throws {
+        check(type: BigInt.self, digits: 20, magnitude: 10_000_000_000_000_000_000)
+        check(type: BigUInt.self, digits: 20, magnitude: 10_000_000_000_000_000_000)
     }
 }
