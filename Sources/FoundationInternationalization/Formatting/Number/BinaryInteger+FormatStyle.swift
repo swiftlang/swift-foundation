@@ -80,7 +80,7 @@ extension BinaryInteger {
                 let remainderIsNegative = 0 > remainder.signum()
 
                 // By definition the remainder has to be a single word (since the divisor, `wordMagnitude`, fits in a single word), so we can avoid working on a BinaryInteger generically and just use the first word directly, which is concretely UInt.
-                assert(remainder.bitWidth - (remainderIsNegative ? 1 : 0) <= Words.Element.max.bitWidth) // When we're working with negative values the reported `bitWidth` will be one greater than that of the magnitude because it counts the sign bit, but we don't care about that sign bit.
+                assert(remainder.bitWidth - (remainderIsNegative ? 1 : 0) <= Words.Element.bitWidth) // When we're working with negative values the reported `bitWidth` will be one greater than that of the magnitude because it counts the sign bit, but we don't care about that sign bit.
                 var word = remainder.words.first ?? 0
 
                 if remainderIsNegative {
