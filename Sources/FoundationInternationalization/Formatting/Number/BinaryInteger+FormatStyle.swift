@@ -93,7 +93,9 @@ extension BinaryInteger {
 
                 if .zero != quotient { // Not on the last word, so need to fill in leading zeroes etc.
                     nextWordInsertPoint = wordInsertionPoint.advanced(by: -decimalDigitsPerWord)
+
                     let leadingZeroes = decimalDigitsPerWord - digitsAdded
+                    assert(0 <= leadingZeroes)
 
                     if 0 < leadingZeroes {
                         buffer[nextWordInsertPoint.advanced(by: 1)...nextWordInsertPoint.advanced(by: leadingZeroes)].initialize(repeating: UInt8(ascii: "0"))
@@ -114,6 +116,7 @@ extension BinaryInteger {
             actualDigits = wordInsertionPoint.distance(to: buffer.endIndex) - 1
 
             let unusedDigits = maximumDigits - actualDigits
+            assert(0 <= unusedDigits)
 
             if 0 < unusedDigits {
                 buffer[0..<unusedDigits].initialize(repeating: 0) // The buffer is permitted to be partially uninitialised, but only at the end.  So we have to initialise the unused portion at the start, in principle.  Technically this probably doesn't matter given we never subsequently read this part of the buffer, but there's no way to express that such that the compiler can ensure it for us.
@@ -218,6 +221,7 @@ extension UInt {
             actualDigits = numericStringRepresentation(intoEndOfBuffer: &buffer[...])
 
             let unusedDigits = maximumDigits - actualDigits
+            assert(0 <= unusedDigits)
 
             if 0 < unusedDigits {
                 buffer[0..<unusedDigits].initialize(repeating: 0) // The buffer is permitted to be partially uninitialised, but only at the end.  So we have to initialise the unused portion at the start, in principle.  Technically this probably doesn't matter given we never subsequently read this part of the buffer, but there's no way to express that such that the compiler can ensure it for us.
