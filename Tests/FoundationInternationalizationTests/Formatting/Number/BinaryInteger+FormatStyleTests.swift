@@ -119,19 +119,19 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
     }
 
     func testDecimalDigitsAndMagnitudePerWord_builtinIntegers() throws {
-        check(type: Int8.self, digits: 3, magnitude: 100)
-        check(type: Int16.self, digits: 5, magnitude: 10_000)
-        check(type: Int32.self, digits: 10, magnitude: 1_000_000_000)
-        check(type: Int64.self, digits: 19, magnitude: 1_000_000_000_000_000_000)
+        check(type: Int8.self, digits: 2, magnitude: 100)
+        check(type: Int16.self, digits: 4, magnitude: 10_000)
+        check(type: Int32.self, digits: 9, magnitude: 1_000_000_000)
+        check(type: Int64.self, digits: 18, magnitude: 1_000_000_000_000_000_000)
 
-        check(type: UInt8.self, digits: 3, magnitude: 100)
-        check(type: UInt16.self, digits: 5, magnitude: 10_000)
-        check(type: UInt32.self, digits: 10, magnitude: 1_000_000_000)
-        check(type: UInt64.self, digits: 20, magnitude: 10_000_000_000_000_000_000)
+        check(type: UInt8.self, digits: 2, magnitude: 100)
+        check(type: UInt16.self, digits: 4, magnitude: 10_000)
+        check(type: UInt32.self, digits: 9, magnitude: 1_000_000_000)
+        check(type: UInt64.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
     }
 
     func testDecimalDigitsAndMagnitudePerWord_arbitraryPrecisionIntegers() throws {
-        check(type: BigInt.self, digits: 20, magnitude: 10_000_000_000_000_000_000)
-        check(type: BigUInt.self, digits: 20, magnitude: 10_000_000_000_000_000_000)
+        check(type: BigInt.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
+        check(type: BigUInt.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
     }
 }

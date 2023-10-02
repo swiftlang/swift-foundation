@@ -88,8 +88,8 @@ extension BinaryInteger {
                 let nextWordInsertPoint: UnsafeMutableBufferPointer<UInt8>.Index
 
                 if .zero != quotient { // Not on the last word, so need to fill in leading zeroes etc.
-                    nextWordInsertPoint = wordInsertionPoint.advanced(by: -(decimalDigitsPerWord - 1))
-                    let leadingZeroes = decimalDigitsPerWord - 1 - digitsAdded
+                    nextWordInsertPoint = wordInsertionPoint.advanced(by: -decimalDigitsPerWord)
+                    let leadingZeroes = decimalDigitsPerWord - digitsAdded
 
                     if 0 < leadingZeroes {
                         buffer[nextWordInsertPoint.advanced(by: 1)...nextWordInsertPoint.advanced(by: leadingZeroes)].initialize(repeating: UInt8(ascii: "0"))
@@ -132,7 +132,7 @@ extension BinaryInteger {
 
     /// Determines the magnitude (the largest round decimal value that fits in Word, e.g. 100 for UInt8) and "maximum" digits per word (e.g. two for UInt8).
     ///
-    /// Note that 'maximum' in this case is context-specific to the `numericStringRepresentation` algorithm.  It is not necessarily the maximum digits required for _any_ Word, but rather any value of Word type which is less than the maximum decimal magnitude.  Typically this is one digit less.
+    /// Note that 'maximum' in this case is context-specific to the `numericStringRepresentation` algorithm.  It is not necessarily the maximum digits required for _any_ Word, but rather any value of Word type which is less than the maximum decimal magnitude.  Typically this is two digit less.
     ///
     /// This cannot be defined statically because Word is UInt which has no fixed size - e.g. it could be UInt64 (most common at time of writing) but also UInt32 (for older or embedded platforms), or technically any other finite-sized unsigned integer.  The compiler can in principle fold this down to the resulting values at compile time - since the only variable is the concrete type of Word - and then just inline those into the caller.
     ///
@@ -154,7 +154,7 @@ extension BinaryInteger {
             }
 
             if overflowed {
-                return (count, Self(value))
+                return (count - 1, Self(value))
             }
 
             value = nextValue
