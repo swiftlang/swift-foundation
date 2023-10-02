@@ -72,7 +72,7 @@ extension BinaryInteger {
 
         return ContiguousArray<UInt8>(unsafeUninitializedCapacity: maximumDigits) { buffer, initialisedCount in
             var tmp = self
-            var wordInsertionPoint = buffer.endIndex.advanced(by: -1)
+            var wordInsertionPoint = buffer.endIndex - 1
 
             while .zero != tmp {
                 let (quotient, remainder) = tmp.quotientAndRemainder(dividingBy: wordMagnitude)
@@ -92,16 +92,16 @@ extension BinaryInteger {
                 let nextWordInsertPoint: UnsafeMutableBufferPointer<UInt8>.Index
 
                 if .zero != quotient { // Not on the last word, so need to fill in leading zeroes etc.
-                    nextWordInsertPoint = wordInsertionPoint.advanced(by: -decimalDigitsPerWord)
+                    nextWordInsertPoint = wordInsertionPoint - decimalDigitsPerWord
 
                     let leadingZeroes = decimalDigitsPerWord - digitsAdded
                     assert(0 <= leadingZeroes)
 
                     if 0 < leadingZeroes {
-                        buffer[nextWordInsertPoint.advanced(by: 1)...nextWordInsertPoint.advanced(by: leadingZeroes)].initialize(repeating: UInt8(ascii: "0"))
+                        buffer[(nextWordInsertPoint + 1)...(nextWordInsertPoint + leadingZeroes)].initialize(repeating: UInt8(ascii: "0"))
                     }
                 } else {
-                    nextWordInsertPoint = wordInsertionPoint.advanced(by: -digitsAdded)
+                    nextWordInsertPoint = wordInsertionPoint - digitsAdded
                 }
 
                 wordInsertionPoint = nextWordInsertPoint
@@ -110,7 +110,7 @@ extension BinaryInteger {
 
             if !positive {
                 buffer[wordInsertionPoint] = UInt8(ascii: "-")
-                wordInsertionPoint = wordInsertionPoint.advanced(by: -1)
+                wordInsertionPoint -= 1
             }
 
             actualDigits = wordInsertionPoint.distance(to: buffer.endIndex) - 1
@@ -183,7 +183,7 @@ extension UInt {
     func numericStringRepresentation(intoEndOfBuffer buffer: inout Slice<UnsafeMutableBufferPointer<UInt8>>) -> Int {
         guard .zero != self else { return 0 } // Easier to special-case this here than deal with it below (annoying off-by-one potential errors).
 
-        var insertionPoint = buffer.endIndex.advanced(by: -1)
+        var insertionPoint = buffer.endIndex - 1
         var tmp = self
 
         // Keep dividing by ten until the value disappears.  Each time we divide, we get one more digit for the output as the remainder of the division.  Since with this approach digits "pop off" from least significant to most, the output buffer is filled in reverse.
@@ -193,7 +193,7 @@ extension UInt {
             buffer[insertionPoint] = UInt8(ascii: "0") + UInt8(remainderAsSelf)
 
             if .zero != quotient {
-                insertionPoint = insertionPoint.advanced(by: -1)
+                insertionPoint -= 1
                 assert(insertionPoint >= buffer.startIndex)
             }
 
