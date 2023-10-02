@@ -114,8 +114,11 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
     func check<I: BinaryInteger>(type: I.Type = I.self, digits: Int, magnitude: UInt) {
         let actual = I.decimalDigitsAndMagnitudePerWord()
 
-        XCTAssertEqual(actual.digits, digits)
-        XCTAssertEqual(actual.magnitude, I(exactly: magnitude))
+        let maxDigits = [32: 9, 64: 19][UInt.bitWidth]!
+        let maxMagnitude: UInt = [32: 1_000_000_000, 64: 10_000_000_000_000_000_000][UInt.bitWidth]!
+
+        XCTAssertEqual(actual.digits, min(digits, maxDigits))
+        XCTAssertEqual(actual.magnitude, I(exactly: min(magnitude, maxMagnitude)))
     }
 
     func testDecimalDigitsAndMagnitudePerWord_builtinIntegers() throws {
