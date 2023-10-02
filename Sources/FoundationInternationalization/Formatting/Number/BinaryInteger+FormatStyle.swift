@@ -14,6 +14,12 @@
 import FoundationEssentials
 #endif
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension BinaryInteger {
 
@@ -126,8 +132,7 @@ extension BinaryInteger {
         guard 0 < bitWidth else { return 0 }
         guard 1 != bitWidth else { return 1 } // Algorithm below only works for bit widths of _two_ and above.
 
-        let log10_of_2: Double = 0.3010299956639812 // Precomputed to avoid having to pull in Glibc/Darwin for the log10 function.
-        return Int((Double(bitWidth) * log10_of_2).rounded(.up)) + 1 // https://www.exploringbinary.com/number-of-decimal-digits-in-a-binary-integer
+        return Int((Double(bitWidth) * log10(2)).rounded(.up)) + 1 // https://www.exploringbinary.com/number-of-decimal-digits-in-a-binary-integer
     }
 
     /// Determines the magnitude (the largest round decimal value that fits in Word, e.g. 100 for UInt8) and "maximum" digits per word (e.g. two for UInt8).
@@ -138,6 +143,13 @@ extension BinaryInteger {
     ///
     /// Alternatively, FixedWidthInteger could be extended with constants for these two values, and the appropriate values hard-coded for every concrete fixed-width unsigned integer.  But that seems like more work both up-front and in future (re. adding new unsigned integer types).
     internal static func decimalDigitsAndMagnitudePerWord() -> (digits: Int, magnitude: Self) { // Internal for unit test accessibility, otherwise would be fileprivate.
+        let guessDigits = Int(Double(Words.Element.bitWidth) * log10(2))
+        let guessMagnitude = pow(10, Double(guessDigits))
+
+        if let magnitudeAsSelf = Self(exactly: guessMagnitude) {
+            return (guessDigits, magnitudeAsSelf)
+        }
+
         var count = 1
         var value: Words.Element = 1
 
