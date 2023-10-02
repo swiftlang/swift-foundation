@@ -88,8 +88,6 @@ extension BinaryInteger {
                     word = ~word &+ 1
                 }
 
-                // This is not recursive - it's utilising the specialisation for UInt that's defined a little later in this file.  The precondition it a bit paranoid but just ensures this invariant is never broken (or at least that this code will have to be proactively reworked if the invariant is broken).
-                precondition(Words.Element.self == UInt.self)
                 let digitsAdded = word.numericStringRepresentation(intoEndOfBuffer: &buffer[...wordInsertionPoint])
                 let nextWordInsertPoint: UnsafeMutableBufferPointer<UInt8>.Index
 
