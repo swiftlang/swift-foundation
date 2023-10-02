@@ -89,22 +89,20 @@ extension BinaryInteger {
                 }
 
                 let digitsAdded = word.numericStringRepresentation(intoEndOfBuffer: &buffer[...wordInsertionPoint])
-                let nextWordInsertPoint: UnsafeMutableBufferPointer<UInt8>.Index
 
                 if .zero != quotient { // Not on the last word, so need to fill in leading zeroes etc.
-                    nextWordInsertPoint = wordInsertionPoint - decimalDigitsPerWord
+                    wordInsertionPoint -= decimalDigitsPerWord
 
                     let leadingZeroes = decimalDigitsPerWord - digitsAdded
                     assert(0 <= leadingZeroes)
 
                     if 0 < leadingZeroes {
-                        buffer[(nextWordInsertPoint + 1)...(nextWordInsertPoint + leadingZeroes)].initialize(repeating: UInt8(ascii: "0"))
+                        buffer[(wordInsertionPoint + 1)...(wordInsertionPoint + leadingZeroes)].initialize(repeating: UInt8(ascii: "0"))
                     }
                 } else {
-                    nextWordInsertPoint = wordInsertionPoint - digitsAdded
+                    wordInsertionPoint -= digitsAdded
                 }
 
-                wordInsertionPoint = nextWordInsertPoint
                 tmp = quotient
             }
 
