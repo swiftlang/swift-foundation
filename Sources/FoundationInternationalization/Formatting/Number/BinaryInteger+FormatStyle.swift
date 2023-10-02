@@ -162,7 +162,7 @@ extension BinaryInteger {
     }
 }
 
-extension BinaryInteger where Self == UInt {
+extension UInt {
     /// Formats `self` in "Numeric string" format (https://speleotrove.com/decimal/daconvs.html) which is the required input form for certain ICU functions (e.g. `unum_formatDecimal`).
     ///
     /// This is solely intended to be used by `numericStringRepresentation` (both the specialised form below and the generic one for all BinaryIntegers, above).  That's why its interface is so unusual.  Prefer using `numericStringRepresentation` for all other use-cases.
