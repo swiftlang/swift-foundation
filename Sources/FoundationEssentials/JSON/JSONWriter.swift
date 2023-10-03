@@ -129,6 +129,7 @@ internal struct JSONWriter {
     private var indent = 0
     private let pretty: Bool
 #if FOUNDATION_FRAMEWORK
+    // https://github.com/apple/swift-foundation/issues/284
     private let sortedKeys: Bool
 #endif
     private let withoutEscapingSlashes: Bool
@@ -138,6 +139,7 @@ internal struct JSONWriter {
     init(options: WritingOptions) {
         pretty = options.contains(.prettyPrinted)
 #if FOUNDATION_FRAMEWORK
+        // https://github.com/apple/swift-foundation/issues/284
         sortedKeys = options.contains(.sortedKeys)
 #endif
         withoutEscapingSlashes = options.contains(.withoutEscapingSlashes)
@@ -352,6 +354,7 @@ internal struct JSONWriter {
 #if FOUNDATION_FRAMEWORK
         if sortedKeys {
             // TODO: Until we have a solution for sorting like Locale.system in FoundationEssentials or with the help of FoundationLocalization, this comparison requires bridging back to NSString. To avoid the extreme overhead of bridging the strings on every comparison, we'll do it up front instead.
+            // https://github.com/apple/swift-foundation/issues/284
             let nsKeysAndValues = dict.map {
                 (key: $0.key as NSString, value: $0.value)
             }
