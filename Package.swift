@@ -15,11 +15,13 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            url: "https://github.com/apple/swift-collections",
-            revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
+            url: "https://github.com/ordo-one/swift-collections",
+            // revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
+            branch: "release/1.1-d8003787efafa82f9805594bc51100be29ac6903"),
         .package(
-            url: "https://github.com/apple/swift-foundation-icu",
-            revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
+            url: "https://github.com/ordo-one/swift-foundation-icu",
+            // revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
+            branch: "main"),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
             from: "509.0.0")
