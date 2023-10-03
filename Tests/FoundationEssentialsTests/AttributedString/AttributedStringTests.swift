@@ -14,6 +14,10 @@
 import TestSupport
 #endif
 
+#if canImport(FoundationEssentials)
+@testable import FoundationEssentials
+#endif // FOUNDATION_FRAMEWORK
+
 #if FOUNDATION_FRAMEWORK
 @testable @_spi(AttributedString) import Foundation
 // For testing default attribute scope conversion
@@ -2126,8 +2130,6 @@ E {
         XCTAssertEqual(abc_lit, abc)
     }
 
-#if FOUNDATION_FRAMEWORK
-    // TODO: Implement AttributedStringProtocol.range(of:) in FoundationPreview
     func testSearch() {
         let testString = AttributedString("abcdefghi")
         XCTAssertNil(testString.range(of: "baba"))
@@ -2218,8 +2220,6 @@ E {
         XCTAssertNil(testString.range(of: "bcd", options: [.anchored]))
         XCTAssertNil(testString.range(of: "abc", options: [.anchored, .backwards]))
     }
-    
-#endif // FOUNDATION_FRAMEWORK
 
     func testIndexConversion() {
         let attrStr = AttributedString("ABCDE")
