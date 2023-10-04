@@ -14,7 +14,9 @@ import XCTest
 import FoundationEssentials
 @testable import FoundationInternationalization
 
+#if canImport(BigInt) // Not included by default as it's a 3rd party library; requires https://github.com/attaswift/BigInt.git be added the package dependencies.  Proved useful in the past for finding bugs that only show up with large numbers.
 import BigInt
+#endif
 
 final class BinaryIntegerFormatStyleTests: XCTestCase {
     // NSR == numericStringRepresentation
@@ -59,6 +61,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt64.self, magnitude: "10000000000000000000", oneLess: "9999999999999999999", oneMore: "10000000000000000001")
     }
 
+#if canImport(BigInt)
     func testNumericStringRepresentation_arbitraryPrecisionIntegers() throws {
         // An initialiser has to be passed manually because BinaryInteger doesn't actually provide a way to initialise an instance from a string representation (that's functional for non-builtin integers).
         func check<I: BinaryInteger>(type: I.Type = I.self, initialiser: (String) -> I) {
@@ -110,6 +113,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: BigInt.self, initialiser: { BigInt($0)! })
         check(type: BigUInt.self, initialiser: { BigUInt($0)! })
     }
+#endif
 
     func check<I: BinaryInteger>(type: I.Type = I.self, digits: Int, magnitude: UInt) {
         let actual = I.decimalDigitsAndMagnitudePerWord()
@@ -133,8 +137,10 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt64.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
     }
 
+#if canImport(BigInt)
     func testDecimalDigitsAndMagnitudePerWord_arbitraryPrecisionIntegers() throws {
         check(type: BigInt.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
         check(type: BigUInt.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
     }
+#endif
 }
