@@ -45,7 +45,7 @@ extension BinaryInteger {
 extension BinaryInteger {
     /// Formats `self` in "Numeric string" format (https://speleotrove.com/decimal/daconvs.html) which is the required input form for certain ICU functions (e.g. `unum_formatDecimal`).
     ///
-    /// This produces output that (at time of writing) looks identical to the standard `description`.  However, the format of `description`'s result is not specifically defined to match the "Numeric string" format needed by ICU, and might change in future.  Thus this purpose-built method.
+    /// This produces output that (at time of writing) looks identical to the `description` for many `BinaryInteger` types, such as the built-in integer types.  However, the format of `description` is not specifically defined by `BinaryInteger` (or anywhere else, really), and as such cannot be relied upon.  Thus this purpose-built method, instead.
     ///
     /// It might be worth moving this into the Swift standard library one day, so that it can be used as the basis for the default `description` instead of duplicating that conversion process.  At least while `description`'s output happens to match this one's.
     ///
