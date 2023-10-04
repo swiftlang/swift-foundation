@@ -17,7 +17,7 @@ let package = Package(
         .package(
             url: "https://github.com/ordo-one/package-swift-collections",
             // revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
-            .upToNextMajor(from: "1.1.1-ordoalpha.1")),
+            .upToNextMajor(from: "1.1.2-ordoalpha.1")),
         .package(
             url: "https://github.com/ordo-one/swift-foundation-icu",
             // revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
