@@ -15,7 +15,7 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            url: "https://github.com/ordo-one/swift-collections",
+            url: "https://github.com/ordo-one/package-swift-collections",
             // revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
             .upToNextMajor(from: "1.1.0-ordoalpha.1")),
         .package(
@@ -52,7 +52,7 @@ let package = Package(
           name: "FoundationEssentials",
           dependencies: [
             "_CShims",
-            .product(name: "_RopeModule", package: "swift-collections"),
+            .product(name: "_RopeModule", package: "package-swift-collections"),
           ],
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
