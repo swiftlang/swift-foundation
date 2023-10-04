@@ -51,7 +51,7 @@ extension BinaryInteger {
     ///
     /// This property's type is an ArraySlice rather than a straight ContiguousArray because it's computationally more expensive to size the array exactly right (whether by pre-calculating the required size more precisely, or by dynamically resizing it during execution of the iterative algorithm).  Since this is intended to only be a transient value, for the purposes of translating from BinaryInteger to the ICU libraries, this is the right compromise of runtime speed (CPU time) and memory efficiency (it's usually only off by a byte or two, if that).
     internal var numericStringRepresentation: ArraySlice<UInt8> {
-        // Fast-path for values that fit into a UInt, as the conversion to a UInt should be virtually free if it's possible (it's essentially just self.words[0]) and there's a specialisation of this function for UInt that's faster (and exists irrespective of this optimisation as it's required for the algorithm below).
+        // Fast-path for values that fit into a UInt, as the conversion to a UInt should be virtually free if it's possible (it's essentially just self.words[0]) and there's a specialisation of this function for UInt that's faster.
         if let fastForm = UInt(exactly: self) {
             return fastForm.numericStringRepresentation
         }
