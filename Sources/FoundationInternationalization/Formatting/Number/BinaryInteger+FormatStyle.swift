@@ -58,7 +58,7 @@ extension BinaryInteger {
 
         assert(.zero != self) // Zero isn't handled correctly in the algorithm below (no numbers will actually be emitted) because it's more work to do so, which is unnecessary as the fast path above should handle that case.
 
-        // The algorithm here is conceptually fairly simple.  In a nutshell, the value of self is broken down into Word-sized chunks, each of which, is divided by ten repeatedly until the value dimishes to zero.  The remainder of each division is the next digit of the result (starting with the least significant).
+        // The algorithm here is conceptually fairly simple.  In a nutshell, the value of self is broken down into Word-sized chunks, each of which is divided by ten repeatedly until the value dimishes to zero.  The remainder of each division is the next digit of the result (starting with the least significant).
         //
         // A conceptually simpler approach is to skip the first step of breaking things into Word-sized chunks, and just do the division by 10 on the whole value of `self`.  The difference is performance - native integer division (for machine-word-sized integers) is essentially O(1), whereas division of arbitrary-precision integers is essentially O(log2(bitWidth)) since it's composed of _multiple_ machine-word-sized divides proportionate to its binary magnitude.
         //
