@@ -114,13 +114,15 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public var count: Int {
+    #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _count
         }
+    #endif
         return _defaultCount
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     @usableFromInline
     internal var _count: Int {
         _unicodeScalars.count
@@ -153,13 +155,15 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         offsetBy distance: Int,
         limitedBy limit: AttributedString.Index
     ) -> AttributedString.Index? {
+    #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance, limitedBy: limit)
         }
+    #endif
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,

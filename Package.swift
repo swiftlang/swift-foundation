@@ -4,6 +4,14 @@
 import PackageDescription
 import CompilerPluginSupport
 
+// Availability Macros
+let availabilityMacros: [SwiftSetting] = [
+    "FoundationPreview 0.1:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+    "FoundationPreview 0.2:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+    "FoundationPreview 0.3:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+    "FoundationPreview 0.4:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+].map { .enableExperimentalFeature("AvailabilityMacro=\($0)") }
+
 let package = Package(
     name: "FoundationPreview",
     platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
@@ -45,7 +53,7 @@ let package = Package(
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
             "FoundationInternationalization",
-        ]),
+        ], swiftSettings: availabilityMacros),
 
         // FoundationEssentials
         .target(
@@ -57,12 +65,12 @@ let package = Package(
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
-          ]
+          ] + availabilityMacros
         ),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
             "FoundationEssentials"
-        ]),
+        ], swiftSettings: availabilityMacros),
 
         // FoundationInternationalization
         .target(
@@ -74,7 +82,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ]
+            ] + availabilityMacros
         ),
         
         // FoundationMacros
@@ -90,14 +98,15 @@ let package = Package(
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ]
+            ] + availabilityMacros
         ),
         .testTarget(
             name: "FoundationMacrosTests",
             dependencies: [
                 "FoundationMacros",
                 "TestSupport"
-            ]
+            ],
+            swiftSettings: availabilityMacros
         )
     ]
 )
@@ -108,7 +117,7 @@ package.targets.append(contentsOf: [
         "TestSupport",
         "FoundationInternationalization",
         //"BigInt"
-    ]),
+    ], swiftSettings: availabilityMacros),
 ])
 #endif
 

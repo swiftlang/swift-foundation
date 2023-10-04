@@ -194,7 +194,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if contains(.calendar) { result.insert(.calendar) }
             if contains(.timeZone) { result.insert(.timeZone) }
             if contains(.isLeapMonth) { 
-                if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
+                if #available(FoundationPreview 0.1, *) {
                     result.insert(.isLeapMonth)
                 }
             }
@@ -218,7 +218,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if self.contains(.nanosecond) { return .nanosecond }
 
             // The algorithms that call this function assume that isLeapMonth counts as a 'highest unit set', but the order is after nanosecond.
-            if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
+            if #available(FoundationPreview 0.1, *) {
                 if self.contains(.isLeapMonth) { return .isLeapMonth }
             }
 
@@ -249,7 +249,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case nanosecond
         case calendar
         case timeZone
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         case isLeapMonth
 
         fileprivate var componentSetValue: ComponentSet.RawValue {

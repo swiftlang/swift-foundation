@@ -113,13 +113,15 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public var count: Int {
+    #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _count
         }
+    #endif
         return _defaultCount
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     @usableFromInline
     internal var _count: Int {
         _characters.count
@@ -141,13 +143,15 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public func index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
+    #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance)
         }
+    #endif
         return _defaultIndex(i, offsetBy: distance)
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     @usableFromInline
     internal func _index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
@@ -162,13 +166,15 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         offsetBy distance: Int,
         limitedBy limit: AttributedString.Index
     ) -> AttributedString.Index? {
+    #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance, limitedBy: limit)
         }
+    #endif
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,
@@ -189,15 +195,17 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public func distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
+    #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _distance(from: start, to: end)
         }
+    #endif
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
         precondition(end >= startIndex && end <= endIndex, "AttributedString index out of bounds")
         return _defaultDistance(from: start, to: end)
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     @usableFromInline
     internal func _distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")

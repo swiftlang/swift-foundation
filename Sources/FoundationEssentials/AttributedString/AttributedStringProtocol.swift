@@ -235,13 +235,35 @@ extension AttributedStringProtocol {
         let clamped = Swift.min(Swift.max(result, bounds.lowerBound), bounds.upperBound)
         return AttributedString.Index(clamped)
     }
+
+    internal func _utf8Index(at utf8Offset: Int) -> AttributedString.Index {
+        let startOffset = self.startIndex._value.utf8Offset
+        return AttributedString.Index(self.__guts.utf8Index(at: startOffset + utf8Offset))
+    }
 }
 
-#if FOUNDATION_FRAMEWORK
-// TODO: Implement AttributedStringProtocol.range(of:) for FoundationPreview
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
+    internal func _range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = []) -> Range<AttributedString.Index>? {
+
+        // TODO: Implement this on BigString to avoid O(n) iteration
+        let substring = Substring(characters)
+        guard let range = try? substring._range(of: Substring(stringToFind), options: options) else {
+            return nil
+        }
+
+        let startOffset = substring.utf8.distance(from: substring.startIndex, to: range.lowerBound) // O(1)
+        let endOffset = substring.utf8.distance(from: substring.startIndex, to: range.upperBound) // O(1)
+
+        return self._utf8Index(at: startOffset) ..< self._utf8Index(at: endOffset) // O(log(n))
+    }
+
     public func range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = [], locale: Locale? = nil) -> Range<AttributedString.Index>? {
+        if locale == nil {
+            return _range(of: stringToFind, options: options)
+        }
+#if FOUNDATION_FRAMEWORK
+        // TODO: Implement localized AttributedStringProtocol.range(of:) for FoundationPreview
         // Since we have secret access to the String property, go ahead and use the full implementation given by Foundation rather than the limited reimplementation we needed for CharacterView.
         // FIXME: There is no longer a `String` property. This is going to be terribly slow.
         let bstring = self.__guts.string
@@ -258,7 +280,10 @@ extension AttributedStringProtocol {
         let end = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8End)
 
         return AttributedString.Index(start) ..< AttributedString.Index(end)
+#else
+        // TODO: Implement localized AttributedStringProtocol.range(of:) for FoundationPreview
+        return _range(of: stringToFind, options: options)
+#endif // FOUNDATION_FRAMEWORK
     }
 }
 
-#endif // FOUNDATION_FRAMEWORK
