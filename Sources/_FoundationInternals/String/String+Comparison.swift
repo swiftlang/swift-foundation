@@ -643,7 +643,7 @@ extension Substring {
     }
 
     // Only throws when using `.regularExpression` option
-    package func _enumerateComponents(separatedBy separator: Substring, options: String.CompareOptions, withBlock block: (_ component: Substring, _ isLastComponent: Bool) -> ()) throws {
+    func _enumerateComponents(separatedBy separator: Substring, options: String.CompareOptions = [], withBlock block: (_ component: Substring, _ isLastComponent: Bool) -> ()) throws {
         var searchStart = startIndex
         while searchStart < endIndex {
             let r = try self[searchStart...]._range(of: separator, options: options)
