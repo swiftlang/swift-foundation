@@ -14,9 +14,6 @@
 import TestSupport
 #endif
 
-// Predicate does not back-deploy to older Darwin versions
-#if FOUNDATION_FRAMEWORK || os(Linux) || os(Windows)
-
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 final class PredicateTests: XCTestCase {
     
@@ -754,5 +751,3 @@ final class PredicateTests: XCTestCase {
         }
     }
 }
-
-#endif
