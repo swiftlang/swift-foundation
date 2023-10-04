@@ -108,7 +108,7 @@ final class JSONEncoderTests : XCTestCase {
         XCTAssertEqual(result2, "[]")
     }
     
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     func testEncodingTopLevelWithConfiguration() throws {
         // CodableTypeWithConfiguration is a struct that conforms to CodableWithConfiguration
         let value = CodableTypeWithConfiguration.testValue

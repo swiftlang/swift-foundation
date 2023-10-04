@@ -88,31 +88,31 @@ extension Locale {
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPreview 0.1, *)
 extension Locale.LanguageCode : CustomDebugStringConvertible { }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPreview 0.1, *)
 extension Locale.Script : CustomDebugStringConvertible { }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPreview 0.1, *)
 extension Locale.Region : CustomDebugStringConvertible { }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPreview 0.1, *)
 extension Locale.Currency : CustomDebugStringConvertible { }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPreview 0.1, *)
 extension Locale.Collation : CustomDebugStringConvertible { }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPreview 0.1, *)
 extension Locale.NumberingSystem : CustomDebugStringConvertible { }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPreview 0.1, *)
 extension Locale.Subdivision : CustomDebugStringConvertible { }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPreview 0.1, *)
 extension Locale.Variant : CustomDebugStringConvertible { }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPreview 0.1, *)
 extension Locale.MeasurementSystem : CustomDebugStringConvertible { }
 
 extension Locale {
@@ -133,7 +133,7 @@ extension Locale {
         package var _identifier: String
         package var _normalizedIdentifier: String
 
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -218,7 +218,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -280,7 +280,7 @@ extension Locale {
         package var _identifier: String
         package var _normalizedIdentifier: String
 
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -359,7 +359,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -431,7 +431,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -497,7 +497,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -612,7 +612,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -691,7 +691,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -763,7 +763,7 @@ extension Locale {
             }
         }
 
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }

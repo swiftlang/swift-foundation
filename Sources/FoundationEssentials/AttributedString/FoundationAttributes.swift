@@ -40,11 +40,11 @@ extension AttributeScopes {
         public let durationField: DurationFieldAttribute
         
 #if FOUNDATION_FRAMEWORK
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public let agreementConcept: AgreementConceptAttribute
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public let agreementArgument: AgreementArgumentAttribute
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         public let referentConcept: ReferentConceptAttribute
         
         // TODO: Support AttributedString markdown in FoundationPreview: https://github.com/apple/swift-foundation/issues/44
@@ -103,7 +103,7 @@ extension AttributeScopes.FoundationAttributes {
 #if FOUNDATION_FRAMEWORK
     
     @frozen @_nonSendable
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     public enum ReferentConceptAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
         public static let name = NSAttributedString.Key.referentConcept.rawValue
@@ -111,7 +111,7 @@ extension AttributeScopes.FoundationAttributes {
     }
 
     @frozen @_nonSendable
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     public enum AgreementConceptAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
         public static let name = NSAttributedString.Key.agreeWithConcept.rawValue
@@ -119,7 +119,7 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen @_nonSendable
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     public enum AgreementArgumentAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
         public static let name = NSAttributedString.Key.agreeWithArgument.rawValue
