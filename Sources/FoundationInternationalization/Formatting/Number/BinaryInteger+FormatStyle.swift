@@ -65,9 +65,9 @@ extension BinaryInteger {
         // So we replace some of those expensive O(log2(bitWidth)) divides with simpler O(1) divides, by first dividing by the largest multiple of ten such that the remainder fits in a single machine word (UInt), and then using regular integer division CPU instructions to further divide that simple machine-word-sized remainder down into individual digits.
 
         let (decimalDigitsPerWord, wordMagnitude) = Self.decimalDigitsAndMagnitudePerWord()
-        let positive = 0 <= self.signum()
-        let maximumDigits = (Self.maximumDecimalDigitsForUnsigned(bitWidth: self.bitWidth - (positive ? 0 : 1)) // -1 for negative values because their bit width includes the sign bit, which we don't care about.
-                             + (positive ? 0 : 1)) // Include room for "-" prefix if necessary.
+        let negative = 0 > self.signum()
+        let maximumDigits = (Self.maximumDecimalDigitsForUnsigned(bitWidth: self.bitWidth - (negative ? 1 : 0)) // -1 for negative values because their bit width includes the sign bit, which we don't care about.
+                             + (negative ? 1 : 0)) // Include room for "-" prefix if necessary.
         var actualDigits: Int = Int.min // Actually initialised inside the closure below, but the compiler mistakenly demands a default value anyway.
 
         return ContiguousArray<UInt8>(unsafeUninitializedCapacity: maximumDigits) { buffer, initialisedCount in
@@ -76,14 +76,13 @@ extension BinaryInteger {
 
             while .zero != tmp {
                 let (quotient, remainder) = tmp.quotientAndRemainder(dividingBy: wordMagnitude)
-
-                let remainderIsNegative = 0 > remainder.signum()
+                precondition(.zero == remainder || (negative == (0 > remainder.signum())), "Starting value \(tmp) is \(negative ? "negative" : "positive (or zero)") yet the remainder of division by \(wordMagnitude) is not: \(remainder).  quotientAndRemainder(dividingBy:) is not implemented correctly for \(type(of: self)) (it might be using T-division instead of F-division).") // It's an entirely understandable error for an implementor to use T-division for their integer quotient and remainder, but they're supposed to use F-division.  i.e. the quotient is supposed to be rounded towards zero rather than down (and that effects the modulus correspondingly, since either way the results must satisfy r = d ⨉ (r idiv i) + (r mod i)).  F-division is convenient because its remainder is neatly the value of interest to this algorithm, rather than being offset by the divisor if r is negative.  While it would be technically possible to assume T-division if the remainder's sign doesn't match, the incorrect implementation of quotientAndRemainder(dividingBy:) will probably still break other algorithms and so we shouldn't encourage it.
 
                 // By definition the remainder has to be a single word (since the divisor, `wordMagnitude`, fits in a single word), so we can avoid working on a BinaryInteger generically and just use the first word directly, which is concretely UInt.
-                assert(remainder.bitWidth - (remainderIsNegative ? 1 : 0) <= Words.Element.bitWidth) // When we're working with negative values the reported `bitWidth` will be one greater than that of the magnitude because it counts the sign bit, but we don't care about that sign bit.
+                assert(remainder.bitWidth - (negative ? 1 : 0) <= Words.Element.bitWidth) // When we're working with negative values the reported `bitWidth` will be one greater than that of the magnitude because it counts the sign bit, but we don't care about that sign bit.
                 var word = remainder.words.first ?? 0
 
-                if remainderIsNegative {
+                if negative {
                     // Luckily for us `words` is defined to be in two's complement form, so we can manually flip the sign.  This doesn't normally work because two's complement cannot represent the positive version of its most negative value, but we know we won't have that here because it's the remainder from division by `wordMagnitude`, which is always going to be less than UInt.max because `wordMagnitude` itself has to fit into UInt (and the remainder of division is always at least one smaller than the divisor).
                     word = ~word &+ 1
                 }
@@ -106,7 +105,7 @@ extension BinaryInteger {
                 tmp = quotient
             }
 
-            if !positive {
+            if negative {
                 buffer[wordInsertionPoint] = UInt8(ascii: "-")
                 wordInsertionPoint -= 1
             }
