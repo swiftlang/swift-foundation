@@ -6,7 +6,7 @@ Access core types and essential functionality used by most applications.
 
 The Foundation Essentials package provides the most important types for everyday development:
 
-* Core types beyond those provided by the Swift standard library: ``Data``, ``Decimal``, and ``UUID``.
+* Core types beyond those provided by the Swift standard library, such as ``Data``, ``Decimal``, and ``UUID``.
 * Dates and time intervals.
 * A measurement API that supports various unit systems.
 * File system access, preferences, archives, and serialization.
