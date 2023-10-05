@@ -188,9 +188,9 @@ extension UInt {
 
         // Keep dividing by ten until the value disappears.  Each time we divide, we get one more digit for the output as the remainder of the division.  Since with this approach digits "pop off" from least significant to most, the output buffer is filled in reverse.
         while .zero != tmp {
-            let (quotient, remainderAsSelf) = tmp.quotientAndRemainder(dividingBy: 10)
+            let (quotient, remainder) = tmp.quotientAndRemainder(dividingBy: 10)
 
-            buffer[insertionPoint] = UInt8(ascii: "0") + UInt8(remainderAsSelf)
+            buffer[insertionPoint] = UInt8(ascii: "0") + UInt8(remainder)
 
             if .zero != quotient {
                 insertionPoint -= 1
