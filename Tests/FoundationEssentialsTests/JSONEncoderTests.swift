@@ -724,6 +724,21 @@ final class JSONEncoderTests : XCTestCase {
         _ = try? JSONEncoder().encode(ReferencingEncoderWrapper([Float.infinity]))
     }
 
+    func testDecodeDynamicSubclass() throws {
+        // https://github.com/apple/swift-corelibs-foundation/issues/4806
+        class BaseTestType: Decodable { }
+        class ChildTestType: BaseTestType { }
+
+        func dynamicTestType() -> BaseTestType.Type {
+            return ChildTestType.self
+        }
+
+        let decoder = JSONDecoder()
+        let testType = dynamicTestType()
+        let instance = try decoder.decode(testType, from: Data(#"{}"#.utf8))
+        XCTAssertTrue(instance is ChildTestType)
+    }
+
     func testEncoderStateThrowOnEncodeCustomDate() {
         // This test is identical to testEncoderStateThrowOnEncode, except throwing via a custom Date closure.
         struct ReferencingEncoderWrapper<T : Encodable> : Encodable {
