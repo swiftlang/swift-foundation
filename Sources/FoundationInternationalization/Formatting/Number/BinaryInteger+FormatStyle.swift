@@ -46,11 +46,11 @@ extension BinaryInteger {
     /// Formats `self` in "Numeric string" format (https://speleotrove.com/decimal/daconvs.html) which is the required input form for certain ICU functions (e.g. `unum_formatDecimal`).
     ///
     /// This produces output that (at time of writing) looks identical to the `description` for many `BinaryInteger` types, such as the built-in integer types.  However, the format of `description` is not specifically defined by `BinaryInteger` (or anywhere else, really), and as such cannot be relied upon.  Thus this purpose-built method, instead.
-    ///
-    /// It might be worth moving this into the Swift standard library one day, so that it can be used as the basis for the default `description` instead of duplicating that conversion process.  At least while `description`'s output happens to match this one's.
-    ///
-    /// This property's type is an ArraySlice rather than a straight ContiguousArray because it's computationally more expensive to size the array exactly right (whether by pre-calculating the required size more precisely, or by dynamically resizing it during execution of the iterative algorithm).  Since this is intended to only be a transient value, for the purposes of translating from BinaryInteger to the ICU libraries, this is the right compromise of runtime speed (CPU time) and memory efficiency (it's usually only off by a byte or two, if that).
     internal var numericStringRepresentation: ArraySlice<UInt8> {
+        // It might be worth moving this method into the Swift standard library one day, so that it can be used as the basis for the default `description` instead of duplicating that conversion process.  At least while `description`'s output happens to match this one's.
+        //
+        // This property's type is an ArraySlice rather than a straight ContiguousArray because it's computationally more expensive to size the array exactly right (whether by pre-calculating the required size more precisely, or by dynamically resizing it during execution of the iterative algorithm).  Since this is intended to only be a transient value, for the purposes of translating from BinaryInteger to the ICU libraries, this is the right compromise of runtime speed (CPU time) and memory efficiency (it's usually only off by a byte or two, if that).
+
         // Fast-path for values that fit into a UInt, as the conversion to a UInt should be virtually free if it's possible (it's essentially just self.words[0]) and there's a specialisation of this function for UInt that's faster.
         if let fastForm = UInt(exactly: self) {
             return fastForm.numericStringRepresentation
@@ -136,10 +136,10 @@ extension BinaryInteger {
     /// Determines the magnitude (the largest decimal magnitude that fits in Word, e.g. 100 for UInt8) and "maximum" digits per word (e.g. two for UInt8).
     ///
     /// Note that 'maximum' in this case is context-specific to the `numericStringRepresentation` algorithm.  It is not necessarily the maximum digits required for _any_ Word, but rather any value of Word type which is less than the maximum decimal magnitude.  Typically this is one digit less.
-    ///
-    /// This cannot be defined statically because it depends on the types of both Self and Word.  The compiler can in principle fold this down to the resulting values at compile time - since it knows the concrete types for any given call site - and then just inline those into the caller.
     internal // For unit test accessibility, otherwise would be fileprivate.
     static func decimalDigitsAndMagnitudePerWord() -> (digits: Int, magnitude: Self) {
+        // This method cannot be defined statically because it depends on the types of both Self and Word.  The compiler can in principle fold this down to the resulting values at compile time - since it knows the concrete types for any given call site - and then just inline those into the caller.
+
         // First, a fast-path that works for any type (for `Self`) which can (essentially) represent a UInt (or larger).
         let guessDigits = Int(Double(Words.Element.bitWidth) * log10(2))
         let guessMagnitude = pow(10, Double(guessDigits))
@@ -207,9 +207,9 @@ extension UInt {
     /// Formats `self` in "Numeric string" format (https://speleotrove.com/decimal/daconvs.html) which is the required input form for certain ICU functions (e.g. `unum_formatDecimal`).
     ///
     /// This specialisation (for UInt) is faster than the generic BinaryIntegers implementation (earlier in this file).  It is used as an opportunistic fast-path in the generic implementation, for any values that happen to fit into a UInt.
-    /// 
-    /// This property's type is an ArraySlice rather than a straight ContiguousArray because it's computationally more expensive to size the array exactly right (whether by pre-calculating the required size more precisely, or by dynamically resizing it during execution of the iterative algorithm).  Since this is intended to only be a transient value, for the purposes of translating from BinaryInteger to the ICU libraries, this is the right compromise of runtime speed (CPU time) and memory efficiency (usually just one excess byte, if any).
     internal var numericStringRepresentation: ArraySlice<UInt8> {
+        // This property's type is an ArraySlice rather than a straight ContiguousArray because it's computationally more expensive to size the array exactly right (whether by pre-calculating the required size more precisely, or by dynamically resizing it during execution of the iterative algorithm).  Since this is intended to only be a transient value, for the purposes of translating from BinaryInteger to the ICU libraries, this is the right compromise of runtime speed (CPU time) and memory efficiency (usually just one excess byte, if any).
+
         // It's easier to just special-case zero than handle it in the main algorithm.
         guard .zero != self else {
             return [UInt8(ascii: "0")]
