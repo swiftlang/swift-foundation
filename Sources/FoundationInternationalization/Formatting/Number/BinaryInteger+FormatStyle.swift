@@ -56,7 +56,7 @@ extension BinaryInteger {
             return fastForm.numericStringRepresentation
         }
 
-        assert(.zero != self) // Zero isn't handled correctly in the algorithm below (no numbers will actually be emitted) because it's more work to do so, which is unnecessary as the fast path above should handle that case.
+        assert(.zero != self, "Value of zero (for self) should have been handled by fast path, but wasn't.") // Zero isn't handled correctly in the algorithm below (no numbers will actually be emitted) because it's more work to do so, which is unnecessary as the fast path above should handle that case.
 
         // The algorithm here is conceptually fairly simple.  In a nutshell, the value of self is broken down into Word-sized chunks, each of which is divided by ten repeatedly until the value dimishes to zero.  The remainder of each division is the next digit of the result (starting with the least significant).
         //
@@ -79,7 +79,8 @@ extension BinaryInteger {
                 precondition(.zero == remainder || (negative == (0 > remainder)), "Starting value \(tmp) is \(negative ? "negative" : "positive (or zero)") yet the remainder of division by \(wordMagnitude) is not: \(remainder).  quotientAndRemainder(dividingBy:) is not implemented correctly for \(type(of: self)) (it might be using T-division instead of F-division).") // It's an entirely understandable error for an implementor to use T-division for their integer quotient and remainder, but they're supposed to use F-division.  i.e. the quotient is supposed to be rounded towards zero rather than down (and that effects the modulus correspondingly, since either way the results must satisfy r = d ⨉ (r idiv i) + (r mod i)).  F-division is convenient because its remainder is neatly the value of interest to this algorithm, rather than being offset by the divisor if r is negative.  While it would be technically possible to assume T-division if the remainder's sign doesn't match, the incorrect implementation of quotientAndRemainder(dividingBy:) will probably still break other algorithms and so we shouldn't encourage it.
 
                 // By definition the remainder has to be a single word (since the divisor, `wordMagnitude`, fits in a single word), so we can avoid working on a BinaryInteger generically and just use the first word directly, which is concretely UInt.
-                assert(remainder.bitWidth - (negative ? 1 : 0) <= Words.Element.bitWidth) // When we're working with negative values the reported `bitWidth` will be one greater than that of the magnitude because it counts the sign bit, but we don't care about that sign bit.
+                assert(remainder.bitWidth - (negative ? 1 : 0) <= Words.Element.bitWidth,
+                       "The remainder of dividing \(tmp) by \(wordMagnitude), \(remainder), should fit into a single word, yet it does not (its bit width is \(remainder.bitWidth) - \(negative ? 1 : 0) (for the sign bit) which is greater than the \(Words.Element.bitWidth) bits of \(Words.Element.Type.self)).") // When we're working with negative values the reported `bitWidth` will be one greater than that of the magnitude because it counts the sign bit, but we don't care about that sign bit.
                 var word = remainder.words.first ?? 0
 
                 if negative {
@@ -93,7 +94,7 @@ extension BinaryInteger {
                     wordInsertionPoint -= decimalDigitsPerWord
 
                     let leadingZeroes = decimalDigitsPerWord - digitsAdded
-                    assert(0 <= leadingZeroes)
+                    assert(0 <= leadingZeroes, "Negative leading zeroes \(leadingZeroes)!  Expected \(decimalDigitsPerWord) digits per word and added \(digitsAdded).")
 
                     if 0 < leadingZeroes {
                         buffer[(wordInsertionPoint + 1)...(wordInsertionPoint + leadingZeroes)].initialize(repeating: UInt8(ascii: "0"))
@@ -113,7 +114,7 @@ extension BinaryInteger {
             actualDigits = wordInsertionPoint.distance(to: buffer.endIndex) - 1
 
             let unusedDigits = maximumDigits - actualDigits
-            assert(0 <= unusedDigits)
+            assert(0 <= unusedDigits, "Negative unused digits \(unusedDigits)!  Expected at most \(maximumDigits) digit(s) but emitted \(actualDigits).")
 
             if 0 < unusedDigits {
                 buffer[0..<unusedDigits].initialize(repeating: 0) // The buffer is permitted to be partially uninitialised, but only at the end.  So we have to initialise the unused portion at the start, in principle.  Technically this probably doesn't matter given we never subsequently read this part of the buffer, but there's no way to express that such that the compiler can ensure it for us.
@@ -194,7 +195,7 @@ extension UInt {
 
             if .zero != quotient {
                 insertionPoint -= 1
-                assert(insertionPoint >= buffer.startIndex)
+                assert(insertionPoint >= buffer.startIndex, "Buffer is too small (\(buffer.count) UInt8s) to contain the result.")
             }
 
             tmp = quotient
@@ -221,7 +222,7 @@ extension UInt {
             actualDigits = numericStringRepresentation(intoEndOfBuffer: &buffer[...])
 
             let unusedDigits = maximumDigits - actualDigits
-            assert(0 <= unusedDigits)
+            assert(0 <= unusedDigits, "Negative unused digits \(unusedDigits)!  Expected at most \(maximumDigits) digit(s) but emitted \(actualDigits).")
 
             if 0 < unusedDigits {
                 buffer[0..<unusedDigits].initialize(repeating: 0) // The buffer is permitted to be partially uninitialised, but only at the end.  So we have to initialise the unused portion at the start, in principle.  Technically this probably doesn't matter given we never subsequently read this part of the buffer, but there's no way to express that such that the compiler can ensure it for us.
