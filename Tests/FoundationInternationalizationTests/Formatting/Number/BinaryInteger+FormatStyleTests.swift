@@ -41,7 +41,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt64.self, min: "0", max: "18446744073709551615")
     }
 
-    func testNumericStringRepresentation_buildinIntegersAroundDecimalMagnitude() throws {
+    func testNumericStringRepresentation_builtinIntegersAroundDecimalMagnitude() throws {
         func check<I: FixedWidthInteger>(type: I.Type = I.self, magnitude: String, oneLess: String, oneMore: String) {
             let mag = I.decimalDigitsAndMagnitudePerWord().magnitude
 
