@@ -139,12 +139,15 @@ extension BinaryInteger {
     /// This cannot be defined statically because it depends on the types of both Self and Word.  The compiler can in principle fold this down to the resulting values at compile time - since it knows the concrete types for any given call site - and then just inline those into the caller.
     internal // For unit test accessibility, otherwise would be fileprivate.
     static func decimalDigitsAndMagnitudePerWord() -> (digits: Int, magnitude: Self) {
+        // First, a fast-path that works for any type (for `Self`) which can (essentially) represent a UInt (or larger).
         let guessDigits = Int(Double(Words.Element.bitWidth) * log10(2))
         let guessMagnitude = pow(10, Double(guessDigits))
 
         if let magnitudeAsSelf = Self(exactly: guessMagnitude) {
             return (guessDigits, magnitudeAsSelf)
         }
+
+        // Alas `Self` is smaller than UInt, so fall back to a truly generic - but slower - algorithm to find the results.  This is because BinaryIntegers - unlike e.g. FixedWidthIntegers - don't provide APIs for questions like "what is the maximum bit width of Self?".
 
         var count = 1
         var value: Words.Element = 1
