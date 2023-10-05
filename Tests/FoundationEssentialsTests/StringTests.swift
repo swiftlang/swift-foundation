@@ -348,7 +348,8 @@ extension String {
 
 final class StringTestsStdlib: XCTestCase {
 
-   public func withOverriddenLocaleCurrentLocale<Result>(
+    // This only works for String functions that calls into `NSString`, which calls the Obj-C `-[NSLocale current]`, which gets swizzled here. This does not work for String functions implemented natively in Swift.
+    public func withOverriddenLocaleCurrentLocale<Result>(
         _ temporaryLocale: NSLocale,
         _ body: () -> Result
     ) -> Result {
@@ -356,13 +357,13 @@ final class StringTestsStdlib: XCTestCase {
         guard let oldMethod = class_getClassMethod(
             NSLocale.self, #selector(getter: NSLocale.current)) as Optional
         else {
-            preconditionFailure("Could not find +[Locale currentLocale]")
+            preconditionFailure("Could not find +[NSLocale currentLocale]")
         }
 
         guard let newMethod = class_getClassMethod(
             NSLocale.self, #selector(NSLocale.__swiftUnittest_currentLocale)) as Optional
         else {
-            preconditionFailure("Could not find +[Locale __swiftUnittest_currentLocale]")
+            preconditionFailure("Could not find +[NSLocale __swiftUnittest_currentLocale]")
         }
 
         precondition(_temporaryLocaleCurrentLocale == nil,
@@ -623,26 +624,24 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_localizedCapitalized() {
-        if #available(OSX 10.11, iOS 9.0, *) {
-            expectEqual(
-                "Foo Foo Foo Foo",
-                "foo Foo fOO FOO".capitalized(with: Locale(identifier: "en")))
-            expectEqual("Жжж", "жжж".capitalized(with: Locale(identifier: "en")))
+        expectEqual(
+            "Foo Foo Foo Foo",
+            "foo Foo fOO FOO".capitalized(with: Locale(identifier: "en")))
+        expectEqual("Жжж", "жжж".capitalized(with: Locale(identifier: "en")))
 
-            //
-            // Special casing.
-            //
+        //
+        // Special casing.
+        //
 
-            // U+0069 LATIN SMALL LETTER I
-            // to upper case:
-            // U+0049 LATIN CAPITAL LETTER I
-            expectEqual("Iii Iii", "iii III".capitalized(with: Locale(identifier: "en")))
+        // U+0069 LATIN SMALL LETTER I
+        // to upper case:
+        // U+0049 LATIN CAPITAL LETTER I
+        expectEqual("Iii Iii", "iii III".capitalized(with: Locale(identifier: "en")))
 
-            // U+0069 LATIN SMALL LETTER I
-            // to upper case in Turkish locale:
-            // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
-            expectEqual("\u{0130}ii Iıı", "iii III".capitalized(with: Locale(identifier: "tr")))
-        }
+        // U+0069 LATIN SMALL LETTER I
+        // to upper case in Turkish locale:
+        // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
+        expectEqual("\u{0130}ii Iıı", "iii III".capitalized(with: Locale(identifier: "tr")))
     }
 
     /// Checks that executing the operation in the locale with the given
@@ -1335,40 +1334,38 @@ final class StringTestsStdlib: XCTestCase {
     func test_localizedLowercase() {
         let en = Locale(identifier: "en")
         let ru = Locale(identifier: "ru")
-        if #available(OSX 10.11, iOS 9.0, *) {
-            expectEqual("abcd", "abCD".lowercased(with: en))
-            expectEqual("абвг", "абВГ".lowercased(with: en))
-            expectEqual("абвг", "абВГ".lowercased(with: ru))
-            expectEqual("たちつてと", "たちつてと".lowercased(with: ru))
+        expectEqual("abcd", "abCD".lowercased(with: en))
+        expectEqual("абвг", "абВГ".lowercased(with: en))
+        expectEqual("абвг", "абВГ".lowercased(with: ru))
+        expectEqual("たちつてと", "たちつてと".lowercased(with: ru))
 
-            //
-            // Special casing.
-            //
+        //
+        // Special casing.
+        //
 
-            // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
-            // to lower case:
-            // U+0069 LATIN SMALL LETTER I
-            // U+0307 COMBINING DOT ABOVE
-            expectEqual("\u{0069}\u{0307}", "\u{0130}".lowercased(with: Locale(identifier: "en")))
+        // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
+        // to lower case:
+        // U+0069 LATIN SMALL LETTER I
+        // U+0307 COMBINING DOT ABOVE
+        expectEqual("\u{0069}\u{0307}", "\u{0130}".lowercased(with: Locale(identifier: "en")))
 
-            // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
-            // to lower case in Turkish locale:
-            // U+0069 LATIN SMALL LETTER I
-            expectEqual("\u{0069}", "\u{0130}".lowercased(with: Locale(identifier: "tr")))
+        // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
+        // to lower case in Turkish locale:
+        // U+0069 LATIN SMALL LETTER I
+        expectEqual("\u{0069}", "\u{0130}".lowercased(with: Locale(identifier: "tr")))
 
-            // U+0049 LATIN CAPITAL LETTER I
-            // U+0307 COMBINING DOT ABOVE
-            // to lower case:
-            // U+0069 LATIN SMALL LETTER I
-            // U+0307 COMBINING DOT ABOVE
-            expectEqual("\u{0069}\u{0307}", "\u{0049}\u{0307}".lowercased(with: Locale(identifier: "en")))
+        // U+0049 LATIN CAPITAL LETTER I
+        // U+0307 COMBINING DOT ABOVE
+        // to lower case:
+        // U+0069 LATIN SMALL LETTER I
+        // U+0307 COMBINING DOT ABOVE
+        expectEqual("\u{0069}\u{0307}", "\u{0049}\u{0307}".lowercased(with: Locale(identifier: "en")))
 
-            // U+0049 LATIN CAPITAL LETTER I
-            // U+0307 COMBINING DOT ABOVE
-            // to lower case in Turkish locale:
-            // U+0069 LATIN SMALL LETTER I
-            expectEqual("\u{0069}", "\u{0049}\u{0307}".lowercased(with: Locale(identifier: "tr")))
-        }
+        // U+0049 LATIN CAPITAL LETTER I
+        // U+0307 COMBINING DOT ABOVE
+        // to lower case in Turkish locale:
+        // U+0069 LATIN SMALL LETTER I
+        expectEqual("\u{0069}", "\u{0049}\u{0307}".lowercased(with: Locale(identifier: "tr")))
     }
 
     func test_lowercased() {
@@ -1638,70 +1635,66 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_localizedStandardContains() {
-        if #available(OSX 10.11, iOS 9.0, *) {
-            withOverriddenLocaleCurrentLocale("en") { () -> Void in
-                expectFalse("".localizedStandardContains(""))
-                expectFalse("".localizedStandardContains("a"))
-                expectFalse("a".localizedStandardContains(""))
-                expectFalse("a".localizedStandardContains("b"))
-                expectTrue("a".localizedStandardContains("a"))
-                expectTrue("a".localizedStandardContains("A"))
-                expectTrue("A".localizedStandardContains("a"))
-                expectTrue("a".localizedStandardContains("a\u{0301}"))
-                expectTrue("a\u{0301}".localizedStandardContains("a\u{0301}"))
-                expectTrue("a\u{0301}".localizedStandardContains("a"))
-                expectTrue("a\u{0301}".localizedStandardContains("\u{0301}"))
-                expectFalse("a".localizedStandardContains("\u{0301}"))
+        withOverriddenLocaleCurrentLocale("en") { () -> Void in
+            expectFalse("".localizedStandardContains(""))
+            expectFalse("".localizedStandardContains("a"))
+            expectFalse("a".localizedStandardContains(""))
+            expectFalse("a".localizedStandardContains("b"))
+            expectTrue("a".localizedStandardContains("a"))
+            expectTrue("a".localizedStandardContains("A"))
+            expectTrue("A".localizedStandardContains("a"))
+            expectTrue("a".localizedStandardContains("a\u{0301}"))
+            expectTrue("a\u{0301}".localizedStandardContains("a\u{0301}"))
+            expectTrue("a\u{0301}".localizedStandardContains("a"))
+            expectTrue("a\u{0301}".localizedStandardContains("\u{0301}"))
+            expectFalse("a".localizedStandardContains("\u{0301}"))
 
-                expectTrue("i".localizedStandardContains("I"))
-                expectTrue("I".localizedStandardContains("i"))
-                expectTrue("\u{0130}".localizedStandardContains("i"))
-                expectTrue("i".localizedStandardContains("\u{0130}"))
+            expectTrue("i".localizedStandardContains("I"))
+            expectTrue("I".localizedStandardContains("i"))
+            expectTrue("\u{0130}".localizedStandardContains("i"))
+            expectTrue("i".localizedStandardContains("\u{0130}"))
 
-                return ()
-            }
+            return ()
+        }
 
-            withOverriddenLocaleCurrentLocale("tr") {
-                expectTrue("\u{0130}".localizedStandardContains("ı"))
-            }
+        withOverriddenLocaleCurrentLocale("tr") {
+            expectTrue("\u{0130}".localizedStandardContains("ı"))
         }
     }
 
     func test_localizedStandardRange() {
-        if #available(OSX 10.11, iOS 9.0, *) {
-            func rangeOf(_ string: String, _ substring: String) -> Range<Int>? {
-                return toIntRange(
-                    string, string.localizedStandardRange(of: substring))
+        func rangeOf(_ string: String, _ substring: String) -> Range<Int>? {
+            return toIntRange(
+                string, string.localizedStandardRange(of: substring))
+        }
+        withOverriddenLocaleCurrentLocale("en") { () -> Void in
+            XCTAssertNil(rangeOf("", ""))
+            XCTAssertNil(rangeOf("", "a"))
+            XCTAssertNil(rangeOf("a", ""))
+            XCTAssertNil(rangeOf("a", "b"))
+            expectEqual(0..<1, rangeOf("a", "a"))
+            expectEqual(0..<1, rangeOf("a", "A"))
+            expectEqual(0..<1, rangeOf("A", "a"))
+            expectEqual(0..<1, rangeOf("a", "a\u{0301}"))
+            expectEqual(0..<1, rangeOf("a\u{0301}", "a\u{0301}"))
+            expectEqual(0..<1, rangeOf("a\u{0301}", "a"))
+            do {
+                // FIXME: Indices that don't correspond to grapheme cluster boundaries.
+                let s = "a\u{0301}"
+                expectEqual(
+                    "\u{0301}", s[s.localizedStandardRange(of: "\u{0301}")!])
             }
-            withOverriddenLocaleCurrentLocale("en") { () -> Void in
-                XCTAssertNil(rangeOf("", ""))
-                XCTAssertNil(rangeOf("", "a"))
-                XCTAssertNil(rangeOf("a", ""))
-                XCTAssertNil(rangeOf("a", "b"))
-                expectEqual(0..<1, rangeOf("a", "a"))
-                expectEqual(0..<1, rangeOf("a", "A"))
-                expectEqual(0..<1, rangeOf("A", "a"))
-                expectEqual(0..<1, rangeOf("a", "a\u{0301}"))
-                expectEqual(0..<1, rangeOf("a\u{0301}", "a\u{0301}"))
-                expectEqual(0..<1, rangeOf("a\u{0301}", "a"))
-                do {
-                    // FIXME: Indices that don't correspond to grapheme cluster boundaries.
-                    let s = "a\u{0301}"
-                    expectEqual(
-                        "\u{0301}", s[s.localizedStandardRange(of: "\u{0301}")!])
-                }
-                XCTAssertNil(rangeOf("a", "\u{0301}"))
+            XCTAssertNil(rangeOf("a", "\u{0301}"))
 
-                expectEqual(0..<1, rangeOf("i", "I"))
-                expectEqual(0..<1, rangeOf("I", "i"))
-                expectEqual(0..<1, rangeOf("\u{0130}", "i"))
-                expectEqual(0..<1, rangeOf("i", "\u{0130}"))
-                return ()
-            }
+            expectEqual(0..<1, rangeOf("i", "I"))
+            expectEqual(0..<1, rangeOf("I", "i"))
+            expectEqual(0..<1, rangeOf("\u{0130}", "i"))
+            expectEqual(0..<1, rangeOf("i", "\u{0130}"))
+            return ()
+        }
 
-            withOverriddenLocaleCurrentLocale("tr") {
-                expectEqual(0..<1, rangeOf("\u{0130}", "ı"))
-            }
+        withOverriddenLocaleCurrentLocale("tr") {
+            expectEqual(0..<1, rangeOf("\u{0130}", "ı"))
         }
     }
 
@@ -2012,45 +2005,43 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_localizedUppercase() {
-        if #available(OSX 10.11, iOS 9.0, *) {
-            expectEqual("ABCD", "abCD".uppercased(with: Locale(identifier: "en")))
+        expectEqual("ABCD", "abCD".uppercased(with: Locale(identifier: "en")))
 
-            expectEqual("АБВГ", "абВГ".uppercased(with: Locale(identifier: "en")))
+        expectEqual("АБВГ", "абВГ".uppercased(with: Locale(identifier: "en")))
 
-            expectEqual("АБВГ", "абВГ".uppercased(with: Locale(identifier: "ru")))
+        expectEqual("АБВГ", "абВГ".uppercased(with: Locale(identifier: "ru")))
 
-            expectEqual("たちつてと", "たちつてと".uppercased(with: Locale(identifier: "ru")))
+        expectEqual("たちつてと", "たちつてと".uppercased(with: Locale(identifier: "ru")))
 
-            //
-            // Special casing.
-            //
+        //
+        // Special casing.
+        //
 
-            // U+0069 LATIN SMALL LETTER I
-            // to upper case:
-            // U+0049 LATIN CAPITAL LETTER I
-            expectEqual("\u{0049}", "\u{0069}".uppercased(with: Locale(identifier: "en")))
+        // U+0069 LATIN SMALL LETTER I
+        // to upper case:
+        // U+0049 LATIN CAPITAL LETTER I
+        expectEqual("\u{0049}", "\u{0069}".uppercased(with: Locale(identifier: "en")))
 
-            // U+0069 LATIN SMALL LETTER I
-            // to upper case in Turkish locale:
-            // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
-            expectEqual("\u{0130}", "\u{0069}".uppercased(with: Locale(identifier: "tr")))
+        // U+0069 LATIN SMALL LETTER I
+        // to upper case in Turkish locale:
+        // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
+        expectEqual("\u{0130}", "\u{0069}".uppercased(with: Locale(identifier: "tr")))
 
-            // U+00DF LATIN SMALL LETTER SHARP S
-            // to upper case:
-            // U+0053 LATIN CAPITAL LETTER S
-            // U+0073 LATIN SMALL LETTER S
-            // But because the whole string is converted to uppercase, we just get two
-            // U+0053.
-            expectEqual("\u{0053}\u{0053}", "\u{00df}".uppercased(with: Locale(identifier: "en")))
+        // U+00DF LATIN SMALL LETTER SHARP S
+        // to upper case:
+        // U+0053 LATIN CAPITAL LETTER S
+        // U+0073 LATIN SMALL LETTER S
+        // But because the whole string is converted to uppercase, we just get two
+        // U+0053.
+        expectEqual("\u{0053}\u{0053}", "\u{00df}".uppercased(with: Locale(identifier: "en")))
 
-            // U+FB01 LATIN SMALL LIGATURE FI
-            // to upper case:
-            // U+0046 LATIN CAPITAL LETTER F
-            // U+0069 LATIN SMALL LETTER I
-            // But because the whole string is converted to uppercase, we get U+0049
-            // LATIN CAPITAL LETTER I.
-            expectEqual("\u{0046}\u{0049}", "\u{fb01}".uppercased(with: Locale(identifier: "ru")))
-        }
+        // U+FB01 LATIN SMALL LIGATURE FI
+        // to upper case:
+        // U+0046 LATIN CAPITAL LETTER F
+        // U+0069 LATIN SMALL LETTER I
+        // But because the whole string is converted to uppercase, we get U+0049
+        // LATIN CAPITAL LETTER I.
+        expectEqual("\u{0046}\u{0049}", "\u{fb01}".uppercased(with: Locale(identifier: "ru")))
     }
 
     func test_uppercased() {
@@ -2132,25 +2123,23 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_applyingTransform() {
-        if #available(OSX 10.11, iOS 9.0, *) {
-            do {
-                let source = "tre\u{300}s k\u{fc}hl"
-                expectEqual(
-                    "tres kuhl",
-                    source.applyingTransform(.stripDiacritics, reverse: false))
-            }
-            do {
-                let source = "hiragana"
-                expectEqual(
-                    "ひらがな",
-                    source.applyingTransform(.latinToHiragana, reverse: false))
-            }
-            do {
-                let source = "ひらがな"
-                expectEqual(
-                    "hiragana",
-                    source.applyingTransform(.latinToHiragana, reverse: true))
-            }
+        do {
+            let source = "tre\u{300}s k\u{fc}hl"
+            expectEqual(
+                "tres kuhl",
+                source.applyingTransform(.stripDiacritics, reverse: false))
+        }
+        do {
+            let source = "hiragana"
+            expectEqual(
+                "ひらがな",
+                source.applyingTransform(.latinToHiragana, reverse: false))
+        }
+        do {
+            let source = "ひらがな"
+            expectEqual(
+                "hiragana",
+                source.applyingTransform(.latinToHiragana, reverse: true))
         }
     }
 
