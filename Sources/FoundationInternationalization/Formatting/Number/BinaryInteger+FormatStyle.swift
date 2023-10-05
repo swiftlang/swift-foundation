@@ -182,7 +182,7 @@ extension UInt {
     /// - Parameter intoEndOfBuffer: The buffer to write into, which _must_ contain enough space for the result.  The formatted output is placed into the _end_ of this buffer ("right-aligned", if you will), though the output is numerically still left-to-right.  The contents of this buffer do not have to be pre-initialised.
     /// - Returns: How many entries (UInt8s) of the buffer were used.  Note that zero is a valid return value, as nothing is written to the buffer if `self` is zero (this may be odd but it's acceptable to `numericStringRepresentation` and it simplifies the overall implementation).
     func numericStringRepresentation(intoEndOfBuffer buffer: inout Slice<UnsafeMutableBufferPointer<UInt8>>) -> Int {
-        guard .zero != self else { return 0 } // Easier to special-case this here than deal with it below (annoying off-by-one potential errors).
+        assert(.zero != self, "Self is zero which should have been handled (as a special case) by the caller.") // Easier to special-case zero (in the callers, as it happens) than deal with it below (annoying off-by-one potential errors).
 
         var insertionPoint = buffer.endIndex - 1
         var tmp = self
