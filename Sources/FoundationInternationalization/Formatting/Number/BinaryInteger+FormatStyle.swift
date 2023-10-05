@@ -132,7 +132,7 @@ extension BinaryInteger {
         return Int((Double(bitWidth) * log10(2)).rounded(.up)) + 1 // https://www.exploringbinary.com/number-of-decimal-digits-in-a-binary-integer
     }
 
-    /// Determines the magnitude (the largest round decimal value that fits in Word, e.g. 100 for UInt8) and "maximum" digits per word (e.g. two for UInt8).
+    /// Determines the magnitude (the largest decimal magnitude that fits in Word, e.g. 100 for UInt8) and "maximum" digits per word (e.g. two for UInt8).
     ///
     /// Note that 'maximum' in this case is context-specific to the `numericStringRepresentation` algorithm.  It is not necessarily the maximum digits required for _any_ Word, but rather any value of Word type which is less than the maximum decimal magnitude.  Typically this is one digit less.
     ///
