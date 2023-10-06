@@ -1120,7 +1120,7 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
     // Disabled in package because _range is imported twice, once from Essentials, once from Internationalization
     func testMatchPartialRangesFromBeginning() {
         func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, file: StaticString = #file, line: UInt = #line) {
-            let occurrenceRange = string._range(of: expectedMatch)!
+            let occurrenceRange = string._range(of: expectedMatch, anchored: false, backwards: false)!
             _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), file: file, line: line)
         }
 

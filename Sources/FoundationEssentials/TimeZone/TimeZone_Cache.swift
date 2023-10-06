@@ -174,7 +174,7 @@ struct TimeZoneCache : Sendable {
 #else
                     let lookFor = TimeZone.TZDIR + "/"
 #endif
-                    if let rangeOfZoneInfo = file._range(of: lookFor) {
+                    if let rangeOfZoneInfo = file._range(of: lookFor, anchored: false, backwards: false) {
                         let name = file[rangeOfZoneInfo.upperBound...]
                         if let result = fixed(String(name)) {
                             return TimeZone(inner: result)

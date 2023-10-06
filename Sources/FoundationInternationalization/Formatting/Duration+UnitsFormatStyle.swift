@@ -252,7 +252,7 @@ extension Duration {
             let formattedFields = _formatFields(duration)
             var result = _getFullListPattern(length: formattedFields.count)
             for formattedField in formattedFields.reversed() {
-                let range = result._range(of: "{0}", backwards: true)!
+                let range = result._range(of: "{0}", anchored: false, backwards: true)!
                 result.replaceSubrange(range, with: formattedField)
             }
             return result

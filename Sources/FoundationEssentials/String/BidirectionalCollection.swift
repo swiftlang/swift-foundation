@@ -74,7 +74,7 @@ extension BidirectionalCollection {
         return idx
     }
 
-    package func _range<S: BidirectionalCollection>(of other: S, anchored: Bool = false, backwards: Bool = false) -> Range<Index>? where S.Element == Element, Element : Equatable {
+    package func _range<S: BidirectionalCollection>(of other: S, anchored: Bool, backwards: Bool) -> Range<Index>? where S.Element == Element, Element : Equatable {
         var result: Range<Index>? = nil
         var fromLoc: Index
         var toLoc: Index
