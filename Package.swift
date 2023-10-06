@@ -31,8 +31,6 @@ let package = Package(
         .package(
             url: "https://github.com/apple/swift-syntax.git",
             from: "509.0.0"),
-//        .package(url: "https://github.com/attaswift/BigInt.git",
-//                 .upToNextMajor(from: "5.1.0")),
     ],
     targets: [
         // Foundation (umbrella)
@@ -116,7 +114,6 @@ package.targets.append(contentsOf: [
     .testTarget(name: "FoundationInternationalizationTests", dependencies: [
         "TestSupport",
         "FoundationInternationalization",
-        //"BigInt"
     ], swiftSettings: availabilityMacros),
 ])
 #endif
