@@ -56,7 +56,7 @@ extension BinaryInteger {
             return fastForm.numericStringRepresentation
         }
 
-        assert(.zero != self, "Value of zero (for self) should have been handled by fast path, but wasn't.") // Zero isn't handled correctly in the algorithm below (no numbers will actually be emitted) because it's more work to do so, which is unnecessary as the fast path above should handle that case.
+        precondition(.zero != self, "Value of zero (for self) should have been handled by fast path, but wasn't.") // Zero isn't handled correctly in the algorithm below (no numbers will actually be emitted) because it's more work to do so, which is unnecessary as the fast path above should handle that case.
 
         // The algorithm here is conceptually fairly simple.  In a nutshell, the value of self is broken down into Word-sized chunks, each of which is divided by ten repeatedly until the value dimishes to zero.  The remainder of each division is the next digit of the result (starting with the least significant).
         //
