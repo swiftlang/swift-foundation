@@ -30,7 +30,7 @@ let package = Package(
             revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
-            from: "509.0.0"),
+            from: "509.0.0")
     ],
     targets: [
         // Foundation (umbrella)
@@ -113,7 +113,7 @@ let package = Package(
 package.targets.append(contentsOf: [
     .testTarget(name: "FoundationInternationalizationTests", dependencies: [
         "TestSupport",
-        "FoundationInternationalization",
+        "FoundationInternationalization"
     ], swiftSettings: availabilityMacros),
 ])
 #endif
