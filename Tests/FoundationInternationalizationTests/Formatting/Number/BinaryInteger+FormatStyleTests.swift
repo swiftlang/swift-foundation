@@ -115,6 +115,44 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
     }
 #endif
 
+    func testActualBitWidth() {
+        XCTAssertEqual(0, 0.actualBitWidth)
+        XCTAssertEqual(0, (0 as UInt).actualBitWidth)
+
+        // Fixed-width unsigned
+        XCTAssertEqual(1, (1 as UInt).actualBitWidth)
+        XCTAssertEqual(2, (2 as UInt).actualBitWidth)
+        XCTAssertEqual(2, (3 as UInt).actualBitWidth)
+        XCTAssertEqual(3, (4 as UInt).actualBitWidth)
+
+        XCTAssertEqual(64, UInt64.max.actualBitWidth)
+        XCTAssertEqual(0, UInt64.min.actualBitWidth)
+
+        // Fixed-width signed (needs to include sign bit!)
+        XCTAssertEqual(2, 1.actualBitWidth)
+        XCTAssertEqual(3, 2.actualBitWidth)
+        XCTAssertEqual(3, 3.actualBitWidth)
+        XCTAssertEqual(4, 4.actualBitWidth)
+
+        XCTAssertEqual(2, (-1).actualBitWidth)
+        XCTAssertEqual(3, (-2).actualBitWidth)
+        XCTAssertEqual(3, (-3).actualBitWidth)
+        XCTAssertEqual(4, (-4).actualBitWidth)
+
+        XCTAssertEqual(64, Int64.max.actualBitWidth)
+        XCTAssertEqual(64, Int64.min.actualBitWidth)
+
+#if canImport(BigInt)
+        // Arbitrary-precision unsigned
+        XCTAssertEqual(64, BigUInt(UInt64.max).actualBitWidth)
+        XCTAssertEqual(0, BigUInt(UInt64.min).actualBitWidth)
+
+        // Arbitrary-precision signed (needs to include sign bit!)
+        XCTAssertEqual(64, BigInt(Int64.max).actualBitWidth)
+        XCTAssertEqual(64, BigInt(Int64.min).actualBitWidth)
+#endif
+    }
+
     func check<I: BinaryInteger>(type: I.Type = I.self, digits: Int, magnitude: UInt) {
         let actual = I.decimalDigitsAndMagnitudePerWord()
 

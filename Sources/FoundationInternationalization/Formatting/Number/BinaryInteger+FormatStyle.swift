@@ -132,6 +132,38 @@ extension BinaryInteger {
 
         return Int((Double(bitWidth) * log10(2)).rounded(.up)) + 1 // https://www.exploringbinary.com/number-of-decimal-digits-in-a-binary-integer
     }
+    
+    /// The actual bit width of the value (the minimum number of bits required to fully represent the value).
+    ///
+    /// For negative values this will include the leading sign bit (so equivalent to magnitude.actualBitWidth + 1).
+    ///
+    /// This is necessary because the `bitWidth` property of `BinaryInteger`s has the unfortunate caveat that it behaves differently for `FixedWidthInteger`s - for them, it returns the maximum bit width of the type (the same as the type-level `bitWidth` property) rather than the actual bit width of the value of `self`.
+    internal var actualBitWidth: Int {
+        // Quick sanity check to catch if, one day, this property is obsoleted by fixing the behaviour of FixedWidthIntegers' bitWidth property.
+        assert(64 == (0 as UInt64).bitWidth, "FixedWidthIntegers are supposed to return their maximum bit width for `bitWidth`, but UInt64 is returning \((0 as UInt64).bitWidth).")
+
+        guard .zero != self else {
+            return 0
+        }
+
+        if self is any FixedWidthInteger {
+            guard .zero <= self else {
+                let positiveSelf = magnitude
+                return positiveSelf.actualBitWidth - (positiveSelf.isPowerOfTwo ? 1 : 0)
+            }
+
+            for (i, word) in words.reversed().enumerated() {
+                if .zero != word {
+                    let fullWidth = type(of: word).bitWidth
+                    return ((words.count - i - 1) * fullWidth) + (fullWidth - word.leadingZeroBitCount) + (type(of: self).isSigned ? 1 : 0)
+                }
+            }
+
+            return 0
+        } else {
+            return bitWidth
+        }
+    }
 
     /// Determines the magnitude (the largest decimal magnitude that fits in Word, e.g. 100 for UInt8) and "maximum" digits per word (e.g. two for UInt8).
     ///
@@ -171,6 +203,20 @@ extension BinaryInteger {
 
             value = nextValue
         }
+    }
+}
+
+extension Numeric {
+    internal var isPowerOfTwo: Bool {
+        guard .zero != self else {
+            return false
+        }
+
+        guard let one = Self(exactly: 1) else {
+            return false // Cannot be a power of two if Self can't even represent 1 (let-alone larger numbers).
+        }
+
+        return .zero == (self & (self - one)) // Not possible: no '&' for Numerics (and also a compiler bug (?) whereby it refuses to allow subtraction between Numerics (via operator inherited from AdditiveArithmetic)).
     }
 }
 
