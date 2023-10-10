@@ -115,41 +115,58 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
     }
 #endif
 
-    func testActualBitWidth() {
-        XCTAssertEqual(0, 0.actualBitWidth)
-        XCTAssertEqual(0, (0 as UInt).actualBitWidth)
+    func testMagnitudeBitWidth() {
+        XCTAssertEqual(1, 0.magnitudeBitWidth)
+        XCTAssertEqual(1, (0 as UInt).magnitudeBitWidth)
 
         // Fixed-width unsigned
-        XCTAssertEqual(1, (1 as UInt).actualBitWidth)
-        XCTAssertEqual(2, (2 as UInt).actualBitWidth)
-        XCTAssertEqual(2, (3 as UInt).actualBitWidth)
-        XCTAssertEqual(3, (4 as UInt).actualBitWidth)
+        XCTAssertEqual(1, (1 as UInt).magnitudeBitWidth)
+        XCTAssertEqual(2, (2 as UInt).magnitudeBitWidth)
+        XCTAssertEqual(2, (3 as UInt).magnitudeBitWidth)
+        XCTAssertEqual(3, (4 as UInt).magnitudeBitWidth)
 
-        XCTAssertEqual(64, UInt64.max.actualBitWidth)
-        XCTAssertEqual(0, UInt64.min.actualBitWidth)
+        XCTAssertEqual(64, UInt64.max.magnitudeBitWidth)
+        XCTAssertEqual(1, UInt64.min.magnitudeBitWidth)
 
-        // Fixed-width signed (needs to include sign bit!)
-        XCTAssertEqual(2, 1.actualBitWidth)
-        XCTAssertEqual(3, 2.actualBitWidth)
-        XCTAssertEqual(3, 3.actualBitWidth)
-        XCTAssertEqual(4, 4.actualBitWidth)
+        // Fixed-width signed
+        XCTAssertEqual(1, 1.magnitudeBitWidth)
+        XCTAssertEqual(2, 2.magnitudeBitWidth)
+        XCTAssertEqual(2, 3.magnitudeBitWidth)
+        XCTAssertEqual(3, 4.magnitudeBitWidth)
 
-        XCTAssertEqual(2, (-1).actualBitWidth)
-        XCTAssertEqual(3, (-2).actualBitWidth)
-        XCTAssertEqual(3, (-3).actualBitWidth)
-        XCTAssertEqual(4, (-4).actualBitWidth)
+        XCTAssertEqual(1, (-1).magnitudeBitWidth)
+        XCTAssertEqual(2, (-2).magnitudeBitWidth)
+        XCTAssertEqual(2, (-3).magnitudeBitWidth)
+        XCTAssertEqual(3, (-4).magnitudeBitWidth)
 
-        XCTAssertEqual(64, Int64.max.actualBitWidth)
-        XCTAssertEqual(64, Int64.min.actualBitWidth)
+        XCTAssertEqual(63, Int64.max.magnitudeBitWidth)
+        XCTAssertEqual(64, Int64.min.magnitudeBitWidth)
+        XCTAssertEqual(63, (Int64.min + 1).magnitudeBitWidth)
 
 #if canImport(BigInt)
         // Arbitrary-precision unsigned
-        XCTAssertEqual(64, BigUInt(UInt64.max).actualBitWidth)
-        XCTAssertEqual(0, BigUInt(UInt64.min).actualBitWidth)
+        XCTAssertEqual(64, BigUInt(UInt64.max).magnitudeBitWidth)
+        XCTAssertEqual(1, BigUInt(UInt64.min).magnitudeBitWidth)
 
-        // Arbitrary-precision signed (needs to include sign bit!)
-        XCTAssertEqual(64, BigInt(Int64.max).actualBitWidth)
-        XCTAssertEqual(64, BigInt(Int64.min).actualBitWidth)
+        // Arbitrary-precision signed
+        XCTAssertEqual(63, BigInt(Int64.max).magnitudeBitWidth)
+        XCTAssertEqual(64, BigInt(Int64.min).magnitudeBitWidth)
+
+        // Signed & unsigned for multi-word numbers.
+        func checkBigInts(hexString: some StringProtocol, magnitudeBitWidth: Int) {
+            XCTAssertEqual(magnitudeBitWidth, BigUInt(hexString, radix: 16)!.magnitudeBitWidth)
+            XCTAssertEqual(magnitudeBitWidth, BigInt(hexString, radix: 16)!.magnitudeBitWidth)
+            XCTAssertEqual(magnitudeBitWidth, BigInt("-" + hexString, radix: 16)!.magnitudeBitWidth)
+        }
+
+        checkBigInts(hexString: "10000000000000000", magnitudeBitWidth: 65)
+        checkBigInts(hexString: "10000000000000001", magnitudeBitWidth: 65)
+        checkBigInts(hexString: "1ffffffffffffffff", magnitudeBitWidth: 65)
+        checkBigInts(hexString: "20000000000000000", magnitudeBitWidth: 66)
+        checkBigInts(hexString: "7fffffffffffffffffffffffffffffff", magnitudeBitWidth: 127)
+        checkBigInts(hexString: "80000000000000000000000000000000", magnitudeBitWidth: 128)
+        checkBigInts(hexString: "8fffffffffffffffffffffffffffffff", magnitudeBitWidth: 128)
+        checkBigInts(hexString: "100000000000000000000000000000000", magnitudeBitWidth: 129)
 #endif
     }
 

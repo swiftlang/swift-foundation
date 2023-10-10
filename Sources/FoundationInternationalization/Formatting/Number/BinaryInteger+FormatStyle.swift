@@ -66,7 +66,7 @@ extension BinaryInteger {
 
         let (decimalDigitsPerWord, wordMagnitude) = Self.decimalDigitsAndMagnitudePerWord()
         let negative = 0 > self
-        let maximumDigits = (Self.maximumDecimalDigitsForUnsigned(bitWidth: self.bitWidth - (negative ? 1 : 0)) // -1 for negative values because their bit width includes the sign bit, which we don't care about.
+        let maximumDigits = (Self.maximumDecimalDigitsForUnsigned(bitWidth: self.magnitudeBitWidth)
                              + (negative ? 1 : 0)) // Include room for "-" prefix if necessary.
         var actualDigits: Int = Int.min // Actually initialised inside the closure below, but the compiler mistakenly demands a default value anyway.
 
@@ -79,8 +79,8 @@ extension BinaryInteger {
                 precondition(.zero == remainder || (negative == (0 > remainder)), "Starting value \(tmp) is \(negative ? "negative" : "positive (or zero)") yet the remainder of division by \(wordMagnitude) is not: \(remainder).  quotientAndRemainder(dividingBy:) is not implemented correctly for \(type(of: self)) (it might be using T-division instead of F-division).") // It's an entirely understandable error for an implementor to use T-division for their integer quotient and remainder, but they're supposed to use F-division.  i.e. the quotient is supposed to be rounded towards zero rather than down (and that effects the modulus correspondingly, since either way the results must satisfy r = d ⨉ (r idiv i) + (r mod i)).  F-division is convenient because its remainder is neatly the value of interest to this algorithm, rather than being offset by the divisor if r is negative.  While it would be technically possible to assume T-division if the remainder's sign doesn't match, the incorrect implementation of quotientAndRemainder(dividingBy:) will probably still break other algorithms and so we shouldn't encourage it.
 
                 // By definition the remainder has to be a single word (since the divisor, `wordMagnitude`, fits in a single word), so we can avoid working on a BinaryInteger generically and just use the first word directly, which is concretely UInt.
-                assert(remainder.bitWidth - (negative ? 1 : 0) <= Words.Element.bitWidth,
-                       "The remainder of dividing \(tmp) by \(wordMagnitude), \(remainder), should fit into a single word, yet it does not (its bit width is \(remainder.bitWidth) - \(negative ? 1 : 0) (for the sign bit) which is greater than the \(Words.Element.bitWidth) bits of \(Words.Element.Type.self)).") // When we're working with negative values the reported `bitWidth` will be one greater than that of the magnitude because it counts the sign bit, but we don't care about that sign bit.
+                assert(remainder.magnitudeBitWidth <= Words.Element.bitWidth,
+                       "The remainder of dividing \(tmp) by \(wordMagnitude), \(remainder), should fit into a single word, yet it does not (its magnitude bit width is \(remainder.magnitudeBitWidth) which is greater than the \(Words.Element.bitWidth) bits of Words.Element (\(Words.Element.self))).")
                 var word = remainder.words.first ?? 0
 
                 if negative {
@@ -133,35 +133,58 @@ extension BinaryInteger {
         return Int((Double(bitWidth) * log10(2)).rounded(.up)) + 1 // https://www.exploringbinary.com/number-of-decimal-digits-in-a-binary-integer
     }
     
-    /// The actual bit width of the value (the minimum number of bits required to fully represent the value).
+    /// The bit width of the magnitude of `self`.
     ///
-    /// For negative values this will include the leading sign bit (so equivalent to magnitude.actualBitWidth + 1).
+    /// This is useful for determining how many bits are needed to store the magnitude of `self` (an unsigned integer) _without_ actually determining the magnitude (via the `magnitude` property) since that is relatively expensive (in memory if not also runtime, depending on the size and implementation of the underlying type).
     ///
-    /// This is necessary because the `bitWidth` property of `BinaryInteger`s has the unfortunate caveat that it behaves differently for `FixedWidthInteger`s - for them, it returns the maximum bit width of the type (the same as the type-level `bitWidth` property) rather than the actual bit width of the value of `self`.
-    internal var actualBitWidth: Int {
-        // Quick sanity check to catch if, one day, this property is obsoleted by fixing the behaviour of FixedWidthIntegers' bitWidth property.
-        assert(64 == (0 as UInt64).bitWidth, "FixedWidthIntegers are supposed to return their maximum bit width for `bitWidth`, but UInt64 is returning \((0 as UInt64).bitWidth).")
+    /// It is never less than one.
+    internal var magnitudeBitWidth: Int {
+        // `BinaryInteger` does provide a `bitWidth` property which could be used to help with this, but for three things:
+        //
+        //   1. For `FixedWidthInteger`s it returns the fixed (maximum) size of the type, not the (minimum) size required to represent `self`.
+        //
+        //   2. It returns the size of the value in two's complement representation, which includes the sign bit that we don't care about.  But we can't just subtract one from that value [for signed types], because for negative powers of two the signed form is one bit shorter than the [unsigned] magnitude's (signed types can represent -(2^N) through +(2^N)-1 - note the asymmetry).  That special case can technically be handled, but it requires determining if `self` is a negative power of two which is relatively expensive for large `BinaryInteger`s.
+        //
+        //   3. Some `BinaryInteger` implementations implement `bitWidth` wrong, due to its terse and ambiguous documentation.  e.g. some are also `FixedWidthInteger`s yet _don't_ return the maximum bit width of the type (or vice versa), some have off-by-one errors for negative powers of two, etc.  Although it's not this code's responsibility to allow for implementation errors, it's nice to.
+        //
+        // So, it's both necessary and preferable (respectively) to just examine `words` directly.
 
-        guard .zero != self else {
-            return 0
-        }
-
-        if self is any FixedWidthInteger {
-            guard .zero <= self else {
-                let positiveSelf = magnitude
-                return positiveSelf.actualBitWidth - (positiveSelf.isPowerOfTwo ? 1 : 0)
-            }
+        if .zero == self {
+            return 1
+        } else if .zero <= self {
+            // Find the highest-order word with any bits set, determine the overall index of the highest set bit, and return that plus one (index to count conversion).
 
             for (i, word) in words.reversed().enumerated() {
                 if .zero != word {
                     let fullWidth = type(of: word).bitWidth
-                    return ((words.count - i - 1) * fullWidth) + (fullWidth - word.leadingZeroBitCount) + (type(of: self).isSigned ? 1 : 0)
+                    return ((words.count - i - 1) * fullWidth) + (fullWidth - word.leadingZeroBitCount)
                 }
             }
 
-            return 0
-        } else {
-            return bitWidth
+            preconditionFailure("\(type(of: self)) \(self) compared as not zero yet all its words are zero.")
+        } else { // `self` is negative.
+            // Perform two's complement one word at a time, keeping track of the index of the highest set bit seen so far.  After enumerating all the words, return that index plus one (index to count conversion).
+
+            var carryingOne = true // Covers both the initial +1 (as part of two's complement) and overflow between words.
+            var indexOfHighestSetBitSeenSoFar = 0
+
+            for (i, word) in words.enumerated() {
+                var positiveWord = ~word
+
+                if carryingOne {
+                    (positiveWord, carryingOne) = positiveWord.addingReportingOverflow(1)
+                }
+
+                let fullWidth = type(of: word).bitWidth
+
+                if carryingOne {
+                    indexOfHighestSetBitSeenSoFar += fullWidth
+                } else {
+                    indexOfHighestSetBitSeenSoFar = (fullWidth * i) + (fullWidth - positiveWord.leadingZeroBitCount) - 1
+                }
+            }
+
+            return indexOfHighestSetBitSeenSoFar + 1
         }
     }
 
@@ -206,20 +229,6 @@ extension BinaryInteger {
     }
 }
 
-extension Numeric {
-    internal var isPowerOfTwo: Bool {
-        guard .zero != self else {
-            return false
-        }
-
-        guard let one = Self(exactly: 1) else {
-            return false // Cannot be a power of two if Self can't even represent 1 (let-alone larger numbers).
-        }
-
-        return .zero == (self & (self - one)) // Not possible: no '&' for Numerics (and also a compiler bug (?) whereby it refuses to allow subtraction between Numerics (via operator inherited from AdditiveArithmetic)).
-    }
-}
-
 extension UInt {
     /// Formats `self` in "Numeric string" format (https://speleotrove.com/decimal/daconvs.html) which is the required input form for certain ICU functions (e.g. `unum_formatDecimal`).
     ///
@@ -261,7 +270,7 @@ extension UInt {
             return [UInt8(ascii: "0")]
         }
 
-        let maximumDigits = Self.maximumDecimalDigitsForUnsigned(bitWidth: self.bitWidth)
+        let maximumDigits = Self.maximumDecimalDigitsForUnsigned(bitWidth: self.magnitudeBitWidth)
         var actualDigits: Int = Int.min // Actually initialised inside the closure below, but the compiler mistakenly demands a default value anyway.
 
         return ContiguousArray(unsafeUninitializedCapacity: maximumDigits) { buffer, initialisedCount in
