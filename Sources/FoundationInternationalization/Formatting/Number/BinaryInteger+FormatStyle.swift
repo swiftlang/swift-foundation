@@ -85,6 +85,7 @@ extension BinaryInteger {
 
                 if negative {
                     // Luckily for us `words` is defined to be in two's complement form, so we can manually flip the sign.  This doesn't normally work because two's complement cannot represent the positive version of its most negative value, but we know we won't have that here because it's the remainder from division by `wordMagnitude`, which is always going to be less than UInt.max because `wordMagnitude` itself has to fit into UInt (and the remainder of division is always at least one smaller than the divisor).
+                    // Note that for a word of zero (no remainder) this does technically overflow but it's intentional - zero is special since there's no distinct representation for -0 vs +0, but ~UInt(0) &+ 1 is 0, conveniently!  So we can trade a conditional (for avoiding this block if `word` is .zero) for two trivial arithmetic instructions.
                     word = ~word &+ 1
                 }
 
