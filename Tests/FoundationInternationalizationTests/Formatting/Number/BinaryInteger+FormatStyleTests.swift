@@ -14,6 +14,10 @@ import XCTest
 import FoundationEssentials
 @testable import FoundationInternationalization
 
+#if canImport(Numberick) // Not included by default as it's a 3rd party library; requires https://github.com/oscbyspro/Numberick.git be added the package dependencies.
+import Numberick
+#endif
+
 #if canImport(BigInt) // Not included by default as it's a 3rd party library; requires https://github.com/attaswift/BigInt.git be added the package dependencies.  Proved useful in the past for finding bugs that only show up with large numbers.
 import BigInt
 #endif
@@ -61,61 +65,72 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt64.self, magnitude: "10000000000000000000", oneLess: "9999999999999999999", oneMore: "10000000000000000001")
     }
 
-#if canImport(BigInt)
-    func testNumericStringRepresentation_arbitraryPrecisionIntegers() throws {
-        // An initialiser has to be passed manually because BinaryInteger doesn't actually provide a way to initialise an instance from a string representation (that's functional for non-builtin integers).
-        func check<I: BinaryInteger>(type: I.Type = I.self, initialiser: (String) -> I) {
-            // Just some real basic sanity checks first.
-            checkNSR(value: I(0), expected: "0")
-            checkNSR(value: I(1), expected: "1")
+#if canImport(Numberick) || canImport(BigInt)
+    // An initialiser has to be passed manually because BinaryInteger doesn't actually provide a way to initialise an instance from a string representation (that's functional for non-builtin integers).
+    func check<I: BinaryInteger>(type: I.Type = I.self, initialiser: (String) -> I?) {
+        // Just some real basic sanity checks first.
+        checkNSR(value: I(0), expected: "0")
+        checkNSR(value: I(1), expected: "1")
 
-            if I.isSigned {
-                checkNSR(value: I(-1), expected: "-1")
-            }
+        if I.isSigned {
+            checkNSR(value: I(-1), expected: "-1")
+        }
 
-            for valueAsString in ["9223372036854775807", // Int64.max
-                                  "9223372036854775808", // Int64.max + 1 (and Int64.min when negated).
+        for valueAsString in ["9223372036854775807", // Int64.max
+                              "9223372036854775808", // Int64.max + 1 (and Int64.min when negated).
 
-                                  "9999999999999999999", // Test around the magnitude.
-                                  "10000000000000000000",
-                                  "10000000000000000001",
+                              "9999999999999999999", // Test around the magnitude.
+                              "10000000000000000000",
+                              "10000000000000000001",
 
+                              "18446744073709551615", // UInt64.max
+                              "18446744073709551616", // UInt64.max + 1
 
-                                  "18446744073709551615", // UInt64.max
-                                  "18446744073709551616", // UInt64.max + 1
+                              "170141183460469231731687303715884105727", // Int128.max
+                              "170141183460469231731687303715884105728", // Int128.max + 1
+                              "340282366920938463463374607431768211455", // UInt128.max
+                              "340282366920938463463374607431768211456", // UInt128.max + 1
 
-                                  "170141183460469231731687303715884105727", // Int128.max
-                                  "170141183460469231731687303715884105728", // Int128.max + 1
-                                  "340282366920938463463374607431768211455", // UInt128.max
-                                  "340282366920938463463374607431768211456", // UInt128.max + 1
-
-                                  // Some arbitrary, *very* large numbers to ensure there's no egregious scaling issues nor fatal inaccuracies in things like sizing of preallocated buffers.
-                                  "1" + String(repeating: "0", count: 99),
-                                  "1" + String(repeating: "0", count: 999),
-                                  "1" + String(repeating: "0", count: 1406), // First power of ten value at which an earlier implementation crashed due to underestimating how many wordStrings would be needed.
-                                  String(repeating: "1234567890", count: 10),
-                                  String(repeating: "1234567890", count: 100)] {
-                let value = initialiser(valueAsString)
-
+                              // Some arbitrary, *very* large numbers to ensure there's no egregious scaling issues nor fatal inaccuracies in things like sizing of preallocated buffers.
+                              "1" + String(repeating: "0", count: 99),
+                              "1" + String(repeating: "0", count: 999),
+                              "1" + String(repeating: "0", count: 1406), // First power of ten value at which an earlier implementation crashed due to underestimating how many wordStrings would be needed.
+                              String(repeating: "1234567890", count: 10),
+                              String(repeating: "1234567890", count: 100)] {
+            if let value = initialiser(valueAsString) { // The test cases cover a wide range of values, that don't all fit into every type tested (i.e. the fixed-width types from Numberick).
                 XCTAssertEqual(value.description, valueAsString) // Sanity check that it initialised from the string correctly.
                 checkNSR(value: value, expected: valueAsString)
 
                 if I.isSigned {
                     let negativeValueAsString = "-" + valueAsString
-                    let negativeValue = initialiser(negativeValueAsString)
+                    let negativeValue = initialiser(negativeValueAsString)!
 
                     XCTAssertEqual(negativeValue.description, negativeValueAsString) // Sanity check that it initialised from the string correctly.
                     checkNSR(value: negativeValue, expected: negativeValueAsString)
                 }
             }
         }
+    }
 
+#if canImport(Numberick)
+    func testNumericStringRepresentation_largeIntegers() throws {
+        check(type: Int128.self, initialiser: { Int128($0) })
+        check(type: UInt128.self, initialiser: { UInt128($0) })
+
+        check(type: Int256.self, initialiser: { Int256($0) })
+        check(type: UInt256.self, initialiser: { UInt256($0) })
+    }
+#endif
+
+#if canImport(BigInt)
+    func testNumericStringRepresentation_arbitraryPrecisionIntegers() throws {
         check(type: BigInt.self, initialiser: { BigInt($0)! })
         check(type: BigUInt.self, initialiser: { BigUInt($0)! })
     }
 #endif
+#endif // canImport(Numberick) || canImport(BigInt)
 
-    func testMagnitudeBitWidth() {
+    func testMagnitudeBitWidth_builtinIntegers() {
         XCTAssertEqual(1, 0.magnitudeBitWidth)
         XCTAssertEqual(1, (0 as UInt).magnitudeBitWidth)
 
@@ -142,8 +157,34 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         XCTAssertEqual(63, Int64.max.magnitudeBitWidth)
         XCTAssertEqual(64, Int64.min.magnitudeBitWidth)
         XCTAssertEqual(63, (Int64.min + 1).magnitudeBitWidth)
+    }
+
+#if canImport(Numberick)
+    func testMagnitudeBitWidth_largeIntegers() {
+        // Unsigned
+        XCTAssertEqual(128, UInt128.max.magnitudeBitWidth)
+        XCTAssertEqual(64, UInt128(UInt64.max).magnitudeBitWidth)
+        XCTAssertEqual(1, UInt128.min.magnitudeBitWidth)
+        XCTAssertEqual(1, UInt128.zero.magnitudeBitWidth)
+
+        // Signed
+        XCTAssertEqual(127, Int128.max.magnitudeBitWidth)
+        XCTAssertEqual(63, Int128(Int64.max).magnitudeBitWidth)
+        XCTAssertEqual(3, Int128(4).magnitudeBitWidth)
+        XCTAssertEqual(2, Int128(3).magnitudeBitWidth)
+        XCTAssertEqual(2, Int128(2).magnitudeBitWidth)
+        XCTAssertEqual(1, Int128(1).magnitudeBitWidth)
+        XCTAssertEqual(1, Int128.zero.magnitudeBitWidth)
+        XCTAssertEqual(1, Int128(-1).magnitudeBitWidth)
+        XCTAssertEqual(2, Int128(-2).magnitudeBitWidth)
+        XCTAssertEqual(2, Int128(-3).magnitudeBitWidth)
+        XCTAssertEqual(3, Int128(-4).magnitudeBitWidth)
+        XCTAssertEqual(128, Int128.min.magnitudeBitWidth)
+    }
+#endif
 
 #if canImport(BigInt)
+    func testMagnitudeBitWidth_arbitraryPrecisionIntegers() {
         // Arbitrary-precision unsigned
         XCTAssertEqual(64, BigUInt(UInt64.max).magnitudeBitWidth)
         XCTAssertEqual(1, BigUInt(UInt64.min).magnitudeBitWidth)
@@ -167,8 +208,8 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         checkBigInts(hexString: "80000000000000000000000000000000", magnitudeBitWidth: 128)
         checkBigInts(hexString: "8fffffffffffffffffffffffffffffff", magnitudeBitWidth: 128)
         checkBigInts(hexString: "100000000000000000000000000000000", magnitudeBitWidth: 129)
-#endif
     }
+#endif
 
     func check<I: BinaryInteger>(type: I.Type = I.self, digits: Int, magnitude: UInt) {
         let actual = I.decimalDigitsAndMagnitudePerWord()
@@ -191,6 +232,16 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt32.self, digits: 9, magnitude: 1_000_000_000)
         check(type: UInt64.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
     }
+
+#if canImport(Numberick)
+    func testDecimalDigitsAndMagnitudePerWord_largeIntegers() throws {
+        check(type: Int128.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
+        check(type: UInt128.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
+
+        check(type: Int256.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
+        check(type: UInt256.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
+    }
+#endif
 
 #if canImport(BigInt)
     func testDecimalDigitsAndMagnitudePerWord_arbitraryPrecisionIntegers() throws {

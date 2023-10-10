@@ -179,7 +179,7 @@ extension BinaryInteger {
 
                 if carryingOne {
                     indexOfHighestSetBitSeenSoFar += fullWidth
-                } else {
+                } else if .zero != positiveWord {
                     indexOfHighestSetBitSeenSoFar = (fullWidth * i) + (fullWidth - positiveWord.leadingZeroBitCount) - 1
                 }
             }
