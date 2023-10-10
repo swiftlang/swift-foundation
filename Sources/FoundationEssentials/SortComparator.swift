@@ -137,10 +137,17 @@ package struct AnySortComparator: SortComparator {
 public struct ComparableComparator<Compared: Comparable>: SortComparator, Sendable {
     public var order: SortOrder
     
-    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+#if FOUNDATION_FRAMEWORK
+    @available(FoundationPreview 0.1, *)
     public init(order: SortOrder = .forward) {
         self.order = order
     }
+#else
+    // No need for availability on this initializer in the package.
+    public init(order: SortOrder = .forward) {
+        self.order = order
+    }
+#endif
 
     private func unorderedCompare(_ lhs: Compared, _ rhs: Compared) -> ComparisonResult {
         if lhs < rhs { return .orderedAscending }

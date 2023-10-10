@@ -21,6 +21,7 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
+@available(FoundationPreview 0.1, *)
 class SortDescriptorTests: XCTestCase {
     struct NonNSObjectRoot {
         enum Gadget: Int, Comparable {

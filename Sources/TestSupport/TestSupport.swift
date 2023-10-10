@@ -197,4 +197,9 @@ public typealias StandardPredicateExpression = FoundationEssentials.StandardPred
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateError = FoundationEssentials.PredicateError
 
+public typealias SortDescriptor = FoundationInternationalization.SortDescriptor
+public typealias SortComparator = FoundationEssentials.SortComparator
+public typealias ComparableComparator = FoundationEssentials.ComparableComparator
+public typealias ComparisonResult = FoundationEssentials.ComparisonResult
+
 #endif // FOUNDATION_FRAMEWORK
