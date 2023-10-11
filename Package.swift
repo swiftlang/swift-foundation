@@ -32,7 +32,10 @@ let package = Package(
             .upToNextMajor(from: "0.0.3-ordoalpha.1")),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
-            from: "509.0.0")
+            from: "509.0.0"),
+        .package(
+            url: "https://github.com/ordo-one/package-benchmark",
+            .upToNextMajor(from: "1.0.0"))
     ],
     targets: [
         // Foundation (umbrella)
@@ -71,6 +74,16 @@ let package = Package(
             "TestSupport",
             "FoundationEssentials"
         ], swiftSettings: availabilityMacros),
+        .executableTarget(
+            name: "Benchmarks",
+            dependencies: [
+                "FoundationEssentials",
+                "_CShims",
+                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "BenchmarkPlugin", package: "package-benchmark")
+            ],
+            path: "Benchmarks/Predicates"
+        ),
 
         // FoundationInternationalization
         .target(
