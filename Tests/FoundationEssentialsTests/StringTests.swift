@@ -330,15 +330,6 @@ final class StringTests : XCTestCase {
 
 
 #if FOUNDATION_FRAMEWORK
-internal var _temporaryLocaleCurrentLocale: NSLocale?
-
-extension NSLocale {
-
-    @objc
-    public class func __swiftUnittest_currentLocale() -> NSLocale {
-        return _temporaryLocaleCurrentLocale!
-    }
-}
 
 extension String {
     var lines: [Substring] {
@@ -347,49 +338,6 @@ extension String {
 }
 
 final class StringTestsStdlib: XCTestCase {
-
-    // This only works for String functions that calls into `NSString`, which calls the Obj-C `-[NSLocale current]`, which gets swizzled here. This does not work for String functions implemented natively in Swift.
-    public func withOverriddenLocaleCurrentLocale<Result>(
-        _ temporaryLocale: NSLocale,
-        _ body: () -> Result
-    ) -> Result {
-        
-        guard let oldMethod = class_getClassMethod(
-            NSLocale.self, #selector(getter: NSLocale.current)) as Optional
-        else {
-            preconditionFailure("Could not find +[NSLocale currentLocale]")
-        }
-
-        guard let newMethod = class_getClassMethod(
-            NSLocale.self, #selector(NSLocale.__swiftUnittest_currentLocale)) as Optional
-        else {
-            preconditionFailure("Could not find +[NSLocale __swiftUnittest_currentLocale]")
-        }
-
-        precondition(_temporaryLocaleCurrentLocale == nil,
-                     "Nested calls to withOverriddenLocaleCurrentLocale are not supported")
-
-        _temporaryLocaleCurrentLocale = temporaryLocale
-        method_exchangeImplementations(oldMethod, newMethod)
-        let result = body()
-        method_exchangeImplementations(newMethod, oldMethod)
-        _temporaryLocaleCurrentLocale = nil
-
-        return result
-    }
-
-    public func withOverriddenLocaleCurrentLocale<Result>(
-        _ temporaryLocaleIdentifier: String,
-        _ body: () -> Result
-    ) -> Result {
-        precondition(
-            NSLocale.availableLocaleIdentifiers.contains(temporaryLocaleIdentifier),
-            "Requested locale \(temporaryLocaleIdentifier) is not available")
-
-        return withOverriddenLocaleCurrentLocale(
-            NSLocale(localeIdentifier: temporaryLocaleIdentifier), body)
-    }
-
 
     // The most simple subclass of NSString that CoreFoundation does not know
     // about.
@@ -411,10 +359,12 @@ final class StringTestsStdlib: XCTestCase {
             super.init()
         }
 
+#if os(macOS) // for AppKit
         required init?(pasteboardPropertyList propertyList: Any, ofType type: NSPasteboard.PasteboardType) {
             fatalError("init(pasteboardPropertyList:ofType:) has not been implemented")
         }
-        
+#endif
+
         @objc(copyWithZone:) override func copy(with zone: NSZone?) -> Any {
             // Ensure that copying this string produces a class that CoreFoundation
             // does not know about.
@@ -1607,95 +1557,85 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_localizedCaseInsensitiveContains() {
-        withOverriddenLocaleCurrentLocale("en") { () -> Void in
-            expectFalse("".localizedCaseInsensitiveContains(""))
-            expectFalse("".localizedCaseInsensitiveContains("a"))
-            expectFalse("a".localizedCaseInsensitiveContains(""))
-            expectFalse("a".localizedCaseInsensitiveContains("b"))
-            expectTrue("a".localizedCaseInsensitiveContains("a"))
-            expectTrue("a".localizedCaseInsensitiveContains("A"))
-            expectTrue("A".localizedCaseInsensitiveContains("a"))
-            expectFalse("a".localizedCaseInsensitiveContains("a\u{0301}"))
-            expectTrue("a\u{0301}".localizedCaseInsensitiveContains("a\u{0301}"))
-            expectFalse("a\u{0301}".localizedCaseInsensitiveContains("a"))
-            expectTrue("a\u{0301}".localizedCaseInsensitiveContains("\u{0301}"))
-            expectFalse("a".localizedCaseInsensitiveContains("\u{0301}"))
+        let en = Locale(identifier: "en")
+        expectFalse("".localizedCaseInsensitiveContains("", locale: en))
+        expectFalse("".localizedCaseInsensitiveContains("a", locale: en))
+        expectFalse("a".localizedCaseInsensitiveContains("", locale: en))
+        expectFalse("a".localizedCaseInsensitiveContains("b", locale: en))
+        expectTrue("a".localizedCaseInsensitiveContains("a", locale: en))
+        expectTrue("a".localizedCaseInsensitiveContains("A", locale: en))
+        expectTrue("A".localizedCaseInsensitiveContains("a", locale: en))
+        expectFalse("a".localizedCaseInsensitiveContains("a\u{0301}", locale: en))
+        expectTrue("a\u{0301}".localizedCaseInsensitiveContains("a\u{0301}", locale: en))
+        expectFalse("a\u{0301}".localizedCaseInsensitiveContains("a", locale: en))
+        expectTrue("a\u{0301}".localizedCaseInsensitiveContains("\u{0301}", locale: en))
+        expectFalse("a".localizedCaseInsensitiveContains("\u{0301}", locale: en))
 
-            expectTrue("i".localizedCaseInsensitiveContains("I"))
-            expectTrue("I".localizedCaseInsensitiveContains("i"))
-            expectFalse("\u{0130}".localizedCaseInsensitiveContains("i"))
-            expectFalse("i".localizedCaseInsensitiveContains("\u{0130}"))
+        expectTrue("i".localizedCaseInsensitiveContains("I", locale: en))
+        expectTrue("I".localizedCaseInsensitiveContains("i", locale: en))
+        expectFalse("\u{0130}".localizedCaseInsensitiveContains("i", locale: en))
+        expectFalse("i".localizedCaseInsensitiveContains("\u{0130}", locale: en))
 
-            return ()
-        }
-
-        withOverriddenLocaleCurrentLocale("tr") {
-            expectFalse("\u{0130}".localizedCaseInsensitiveContains("ı"))
-        }
+        expectFalse("\u{0130}".localizedCaseInsensitiveContains("ı", locale: Locale(identifier: "tr")))
     }
 
     func test_localizedStandardContains() {
-        withOverriddenLocaleCurrentLocale("en") { () -> Void in
-            expectFalse("".localizedStandardContains(""))
-            expectFalse("".localizedStandardContains("a"))
-            expectFalse("a".localizedStandardContains(""))
-            expectFalse("a".localizedStandardContains("b"))
-            expectTrue("a".localizedStandardContains("a"))
-            expectTrue("a".localizedStandardContains("A"))
-            expectTrue("A".localizedStandardContains("a"))
-            expectTrue("a".localizedStandardContains("a\u{0301}"))
-            expectTrue("a\u{0301}".localizedStandardContains("a\u{0301}"))
-            expectTrue("a\u{0301}".localizedStandardContains("a"))
-            expectTrue("a\u{0301}".localizedStandardContains("\u{0301}"))
-            expectFalse("a".localizedStandardContains("\u{0301}"))
+        let en = Locale(identifier: "en")
+        expectFalse("".localizedStandardContains("", locale: en))
+        expectFalse("".localizedStandardContains("a", locale: en))
+        expectFalse("a".localizedStandardContains("", locale: en))
+        expectFalse("a".localizedStandardContains("b", locale: en))
+        expectTrue("a".localizedStandardContains("a", locale: en))
+        expectTrue("a".localizedStandardContains("A", locale: en))
+        expectTrue("A".localizedStandardContains("a", locale: en))
+        expectTrue("a".localizedStandardContains("a\u{0301}", locale: en))
+        expectTrue("a\u{0301}".localizedStandardContains("a\u{0301}", locale: en))
+        expectTrue("a\u{0301}".localizedStandardContains("a", locale: en))
+        expectTrue("a\u{0301}".localizedStandardContains("\u{0301}", locale: en))
+        expectFalse("a".localizedStandardContains("\u{0301}", locale: en))
 
-            expectTrue("i".localizedStandardContains("I"))
-            expectTrue("I".localizedStandardContains("i"))
-            expectTrue("\u{0130}".localizedStandardContains("i"))
-            expectTrue("i".localizedStandardContains("\u{0130}"))
+        expectTrue("i".localizedStandardContains("I", locale: en))
+        expectTrue("I".localizedStandardContains("i", locale: en))
+        expectTrue("\u{0130}".localizedStandardContains("i", locale: en))
+        expectTrue("i".localizedStandardContains("\u{0130}", locale: en))
 
-            return ()
-        }
-
-        withOverriddenLocaleCurrentLocale("tr") {
-            expectTrue("\u{0130}".localizedStandardContains("ı"))
-        }
+        expectTrue("\u{0130}".localizedStandardContains("ı", locale: Locale(identifier: "tr")))
     }
 
     func test_localizedStandardRange() {
-        func rangeOf(_ string: String, _ substring: String) -> Range<Int>? {
+        func rangeOf(_ string: String, _ substring: String, locale: Locale) -> Range<Int>? {
             return toIntRange(
-                string, string.localizedStandardRange(of: substring))
-        }
-        withOverriddenLocaleCurrentLocale("en") { () -> Void in
-            XCTAssertNil(rangeOf("", ""))
-            XCTAssertNil(rangeOf("", "a"))
-            XCTAssertNil(rangeOf("a", ""))
-            XCTAssertNil(rangeOf("a", "b"))
-            expectEqual(0..<1, rangeOf("a", "a"))
-            expectEqual(0..<1, rangeOf("a", "A"))
-            expectEqual(0..<1, rangeOf("A", "a"))
-            expectEqual(0..<1, rangeOf("a", "a\u{0301}"))
-            expectEqual(0..<1, rangeOf("a\u{0301}", "a\u{0301}"))
-            expectEqual(0..<1, rangeOf("a\u{0301}", "a"))
-            do {
-                // FIXME: Indices that don't correspond to grapheme cluster boundaries.
-                let s = "a\u{0301}"
-                expectEqual(
-                    "\u{0301}", s[s.localizedStandardRange(of: "\u{0301}")!])
-            }
-            XCTAssertNil(rangeOf("a", "\u{0301}"))
-
-            expectEqual(0..<1, rangeOf("i", "I"))
-            expectEqual(0..<1, rangeOf("I", "i"))
-            expectEqual(0..<1, rangeOf("\u{0130}", "i"))
-            expectEqual(0..<1, rangeOf("i", "\u{0130}"))
-            return ()
+                string, string.localizedStandardRange(of: substring, locale: locale))
         }
 
-        withOverriddenLocaleCurrentLocale("tr") {
-            expectEqual(0..<1, rangeOf("\u{0130}", "ı"))
+        let en = Locale(identifier: "en")
+
+        XCTAssertNil(rangeOf("", "", locale: en))
+        XCTAssertNil(rangeOf("", "a", locale: en))
+        XCTAssertNil(rangeOf("a", "", locale: en))
+        XCTAssertNil(rangeOf("a", "b", locale: en))
+        expectEqual(0..<1, rangeOf("a", "a", locale: en))
+        expectEqual(0..<1, rangeOf("a", "A", locale: en))
+        expectEqual(0..<1, rangeOf("A", "a", locale: en))
+        expectEqual(0..<1, rangeOf("a", "a\u{0301}", locale: en))
+        expectEqual(0..<1, rangeOf("a\u{0301}", "a\u{0301}", locale: en))
+        expectEqual(0..<1, rangeOf("a\u{0301}", "a", locale: en))
+        do {
+        // FIXME: Indices that don't correspond to grapheme cluster boundaries.
+        let s = "a\u{0301}"
+        expectEqual(
+            "\u{0301}", s[s.localizedStandardRange(of: "\u{0301}", locale: en)!])
         }
+        XCTAssertNil(rangeOf("a", "\u{0301}", locale: en))
+
+        expectEqual(0..<1, rangeOf("i", "I", locale: en))
+        expectEqual(0..<1, rangeOf("I", "i", locale: en))
+        expectEqual(0..<1, rangeOf("\u{0130}", "i", locale: en))
+        expectEqual(0..<1, rangeOf("i", "\u{0130}", locale: en))
+
+
+        let tr = Locale(identifier: "tr")
+        expectEqual(0..<1, rangeOf("\u{0130}", "ı", locale: tr))
     }
 
     func test_smallestEncoding() {
