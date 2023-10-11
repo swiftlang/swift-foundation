@@ -17,6 +17,10 @@ struct Monster {
 }
 
 let benchmarks = {
+    Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
+    Benchmark.defaultConfiguration.maxDuration = .seconds(5)
+    Benchmark.defaultConfiguration.scalingFactor = .kilo
+
     Benchmark("Predicate #1 - int increment (baseline)") { benchmark in
         benchmark.startMeasurement()
         var count = 0
