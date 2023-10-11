@@ -18,7 +18,7 @@ let package = Package(
                 .product(name: "FoundationEssentials", package: "swift-foundation"),
                 .product(name: "Benchmark", package: "package-benchmark"),
             ],
-            path: "Predicates",
+            path: "Benchmarks/Predicates",
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
