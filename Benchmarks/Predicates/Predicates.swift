@@ -17,7 +17,7 @@ struct Monster {
 }
 
 let benchmarks = {
-    Benchmark("Predicate #1 - int incremen (baseline)") { benchmark in
+    Benchmark("Predicate #1 - int increment (baseline)") { benchmark in
         benchmark.startMeasurement()
         var count = 0
         for _ in benchmark.scaledIterations {
