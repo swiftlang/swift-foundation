@@ -23,13 +23,11 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            url: "https://github.com/ordo-one/package-swift-collections",
-            // revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
-            .upToNextMajor(from: "1.1.3-ordoalpha.1")),
+            url: "https://github.com/apple/swift-collections",
+            revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
         .package(
-            url: "https://github.com/ordo-one/swift-foundation-icu",
-            // revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
-            .upToNextMajor(from: "0.0.3-ordoalpha.1")),
+            url: "https://github.com/apple/swift-foundation-icu",
+            revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
             from: "509.0.0"),
@@ -63,7 +61,7 @@ let package = Package(
           name: "FoundationEssentials",
           dependencies: [
             "_CShims",
-            .product(name: "_RopeModule", package: "package-swift-collections"),
+            .product(name: "_RopeModule", package: "swift-collections"),
           ],
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
