@@ -354,7 +354,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
 
     #if FOUNDATION_FRAMEWORK
-    @available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
+    @available(FoundationPreview 0.1, *)
     #endif
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     func replaceBytes(in range_: Range<Int>, with replacementBytes: UnsafeRawPointer?, length replacementLength: Int) {

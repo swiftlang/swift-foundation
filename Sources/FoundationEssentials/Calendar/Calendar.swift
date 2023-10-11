@@ -194,7 +194,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if contains(.calendar) { result.insert(.calendar) }
             if contains(.timeZone) { result.insert(.timeZone) }
             if contains(.isLeapMonth) { 
-                if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
+                if #available(FoundationPreview 0.1, *) {
                     result.insert(.isLeapMonth)
                 }
             }
@@ -218,7 +218,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if self.contains(.nanosecond) { return .nanosecond }
 
             // The algorithms that call this function assume that isLeapMonth counts as a 'highest unit set', but the order is after nanosecond.
-            if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
+            if #available(FoundationPreview 0.1, *) {
                 if self.contains(.isLeapMonth) { return .isLeapMonth }
             }
 
@@ -249,7 +249,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case nanosecond
         case calendar
         case timeZone
-        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+        @available(FoundationPreview 0.1, *)
         case isLeapMonth
 
         fileprivate var componentSetValue: ComponentSet.RawValue {
@@ -721,8 +721,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
             }
         case .minute:
             // assumes that time zone or other adjustments are always whole minutes
-            var (int1, _) = modf(date1.timeIntervalSinceReferenceDate)
-            var (int2, _) = modf(date2.timeIntervalSinceReferenceDate)
+            var int1 = date1.timeIntervalSinceReferenceDate.rounded(.down)
+            var int2 = date2.timeIntervalSinceReferenceDate.rounded(.down)
             int1 = floor(int1 / 60.0)
             int2 = floor(int2 / 60.0)
             if int1 == int2 {
@@ -733,8 +733,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
                 return .orderedAscending
             }
         case .second:
-            let (int1, _) = modf(date1.timeIntervalSinceReferenceDate)
-            let (int2, _) = modf(date2.timeIntervalSinceReferenceDate)
+            let int1 = date1.timeIntervalSinceReferenceDate.rounded(.down)
+            let int2 = date2.timeIntervalSinceReferenceDate.rounded(.down)
             if int1 == int2 {
                 return .orderedSame
             } else if int2 < int1 {
@@ -743,22 +743,22 @@ public struct Calendar : Hashable, Equatable, Sendable {
                 return .orderedAscending
             }
         case .nanosecond:
-            let (int1, frac1) = modf(date1.timeIntervalSinceReferenceDate)
-            let (int2, frac2) = modf(date2.timeIntervalSinceReferenceDate)
-            if int1 == int2 {
-                let nano1 = floor(frac1 * 1000000000.0)
-                let nano2 = floor(frac2 * 1000000000.0)
+            func split(_ timeInterval: Double) -> (secs: Double, nano: Double) {
+                let secs = timeInterval.rounded(.towardZero)
+                let nano = (1e9 * (timeInterval - secs)).rounded(.towardZero)
+                return (secs, nano)
+            }
+            
+            let (secs1, nano1) = split(date1.timeIntervalSinceReferenceDate)
+            let (secs2, nano2) = split(date2.timeIntervalSinceReferenceDate)
+            if secs1 == secs2 {
                 if nano1 == nano2 {
                     return .orderedSame
                 } else if nano1 < nano2 {
-                    return .orderedDescending
+                    return .orderedAscending
                 } else {
-                    return .orderedSame
+                    return .orderedDescending
                 }
-            } else if int2 < int1 {
-                return .orderedDescending
-            } else {
-                return .orderedAscending
             }
         default:
             break

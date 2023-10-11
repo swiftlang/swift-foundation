@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 extension String {
-    internal func _trimmingWhitespace() -> String {
+    package func _trimmingWhitespace() -> String {
         String(unicodeScalars._trimmingCharacters {
             $0.properties.isWhitespace
         })
     }
 
-    internal init?(_utf16 input: UnsafeBufferPointer<UInt16>) {
+    package init?(_utf16 input: UnsafeBufferPointer<UInt16>) {
         // Allocate input.count * 3 code points since one UTF16 code point may require up to three UTF8 code points when transcoded
         let str = withUnsafeTemporaryAllocation(of: UTF8.CodeUnit.self, capacity: input.count * 3) { contents in
             var count = 0
@@ -39,14 +39,14 @@ extension String {
         self = str
     }
 
-    internal init?(_utf16 input: UnsafeMutableBufferPointer<UInt16>, count: Int) {
+    package init?(_utf16 input: UnsafeMutableBufferPointer<UInt16>, count: Int) {
         guard let str = String(_utf16: UnsafeBufferPointer(rebasing: input[..<count])) else {
             return nil
         }
         self = str
     }
 
-    internal init?(_utf16 input: UnsafePointer<UInt16>, count: Int) {
+    package init?(_utf16 input: UnsafePointer<UInt16>, count: Int) {
         guard let str = String(_utf16: UnsafeBufferPointer(start: input, count: count)) else {
             return nil
         }

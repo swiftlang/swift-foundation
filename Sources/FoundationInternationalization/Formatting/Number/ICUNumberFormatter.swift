@@ -464,4 +464,65 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase {
 
         return attrstr
     }
+
+    // The raw values are for use with ICU's API. They should match CLDR's declaration at https://github.com/unicode-org/cldr/blob/master/common/supplemental/units.xml
+    internal enum Usage: String {
+        // common
+        case general = "default"
+        case person
+        // energy
+        case food
+        // length
+        case personHeight = "person-height"
+        case road
+        case focalLength = "focal-length"
+        case rainfall
+        case snowfall
+        case visibility = "visiblty"
+        // pressure
+        case barometric = "baromtrc"
+        // speed
+        case wind
+        // temperature
+        case weather
+        // volume
+        case fluid
+        // Foundation's flag: Do not convert to preferred unit
+        case asProvided
+    }
+
+    enum UnitWidth: String, Codable {
+        case wide = "unit-width-full-name"
+        case abbreviated = "unit-width-short"
+        case narrow = "unit-width-narrow"
+
+        init(_ width: Duration.UnitsFormatStyle.UnitWidth) {
+            switch width.width.option {
+            case .wide:
+                self = .wide
+            case .abbreviated:
+                self = .abbreviated
+            case .narrow:
+                self = .narrow
+            }
+        }
+    }
+
+    static func skeleton(_ unitSkeleton: String?, width: UnitWidth, usage: Usage?, numberFormatStyle: FloatingPointFormatStyle<Double>?) -> String {
+        var stem = ""
+        if let unitSkeleton = unitSkeleton {
+            stem += unitSkeleton + " " + width.rawValue
+            if let usage {
+                // ICU handles the conversion when using the `usage` skeleton.
+                stem += " usage/" + usage.rawValue
+            }
+        }
+        if let numberFormatSkeleton = numberFormatStyle?.collection.skeleton {
+            if stem.count > 0 {
+                stem += " "
+            }
+            stem += numberFormatSkeleton
+        }
+        return stem
+    }
 }
