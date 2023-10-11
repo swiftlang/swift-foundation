@@ -660,9 +660,9 @@ final class CalendarTests : XCTestCase {
         let date = Date(timeIntervalSinceReferenceDate: 2.4499581972890255e+18)
         let calendar = Calendar(identifier: .gregorian)
         let components = DateComponents(weekOfMonth: 3)
-        let next = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTime)
-        let nextSmaller = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents)
-        let previous = calendar.nextDate(after: date, matching: components, matchingPolicy: .previousTimePreservingSmallerComponents)
+        _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTime)
+        _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents)
+        _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .previousTimePreservingSmallerComponents)
     }
 }
 
