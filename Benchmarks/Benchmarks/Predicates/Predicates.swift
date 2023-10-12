@@ -14,6 +14,11 @@ struct Monster {
     var hp: Int
     var mana: Int
     var weapon: Int?
+    var nameComputed: String { name }
+    var levelComputer: Int { level }
+    var hpComputed: Int { hp }
+    var manaComputed: Int { mana }
+    var weaponComputed: Int? { weapon }
 }
 
 let benchmarks = {
@@ -21,23 +26,13 @@ let benchmarks = {
     Benchmark.defaultConfiguration.maxDuration = .seconds(5)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
 
-    Benchmark("Predicate #1 - int increment (baseline)") { benchmark in
-        benchmark.startMeasurement()
-        var count = 0
-        for _ in benchmark.scaledIterations {
-            count += 1
-        }
-        benchmark.stopMeasurement()
-        blackHole(count)
-    }
-
     if #available(macOS 14, *) {
-        Benchmark("Predicate #2 - simple 'true' condition") { benchmark in
+        Benchmark("Predicate #1 - simple 'true' condition") { benchmark in
             let monster = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: Weapon.sword.rawValue)
             let predicate = #Predicate<Monster> { monster in
                 true
             }
-            
+
             benchmark.startMeasurement()
             var matched = 0
             for _ in benchmark.scaledIterations {
@@ -46,7 +41,7 @@ let benchmarks = {
                 }
             }
             benchmark.stopMeasurement()
-            
+
             guard matched == benchmark.scaledIterations.count else {
                 fatalError("Internal error: wrong number of matched monsters")
             }
@@ -54,7 +49,7 @@ let benchmarks = {
     }
 
     if #available(macOS 14, *) {
-        Benchmark("Predicate #3 - 1 KeyPath condition") { benchmark in
+        Benchmark("Predicate #2 - 1 KeyPath variable condition") { benchmark in
             let monster = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: Weapon.sword.rawValue)
             let predicate = #Predicate<Monster> { monster in
                 (monster.level == 80)
@@ -76,7 +71,29 @@ let benchmarks = {
     }
 
     if #available(macOS 14, *) {
-        Benchmark("Predicate #4 - 5 KeyPath conditions") { benchmark in
+        Benchmark("Predicate #3 - 1 KeyPath computed property condition") { benchmark in
+            let monster = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: Weapon.sword.rawValue)
+            let predicate = #Predicate<Monster> { monster in
+                (monster.hpComputed == 100)
+            }
+
+            benchmark.startMeasurement()
+            var matched = 0
+            for _ in benchmark.scaledIterations {
+                if try predicate.evaluate(monster) {
+                    matched += 1
+                }
+            }
+            benchmark.stopMeasurement()
+
+            guard matched == benchmark.scaledIterations.count else {
+                fatalError("Internal error: wrong number of matched monsters")
+            }
+        }
+    }
+
+    if #available(macOS 14, *) {
+        Benchmark("Predicate #4 - 5 KeyPath variable conditions") { benchmark in
             let weapon = Weapon.sword.rawValue
             let monster = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: weapon)
             let predicate = #Predicate<Monster> { monster in
@@ -86,7 +103,34 @@ let benchmarks = {
                  (monster.mana == 0) &&
                  ((monster.weapon != nil) && (monster.weapon! == weapon)))
             }
-            
+
+            benchmark.startMeasurement()
+            var matched = 0
+            for _ in benchmark.scaledIterations {
+                if try predicate.evaluate(monster) {
+                    matched += 1
+                }
+            }
+            benchmark.stopMeasurement()
+
+            guard matched == benchmark.scaledIterations.count else {
+                fatalError("Internal error: wrong number of matched monsters")
+            }
+        }
+    }
+
+    if #available(macOS 14, *) {
+        Benchmark("Predicate #5 - 5 KeyPath computed property conditions") { benchmark in
+            let weapon = Weapon.sword.rawValue
+            let monster = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: weapon)
+            let predicate = #Predicate<Monster> { monster in
+                ((monster.nameComputed == "Orc") &&
+                 (monster.levelComputer == 80) &&
+                 (monster.hpComputed == 100) &&
+                 (monster.manaComputed == 0) &&
+                 ((monster.weaponComputed != nil) && (monster.weapon! == weapon)))
+            }
+
             benchmark.startMeasurement()
             var matched = 0
             for _ in benchmark.scaledIterations {
