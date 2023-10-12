@@ -74,7 +74,7 @@ let benchmarks = {
         Benchmark("Predicate #3 - 1 KeyPath computed property condition") { benchmark in
             let monster = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: Weapon.sword.rawValue)
             let predicate = #Predicate<Monster> { monster in
-                (monster.hpComputed == 100)
+                (monster.nameComputed == 100)
             }
 
             benchmark.startMeasurement()
