@@ -15,7 +15,7 @@ struct Monster {
     var mana: Int
     var weapon: Int?
     var nameComputed: String { name }
-    var levelComputer: Int { level }
+    var levelComputed: Int { level }
     var hpComputed: Int { hp }
     var manaComputed: Int { mana }
     var weaponComputed: Int? { weapon }
@@ -74,7 +74,7 @@ let benchmarks = {
         Benchmark("Predicate #3 - 1 KeyPath computed property condition") { benchmark in
             let monster = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: Weapon.sword.rawValue)
             let predicate = #Predicate<Monster> { monster in
-                (monster.nameComputed == 100)
+                (monster.levelComputed == 80)
             }
 
             benchmark.startMeasurement()
@@ -125,10 +125,10 @@ let benchmarks = {
             let monster = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: weapon)
             let predicate = #Predicate<Monster> { monster in
                 ((monster.nameComputed == "Orc") &&
-                 (monster.levelComputer == 80) &&
+                 (monster.levelComputed == 80) &&
                  (monster.hpComputed == 100) &&
                  (monster.manaComputed == 0) &&
-                 ((monster.weaponComputed != nil) && (monster.weapon! == weapon)))
+                 ((monster.weaponComputed != nil) && (monster.weaponComputed! == weapon)))
             }
 
             benchmark.startMeasurement()
