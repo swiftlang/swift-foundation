@@ -595,7 +595,7 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     /// Checks that executing the operation in the locale with the given
-    /// `localeID` (or if `localeID` is `nil`, the current locale) gives
+    /// `localeID` (or unlocalized if `localeID` is `nil`) gives
     /// the expected result, and that executing the operation with a nil
     /// locale gives the same result as explicitly passing the system
     /// locale.
@@ -613,7 +613,7 @@ final class StringTestsStdlib: XCTestCase {
 
         let locale = localeID.map {
             Locale(identifier: $0)
-        } ?? Locale.current
+        } ?? nil
 
         expectEqual(
             expected, op(locale),
@@ -700,9 +700,9 @@ final class StringTestsStdlib: XCTestCase {
         }
 
         expectEqual(ComparisonResult.orderedSame,
-                    "abc".compare("abc", locale: Locale.current))
+                    "abc".compare("abc", locale: nil))
         expectEqual(ComparisonResult.orderedSame,
-                    "абв".compare("абв", locale: Locale.current))
+                    "абв".compare("абв", locale: nil))
     }
 
     func test_completePath() {
