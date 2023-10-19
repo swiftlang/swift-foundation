@@ -28,9 +28,11 @@ extension String {
         // CLDR uses two adjacent single vertical quotes to represent a literal
         // single quote in the template. For the rest of the cases, surround the
         // text between single quotes as literal text.
-        return self.split(separator: "'", omittingEmptySubsequences: false)
-            .map { $0.isEmpty ? "'" : "'\($0)'" }
-            .joined()
+        guard self.contains(where: { $0 != "'" }) else {
+            return String(repeating: "'", count: 2 * count)
+        }
+
+        return "'\(self.replacing("'", with: "''"))'"
     }
 }
 
