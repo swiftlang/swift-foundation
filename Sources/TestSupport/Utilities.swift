@@ -80,6 +80,28 @@ public func expectEqual(
     XCTAssertTrue(expected == actual, message(), file: file, line: line)
 }
 
+public func expectEqualSequence< Expected: Sequence, Actual: Sequence>(
+    _ expected: Expected, _ actual: Actual,
+    _ message: @autoclosure () -> String = "",
+    file: String = #file, line: UInt = #line,
+    sameValue: (Expected.Element, Expected.Element) -> Bool
+) where Expected.Element == Actual.Element {
+    if !expected.elementsEqual(actual, by: sameValue) {
+      XCTFail("expected elements: \"\(expected)\"\n"
+              + "actual: \"\(actual)\" (of type \(String(reflecting: type(of: actual)))), \(message())")
+    }
+}
+
+public func expectEqualSequence< Expected: Sequence, Actual: Sequence>(
+    _ expected: Expected, _ actual: Actual,
+    _ message: @autoclosure () -> String = "",
+    file: String = #file, line: UInt = #line
+) where Expected.Element == Actual.Element, Expected.Element: Equatable {
+    expectEqualSequence(expected, actual, message()) {
+        $0 == $1
+    }
+}
+
 func expectChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line, _ expression: () throws -> ()) rethrows {
     let valueBefore = check()
     try expression()
