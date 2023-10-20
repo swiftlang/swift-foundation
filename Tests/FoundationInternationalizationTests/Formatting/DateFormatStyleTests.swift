@@ -63,28 +63,41 @@ final class DateFormatStyleTests : XCTestCase {
     }
 
     func test_dateFormatString() {
-        let expectedFormats: [Date.FormatString: String] = [
-            "": "",
-            "some latin characters": "'some latin characters'",
-            " ": "' '",
-            "😀😀": "'😀😀'",
-            "'": "''",
-            "'some strings in single quotes'": "''some strings in single quotes''",
+        // dateFormatter.date(from: "2021-04-12 15:04:32")!
+        let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
 
-            "\(day: .twoDigits)\(month: .twoDigits)": "ddMM",
-            "\(day: .twoDigits)/\(month: .twoDigits)": "dd'/'MM",
-            "\(day: .twoDigits)-\(month: .twoDigits)": "dd'-'MM",
-            "\(day: .twoDigits)'\(month: .twoDigits)": "dd''MM",
-            " \(day: .twoDigits) \(month: .twoDigits) ": "' 'dd' 'MM' '",
-
-            "\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .oneBased)) o'clock": "h' o''clock'",
-
-            "Day:\(day: .defaultDigits) Month:\(month: .abbreviated) Year:\(year: .padded(4))": "'Day:'d' Month:'MMM' Year:'yyyy",
-        ]
-
-        for (format, expected) in expectedFormats {
-            XCTAssertEqual(format.rawFormat, expected)
+        func _verify(_ format: Date.FormatString, rawExpectation: String, formattedExpectation: String, line: UInt = #line) {
+            XCTAssertEqual(format.rawFormat, rawExpectation, "raw expectation failed", line: line)
+            XCTAssertEqual(
+                Date.VerbatimFormatStyle(format: format, timeZone: .gmt, calendar: .init(identifier: .gregorian))
+                    .locale(.init(identifier: "en_US"))
+                    .format(date),
+                formattedExpectation,
+                "formatted expectation failed",
+                line: line
+            )
         }
+
+        _verify("", rawExpectation: "", formattedExpectation: "\(date)")
+        _verify("some latin characters", rawExpectation: "'some latin characters'", formattedExpectation: "some latin characters")
+        _verify(" ", rawExpectation: "' '", formattedExpectation: " ")
+        _verify("😀😀", rawExpectation: "'😀😀'", formattedExpectation: "😀😀")
+        _verify("'", rawExpectation: "''", formattedExpectation: "'")
+        _verify(" ' ", rawExpectation: "' '' '", formattedExpectation: " ' ")
+        _verify("' ", rawExpectation: "''' '", formattedExpectation: "' ")
+        _verify(" '", rawExpectation: "' '''", formattedExpectation: " '")
+        _verify("''", rawExpectation: "''''", formattedExpectation: "''")
+        _verify("'some strings in single quotes'", rawExpectation: "'''some strings in single quotes'''", formattedExpectation: "'some strings in single quotes'")
+
+        _verify("\(day: .twoDigits)\(month: .twoDigits)", rawExpectation: "ddMM", formattedExpectation: "1204")
+        _verify("\(day: .twoDigits)/\(month: .twoDigits)", rawExpectation: "dd'/'MM", formattedExpectation: "12/04")
+        _verify("\(day: .twoDigits)-\(month: .twoDigits)", rawExpectation: "dd'-'MM", formattedExpectation: "12-04")
+        _verify("\(day: .twoDigits)'\(month: .twoDigits)", rawExpectation: "dd''MM", formattedExpectation: "12'04")
+        _verify(" \(day: .twoDigits) \(month: .twoDigits) ", rawExpectation: "' 'dd' 'MM' '", formattedExpectation: " 12 04 ")
+
+        _verify("\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .oneBased)) o'clock", rawExpectation: "h' o''clock'", formattedExpectation: "3 o'clock")
+
+        _verify("Day:\(day: .defaultDigits) Month:\(month: .abbreviated) Year:\(year: .padded(4))", rawExpectation: "'Day:'d' Month:'MMM' Year:'yyyy", formattedExpectation: "Day:12 Month:Apr Year:2021")
     }
 
     func test_parsingThrows() {
