@@ -91,8 +91,10 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
     
     func bridgeToNSLocale() -> NSLocale
     
+#if !NO_FORMATTERS
     // This is framework-only because Date.FormatStyle.DateStlye is Internationalization-only
     func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String?
+#endif
 #endif
 }
 

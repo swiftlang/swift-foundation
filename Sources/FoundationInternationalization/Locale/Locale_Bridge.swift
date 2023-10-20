@@ -50,10 +50,14 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     }
 
     func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> any _LocaleProtocol {
+#if canImport(FoundationICU)
         // Round trip through Locale.Components
         var comps = Locale.Components(identifier: self.identifier)
         comps.calendar = identifier
         return Locale(components: comps)._locale
+#else
+        return _LocaleUnlocalized(identifier: identifier.cfCalendarIdentifier)
+#endif
     }
     
     var isBridged: Bool {
@@ -287,9 +291,11 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
         nil
     }
 
+#if !NO_FORMATTERS
     func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
         nil
     }
+#endif
     
     var prefs: LocalePreferences? {
         nil

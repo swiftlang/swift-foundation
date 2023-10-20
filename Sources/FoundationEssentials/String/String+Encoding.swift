@@ -97,7 +97,7 @@ extension String.Encoding : Hashable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String.Encoding : CustomStringConvertible {
     public var description: String {
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_LOCALIZATION
         return String.localizedName(of: self)
 #else
         return "\(self)"

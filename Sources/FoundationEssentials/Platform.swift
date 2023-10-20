@@ -12,7 +12,9 @@
 #if canImport(Darwin)
 import Darwin
 
-fileprivate let _pageSize = Int(vm_page_size)
+fileprivate var _pageSize: Int {
+    Int(vm_page_size)
+}
 #elseif canImport(WinSDK)
 import WinSDK
 fileprivate var _pageSize: Int {
@@ -23,13 +25,17 @@ fileprivate var _pageSize: Int {
 #elseif os(WASI)
 // WebAssembly defines a fixed page size
 fileprivate let _pageSize: Int = 65_536
-#else
+#elseif canImport(Glibc)
 import Glibc
+fileprivate let _pageSize: Int = Int(getpagesize())
+#elseif canImport(C)
 fileprivate let _pageSize: Int = Int(getpagesize())
 #endif // canImport(Darwin)
 
 internal struct Platform {
-    static var pageSize: Int = _pageSize
+    static var pageSize: Int {
+        _pageSize
+    }
 
     static func roundDownToMultipleOfPageSize(_ size: Int) -> Int {
         return size & ~(self.pageSize - 1)

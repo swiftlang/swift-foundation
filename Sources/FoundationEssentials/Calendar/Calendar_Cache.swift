@@ -10,11 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import _ForSwiftFoundation
 import CoreFoundation
-#else
 #endif
 
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.
@@ -24,7 +22,7 @@ struct CalendarCache : Sendable {
     
     // _CalendarICU, if present
     static var calendarICUClass: _CalendarProtocol.Type = {
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
         _CalendarICU.self
 #else
         if let name = _typeByName("FoundationInternationalization._CalendarICU"), let t = name as? _CalendarProtocol.Type {

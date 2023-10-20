@@ -34,7 +34,7 @@ struct TimeZoneCache : Sendable {
     
     // _TimeZoneICU, if present
     static var timeZoneICUClass: _TimeZoneProtocol.Type? = {
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
         _TimeZoneICU.self
 #else
         if let name = _typeByName("FoundationInternationalization._TimeZoneICU"), let t = name as? _TimeZoneProtocol.Type {
@@ -47,7 +47,7 @@ struct TimeZoneCache : Sendable {
     
     // _TimeZoneGMTICU or _TimeZoneGMT
     static var timeZoneGMTClass: _TimeZoneProtocol.Type = {
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
         _TimeZoneGMTICU.self
 #else
         if let name = _typeByName("FoundationInternationalization._TimeZoneGMTICU"), let t = name as? _TimeZoneProtocol.Type {
@@ -118,6 +118,7 @@ struct TimeZoneCache : Sendable {
 
         /// Reads from environment variables `TZFILE`, `TZ` and finally the symlink pointed at by the C macro `TZDEFAULT` to figure out what the current (aka "system") time zone is.
         mutating func findCurrentTimeZone() -> TimeZone {
+#if !NO_TZFILE
             if let tzenv = getenv("TZFILE") {
                 if let name = String(validatingUTF8: tzenv) {
                     if let result = fixed(name) {
@@ -183,7 +184,7 @@ struct TimeZoneCache : Sendable {
                 }
             }
 #endif
-
+#endif //!NO_TZFILE
             // Last option as a default is the GMT value (again, using the cached version directly to avoid recursive lock)
             return TimeZone(inner: offsetFixed(0)!)
         }
@@ -355,34 +356,44 @@ struct TimeZoneCache : Sendable {
         mutating func bridgedFixed(_ identifier: String) -> _NSSwiftTimeZone? {
             if let cached = bridgedFixedTimeZones[identifier] {
                 return cached
-            } else if let swiftCached = fixedTimeZones[identifier] {
+            }
+            if let swiftCached = fixedTimeZones[identifier] {
                 // If we don't have a bridged instance yet, check to see if we have a Swift one and re-use that
                 let bridged = _NSSwiftTimeZone(timeZone: TimeZone(inner: swiftCached))
                 bridgedFixedTimeZones[identifier] = bridged
                 return bridged
-            } else if let innerTz = _TimeZoneICU(identifier: identifier) {
+            }
+#if canImport(FoundationICU)
+            if let innerTz = _TimeZoneICU(identifier: identifier) {
                 // In this case, the identifier is unique and we need to cache it (in two places)
                 fixedTimeZones[identifier] = innerTz
                 let bridgedTz = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTz))
                 bridgedFixedTimeZones[identifier] = bridgedTz
                 return bridgedTz
-            } else {
-                return nil
             }
+#endif
+            return nil
         }
 
         mutating func bridgedOffsetFixed(_ offset: Int) -> _NSSwiftTimeZone? {
             if let cached = bridgedOffsetTimeZones[offset] {
                 return cached
-            } else if let swiftCached = offsetTimeZones[offset] {
+            }
+            if let swiftCached = offsetTimeZones[offset] {
                 // If we don't have a bridged instance yet, check to see if we have a Swift one and re-use that
                 let bridged = _NSSwiftTimeZone(timeZone: TimeZone(inner: swiftCached))
                 bridgedOffsetTimeZones[offset] = bridged
                 return bridged
-            } else if let innerTz = _TimeZoneGMTICU(secondsFromGMT: offset) {
+            }
+#if canImport(FoundationICU)
+            let maybeInnerTz = _TimeZoneGMTICU(secondsFromGMT: offset)
+#else
+            let maybeInnerTz = _TimeZoneGMT(secondsFromGMT: offset)
+#endif
+            if let innerTz = maybeInnerTz {
                 // In order to avoid bloating a cache with weird time zones, only cache values that are 30min offsets (including 1hr offsets).
                 let doCache = abs(offset) % 1800 == 0
-
+                
                 // In this case, the offset is unique and we need to cache it (in two places)
                 let bridgedTz = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTz))
                 if doCache {
@@ -390,9 +401,9 @@ struct TimeZoneCache : Sendable {
                     bridgedOffsetTimeZones[offset] = bridgedTz
                 }
                 return bridgedTz
-            } else {
-                return nil
             }
+            
+            return nil
         }
 #endif // FOUNDATION_FRAMEWORK
     }

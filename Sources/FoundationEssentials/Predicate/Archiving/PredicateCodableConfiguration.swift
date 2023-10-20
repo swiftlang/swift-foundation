@@ -12,6 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
+#if canImport(ReflectionInternal)
 @_implementationOnly
 import ReflectionInternal
 
@@ -499,4 +500,5 @@ extension PredicateCodableConfiguration {
     }()
 }
 
+#endif // canImport(ReflectionInternal)
 #endif // FOUNDATION_FRAMEWORK

@@ -10,16 +10,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/string_shims.h"
 #include "include/_CShimsTargetConditionals.h"
+#include "include/string_shims.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <float.h>
+#include <assert.h>
 
-int
-_cshims_strncasecmp_l(const char * _Nullable s1,
+#if !defined(CF_PRIVATE)
+#define CF_PRIVATE __attribute__((__visibility__("hidden"))) extern
+#endif
+
+#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
+#include <strings.h>
+#endif
+
+CF_PRIVATE int _cshims_strncasecmp_l(const char * _Nullable s1,
                       const char * _Nullable s2,
                       size_t n,
                       locale_t _Nullable loc)
@@ -34,11 +42,17 @@ _cshims_strncasecmp_l(const char * _Nullable s1,
   return _strnicmp_l(s1, s2, n, loc ? loc : *cloc);
 #else
     if (loc != NULL) {
+#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
+        abort();
+#else
         return strncasecmp_l(s1, s2, n, loc);
+#endif
     }
     // On Darwin, NULL loc means unlocalized compare.
     // Uses the standard C locale for Linux in this case
-#if TARGET_OS_MAC
+#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
+    return strncasecmp(s1, s2, n);
+#elif TARGET_OS_MAC
     return strncasecmp_l(s1, s2, n, NULL);
 #else
     locale_t clocale = newlocale(LC_ALL_MASK, "C", (locale_t)0);
@@ -47,12 +61,14 @@ _cshims_strncasecmp_l(const char * _Nullable s1,
 #endif // TARGET_OS_WINDOWS
 }
 
-double
-_cshims_strtod_l(const char * _Nullable restrict nptr,
+CF_PRIVATE double _cshims_strtod_l(const char * _Nullable restrict nptr,
                  char * _Nullable * _Nullable restrict endptr,
                  locale_t _Nullable loc)
 {
-#if TARGET_OS_MAC
+#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
+    assert(loc == NULL);
+    return strtod_l(nptr, endptr, NULL);
+#elif TARGET_OS_MAC
     return strtod_l(nptr, endptr, loc);
 #elif TARGET_OS_WINDOWS
     return _strtod_l(nptr, endptr, loc);
@@ -67,12 +83,14 @@ _cshims_strtod_l(const char * _Nullable restrict nptr,
 #endif
 }
 
-float
-_cshims_strtof_l(const char * _Nullable restrict nptr,
+CF_PRIVATE float _cshims_strtof_l(const char * _Nullable restrict nptr,
                  char * _Nullable * _Nullable restrict endptr,
                  locale_t _Nullable loc)
 {
-#if TARGET_OS_MAC
+#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
+    assert(loc == NULL);
+    return strtof_l(nptr, endptr, NULL);
+#elif TARGET_OS_MAC
     return strtof_l(nptr, endptr, loc);
 #elif TARGET_OS_WINDOWS
     return _strtof_l(nptr, endptr, loc);
@@ -87,8 +105,7 @@ _cshims_strtof_l(const char * _Nullable restrict nptr,
 #endif
 }
 
-int
-_cshims_get_formatted_str_length(double value)
+CF_PRIVATE int _cshims_get_formatted_str_length(double value)
 {
     char empty[1];
     return snprintf(empty, 0, "%0.*g", DBL_DECIMAL_DIG, value);

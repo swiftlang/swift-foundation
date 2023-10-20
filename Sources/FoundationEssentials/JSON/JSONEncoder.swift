@@ -66,7 +66,7 @@ open class JSONEncoder {
         /// Encode the `Date` as UNIX millisecond timestamp (as a JSON number).
         case millisecondsSince1970
 
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
         // TODO: Reenable once DateFormatStyle has been ported: https://github.com/apple/swift-foundation/issues/46
         /// Encode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
         @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
@@ -998,7 +998,7 @@ private extension __JSONEncoder {
         case .millisecondsSince1970:
             return try .number(from: 1000.0 * date.timeIntervalSince1970, with: .throw, for: codingPathNode, additionalKey)
 
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
         case .iso8601:
             return self.wrap(date.formatted(.iso8601))
 
