@@ -72,90 +72,99 @@ extension Calendar {
 
 extension DateComponents {
     fileprivate func _validate(for calendar: Calendar) -> Bool {
-        var dcValuesAreValid = true
         var hasAtLeastOneFieldSet = false
-
+        
         if let v = self.era {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .era) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .era) else { return false }
         }
-
+        
         if let v = self.year {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .year) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .year) else { return false }
+        }
+        
+        if #available(FoundationPreview 0.4, *) {
+            if let v = self.dayOfYear {
+                hasAtLeastOneFieldSet = true
+                guard calendar.value(v, isValidFor: .dayOfYear) else { return false }
+            }
         }
 
         if let v = self.quarter {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .quarter) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .quarter) else { return false }
         }
 
         if let v = self.month {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .month) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .month) else { return false }
         }
 
         if let v = self.day {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .day) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .day) else { return false }
         }
 
         if let v = self.hour {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .hour) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .hour) else { return false }
         }
 
         if let v = self.minute {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .minute) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .minute) else { return false }
         }
 
         if let v = self.second {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .second) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .second) else { return false }
         }
 
         if let v = self.weekday {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .weekday) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .weekday) else { return false }
         }
 
         if let v = self.weekdayOrdinal {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .weekdayOrdinal) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .weekdayOrdinal) else { return false }
         }
 
         if let v = self.weekOfMonth {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .weekOfMonth) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .weekOfMonth) else { return false }
         }
 
         if let v = self.weekOfYear {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .weekOfYear) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .weekOfYear) else { return false }
         }
 
         if let v = self.yearForWeekOfYear {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .yearForWeekOfYear) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .yearForWeekOfYear) else { return false }
         }
 
         if let v = self.nanosecond {
             hasAtLeastOneFieldSet = true
-            if !calendar.value(v, isValidFor: .nanosecond) { dcValuesAreValid = false }
+            guard calendar.value(v, isValidFor: .nanosecond) else { return false }
         }
 
         if !hasAtLeastOneFieldSet && (isLeapMonth ?? false) {
-            dcValuesAreValid = false
+            return false
         }
 
-        return dcValuesAreValid
+        return true
     }
 
     var highestSetUnit: Calendar.Component? {
         // A note on performance: this approach is much faster than using key paths, which require a lot more allocations.
         if self.era != nil { return .era }
         if self.year != nil { return .year }
+        if #available(FoundationPreview 0.4, *) {
+            if self.dayOfYear != nil { return .dayOfYear }
+        }
         if self.quarter != nil { return .quarter }
         if self.month != nil { return .month }
         if self.day != nil { return .day }
@@ -189,6 +198,9 @@ extension DateComponents {
         if self.day != nil { return .day }
         if self.month != nil { return .month }
         if self.quarter != nil { return .quarter }
+        if #available(FoundationPreview 0.4, *) {
+            if self.dayOfYear != nil { return .dayOfYear }
+        }
         if self.year != nil { return .year }
         if self.era != nil { return .era }
         return nil
@@ -209,6 +221,9 @@ extension DateComponents {
         if self.weekOfMonth != nil { units.insert(.weekOfMonth) }
         if self.weekOfYear != nil { units.insert(.weekOfYear) }
         if self.yearForWeekOfYear != nil { units.insert(.yearForWeekOfYear) }
+        if #available(FoundationPreview 0.4, *) {
+            if self.dayOfYear != nil { units.insert(.dayOfYear) }
+        }
         if self.nanosecond != nil { units.insert(.nanosecond) }
         return units
     }
@@ -236,7 +251,10 @@ extension DateComponents {
         if self.yearForWeekOfYear != other.yearForWeekOfYear { mismatched.insert(.yearForWeekOfYear) }
         if self.nanosecond != other.nanosecond { mismatched.insert(.nanosecond) }
         if self.isLeapMonth != other.isLeapMonth { mismatched.insert(.isLeapMonth) }
-
+        if #available(FoundationPreview 0.4, *) {
+            if self.dayOfYear != other.dayOfYear { mismatched.insert(.dayOfYear) }
+        }
+        
         return mismatched
     }
 }
@@ -261,86 +279,178 @@ private func _handleCalendarResultNotFound(date: Date, calendar: Calendar, comps
 #endif
 }
 
-/* public */
-internal struct DateSequence : Sequence {
-    typealias Element = Date
-
-    let calendar: Calendar
-    let start: Date
-    let matchingComponents: DateComponents
-    let matchingPolicy: Calendar.MatchingPolicy
-    let repeatedTimePolicy: Calendar.RepeatedTimePolicy
-    let direction: Calendar.SearchDirection
-
-    struct Iterator: IteratorProtocol {
-        var iterations: Int
-        var previouslyReturnedMatchDate: Date?
-        var searchingDate: Date
-
-        let start: Date
+extension Calendar {
+    /// A `Sequence` of `Date`s which match the specified search criteria.
+    struct DatesByMatching : Sendable, Sequence {
+        typealias Element = Date
+        
         let calendar: Calendar
+        let start: Date
+        let range: Range<Date>?
         let matchingComponents: DateComponents
         let matchingPolicy: Calendar.MatchingPolicy
         let repeatedTimePolicy: Calendar.RepeatedTimePolicy
         let direction: Calendar.SearchDirection
-        let searchLimit: Int = 100
-
-        // Calculated at init, checked on `next`
-        let validated: Bool
-
-        init(_ calendar: Calendar, start: Date, matching matchingComponents: DateComponents, matchingPolicy: Calendar.MatchingPolicy, repeatedTimePolicy: Calendar.RepeatedTimePolicy, direction: Calendar.SearchDirection) {
+        
+        init(calendar: Calendar, start: Date, range: Range<Date>?, matchingComponents: DateComponents, matchingPolicy: Calendar.MatchingPolicy = .nextTime, repeatedTimePolicy: Calendar.RepeatedTimePolicy = .first, direction: Calendar.SearchDirection = .forward) {
             self.calendar = calendar
-            self.start = start
             self.matchingComponents = matchingComponents
             self.matchingPolicy = matchingPolicy
             self.repeatedTimePolicy = repeatedTimePolicy
             self.direction = direction
-
-            self.searchingDate = start
-            iterations = -1
-
-            // If this fails we'll short circuit the next `next`
-            validated = matchingComponents._validate(for: calendar)
+            self.start = start
+            self.range = range
         }
 
-        mutating func next() -> Element? {
-            guard validated else { return nil }
-
-            repeat {
-                iterations += 1
-                do {
-                    let result = try calendar._enumerateDatesStep(startingAfter: start, matching: matchingComponents, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction, inSearchingDate: searchingDate, previouslyReturnedMatchDate: previouslyReturnedMatchDate)
-                    
-                    searchingDate = result.newSearchDate
-
-                    // Return a value if we have a result. Else, continue on searching unless we've hit our search limit.
-                    // This version of the implementation ignores the 'exactMatch' result. Nobody cares unless they specify `strict`, and if they do that all results are exact anyway.
-                    if let (matchDate, _) = result.result {
-                        previouslyReturnedMatchDate = matchDate
-                        return matchDate
-                    }
-
-                    if (iterations < searchLimit) {
-                        // Try again on nil result or not-exact match
+        struct Iterator: Sendable, IteratorProtocol {
+            var iterations: Int
+            var previouslyReturnedMatchDate: Date?
+            var searchingDate: Date
+            
+            let range: Range<Date>?
+            let start: Date
+            let calendar: Calendar
+            let matchingComponents: DateComponents
+            let matchingPolicy: Calendar.MatchingPolicy
+            let repeatedTimePolicy: Calendar.RepeatedTimePolicy
+            let direction: Calendar.SearchDirection
+            let searchLimit: Int = 100
+            
+            // Calculated at init, checked on `next`
+            var finished: Bool
+            
+            internal init(_ calendar: Calendar, start: Date, range: Range<Date>?, matching matchingComponents: DateComponents, matchingPolicy: Calendar.MatchingPolicy, repeatedTimePolicy: Calendar.RepeatedTimePolicy, direction: Calendar.SearchDirection) {
+                self.calendar = calendar
+                
+                self.range = range
+                self.matchingComponents = matchingComponents
+                self.matchingPolicy = matchingPolicy
+                self.repeatedTimePolicy = repeatedTimePolicy
+                self.direction = direction
+                self.start = start
+                iterations = -1
+                
+                // Start searching here
+                searchingDate = start
+                
+                // If this fails we'll short circuit the next `next`
+                finished = !matchingComponents._validate(for: calendar)
+            }
+            
+            mutating func next() -> Element? {
+                guard !finished else { return nil }
+                
+                repeat {
+                    iterations += 1
+                    do {
+                        let result = try calendar._enumerateDatesStep(startingAfter: start, matching: matchingComponents, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction, inSearchingDate: searchingDate, previouslyReturnedMatchDate: previouslyReturnedMatchDate)
+                        
                         searchingDate = result.newSearchDate
-                        continue
-                    } else {
-                        // Give up
-                        _handleCalendarResultNotFound(date: start, calendar: calendar, comps: matchingComponents, direction: direction, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy)
+                        
+                        // Return a value if we have a result. Else, continue on searching unless we've hit our search limit.
+                        // This version of the implementation ignores the 'exactMatch' result. Nobody cares unless they specify `strict`, and if they do that all results are exact anyway.
+                        if let (matchDate, _) = result.result {
+                            
+                            if let range, !range.contains(matchDate) {
+                                // We are outside the scope of our search
+                                finished = true
+                                return nil
+                            }
+                            
+                            previouslyReturnedMatchDate = matchDate
+                            return matchDate
+                        }
+                        
+                        if (iterations < searchLimit) {
+                            // Try again on nil result or not-exact match
+                            searchingDate = result.newSearchDate
+                            continue
+                        } else {
+                            // Give up
+                            _handleCalendarResultNotFound(date: start, calendar: calendar, comps: matchingComponents, direction: direction, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy)
+                            finished = true
+                            return nil
+                        }
+                    } catch (let e as CalendarEnumerationError) {
+                        _handleCalendarError(e, date: start, calendar: calendar, comps: matchingComponents, direction: direction, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy)
+                        finished = true
                         return nil
+                    } catch {
+                        fatalError("Unexpected Calendar enumeration error type")
                     }
-                } catch (let e as CalendarEnumerationError) {
-                    _handleCalendarError(e, date: start, calendar: calendar, comps: matchingComponents, direction: direction, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy)
-                    return nil
-                } catch {
-                    fatalError("Unexpected Calendar enumeration error type")
-                }
-            } while true
+                } while true
+            }
+        }
+        
+        public func makeIterator() -> Iterator {
+            return Iterator(calendar, start: start, range: range, matching: matchingComponents, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction)
         }
     }
-
-    func makeIterator() -> Iterator {
-        return Iterator(calendar, start: start, matching: matchingComponents, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction)
+    
+    /// A `Sequence` of `Date`s, calculated by iterative addition of `DateComponents`.
+    struct DatesByAdding : Sendable, Sequence {
+        typealias Element = Date
+        
+        let calendar: Calendar
+        let start: Date
+        let range: Range<Date>?
+        let components: DateComponents
+        let wrappingComponents: Bool
+        
+        /// If `components` is `nil`, the result is an empty `Sequence`.
+        internal init(calendar: Calendar, start: Date, range: Range<Date>?, components: DateComponents, wrappingComponents: Bool) {
+            self.calendar = calendar
+            self.start = start
+            self.range = range
+            self.components = components
+            self.wrappingComponents = wrappingComponents
+        }
+        
+        struct Iterator: Sendable, IteratorProtocol {
+            let calendar: Calendar
+            let start: Date
+            let range: Range<Date>?
+            let components: DateComponents
+            let wrappingComponents: Bool
+            var finished = false
+            var iteration = 1
+            
+            /// If `components` is `nil`, the result is an empty `Sequence`.
+            init(calendar: Calendar, start: Date, range: Range<Date>?, components: DateComponents, wrappingComponents: Bool) {
+                self.start = start
+                self.calendar = calendar
+                self.components = components
+                self.range = range
+                self.wrappingComponents = wrappingComponents
+            }
+            
+            mutating func next() -> Element? {
+                guard !finished else {
+                    return nil
+                }
+                
+                let scaled = components.scaled(by: iteration)
+                let next = calendar.date(byAdding: scaled, to: start, wrappingComponents: wrappingComponents)
+                guard let next else {
+                    // We have finished
+                    finished = true
+                    return nil
+                }
+                
+                if let range, !range.contains(next) {
+                    // We are out of the range
+                    finished = true
+                    return nil
+                }
+                
+                iteration += 1
+                return next
+            }
+        }
+        
+        func makeIterator() -> Iterator {
+            return Iterator(calendar: calendar, start: start, range: range, components: components, wrappingComponents: wrappingComponents)
+        }
     }
 }
 
@@ -1233,6 +1343,12 @@ extension Calendar {
         if let result = try dateAfterMatchingWeekOfYear(startingAt: searchStartDate, components: comps, direction: direction) {
             searchStartDate = result
         }
+        
+        if #available(FoundationPreview 0.4, *) {
+            if let result = try dateAfterMatchingDayOfYear(startingAt: searchStartDate, components: comps, direction: direction) {
+                searchStartDate = result
+            }
+        }
 
         if let result = try dateAfterMatchingMonth(startingAt: searchStartDate, components: comps, direction: direction, strictMatching: isStrictMatching) {
             searchStartDate = result
@@ -1288,7 +1404,6 @@ extension Calendar {
             throw CalendarEnumerationError.notAdvancing(next, previous)
         }
     }
-
     
     private func dateAfterMatchingEra(startingAt startDate: Date, components: DateComponents, direction: SearchDirection, matchedEra: inout Bool) -> Date? {
         guard let era = components.era else {
@@ -1462,6 +1577,44 @@ extension Calendar {
             try verifyAdvancingResult(result, previous: lastResult, direction: direction)
         } while weekOfYear != dateWeekOfYear
 
+        return result
+    }
+    
+    @available(FoundationPreview 0.4, *)
+    private func dateAfterMatchingDayOfYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+        guard let dayOfYear = components.dayOfYear else {
+            // Nothing to do
+            return nil
+        }
+        var dateDayOfYear = component(.dayOfYear, from: startingAt)
+        
+        guard dayOfYear != dateDayOfYear else {
+            // Already matches
+            return nil
+        }
+        
+        var result = startingAt
+        repeat {
+            let lastResult = result
+            
+            guard let foundRange = dateInterval(of: .dayOfYear, for: result) else {
+                throw CalendarEnumerationError.dateOutOfRange(.dayOfYear, result)
+            }
+
+            if direction == .backward {
+                let searchDate = foundRange.start - foundRange.duration
+                dateDayOfYear = component(.dayOfYear, from: searchDate)
+                result = searchDate
+            } else {
+                let searchDate = foundRange.start + foundRange.duration
+                dateDayOfYear = component(.dayOfYear, from: searchDate)
+                result = searchDate
+            }
+
+            
+            try verifyAdvancingResult(result, previous: lastResult, direction: direction)
+        } while dayOfYear != dateDayOfYear
+        
         return result
     }
 
@@ -2301,7 +2454,7 @@ extension Calendar.Component {
             return .era
         case .weekOfYear:
             return .yearForWeekOfYear
-        case .quarter, .isLeapMonth, .month:
+        case .quarter, .isLeapMonth, .month, .dayOfYear:
             return .year
         case .day, .weekOfMonth, .weekdayOrdinal:
             return .month

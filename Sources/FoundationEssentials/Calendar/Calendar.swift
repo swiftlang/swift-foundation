@@ -170,6 +170,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         package static let calendar = ComponentSet(rawValue: 1 << 14)
         package static let timeZone = ComponentSet(rawValue: 1 << 15)
         package static let isLeapMonth = ComponentSet(rawValue: 1 << 16)
+        package static let dayOfYear = ComponentSet(rawValue: 1 << 18)
 
         package var count: Int {
             rawValue.nonzeroBitCount
@@ -198,12 +199,20 @@ public struct Calendar : Hashable, Equatable, Sendable {
                     result.insert(.isLeapMonth)
                 }
             }
+            if contains(.dayOfYear) {
+                if #available(FoundationPreview 0.4, *) {
+                    result.insert(.dayOfYear)
+                }
+            }
             return result
         }
 
         package var highestSetUnit: Calendar.Component? {
             if self.contains(.era) { return .era }
             if self.contains(.year) { return .year }
+            if #available(FoundationPreview 0.4, *) {
+                if self.contains(.dayOfYear) { return .dayOfYear }
+            }
             if self.contains(.quarter) { return .quarter }
             if self.contains(.month) { return .month }
             if self.contains(.day) { return .day }
@@ -251,13 +260,17 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case timeZone
         @available(FoundationPreview 0.1, *)
         case isLeapMonth
-
+        
+        @available(FoundationPreview 0.4, *)
+        case dayOfYear
+        
         fileprivate var componentSetValue: ComponentSet.RawValue {
             switch self {
             case .era: return ComponentSet.era.rawValue
             case .year: return ComponentSet.year.rawValue
             case .month: return ComponentSet.month.rawValue
             case .day: return ComponentSet.day.rawValue
+            case .dayOfYear: return ComponentSet.dayOfYear.rawValue
             case .hour: return ComponentSet.hour.rawValue
             case .minute: return ComponentSet.minute.rawValue
             case .second: return ComponentSet.second.rawValue
@@ -280,6 +293,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .year: "year"
             case .month: "month"
             case .day: "day"
+            case .dayOfYear: "dayOfYear"
             case .hour: "hour"
             case .minute: "minute"
             case .second: "second"
@@ -497,6 +511,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar.ordinality(of: smaller, in: larger, for: date)
     }
 
+    // MARK: - Addition
+    
     /// Returns a new `Date` representing the date calculated by adding components to a given date.
     ///
     /// - parameter components: A set of values to add to the date.
@@ -516,43 +532,53 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A new date, or nil if a date could not be calculated with the given input.
     @available(iOS 8.0, *)
     public func date(byAdding component: Component, value: Int, to date: Date, wrappingComponents: Bool = false) -> Date? {
-        var dc = DateComponents()
-        switch component {
-        case .era:
-            dc.era = value
-        case .year:
-            dc.year = value
-        case .month:
-            dc.month = value
-        case .day:
-            dc.day = value
-        case .hour:
-            dc.hour = value
-        case .minute:
-            dc.minute = value
-        case .second:
-            dc.second = value
-        case .weekday:
-            dc.weekday = value
-        case .weekdayOrdinal:
-            dc.weekdayOrdinal = value
-        case .quarter:
-            dc.quarter = value
-        case .weekOfMonth:
-            dc.weekOfMonth = value
-        case .weekOfYear:
-            dc.weekOfYear = value
-        case .yearForWeekOfYear:
-            dc.yearForWeekOfYear = value
-        case .nanosecond:
-            dc.nanosecond = value
-        case .calendar, .timeZone, .isLeapMonth:
+        guard let dc = DateComponents(component: component, value: value) else {
             return nil
         }
-
+        
         return self.date(byAdding: dc, to: date, wrappingComponents: wrappingComponents)
     }
 
+    /// Returns a sequence of `Date`s, calculated by adding a scaled amount of `Calendar.Component`s to a starting `Date`.
+    /// If a range is supplied, the sequence terminates if the next result is not contained in the range. The starting point does not need to be contained in the range, but if the first result is outside of the range then the result will be an empty sequence.
+    ///
+    /// - parameter start: The starting point of the search.
+    /// - parameter range: The range of dates to allow in the result. The sequence terminates if the next result is not contained in this range. If `nil`, all results are allowed.
+    /// - parameter component: A component to add or subtract.
+    /// - parameter value: The value of the specified component to add or subtract. The default value is `1`. The value can be negative, which causes subtraction.
+    /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
+    /// - returns: A `Sequence` of `Date` values, or an empty sequence if no addition could be performed.
+    @available(FoundationPreview 0.4, *)
+    public func dates(byAdding component: Calendar.Component,
+                      value: Int = 1,
+                      startingAt start: Date,
+                      in range: Range<Date>? = nil,
+                      wrappingComponents: Bool = false) -> some (Sequence<Date> & Sendable) {
+        guard let components = DateComponents(component: component, value: value) else {
+            preconditionFailure("Attempt to add with an invalid Calendar.Component argument")
+        }
+        
+        return DatesByAdding(calendar: self, start: start, range: range, components: components, wrappingComponents: wrappingComponents)
+    }
+    
+    /// Returns a sequence of `Date`s, calculated by repeatedly adding an amount of `DateComponents` to a starting `Date` and then to each subsequent result.
+    /// If a range is supplied, the sequence terminates if the next result is not contained in the range. The starting point does not need to be contained in the range, but if the first result is outside of the range then the result will be an empty sequence.
+    ///
+    /// - parameter start: The starting point of the search.
+    /// - parameter range: The range of dates to allow in the result. The sequence terminates if the next result is not contained in this range. If `nil`, all results are allowed.
+    /// - parameter components: The components to add or subtract.
+    /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
+    /// - returns: A `Sequence` of `Date` values, or an empty sequence if no addition could be performed.
+    @available(FoundationPreview 0.4, *)
+    public func dates(byAdding components: DateComponents,
+                      startingAt start: Date,
+                      in range: Range<Date>? = nil,
+                      wrappingComponents: Bool = false) -> some (Sequence<Date> & Sendable) {
+        DatesByAdding(calendar: self, start: start, range: range, components: components, wrappingComponents: wrappingComponents)
+    }
+    
+    // MARK: -
+    
     /// Returns a date created from the specified components.
     ///
     /// - parameter components: Used as input to the search algorithm for finding a corresponding date.
@@ -599,7 +625,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: All components, calculated using the `Calendar` and `TimeZone`.
     @available(iOS 8.0, *)
     public func dateComponents(in timeZone: TimeZone, from date: Date) -> DateComponents {
-        var dc = _calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date, in: timeZone)
+        var dc = _calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: date, in: timeZone)
 
         // Fill out the Calendar field of dateComponents (the above calls cannot insert this struct into the date components, because they don't know the right value).
         dc.calendar = self
@@ -1102,29 +1128,32 @@ public struct Calendar : Hashable, Equatable, Sendable {
     public func enumerateDates(startingAfter start: Date, matching components: DateComponents, matchingPolicy: MatchingPolicy, repeatedTimePolicy: RepeatedTimePolicy = .first, direction: SearchDirection = .forward, using block: (_ result: Date?, _ exactMatch: Bool, _ stop: inout Bool) -> Void) {
         _enumerateDates(startingAfter: start, matching: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction, using: block)
     }
-
+    
     /// Computes the dates which match (or most closely match) a given set of components, returned as a `Sequence`.
     ///
-    /// There will be at least one intervening date which does not match all the components (or the given date itself must not match) between the given date and any result.
+    /// If `direction` is set to `.backward`, this method finds the previous match before the start date. The intent is that the same matches as for a `.forward` search will be found. For example, if you are searching forwards or backwards for each hour with minute "27", the seconds in the date you will get in both a `.forward` and `.backward` search would be `00`.  Similarly, for DST backwards jumps which repeat times, you'll get the first match by default, where "first" is defined from the point of view of searching forwards. Therefore, when searching backwards looking for a particular hour, with no minute and second specified, you don't get a minute and second of `59:59` for the matching hour but instead `00:00`.
     ///
-    /// If `direction` is set to `.backward`, this method finds the previous match before the given date. The intent is that the same matches as for a `.forward` search will be found (that is, if you are searching forwards or backwards for each hour with minute "27", the seconds in the date you will get in forwards search would be 00), and the same will be true in a backwards search in order to implement this rule.  Similarly for DST backwards jumps which repeats times, you'll get the first match by default, where "first" is defined from the point of view of searching forwards.  So, when searching backwards looking for a particular hour, with no minute and second specified, you don't get a minute and second of 59:59 for the matching hour (which would be the nominal first match within a given hour, given the other rules here, when searching backwards).
+    /// If a range is supplied, the sequence terminates if the next result is not contained in the range. The starting point does not need to be contained in the range, but if the first result is outside of the range then the result will be an empty sequence.
     ///
-    /// If an exact match is not possible, and requested with the `strict` option, the sequence ends.  (Logically, since an exact match searches indefinitely into the future, if no match is found there's no point in continuing the enumeration.)
+    /// If an exact match is not possible, and requested with the `strict` option, the sequence ends.
     ///
-    /// Result dates have an integer number of seconds (as if 0 was specified for the nanoseconds property of the `DateComponents` matching parameter), unless a value was set in the nanoseconds property, in which case the result date will have that number of nanoseconds (or as close as possible with floating point numbers).
+    /// Result dates have an integer number of seconds (as if 0 was specified for the nanoseconds property of the `DateComponents` matching parameter), unless a value was set in the nanoseconds property, in which case the result date will have that number of nanoseconds, or as close as possible with floating point numbers.
     /// - parameter start: The `Date` at which to start the search.
+    /// - parameter range: The range of dates to allow in the result. The sequence terminates if the next result is not contained in this range. If `nil`, all results are allowed.
     /// - parameter components: The `DateComponents` to use as input to the search algorithm.
     /// - parameter matchingPolicy: Determines the behavior of the search algorithm when the input produces an ambiguous result.
     /// - parameter repeatedTimePolicy: Determines the behavior of the search algorithm when the input produces a time that occurs twice on a particular day.
     /// - parameter direction: Which direction in time to search. The default value is `.forward`, which means later in time.
-    internal func dates(startingAfter start: Date,
-                        matching components: DateComponents,
-                        matchingPolicy: MatchingPolicy = .nextTime,
-                        repeatedTimePolicy: RepeatedTimePolicy = .first,
-                        direction: SearchDirection = .forward) -> DateSequence {
-        DateSequence(calendar: self, start: start, matchingComponents: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction)
+    @available(FoundationPreview 0.4, *)
+    public func dates(byMatching components: DateComponents,
+                      startingAt start: Date,
+                      in range: Range<Date>? = nil,
+                      matchingPolicy: MatchingPolicy = .nextTime,
+                      repeatedTimePolicy: RepeatedTimePolicy = .first,
+                      direction: SearchDirection = .forward) -> some (Sequence<Date> & Sendable) {
+        DatesByMatching(calendar: self, start: start, range: range, matchingComponents: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction)
     }
-
+                
     /// Computes the next date which matches (or most closely matches) a given set of components.
     ///
     /// The general semantics follow those of the `enumerateDates` function.
@@ -1218,7 +1247,14 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: `true` if the date matches all of the components, otherwise `false`.
     @available(iOS 8.0, *)
     public func date(_ date: Date, matchesComponents components: DateComponents) -> Bool {
-        let comparedUnits: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .nanosecond]
+        let comparedUnits: Set<Calendar.Component> 
+        
+        if #available(FoundationPreview 0.4, *) {
+            comparedUnits = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .nanosecond]
+        } else {
+            comparedUnits = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .nanosecond]
+        }
+            
 
         let actualUnits = comparedUnits.filter { u in
             return components.value(for: u) != nil
