@@ -31,6 +31,13 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.UnaryMinus : CustomStringConvertible {
+    public var description: String {
+        "UnaryMinus(wrapped: \(wrapped))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.UnaryMinus : StandardPredicateExpression where Wrapped : StandardPredicateExpression {}
 

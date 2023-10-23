@@ -141,6 +141,27 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.SequenceContains : CustomStringConvertible {
+    public var description: String {
+        "SequenceContains(sequence: \(sequence), element: \(element))"
+    }
+}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.SequenceContainsWhere : CustomStringConvertible {
+    public var description: String {
+        "SequenceContainsWhere(sequence: \(sequence), variable: \(variable), test: \(test))"
+    }
+}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.SequenceAllSatisfy : CustomStringConvertible {
+    public var description: String {
+        "SequenceAllSatisfy(sequence: \(sequence), variable: \(variable), test: \(test))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceContains : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 

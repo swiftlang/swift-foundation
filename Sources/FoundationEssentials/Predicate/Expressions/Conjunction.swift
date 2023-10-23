@@ -40,6 +40,13 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.Conjunction : CustomStringConvertible {
+    public var description: String {
+        "Conjunction(lhs: \(lhs), rhs: \(rhs))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Conjunction : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 

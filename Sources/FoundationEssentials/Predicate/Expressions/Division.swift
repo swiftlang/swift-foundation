@@ -100,6 +100,27 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.FloatDivision : CustomStringConvertible {
+    public var description: String {
+        "FloatDivision(lhs: \(lhs), rhs: \(rhs))"
+    }
+}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.IntDivision : CustomStringConvertible {
+    public var description: String {
+        "IntDivision(lhs: \(lhs), rhs: \(rhs))"
+    }
+}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.IntRemainder : CustomStringConvertible {
+    public var description: String {
+        "IntRemainder(lhs: \(lhs), rhs: \(rhs))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.FloatDivision : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
