@@ -41,6 +41,7 @@ open class JSONEncoder {
 
 #if FOUNDATION_FRAMEWORK
         // TODO: Reenable once String.compare is implemented
+        // https://github.com/apple/swift-foundation/issues/284
 
         /// Produce JSON with dictionary keys sorted in lexicographic order.
         @available(macOS 10.13, iOS 11.0, watchOS 4.0, tvOS 11.0, *)
