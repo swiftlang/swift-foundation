@@ -12,6 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
+#if canImport(Foundation_Private.NSExpression)
 @_implementationOnly import Foundation_Private.NSExpression
 @_implementationOnly import Foundation_Private.NSPredicate
 
@@ -531,4 +532,5 @@ extension NSPredicate {
     }
 }
 
+#endif //canImport(Foundation_Private.NSExpression)
 #endif

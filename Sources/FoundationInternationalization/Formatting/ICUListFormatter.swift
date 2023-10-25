@@ -76,6 +76,3 @@ internal final class ICUListFormatter {
     }
 
 }
-
-
-

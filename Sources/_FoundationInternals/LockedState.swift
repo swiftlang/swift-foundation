@@ -10,9 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
+#if canImport(os)
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import os
+#if canImport(C.os.lock)
+@_implementationOnly import C.os.lock
+#endif
 #else
 package import os
 #endif
@@ -26,7 +29,7 @@ internal struct LockedState<State> {
 
     // Internal implementation for a cheap lock to aid sharing code across platforms
     private struct _Lock {
-#if canImport(Darwin)
+#if canImport(os)
         typealias Primitive = os_unfair_lock
 #elseif canImport(Glibc)
         typealias Primitive = pthread_mutex_t
@@ -38,7 +41,7 @@ internal struct LockedState<State> {
         var _platformLock: PlatformLock
 
         fileprivate static func initialize(_ platformLock: PlatformLock) {
-#if canImport(Darwin)
+#if canImport(os)
             platformLock.initialize(to: os_unfair_lock())
 #elseif canImport(Glibc)
             pthread_mutex_init(platformLock, nil)
@@ -55,7 +58,7 @@ internal struct LockedState<State> {
         }
 
         static fileprivate func lock(_ platformLock: PlatformLock) {
-#if canImport(Darwin)
+#if canImport(os)
             os_unfair_lock_lock(platformLock)
 #elseif canImport(Glibc)
             pthread_mutex_lock(platformLock)
@@ -65,7 +68,7 @@ internal struct LockedState<State> {
         }
 
         static fileprivate func unlock(_ platformLock: PlatformLock) {
-#if canImport(Darwin)
+#if canImport(os)
             os_unfair_lock_unlock(platformLock)
 #elseif canImport(Glibc)
             pthread_mutex_unlock(platformLock)

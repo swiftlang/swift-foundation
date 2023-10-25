@@ -210,7 +210,7 @@ extension DataProtocol {
 extension DataProtocol where Self : ContiguousBytes {
     public func copyBytes<DestinationType, R: RangeExpression>(to ptr: UnsafeMutableBufferPointer<DestinationType>, from range: R) where R.Bound == Index {
         precondition(ptr.baseAddress != nil)
-
+        
         let concreteRange = range.relative(to: self)
         withUnsafeBytes { fullBuffer in
             let adv = distance(from: startIndex, to: concreteRange.lowerBound)

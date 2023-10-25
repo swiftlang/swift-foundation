@@ -600,6 +600,7 @@ extension Substring {
     }
 
     func _range(of strToFind: Substring, options: String.CompareOptions) throws -> Range<Index>? {
+        #if canImport(FoundationICU)
         if options.contains(.regularExpression) {
             guard let regex = try RegexPatternCache.cache.regex(for: String(strToFind), caseInsensitive: options.contains(.caseInsensitive)) else {
                 return nil
@@ -613,7 +614,8 @@ extension Substring {
                 return match.range
             }
         }
-
+        #endif
+        
         guard !isEmpty, !strToFind.isEmpty else {
             return nil
         }

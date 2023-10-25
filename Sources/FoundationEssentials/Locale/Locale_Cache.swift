@@ -26,7 +26,7 @@ struct LocaleCache : Sendable {
     
     // _LocaleICU, if present. Otherwise we use _LocaleUnlocalized. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
     static var localeICUClass: _LocaleProtocol.Type = {
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
         return _LocaleICU.self
 #else
         if let name = _typeByName("FoundationInternationalization._LocaleICU"), let t = name as? _LocaleProtocol.Type {
@@ -140,6 +140,7 @@ struct LocaleCache : Sendable {
             }
         }
         
+#if canImport(FoundationICU)
         mutating func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
             let id = IdentifierAndPrefs(identifier: locale.identifier, prefs: locale.prefs)
             if let locale = cachedFixedLocaleToNSLocales[id] {
@@ -152,6 +153,7 @@ struct LocaleCache : Sendable {
                 return nsLocale
             }
         }
+#endif
 
         mutating func currentNSLocale(preferences: LocalePreferences?, cache: Bool) -> _NSSwiftLocale? {
             resetCurrentIfNeeded()
@@ -172,9 +174,14 @@ struct LocaleCache : Sendable {
                 return nil
             }
 
+#if canImport(FoundationICU)
             // We have neither a Swift Locale nor an NSLocale. Recalculate and set both.
             let locale = _LocaleICU(name: nil, prefs: preferences, disableBundleMatching: false)
+#else
+            let locale = _LocaleUnlocalized(name: nil, prefs: preferences, disableBundleMatching: false)
+#endif
             let nsLocale = _NSSwiftLocale(Locale(inner: locale))
+            
             if cache {
                 // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
                 self.cachedCurrentLocale = locale
@@ -281,9 +288,11 @@ struct LocaleCache : Sendable {
         lock.withLock { $0.fixedNSLocale(identifier: id) }
     }
 
+#if canImport(FoundationICU)
     func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
         lock.withLock { $0.fixedNSLocale(locale) }
     }
+#endif
 
     func autoupdatingCurrentNSLocale() -> _NSSwiftLocale {
         lock.withLock { $0.autoupdatingNSLocale() }
@@ -319,7 +328,7 @@ struct LocaleCache : Sendable {
         lock.withLock { $0.fixedComponents(comps) }
     }
     
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_CFPREFERENCES
     func preferences() -> (LocalePreferences, Bool) {
         // On Darwin, we check the current user preferences for Locale values
         var wouldDeadlock: DarwinBoolean = false
@@ -372,7 +381,7 @@ struct LocaleCache : Sendable {
     }
 #endif
     
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_CFPREFERENCES
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
     func localeAsIfCurrent(name: String?, cfOverrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
         
@@ -399,7 +408,7 @@ struct LocaleCache : Sendable {
     }
 
     func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
         guard !allowsMixedLocalizations else {
             let (prefs, _) = preferences()
             let inner = _LocaleICU(name: nil, prefs: prefs, disableBundleMatching: true)

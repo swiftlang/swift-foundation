@@ -15,11 +15,25 @@ import Darwin
 import Glibc
 #elseif canImport(WinSDK)
 import WinSDK
+#elseif canImport(threads_h)
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly import threads_h
+#else
+package import threads_h
+#endif
+#elseif canImport(threads)
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly import threads
+#else
+package import threads
+#endif
 #endif
 
 struct _ThreadLocal {
 #if canImport(Darwin) || canImport(Glibc)
     fileprivate typealias PlatformKey = pthread_key_t
+#elseif USE_TSS
+    fileprivate typealias PlatformKey = tss_t
 #elseif canImport(WinSDK)
     fileprivate typealias PlatformKey = DWORD
 #endif
@@ -32,6 +46,10 @@ struct _ThreadLocal {
             var key = PlatformKey()
             pthread_key_create(&key, nil)
             self.key = key
+#elseif USE_TSS
+            var key = PlatformKey()
+            tss_create(&key, nil)
+            self.key = key
 #elseif canImport(WinSDK)
             key = FlsAlloc(nil)
 #endif
@@ -42,6 +60,8 @@ struct _ThreadLocal {
         get {
 #if canImport(Darwin) || canImport(Glibc)
             pthread_getspecific(key)
+#elseif USE_TSS
+            tss_get(key)
 #elseif canImport(WinSDK)
             FlsGetValue(key)
 #endif
@@ -50,6 +70,8 @@ struct _ThreadLocal {
         set {
 #if canImport(Darwin) || canImport(Glibc)
             pthread_setspecific(key, newValue)
+#elseif USE_TSS
+            tss_set(key, newValue)
 #elseif canImport(WinSDK)
             FlsSetValue(key, newValue)
 #endif

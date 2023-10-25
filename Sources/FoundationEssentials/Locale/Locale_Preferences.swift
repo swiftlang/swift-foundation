@@ -75,7 +75,9 @@ package struct LocalePreferences: Hashable {
     // The OS no longer writes out this preference, but we keep it here for compatibility with CFDateFormatter behavior.
     package var icuNumberFormatStrings: CFDictionary?
     package var icuNumberSymbols: CFDictionary?
+#if !NO_FORMATTERS
     package var dateFormats: [Date.FormatStyle.DateStyle: String]? // Bridged version of `icuDateFormatStrings`
+#endif
 #endif
     package var numberSymbols: [UInt32 : String]? // Bridged version of `icuNumberSymbols`
 
@@ -87,7 +89,7 @@ package struct LocalePreferences: Hashable {
 
     package init() { }
     
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
     // The framework init supports customized dateFormats
     package init(metricUnits: Bool? = nil,
          languages: [String]? = nil,
@@ -153,7 +155,7 @@ package struct LocalePreferences: Hashable {
     }
 #endif
 
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_CFPREFERENCES
     /// Interpret a dictionary (from user defaults) according to a predefined set of strings and convert it into the more strongly-typed `LocalePreferences` values.
     /// Several dictionaries may need to be applied to the same instance, which is why this is structured as a mutating setter rather than an initializer.
     /// Why use a `CFDictionary` instead of a Swift dictionary here? The input prefs may be a complete copy of the user's prefs, and we don't want to bridge a ton of unrelated data into Swift just to extract a few keys. Keeping it as a `CFDictionary` avoids that overhead, and we call into small CF helper functions to get the data we need, if it is there.
@@ -284,15 +286,17 @@ package struct LocalePreferences: Hashable {
         if let other = prefs.collationOrder { self.collationOrder = other }
         if let other = prefs.firstWeekday { self.firstWeekday = other }
         if let other = prefs.minDaysInFirstWeek { self.minDaysInFirstWeek = other }
+        if let other = prefs.numberSymbols { self.numberSymbols = other }
 #if FOUNDATION_FRAMEWORK
         if let other = prefs.icuDateTimeSymbols { self.icuDateTimeSymbols = other }
         if let other = prefs.icuDateFormatStrings { self.icuDateFormatStrings = other }
         if let other = prefs.icuTimeFormatStrings { self.icuTimeFormatStrings = other }
         if let other = prefs.icuNumberFormatStrings { self.icuNumberFormatStrings = other }
         if let other = prefs.icuNumberSymbols { self.icuNumberSymbols = other }
+#if !NO_FORMATTERS
         if let other = prefs.dateFormats { self.dateFormats = other }
-#endif
-        if let other = prefs.numberSymbols { self.numberSymbols = other }
+#endif // !NO_FORMATTERS
+#endif // FOUNDATION_FRAMEWORK
         if let other = prefs.country { self.country = other }
         if let other = prefs.measurementUnits { self.measurementUnits = other }
         if let other = prefs.temperatureUnit { self.temperatureUnit = other }

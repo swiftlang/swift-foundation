@@ -231,7 +231,7 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
         LocaleCache.cache.current.forceTemperatureUnit
     }
     
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
     func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
         LocaleCache.cache.current.customDateFormat(style)
     }

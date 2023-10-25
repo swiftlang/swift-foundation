@@ -233,7 +233,7 @@ internal final class _LocaleUnlocalized : _LocaleProtocol, @unchecked Sendable {
         nil
     }
     
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
     func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
         nil
     }

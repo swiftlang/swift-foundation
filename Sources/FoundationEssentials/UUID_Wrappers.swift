@@ -13,8 +13,10 @@
 
 @_implementationOnly import _ForSwiftFoundation
 
+#if canImport(Darwin.uuid)
 // Needed this for backward compatibility even though we don't use it.
 import Darwin.uuid
+#endif
 
 @available(macOS 10.10, iOS 8.0, tvOS 9.0, watchOS 2.0, *)
 extension UUID : ReferenceConvertible {

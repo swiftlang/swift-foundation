@@ -24,11 +24,12 @@ extension StringProtocol {
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var localizedCapitalized: String {
 #if FOUNDATION_FRAMEWORK
+#if canImport(FoundationICU)
         if _foundation_essentials_feature_enabled() {
             return String(self)._capitalized(with: .current)
-        } else {
-            return _ns.localizedCapitalized
         }
+#endif
+        return _ns.localizedCapitalized
 #else
         return String(self)._capitalized(with: .current)
 #endif
@@ -39,11 +40,12 @@ extension StringProtocol {
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func capitalized(with locale: Locale?) -> String {
 #if FOUNDATION_FRAMEWORK
+#if canImport(FoundationICU)
         if _foundation_essentials_feature_enabled() {
             return String(self)._capitalized(with: locale)
-        } else {
-            return _ns.capitalized(with: locale)
         }
+#endif
+        return _ns.capitalized(with: locale)
 #else
         return String(self)._capitalized(with: locale)
 #endif
@@ -54,9 +56,11 @@ extension StringProtocol {
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var localizedLowercase: String {
 #if FOUNDATION_FRAMEWORK
+#if canImport(FoundationICU)
         if _foundation_essentials_feature_enabled() {
             return String(self)._lowercased(with: .current)
         }
+#endif
 
         return _ns.localizedLowercase
 #else
@@ -71,9 +75,11 @@ extension StringProtocol {
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public func lowercased(with locale: Locale?) -> String {
 #if FOUNDATION_FRAMEWORK
+#if canImport(FoundationICU)
         if _foundation_essentials_feature_enabled() {
             return String(self)._lowercased(with: locale)
         }
+#endif
         return _ns.lowercased(with: locale)
 #else
         return String(self)._lowercased(with: locale)
@@ -85,9 +91,11 @@ extension StringProtocol {
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var localizedUppercase: String {
 #if FOUNDATION_FRAMEWORK
+#if canImport(FoundationICU)
         if _foundation_essentials_feature_enabled() {
             return String(self)._uppercased(with: .current)
         }
+#endif
 
         return _ns.localizedUppercase
 #else
@@ -101,9 +109,11 @@ extension StringProtocol {
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public func uppercased(with locale: Locale?) -> String {
 #if FOUNDATION_FRAMEWORK
+#if canImport(FoundationICU)
         if _foundation_essentials_feature_enabled() {
             return String(self)._uppercased(with: locale)
         }
+#endif
 
         return _ns.uppercased(with: locale)
 #else

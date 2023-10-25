@@ -111,12 +111,20 @@ extension NSTimeZone {
 
     @objc
     static func _knownTimeZoneIdentifiers() -> [String] {
+#if canImport(FoundationICU)
         TimeZone.knownTimeZoneIdentifiers
+#else
+        []
+#endif
     }
 
     @objc
     static func _timeZoneDataVersion() -> String {
+#if canImport(FoundationICU)
         TimeZone.timeZoneDataVersion
+#else
+        ""
+#endif
     }
 }
 
@@ -229,13 +237,16 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge {
     }
     
     private static func dataFromTZFile(_ name: String) -> Data {
+#if NO_TZFILE
+        return Data()
+#else
         let path = TimeZone.TZDIR + "/" + name
         guard !path.contains("..") else {
             // No good reason for .. to be present anywhere in the path
             return Data()
         }
 
-        #if os(Windows)
+#if os(Windows)
         let fd: CInt = path.withCString(encodedAs: UTF16.self) {
             var fd: CInt = -1
             let errno: errno_t =
@@ -243,9 +254,9 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge {
             guard errno == 0 else { return -1 }
             return fd
         }
-        #else
+#else
         let fd = open(path, O_RDONLY, 0666)
-        #endif
+#endif
 
         guard fd >= 0 else { return Data() }
         defer { close(fd) }
@@ -280,6 +291,7 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge {
         guard ret >= sz else { return Data() }
 
         return Data(bytes: bytes.baseAddress!, count: sz)
+#endif
     }
 
 }

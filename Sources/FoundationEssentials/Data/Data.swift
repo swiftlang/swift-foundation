@@ -37,6 +37,12 @@ private func malloc_good_size(_ size: Int) -> Int {
     return size
 }
 
+#elseif canImport(C)
+
+private func malloc_good_size(_ size: Int) -> Int {
+    return size
+}
+
 #endif
 
 #if os(Windows)
@@ -46,6 +52,8 @@ import func WinSDK.UnmapViewOfFile
 internal func __DataInvokeDeallocatorUnmap(_ mem: UnsafeMutableRawPointer, _ length: Int) {
 #if os(Windows)
     _ = UnmapViewOfFile(mem)
+#elseif canImport(C)
+    free(mem)
 #else
     munmap(mem, length)
 #endif

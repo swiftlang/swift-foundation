@@ -351,7 +351,7 @@ internal struct JSONWriter {
             pretty ? writer(" : ") : writer(":")
             try serializeJSON(value, depth: depth)
         }
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_LOCALIZATION
         if sortedKeys {
             // TODO: Until we have a solution for sorting like Locale.system in FoundationEssentials or with the help of FoundationLocalization, this comparison requires bridging back to NSString. To avoid the extreme overhead of bridging the strings on every comparison, we'll do it up front instead.
             // https://github.com/apple/swift-foundation/issues/284

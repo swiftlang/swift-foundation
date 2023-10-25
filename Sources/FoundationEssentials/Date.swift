@@ -358,7 +358,7 @@ extension NSDate : _HasCustomAnyHashableRepresentation {
 #endif // FOUNDATION_FRAMEWORK
 
 // MARK: - Playground Support
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Date : _CustomPlaygroundQuickLookable {
     var summary: String {

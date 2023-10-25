@@ -78,7 +78,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         Locale(inner: LocaleCache.cache.system)
     }
 
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
     internal static func localeAsIfCurrent(name: String?, cfOverrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
         return LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: cfOverrides, disableBundleMatching: disableBundleMatching)
@@ -483,7 +483,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.forceMinDaysInFirstWeek(calendar)
     }
 
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
     // This is framework-only because Date.FormatStyle.DateStyle is Internationalization-only.
     package func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String? {
         _locale.customDateFormat(style)

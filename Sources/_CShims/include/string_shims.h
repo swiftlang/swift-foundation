@@ -13,7 +13,9 @@
 #ifndef CSHIMS_STRING_H
 #define CSHIMS_STRING_H
 
+#if __has_include(<locale.h>)
 #include <locale.h>
+#endif
 #include <stddef.h>
 
 #if __has_include(<xlocale.h>)
@@ -22,6 +24,10 @@
 
 #if defined(_WIN32)
 #define locale_t _locale_t
+#endif
+
+#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
+#define locale_t void *
 #endif
 
 int _cshims_strncasecmp_l(const char * _Nullable s1, const char * _Nullable s2, size_t n, locale_t _Nullable loc);
