@@ -251,7 +251,7 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
     
 #if FOUNDATION_FRAMEWORK
     func pref(for key: String) -> Any? {
-        LocaleCache.cache.current.pref
+        LocaleCache.cache.current.pref(for: key)
     }
     
     func bridgeToNSLocale() -> NSLocale {
