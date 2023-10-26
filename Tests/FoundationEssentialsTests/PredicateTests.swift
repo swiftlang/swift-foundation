@@ -14,6 +14,13 @@
 import TestSupport
 #endif
 
+#if !FOUNDATION_FRAMEWORK
+// Resolve ambiguity between Foundation.#Predicate and FoundationEssentials.#Predicate
+@freestanding(expression)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
+#endif
+
 final class PredicateTests: XCTestCase {
     
     override func setUp() async throws {
@@ -31,6 +38,7 @@ final class PredicateTests: XCTestCase {
         var f: Bool
         var g: [Int]
         var h: Date = .now
+        var i: Any = 3
     }
     
     struct Object2 {
@@ -40,118 +48,36 @@ final class PredicateTests: XCTestCase {
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testBasic() throws {
         let compareTo = 2
-        let predicate = Predicate<Object> {
-            // $0.a == compareTo
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.a
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(compareTo)
-            )
+        let predicate = #Predicate<Object> {
+            $0.a == compareTo
         }
         try XCTAssertFalse(predicate.evaluate(Object(a: 1, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
         try XCTAssertTrue(predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
-    }
-    
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    func testBasicMacro() throws {
-#if compiler(<5.9) || os(Windows)
-        throw XCTSkip("Macros are not supported on this platform")
-#else
-        let compareTo = 2
-        let predicate: Predicate = #Predicate<Object> {
-             $0.a == compareTo
-        }
-        try XCTAssertFalse(predicate.evaluate(Object(a: 1, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
-        try XCTAssertTrue(predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
-#endif
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testVariadic() throws {
-        let predicate = Predicate<Object, Int> {
-            // $0.a == $1 + 1
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.a
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_Arithmetic(
-                        lhs: PredicateExpressions.build_Arg($1),
-                        rhs: PredicateExpressions.build_Arg(1),
-                        op: .add
-                    )
-                )
-            )
+        let predicate = #Predicate<Object, Int> {
+            $0.a == $1 + 1
         }
         XCTAssert(try predicate.evaluate(Object(a: 3, b: "", c: 0, d: 0, e: "c", f: true, g: []), 2))
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testArithmetic() throws {
-        let predicate = Predicate<Object> {
-            // $0.a + 2 == 4
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_Arithmetic(
-                        lhs: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_KeyPath(
-                                root: $0,
-                                keyPath: \.a
-                            )
-                        ),
-                        rhs: PredicateExpressions.build_Arg(2),
-                        op: .add
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(4)
-            )
+        let predicate = #Predicate<Object> {
+            $0.a + 2 == 4
         }
         XCTAssert(try predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testDivision() throws {
-        let predicate = Predicate<Object> {
-            // $0.a / 2 == 3
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_Division(
-                        lhs: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_KeyPath(
-                                root: $0,
-                                keyPath: \.a
-                            )
-                        ),
-                        rhs: PredicateExpressions.build_Arg(2)
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(3)
-            )
+        let predicate = #Predicate<Object> {
+            $0.a / 2 == 3
         }
-        let predicate2 = Predicate<Object> {
-            // $0.c / 2.1 <= 3.0
-            PredicateExpressions.build_Comparison(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_Division(
-                        lhs: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_KeyPath(
-                                root: $0,
-                                keyPath: \.c
-                            )
-                        ),
-                        rhs: PredicateExpressions.build_Arg(2.1)
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(3.0),
-                op: .lessThanOrEqual
-            )
+        let predicate2 = #Predicate<Object> {
+            $0.c / 2.1 <= 3.0
         }
         XCTAssert(try predicate.evaluate(Object(a: 6, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
         XCTAssert(try predicate2.evaluate(Object(a: 2, b: "", c: 6.0, d: 0, e: "c", f: true, g: [])))
@@ -159,186 +85,62 @@ final class PredicateTests: XCTestCase {
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testBuildDivision() throws {
-        let predicate = Predicate<Object> {
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_Division(
-                        lhs: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_KeyPath(
-                                root: $0,
-                                keyPath: \.a
-                            )
-                        ),
-                        rhs: PredicateExpressions.build_Arg(2)
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(3))
+        let predicate = #Predicate<Object> {
+            $0.a / 2 == 3
         }
         XCTAssert(try predicate.evaluate(Object(a: 6, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testUnaryMinus() throws {
-        let predicate = Predicate<Object> {
-            // -$0.a == 17
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_UnaryMinus(
-                        PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_KeyPath(
-                                root: $0,
-                                keyPath: \.a
-                            )
-                        )
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(17)
-            )
+        let predicate = #Predicate<Object> {
+            -$0.a == 17
         }
         XCTAssert(try predicate.evaluate(Object(a: -17, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testCount() throws {
-        let predicate = Predicate<Object> {
-            // $0.g.count == 5
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_KeyPath(
-                            root: $0,
-                            keyPath: \.g
-                        ),
-                        keyPath: \.count
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(5)
-            )
+        let predicate = #Predicate<Object> {
+            $0.g.count == 5
         }
         XCTAssert(try predicate.evaluate(Object(a: 0, b: "", c: 0, d: 0, e: "c", f: true, g: [2, 3, 5, 7, 11])))
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testFilter() throws {
-        let predicate = Predicate<Object> { object in
-            /*object.g.filter {
+        let predicate = #Predicate<Object> { object in
+            !object.g.filter {
                 $0 == object.d
-            }.count > 0*/
-            
-            PredicateExpressions.build_Comparison(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_filter(
-                            PredicateExpressions.build_Arg(
-                                PredicateExpressions.build_KeyPath(
-                                    root: object,
-                                    keyPath: \.g
-                                )
-                            ),
-                            {
-                                PredicateExpressions.build_Equal(
-                                    lhs: PredicateExpressions.build_Arg($0),
-                                    rhs: PredicateExpressions.build_Arg(
-                                        PredicateExpressions.build_KeyPath(
-                                            root: object,
-                                            keyPath: \.d
-                                        )
-                                    )
-                                )
-                            }
-                        ),
-                        keyPath: \.count
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(0),
-                op: .greaterThan
-            )
+            }.isEmpty
         }
         XCTAssert(try predicate.evaluate(Object(a: 0, b: "", c: 0.0, d: 17, e: "c", f: true, g: [3, 5, 7, 11, 13, 17, 19])))
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testContains() throws {
-        let predicate = Predicate<Object> {
-            // $0.g.contains($0.a)
-            PredicateExpressions.build_contains(
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.g
-                    )
-                ),
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.a
-                    )
-                )
-            )
+        let predicate = #Predicate<Object> {
+            $0.g.contains($0.a)
         }
         XCTAssert(try predicate.evaluate(Object(a: 13, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3, 5, 11, 13, 17])))
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testContainsWhere() throws {
-        let predicate = Predicate<Object> { object in
-            // object.g.contains { $0 % object.a == 0 }
-            PredicateExpressions.build_contains(
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: object,
-                        keyPath: \.g
-                    )
-                ),
-                where: {
-                    PredicateExpressions.build_Equal(
-                        lhs: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_Remainder(
-                                lhs: PredicateExpressions.build_Arg($0),
-                                rhs: PredicateExpressions.build_Arg(
-                                    PredicateExpressions.build_KeyPath(
-                                        root: object,
-                                        keyPath: \.a
-                                    )
-                                )
-                            )
-                        ),
-                        rhs: PredicateExpressions.build_Arg(0)
-                    )
-                }
-            )
+        let predicate = #Predicate<Object> { object in
+            object.g.contains {
+                $0 % object.a == 0
+            }
         }
         XCTAssert(try predicate.evaluate(Object(a: 2, b: "", c: 0.0, d: 0, e: "c", f: true, g: [3, 5, 7, 2, 11, 13])))
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testAllSatisfy() throws {
-        let predicate = Predicate<Object> { object in
-            // object.g.allSatisfy { $0 % object.d != 0 }
-            PredicateExpressions.build_allSatisfy(
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: object,
-                        keyPath: \.g
-                    )
-                ),
-                {
-                    PredicateExpressions.build_NotEqual(
-                        lhs: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_Remainder(
-                                lhs: PredicateExpressions.build_Arg($0),
-                                rhs: PredicateExpressions.build_Arg(
-                                    PredicateExpressions.build_KeyPath(
-                                        root: object,
-                                        keyPath: \.d
-                                    )
-                                )
-                            )
-                        ),
-                        rhs: PredicateExpressions.build_Arg(0)
-                    )
-                }
-            )
+        let predicate = #Predicate<Object> { object in
+            object.g.allSatisfy {
+                $0 % object.d != 0
+            }
         }
         XCTAssert(try predicate.evaluate(Object(a: 0, b: "", c: 0.0, d: 2, e: "c", f: true, g: [3, 5, 7, 11, 13, 17, 19])))
     }
@@ -348,53 +150,11 @@ final class PredicateTests: XCTestCase {
         struct Wrapper<T> {
             let wrapped: T?
         }
-        let predicate = Predicate<Wrapper<Int>> {
-//            ($0.wrapped.flatMap { $0 + 1 } ?? 7) % 2 == 1
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_Remainder(
-                        lhs: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_NilCoalesce(
-                                lhs: PredicateExpressions.build_Arg(
-                                    PredicateExpressions.build_flatMap(
-                                        PredicateExpressions.build_Arg(
-                                            PredicateExpressions.build_KeyPath(
-                                                root: $0,
-                                                keyPath: \.wrapped
-                                            )
-                                        ),
-                                        {
-                                            PredicateExpressions.build_Arithmetic(
-                                                lhs: PredicateExpressions.build_Arg($0),
-                                                rhs: PredicateExpressions.build_Arg(1),
-                                                op: .add
-                                            )
-                                        }
-                                    )
-                                ),
-                                rhs: PredicateExpressions.build_Arg(7)
-                            )
-                        ),
-                        rhs: PredicateExpressions.build_Arg(2)
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(1))
+        let predicate = #Predicate<Wrapper<Int>> {
+            ($0.wrapped.flatMap { $0 + 1 } ?? 7) % 2 == 1
         }
-        let predicate2 = Predicate<Wrapper<Int>> {
-//          $0.wrapped! == 19
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_ForcedUnwrap(
-                        PredicateExpressions.build_KeyPath(
-                            root: $0,
-                            keyPath: \.wrapped
-                        )
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(
-                    19
-                )
-            )
+        let predicate2 = #Predicate<Wrapper<Int>> {
+            $0.wrapped! == 19
         }
         XCTAssert(try predicate.evaluate(Wrapper<Int>(wrapped: 4)))
         XCTAssert(try predicate.evaluate(Wrapper<Int>(wrapped: nil)))
@@ -402,15 +162,8 @@ final class PredicateTests: XCTestCase {
         XCTAssertThrowsError(try predicate2.evaluate(Wrapper<Int>(wrapped: nil)))
         
         struct _NonCodableType : Equatable {}
-        let predicate3 = Predicate<Wrapper<_NonCodableType>> {
-            // $0.wrapped == nil
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_Arg($0),
-                    keyPath: \.wrapped
-                ),
-                rhs: PredicateExpressions.build_NilLiteral()
-            )
+        let predicate3 = #Predicate<Wrapper<_NonCodableType>> {
+            $0.wrapped == nil
         }
         XCTAssertFalse(try predicate3.evaluate(Wrapper(wrapped: _NonCodableType())))
         XCTAssertTrue(try predicate3.evaluate(Wrapper(wrapped: nil)))
@@ -418,62 +171,19 @@ final class PredicateTests: XCTestCase {
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testConditional() throws {
-        let predicate = Predicate<Bool, String, String> {
-            // ($0 ? $1 : $2) == "if branch"
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_Conditional(
-                        $0,
-                        PredicateExpressions.build_Arg($1),
-                        PredicateExpressions.build_Arg($2)
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg("if branch")
-            )
+        let predicate = #Predicate<Bool, String, String> {
+            ($0 ? $1 : $2) == "if branch"
         }
         XCTAssert(try predicate.evaluate(true, "if branch", "else branch"))
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testClosedRange() throws {
-        let predicate = Predicate<Object> {
-            // (3...5).contains($0.a)
-            PredicateExpressions.build_contains(
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_ClosedRange(
-                        lower: PredicateExpressions.build_Arg(3),
-                        upper: PredicateExpressions.build_Arg(5)
-                    )
-                ),
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.a
-                    )
-                )
-            )
+        let predicate = #Predicate<Object> {
+            (3...5).contains($0.a)
         }
-        let predicate2 = Predicate<Object> {
-            // ($0.a...$0.d).contains(4)
-            PredicateExpressions.build_contains(
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_ClosedRange(
-                        lower: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_KeyPath(
-                                root: $0,
-                                keyPath: \.a
-                            )
-                        ),
-                        upper: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_KeyPath(
-                                root: $0,
-                                keyPath: \.d
-                            )
-                        )
-                    )
-                ),
-                PredicateExpressions.build_Arg(4)
-            )
+        let predicate2 = #Predicate<Object> {
+            ($0.a ... $0.d).contains(4)
         }
         XCTAssert(try predicate.evaluate(Object(a: 4, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
         XCTAssert(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
@@ -481,45 +191,12 @@ final class PredicateTests: XCTestCase {
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testRange() throws {
-        let predicate = Predicate<Object> {
-            // (3..<5).contains($0.a)
-            PredicateExpressions.build_contains(
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_Range(
-                        lower: PredicateExpressions.build_Arg(3),
-                        upper: PredicateExpressions.build_Arg(5)
-                    )
-                ),
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.a
-                    )
-                )
-            )
+        let predicate = #Predicate<Object> {
+            (3 ..< 5).contains($0.a)
         }
         let toMatch = 4
-        let predicate2 = Predicate<Object> {
-            // ($0.a..<$0.d).contains(toMatch)
-            PredicateExpressions.build_contains(
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_Range(
-                        lower: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_KeyPath(
-                                root: $0,
-                                keyPath: \.a
-                            )
-                        ),
-                        upper: PredicateExpressions.build_Arg(
-                            PredicateExpressions.build_KeyPath(
-                                root: $0,
-                                keyPath: \.d
-                            )
-                        )
-                    )
-                ),
-                PredicateExpressions.build_Arg(toMatch)
-            )
+        let predicate2 = #Predicate<Object> {
+            ($0.a ..< $0.d).contains(toMatch)
         }
         XCTAssert(try predicate.evaluate(Object(a: 4, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
         XCTAssert(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
@@ -528,18 +205,8 @@ final class PredicateTests: XCTestCase {
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testRangeContains() throws {
         let date = Date.distantPast
-        let predicate = Predicate<Object> {
-            // (date ..< date).contains($0.h)
-            PredicateExpressions.build_contains(
-                PredicateExpressions.build_Range(
-                    lower: PredicateExpressions.build_Arg(date),
-                    upper: PredicateExpressions.build_Arg(date)
-                ),
-                PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_Arg($0),
-                    keyPath: \.h
-                )
-            )
+        let predicate = #Predicate<Object> {
+            (date ..< date).contains($0.h)
         }
         
         XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
@@ -547,42 +214,11 @@ final class PredicateTests: XCTestCase {
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testTypes() throws {
-        let predicate = Predicate<Object> {
-            // ($0.a as? Int).flatMap { $0 == 3 } ?? false
-            PredicateExpressions.build_NilCoalesce(
-                lhs: PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_flatMap(
-                        PredicateExpressions.build_Arg(
-                            PredicateExpressions.ConditionalCast<_, Int>(
-                                PredicateExpressions.build_Arg(
-                                    PredicateExpressions.build_KeyPath(
-                                        root: $0,
-                                        keyPath: \.a
-                                    )
-                                )
-                            )
-                        ),
-                        {
-                            PredicateExpressions.build_Equal(
-                                lhs: PredicateExpressions.build_Arg($0),
-                                rhs: PredicateExpressions.build_Arg(3)
-                            )
-                        }
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(false)
-            )
+        let predicate = #Predicate<Object> {
+            ($0.i as? Int).flatMap { $0 == 3 } ?? false
         }
-        let predicate2 = Predicate<Object> {
-            // $0.a is BinaryInteger
-            PredicateExpressions.TypeCheck<_, BinaryInteger>(
-                PredicateExpressions.build_Arg(
-                    PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.a
-                    )
-                )
-            )
+        let predicate2 = #Predicate<Object> {
+            $0.i is Int
         }
         XCTAssert(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
         XCTAssert(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
@@ -590,38 +226,16 @@ final class PredicateTests: XCTestCase {
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testSubscripts() throws {
-        var predicate = Predicate<Object> {
-            // $0.g[0] == 0
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_subscript(
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
-                        keyPath: \.g
-                    ),
-                    PredicateExpressions.build_Arg(0)
-                ),
-                rhs: PredicateExpressions.build_Arg(0)
-            )
+        var predicate = #Predicate<Object> {
+            $0.g[0] == 0
         }
         
         XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0])))
         XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1])))
         XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
         
-        predicate = Predicate<Object> {
-            // $0.g[0 ..< 2].isEmpty
-            PredicateExpressions.build_KeyPath(
-                root: PredicateExpressions.build_subscript(
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
-                        keyPath: \.g
-                    ),
-                    PredicateExpressions.build_Range(
-                        lower: PredicateExpressions.build_Arg(0),
-                        upper: PredicateExpressions.build_Arg(2))
-                ),
-                keyPath: \.isEmpty
-            )
+        predicate = #Predicate<Object> {
+            $0.g[0 ..< 2].isEmpty
         }
         
         XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0, 1, 2])))
@@ -642,18 +256,8 @@ final class PredicateTests: XCTestCase {
         }
         
         let foo = Foo()
-        let predicate = Predicate<[String : Int]> {
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_subscript(
-                    PredicateExpressions.build_Arg($0),
-                    PredicateExpressions.build_Arg("key"),
-                    default: PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg(foo),
-                        keyPath: \.property
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(1)
-            )
+        let predicate = #Predicate<[String : Int]> {
+            $0["key", default: foo.property] == 1
         }
         XCTAssertFalse(try predicate.evaluate(["key" : 2]))
         XCTAssertEqual(Foo.num, 1)
@@ -671,32 +275,14 @@ final class PredicateTests: XCTestCase {
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testMaxMin() throws {
-        var predicate = Predicate<Object> {
-            // $0.g.max() == 2
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_max(
-                    PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.g
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(2)
-            )
+        var predicate = #Predicate<Object> {
+            $0.g.max() == 2
         }
         XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 2])))
         
-        predicate = Predicate<Object> {
-            // $0.g.min() == 2
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_min(
-                    PredicateExpressions.build_KeyPath(
-                        root: $0,
-                        keyPath: \.g
-                    )
-                ),
-                rhs: PredicateExpressions.build_Arg(2)
-            )
+        predicate = #Predicate<Object> {
+            $0.g.min() == 2
         }
         XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3])))
@@ -707,18 +293,8 @@ final class PredicateTests: XCTestCase {
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testCaseInsensitiveCompare() throws {
         let equal = ComparisonResult.orderedSame
-        let predicate = Predicate<Object> {
-            // $0.b.caseInsensitiveCompare("ABC") == equal
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_caseInsensitiveCompare(
-                    PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
-                        keyPath: \.b
-                    ),
-                    PredicateExpressions.build_Arg("ABC")
-                ),
-                rhs: PredicateExpressions.build_Arg(equal)
-            )
+        let predicate = #Predicate<Object> {
+            $0.b.caseInsensitiveCompare("ABC") == equal
         }
         XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "def", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
@@ -758,26 +334,8 @@ final class PredicateTests: XCTestCase {
         }
         
         let now = Date.now
-        let _ = Predicate<Foo> {
-            PredicateExpressions.build_Conjunction(
-                lhs: PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
-                        keyPath: \.a
-                    ),
-                    rhs: PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
-                        keyPath: \.c
-                    )
-                ),
-                rhs: PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
-                        keyPath: \.b
-                    ),
-                    rhs: PredicateExpressions.build_Arg(now)
-                )
-            )
+        let _ = #Predicate<Foo> {
+            $0.a == $0.c && $0.b == now
         }
     }
 }

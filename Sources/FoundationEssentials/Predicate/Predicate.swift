@@ -27,11 +27,9 @@ public struct Predicate<each Input> : Sendable {
     }
 }
 
-#if compiler(>=5.9) && !os(Windows)
 @freestanding(expression)
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
-#endif
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Predicate {
