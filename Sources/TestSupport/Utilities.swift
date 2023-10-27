@@ -102,6 +102,45 @@ public func expectEqualSequence< Expected: Sequence, Actual: Sequence>(
     }
 }
 
+func expectEqual(_ actual: Date, _ expected: Date , within: Double = 0.001, file: StaticString = #file, line: UInt = #line) {
+    let debugDescription = "\nactual: \(actual.formatted(.iso8601));\nexpected: \(expected.formatted(.iso8601))"
+    XCTAssertEqual(actual.timeIntervalSinceReferenceDate, expected.timeIntervalSinceReferenceDate, accuracy: within, debugDescription, file: file, line: line)
+}
+
+// Compare two date components like the original equality, but compares nanosecond within a reasonable epsilon, and optionally ignores quarter and calendar equality since they were often not supported in the original implementation
+public func expectEqual(_ first: DateComponents, _ second: DateComponents, within nanosecondAccuracy: Int = 5000, expectQuarter: Bool = true, expectCalendar: Bool = true, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+    XCTAssertEqual(first.era, second.era, message(), file: file, line: line)
+    XCTAssertEqual(first.year, second.year, message(), file: file, line: line)
+    XCTAssertEqual(first.month, second.month, message(), file: file, line: line)
+    XCTAssertEqual(first.day, second.day, message(), file: file, line: line)
+    XCTAssertEqual(first.hour, second.hour, message(), file: file, line: line)
+    XCTAssertEqual(first.minute, second.minute, message(), file: file, line: line)
+    XCTAssertEqual(first.second, second.second, message(), file: file, line: line)
+    XCTAssertEqual(first.weekday, second.weekday, message(), file: file, line: line)
+    XCTAssertEqual(first.weekdayOrdinal, second.weekdayOrdinal, message(), file: file, line: line)
+    XCTAssertEqual(first.weekOfMonth, second.weekOfMonth, message(), file: file, line: line)
+    XCTAssertEqual(first.weekOfYear, second.weekOfYear, message(), file: file, line: line)
+    XCTAssertEqual(first.yearForWeekOfYear, second.yearForWeekOfYear, message(), file: file, line: line)
+    if expectQuarter {
+        XCTAssertEqual(first.quarter, second.quarter, message(), file: file, line: line)
+    }
+
+    if let ns = first.nanosecond, let otherNS = second.nanosecond {
+        XCTAssertLessThan(abs(ns - otherNS), nanosecondAccuracy, message(), file: file, line: line)
+    } else {
+        XCTAssertEqual(first.nanosecond, second.nanosecond, message(), file: file, line: line)
+    }
+
+    XCTAssertEqual(first.isLeapMonth, second.isLeapMonth, message(), file: file, line: line)
+
+    if expectCalendar {
+        XCTAssertEqual(first.calendar, second.calendar, message(), file: file, line: line)
+    }
+
+    XCTAssertEqual(first.timeZone, second.timeZone, message(), file: file, line: line)
+
+}
+
 func expectChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line, _ expression: () throws -> ()) rethrows {
     let valueBefore = check()
     try expression()
