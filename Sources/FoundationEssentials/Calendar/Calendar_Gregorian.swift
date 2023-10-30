@@ -85,9 +85,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     var _firstWeekday: Int?
     var firstWeekday: Int {
         set {
-            if newValue >= 1 && newValue <= 7 {
-                _firstWeekday = newValue
-            }
+            precondition(newValue >= 1 && newValue <= 7, "Weekday should be in the range of 1...7")
+            _firstWeekday = newValue
         }
 
         get {
