@@ -34,6 +34,150 @@ extension Date {
         self.init(timeIntervalSinceReferenceDate: secondsSinceJulianReference)
     }
 }
+
+/// It is possible that a `DateComponents` does not represent a valid date,
+/// e.g. year: 1996, month: 3, day: 1, weekday: 6.
+/// This helper records which components should take precedence.
+enum ResolvedDateComponents {
+
+    case day(year: Int, month: Int, day: Int?, weekOfYear: Int?)
+    case weekdayOrdinal(year: Int, month: Int, weekdayOrdinal: Int, weekday: Int?)
+    case weekOfYear(year: Int, weekOfYear: Int?, weekday: Int?)
+    case weekOfMonth(year: Int, month: Int, weekOfMonth: Int, weekday: Int?)
+
+    // Pick the year field between yearForWeekOfYear and year and resovles era
+    static func yearMonth(forDateComponent components: DateComponents) -> (year: Int, month: Int) {
+        var rawYear: Int
+        if let yearForWeekOfYear = components.yearForWeekOfYear {
+            rawYear = yearForWeekOfYear
+        } else if let year = components.year {
+            rawYear = year
+        } else {
+            rawYear = 1
+        }
+
+        if components.era == 0 /* BC */{
+           rawYear = 1 - rawYear
+        }
+
+        guard let rawMonth = components.month else {
+            return (rawYear, 1)
+        }
+        return carryOver(rawYear: rawYear, rawMonth: rawMonth)
+    }
+
+    static func carryOver(rawYear: Int, rawMonth: Int?) -> (year: Int, month: Int) {
+        guard let rawMonth else {
+            return (rawYear, 1)
+        }
+        let month: Int
+        let year: Int
+        if rawMonth > 12 {
+            let (q, r) = (rawMonth - 1 ).quotientAndRemainder(dividingBy: 12)
+            year = rawYear + q
+            month = r + 1
+        } else if rawMonth < 1 {
+            let (q, r) = rawMonth.quotientAndRemainder(dividingBy: 12)
+            year = rawYear + q - 1
+            month = r + 12
+        } else {
+            year = rawYear
+            month = rawMonth
+        }
+
+        return (year,  month)
+    }
+
+    init(dateComponents components: DateComponents) {
+        var (year, month) = Self.yearMonth(forDateComponent: components)
+        let minMonth = 1
+        let minWeekdayOrdinal = 1
+        if let d = components.day {
+            if components.yearForWeekOfYear != nil, let weekOfYear = components.weekOfYear {
+                if components.month == nil && weekOfYear >= 52 {
+                    year += 1
+                } else if weekOfYear == 1 {
+                    year -= 1
+                }
+            }
+            self = .day(year: year, month: month, day: d, weekOfYear: components.weekOfYear)
+        } else if let woy = components.weekOfYear, let weekday = components.weekday {
+            self = .weekOfYear(year: year, weekOfYear: woy, weekday: weekday)
+        } else if let wom = components.weekOfMonth, let weekday = components.weekday {
+            self = .weekOfMonth(year: year, month: month, weekOfMonth: wom, weekday: weekday)
+        } else if let weekdayOrdinal = components.weekdayOrdinal, let weekday = components.weekday {
+            self = .weekdayOrdinal(year: year, month: month, weekdayOrdinal: weekdayOrdinal, weekday: weekday)
+        } else if components.year != nil {
+            self = .day(year: year, month: month, day: components.day, weekOfYear: components.weekOfYear)
+        } else if components.yearForWeekOfYear != nil  {
+            self = .weekOfYear(year: year, weekOfYear: components.weekOfYear, weekday: components.weekday)
+        } else if let weekOfYear = components.weekOfYear  {
+            self = .weekOfYear(year: year, weekOfYear: weekOfYear, weekday: components.weekday)
+        } else if let weekOfMonth = components.weekOfMonth {
+            self = .weekOfMonth(year: year, month: month, weekOfMonth: weekOfMonth, weekday: components.weekday)
+        } else if let weekdayOrdinal = components.weekdayOrdinal {
+            self = .weekdayOrdinal(year: year, month: month, weekdayOrdinal: weekdayOrdinal, weekday: components.weekday)
+        } else if let weekday = components.weekday {
+            self = .weekdayOrdinal(year: year, month: month, weekdayOrdinal: components.weekdayOrdinal ?? minWeekdayOrdinal, weekday: weekday)
+        } else {
+            self = .day(year: year, month: month, day: components.day, weekOfYear: components.weekOfYear)
+        }
+    }
+
+    init(preferComponent c: Calendar.Component, dateComponents components: DateComponents) {
+        let minMonth = 1
+        let minWeekdayOrdinal = 1
+        switch c {
+        case .day:
+            let (rawYear, month) = Self.yearMonth(forDateComponent: components)
+            self = .day(year: rawYear, month: month, day: components.day, weekOfYear: components.weekOfYear)
+        case .weekday:
+            let (rawYear, month) = Self.yearMonth(forDateComponent: components)
+            if let woy = components.weekOfYear {
+                self = .weekOfYear(year: rawYear, weekOfYear: woy, weekday: components.weekday)
+            } else if let wom = components.weekOfMonth {
+                self = .weekOfMonth(year: rawYear, month: month, weekOfMonth: wom, weekday: components.weekday)
+            } else if components.weekdayOrdinal != nil || components.weekday != nil {
+                self = .weekdayOrdinal(year: rawYear, month: month, weekdayOrdinal: components.weekdayOrdinal ?? minWeekdayOrdinal, weekday: components.weekday)
+            } else {
+                self = .init(dateComponents: components)
+            }
+        case .weekdayOrdinal:
+            let (rawYear, month) = Self.yearMonth(forDateComponent: components)
+            self = .weekdayOrdinal(year: rawYear, month: month, weekdayOrdinal: components.weekdayOrdinal ?? minWeekdayOrdinal, weekday: components.weekday)
+        case .weekOfMonth:
+            let (rawYear, month) = Self.yearMonth(forDateComponent: components)
+            if let weekOfMonth = components.weekOfMonth {
+                self = .weekOfMonth(year: rawYear, month: month, weekOfMonth: weekOfMonth, weekday: components.weekday)
+            } else {
+                self = .init(dateComponents: components)
+            }
+        case .weekOfYear:
+            let (rawYear, _) = Self.yearMonth(forDateComponent: components)
+            self = .weekOfYear(year: rawYear, weekOfYear: components.weekOfYear, weekday: components.weekday)
+        case .yearForWeekOfYear:
+            let year: Int
+            if let y = components.yearForWeekOfYear {
+                year = y
+            } else {
+                year = components.era == 0 ? 0 : 1
+            }
+            self = .weekOfYear(year: year, weekOfYear: components.weekOfYear, weekday: components.weekday)
+        case .year:
+            let rawYear: Int
+            if let y = components.year {
+                rawYear = y
+            } else {
+                rawYear = components.era == 0 ? 0 : 1
+            }
+            let (year, month) = Self.carryOver(rawYear: rawYear, rawMonth: components.month)
+            self = .day(year: year, month: month, day: components.day, weekOfYear: components.weekOfYear)
+        default:
+            self = .init(dateComponents: components)
+        }
+    }
+}
+
 /// This class is a placeholder and work-in-progress to provide an implementation of the Gregorian calendar.
 internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     
@@ -189,9 +333,187 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         fatalError()
     }
     
+    // MARK:
+
     func date(from components: DateComponents) -> Date? {
-        fatalError()
+        date(from: components, inTimeZone: timeZone)
     }
+
+    //  Returns the weekday with reference to `firstWeekday`, in the range of 0...6
+    func relativeWeekday(fromJulianDay julianDay: Int) -> Int {
+        // Julian day is 0 based; day 0 == Sunday
+        let weekday = (julianDay + 1) % 7 + 1
+
+        let relativeWeekday = (weekday + 7 - firstWeekday) % 7
+        return relativeWeekday
+    }
+
+    func numberOfDaysInMonth(_ month: Int, year: Int) -> Int {
+        var month = month
+        if month > 12 {
+            month = (month - 1) % 12 + 1
+        } else if month < 1 {
+            month = month % 12 + 12
+        }
+        switch month {
+        case 1, 3, 5, 7, 8, 10, 12:
+            return 31
+        case 4, 6, 9, 11:
+            return 30
+        case 2:
+            return gregorianYearIsLeap(year) ? 29 : 28
+        default:
+            fatalError("programming error, month out of range")
+        }
+    }
+
+    // Returns the weekday with reference to `firstWeekday`, in the range of 0...6
+    func wrapAroundRelativeWeekday(_ weekday: Int) -> Int {
+        var dow = (weekday - firstWeekday) % 7
+        if dow < 0 {
+            dow += 7
+        }
+        return dow
+    }
+
+    func julianDay(usingJulianReference: Bool, resolvedComponents: ResolvedDateComponents) -> Int {
+
+        var rawMonth: Int // 1-based
+        let monthStart = 1
+
+        var rawYear: Int
+        switch resolvedComponents {
+        case .day(let year, let month, _, _):
+            rawMonth = month
+            rawYear = year
+        case .weekdayOrdinal(let year, let month, _, _):
+            rawMonth = month
+            rawYear = year
+        case .weekOfYear(let year, _, _):
+            rawMonth = monthStart
+            rawYear = year
+        case .weekOfMonth(let year, let month, _, _):
+            rawMonth = month
+            rawYear = year
+        }
+
+        assert(rawMonth >= 1 || rawMonth <= 12)
+
+        // `julianDayAtBeginningOfYear` points to the noon of the day *before* the beginning of year/month
+        let julianDayAtBeginningOfYear = Self.julianDay(ofDay: 0, month: rawMonth, year: rawYear, useJulianReference: usingJulianReference)
+
+        let first = relativeWeekday(fromJulianDay: julianDayAtBeginningOfYear + 1) // weekday of the first day in the month, 0...6
+
+        let julianDay: Int
+        switch resolvedComponents {
+        case .day(_, _, let day, _):
+            julianDay = julianDayAtBeginningOfYear + (day ?? 1)
+        case .weekdayOrdinal(_, _, let weekdayOrdinal, let weekday):
+            let dow = (weekday != nil) ? wrapAroundRelativeWeekday(weekday!) : 0
+
+            // `date` is the first day of month whose weekday matches the target relative weekday (`dow`), -5...7
+            //  e.g. If we're looking for weekday == 2 (Tuesday), `date` would be the day number of the first Tuesday in the month
+            var date = dow - first + 1
+            if date < 1 {
+                date += 7
+            }
+
+            if weekdayOrdinal >= 0 {
+                date += (weekdayOrdinal - 1) * 7
+            } else {
+                // Negative weekdayOrdinal means counting from back.
+                // e.g. -1 means the last day in the month whose weekday is the target `weekday`
+                let monthLength = numberOfDaysInMonth(rawMonth, year: rawYear)
+                date += ((monthLength - date) / 7 + weekdayOrdinal + 1 ) * 7
+            }
+
+            julianDay = julianDayAtBeginningOfYear + date
+
+        case .weekOfYear(_, let weekOfYear, let weekday):
+
+            let dow = (weekday != nil) ? wrapAroundRelativeWeekday(weekday!) : 0
+
+            var date = dow - first + 1 // the first day of month whose weekday matches the target relative weekday (`dow`), -5...7
+            if 7 - first < minimumDaysInFirstWeek {
+                // move forward to the next week if the found date is in the first week of month, but the first week is a partial week
+                date += 7
+            }
+
+            if let weekOfYear {
+                date += (weekOfYear - 1) * 7
+            }
+
+            julianDay = julianDayAtBeginningOfYear + date
+
+        case .weekOfMonth(_, _, let weekOfMonth, let weekday):
+
+            let dow = (weekday != nil) ? wrapAroundRelativeWeekday(weekday!) : 0
+            var date = dow - first + 1 //  // the first day of month whose weekday matches the target relative weekday (`dow`), -5...7
+
+            if 7 - first < minimumDaysInFirstWeek {
+                // move forward to the next week if the found date is in the first week of month, but the first week is a partial week
+                date += 7
+            }
+
+            date = date + (weekOfMonth - 1) * 7
+
+            julianDay = julianDayAtBeginningOfYear + date
+        }
+
+        return julianDay
+    }
+
+
+    func date(from components: DateComponents, inTimeZone timeZone: TimeZone?, resolvedComponents: ResolvedDateComponents? = nil) -> Date? {
+
+        let resolvedComponents = resolvedComponents ?? ResolvedDateComponents(dateComponents: components)
+
+        var useJulianReference = false
+        switch resolvedComponents {
+        case .weekOfYear(let year, _, _):
+            useJulianReference = year == gregorianStartYear
+        case .weekOfMonth(_, _, _, _): break
+        case .day(_, _, _, _): break
+        case .weekdayOrdinal(_, _, _, _): break
+        }
+
+        var julianDay = self.julianDay(usingJulianReference: useJulianReference, resolvedComponents: resolvedComponents)
+        if !useJulianReference && julianDay < julianCutoverDay { // Recalculate using julian reference if we're before cutover
+            julianDay = self.julianDay(usingJulianReference: true, resolvedComponents: resolvedComponents)
+        }
+
+        let nano_coef = 1_000_000_000
+
+        var secondsInDay = 0.0
+        if let hour = components.hour {
+            secondsInDay += Double(hour) * 3600.0
+        }
+        if let minute = components.minute {
+            secondsInDay += Double(minute) * 60.0
+        }
+        if let second = components.second {
+            secondsInDay += Double(second)
+        }
+        if let nanosecond = components.nanosecond {
+            secondsInDay += Double(nanosecond) / Double(nano_coef)
+        }
+
+        let timeZoneOffset: Int
+        if let timeZone = timeZone {
+            // TODO: Implement `TimeZone.secondsFromGMT(for date: Date)` to support DST
+            timeZoneOffset = timeZone.secondsFromGMT()
+        } else if let timeZone = components.timeZone {
+            timeZoneOffset = timeZone.secondsFromGMT()
+        } else {
+            timeZoneOffset = 0 // Assume GMT
+        }
+
+        let timeInThisDay = secondsInDay - Double(timeZoneOffset)
+
+        // rewind from Julian day, which starts at noon, back to midnight
+        return Date(julianDay: julianDay) - 43200 + timeInThisDay
+    }
+
 
     // MARK: - Julian day number calculation
     // Algorithm from Explanatory Supplement to the Astronomical Almanac, ch 15. Calendars, by E.G. Richards
@@ -228,7 +550,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     // day and month are 1-based
-    static func julianDay(ofDay day: Int, month: Int, year: Int) -> Int {
+    static func julianDay(ofDay day: Int, month: Int, year: Int, useJulianReference: Bool = false) -> Int {
         let y = 4716 // number of years from epoch of computation to epoch of calendar
         let j = 1401 // number of days from the epoch of computation to the first day of the Julian period
         let m = 2 // value of M for which M' is zero
@@ -247,8 +569,12 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let f = (h - 1 + n) % n
         let e = (p * g + q) / r + day - 1 - j
         let J = e + (s * f + t) / u
-        let julianDayNumber = J - (3 * ((g + A) / 100)) / 4 - C
-
+        let julianDayNumber: Int
+        if useJulianReference {
+            julianDayNumber = J
+        } else { // Gregorian calendar
+            julianDayNumber = J - (3 * ((g + A) / 100)) / 4 - C
+        }
         return julianDayNumber
     }
 
