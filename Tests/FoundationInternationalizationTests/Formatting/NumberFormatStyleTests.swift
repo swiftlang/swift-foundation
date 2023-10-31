@@ -1,4 +1,4 @@
-// Copyright (c) 2014 - 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2023 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -139,6 +139,45 @@ final class NumberFormatStyleTests: XCTestCase {
         testIntValues(IntegerFormatStyle<Int>(locale: locale).notation(.scientific), expected: [ "8.765E7", "8.765E6", "8.765E5", "8.765E4", "8.765E3", "8.76E2", "8.7E1", "8E0", "0E0" ])
 
         testIntValues(IntegerFormatStyle<Int>(locale: locale).sign(strategy: .always()), expected: [ "+87,650,000", "+8,765,000", "+876,500", "+87,650", "+8,765", "+876", "+87", "+8", "+0" ])
+    }
+
+    func testIntegerFormatStyleFixedWidthLimits() throws {
+        func test<I: FixedWidthInteger>(type: I.Type = I.self, min: String, max: String) {
+            do {
+                let style: IntegerFormatStyle<I> = .init(locale: Locale(identifier: "en_US_POSIX"))
+                XCTAssertEqual(style.format(I.min), I.min.description)
+                XCTAssertEqual(style.format(I.max), I.max.description)
+            }
+
+            do {
+                let style: IntegerFormatStyle<I> = .init(locale: Locale(identifier: "en_US"))
+                XCTAssertEqual(style.format(I.min), min)
+                XCTAssertEqual(style.format(I.max), max)
+            }
+
+            do {
+                let style: IntegerFormatStyle<I>.Percent = .init(locale: Locale(identifier: "en_US"))
+                XCTAssertEqual(style.format(I.min), min + "%")
+                XCTAssertEqual(style.format(I.max), max + "%")
+            }
+
+            do {
+                let style: IntegerFormatStyle<I>.Currency = .init(code: "USD", locale: Locale(identifier: "en_US")).presentation(.narrow)
+                let negativeSign = (min.first == "-" ? "-" : "")
+                XCTAssertEqual(style.format(I.min), "\(negativeSign)$\(min.drop(while: { $0 == "-" })).00")
+                XCTAssertEqual(style.format(I.max), "$\(max).00")
+            }
+        }
+
+        test(type: Int8.self, min: "-128", max: "127")
+        test(type: Int16.self, min: "-32,768", max: "32,767")
+        test(type: Int32.self, min: "-2,147,483,648", max: "2,147,483,647")
+        test(type: Int64.self, min: "-9,223,372,036,854,775,808", max: "9,223,372,036,854,775,807")
+
+        test(type: UInt8.self, min: "0", max: "255")
+        test(type: UInt16.self, min: "0", max: "65,535")
+        test(type: UInt32.self, min: "0", max: "4,294,967,295")
+        test(type: UInt64.self, min: "0", max: "18,446,744,073,709,551,615")
     }
 
     func testInteger_Precision() throws {

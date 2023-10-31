@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2020 Apple Inc. and the Swift project authors
+// Copyright (c) 2020 - 2023 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -172,6 +172,10 @@ internal class ICUNumberFormatterBase {
         try? FormatResult(formatter: uformatter, value: v).string
     }
 
+    func format(_ v: ArraySlice<UInt8>) -> String? {
+        try? FormatResult(formatter: uformatter, value: v).string
+    }
+
     // MARK: -
 
     class FormatResult {
@@ -206,6 +210,22 @@ internal class ICUNumberFormatterBase {
             str.withUTF8 {
                 unumf_formatDecimal(formatter, $0.baseAddress, Int32($0.count), result, &status)
             }
+            try status.checkSuccess()
+        }
+
+        init(formatter: OpaquePointer, value: ArraySlice<UInt8>) throws {
+            var status = U_ZERO_ERROR
+            result = unumf_openResult(&status)
+            try status.checkSuccess()
+
+            value.withUnsafeBufferPointer {
+                unumf_formatDecimal(formatter,
+                                    $0.baseAddress,
+                                    Int32($0.count),
+                                    result,
+                                    &status)
+            }
+
             try status.checkSuccess()
         }
 
