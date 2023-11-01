@@ -52,7 +52,7 @@ extension BinaryInteger {
     /// `description` is not specifically defined by `BinaryInteger` (or anywhere else, really),
     /// and as such cannot be relied upon.  Thus this purpose-built method, instead.
     ///
-    public var numericStringRepresentation: ArraySlice<UInt8> {
+    internal var numericStringRepresentation: ArraySlice<UInt8> {
         numericStringRepresentationForBinaryInteger(words: self.words, isSigned: Self.isSigned)
     }
 }
