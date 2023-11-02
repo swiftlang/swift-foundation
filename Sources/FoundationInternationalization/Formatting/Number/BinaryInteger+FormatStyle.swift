@@ -87,15 +87,15 @@ words: some Collection<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
 private func numericStringRepresentationForMutableBinaryInteger(
 words: UnsafeMutableBufferPointer<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
     //  Note that negative values are in two's complement form.
-    let isLessThanZero = isSigned && Int(bitPattern: words.last ?? 0) < UInt.zero
+    let isLessThanZero = isSigned && Int(bitPattern: words.last ?? 0) < 0
     //  The magnitude is formed when the words represent a negative value.
     if  isLessThanZero {
         formTwosComplementForBinaryInteger(words: words)
     }
     
-    let radix: (exponent: UInt, power: UInt) = maxDecimalExponentAndPowerForUnsignedIntegerWord()
-    let capacity =  maxDecimalDigitCountForUnsignedInteger(bitWidth: words.count * UInt.bitWidth) + (isLessThanZero ? 1 : 0)
-    var ascii = ContiguousArray(repeating: UInt8(ascii: "0"), count: capacity) // Sets initial ASCII zeros (see later steps).
+    let radix: (exponent: Int, power: UInt) = maxDecimalExponentAndPowerForUnsignedIntegerWord()
+    let capacity = maxDecimalDigitCountForUnsignedInteger(bitWidth: words.count * UInt.bitWidth) + (isLessThanZero ? 1 : 0)
+    var ascii = ContiguousArray(repeating: UInt8(ascii: "0"), count: capacity) // Set initial ASCII zeros (see later steps).
     
     var wordsIndex = words.endIndex
     var writeIndex = ascii.endIndex
@@ -105,26 +105,26 @@ words: UnsafeMutableBufferPointer<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
         repeat {
             // Mutating division prevents unnecessary big integer allocations.
             let remainder = formQuotientWithRemainderForUnsignedInteger(words: words.prefix(upTo: wordsIndex), dividingBy: radix.power)
-            // The quotient's most significant zeros are trimmed for flexible-width performance, and to end the loop.
-            wordsIndex = words.prefix(upTo: wordsIndex).reversed().drop(while:{ $0 == 0 }).startIndex.base
+            // Trim the quotient's most significant zeros for flexible-width performance and to end the loop.
+            wordsIndex  = words.prefix(upTo: wordsIndex).reversed().drop(while:{ $0 == 0 as UInt }).startIndex.base
             // The remainder's numeric string representation is written to the array's trailing edge, up to the ASCII index.
-            writeIndex = formTrailingNumericStringRepresentationForUnsignedInteger(word: remainder, into: ascii.prefix(upTo: asciiIndex))
+            writeIndex  = formTrailingNumericStringRepresentationForUnsignedInteger(word: remainder, into: ascii.prefix(upTo: asciiIndex))
             // Because the array is pre-filled with ASCII zeros, we can skip ahead; only the final loop's zeros are trimmed.
-            asciiIndex = asciiIndex - Int(bitPattern: radix.exponent)
+            asciiIndex -= radix.exponent
             // The entire magnitude has been encoded when the formed quotient is empty.
         }   while wordsIndex > words.startIndex
         
+        //  Jump to the most significant digit.
+        asciiIndex = writeIndex
         
-        asciiIndex = writeIndex // Assigns the index of the most significant digit encoded inside the loop.
-        
-        //  A minus sign is added to negative values.
+        //  Add a minus sign to negative values.
         if  isLessThanZero {
             ascii.formIndex(before:  &asciiIndex)
             ascii[asciiIndex] = UInt8(ascii: "-")
         }
     }
     
-    assert(words.allSatisfy({ $0 == UInt.zero }))
+    assert(words.allSatisfy({ $0 == 0 }))
     return ascii.suffix(from: asciiIndex) as ArraySlice<UInt8>
 }
 
@@ -147,7 +147,7 @@ word: UInt, into buffer: Slice<UnsafeMutableBufferPointer<UInt8>>) -> Int {
         let remainder: UInt
         (magnitude, remainder) = magnitude.quotientAndRemainder(dividingBy: 10)
         buffer.base[index] = UInt8(ascii: "0") &+ UInt8(truncatingIfNeeded: remainder)
-    }   while magnitude != UInt.zero
+    }   while magnitude != 0 as UInt
     
     return index as Int
 }
@@ -193,8 +193,8 @@ private func formTwosComplementForBinaryInteger(words: UnsafeMutableBufferPointe
 /// 64-bit: (exponent: 19, power: 10000000000000000000)
 /// ```
 ///
-private func maxDecimalExponentAndPowerForUnsignedIntegerWord() -> (exponent: UInt, power: UInt) {
-    var exponent = 1 as UInt
+private func maxDecimalExponentAndPowerForUnsignedIntegerWord() -> (exponent: Int, power: UInt) {
+    var exponent = 1 as  Int
     var power = 0010 as UInt
     
     while true {
