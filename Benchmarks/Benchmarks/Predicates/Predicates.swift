@@ -61,6 +61,7 @@ let benchmarks = {
         //             (monster.weaponP4 == 4) &&
         //             (monster.weaponP5 == 5))
         //        }))
+        // This is reported in https://github.com/apple/swift/issues/69277
 
         predicateTests.forEach { (testDescription, predicate) in
             Benchmark(testDescription) { benchmark in
