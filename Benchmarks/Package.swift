@@ -13,7 +13,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "Benchmarks",
+            name: "PredicateBenchmarks",
             dependencies: [
                 .product(name: "FoundationEssentials", package: "swift-foundation"),
                 .product(name: "Benchmark", package: "package-benchmark"),
