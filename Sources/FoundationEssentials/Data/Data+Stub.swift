@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2018 Apple Inc. and the Swift project authors
+// Copyright (c) 2018 - 2023 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -14,29 +14,6 @@
 
 // FIXME: rdar://103535015 (Implement stub methods in struct Data)
 extension Data {
-    /// Initialize a `Data` from a Base-64 encoded String using the given options.
-    ///
-    /// Returns nil when the input is not recognized as valid Base-64.
-    /// - parameter base64String: The string to parse.
-    /// - parameter options: Encoding options. Default value is `[]`.
-    @inlinable // This is @inlinable as a convenience initializer.
-    public init?(base64Encoded base64String: __shared String, options: Data.Base64DecodingOptions = []) {
-        // FIXME: Implement Data IO
-        fatalError("Not implemented")
-    }
-
-    /// Initialize a `Data` from a Base-64, UTF-8 encoded `Data`.
-    ///
-    /// Returns nil when the input is not recognized as valid Base-64.
-    ///
-    /// - parameter base64Data: Base-64, UTF-8 encoded input data.
-    /// - parameter options: Decoding options. Default value is `[]`.
-    @inlinable // This is @inlinable as a convenience initializer.
-    public init?(base64Encoded base64Data: __shared Data, options: Data.Base64DecodingOptions = []) {
-        // FIXME: Implement Data IO
-        fatalError("Not implemented")
-    }
-
     /// Find the given `Data` in the content of this `Data`.
     ///
     /// - parameter dataToFind: The data to be searched for.
@@ -45,26 +22,6 @@ extension Data {
     /// - returns: A `Range` specifying the location of the found data, or nil if a match could not be found.
     /// - precondition: `range` must be in the bounds of the Data.
     public func range(of dataToFind: Data, options: Data.SearchOptions = [], in range: Range<Index>? = nil) -> Range<Index>? {
-        // FIXME: Implement Data IO
-        fatalError("Not implemented")
-    }
-
-    /// Returns a Base-64 encoded string.
-    ///
-    /// - parameter options: The options to use for the encoding. Default value is `[]`.
-    /// - returns: The Base-64 encoded string.
-    @inlinable // This is @inlinable as trivially forwarding.
-    public func base64EncodedString(options: Data.Base64EncodingOptions = []) -> String {
-        // FIXME: Implement Data IO
-        fatalError("Not implemented")
-    }
-
-    /// Returns a Base-64 encoded `Data`.
-    ///
-    /// - parameter options: The options to use for the encoding. Default value is `[]`.
-    /// - returns: The Base-64 encoded data.
-    @inlinable // This is @inlinable as trivially forwarding.
-    public func base64EncodedData(options: Data.Base64EncodingOptions = []) -> Data {
         // FIXME: Implement Data IO
         fatalError("Not implemented")
     }
