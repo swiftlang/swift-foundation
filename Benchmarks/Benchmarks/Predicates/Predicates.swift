@@ -16,7 +16,7 @@ import FoundationEssentials
 
 let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
-    Benchmark.defaultConfiguration.maxDuration = .seconds(5)
+    Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = .arc + [.cpuTotal, .wallClock, .mallocCountTotal, .throughput] // use ARC to see traffic
 //  Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput] // skip ARC as it has some overhead
@@ -74,17 +74,17 @@ let benchmarks = {
             }
         }
 
-        var multivariatePredicateTests : [(String, Predicate<Monster, Monster>)] = []
+        var variadicPredicateTests : [(String, Predicate<Monster, Monster>)] = []
         let monster2 = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: .sword(Sword(p1: 1, p2: 2, p3: 3, p4: 4, p5: 5)))
 
-        multivariatePredicateTests.append(("predicateMultivariateThreeKeypathNestedComputedPropertyCondition",
-                                           #Predicate<Monster, Monster> { monster, monster2 in
+        variadicPredicateTests.append(("predicateVariadicThreeKeypathNestedComputedPropertyCondition",
+                                       #Predicate<Monster, Monster> { monster, monster2 in
             ((monster.weaponP1 == 1) &&
              (monster.weaponP2 == 2) &&
              (monster2.weaponP2 == 2))
         }))
 
-        multivariatePredicateTests.forEach { (testDescription, predicate) in
+        variadicPredicateTests.forEach { (testDescription, predicate) in
             Benchmark(testDescription) { benchmark in
                 var matched = 0
 
