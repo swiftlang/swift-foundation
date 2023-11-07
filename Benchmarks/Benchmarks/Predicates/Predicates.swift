@@ -73,5 +73,31 @@ let benchmarks = {
                 }
             }
         }
+
+        var multivariatePredicateTests : [(String, Predicate<Monster, Weapon>)] = []
+
+        let weapon = Weapon.sword(.init(p1: 1, p2: 2, p3: 3, p4: 4, p5: 5))
+
+        multivariatePredicateTests.append(("predicateMultivariateCondition",
+                                           #Predicate<Monster, Weapon> { monster, weapon in
+            ((monster.weaponP1 == 1) &&
+             (weapon.p3 == 3))
+        }))
+
+        multivariatePredicateTests.forEach { (testDescription, predicate) in
+            Benchmark(testDescription) { benchmark in
+                var matched = 0
+
+                for _ in benchmark.scaledIterations {
+                    if try predicate.evaluate(monster, weapon) {
+                        matched += 1
+                    }
+                }
+
+                guard matched == benchmark.scaledIterations.count else {
+                    fatalError("Internal error: wrong number of matched monsters")
+                }
+            }
+        }
     }
 }
