@@ -74,14 +74,14 @@ let benchmarks = {
             }
         }
 
-        var multivariatePredicateTests : [(String, Predicate<Monster, Weapon>)] = []
+        var multivariatePredicateTests : [(String, Predicate<Monster, Monster>)] = []
+        let monster2 = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: .sword(Sword(p1: 1, p2: 2, p3: 3, p4: 4, p5: 5)))
 
-        let weapon = Weapon.sword(.init(p1: 1, p2: 2, p3: 3, p4: 4, p5: 5))
-
-        multivariatePredicateTests.append(("predicateMultivariateCondition",
-                                           #Predicate<Monster, Weapon> { monster, weapon in
+        multivariatePredicateTests.append(("predicateMultivariateKeypathNestedComputedPropertyCondition",
+                                           #Predicate<Monster, Monster> { monster, monster2 in
             ((monster.weaponP1 == 1) &&
-             (weapon.p3 == 3))
+             (monster.weaponP2 == 2) &&
+             (monster2.weaponP2 == 2))
         }))
 
         multivariatePredicateTests.forEach { (testDescription, predicate) in
@@ -89,7 +89,7 @@ let benchmarks = {
                 var matched = 0
 
                 for _ in benchmark.scaledIterations {
-                    if try predicate.evaluate(monster, weapon) {
+                    if try predicate.evaluate(monster, monster2) {
                         matched += 1
                     }
                 }
