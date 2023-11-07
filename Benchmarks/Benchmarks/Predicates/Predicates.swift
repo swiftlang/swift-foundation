@@ -77,7 +77,7 @@ let benchmarks = {
         var multivariatePredicateTests : [(String, Predicate<Monster, Monster>)] = []
         let monster2 = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: .sword(Sword(p1: 1, p2: 2, p3: 3, p4: 4, p5: 5)))
 
-        multivariatePredicateTests.append(("predicateMultivariateKeypathNestedComputedPropertyCondition",
+        multivariatePredicateTests.append(("predicateMultivariateThreeKeypathNestedComputedPropertyCondition",
                                            #Predicate<Monster, Monster> { monster, monster2 in
             ((monster.weaponP1 == 1) &&
              (monster.weaponP2 == 2) &&
