@@ -27,30 +27,30 @@ let benchmarks = {
 
         var predicateTests : [(String, Predicate<Monster>)] = []
 
-        predicateTests.append(("Predicate #1 - simple 'true' condition", #Predicate<Monster> { monster in
+        predicateTests.append(("Predicate #\(predicateTests.count + 1) - Trivial 'true' condition", #Predicate<Monster> { monster in
             true
         }))
 
-        predicateTests.append(("Predicate #2 - 1 KeyPath variable condition", #Predicate<Monster> { monster in
+        predicateTests.append(("Predicate #\(predicateTests.count + 1) - 1 KeyPath variable condition", #Predicate<Monster> { monster in
             (monster.level == 80)
         }))
 
-        predicateTests.append(("Predicate #3 - 1 KeyPath computed property condition", #Predicate<Monster> { monster in
+        predicateTests.append(("Predicate #\(predicateTests.count + 1) - 1 KeyPath computed property condition", #Predicate<Monster> { monster in
             (monster.levelComputed == 80)
         }))
 
-        predicateTests.append(("Predicate #4 - 1 KeyPath nested computed property condition", #Predicate<Monster> { monster in
+        predicateTests.append(("Predicate #\(predicateTests.count + 1) - 1 KeyPath nested computed property condition", #Predicate<Monster> { monster in
             (monster.weaponP1 == 1)
         }))
 
-        predicateTests.append(("Predicate #5 - 3 KeyPath nested computed property conditions", #Predicate<Monster> { monster in
+        predicateTests.append(("Predicate #\(predicateTests.count + 1) - 3 KeyPath nested computed property conditions", #Predicate<Monster> { monster in
             ((monster.weaponP1 == 1) &&
              (monster.weaponP2 == 2) &&
              (monster.weaponP3 == 3))
         }))
 
     // This test disabled, as enabling it will make compilation fail due to https://github.com/apple/swift/issues/69277
-    //      predicateTests.append(("Predicate #6 - 5 KeyPath nested computed property conditions", #Predicate<Monster> { monster in
+    //      predicateTests.append(("Predicate #\(predicateTests.count + 1) - 5 KeyPath nested computed property conditions", #Predicate<Monster> { monster in
     //          ((monster.weaponP1 == 1) &&
     //           (monster.weaponP2 == 2) &&
     //           (monster.weaponP3 == 3) &&
