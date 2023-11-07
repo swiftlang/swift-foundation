@@ -27,30 +27,30 @@ let benchmarks = {
 
         var predicateTests : [(String, Predicate<Monster>)] = []
 
-        predicateTests.append(("Predicate #\(predicateTests.count) - Trivial 'true' condition", #Predicate<Monster> { monster in
+        predicateTests.append(("predicateTrivialCondition", #Predicate<Monster> { monster in
             true
         }))
 
-        predicateTests.append(("Predicate #\(predicateTests.count) - 1 KeyPath variable condition", #Predicate<Monster> { monster in
+        predicateTests.append(("predicateKeypathPropertyCondition", #Predicate<Monster> { monster in
             (monster.level == 80)
         }))
 
-        predicateTests.append(("Predicate #\(predicateTests.count) - 1 KeyPath computed property condition", #Predicate<Monster> { monster in
+        predicateTests.append(("predicateKeypathComputedPropertyCondition", #Predicate<Monster> { monster in
             (monster.levelComputed == 80)
         }))
 
-        predicateTests.append(("Predicate #\(predicateTests.count) - 1 KeyPath nested computed property condition", #Predicate<Monster> { monster in
+        predicateTests.append(("predicateKeypathNestedComputedPropertyCondition", #Predicate<Monster> { monster in
             (monster.weaponP1 == 1)
         }))
 
-        predicateTests.append(("Predicate #\(predicateTests.count) - 3 KeyPath nested computed property conditions", #Predicate<Monster> { monster in
+        predicateTests.append(("predicateThreeKeypathNestedComputedPropertyCondition", #Predicate<Monster> { monster in
             ((monster.weaponP1 == 1) &&
              (monster.weaponP2 == 2) &&
              (monster.weaponP3 == 3))
         }))
 
     // This test disabled, as enabling it will make compilation fail due to https://github.com/apple/swift/issues/69277
-    //      predicateTests.append(("Predicate #\(predicateTests.count) - 5 KeyPath nested computed property conditions", #Predicate<Monster> { monster in
+    //      predicateTests.append(("predicateFiveKeypathNestedComputedPropertyCondition", #Predicate<Monster> { monster in
     //          ((monster.weaponP1 == 1) &&
     //           (monster.weaponP2 == 2) &&
     //           (monster.weaponP3 == 3) &&
