@@ -238,6 +238,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone {
 #if !FOUNDATION_FRAMEWORK
+/// Enum you use to specify different name style of a time zone.
     public enum NameStyle : Int, Sendable {
         /// Specifies a standard name style. For example, “Central Standard Time” for Central Time.
         case standard
