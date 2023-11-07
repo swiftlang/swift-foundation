@@ -4,9 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "benchmarks",
-    platforms: [
-        .macOS(.v14),
-    ],
+    platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")], // Should match parent project
     dependencies: [
         .package(path: "../"),
         .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1"),
