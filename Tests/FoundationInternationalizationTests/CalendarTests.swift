@@ -20,7 +20,6 @@ import TestSupport
 @testable import FoundationInternationalization
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
-import FoundationICU
 
 final class CalendarTests : XCTestCase {
 
