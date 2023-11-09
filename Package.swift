@@ -30,7 +30,10 @@ let package = Package(
             revision: "0c1de7149a39a9ff82d4db66234dec587b30a3ad"),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
-            from: "509.0.2")
+            from: "509.0.2"),
+        .package(
+            url: "https://github.com/apple/swift-testing.git",
+            from: "0.1.0")
     ],
     targets: [
         // Foundation (umbrella)
@@ -51,6 +54,7 @@ let package = Package(
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
             "FoundationInternationalization",
+           .product(name: "Testing", package: "swift-testing")
         ], swiftSettings: availabilityMacros),
 
         // FoundationEssentials

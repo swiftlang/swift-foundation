@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 @_exported import XCTest
+@_exported import Testing
 
 // See this issue for more info on this file: https://github.com/apple/swift-foundation/issues/40
 
