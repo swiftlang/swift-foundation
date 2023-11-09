@@ -17,6 +17,12 @@ package protocol _TimeZoneProtocol : AnyObject, Sendable, CustomDebugStringConve
     
     var identifier: String { get }
     func secondsFromGMT(for date: Date) -> Int
+
+    /// The returned `daylightSavingOffset` is different from that returned by `daylightSavingTimeOffset(:)` in that this interprets `Date` in GMT.
+    /// Essentially this is equivalent to adjusting `date` to this time zone using `rawOffset`, then passing the adjusted date to `daylightSavingTimeOffset(for: <adjusted date>)`.
+    /// This also handles the skipped time frame on DST start day differently from `daylightSavingTimeOffset(:)`, where dates in the skipped time frame are considered *not* in DST here, hence the DST offset would be 0.
+    func rawAndDaylightSavingTimeOffset(forGMTDate date: Date) -> (rawOffset: Int, daylightSavingOffset: Int)
+
     func abbreviation(for date: Date) -> String?
     func isDaylightSavingTime(for date: Date) -> Bool
     func daylightSavingTimeOffset(for date: Date) -> TimeInterval

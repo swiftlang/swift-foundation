@@ -152,6 +152,10 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz.secondsFromGMT(for: date)
     }
 
+    internal func rawAndDaylightSavingTimeOffset(forGMTDate date: Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
+        _tz.rawAndDaylightSavingTimeOffset(forGMTDate: date)
+    }
+
     /// Returns the abbreviation for the time zone at a given date.
     ///
     /// Note that the abbreviation may be different at different dates. For example, during daylight saving time the US/Eastern time zone has an abbreviation of "EDT." At other times, its abbreviation is "EST."

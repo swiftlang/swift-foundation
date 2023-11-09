@@ -51,6 +51,10 @@ internal final class _TimeZoneAutoupdating : _TimeZoneProtocol, Sendable {
         TimeZoneCache.cache.current.localizedName(for: style, locale: locale)
     }
     
+    func rawAndDaylightSavingTimeOffset(forGMTDate date: Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
+        TimeZoneCache.cache.current.rawAndDaylightSavingTimeOffset(forGMTDate: date)
+    }
+
     var isAutoupdating: Bool {
         true
     }

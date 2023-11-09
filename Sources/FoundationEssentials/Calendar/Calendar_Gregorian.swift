@@ -90,7 +90,6 @@ enum ResolvedDateComponents {
 
     init(dateComponents components: DateComponents) {
         var (year, month) = Self.yearMonth(forDateComponent: components)
-        let minMonth = 1
         let minWeekdayOrdinal = 1
         if let d = components.day {
             if components.yearForWeekOfYear != nil, let weekOfYear = components.weekOfYear {
@@ -125,7 +124,6 @@ enum ResolvedDateComponents {
     }
 
     init(preferComponent c: Calendar.Component, dateComponents components: DateComponents) {
-        let minMonth = 1
         let minWeekdayOrdinal = 1
         switch c {
         case .day:
@@ -464,7 +462,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
 
-    func date(from components: DateComponents, inTimeZone timeZone: TimeZone?, resolvedComponents: ResolvedDateComponents? = nil) -> Date? {
+    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, resolvedComponents: ResolvedDateComponents? = nil) -> Date? {
 
         let resolvedComponents = resolvedComponents ?? ResolvedDateComponents(dateComponents: components)
 
@@ -498,20 +496,14 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             secondsInDay += Double(nanosecond) / Double(nano_coef)
         }
 
-        let timeZoneOffset: Int
-        if let timeZone = timeZone {
-            // TODO: Implement `TimeZone.secondsFromGMT(for date: Date)` to support DST
-            timeZoneOffset = timeZone.secondsFromGMT()
-        } else if let timeZone = components.timeZone {
-            timeZoneOffset = timeZone.secondsFromGMT()
-        } else {
-            timeZoneOffset = 0 // Assume GMT
-        }
+        // Rewind from Julian day, which starts at noon, back to midnight
+        var tmpDate = Date(julianDay: julianDay) - 43200 + secondsInDay
 
-        let timeInThisDay = secondsInDay - Double(timeZoneOffset)
+        // tmpDate now is in GMT. Adjust it back into local time zone
+        let (timeZoneOffset, dstOffset) = timeZone.rawAndDaylightSavingTimeOffset(forGMTDate: tmpDate)
+        tmpDate = tmpDate - Double(timeZoneOffset) - Double(dstOffset)
 
-        // rewind from Julian day, which starts at noon, back to midnight
-        return Date(julianDay: julianDay) - 43200 + timeInThisDay
+        return tmpDate
     }
 
 

@@ -61,6 +61,10 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
         nil
     }
     
+    func rawAndDaylightSavingTimeOffset(forGMTDate date: FoundationEssentials.Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
+        (offset, 0)
+    }
+
     var debugDescription: String {
         "gmt icu offset \(offset)"
     }
