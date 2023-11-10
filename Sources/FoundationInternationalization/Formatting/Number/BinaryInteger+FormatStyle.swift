@@ -64,8 +64,7 @@ extension BinaryInteger {
 ///   - words: The binary integer's words (least-significant word first).
 ///   - isSigned: The binary integer's signedness.  If true, `words` must be in two's complement form.
 ///
-internal
-func numericStringRepresentationForBinaryInteger(
+internal func numericStringRepresentationForBinaryInteger(
 words: some Collection<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
     // Copies the words and then passes them to a non-generic, mutating, word-based algorithm.
     withUnsafeTemporaryAllocation(of: UInt.self, capacity: words.count) { copy in
@@ -114,10 +113,10 @@ words: UnsafeMutableBufferPointer<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
             // The entire magnitude has been encoded when the formed quotient is empty.
         }   while wordsIndex > words.startIndex
         
-        //  Jump to the most significant digit.
+        // Jump to the most significant digit.
         asciiIndex = writeIndex
         
-        //  Add a minus sign to negative values.
+        // Add a minus sign to negative values.
         if isLessThanZero {
             ascii.formIndex(before: &asciiIndex)
             ascii[asciiIndex] = UInt8(ascii: "-")
@@ -149,7 +148,7 @@ word: UInt, into buffer: Slice<UnsafeMutableBufferPointer<UInt8>>) -> Int {
         buffer.base[index] = UInt8(ascii: "0") &+ UInt8(truncatingIfNeeded: remainder)
     }   while magnitude != 0 as UInt
     
-    return index as Int
+    return index
 }
 
 /// Forms the `quotient` of dividing the `dividend` by the `divisor`, then returns the `remainder`.
