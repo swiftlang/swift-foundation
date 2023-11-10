@@ -106,9 +106,9 @@ words: UnsafeMutableBufferPointer<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
             // Mutating division prevents unnecessary big integer allocations.
             let remainder = formQuotientWithRemainderForUnsignedInteger(words: words[..<wordsIndex], dividingBy: radix.power)
             // Trim the quotient's most significant zeros for flexible-width performance and to end the loop.
-            wordsIndex  = words.prefix(upTo: wordsIndex).reversed().drop(while:{ $0 == 0 as UInt }).startIndex.base
+            wordsIndex  = words[..<wordsIndex].reversed().drop(while:{ $0 == 0 as UInt }).startIndex.base
             // The remainder's numeric string representation is written to the array's trailing edge, up to the ASCII index.
-            writeIndex  = formTrailingNumericStringRepresentationForUnsignedInteger(word: remainder, into: ascii.prefix(upTo: asciiIndex))
+            writeIndex  = formTrailingNumericStringRepresentationForUnsignedInteger(word: remainder, into: ascii[..<asciiIndex])
             // Because the array is pre-filled with ASCII zeros, we can skip ahead; only the final loop's zeros are trimmed.
             asciiIndex -= radix.exponent
             // The entire magnitude has been encoded when the formed quotient is empty.
