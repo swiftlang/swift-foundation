@@ -61,10 +61,10 @@ extension BinaryInteger {
 /// which is the required input form for certain ICU functions (e.g. `unum_formatDecimal`).
 ///
 /// - Parameters:
-///   - words: The binary integer's words.
-///   - isSigned: The binary integer's signedness.
+///   - words: The binary integer's words (least-significant word first).
+///   - isSigned: The binary integer's signedness.  If true, `words` must be in two's complement form.
 ///
-internal // In order to test big integers without big integer models.
+internal
 func numericStringRepresentationForBinaryInteger(
 words: some Collection<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
     // Copies the words and then passes them to a non-generic, mutating, word-based algorithm.
@@ -104,7 +104,7 @@ words: UnsafeMutableBufferPointer<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
     ascii.withUnsafeMutableBufferPointer { ascii in
         repeat {
             // Mutating division prevents unnecessary big integer allocations.
-            let remainder = formQuotientWithRemainderForUnsignedInteger(words: words.prefix(upTo: wordsIndex), dividingBy: radix.power)
+            let remainder = formQuotientWithRemainderForUnsignedInteger(words: words[..<wordsIndex], dividingBy: radix.power)
             // Trim the quotient's most significant zeros for flexible-width performance and to end the loop.
             wordsIndex  = words.prefix(upTo: wordsIndex).reversed().drop(while:{ $0 == 0 as UInt }).startIndex.base
             // The remainder's numeric string representation is written to the array's trailing edge, up to the ASCII index.
@@ -118,8 +118,8 @@ words: UnsafeMutableBufferPointer<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
         asciiIndex = writeIndex
         
         //  Add a minus sign to negative values.
-        if  isLessThanZero {
-            ascii.formIndex(before:  &asciiIndex)
+        if isLessThanZero {
+            ascii.formIndex(before: &asciiIndex)
             ascii[asciiIndex] = UInt8(ascii: "-")
         }
     }
@@ -155,7 +155,7 @@ word: UInt, into buffer: Slice<UnsafeMutableBufferPointer<UInt8>>) -> Int {
 /// Forms the `quotient` of dividing the `dividend` by the `divisor`, then returns the `remainder`.
 ///
 /// - Parameters:
-///   - dividend: An unsigned binary integer's words.
+///   - dividend: An unsigned binary integer's words.  This is modified to be the quotient once this function returns.
 ///   - divisor:  An unsigned binary integer's only word.
 ///
 /// - Returns: The `remainder`, which is a value in the range of `0 ..< divisor`.
@@ -168,7 +168,7 @@ words dividend: Slice<UnsafeMutableBufferPointer<UInt>>, dividingBy divisor: UIn
         (dividend.base[index], remainder) = divisor.dividingFullWidth((high: remainder, low: dividend.base[index]))
     }
     
-    return remainder as UInt
+    return remainder
 }
 
 /// Forms the `two's complement` of a binary integer.
