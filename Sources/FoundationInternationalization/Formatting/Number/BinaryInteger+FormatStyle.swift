@@ -67,10 +67,15 @@ extension BinaryInteger {
 internal func numericStringRepresentationForBinaryInteger(
 words: some Collection<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
     // Copies the words and then passes them to a non-generic, mutating, word-based algorithm.
-    withUnsafeTemporaryAllocation(of: UInt.self, capacity: words.count) { copy in
-        let count =  copy.initialize(fromContentsOf: words)
-        defer{ copy.baseAddress!.deinitialize(count: count) }
-        return numericStringRepresentationForMutableBinaryInteger(words: copy, isSigned: isSigned)
+    withUnsafeTemporaryAllocation(of: UInt.self, capacity: words.count) {
+        let initializedEndIndex = $0.initialize(fromContentsOf: words)
+        let initialized = UnsafeMutableBufferPointer(rebasing: $0[..<initializedEndIndex])
+                
+        defer {
+            initialized.deinitialize()
+        }
+        
+        return numericStringRepresentationForMutableBinaryInteger(words: initialized, isSigned: isSigned)
     }
 }
 
