@@ -152,8 +152,8 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz.secondsFromGMT(for: date)
     }
 
-    internal func rawAndDaylightSavingTimeOffset(forGMTDate date: Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
-        _tz.rawAndDaylightSavingTimeOffset(forGMTDate: date)
+    internal func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
+        _tz.rawAndDaylightSavingTimeOffset(for: date)
     }
 
     /// Returns the abbreviation for the time zone at a given date.

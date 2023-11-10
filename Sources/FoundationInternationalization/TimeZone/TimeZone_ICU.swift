@@ -162,7 +162,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
     }
 
-    func rawAndDaylightSavingTimeOffset(forGMTDate date: Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
+    func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
         return lock.withLock {
             guard let calendar = $0.calendar(identifier) else { return (0, 0) }
             var rawOffset: Int32 = 0

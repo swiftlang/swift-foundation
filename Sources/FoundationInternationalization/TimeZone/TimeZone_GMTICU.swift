@@ -61,7 +61,7 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
         nil
     }
     
-    func rawAndDaylightSavingTimeOffset(forGMTDate date: FoundationEssentials.Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
+    func rawAndDaylightSavingTimeOffset(for date: FoundationEssentials.Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
         (offset, 0)
     }
 
