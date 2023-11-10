@@ -687,7 +687,7 @@ final class CalendarBridgingTests : XCTestCase {
 #endif
 
 // This test validates the results against FoundationInternationalization's calendar implementation temporarily until we completely ported the calendar
-final class GregorianCalendarTests: XCTestCase {
+final class GregorianCalendarCompatibilityTests: XCTestCase {
 
     func testDateFromComponentsCompatibility() {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
