@@ -501,7 +501,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         // tmpDate now is in GMT. Adjust it back into local time zone
         let (timeZoneOffset, dstOffset) = timeZone.rawAndDaylightSavingTimeOffset(for: tmpDate)
-        tmpDate = tmpDate - Double(timeZoneOffset) - Double(dstOffset)
+        tmpDate = tmpDate - Double(timeZoneOffset) - dstOffset
 
         return tmpDate
     }

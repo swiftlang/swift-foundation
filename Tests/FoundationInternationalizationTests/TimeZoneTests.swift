@@ -207,7 +207,7 @@ final class TimeZoneICUTests: XCTestCase {
 
         var gmt_calendar = Calendar(identifier: .gregorian)
         gmt_calendar.timeZone = .gmt
-        func test(_ dateComponent: DateComponents, expectedRawOffset: Int, expectedDSTOffset: Int, file: StaticString = #file, line: UInt = #line) {
+        func test(_ dateComponent: DateComponents, expectedRawOffset: Int, expectedDSTOffset: TimeInterval, file: StaticString = #file, line: UInt = #line) {
             let d = gmt_calendar.date(from: dateComponent)! // date in GMT
             let (rawOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: d)
             XCTAssertEqual(rawOffset, expectedRawOffset, file: file, line: line)

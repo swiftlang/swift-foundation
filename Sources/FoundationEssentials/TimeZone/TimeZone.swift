@@ -152,7 +152,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz.secondsFromGMT(for: date)
     }
 
-    internal func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: Int) {
+    internal func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
         _tz.rawAndDaylightSavingTimeOffset(for: date)
     }
 

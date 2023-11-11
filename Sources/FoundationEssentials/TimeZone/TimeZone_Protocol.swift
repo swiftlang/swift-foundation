@@ -20,7 +20,7 @@ package protocol _TimeZoneProtocol : AnyObject, Sendable, CustomDebugStringConve
 
     /// Essentially this is equivalent to adjusting `date` to this time zone using `rawOffset`, then passing the adjusted date to `daylightSavingTimeOffset(for: <adjusted date>)`.
     /// This also handles the skipped time frame on DST start day differently from `daylightSavingTimeOffset(:)`, where dates in the skipped time frame are considered *not* in DST here, hence the DST offset would be 0.
-    func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: Int)
+    func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: TimeInterval)
 
     func abbreviation(for date: Date) -> String?
     func isDaylightSavingTime(for date: Date) -> Bool
