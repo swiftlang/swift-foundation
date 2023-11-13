@@ -338,8 +338,12 @@ final class PredicateTests: XCTestCase {
             $0.a == $0.c && $0.b == now
         }
     }
-
-    func testDebugDescription() {
+    
+    func testDebugDescription() throws {
+        guard #available(FoundationPreview 0.3, *) else {
+            throw XCTSkip("This test is not available on this OS version")
+        }
+        
         let date = Date.now
         let predicate = Predicate<Object> {
             /*
@@ -392,7 +396,7 @@ final class PredicateTests: XCTestCase {
             """
         )
         
-        let debugDescription = predicate.debugDescription.replacing(/Variable\([0-9]+\)/, with: "Variable(#)")
+        let debugDescription = predicate.debugDescription.replacing(#/Variable\([0-9]+\)/#, with: "Variable(#)")
         XCTAssertEqual(
             debugDescription,
             "\(moduleName).Predicate<Pack{\(testModuleName).PredicateTests.Object}>(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\Object.a), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\Object.h), rhs: Value<\(moduleName).Date>(\(date.debugDescription)))))"
