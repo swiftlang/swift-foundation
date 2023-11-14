@@ -31,6 +31,13 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.Negation : CustomStringConvertible {
+    public var description: String {
+        "Negation(wrapped: \(wrapped))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Negation : StandardPredicateExpression where Wrapped : StandardPredicateExpression {}
 

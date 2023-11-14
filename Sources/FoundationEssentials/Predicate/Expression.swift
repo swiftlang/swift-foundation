@@ -209,6 +209,13 @@ extension PredicateExpressions.KeyPath : Sendable where Root : Sendable {}
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.KeyPath : StandardPredicateExpression where Root : StandardPredicateExpression {}
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.KeyPath : CustomStringConvertible {
+    public var description: String {
+        "KeyPath(root: \(root), keyPath: \(keyPath.debugDescription))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Value : Codable where Output : Codable {
     public func encode(to encoder: Encoder) throws {
@@ -227,6 +234,22 @@ extension PredicateExpressions.Value : Sendable where Output : Sendable {}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Value : StandardPredicateExpression where Output : Codable /*, Output : Sendable*/ {}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.Value : CustomStringConvertible {
+    public var description: String {
+        var result = "Value<\(_typeName(Output.self))>("
+        debugPrint(value, separator: "", terminator: "", to: &result)
+        return result + ")"
+    }
+}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.Variable : CustomStringConvertible {
+    public var description: String {
+        "Variable(\(key.id))"
+    }
+}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.KeyPath {

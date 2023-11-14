@@ -39,6 +39,13 @@ extension PredicateExpressions {
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMaximum : StandardPredicateExpression where Elements : StandardPredicateExpression {}
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.SequenceMaximum : CustomStringConvertible {
+    public var description: String {
+        "SequenceMaximum(elements: \(elements))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMaximum : Codable where Elements : Codable {}
 
@@ -73,6 +80,13 @@ extension PredicateExpressions {
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMinimum : StandardPredicateExpression where Elements : StandardPredicateExpression {}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.SequenceMinimum : CustomStringConvertible {
+    public var description: String {
+        "SequenceMinimum(elements: \(elements))"
+    }
+}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMinimum : Codable where Elements : Codable {}

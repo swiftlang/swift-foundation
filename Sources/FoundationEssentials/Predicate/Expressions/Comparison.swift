@@ -54,6 +54,13 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.Comparison : CustomStringConvertible {
+    public var description: String {
+        "Comparison(lhs: \(lhs), operator: \(op), rhs: \(rhs))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Comparison : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 

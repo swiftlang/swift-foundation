@@ -41,6 +41,20 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.StringLocalizedStandardContains : CustomStringConvertible {
+    public var description: String {
+        "StringLocalizedStandardContains(root: \(root), other: \(other))"
+    }
+}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.StringLocalizedStandardContains : DebugStringConvertiblePredicateExpression where Root : DebugStringConvertiblePredicateExpression, Other : DebugStringConvertiblePredicateExpression {
+    package func debugString(state: inout DebugStringConversionState) -> String {
+        "\(root.debugString(state: &state)).localizedStandardContains(\(other.debugString(state: &state)))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.StringLocalizedStandardContains : StandardPredicateExpression where Root : StandardPredicateExpression, Other : StandardPredicateExpression {}
 
@@ -88,6 +102,20 @@ extension PredicateExpressions {
     
     public static func build_localizedCompare<Root, Other>(_ root: Root, _ other: Other) -> StringLocalizedCompare<Root, Other> {
         StringLocalizedCompare(root: root, other: other)
+    }
+}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.StringLocalizedCompare : CustomStringConvertible {
+    public var description: String {
+        "StringLocalizedCompare(root: \(root), other: \(other))"
+    }
+}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.StringLocalizedCompare : DebugStringConvertiblePredicateExpression where Root : DebugStringConvertiblePredicateExpression, Other : DebugStringConvertiblePredicateExpression {
+    package func debugString(state: inout DebugStringConversionState) -> String {
+        "\(root.debugString(state: &state)).localizedCompare(\(other.debugString(state: &state)))"
     }
 }
 

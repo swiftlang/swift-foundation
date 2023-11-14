@@ -56,6 +56,13 @@ extension PredicateExpressions {
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Arithmetic : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.Arithmetic : CustomStringConvertible {
+    public var description: String {
+        "Arithmetic(lhs: \(lhs), operator: \(op), rhs: \(rhs))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Arithmetic : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {

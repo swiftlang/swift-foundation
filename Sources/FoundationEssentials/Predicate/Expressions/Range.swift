@@ -45,6 +45,13 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.Range : CustomStringConvertible {
+    public var description: String {
+        "Range(lower: \(lower), upper: \(upper))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Range : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
@@ -98,6 +105,13 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.ClosedRange : CustomStringConvertible {
+    public var description: String {
+        "ClosedRange(lower: \(lower), upper: \(upper))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ClosedRange : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
@@ -145,6 +159,13 @@ extension PredicateExpressions {
     
     public static func build_contains<RangeExpression, Element>(_ range: RangeExpression, _ element: Element) -> RangeExpressionContains<RangeExpression, Element> {
         RangeExpressionContains(range: range, element: element)
+    }
+}
+
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.RangeExpressionContains : CustomStringConvertible {
+    public var description: String {
+        "RangeExpressionContains(range: \(range), element: \(element))"
     }
 }
 

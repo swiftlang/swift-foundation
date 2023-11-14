@@ -48,6 +48,13 @@ extension PredicateExpressions {
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.CollectionIndexSubscript : Sendable where Wrapped : Sendable, Index : Sendable {}
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.CollectionIndexSubscript : CustomStringConvertible {
+    public var description: String {
+        "CollectionIndexSubscript(wrapped: \(wrapped), index: \(index))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.CollectionIndexSubscript : Codable where Wrapped : Codable, Index : Codable {
     public func encode(to encoder: Encoder) throws {
@@ -106,6 +113,13 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.CollectionRangeSubscript : CustomStringConvertible {
+    public var description: String {
+        "CollectionRangeSubscript(wrapped: \(wrapped), range: \(range))"
+    }
+}
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.CollectionRangeSubscript : Sendable where Wrapped : Sendable, Range : Sendable {}
 
@@ -160,6 +174,12 @@ extension PredicateExpressions {
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.CollectionContainsCollection : CustomStringConvertible {
+    public var description: String {
+        "CollectionContainsCollection(base: \(base), other: \(other))"
+    }
+}
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.CollectionContainsCollection : Sendable where Base : Sendable, Other : Sendable {}
