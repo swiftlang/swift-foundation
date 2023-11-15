@@ -345,36 +345,12 @@ final class PredicateTests: XCTestCase {
         }
         
         let date = Date.now
-        let predicate = Predicate<Object> {
-            /*
-             if let num = $0.a as? Int {
-                 num == 3
-             } else {
-                 $0.h == date
-             }
-             */
-            PredicateExpressions.build_NilCoalesce(
-                lhs: PredicateExpressions.build_flatMap(
-                    PredicateExpressions.ConditionalCast<_, Int >(
-                        PredicateExpressions.build_KeyPath(
-                            root: PredicateExpressions.build_Arg($0),
-                            keyPath: \.a
-                        )
-                    )
-                ) { num in
-                    PredicateExpressions.build_Equal(
-                        lhs: PredicateExpressions.build_Arg(num),
-                        rhs: PredicateExpressions.build_Arg(3)
-                    )
-                },
-                rhs: PredicateExpressions.build_Equal(
-                    lhs: PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
-                        keyPath: \.h
-                    ),
-                    rhs: PredicateExpressions.build_Arg(date)
-                )
-            )
+        let predicate = #Predicate<Object> {
+            if let num = $0.i as? Int {
+                num == 3
+            } else {
+                $0.h == date
+            }
         }
 #if FOUNDATION_FRAMEWORK
         let moduleName = "Foundation"
@@ -389,7 +365,7 @@ final class PredicateTests: XCTestCase {
             capture1 (Swift.Int): 3
             capture2 (\(moduleName).Date): <Date \(date.timeIntervalSince1970)>
             Predicate<\(testModuleName).PredicateTests.Object> { input1 in
-                (input1.a as? Swift.Int).flatMap({ variable1 in
+                (input1.i as? Swift.Int).flatMap({ variable1 in
                     variable1 == capture1
                 }) ?? (input1.h == capture2)
             }
@@ -399,7 +375,7 @@ final class PredicateTests: XCTestCase {
         let debugDescription = predicate.debugDescription.replacing(#/Variable\([0-9]+\)/#, with: "Variable(#)")
         XCTAssertEqual(
             debugDescription,
-            "\(moduleName).Predicate<Pack{\(testModuleName).PredicateTests.Object}>(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\Object.a), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\Object.h), rhs: Value<\(moduleName).Date>(\(date.debugDescription)))))"
+            "\(moduleName).Predicate<Pack{\(testModuleName).PredicateTests.Object}>(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\Object.i), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\Object.h), rhs: Value<\(moduleName).Date>(\(date.debugDescription)))))"
         )
     }
 }
