@@ -752,13 +752,30 @@ public struct Calendar : Hashable, Equatable, Sendable {
             let (secs1, nano1) = split(date1.timeIntervalSinceReferenceDate)
             let (secs2, nano2) = split(date2.timeIntervalSinceReferenceDate)
             if secs1 == secs2 {
+#if FOUNDATION_FRAMEWORK
+                // Compatibility path - we found some apps depending on this.
+                // NOTE: This comparison is wrong!
+                if Calendar.compatibility1 {
+                    if nano1 == nano2 {
+                        return .orderedSame
+                    } else if nano1 < nano2 {
+                        return .orderedDescending
+                    } else {
+                        return .orderedSame
+                    }
+                }
+#endif
                 if nano1 == nano2 {
                     return .orderedSame
-                } else if nano1 < nano2 {
-                    return .orderedAscending
-                } else {
+                } else if nano2 < nano1 {
                     return .orderedDescending
+                } else {
+                    return .orderedAscending
                 }
+            } else if secs2 < secs1 {
+                return .orderedDescending
+            } else {
+                return .orderedAscending
             }
         default:
             break
