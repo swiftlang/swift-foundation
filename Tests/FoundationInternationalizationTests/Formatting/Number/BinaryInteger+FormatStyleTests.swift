@@ -25,7 +25,7 @@ import BigInt
 final class BinaryIntegerFormatStyleTests: XCTestCase {
     // NSR == numericStringRepresentation
     func checkNSR(value: some BinaryInteger, expected: String) {
-        XCTAssertEqual(String(decoding: value.numericStringRepresentation, as: Unicode.ASCII.self), expected)
+        XCTAssertEqual(String(decoding: value.numericStringRepresentation.utf8, as: Unicode.ASCII.self), expected)
     }
 
     func testNumericStringRepresentation_builtinIntegersLimits() throws {
@@ -223,7 +223,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     
     func check(_ integer: some BinaryInteger, expectation: String, file: StaticString = #file, line: UInt = #line) {
         XCTAssertEqual(integer.description, expectation, "integer description does not match expectation", file: file, line: line)
-        check(ascii: integer.numericStringRepresentation, expectation: expectation, file: file, line: line)
+        check(ascii: integer.numericStringRepresentation.utf8, expectation: expectation, file: file, line: line)
         check(words: Array(integer.words), isSigned: type(of: integer).isSigned, expectation: expectation, file: file, line: line)
     }
     
@@ -232,7 +232,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     }
     
     func check(words: [UInt], isSigned: Bool, expectation: String, file: StaticString = #file, line: UInt = #line) {
-        let ascii = numericStringRepresentationForBinaryInteger(words: words, isSigned: isSigned)
+        let ascii =  numericStringRepresentationForBinaryInteger(words: words, isSigned: isSigned).utf8
         check(ascii: ascii, expectation: expectation, file: file, line: line)
     }
     

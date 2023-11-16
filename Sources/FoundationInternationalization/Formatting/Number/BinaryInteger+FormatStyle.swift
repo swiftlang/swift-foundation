@@ -52,7 +52,7 @@ extension BinaryInteger {
     /// `description` is not specifically defined by `BinaryInteger` (or anywhere else, really),
     /// and as such cannot be relied upon.  Thus this purpose-built method, instead.
     ///
-    internal var numericStringRepresentation: ArraySlice<UInt8> {
+    internal var numericStringRepresentation: String {
         numericStringRepresentationForBinaryInteger(words: self.words, isSigned: Self.isSigned)
     }
 }
@@ -64,13 +64,12 @@ extension BinaryInteger {
 ///   - words: The binary integer's words (least-significant word first).
 ///   - isSigned: The binary integer's signedness.  If true, `words` must be in two's complement form.
 ///
-internal func numericStringRepresentationForBinaryInteger(
-words: some Collection<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
+internal func numericStringRepresentationForBinaryInteger(words: some Collection<UInt>, isSigned: Bool) -> String {
     // Copies the words and then passes them to a non-generic, mutating, word-based algorithm.
     withUnsafeTemporaryAllocation(of: UInt.self, capacity: words.count) {
         let initializedEndIndex = $0.initialize(fromContentsOf: words)
         let initialized = UnsafeMutableBufferPointer(rebasing: $0[..<initializedEndIndex])
-                
+        
         defer {
             initialized.deinitialize()
         }
@@ -88,102 +87,82 @@ words: some Collection<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
 ///
 /// This method consumes the `words` such that the buffer is filled with zeros when it returns.
 ///
-private func numericStringRepresentationForMutableBinaryInteger(
-words: UnsafeMutableBufferPointer<UInt>, isSigned: Bool) -> ArraySlice<UInt8> {
+private func numericStringRepresentationForMutableBinaryInteger(words: UnsafeMutableBufferPointer<UInt>, isSigned: Bool) -> String {
     //  Note that negative values are in two's complement form.
-    let isLessThanZero = isSigned && Int(bitPattern: words.last ?? 0) < 0
-    //  The magnitude is formed when the words represent a negative value.
+    let isLessThanZero = isSigned && Int(bitPattern: words.last ?? .zero) < .zero
+    //  The **unsigned** magnitude is formed when the words represent a negative value.
     if  isLessThanZero {
         formTwosComplementForBinaryInteger(words: words)
     }
     
-    let radix: (exponent: Int, power: UInt) = maxDecimalExponentAndPowerForUnsignedIntegerWord()
     let capacity = maxDecimalDigitCountForUnsignedInteger(bitWidth: words.count * UInt.bitWidth) + (isLessThanZero ? 1 : 0)
-    var ascii = ContiguousArray(repeating: UInt8(ascii: "0"), count: capacity) // Set initial ASCII zeros (see later steps).
-    
-    var wordsIndex = words.endIndex
-    var writeIndex = ascii.endIndex
-    var asciiIndex = ascii.endIndex
-    
-    ascii.withUnsafeMutableBufferPointer { ascii in
-        repeat {
-            // Mutating division prevents unnecessary big integer allocations.
-            let remainder = formQuotientWithRemainderForUnsignedInteger(words: words[..<wordsIndex], dividingBy: radix.power)
-            // Trim the quotient's most significant zeros for flexible-width performance and to end the loop.
-            wordsIndex  = words[..<wordsIndex].reversed().drop(while:{ $0 == 0 as UInt }).startIndex.base
-            // The remainder's numeric string representation is written to the array's trailing edge, up to the ASCII index.
-            writeIndex  = formTrailingNumericStringRepresentationForUnsignedInteger(word: remainder, into: ascii[..<asciiIndex])
-            // Because the array is pre-filled with ASCII zeros, we can skip ahead; only the final loop's zeros are trimmed.
-            asciiIndex -= radix.exponent
-            // The entire magnitude has been encoded when the formed quotient is empty.
-        }   while wordsIndex > words.startIndex
-        
-        // Jump to the most significant digit.
-        asciiIndex = writeIndex
-        
-        // Add a minus sign to negative values.
-        if isLessThanZero {
-            ascii.formIndex(before: &asciiIndex)
-            ascii[asciiIndex] = UInt8(ascii: "-")
+    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: capacity) {
+        let ascii = UnsafeMutableBufferPointer(start: $0.baseAddress!, count: capacity)
+        // Set initial ASCII zeros, see later steps.
+        ascii.initialize(repeating: UInt8(ascii: "0"))
+        // Deferred deinitialization of initialized allocation.
+        defer {
+            ascii.deinitialize()
         }
-    }
-    
-    assert(words.allSatisfy({ $0 == 0 }))
-    return ascii.suffix(from: asciiIndex) as ArraySlice<UInt8>
-}
-
-/// Writes `word` in "Numeric string" format (https://speleotrove.com/decimal/daconvs.html)  to
-/// the trailing edge of `buffer`, then returns the least significant `buffer` index written to.
-///
-/// - Parameters:
-///   - word: An unsigned binary integer's only word.
-///   - buffer: A buffer with enough memory to accommodate the format.
-///
-private func formTrailingNumericStringRepresentationForUnsignedInteger(
-word: UInt, into buffer: Slice<UnsafeMutableBufferPointer<UInt8>>) -> Int {
-    var magnitude = word
-    var index = buffer.endIndex
-    
-    repeat {
-        precondition(index > buffer.startIndex)
-        buffer.base.formIndex(before: &index)
         
-        let remainder: UInt
-        (magnitude, remainder) = magnitude.quotientAndRemainder(dividingBy: 10)
-        buffer.base[index] = UInt8(ascii: "0") &+ UInt8(truncatingIfNeeded: remainder)
-    }   while magnitude != 0 as UInt
-    
-    return index
+        var chunkIndex = ascii.endIndex // The index marking the position of each loop's remainder.
+        var writeIndex = ascii.endIndex // The index of the most significant digit encoded.
+        var wordsIndex = words.endIndex // The index one past the most significant nonzero element.
+        
+        // We get decimal digits in chunks as we divide the magnitude by pow(10,radix.exponent).
+        // We then extract the decimal digits from each chunk by repeatedly dividing them by 10.
+        let radix: (exponent: Int, power: UInt) = maxDecimalExponentAndPowerForUnsignedIntegerWord()
+        
+        dividing: while true {
+            // Mutating division prevents unnecessary big integer allocations.
+            var remainder = formQuotientWithRemainderForUnsignedInteger(words: words[..<wordsIndex], dividingBy: radix.power)
+            // Trims the quotient's most significant zeros for flexible-width performance and to end the loop.
+            wordsIndex = words[..<wordsIndex].reversed().drop(while:{ $0 == .zero }).startIndex.base
+            // This loop writes the remainder's decimal digits to the buffer. Note that remainder < radix.power.
+            repeat {
+                
+                let digit: UInt; (remainder, digit) = remainder.quotientAndRemainder(dividingBy: 10)
+                assert(writeIndex > ascii.startIndex, "the buffer must accomodate the magnitude's decimal digits")
+                ascii.formIndex(before: &writeIndex)
+                ascii[writeIndex] = UInt8(ascii: "0") &+ UInt8(truncatingIfNeeded: digit)
+                
+            } while remainder != .zero
+            // We break the loop when every decimal digit has been extracted.
+            guard wordsIndex != words.startIndex else { break }
+            // The resulting index is always in bounds because we form it after checking if there are digits left.
+            chunkIndex = ascii.index(chunkIndex, offsetBy: -radix.exponent)
+            // Set the next iterations's index in case this one ended in zeros. Note that zeros are pre-initialized.
+            writeIndex = chunkIndex
+        }
+        
+        //  Add a minus sign to negative values.
+        if  isLessThanZero {
+            assert(writeIndex > ascii.startIndex, "must add 1 to the buffer's capacity for integers less than zero")
+            ascii.formIndex(before: &writeIndex)
+            ascii[writeIndex] = UInt8(ascii: "-")
+        }
+        
+        // We copy the sequence from the last character we encoded.
+        let result = UnsafeBufferPointer(rebasing: ascii[writeIndex...])
+        return String(unsafeUninitializedCapacity: result.count) { _ = $0.initialize(fromContentsOf: result); return result.count }
+    }
 }
 
-/// Forms the `quotient` of dividing the `dividend` by the `divisor`, then returns the `remainder`.
+/// Returns an upper bound for the [number of decimal digits][algorithm] needed
+/// to represent an unsigned integer with the given `bitWidth`.
 ///
-/// - Parameters:
-///   - dividend: An unsigned binary integer's words.  This is modified to be the quotient once this function returns.
-///   - divisor:  An unsigned binary integer's only word.
+/// [algorithm]: https://www.exploringbinary.com/number-of-decimal-digits-in-a-binary-integer
 ///
-/// - Returns: The `remainder`, which is a value in the range of `0 ..< divisor`.
+/// - Parameter bitWidth: An unsigned binary integer's bit width.
 ///
-private func formQuotientWithRemainderForUnsignedInteger(
-words dividend: Slice<UnsafeMutableBufferPointer<UInt>>, dividingBy divisor: UInt) -> UInt {
-    var remainder = UInt.zero
-    
-    for index in (dividend.startIndex ..< dividend.endIndex).reversed() {
-        (dividend.base[index], remainder) = divisor.dividingFullWidth((high: remainder, low: dividend.base[index]))
-    }
-    
-    return remainder
-}
-
-/// Forms the `two's complement` of a binary integer.
+/// - Returns: Some integer greater than or equal to `1`.
 ///
-/// - Parameter words: A binary integer's mutable words.
-///
-private func formTwosComplementForBinaryInteger(words: UnsafeMutableBufferPointer<UInt>) {
-    var carry =  true
-    for index in words.indices {
-        (words[index], carry) = (~words[index]).addingReportingOverflow(carry ? 1 : 0)
-    }
+private func maxDecimalDigitCountForUnsignedInteger(bitWidth: Int) -> Int {
+    // - Int.init(some BinaryFloatingPoint) rounds to zero.
+    // - Double.init(exactly:) and UInt.init(_:) for correctness.
+    // - log10(2.0) is: 1.0021010002000002002101⌈01...⌉ * 2^(-2).
+    // - It's an upper bound, so Double/nextUp for peace of mind.
+    return Int(Double(exactly: UInt(bitWidth))! * log10(2.0).nextUp) + 1
 }
 
 /// Returns the largest `exponent` and `power` in `pow(10, exponent) <= UInt.max + 1`.
@@ -197,9 +176,13 @@ private func formTwosComplementForBinaryInteger(words: UnsafeMutableBufferPointe
 /// 64-bit: (exponent: 19, power: 10000000000000000000)
 /// ```
 ///
+/// - Note: The optimizer should inline this as a constant.
+///
+/// - Note: Dividing an integer by `power` yields the first `exponent` number of decimal digits in the
+///   remainder. The quotient is the integer with its first `exponent` number of decimal digits removed.
+///
 private func maxDecimalExponentAndPowerForUnsignedIntegerWord() -> (exponent: Int, power: UInt) {
-    var exponent = 1 as  Int
-    var power = 0010 as UInt
+    var exponent: Int = 1, power: UInt = 10
     
     while true {
         let next = power.multipliedReportingOverflow(by: 10)
@@ -212,18 +195,33 @@ private func maxDecimalExponentAndPowerForUnsignedIntegerWord() -> (exponent: In
     return (exponent: exponent, power: power)
 }
 
-/// Returns an upper bound for the [number of decimal digits][algorithm] needed
-/// to represent an unsigned integer with the given `bitWidth`.
+/// Forms the `two's complement` of a binary integer.
 ///
-/// [algorithm]: https://www.exploringbinary.com/number-of-decimal-digits-in-a-binary-integer
+/// - Parameter words: A binary integer's mutable words.
 ///
-/// - Parameter bitWidth: The unsigned binary integer's bit width.
+private func formTwosComplementForBinaryInteger(words: UnsafeMutableBufferPointer<UInt>) {
+    var carry =  true
+    for index in words.indices {
+        (words[index], carry) = (~words[index]).addingReportingOverflow(carry ? 1 : 0)
+    }
+}
+
+/// Forms the `quotient` of dividing the `dividend` by the `divisor`, then returns the `remainder`.
 ///
-private func maxDecimalDigitCountForUnsignedInteger(bitWidth: Int) -> Int {
-    // - Int.init(some BinaryFloatingPoint) rounds to zero.
-    // - Double.init(exactly:) and UInt.init(_:) for correctness.
-    // - log10(2.0) is: 1.0011010001000001001101⌈01...⌉ * 2^(-2).
-    return Int(Double(exactly: UInt(bitWidth))! * log10(2.0)) + 1
+/// - Parameters:
+///   - dividend: An unsigned binary integer's words.  This is modified to be the quotient once this function returns.
+///   - divisor:  An unsigned binary integer's only word.
+///
+/// - Returns: The `remainder`, which is a value in the range of `0 ..< divisor`.
+///
+private func formQuotientWithRemainderForUnsignedInteger(words dividend: Slice<UnsafeMutableBufferPointer<UInt>>, dividingBy divisor: UInt) -> UInt {
+    var remainder = UInt.zero
+    
+    for index in (dividend.startIndex ..< dividend.endIndex).reversed() {
+        (dividend.base[index], remainder) = divisor.dividingFullWidth((high: remainder, low: dividend.base[index]))
+    }
+    
+    return remainder
 }
 
 // MARK: - BinaryInteger + Parsing
