@@ -135,60 +135,71 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     
     // MARK: Tests
     
-    func testMinMax32() {
-        check(integer:  Int32.min,       expectation: "-2147483648")
-        check(integer:  Int32.max,       expectation:  "2147483647")
-        check(integer: UInt32.min,       expectation:           "0")
-        check(integer: UInt32.max/2,     expectation:  "2147483647")
-        check(integer: UInt32.max/2 + 1, expectation:  "2147483648")
-        check(integer: UInt32.max,       expectation:  "4294967295")
+    func testInt32() {
+        check( Int32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0")
+        check( Int32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
+        check( Int32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647") //  Int32.max
+        check( Int32(truncatingIfNeeded: 0x80000000 as UInt32), expectation: "-2147483648") //  Int32.min
+        check( Int32(truncatingIfNeeded: 0x81807f7e as UInt32), expectation: "-2122285186")
+        check( Int32(truncatingIfNeeded: 0xfffefdfc as UInt32), expectation:      "-66052")
+        check( Int32(truncatingIfNeeded: 0xffffffff as UInt32), expectation:          "-1")
     }
     
-    /// Tests the highest and lowest slice of a byte sequence that goes from 0x00 through 0xff.
-    func testTopBot32() {
-        check(integer:  Int32(bitPattern: 0xfffefdfc), expectation:     "-66052")
-        check(integer:  Int32(bitPattern: 0x03020100), expectation:   "50462976")
-        check(integer: UInt32(            0xfffefdfc), expectation: "4294901244")
-        check(integer: UInt32(            0x03020100), expectation:   "50462976")
+    func testUInt32() {
+        check(UInt32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0") // UInt32.min
+        check(UInt32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
+        check(UInt32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647")
+        check(UInt32(truncatingIfNeeded: 0x80000000 as UInt32), expectation:  "2147483648")
+        check(UInt32(truncatingIfNeeded: 0x81807f7e as UInt32), expectation:  "2172682110")
+        check(UInt32(truncatingIfNeeded: 0xfffefdfc as UInt32), expectation:  "4294901244")
+        check(UInt32(truncatingIfNeeded: 0xffffffff as UInt32), expectation:  "4294967295") // UInt32.max
     }
     
-    func testMinMax64() {
-        check(integer:  Int64.min,       expectation: "-9223372036854775808")
-        check(integer:  Int64.max,       expectation:  "9223372036854775807")
-        check(integer: UInt64.min,       expectation:                    "0")
-        check(integer: UInt64.max/2,     expectation:  "9223372036854775807")
-        check(integer: UInt64.max/2 + 1, expectation:  "9223372036854775808")
-        check(integer: UInt64.max,       expectation: "18446744073709551615")
+    func testInt64() {
+        check( Int64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0")
+        check( Int64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
+        check( Int64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807") //  Int64.max
+        check( Int64(truncatingIfNeeded: 0x8000000000000000 as UInt64), expectation: "-9223372036854775808") //  Int64.max
+        check( Int64(truncatingIfNeeded: 0x838281807f7e7d7c as UInt64), expectation: "-8970465118873813636")
+        check( Int64(truncatingIfNeeded: 0xfffefdfcfbfaf9f8 as UInt64), expectation:     "-283686952306184")
+        check( Int64(truncatingIfNeeded: 0xffffffffffffffff as UInt64), expectation:                   "-1")
     }
     
-    /// Tests the highest and lowest slice of a byte sequence that goes from 0x00 through 0xff.
-    func testTopBot64() {
-        check(integer:  Int64(bitPattern: 0xfffefdfcfbfaf9f8), expectation:     "-283686952306184")
-        check(integer:  Int64(bitPattern: 0x0706050403020100), expectation:   "506097522914230528")
-        check(integer: UInt64(            0xfffefdfcfbfaf9f8), expectation: "18446460386757245432")
-        check(integer: UInt64(            0x0706050403020100), expectation:   "506097522914230528")
+    func testUInt64() {
+        check(UInt64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0") // UInt64.min
+        check(UInt64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
+        check(UInt64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807")
+        check(UInt64(truncatingIfNeeded: 0x8000000000000000 as UInt64), expectation:  "9223372036854775808")
+        check(UInt64(truncatingIfNeeded: 0x838281807f7e7d7c as UInt64), expectation:  "9476278954835737980")
+        check(UInt64(truncatingIfNeeded: 0xfffefdfcfbfaf9f8 as UInt64), expectation: "18446460386757245432")
+        check(UInt64(truncatingIfNeeded: 0xffffffffffffffff as UInt64), expectation: "18446744073709551615") // UInt64.max
     }
     
-    func testMinMax128() {
-        check(x64:[ 0, ~0/2 + 1] as [UInt64], isSigned: true,  expectation: "-170141183460469231731687303715884105728") //  Int128.min
-        check(x64:[~0, ~0/2    ] as [UInt64], isSigned: true,  expectation:  "170141183460469231731687303715884105727") //  Int128.max
-        check(x64:[ 0,  0      ] as [UInt64], isSigned: false, expectation:                                        "0") // UInt128.min
-        check(x64:[~0, ~0/2    ] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105727") // UInt128.max/2
-        check(x64:[ 0, ~0/2 + 1] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105728") // UInt128.max/2 + 1
-        check(x64:[~0, ~0      ] as [UInt64], isSigned: false, expectation:  "340282366920938463463374607431768211455") // UInt128.max
+    // MARK: Tests + Big Integer
+    
+    func testInt128() {
+        check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: true,  expectation:                                        "0")
+        check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: true,  expectation:   "20011376718272490338853433276725592320")
+        check(x64:[0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: true,  expectation:  "170141183460469231731687303715884105727") //  Int128.max
+        check(x64:[0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: true,  expectation: "-170141183460469231731687303715884105728") //  Int128.min
+        check(x64:[0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: true,  expectation:      "-5233100606242806050955395731361296")
+        check(x64:[0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: true,  expectation:                                       "-1")
     }
     
-    /// Tests the highest and lowest slice of a byte sequence that goes from 0x00 through 0xff.
-    func testTopBot128() {
-        check(x64:[0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: true,  expectation:     "-5233100606242806050955395731361296")
-        check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: true,  expectation:  "20011376718272490338853433276725592320")
-        check(x64:[0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: false, expectation: "340277133820332220657323652036036850160")
-        check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: false, expectation:  "20011376718272490338853433276725592320")
+    func testUInt128() {
+        check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: false, expectation:                                        "0") // UInt128.min
+        check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: false, expectation:   "20011376718272490338853433276725592320")
+        check(x64:[0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105728")
+        check(x64:[0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: false, expectation:  "340277133820332220657323652036036850160")
+        check(x64:[0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105727")
+        check(x64:[0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: false, expectation:  "340282366920938463463374607431768211455") // UInt128.max
     }
+    
+    // MARK: Tests + Big Integer + Miscellaneous
     
     func testWordsIsEmptyResultsInZero() {
-        check(words:[  ] as [UInt], isSigned: true,  expectation: "0")
-        check(words:[  ] as [UInt], isSigned: false, expectation: "0")
+        check(words:[              ] as [UInt], isSigned: true,  expectation:  "0")
+        check(words:[              ] as [UInt], isSigned: false, expectation:  "0")
     }
     
     func testSignExtendingDoesNotChangeTheResult() {
@@ -209,9 +220,9 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     }
     
     // MARK: Assertions
-     
-    func check(integer: some BinaryInteger, expectation: String, file: StaticString = #file, line: UInt = #line) {
-        XCTAssertEqual(integer.description, expectation,  file:  file, line: line)
+    
+    func check(_ integer: some BinaryInteger, expectation: String, file: StaticString = #file, line: UInt = #line) {
+        XCTAssertEqual(integer.description, expectation, "integer description does not match expectation", file: file, line: line)
         check(ascii: integer.numericStringRepresentation, expectation: expectation, file: file, line: line)
         check(words: Array(integer.words), isSigned: type(of: integer).isSigned, expectation: expectation, file: file, line: line)
     }
