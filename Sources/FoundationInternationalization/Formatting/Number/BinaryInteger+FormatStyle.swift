@@ -105,30 +105,31 @@ private func numericStringRepresentationForMutableBinaryInteger(words: UnsafeMut
             ascii.deinitialize()
         }
         
-        var chunkIndex = ascii.endIndex // The index marking the position of each loop's remainder.
-        var writeIndex = ascii.endIndex // The index of the most significant digit encoded.
-        var wordsIndex = words.endIndex // The index one past the most significant nonzero element.
-        
         // We get decimal digits in chunks as we divide the magnitude by pow(10,radix.exponent).
         // We then extract the decimal digits from each chunk by repeatedly dividing them by 10.
         let radix: (exponent: Int, power: UInt) = maxDecimalExponentAndPowerForUnsignedIntegerWord()
         
+        var chunkIndex = ascii.endIndex // The index marking the position of the iteration's chunk.
+        var writeIndex = ascii.endIndex // The index of the most significant digit encoded.
+        var wordsIndex = words.endIndex // The index one past the most significant nonzero element.
+        
         dividing: while true {
             // Mutating division prevents unnecessary big integer allocations.
-            var remainder = formQuotientWithRemainderForUnsignedInteger(words: words[..<wordsIndex], dividingBy: radix.power)
+            var chunk = formQuotientWithRemainderForUnsignedInteger(words: words[..<wordsIndex], dividingBy: radix.power)
             // Trims the quotient's most significant zeros for flexible-width performance and to end the loop.
             wordsIndex = words[..<wordsIndex].reversed().drop(while:{ $0 == .zero }).startIndex.base
-            // This loop writes the remainder's decimal digits to the buffer. Note that remainder < radix.power.
+            // This loop writes the chunk's decimal digits to the buffer. Note that chunk < radix.power.
             repeat {
                 
-                let digit: UInt; (remainder, digit) = remainder.quotientAndRemainder(dividingBy: 10)
-                assert(writeIndex > ascii.startIndex, "the buffer must accomodate the magnitude's decimal digits")
+                let digit: UInt
+                (chunk,digit) = chunk.quotientAndRemainder(dividingBy: 10)
+                assert(writeIndex > ascii.startIndex, "the buffer must accommodate the magnitude's decimal digits")
                 ascii.formIndex(before: &writeIndex)
                 ascii[writeIndex] = UInt8(ascii: "0") &+ UInt8(truncatingIfNeeded: digit)
                 
-            } while remainder != .zero
-            // We break the loop when every decimal digit has been extracted.
-            guard wordsIndex != words.startIndex else { break }
+            } while chunk != .zero
+            // We break the loop when every decimal digit has been encoded.
+            if wordsIndex == words.startIndex { break }
             // The resulting index is always in bounds because we form it after checking if there are digits left.
             chunkIndex = ascii.index(chunkIndex, offsetBy: -radix.exponent)
             // Set the next iterations's index in case this one ended in zeros. Note that zeros are pre-initialized.
