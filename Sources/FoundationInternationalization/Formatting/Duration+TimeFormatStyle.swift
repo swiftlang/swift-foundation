@@ -39,7 +39,7 @@ extension Duration {
             enum Fields: Hashable, Codable {
                 case hourMinute(roundSeconds: FloatingPointRoundingRule)
                 case hourMinuteSecond(fractionalSecondsLength: Int, roundFractionalSeconds: FloatingPointRoundingRule)
-                case mintueSecond(fractionalSecondsLength: Int, roundFractionalSeconds: FloatingPointRoundingRule)
+                case minuteSecond(fractionalSecondsLength: Int, roundFractionalSeconds: FloatingPointRoundingRule)
             }
             var fields: Fields
 
@@ -80,7 +80,7 @@ extension Duration {
 
             /// Displays a duration in minutes and seconds. For example, one hour is formatted as "60:00" in en_US locale.
             public static var minuteSecond: Pattern {
-                .init(fields: .mintueSecond(fractionalSecondsLength: 0, roundFractionalSeconds: .toNearestOrEven))
+                .init(fields: .minuteSecond(fractionalSecondsLength: 0, roundFractionalSeconds: .toNearestOrEven))
             }
             /// Displays a duration in minutes and seconds with the specified configurations.
             /// - Parameters:
@@ -89,7 +89,7 @@ extension Duration {
             ///   - roundFractionalSeconds: Rounding rule for the fractional second values.
             /// - Returns: A pattern to format a duration with.
             public static func minuteSecond(padMinuteToLength: Int, fractionalSecondsLength: Int = 0, roundFractionalSeconds: FloatingPointRoundingRule = .toNearestOrEven) -> Pattern {
-                .init(fields: .mintueSecond(fractionalSecondsLength: fractionalSecondsLength, roundFractionalSeconds: roundFractionalSeconds), paddingForLargestField: padMinuteToLength)
+                .init(fields: .minuteSecond(fractionalSecondsLength: fractionalSecondsLength, roundFractionalSeconds: roundFractionalSeconds), paddingForLargestField: padMinuteToLength)
             }
         }
 
@@ -207,7 +207,7 @@ extension Duration.TimeFormatStyle {
                 uPattern = .hourMinuteSecond
                 fallbackPattern = "h':'mm':'ss"
                 break
-            case .mintueSecond:
+            case .minuteSecond:
                 uPattern = .minuteSecond
                 fallbackPattern = "m':'ss"
                 break
@@ -239,7 +239,7 @@ extension Duration.TimeFormatStyle {
                 units = [ .hours, .minutes, .seconds ]
                 rounding = roundFractionalSeconds
                 lastUnitFractionalLen = fractionalSecondsLength
-            case .mintueSecond(let fractionalSecondsLength, let roundFractionalSeconds):
+            case .minuteSecond(let fractionalSecondsLength, let roundFractionalSeconds):
                 units = [ .minutes, .seconds ]
                 rounding = roundFractionalSeconds
                 lastUnitFractionalLen = fractionalSecondsLength
@@ -347,7 +347,7 @@ extension Duration.TimeFormatStyle {
                         case .hourMinuteSecond:
                             numberFormatStyle = numberFormatStyle.precision(.integerAndFractionLength(integerLimits: minIntLength..., fractionLimits: 0...0))
                             isMostSignificantField = false
-                        case .mintueSecond:
+                        case .minuteSecond:
                             if let padding = pattern.paddingForLargestField {
                                 minIntLength = max(padding, patternSymbols.count)
                             }
@@ -363,7 +363,7 @@ extension Duration.TimeFormatStyle {
                             break
                         case .hourMinuteSecond(let fractionalSecondsLength, _):
                             numberFormatStyle = numberFormatStyle.precision(.integerAndFractionLength(integerLimits: minIntLength..., fractionLimits: fractionalSecondsLength...fractionalSecondsLength))
-                        case .mintueSecond(let fractionalSecondsLength, _):
+                        case .minuteSecond(let fractionalSecondsLength, _):
                             numberFormatStyle = numberFormatStyle.precision(.integerAndFractionLength(integerLimits: minIntLength..., fractionLimits: fractionalSecondsLength...fractionalSecondsLength))
                         }
 
