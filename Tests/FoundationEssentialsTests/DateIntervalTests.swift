@@ -50,6 +50,140 @@ final class DateIntervalTests : XCTestCase {
         let testInterval3 = DateInterval(start: start, duration: 100.0)
         XCTAssertNotEqual(testInterval1, testInterval3)
     }
+    
+    func test_intervalsBetweenDateIntervalAndDate() {
+        let earlier = Date(timeIntervalSince1970: 0)
+        let middle = Date(timeIntervalSince1970: 5)
+        let later = Date(timeIntervalSince1970: 10)
+
+        let start = Date(timeIntervalSince1970: 1)
+        let duration: TimeInterval = 8
+        let end = start.addingTimeInterval(duration) // 9
+        let testInterval1 = DateInterval(start: start, duration: duration)
+
+        // * --- |testInterval1|
+        let t1 = testInterval1.timeInterval(to: earlier)
+        let d1 = testInterval1.dateInterval(to: earlier)
+        XCTAssertEqual(t1, 1)
+        XCTAssertEqual(d1, DateInterval(start: earlier, end: start))
+
+        // |testInterval1| --- *
+        let t2 = testInterval1.timeInterval(to: later)
+        let d2 = testInterval1.dateInterval(to: later)
+        XCTAssertEqual(t2, -1)
+        XCTAssertEqual(d2, DateInterval(start: end, end: later))
+
+        // |  testInterval1 *  |
+        let t3 = testInterval1.timeInterval(to: middle)
+        let d3 = testInterval1.dateInterval(to: middle)
+        XCTAssertEqual(t3, nil)
+        XCTAssertEqual(d3, nil)
+
+        // equal to start/end
+        XCTAssertEqual(testInterval1.timeInterval(to: start), 0)
+        XCTAssertEqual(testInterval1.dateInterval(to: start), DateInterval(start: start, duration: 0))
+        XCTAssertEqual(testInterval1.timeInterval(to: end), 0)
+        XCTAssertEqual(testInterval1.dateInterval(to: end), DateInterval(start: end, duration: 0))
+    }
+    
+    func test_intervalsBetweenDateIntervals() {
+        // Tests for intervals of zero or more duration between subjects.
+        // |testInterval1|testInterval2|
+        let testInterval1 = DateInterval(start: Date(timeIntervalSince1970: 0), end: Date(timeIntervalSinceReferenceDate: 0))
+        let testInterval2 = DateInterval(start: Date(timeIntervalSinceReferenceDate: 0), end: Date(timeIntervalSinceReferenceDate: 100))
+        let t1 = testInterval1.timeInterval(to: testInterval2)
+        XCTAssertEqual(t1, 0)
+        
+        let t2 = testInterval2.timeInterval(to: testInterval1)
+        XCTAssertEqual(t2, 0)
+        
+        let d1 = testInterval1.dateInterval(to: testInterval2)
+        XCTAssertEqual(d1?.start, testInterval1.end)
+        XCTAssertEqual(d1?.duration, 0)
+        
+        let d2 = testInterval2.dateInterval(to: testInterval1)
+        XCTAssertEqual(d2?.start, testInterval1.end)
+        XCTAssertEqual(d2?.duration, 0)
+        
+        XCTAssertEqual(d1, d2)
+        
+        // |testInterval3|-----|testInterval4|
+        let testInterval3 = DateInterval(start: Date(timeIntervalSince1970: 0), end: Date(timeIntervalSinceReferenceDate: 0))
+        let testInterval4 = DateInterval(start: Date(timeIntervalSinceReferenceDate: 1), end: Date(timeIntervalSinceReferenceDate: 100))
+        let t3 = testInterval3.timeInterval(to: testInterval4)
+        XCTAssertEqual(t3, -1)
+        
+        let t4 = testInterval4.timeInterval(to: testInterval3)
+        XCTAssertEqual(t4, 1)
+        
+        let d3 = testInterval3.dateInterval(to: testInterval4)
+        let d4 = testInterval4.dateInterval(to: testInterval3)
+        XCTAssertEqual(d3?.duration, 1)
+        XCTAssertEqual(d3?.start, testInterval3.end)
+        XCTAssertEqual(d4?.duration, 1)
+        XCTAssertEqual(d4?.start, testInterval3.end)
+        
+        // Tests for non-existing intervals between subjects.
+        // |testInterval5|
+        //      |testInterval6|
+        //
+        // As a single timeline: |555|565656|666|
+        let testInterval5 = DateInterval(start: Date(timeIntervalSince1970: 0), end: Date(timeIntervalSinceReferenceDate: 0))
+        let testInterval6 = DateInterval(start: Date(timeIntervalSinceReferenceDate: -1), end: Date(timeIntervalSinceReferenceDate: 100))
+        let t5 = testInterval5.timeInterval(to: testInterval6)
+        XCTAssertEqual(t5, nil)
+        
+        let t6 = testInterval6.timeInterval(to: testInterval5)
+        XCTAssertEqual(t6, nil)
+        
+        let d5 = testInterval5.dateInterval(to: testInterval6)
+        XCTAssertEqual(d5, nil)
+        
+        let d6 = testInterval6.dateInterval(to: testInterval5)
+        XCTAssertEqual(d6, nil)
+        
+        // |---testInterval7---|
+        //    |testInterval8|
+        //
+        // As a single timeline: |777|787878|777|
+        let testInterval7 = DateInterval(start: Date(timeIntervalSince1970: 0), end: Date(timeIntervalSinceReferenceDate: 0))
+        let testInterval8 = DateInterval(start: Date(timeIntervalSince1970: 10), end: Date(timeIntervalSince1970: 20))
+        let t7 = testInterval7.timeInterval(to: testInterval8)
+        XCTAssertEqual(t7, nil)
+        
+        let t8 = testInterval8.timeInterval(to: testInterval7)
+        XCTAssertEqual(t8, nil)
+        
+        let d7 = testInterval7.dateInterval(to: testInterval8)
+        XCTAssertEqual(d7, nil)
+        
+        let d8 = testInterval8.dateInterval(to: testInterval7)
+        XCTAssertEqual(d8, nil)
+        
+        // |testInterval9|
+        // |testInterval10---|
+        let testInterval9 = DateInterval(start: Date(timeIntervalSince1970: 0), end: Date(timeIntervalSinceReferenceDate: 0))
+        let testInterval10 = DateInterval(start: Date(timeIntervalSince1970: 0), end: Date(timeIntervalSinceReferenceDate: 100))
+        let t9 = testInterval9.timeInterval(to: testInterval10)
+        XCTAssertEqual(t9, nil)
+        
+        let t10 = testInterval10.timeInterval(to: testInterval9)
+        XCTAssertEqual(t10, nil)
+        
+        let d9 = testInterval9.dateInterval(to: testInterval10)
+        XCTAssertEqual(d9, nil)
+        
+        let d10 = testInterval10.dateInterval(to: testInterval9)
+        XCTAssertEqual(d10, nil)
+        
+        // |testInterval11| on itself
+        let testInterval11 = DateInterval(start: Date(timeIntervalSince1970: 0), end: Date(timeIntervalSinceReferenceDate: 0))
+        let t11 = testInterval11.timeInterval(to: testInterval11)
+        XCTAssertEqual(t11, nil)
+        
+        let d11 = testInterval11.dateInterval(to: testInterval11)
+        XCTAssertEqual(d11, nil)
+    }
 
     func test_hashing() {
         // dateWithString("2019-04-04 17:09:23 -0700")
