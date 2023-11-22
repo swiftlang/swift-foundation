@@ -147,6 +147,139 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
         }
         return false
     }
+    
+    /**
+     Returns the seconds between `self` and `date` or `nil` if there is no difference in time between them.
+     
+     For example, given this interval and this date on a timeline:
+     ```
+     |-----| <-- time interval --> *
+     ```
+     Returns a negative time interval when `date` is a moment greater than or equal to the end of `self` because the receiver specifies a range of times earlier than `date`.
+     
+     ```
+      * <-- time interval --> |-----|
+     ```
+     Returns a positive time interval when `date` is a moment less than or equal to (before) the start of `self` because the receiver specifies a range of times later than `date`.
+     
+     A return value of `0` indicates `date` is equal to either the start or end moments of `self`.
+     
+     A return value of `nil` indicates the `date` is between the start and end dates (`date` is both greater than the start and less than the end moments of `self`):
+     ```
+      |--*--|
+     ```
+     */
+    public func timeIntervalSince(_ date: Date) -> TimeInterval? {
+        if end <= date {
+            return end.timeIntervalSince(date)
+        } else if date <= start {
+            return start.timeIntervalSince(date)
+        } else {
+            return nil
+        }
+    }
+    
+    /**
+     Returns the date interval between `self` and `date` or `nil` if there is no difference in time between them.
+     
+     For example, given this interval and this date on a timeline:
+     ```
+      * <-- duration --> |-----|
+     ```
+     Returns a value whose start is `date` and whose `duration` is the time between the `date` and the end of `self`.
+     
+     ```
+     |-----| <-- duration --> *
+     ```
+     Returns a value whose start is the end of `self` and whose `duration` is the time between the `date` and the the end of `self`.
+     
+     A return value with a duration of `0` indicates `date` is equal to the start or end of `self`.
+     
+     A return value of `nil` indicates there are no moments between `date` and `self` (`date` is both greater than the start and less than the end moments of `self`):
+     ```
+      |--*--|
+     ```
+     */
+    public func dateIntervalSince(_ date: Date) -> DateInterval? {
+        if date <= start {
+            return DateInterval(start: date, end: start)
+            
+        } else if end <= date {
+            return DateInterval(start: end, end: date)
+            
+        } else {
+            return nil
+        }
+    }
+    
+    /**
+     Returns the seconds between `self` and `dateInterval` or `nil` if there is no difference in time between them.
+     
+     For example, given these two intervals on a timeline:
+     ```
+     |-----| <-- time interval --> |-----|
+     ```
+     Returns a negative time interval when `self` ends before `dateInterval` starts. A postive time interval indicates `self` starts after `dateInterval` ends.
+     
+     A return value of `0` indicates `self` starts or ends where `dateInterval` ends or starts (in other words, they intersect at their opposing start/end moments):
+     ```
+     |-----|-----|
+     ```
+     
+     A return value of `nil` indicates `self` and `dateInterval` do not have any time between them:
+     ```
+     |--|-----|--|
+     ```
+     */
+    public func timeIntervalSince(_ dateInterval: DateInterval) -> TimeInterval? {
+        if end <= dateInterval.start {
+            return end.timeIntervalSince(dateInterval.start)
+            
+        } else if dateInterval.end <= start {
+            return start.timeIntervalSince(dateInterval.end)
+            
+        } else {
+            return nil
+        }
+    }
+    
+    /**
+     Returns the date interval between `self` and `dateInterval` or `nil` if there is no difference in time between them.
+     
+     For example, given these two intervals on a timeline:
+     ```
+     |-----| <-- duration --> |-----|
+     ```
+     The latest start date and the earliest end date between `self` and `dateInterval` is determined. Returns a date interval whose start is the earliest end date and whose duration is the difference in time between the latest start and earliest end.
+     
+     A return value with a duration of `0` indicates `self` and `dateInterval` form an unbroken, continous interval (in other words, they intersect at opposing starts/ends):
+     ```
+     |-----|-----|
+     ```
+     
+     A return value of `nil` indicates that no interval exists between `self` and `dateInterval`:
+     ```
+     |--|-----|--|
+     ```
+     */
+    public func dateIntervalSince(_ dateInterval: DateInterval) -> DateInterval? {
+        let earliestEnd: Date
+        let duration: TimeInterval
+        
+        if end <= dateInterval.start {
+            earliestEnd = end
+            duration = dateInterval.start.timeIntervalSince(end)
+            
+        } else if dateInterval.end <= start {
+            earliestEnd = dateInterval.end
+            duration = start.timeIntervalSince(dateInterval.end)
+            
+        } else {
+            return nil
+        }
+        
+        return DateInterval(start: earliestEnd, duration: duration)
+    }
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(start)
