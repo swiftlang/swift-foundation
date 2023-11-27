@@ -82,7 +82,11 @@ internal final class _TimeZoneBridged: _TimeZoneProtocol, @unchecked Sendable {
     func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
         _timeZone.localizedName(style, locale: locale)
     }
-    
+
+    func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+        (_timeZone.secondsFromGMT(for: date), _timeZone.daylightSavingTimeOffset(for: date))
+    }
+
     func bridgeToNSTimeZone() -> NSTimeZone {
         _timeZone.copy() as! NSTimeZone
     }
