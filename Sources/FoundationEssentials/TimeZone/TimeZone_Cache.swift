@@ -154,10 +154,10 @@ struct TimeZoneCache : Sendable {
                 _ = GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwSize, DWORD(VOLUME_NAME_DOS))
                 return String(decodingCString: $0.baseAddress!, as: UTF16.self)
             }
-            if let rangeOfZoneInfo = path.range(of: "\(TimeZone.TZDIR)\\") {
+            if let rangeOfZoneInfo = path._range(of: "\(TimeZone.TZDIR)\\", anchored: false, backwards: false) {
                 let name = path[rangeOfZoneInfo.upperBound...]
                 if let result = fixed(String(name)) {
-                    return result
+                    return TimeZone(inner: result)
                 }
             }
 #else
