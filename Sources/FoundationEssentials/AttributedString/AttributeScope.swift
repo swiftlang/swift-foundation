@@ -30,6 +30,7 @@ public enum AttributeScopes { }
 #if FOUNDATION_FRAMEWORK
 
 import Darwin
+@_implementationOnly import MachO.dyld
 @_implementationOnly import ReflectionInternal
 
 fileprivate struct ScopeDescription : Sendable {
