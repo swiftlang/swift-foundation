@@ -7,45 +7,21 @@
 * Implementation: [apple/swift-foundation#330](https://github.com/apple/swift-foundation/pull/330)
 * Review: ([pitch](https://forums.swift.org/...))
 
-When filling out this template, you should delete or replace all of the text except for the section headers and the header fields above. For example, you should delete everything from this paragraph down to the Introduction section below.
-
-As a proposal author, you should fill out all of the header fields except `Review Manager`. The review manager will set that field and change several others as part of initiating the review. Delete any header fields marked *if applicable* that are not applicable to your proposal.
-
-When sharing a link to the proposal while it is still a PR, be sure to share a live link to the proposal, not an exact commit, so that readers will always see the latest version when you make changes. On GitHub, you can find this link by browsing the PR branch: from the PR page, click the "username wants to merge ... from username:my-branch-name" link and find the proposal file in that branch.
-
-`Status` should reflect the current implementation status while the proposal is still a PR. The proposal cannot be reviewed until an implementation is available, but early readers should see the correct status.
-
-`Bug` should be used when this proposal is fixing a bug with significant discussion in the bug report. It is not necessary to link bugs that do not contain significant discussion or that merely duplicate discussion linked somewhere else. Do not link bugs from private bug trackers.
-
-`Implementation` should link to the PR(s) implementing the feature. If the proposal has not been implemented yet, or if it simply codifies existing behavior, just say that. If the implementation has already been committed to the main branch (as an experimental feature), say that and specify the experimental feature flag. If the implementation is spread across multiple PRs, just link to the most important ones.
-
-`Previous Proposal` should be used when there is a specific line of succession between this proposal and another proposal. For example, this proposal might have been removed from a previous proposal so that it can be reviewed separately, or this proposal might supersede a previous proposal in some way that was felt to exceed the scope of a "revision". Include text briefly explaining the relationship, such as "Supersedes SE-1234" or "Extracted from SE-01234". If possible, link to a post explaining the relationship, such as a review decision that asked for part of the proposal to be split off. Otherwise, you can just link to the previous proposal.
-
-`Previous Revision` should be added after a major substantive revision of a proposal that has undergone review. It links to the previously reviewed revision. It is not necessary to add or update this field after minor editorial changes.
-
-`Review` is a history of all discussion threads about this proposal, in chronological order. Use these standardized link names: `pitch` `review` `revision` `acceptance` `rejection`. If there are multiple such threads, spell the ordinal out: `first pitch` `second review` etc.
-
 ## Introduction
 
-A short description of what the feature is. Try to keep it to a single-paragraph "elevator pitch" so the reader understands what problem this proposal is addressing.
-
-Add small but convenient, quality-assured methods on `DateInterval` to compute time and date intervals between date intervals to extend and complement existing comparison and intersection APIs.
+Add small but convenient, quality-assured methods on `DateInterval` for computing time and date intervals between other date intervals.
 
 ## Motivation
 
-Describe the problems that this proposal seeks to address. If the problem is that some common pattern is currently hard to express, show how one can currently get a similar effect and describe its drawbacks. If it's completely new functionality that cannot be emulated, motivate why this new functionality would help Swift developers create better Swift code.
+`DateInterval` could offer more APIs to help developers work with ranges of absolute moments in time. For example, a developer might be building a logbook, employment time planner or implementing a time based feature in a less specialised app. In a more complex case, the app may require users to enter start and end times for particular activities, arrange them in a particular sequence with some acceptable gap between (e.g. work here for 2 hours, work there for 1.5 hours and rest for 10 minutes with at most five minutes between, no overlaps, etc). This app would need to validate the intervals formed by the dates entered by at least: checking the intersections of intervals, measuring how much those intervals intersect by and/or by measuring the time between them.
 
-`DateInterval` could offer more API helping developers working with ranges of absolute moments in time. For example, a developer might be building a logbook, employment time planner or implementing a time based feature in a less specialised app. In a more complex case, the app may require users to enter start and end times for particular activities, arrange them in a particular sequence with some acceptable gap between (e.g. work here for 2 hours, work there for 1.5 hours and rest for 10 minutes with at most five minutes between, no overlaps, etc). This app would need to validate the intervals formed by the dates entered by at least: checking the intersections of intervals, measuring how much those intervals intersect by and/or measuring the time between them or by some moment. `DateInterval` would be an intuitive type to begin such an implementation with but developers would quickly hit a limit with its available interface and become responsible for implementing their logic and maintain its quality.
+`DateInterval` would be an intuitive type to begin such an implementation with. However, developers would quickly hit a limit with its out-of-the-box utility and become responsible for proving a quality implementation. Further, the precedent set by other Foundation types forms our intuitions about what utility we should expect of it.
 
 ## Proposed solution
 
-Describe your solution to the problem. Provide examples and describe how they work. Show how your solution is better than current workarounds: is it cleaner, safer, or more efficient?
-
-This section doesn't have to be comprehensive. Focus on the most important parts of the proposal and make arguments about why the proposal is better than the status quo.
-
 I would like to suggest a set of small but delightful, quality-assured additions to `DateInterval` for computing the time or date interval between two, potentially non-intersecting date intervals: `timeIntervalSince:`, `dateIntervalSince:`. I would propose two overloads for these APIs: one taking `DateInterval` values and another taking `Date` values.
 
-Should a developer find themselves needing to compute values, these additions should feel intuitive because they bear a family resemblance to existing `Date` APIs. They extend the existing intersection APIs by signalling if two intervals intersect for a moment at opposing ends. They complement the comparison API by providing the past or future time between intervals. Effort has been put into expressively describing the computations — promoting readability — especially when developers may be tempted to settle for terse expressions. With the quality of these APIs assured, their convenience saving developers the cognitive load implementing, naming, testing and maintaining these computations, I would suggest these small but not-so-commonly needed additions would delight developers.
+Should a developer find themselves needing to compute these values, the suggested additions should feel intuitive because they bear a family resemblance to existing `Date` APIs. These additions build on and complement existing intersection and comparision APIs. By easily indicating if two intervals intersect for a moment at opposing ends, developers can more easily determine special cases of intersection. By indicating if one interval is relative to another in the past or the future, the comparison offering is enriched. Effort has been put into expressively describing the computations — promoting readability — especially when developers may be tempted to settle for terse expressions. With the quality of these APIs assured; the convenience saving developers the cognitive load implementing, naming, testing and maintaining these computations and; the presence of these small but not-so-commonly needed additions that match our intuitions about using Foundation; I would suggest these additions are delightful.
 
 ## Detailed design
 
