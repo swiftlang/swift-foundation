@@ -26,6 +26,7 @@ internal struct BuiltInUnicodeScalarSet {
         case canonicalDecomposable
 
         // Below are internal
+        case hfsPlusDecomposable
         case caseIgnorable
         case graphemeExtend
     }
@@ -44,6 +45,8 @@ internal struct BuiltInUnicodeScalarSet {
             return 3
         case .canonicalDecomposable:
             return 5
+        case .hfsPlusDecomposable:
+            return 12
         case .caseIgnorable:
             return 20
         case .graphemeExtend:
@@ -90,6 +93,7 @@ internal struct BuiltInUnicodeScalarSet {
     static let uppercaseLetters = Self.init(type: .uppercaseLetter)
     static let lowercaseLetters = Self.init(type: .lowercaseLetter)
     static let caseIgnorables = Self.init(type: .caseIgnorable)
+    static let hfsPlusDecomposables = Self.init(type: .hfsPlusDecomposable)
     static let graphemeExtends = Self.init(type: .graphemeExtend)
     static let canonicalDecomposables = Self.init(type: .canonicalDecomposable)
 }
