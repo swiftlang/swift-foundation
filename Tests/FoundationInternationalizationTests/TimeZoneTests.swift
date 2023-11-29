@@ -14,7 +14,9 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationInternationalization)
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#elseif canImport(FoundationInternationalization)
 @testable import FoundationInternationalization
 #endif
 
