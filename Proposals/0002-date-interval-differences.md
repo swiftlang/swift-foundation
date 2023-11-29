@@ -13,19 +13,37 @@ Add small but convenient, quality-assured methods on `DateInterval` for computin
 
 ## Motivation
 
-`DateInterval` could offer more APIs to help developers work with ranges of absolute moments in time. For example, a developer might be building a logbook, employment time planner or implementing a time based feature in a less specialised app. In a more complex case, the app may require users to enter start and end times for particular activities, arrange them in a particular sequence with some acceptable gap between (e.g. work here for 2 hours, work there for 1.5 hours and rest for 10 minutes with at most five minutes between, no overlaps, etc). This app would need to validate the intervals formed by the dates entered by at least: checking the intersections of intervals, measuring how much those intervals intersect by and/or by measuring the time between them.
+`DateInterval` could offer more APIs to help developers work with ranges of absolute moments in time. For example, a developer might be building a logbook, shift planner, time tracker or implementing a time based feature in a less specialised app. In the more complex cases, an app may require users to enter start and end times for particular activities, arrange them in a particular sequence with some acceptable gap between (e.g. work here for 2 hours, work there for 1.5 hours and rest for 10 minutes with at most five minutes between, no overlaps, etc). This app would need to validate the intervals formed by the dates entered by at least: checking the intersections of intervals, measuring how much those intervals intersect by and/or by measuring the time between them. In the case of a simpler feature, perhaps the duration between some moment and either the start or end of an interval should be displayed.
 
-`DateInterval` would be an intuitive type to begin such an implementation with. However, developers would quickly hit a limit with its out-of-the-box utility and become responsible for proving a quality implementation. Further, the precedent set by other Foundation types forms our intuitions about what utility we should expect of it.
+`DateInterval` would be an intuitive type to begin such implementations with. However, developers would quickly hit a limit with its out-of-the-box utility and become responsible for providing an implementation. Further, the precedent set by other Foundation types have shaped our intuitions about what utility we could expect of it.
 
 ## Proposed solution
 
-I would like to suggest a set of small but delightful, quality-assured additions to `DateInterval` for computing the time or date interval between two, potentially non-intersecting date intervals: `timeIntervalSince:`, `dateIntervalSince:`. I would propose two overloads for these APIs: one taking `DateInterval` values and another taking `Date` values.
+I would like to propose a set of small but delightful, quality-assured additions to `DateInterval` for computing the time or date interval between two, potentially non-intersecting date intervals: `timeIntervalSince(_:)`, `dateIntervalSince(_:)`. I would propose two overloads for these APIs: one taking `DateInterval` values and another taking `Date` values.
 
-Should a developer find themselves needing to compute these values, the suggested additions should feel intuitive because they bear a family resemblance to existing `Date` APIs. These additions build on and complement existing intersection and comparision APIs. By easily indicating if two intervals intersect for a moment at opposing ends, developers can more easily determine special cases of intersection. By indicating if one interval is relative to another in the past or the future, the comparison offering is enriched. Effort has been put into expressively describing the computations — promoting readability — especially when developers may be tempted to settle for terse expressions. With the quality of these APIs assured; the convenience saving developers the cognitive load implementing, naming, testing and maintaining these computations and; the presence of these small but not-so-commonly needed additions that match our intuitions about using Foundation; I would suggest these additions are delightful.
+Should a developer find themselves needing to compute these values, the proposed additions should feel intuitive because they bear a family resemblance to existing `Date` APIs (e.g.: `timeIntervalSince(_:)`). These additions build on and complement existing intersection and comparision APIs. By easily indicating if two intervals intersect for a moment at opposing ends, developers can more easily determine special cases of intersection. By indicating if one interval is exclusively relative to another in the past or the future, the comparison offering is enriched. The names for these computations are expressive, promoting clarity and readability, especially when developers may be tempted to settle for terse expressions. With the quality of these APIs assured; the convenience saving developers the cognitive load implementing, naming, testing and maintaining these computations and; the presence of these small additions that congeal with intuitions about Foundation types; I would propose these additions are delightful.
 
 ## Detailed design
 
-Describe the design of the solution in detail. Show the full API and its documentation comments detailing what it does. The detail in this section should be sufficient for someone who is *not* one of the authors to be able to reasonably implement the feature.
+Consider two date intervals `A` and `B` demarcating moments on this first timeline:
+```
+1. |--A--| <-- time interval --> |--B--|
+```
+For the `timeIntervalSince(_:)` APIs, the time interval of `B` since `A` will be zero or positive because `B` demarcates a range of moments later than the range of moments demarcated by `A`. The time interval of `A` since `B` will be zero or negative because the range of moments the range of moments demarcated by `A` are earlier than those demarcated by `B`.
+
+For the `dateIntervalSince(_:)` APIs, the date interval of `B` since `A` will be the same as the date interval of `A` since `B` because `DateInterval` is designed to represent positive intervals only. The time between the earliest end and latest start becomes the duration and the earliest end becomes the start of the resulting `DateInterval`.
+
+Consider two date intervals `C` and `D` demarcating moments on a second timeline:
+```
+2. |--C--|--D--|
+```
+The time or date intervals since `C` and `D` and vice-versa are zero because `C` ends where `D` begins. With this, developers can test that two date intervals form an unbroken, continuous range of moments.
+
+Finally, consider two thoroughly intersecting date intervals demarcating these moments on a third timeline:
+```
+3. |--|—-—-|--|
+```
+In this case, the time or date intervals since either interval does not exist and the APIs shall return `nil`.
 
 ## Source compatibility
 
