@@ -161,9 +161,15 @@ final class LocaleTests : XCTestCase {
             return localeComponents
         }
 
+#if FIXED_ICU_20187
+        verify(cldr: "root", bcp47: "und", icu: "") {
+            return Locale.Components(identifier: "")
+        }
+#else
         verify(cldr: "root", bcp47: "und", icu: "en_US_POSIX") {
             return Locale.Components(identifier: "")
         }
+#endif
 
         verify(cldr: "und_US", bcp47: "und-US", icu: "_US") {
             return Locale.Components(languageRegion: .unitedStates)
@@ -753,7 +759,11 @@ extension LocaleTests {
 
     // TODO: Reenable once (Locale.canonicalIdentifier) is implemented
     func test_identifierTypesFromSpecialIdentifier() throws {
+#if FIXED_ICU_20187
+        verify("", cldr: "root", bcp47: "und", icu: "")
+#else
         verify("", cldr: "root", bcp47: "und", icu: "en_US_POSIX")
+#endif
         verify("root", cldr: "root", bcp47: "root", icu: "root")
         verify("und", cldr: "root", bcp47: "und", icu: "und")
 
@@ -772,12 +782,20 @@ extension LocaleTests {
 
         // If there's only one component, it is treated as the language code
         verify("123", cldr: "root", bcp47: "und", icu: "123")
+#if FIXED_ICU_20187
+        verify("😀123", cldr: "root", bcp47: "und", icu: "")
+#else
         verify("😀123", cldr: "root", bcp47: "und", icu: "en_US_POSIX")
+#endif
 
         // The "_" prefix marks the start of the region
         verify("_ZZ", cldr: "und_ZZ", bcp47: "und-ZZ", icu: "_ZZ")
         verify("_123", cldr: "und_123", bcp47: "und-123", icu: "_123")
+#if FIXED_ICU_20187
+        verify("_😀123", cldr: "root", bcp47: "und", icu: "")
+#else
         verify("_😀123", cldr: "root", bcp47: "und", icu: "en_US_POSIX")
+#endif
 
         // Starting an ID with script code is an acceptable special case
         verify("Hant", cldr: "hant", bcp47: "hant", icu: "hant")
