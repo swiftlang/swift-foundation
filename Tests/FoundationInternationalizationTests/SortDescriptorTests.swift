@@ -209,7 +209,7 @@ class SortDescriptorTests: XCTestCase {
     }
 
     func test_encoding_comparable_throws() {
-        let descriptors = [
+        let descriptors : [SortDescriptor<SortDescriptorTests.NonNSObjectRoot>] = [
             SortDescriptor(\NonNSObjectRoot.word),
             SortDescriptor(\NonNSObjectRoot.maybeWord),
             SortDescriptor(\NonNSObjectRoot.gadget),
