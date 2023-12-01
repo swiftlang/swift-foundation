@@ -18,43 +18,6 @@ import TestSupport
 @testable import FoundationEssentials
 #endif
 
-extension DateComponents {
-    init(field: Calendar.Component, value: Int) {
-        self = .init()
-        switch field {
-        case .era:
-            self.era = value
-        case .year:
-            self.year = value
-        case .month:
-            self.month = value
-        case .day:
-            self.day = value
-        case .hour:
-            self.hour = value
-        case .minute:
-            self.minute = value
-        case .second:
-            self.second = value
-        case .weekday:
-            self.weekday = value
-        case .weekdayOrdinal:
-            self.weekdayOrdinal = value
-        case .quarter:
-            self.quarter = value
-        case .weekOfMonth:
-            self.weekOfMonth = value
-        case .weekOfYear:
-            self.weekOfYear = value
-        case .yearForWeekOfYear:
-            self.yearForWeekOfYear = value
-        case .nanosecond:
-            self.nanosecond = value
-        case .calendar, .timeZone, .isLeapMonth:
-            return
-        }
-    }
-}
 
 // Tests for _GregorianCalendar
 final class GregorianCalendarTests : XCTestCase {
@@ -163,7 +126,7 @@ final class GregorianCalendarTests : XCTestCase {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
         var date: Date
         func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, wrap: Bool, expectedDate: Date, _ file: StaticString = #file, _ line: UInt = #line) {
-            let components = DateComponents(field: field, value: value)
+            let components = DateComponents(component: field, value: value)!
             let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: wrap)!
             XCTAssertEqual(result, expectedDate, file: file, line: line)
         }

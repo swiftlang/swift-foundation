@@ -687,44 +687,6 @@ final class CalendarBridgingTests : XCTestCase {
 #endif
 
 
-extension DateComponents {
-    init(field: Calendar.Component, value: Int) {
-        self = .init()
-        switch field {
-        case .era:
-            self.era = value
-        case .year:
-            self.year = value
-        case .month:
-            self.month = value
-        case .day:
-            self.day = value
-        case .hour:
-            self.hour = value
-        case .minute:
-            self.minute = value
-        case .second:
-            self.second = value
-        case .weekday:
-            self.weekday = value
-        case .weekdayOrdinal:
-            self.weekdayOrdinal = value
-        case .quarter:
-            self.quarter = value
-        case .weekOfMonth:
-            self.weekOfMonth = value
-        case .weekOfYear:
-            self.weekOfYear = value
-        case .yearForWeekOfYear:
-            self.yearForWeekOfYear = value
-        case .nanosecond:
-            self.nanosecond = value
-        case .calendar, .timeZone, .isLeapMonth:
-            return
-        }
-    }
-}
-
 #if ENABLE_CALENDAR_COMPATIBILITY_TEST // These tests take a long time to run, so disable them for now
 // This test validates the results against FoundationInternationalization's calendar implementation temporarily until we completely ported the calendar
 final class GregorianCalendarCompatibilityTests: XCTestCase {
@@ -975,19 +937,19 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         self.continueAfterFailure = false
         func verify(_ date: Date, wrap: Bool, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
             for v in stride(from: -100, through: 100, by: 3) {
-                verifyAdding(DateComponents(field: .era, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .year, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .month, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .day, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .hour, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .minute, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .second, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .weekday, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .weekdayOrdinal, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .weekOfYear, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .weekOfMonth, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .yearForWeekOfYear, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .nanosecond, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .era, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .year, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .month, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .day, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .hour, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .minute, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .second, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekday, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekdayOrdinal, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekOfYear, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekOfMonth, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .yearForWeekOfYear, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .nanosecond, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
             }
         }
 
@@ -1031,19 +993,19 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         self.continueAfterFailure = false
         func verify(_ date: Date, wrap: Bool, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
             for v in stride(from: -100, through: 100, by: 23) {
-                verifyAdding(DateComponents(field: .era, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .year, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .month, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .day, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .hour, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .minute, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .second, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .weekday, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .weekdayOrdinal, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .weekOfYear, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .weekOfMonth, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .yearForWeekOfYear, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
-                verifyAdding(DateComponents(field: .nanosecond, value: v), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .era, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .year, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .month, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .day, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .hour, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .minute, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .second, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekday, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekdayOrdinal, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekOfYear, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekOfMonth, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .yearForWeekOfYear, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .nanosecond, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
             }
         }
 
