@@ -1729,7 +1729,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         let start = date - 48.0 * 60.0 * 60.0
 
 
-        guard let nextDSTTransition = _locked_nextDaylightSavingTimeTransition(startingAt: start, limit: start + 4 * 8600 * 1000.0) else {
+        guard let nextDSTTransition = _locked_nextDaylightSavingTimeTransition(startingAt: start, limit: start + 4 * 86400 * 1000.0) else {
             return nil
         }
 

@@ -687,7 +687,7 @@ final class CalendarBridgingTests : XCTestCase {
 #endif
 
 // This test validates the results against FoundationInternationalization's calendar implementation temporarily until we completely ported the calendar
-final class GregorianCalendarTests: XCTestCase {
+final class GregorianCalendarCompatibilityTests: XCTestCase {
 
     func testDateFromComponentsCompatibility() {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
@@ -793,6 +793,46 @@ final class GregorianCalendarTests: XCTestCase {
         }
     }
 
+    func testDateFromComponentsCompatibility_DaylightSavingTimeZone() {
+
+        let tz = TimeZone(identifier: "America/Los_Angeles")!
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+
+        func test(_ dateComponents: DateComponents, file: StaticString = #file, line: UInt = #line) {
+            let date_new = gregorianCalendar.date(from: dateComponents)!
+            let date_old = icuCalendar.date(from: dateComponents)!
+            expectEqual(date_new, date_old, "dateComponents: \(dateComponents)")
+            let roundtrip_new = gregorianCalendar.dateComponents([.hour], from: date_new)
+            let roundtrip_old = icuCalendar.dateComponents([.hour], from: date_new)
+            XCTAssertEqual(roundtrip_new.hour, roundtrip_old.hour, "dateComponents: \(dateComponents)")
+        }
+
+         // In daylight saving time
+        test(.init(year: 2023, month: 10, day: 16))
+        test(.init(year: 2023, month: 10, day: 16, hour: 1, minute: 34, second: 52))
+        
+        // Not in daylight saving time
+        test(.init(year: 2023, month: 11, day: 6))
+
+        // Before daylight saving time starts
+        test(.init(year: 2023, month: 3, day: 12))
+        test(.init(year: 2023, month: 3, day: 12, hour: 1, minute: 34, second: 52))
+        test(.init(year: 2023, month: 3, day: 12, hour: 2, minute: 34, second: 52)) // this time does not exist
+
+        // After daylight saving time starts
+        test(.init(year: 2023, month: 3, day: 12, hour: 3, minute: 34, second: 52))
+        test(.init(year: 2023, month: 3, day: 13, hour: 00))
+
+        // Before daylight saving time ends
+        test(.init(year: 2023, month: 11, day: 5))
+        test(.init(year: 2023, month: 11, day: 5, hour: 1, minute: 34, second: 52)) // this time happens twice
+
+        // After daylight saving time ends
+        test(.init(year: 2023, month: 11, day: 5, hour: 2, minute: 34, second: 52))
+        test(.init(year: 2023, month: 11, day: 5, hour: 3, minute: 34, second: 52))
+    }
+
     func testDateComponentsFromDateCompatibility() {
         let componentSet = Calendar.ComponentSet([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar])
 
@@ -877,4 +917,5 @@ final class GregorianCalendarTests: XCTestCase {
             }
         }
     }
+
 }

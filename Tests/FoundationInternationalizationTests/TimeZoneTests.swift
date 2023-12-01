@@ -14,6 +14,12 @@
 import TestSupport
 #endif
 
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#elseif canImport(FoundationInternationalization)
+@testable import FoundationInternationalization
+#endif
+
 final class TimeZoneTests : XCTestCase {
 
     func test_timeZoneBasics() {
@@ -50,7 +56,7 @@ final class TimeZoneTests : XCTestCase {
     func testPredefinedTimeZone() {
         XCTAssertEqual(TimeZone.gmt, TimeZone(identifier: "GMT"))
     }
-    
+
     func testLocalizedName_103036605() {
         func test(_ tzIdentifier: String, _ localeIdentifier: String, _ style: TimeZone.NameStyle, _ expected: String?, file: StaticString = #file, line: UInt = #line) {
             let tz = TimeZone(identifier: tzIdentifier)
@@ -195,6 +201,49 @@ final class TimeZoneGMTTests : XCTestCase {
     }
 }
 
+final class TimeZoneICUTests: XCTestCase {
+    func testTimeZoneOffset() {
+        let tz = _TimeZoneICU(identifier: "America/Los_Angeles")!
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+
+        var gmt_calendar = Calendar(identifier: .gregorian)
+        gmt_calendar.timeZone = .gmt
+        func test(_ dateComponent: DateComponents, expectedRawOffset: Int, expectedDSTOffset: TimeInterval, file: StaticString = #file, line: UInt = #line) {
+            let d = gmt_calendar.date(from: dateComponent)! // date in GMT
+            let (rawOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: d)
+            XCTAssertEqual(rawOffset, expectedRawOffset, file: file, line: line)
+            XCTAssertEqual(dstOffset, expectedDSTOffset, file: file, line: line)
+        }
+
+        // Not in DST
+        test(.init(year: 2023, month: 3, day: 12, hour: 1, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 0)
+        test(.init(year: 2023, month: 3, day: 12, hour: 1, minute: 00, second: 00, nanosecond: 1), expectedRawOffset: -28800, expectedDSTOffset: 0)
+        test(.init(year: 2023, month: 3, day: 12, hour: 1, minute: 00, second: 01), expectedRawOffset: -28800, expectedDSTOffset: 0)
+        test(.init(year: 2023, month: 3, day: 12, hour: 1, minute: 59, second: 59), expectedRawOffset: -28800, expectedDSTOffset: 0)
+        
+        // These times do not exist; we treat it as if in the previous time zone, i.e. not in DST
+        test(.init(year: 2023, month: 3, day: 12, hour: 2, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 0)
+        test(.init(year: 2023, month: 3, day: 12, hour: 2, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 0)
+
+        // After DST starts
+        test(.init(year: 2023, month: 3, day: 12, hour: 3, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 3600)
+        test(.init(year: 2023, month: 3, day: 12, hour: 3, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 3600)
+        test(.init(year: 2023, month: 3, day: 12, hour: 4, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 3600)
+
+        // These times happen twice; we treat it as if in the previous time zone, i.e. still in DST
+        test(.init(year: 2023, month: 11, day: 5, hour: 1, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 3600)
+        test(.init(year: 2023, month: 11, day: 5, hour: 1, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 3600)
+        
+        // Clock should turn right back as this moment, so if we insist on being at this point, then we've moved past the transition point -- hence not DST
+        test(.init(year: 2023, month: 11, day: 5, hour: 2, minute: 00, second: 00), expectedRawOffset: -28800, expectedDSTOffset: 0)
+
+        // Not in DST
+        test(.init(year: 2023, month: 11, day: 5, hour: 2, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 0)
+        test(.init(year: 2023, month: 11, day: 5, hour: 3, minute: 34, second: 52), expectedRawOffset: -28800, expectedDSTOffset: 0)
+    }
+
+}
 // MARK: - FoundationPreview disabled tests
 #if FOUNDATION_FRAMEWORK
 extension TimeZoneTests {
