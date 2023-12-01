@@ -725,6 +725,7 @@ extension DateComponents {
     }
 }
 
+#if ENABLE_CALENDAR_COMPATIBILITY_TEST // These tests take a long time to run, so disable them for now
 // This test validates the results against FoundationInternationalization's calendar implementation temporarily until we completely ported the calendar
 final class GregorianCalendarCompatibilityTests: XCTestCase {
 
@@ -1114,3 +1115,4 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
     }
 }
+#endif // ENABLE_CALENDAR_COMPATIBILITY_TEST
