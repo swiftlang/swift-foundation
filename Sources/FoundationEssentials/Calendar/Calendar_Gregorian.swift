@@ -179,6 +179,10 @@ enum ResolvedDateComponents {
 /// This class is a placeholder and work-in-progress to provide an implementation of the Gregorian calendar.
 internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     
+    let kSecondsInWeek = 604_800
+    let kSecondsInDay = 86400
+    let kSecondsInHour = 3600
+
     let julianCutoverDay: Int// Julian day (noon-based) of cutover
     let gregorianStartYear: Int
     let gregorianStartDate: Date
@@ -727,9 +731,521 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         dateComponents(components, from: date, in: timeZone)
     }
 
-    func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
-        fatalError()
+    // MARK: - Add
+
+    // Returns the weekday of the last day of the month or the year, using `referenceDayOfPeriod` and `referenceDayWeekday` as the reference
+    func relativeWeekdayForLastDayOfPeriod(periodLength: Int, referenceDayOfPeriod dayOfPeriod: Int, referenceDayWeekday weekday: Int) -> Int {
+        return (periodLength - dayOfPeriod + weekday - firstWeekday) % 7
     }
+
+    // Returns the "adjusted" day of month considering gregorian cutover:
+    // In the Gregorian cutover month, 10 days were taken away -- Thursday, Oct 4, 1582 was followed by Friday, Oct 15, 1582
+    // This affects the length of month and the start of the month of a given date if it falls in the cutover month
+    func dayOfMonthConsideringGregorianCutover(_ date: Date, inTimeZone timeZone: TimeZone) -> (dayOfMonthAdjustingJulianDay: Int, monthStart: Date, monthLen: Int, isCutover: Bool) {
+        let dc = dateComponents([.year, .month, .day], from: date, in: timeZone)
+        guard let year = dc.year, let month = dc.month, let day = dc.day else {
+            preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+        }
+        let monthLen = numberOfDaysInMonth(month, year: year)
+        guard year == gregorianStartYear else {
+            let monthStartDate = date - Double((day - 1) * kSecondsInDay)
+            return (day, monthStartDate, monthLen, false)
+        }
+
+        let kCutoverMonthRollbackDays = 10
+        let attemptDayOfMonth: Int
+        if date >= gregorianStartDate {
+            attemptDayOfMonth = day - kCutoverMonthRollbackDays
+        } else {
+            attemptDayOfMonth = day
+        }
+        let monthStartDate = date - Double((attemptDayOfMonth - 1) * kSecondsInDay)
+        let monthEndDateForCutoverMonth = monthStartDate + Double((monthLen - kCutoverMonthRollbackDays) * kSecondsInDay)
+        if monthStartDate < gregorianStartDate && monthEndDateForCutoverMonth >= gregorianStartDate {
+            // this month is the cutover month
+            return (attemptDayOfMonth, monthStartDate, monthLen - kCutoverMonthRollbackDays, true)
+        }
+
+        return (day, monthStartDate, monthLen, false)
+    }
+
+    // Limits the day of month to the number of days in the given month
+    func capDay(in dateComponent: inout DateComponents) {
+        guard let day = dateComponent.day, let month = dateComponent.month, let year = dateComponent.year else {
+            return
+        }
+
+        let daysInMonth = numberOfDaysInMonth(month, year: year)
+        if day > daysInMonth {
+            dateComponent.day = daysInMonth
+        } else if day < 1 {
+            dateComponent.day = 1
+        }
+    }
+
+    func add(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) -> Date {
+
+        let amountInSeconds: Int
+        var nanoseconds: Double = 0
+
+        let allComponents: Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
+        switch field {
+        case .era:
+            // We've been ignorning era historically. Do the same for compatibility reason.
+            return date
+
+        case .yearForWeekOfYear:
+            var dc = dateComponents(allComponents, from: date, in: timeZone)
+            var amount = amount
+            if let era = dc.era, era == 0 {
+                amount = -amount
+            }
+            dc.yearForWeekOfYear = (dc.yearForWeekOfYear ?? 0) + amount
+            capDay(in: &dc)
+            let resolvedComponents = ResolvedDateComponents(preferComponent: .yearForWeekOfYear, dateComponents: dc)
+            let old = self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+            return old
+        case .year:
+            var dc = dateComponents(allComponents, from: date, in: timeZone)
+            var amount = amount
+            if let era = dc.era, era == 0 {
+                amount = -amount
+            }
+            dc.year = (dc.year ?? 0) + amount
+            capDay(in: &dc)
+            let resolvedComponents = ResolvedDateComponents(preferComponent: .year, dateComponents: dc)
+            return self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+
+        case .month:
+            var dc = dateComponents(allComponents, from: date, in: timeZone)
+            dc.month = (dc.month ?? 0) + amount
+            capDay(in: &dc) // adding 1 month to Jan 31 should return Feb 29, not Feb 31
+            let resolvedComponents = ResolvedDateComponents(preferComponent: .month, dateComponents: dc)
+            return self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+
+        case .quarter:
+            // TODO: This isn't supported in Calendar_ICU either. We should do it here though.
+            return date
+
+        case .weekdayOrdinal:
+            amountInSeconds = kSecondsInWeek * amount
+
+        case .weekOfMonth:
+            amountInSeconds = kSecondsInWeek * amount
+
+        case .weekOfYear:
+            amountInSeconds = kSecondsInWeek * amount
+
+        case .day:
+            amountInSeconds = amount * kSecondsInDay
+
+        case .weekday:
+            amountInSeconds = amount * kSecondsInDay
+
+        case .hour:
+            amountInSeconds = amount * kSecondsInHour
+
+        case .minute:
+            amountInSeconds = amount * 60
+
+        case .second:
+            amountInSeconds = amount
+
+        case .nanosecond:
+            amountInSeconds = 0
+            nanoseconds = Double(amount) / 1_000_000_000
+
+        // nothing to do for the below fields
+        case .calendar, .timeZone, .isLeapMonth:
+            return date
+        }
+
+        let newDate = date + Double(amountInSeconds) + nanoseconds
+        let dstOffset = timeZone.daylightSavingTimeOffset(for: newDate)
+
+        // No need for normal gmt-offset adjustment because the revelant bits are handled above individually
+        // We do have to adjust dst offset in the case of, say, adding an hour to dst transitioning day
+        return newDate - Double(dstOffset)
+    }
+
+
+    func add(amount: Int, to value: Int, wrappingTo range: Range<Int>) -> Int {
+        guard amount != 0 else {
+            return value
+        }
+
+        var newValue = (value + amount - range.lowerBound) % range.count
+        if newValue < 0 {
+            newValue += range.count
+        }
+        newValue += range.lowerBound
+        return newValue
+    }
+
+    func addAndWrap(_ field:  Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) -> Date {
+
+        guard amount != 0 else {
+            return date
+        }
+
+        let allComponents: Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
+
+        switch field {
+        case .era:
+            // FCF ignores era
+            return date
+
+        case .year:
+            var dc = dateComponents(allComponents, from: date, in: timeZone)
+            guard let year = dc.year else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+            var amount = amount
+            if dc.era == 0 /* BC */ {
+                // in BC year goes backwards
+                amount = -amount
+            }
+
+            var newValue = year + amount
+            if newValue < 1 {
+                newValue = 1
+            }
+            dc.year = newValue
+            capDay(in: &dc) // day in month may change if the year changes from a leap year to a non-leap year for Feb
+
+            let resolvedComponents = ResolvedDateComponents(preferComponent: .year, dateComponents: dc)
+            return self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+
+        case .month:
+            var dc = dateComponents(allComponents, from: date, in: timeZone)
+            guard let month = dc.month else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+            let newMonth = add(amount: amount, to: month, wrappingTo: 1..<13)
+            dc.month = newMonth
+
+            capDay(in: &dc) // adding 1 month to Jan 31 should return Feb 29, not Feb 31
+            let resolvedComponents = ResolvedDateComponents(preferComponent: .month, dateComponents: dc)
+            return self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+
+        case .day:
+            let (_, monthStart, daysInMonth, _) = dayOfMonthConsideringGregorianCutover(date, inTimeZone: timeZone)
+            let monthLengthInSec = Double(daysInMonth * kSecondsInDay)
+            var timeIntervalIntoMonth = (date.timeIntervalSince(monthStart) + Double(amount * kSecondsInDay)).remainder(dividingBy: monthLengthInSec)
+            if timeIntervalIntoMonth < 0 {
+                timeIntervalIntoMonth += monthLengthInSec
+            }
+            return monthStart + timeIntervalIntoMonth
+
+        case .hour:
+            let dc = dateComponents([.hour], from: date, in: timeZone)
+            guard let hour = dc.hour else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+
+            let newHour = add(amount: amount, to: hour, wrappingTo: 0..<24)
+            let newDate = date + Double((newHour - hour) * kSecondsInHour)
+            return newDate
+
+        case .minute:
+            var dc = dateComponents(allComponents, from: date, in: timeZone)
+            guard let minute = dc.minute else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+
+            let newMinute = add(amount: amount, to: minute, wrappingTo: 0..<60)
+            dc.minute = newMinute
+
+            let resolvedComponents = ResolvedDateComponents(preferComponent: .minute, dateComponents: dc)
+            return self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+
+        case .second:
+            var dc = dateComponents(allComponents, from: date, in: timeZone)
+            guard let second = dc.second else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+
+            let newSecond = add(amount: amount, to: second, wrappingTo: 0..<60)
+            dc.second = newSecond
+            let resolvedComponents = ResolvedDateComponents(preferComponent: .second, dateComponents: dc)
+            return self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+
+        case .weekday:
+            let dc = dateComponents([.weekday], from: date, in: timeZone)
+            guard let weekday = dc.weekday else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+
+            var dayOffset = weekday - firstWeekday
+            if dayOffset < 0 {
+                dayOffset += 7
+            }
+
+            let rewindedDate = date - Double(dayOffset * kSecondsInDay) // shifted date considering first day of week
+            let newDate = date + Double(amount * kSecondsInDay)
+
+            var newSecondsOffset = newDate.timeIntervalSince(rewindedDate)
+            newSecondsOffset = newSecondsOffset.remainder(dividingBy: Double(kSecondsInWeek))  // constrain the offset to fewer than a week
+            if newSecondsOffset < 0 {
+                newSecondsOffset += Double(kSecondsInWeek)
+            }
+
+            return rewindedDate + newSecondsOffset
+
+        case .weekdayOrdinal:
+            // similar to weekday calculation
+            let dc = dateComponents([.day, .month, .year], from: date, in: timeZone)
+            guard let year = dc.year, let day = dc.day, let month = dc.month else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+            let preWeeks = (day - 1) / 7
+            let numberOfDaysInMonth = numberOfDaysInMonth(month, year: year)
+            let postWeeks = (numberOfDaysInMonth - day) / 7
+            let rewindedDate = date - Double(preWeeks * kSecondsInWeek) // same time in the day on the first same weekday in the month
+            let newDate = date + Double(amount * kSecondsInWeek)
+            let gap = Double((preWeeks + postWeeks + 1) * kSecondsInWeek) // number of seconds in this month, calculated based on the number of weeks
+            var newSecondsOffset = newDate.timeIntervalSince(rewindedDate)
+            newSecondsOffset = newSecondsOffset.remainder(dividingBy: gap) // constrain the offset to fewer than a month, starting from the first weekday of the month
+            if newSecondsOffset < 0 {
+                newSecondsOffset += gap
+            }
+
+            return rewindedDate + newSecondsOffset
+
+        case .quarter:
+            // TODO: This isn't supported in Calendar_ICU either. We should do it here though.
+            return date
+
+        case .weekOfMonth:
+            let tzOffset = timeZone.secondsFromGMT(for: date)
+            let date = date + Double(tzOffset)
+            var dc = dateComponents(allComponents, from: date, in: .gmt)
+            guard let weekday = dc.weekday  else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+            let (dayOfMonth, monthStart, nDaysInMonth, inGregorianCutoverMonth) = dayOfMonthConsideringGregorianCutover(date, inTimeZone: .gmt)
+
+            // needs special handling of the first and last week if it's an incomplete week
+            var relativeWeekday = weekday - firstWeekday // 0...6
+            if relativeWeekday < 0 {
+                relativeWeekday += 7
+            }
+
+            var relativeWeekdayForFirstOfMonth = (relativeWeekday - dayOfMonth + 1) % 7 // relative weekday for the first day of the month, 0...6
+            if relativeWeekdayForFirstOfMonth < 0 {
+                relativeWeekdayForFirstOfMonth += 7
+            }
+
+            // handle the first week (may be partial)
+            let startDayForFirstWeek: Int // the day number for the first day of the first full week of the month
+            if 7 - relativeWeekdayForFirstOfMonth < minimumDaysInFirstWeek {
+                startDayForFirstWeek = 8 - relativeWeekdayForFirstOfMonth
+            } else {
+                startDayForFirstWeek = 1 - relativeWeekdayForFirstOfMonth
+            }
+
+            // handle the last week (may be partial)
+            let relativeWeekdayForLastOfMonth = relativeWeekdayForLastDayOfPeriod(periodLength: nDaysInMonth, referenceDayOfPeriod: dayOfMonth, referenceDayWeekday: dc.weekday!)
+            let endDayForLastWeek = nDaysInMonth + (7 - relativeWeekdayForLastOfMonth) // the day number for the last day of the last full week of the month. relative weekday of this day should be 0
+
+            var newDayOfMonth = add(amount: amount * 7, to: dayOfMonth, wrappingTo: startDayForFirstWeek ..< endDayForLastWeek)
+
+            // newDayOfMonth now falls in the full block that might extend the actual month. Now pin it back to the actual month
+            if newDayOfMonth < 1 {
+                newDayOfMonth = 1
+            } else if newDayOfMonth > nDaysInMonth {
+                newDayOfMonth = nDaysInMonth
+            }
+
+            if inGregorianCutoverMonth {
+                // Manipulating time directly generally does not work with DST. In these cases we want to go through our normal path as below
+                return monthStart + TimeInterval((newDayOfMonth - 1) * kSecondsInDay) - TimeInterval(tzOffset)
+            } else {
+                dc.day = newDayOfMonth
+                let resolvedComponents = ResolvedDateComponents(preferComponent: .day, dateComponents: dc)
+                return self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+            }
+
+        case .weekOfYear:
+            func yearLength(_ year: Int) -> Int {
+                return gregorianYearIsLeap(year) ? 366 : 365
+            }
+
+            var dc = dateComponents(allComponents, from: date, in: timeZone)
+            guard let weekOfYear = dc.weekOfYear, let yearForWeekOfYear = dc.yearForWeekOfYear, let month = dc.month, let year = dc.year, let day = dc.day, let weekday = dc.weekday else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+            var newWeekOfYear = weekOfYear + amount
+            if newWeekOfYear < 1 || newWeekOfYear > 52 {
+                var isoDayOfYear = dayOfYear(fromYear: year, month: month, day: day)
+                if month == 1 && weekOfYear > 52 {
+                    // the first week of the next year
+                    isoDayOfYear += yearLength(yearForWeekOfYear)
+                } else if month != 1 && weekOfYear == 1 {
+                    // the last week of the previous year
+                    isoDayOfYear -= yearLength(yearForWeekOfYear - 1)
+                }
+
+                var lastDoy = yearLength(yearForWeekOfYear)
+                let relativeWeekdayForLastOfYear = relativeWeekdayForLastDayOfPeriod(periodLength: lastDoy, referenceDayOfPeriod: isoDayOfYear, referenceDayWeekday: weekday)
+                if 6 - relativeWeekdayForLastOfYear >= minimumDaysInFirstWeek {
+                    // last week for this year needs to go to the next year
+                    lastDoy -= 7
+                }
+                let lastWeekOfYear = weekNumber(desiredDay: lastDoy, dayOfPeriod: lastDoy, weekday: relativeWeekdayForLastOfYear + 1)
+                newWeekOfYear = (newWeekOfYear + lastWeekOfYear - 1) % lastWeekOfYear + 1
+            }
+
+            dc.weekOfYear = newWeekOfYear
+            let resolvedComponents = ResolvedDateComponents(preferComponent: .weekOfYear, dateComponents: dc)
+            return self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+
+        case .yearForWeekOfYear:
+            // basically the same as year calculation
+            var dc = dateComponents(allComponents, from: date, in: timeZone)
+            guard let yearForWeekOfYear = dc.yearForWeekOfYear else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+            }
+
+            var amount = amount
+            if dc.era == 0 /* BC */ {
+                // in BC year goes backwards
+                amount = -amount
+            }
+
+            var newValue = yearForWeekOfYear + amount
+            if newValue < 1 {
+                newValue = 1
+            }
+            dc.yearForWeekOfYear = newValue
+            capDay(in: &dc) // day in month may change if the year changes from a leap year to a non-leap year for Feb
+            let resolvedComponents = ResolvedDateComponents(preferComponent: .yearForWeekOfYear, dateComponents: dc)
+            return self.date(from: dc, inTimeZone: timeZone, resolvedComponents: resolvedComponents)!
+
+        case .nanosecond:
+            return date + (Double(amount) * 1.0e-9)
+        case .calendar:
+            return date
+        case .timeZone:
+            return date
+        case .isLeapMonth:
+            return date
+        }
+    }
+
+
+    func date(byAddingAndWrapping components: DateComponents, to date: Date) -> Date? {
+        let timeZone = components.timeZone ?? self.timeZone
+        var result = date
+        // No leap month support needed here, since these are quantities, not values
+        if let amount = components.era {
+            result = addAndWrap(.era, to: result, amount: amount, inTimeZone: timeZone) }
+        if let amount = components.year {
+            result = addAndWrap(.year, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.yearForWeekOfYear {
+            result = addAndWrap(.yearForWeekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.quarter { 
+            result = addAndWrap(.quarter, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.month {
+            result = addAndWrap(.month, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.day {
+            result = addAndWrap(.day, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekOfYear {
+            result = addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        // `week` is for backward compatibility only, and is only used if weekOfYear is missing
+        if let amount = components.week, components.weekOfYear == nil {
+            result = addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekOfMonth {
+            result = addAndWrap(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekday {
+            result = addAndWrap(.weekday, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekdayOrdinal {
+            result = addAndWrap(.weekdayOrdinal, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.hour {
+            result = addAndWrap(.hour, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.minute {
+            result = addAndWrap(.minute, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.second {
+            result = addAndWrap(.second, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.nanosecond { 
+            result = addAndWrap(.nanosecond, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        return result
+    }
+
+    func date(byAddingAndCarryingOverComponents components: DateComponents, to date: Date) -> Date? {
+        let timeZone = components.timeZone ?? self.timeZone
+        var result = date
+        // No leap month support needed here, since these are quantities, not values
+        if let amount = components.era {
+            result = add(.era, to: result, amount: amount, inTimeZone: timeZone) }
+        if let amount = components.year {
+            result = add(.year, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.yearForWeekOfYear {
+            result = add(.yearForWeekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.quarter {
+            result = add(.quarter, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.month {
+            result = add(.month, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.day {
+            result = add(.day, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekOfYear {
+            result = add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        // `week` is for backward compatibility only, and is only used if weekOfYear is missing
+        if let amount = components.week, components.weekOfYear == nil {
+            result = addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }        
+        if let amount = components.weekOfMonth {
+            result = add(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekday {
+            result = add(.weekday, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekdayOrdinal {
+            result = add(.weekdayOrdinal, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.hour {
+            result = add(.hour, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.minute {
+            result = add(.minute, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.second {
+            result = add(.second, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.nanosecond { 
+            result = add(.nanosecond, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        return result
+    }
+
+    func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
+        if wrappingComponents {
+            return self.date(byAddingAndWrapping: components, to: date)
+        } else {
+            return self.date(byAddingAndCarryingOverComponents: components, to: date)
+        }
+    }
+
     
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
         fatalError()

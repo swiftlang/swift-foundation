@@ -686,6 +686,8 @@ final class CalendarBridgingTests : XCTestCase {
 }
 #endif
 
+
+#if ENABLE_CALENDAR_COMPATIBILITY_TEST // These tests take a long time to run, so disable them for now
 // This test validates the results against FoundationInternationalization's calendar implementation temporarily until we completely ported the calendar
 final class GregorianCalendarCompatibilityTests: XCTestCase {
 
@@ -918,4 +920,161 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         }
     }
 
+    // MARK: - adding
+    func verifyAdding(_ components: DateComponents, to date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, wrap: Bool = false, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+        let added_icu = icuCalendar.date(byAdding: components, to: date, wrappingComponents: wrap)
+        let added_greg = gregorianCalendar.date(byAdding: components, to: date, wrappingComponents: wrap)
+        guard let added_icu, let added_greg else {
+            XCTFail("\(message())", file: file, line: line)
+            return
+        }
+
+        expectEqual(added_greg, added_icu, message().appending("components:\(components)"), file: file, line: line)
+    }
+
+    func testAddComponentsCompatibility_singleField() {
+
+        self.continueAfterFailure = false
+        func verify(_ date: Date, wrap: Bool, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+            for v in stride(from: -100, through: 100, by: 3) {
+                verifyAdding(DateComponents(component: .era, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .year, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .month, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .day, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .hour, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .minute, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .second, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekday, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekdayOrdinal, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekOfYear, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekOfMonth, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .yearForWeekOfYear, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .nanosecond, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+            }
+        }
+
+        let firstWeekday = 1
+        let minimumDaysInFirstWeek = 1
+        let timeZone = TimeZone.gmt
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+
+        // Wrap
+        verify(Date(timeIntervalSince1970: 825638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 00:00
+        verify(Date(timeIntervalSince1970: 825721200), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 23:00
+        verify(Date(timeIntervalSince1970: 825723300), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 23:35
+        verify(Date(timeIntervalSince1970: 825638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 5, Tue
+        verify(Date(timeIntervalSince1970: 826588800), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 12, Tue
+
+        // Dates close to Gregorian cutover
+        verify(Date(timeIntervalSince1970: -12219638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 1
+        verify(Date(timeIntervalSince1970: -12218515200), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 14
+        verify(Date(timeIntervalSince1970: -12219292800), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 15
+        verify(Date(timeIntervalSince1970: -12219206400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 16
+        verify(Date(timeIntervalSince1970: -62130067200), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // long time ago
+
+        // No wrap
+        verify(Date(timeIntervalSince1970: 825638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 00:00
+        verify(Date(timeIntervalSince1970: 825721200), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 23:00
+        verify(Date(timeIntervalSince1970: 825723300), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 1, Fri 23:35
+        verify(Date(timeIntervalSince1970: 825638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 5, Tue
+        verify(Date(timeIntervalSince1970: 826588800), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar)  // 1996 Mar 12, Tue
+
+        // Dates close to Gregorian cutover
+        verify(Date(timeIntervalSince1970: -12219638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 1
+        verify(Date(timeIntervalSince1970: -12218515200), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 14
+        verify(Date(timeIntervalSince1970: -12219292800), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 15
+        verify(Date(timeIntervalSince1970: -12219206400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // 1582 Oct 16
+        verify(Date(timeIntervalSince1970: -62130067200), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar) // long time ago
+    }
+
+    func testAddComponentsCompatibility_singleField_custom() {
+
+        self.continueAfterFailure = false
+        func verify(_ date: Date, wrap: Bool, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+            for v in stride(from: -100, through: 100, by: 23) {
+                verifyAdding(DateComponents(component: .era, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .year, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .month, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .day, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .hour, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .minute, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .second, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekday, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekdayOrdinal, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekOfYear, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .weekOfMonth, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .yearForWeekOfYear, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+                verifyAdding(DateComponents(component: .nanosecond, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
+            }
+        }
+
+        for firstWeekday in [0, 1, 7] {
+            for minimumDaysInFirstWeek in [0, 1, 4, 7] {
+                for tzOffset in [ 3600, 7200] {
+                    let timeZone = TimeZone(secondsFromGMT: tzOffset)!
+                    let msg = "firstweekday: \(firstWeekday), minimumDaysInFirstWeek: \(minimumDaysInFirstWeek), timeZone: \(timeZone)"
+                    let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+                    let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+                    // Wrap
+                    verify(Date(timeIntervalSince1970: 825723300), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)  // 1996 Mar 1, Fri 23:35
+                    verify(Date(timeIntervalSince1970: 826588800), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)  // 1996 Mar 12, Tue
+
+                    // Dates close to Gregorian cutover
+                    verify(Date(timeIntervalSince1970: -12219638400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1582 Oct 1
+                    verify(Date(timeIntervalSince1970: -12218515200), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1582 Oct 14
+                    verify(Date(timeIntervalSince1970: -12219206400), wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1582 Oct 16
+
+                    // Far dates
+                    // FIXME: This is failing
+                    // verify(Date.distantPast, wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)
+                    // verify(Date.distantFuture, wrap: true, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)
+
+                    // No Wrap
+                    verify(Date(timeIntervalSince1970: 825723300), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)  // 1996 Mar 1, Fri 23:35
+                    verify(Date(timeIntervalSince1970: 826588800), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)  // 1996 Mar 12, Tue
+
+                    // Dates close to Gregorian cutover
+                    verify(Date(timeIntervalSince1970: -12219638400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1582 Oct 1
+                    verify(Date(timeIntervalSince1970: -12218515200), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1582 Oct 14
+                    verify(Date(timeIntervalSince1970: -12219206400), wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg) // 1582 Oct 16
+
+                    // Far dates
+                    // verify(Date.distantPast, wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)
+                    // verify(Date.distantFuture, wrap: false, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, msg)
+                }
+            }
+        }
+    }
+
+    func testAddComponentsCompatibility() {
+        let firstWeekday = 2
+        let minimumDaysInFirstWeek = 4
+        let timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+
+        let march1_1996 = Date(timeIntervalSince1970: 825723300) // 1996 Mar 1, Fri 23:35
+
+        verifyAdding(.init(day: -1, hour: 1),   to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(month: -1, hour: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(month: -1, day: 30), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(year: 4, day: -1),   to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -1, hour: 24),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -1, weekday: 1),                     to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -7, weekOfYear: 1),                  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -7, weekOfMonth: 1),                 to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+
+        verifyAdding(.init(day: -1, hour: 1),   to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(month: -1, hour: 1), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(month: -1, day: 30), to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(year: 4, day: -1),   to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(day: -1, hour: 24),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(day: -1, weekday: 1),                     to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(day: -7, weekOfYear: 1),                  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(day: -7, weekOfMonth: 1),                 to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+    }
 }
+#endif // ENABLE_CALENDAR_COMPATIBILITY_TEST

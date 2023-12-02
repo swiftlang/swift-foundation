@@ -74,6 +74,14 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         self.yearForWeekOfYear = yearForWeekOfYear
     }
 
+    package init?(component: Calendar.Component, value: Int) {
+        switch component {
+        case .calendar, .timeZone, .isLeapMonth:
+            return nil
+        default:
+            setValue(value, for: component)
+        }
+    }
 
     // MARK: - Properties
 
