@@ -10,6 +10,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+
+#if canImport(Darwin)
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly import os
+#else
+package import os
+#endif
+#elseif canImport(Glibc)
+import Glibc
+#endif
+
+#if canImport(CRT)
+import CRT
+#endif
+
+
 /// Julian date helper
 /// Julian dates are noon-based. Gregorian dates are midnight-based.
 /// JulianDates        `2451544.5 ..< 2451545.5` (Jan 01 2000, 00:00 - Jan 02 2000, 00:00)
@@ -268,10 +284,769 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         fatalError()
     }
     
-    func ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Int? {
-        fatalError()
+    func minMaxRange(of component: Calendar.Component, in dateComponent: DateComponents) -> Range<Int>? {
+        let allComponents: Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
+
+        // Returns the actual `maxRange` using the passed in `range` as a hint.
+        // e.g. Some year has 52 weeks, while some year has 53, so we would pass in `52..<54` for `.weekOfYear`.
+        // and we'd expect this function to return the actual number of weeks of year in the given `dateComponent`
+        // Mostly follows ICU::Calendar::getActualHelper
+        func actualMax(inRange range: Range<Int>) -> Int? {
+            if range.count == 0 {
+                return range.lowerBound
+            }
+            guard let date = self.date(from: dateComponent) else {
+                return nil
+            }
+
+            let tz = dateComponent.timeZone ?? self.timeZone
+            // now try each value from the start to the end one by one until
+            // we get a value that normalizes to another value.  The last value that
+            // normalizes to itself is the actual maximum for the current date
+            var start = range.lowerBound
+            var result = start
+            // FIXME: Add a fail-safe for searching functions to prevent infinite loop
+            repeat {
+                start += 1
+                let newDate = add(component, to: date, amount: 1, inTimeZone: tz)
+                let newDC = dateComponents(allComponents, from: newDate, in: tz)
+                let value = newDC.value(for: component)
+                if value != start {
+                    break
+                }
+                result = start
+
+            } while start != range.upperBound
+
+            assert(result < range.upperBound)
+            return result
+        }
+
+        switch component {
+        case .era:
+            return 0..<2
+        case .year:
+            guard let max = actualMax(inRange: 140742..<144684) else {
+                return nil
+            }
+            return 1..<max + 1
+        case .month:
+            return 1..<13
+        case .day: // day in month
+            guard let month = dateComponent.month, let year = dateComponent.year else {
+                return nil
+            }
+            let daysInMonth = numberOfDaysInMonth(month, year: year)
+            return 1 ..< (daysInMonth + 1)
+        case .hour:
+            return 0..<24
+        case .minute:
+            return 0..<60
+        case .second:
+            return 0..<60
+        case .weekday:
+            return 1..<8
+        case .weekdayOrdinal:
+            guard let max = actualMax(inRange: 4..<6) else {
+                return nil
+            }
+            return 1..<max + 1
+        case .quarter:
+            return 1..<5
+        case .weekOfMonth:
+            // Not following ICU: Simply return the week of month value of the last day in the month instead of doing an incremental search.
+            guard let date = self.date(from: dateComponent) else {
+                return nil
+            }
+            var lastDayInMonthDC = dateComponents(allComponents, from: date, in: timeZone)
+            let daysInMonth = numberOfDaysInMonth(lastDayInMonthDC.month!, year: lastDayInMonthDC.year!)
+            lastDayInMonthDC.day = daysInMonth
+            let lastDayInMonth = self.date(from: lastDayInMonthDC)!
+            let lastDayInMonthDC_Complete =  dateComponents(allComponents, from: lastDayInMonth, in: timeZone)
+            let weekOfMonthOfLastDay = lastDayInMonthDC_Complete.weekOfMonth!
+            return 1..<weekOfMonthOfLastDay + 1
+
+        case .weekOfYear:
+            guard let max = actualMax(inRange: 52..<54) else {
+                return nil
+            }
+            return 1..<max + 1
+        case .yearForWeekOfYear:
+            guard let max = actualMax(inRange: 140742..<144684) else {
+                return nil
+            }
+            return -140742..<max + 1
+        case .nanosecond:
+            return 0..<1_000_000_000
+        case .calendar:
+            return nil
+        case .timeZone:
+            return nil
+        case .isLeapMonth:
+            return nil
+        }
     }
-    
+
+    // MARK: - Ordinality
+
+    func firstInstant(of unit: Calendar.Component, at date: Date) -> Date {
+        var startAtUnit = unit
+        let monthBasedComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday]
+        let allComponents: Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
+        var dc: DateComponents
+
+        if startAtUnit == .yearForWeekOfYear || startAtUnit == .weekOfYear || startAtUnit == .weekOfMonth {
+            dc = dateComponents(allComponents, from: date, in: timeZone)
+        } else {
+            dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
+        }
+
+        // For these units, we will adjust which unit to start at then proceed to second check
+        switch startAtUnit {
+        case .quarter:
+            var month = dc.month! - 1
+            // A lunar leap month is considered to be in the same quarter that the base month number is in.
+            let qmonth : [Int] = [0, 0, 0, 3, 3, 3, 6, 6, 6, 9, 9, 9, 9]
+            month = qmonth[Int(month)]
+            dc.month = month + 1
+            dc.isLeapMonth = false
+            startAtUnit = .month
+        case .yearForWeekOfYear:
+
+            let minWOY = minMaxRange(of: .year, in: dc)!
+            dc.weekOfYear = minWOY.lowerBound
+            fallthrough
+
+        case .weekOfMonth, .weekOfYear: /* kCFCalendarUnitWeek_Deprecated */
+            // reduce to first day of week, then reduce the rest of the day
+            let updatedDate = self.date(from: dc)!
+            let updatedDC = self.dateComponents(allComponents, from: updatedDate, in: timeZone)
+
+            var dow = updatedDC.weekday!
+            var work = date
+            // FIXME: Add a fail-safe for searching functions to prevent infinite loop
+            while dow != firstWeekday {
+                work = add(.day, to: work, amount: -3, inTimeZone: timeZone)
+                work = add(.day, to: work, amount: 2, inTimeZone: timeZone)
+                let workDC = dateComponents(allComponents, from: work, in: timeZone)
+                dow = workDC.weekday!
+                dc = workDC
+            }
+
+            startAtUnit = .day
+
+        default:
+            // Leave startAtUnit alone
+            break
+        }
+
+        // largest to smallest, we set the fields to their minimum value
+        switch startAtUnit {
+        case .era:
+            dc.year = minMaxRange(of: .year, in: dc)?.lowerBound
+            fallthrough
+
+        case .year:
+            dc.month = minMaxRange(of: .month, in: dc)?.lowerBound
+            dc.isLeapMonth = false
+            fallthrough
+
+        case .month:
+            dc.day = minMaxRange(of: .day, in: dc)?.lowerBound
+            fallthrough
+
+        case .weekdayOrdinal, .weekday, .day:
+            dc.hour = minMaxRange(of: .hour, in: dc)?.lowerBound
+            fallthrough
+
+        case .hour:
+            dc.minute = minMaxRange(of: .minute, in: dc)?.lowerBound
+            fallthrough
+
+        case .minute:
+            dc.second = minMaxRange(of: .second, in: dc)?.lowerBound
+            fallthrough
+
+        case .second:
+            dc.nanosecond = 0
+
+        default:
+            // do nothing extra
+            break
+        }
+
+        let updatedDate = self.date(from: dc)!
+        let newDC = self.dateComponents(allComponents, from: updatedDate, in: timeZone)
+
+        let start: Date
+        if startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal {
+            let targetDay = newDC.day!
+            var currentDay = targetDay
+            var udate: Date
+            // FIXME: Add a fail-safe for searching functions to prevent infinite loop
+            repeat {
+                udate = self.date(from: newDC)!
+                udate = self.add(.second, to: udate, amount: -1, inTimeZone: timeZone)
+                currentDay = dateComponent(.day, from: udate)
+            } while targetDay == currentDay
+
+            start = udate
+        } else {
+            start = updatedDate
+        }
+
+        // FIXME: dst transition
+        return start
+    }
+
+    // FIXME: This is almost the same with Calendar_ICU's _locked_start(of:).
+    // There is a chance of refactoring Calendar_ICU to use this one
+    func start(of unit: Calendar.Component, at: Date) -> Date? {
+        let capped = at.capped
+
+        let inf_ti : TimeInterval = 4398046511104.0
+        let time = capped.timeIntervalSinceReferenceDate
+
+        var effectiveUnit = unit
+        switch effectiveUnit {
+        case .calendar, .timeZone, .isLeapMonth:
+            return nil
+        case .era:
+            if time < -63113904000.0 {
+                return Date(timeIntervalSinceReferenceDate: -63113904000.0 - inf_ti)
+            } else {
+                return Date(timeIntervalSinceReferenceDate: -63113904000.0)
+            }
+
+        case .hour:
+            let ti = Double(timeZone.secondsFromGMT(for: capped))
+            var fixedTime = time + ti // compute local time
+            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = fixedTime - ti // compute GMT
+            return Date(timeIntervalSinceReferenceDate: fixedTime)
+        case .minute:
+            return Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0)
+        case .second:
+            return Date(timeIntervalSinceReferenceDate: floor(time))
+        case .nanosecond:
+            return Date(timeIntervalSinceReferenceDate: floor(time * 1.0e+9) * 1.0e-9)
+        case .year, .yearForWeekOfYear, .quarter, .month, .day, .weekOfMonth, .weekOfYear:
+            // Continue to below
+            break
+        case .weekdayOrdinal, .weekday:
+            // Continue to below, after changing the unit
+            effectiveUnit = .day
+            break
+        }
+
+        let firstInstant = firstInstant(of: effectiveUnit, at: capped)
+        return firstInstant
+    }
+
+    // move date to target day of week
+    func dateAfterDateWithTargetDoW(_ start: Date, _ targetDoW: Int) -> (Date, daysAdded: Int) {
+        var daysAdded = 0
+        var weekday = dateComponent(.weekday, from: start)
+        var work = start
+        // FIXME: Add a fail-safe for searching functions to prevent infinite loop
+        while weekday != targetDoW {
+            work = self.add(.day, to: work, amount: 1, inTimeZone: timeZone)
+            weekday = dateComponent(.weekday, from: work)
+            daysAdded += 1
+        }
+        return (work, daysAdded)
+    }
+
+    func ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Int? {
+
+        switch larger {
+        case .era:
+            switch smaller {
+            case .year:
+                return dateComponent(.year, from: date)
+
+            case .yearForWeekOfYear:
+                return dateComponent(.yearForWeekOfYear, from: date)
+
+            case .quarter:
+                guard let year = ordinality(of: .year, in: .era, for: date) else { return nil }
+                guard let q = ordinality(of: .quarter, in: .year, for: date) else { return nil }
+                let quarter = 4 * (year - 1) + q
+                return quarter
+
+            case .month:
+                guard let start = start(of: .era, at: date) else { return nil }
+                var test: Date
+                var month = 0
+                if let r = maximumRange(of: .day) {
+                    month = Int(floor(
+                        (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
+                        86400.0 /
+                        Double(r.count + 1) *
+                        0.96875
+                    ))
+                    // low-ball the estimate
+                    month = 10 < month ? month - 10 : 0
+                    // low-ball the estimate further
+
+                    // FIXME: Add a fail-safe for searching functions to prevent infinite loop
+                    repeat {
+                        month += 1
+                        test = add(.month, to: start, amount: month, inTimeZone: timeZone)
+                    } while test <= date
+                }
+                return month
+
+            case .weekOfYear, .weekOfMonth: /* kCFCalendarUnitWeek_Deprecated */
+                guard var start = start(of: .era, at: date) else { return nil }
+                var (startMatchinWeekday, daysAdded) = self.dateAfterDateWithTargetDoW(start, firstWeekday)
+
+                start += Double(daysAdded) * 86400.0
+                assert(startMatchinWeekday == start)
+
+                if minimumDaysInFirstWeek <= daysAdded {
+                    // previous week chunk was big enough, count it
+                    startMatchinWeekday -= 7 * 86400.0
+                    start -=  7 * 86400.0
+                }
+                var week = Int(floor(
+                    (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
+                    86400.0 /
+                    7.0
+                ))
+                // low-ball the estimate
+                var test: Date
+                week = 10 < week ? week - 109 : 0
+                // FIXME: Add a fail-safe for searching functions to prevent infinite loop
+                repeat {
+                    week += 1
+                    test = add(.weekOfYear, to: start, amount: week, inTimeZone: timeZone)
+                } while test <= date
+
+                return week
+
+            case .weekdayOrdinal, .weekday:
+                guard let start = start(of: .era, at: date) else { return nil }
+                let targetDOW = dateComponent(.weekday, from: date)
+                let (startMatchingWeekday, _) = self.dateAfterDateWithTargetDoW(start, targetDOW)
+
+                var nthWeekday = Int(floor(
+                    (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
+                    86400.0 /
+                    7.0
+                ))
+
+                // Low-ball estimate
+                nthWeekday = (10 < nthWeekday) ? nthWeekday - 10 : 0
+
+                var test: Date
+                // FIXME: Add a fail-safe for searching functions to prevent infinite loop
+                repeat {
+                    nthWeekday += 1
+                    test = self.add(.weekOfYear, to: startMatchingWeekday, amount: nthWeekday, inTimeZone: timeZone)
+                } while test < date
+
+                return nthWeekday
+
+            case .day:
+                guard let start = start(of: .era, at: date) else {
+                    return nil
+                }
+                let day = Int(floor(
+                    (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
+                    86400.0
+                )) + 1
+                return day
+
+            case .hour:
+                guard let day = ordinality(of: .day, in: .era, for: date) else { return nil }
+                if (Int.max - 24) / 24 < (day - 1) { return nil }
+                let hour = dateComponent(.hour, from: date)
+                let newHour = (day - 1) * 24 + hour + 1
+                return newHour
+
+            case .minute:
+                guard let hour = ordinality(of: .hour, in: .era, for: date) else { return nil }
+                if (Int.max - 60) / 60 < (hour - 1) { return nil }
+                let minute = dateComponent(.minute, from: date)
+                let newMinute = (hour - 1) * 60 + minute + 1
+                return newMinute
+
+            case .second:
+                guard let minute = ordinality(of: .minute, in: .era, for: date) else { return nil }
+                if (Int.max - 60) / 60 < (minute - 1) { return nil }
+                let second = dateComponent(.second, from: date)
+                let newSecond = (minute - 1) * 60 + second + 1
+                return newSecond
+
+            default:
+                return nil
+            }
+        case .year:
+            switch smaller {
+            case .quarter:
+                let month = dateComponent(.month, from: date)
+                let quarter = month - 1
+                let mquarter = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4]
+                return mquarter[Int(quarter)]
+
+            case .month:
+                return dateComponent(.month, from: date)
+
+            case .weekOfMonth:
+                return nil
+
+            case .weekOfYear: /* kCFCalendarUnitWeek_Deprecated */
+                let dc = self.dateComponents([.year, .month, .day], from: date, in: timeZone)
+                let doy = dayOfYear(fromYear: dc.year!, month: dc.month!, day: dc.day!)
+                var work = dc
+                work.day = 1
+                work.month = 1
+                let workDate = self.date(from: work)!
+                let yearStartWeekday = dateComponent(.weekday, from: workDate)
+                let week = (doy + 7 - minimumDaysInFirstWeek + (yearStartWeekday + minimumDaysInFirstWeek - firstWeekday + 6) % 7) / 7
+
+                return week
+
+            case .weekdayOrdinal, .weekday:
+                guard let start = start(of: .year, at: date) else { return nil }
+                guard let dateWeek = ordinality(of: .weekOfYear, in: .year, for: date) else { return nil }
+
+                let targetDoW = dateComponent(.weekday, from: date)
+                let (startMatchingWeekday, _) = self.dateAfterDateWithTargetDoW(start, targetDoW)
+                let newStart = startMatchingWeekday
+                guard let startWeek = ordinality(of: .weekOfYear, in: .year, for: newStart) else { return nil }
+                let nthWeekday = dateWeek - startWeek + 1
+                return nthWeekday
+
+            case .day:
+                let dc = self.dateComponents([.year, .month, .day], from: date, in: timeZone)
+                let doy = dayOfYear(fromYear: dc.year!, month: dc.month!, day: dc.day!)
+                return doy
+
+            case .hour:
+                guard let day = ordinality(of: .day, in: .year, for: date) else { return nil }
+                let hour = dateComponent(.hour, from: date)
+                let ord = (day - 1) * 24 + hour + 1
+                return ord
+
+            case .minute:
+                guard let hour = ordinality(of: .hour, in: .year, for: date) else { return nil }
+                let minute = dateComponent(.minute, from: date)
+
+                let ord = (hour - 1) * 60 + minute + 1
+                return ord
+
+            case .second:
+                guard let minute = ordinality(of: .minute, in: .year, for: date) else { return nil }
+                let second = dateComponent(.second, from: date)
+
+                let ord = (minute - 1) * 60 + second + 1
+                return ord
+
+            case .nanosecond:
+                guard let second = ordinality(of: .second, in: .year, for: date) else { return nil }
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                return Int(dseconds * 1.0e9) + 1
+
+            default:
+                return nil
+            }
+
+        case .yearForWeekOfYear:
+            switch smaller {
+            case .quarter:
+                return nil
+            case .month:
+                return nil
+            case .weekOfMonth: /* kCFCalendarUnitWeek_Deprecated */
+                return nil
+            case .weekOfYear:
+                let weekOfYear = dateComponent(.weekOfYear, from: date)
+                return weekOfYear
+
+            case .weekdayOrdinal, .weekday:
+                guard let start = start(of: .yearForWeekOfYear, at: date) else { return nil }
+                guard let dateWeek = ordinality(of: .weekOfYear, in: .yearForWeekOfYear, for: date) else {
+                    return nil
+                }
+                let targetDoW = dateComponent(.weekday, from: date)
+
+                let (startMatchingWeekday, _) = self.dateAfterDateWithTargetDoW(start, targetDoW)
+                guard let startWeek = ordinality(of: .weekOfYear, in: .yearForWeekOfYear, for: startMatchingWeekday) else { return nil }
+                let nthWeekday = dateWeek - startWeek + 1
+                return nthWeekday
+
+            case .day:
+                guard let start = start(of: .yearForWeekOfYear, at: date) else { return nil }
+                let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
+                return day
+
+            case .hour:
+                guard let day = ordinality(of: .day, in: .yearForWeekOfYear, for: date) else { return nil }
+                let hour = dateComponent(.hour, from: date)
+
+                let ord = (day - 1) * 24 + hour + 1
+                return ord
+
+            case .minute:
+                guard let hour = ordinality(of: .hour, in: .yearForWeekOfYear, for: date) else { return nil }
+                let minute = dateComponent(.minute, from: date)
+
+                let ord = (hour - 1) * 60 + minute + 1
+                return ord
+            case .second:
+                guard let minute = ordinality(of: .minute, in: .yearForWeekOfYear, for: date) else { return nil }
+                let second = dateComponent(.second, from: date)
+
+                let ord = (minute - 1) * 60 + second + 1
+                return ord
+
+            case .nanosecond:
+                guard let second = ordinality(of: .second, in: .yearForWeekOfYear, for: date) else { return nil }
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                return Int(dseconds * 1.0e9) + 1
+
+            default:
+                return nil
+            }
+
+        case .quarter:
+            switch smaller {
+            case .month:
+                let month = dateComponent(.month, from: date)
+                let mcount = [1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 4]
+                return mcount[month - 1]
+
+            case .weekOfYear, .weekOfMonth: /* kCFCalendarUnitWeek_Deprecated */
+                guard let start = start(of: .quarter, at: date) else { return nil }
+                let (startMatchingWeekday, daysAdded) = self.dateAfterDateWithTargetDoW(start, firstWeekday)
+                guard var startWeek = ordinality(of: .weekOfYear, in: .year, for: startMatchingWeekday) else { return nil }
+                if minimumDaysInFirstWeek <= daysAdded {
+                    // previous week chunk was big enough, back up
+                    startWeek -= 1
+                }
+                guard let dateWeek = ordinality(of: .weekOfYear, in: .year, for: date) else { return nil }
+                let week = dateWeek - startWeek + 1
+                return week
+
+            case .weekdayOrdinal, .weekday:
+                guard let start = start(of: .quarter, at: date) else { return nil }
+                let targetDoW = dateComponent(.weekday, from: date)
+
+                guard let dateWeek = ordinality(of: .weekOfYear, in: .year, for: date) else {
+                    return nil
+                }
+
+                // move start forward to target day of week if not already there
+                let (startMatchingWeekday, _) = self.dateAfterDateWithTargetDoW(start, targetDoW)
+                guard let startWeek = ordinality(of: .weekOfYear, in: .year, for: startMatchingWeekday) else { return nil }
+                let nthWeekday = dateWeek - startWeek + 1
+                return nthWeekday
+
+            case .day:
+                let start = start(of: .quarter, at: date)
+                guard let start else { return nil }
+                let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
+                return day
+            case .hour:
+                guard let day = ordinality(of: .day, in: .quarter, for: date) else { return nil }
+                let hour = dateComponent(.hour, from: date)
+
+                let ord = (day - 1) * 24 + hour + 1
+                return ord
+
+            case .minute:
+                guard let hour = ordinality(of: .hour, in: .quarter, for: date) else { return nil }
+                let minute = dateComponent(.minute, from: date)
+
+                let ord = (hour - 1) * 60 + minute + 1
+                return ord
+            case .second:
+                guard let minute = ordinality(of: .minute, in: .quarter, for: date) else { return nil }
+                let second = dateComponent(.second, from: date)
+
+                let ord = (minute - 1) * 60 + second + 1
+                return ord
+
+            case .nanosecond:
+                guard let second = ordinality(of: .second, in: .quarter, for: date) else { return nil }
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                return Int(dseconds * 1.0e9) + 1
+
+            default:
+                return nil
+            }
+        case .month:
+            switch smaller {
+            case .weekOfYear:
+                return nil
+            case .weekOfMonth: /* kCFCalendarUnitWeek_Deprecated */
+                let week = dateComponent(.weekOfMonth, from: date)
+                return week
+
+            case .day:
+                let day = dateComponent(.day, from: date)
+                return day
+
+            case .weekdayOrdinal, .weekday:
+                guard let day = ordinality(of: .day, in: .month, for: date) else { return nil }
+                let nthWeekday = (day + 6) / 7
+                return nthWeekday
+
+            case .hour:
+                guard let day = ordinality(of: .day, in: .month, for: date) else { return nil }
+                let hour = dateComponent(.hour, from: date)
+
+                let ord = (day - 1) * 24 + hour + 1
+                return ord
+
+            case .minute:
+                guard let hour = ordinality(of: .hour, in: .month, for: date) else { return nil }
+                let minute = dateComponent(.minute, from: date)
+
+                let ord = (hour - 1) * 60 + minute + 1
+                return ord
+
+            case .second:
+                guard let minute = ordinality(of: .minute, in: .month, for: date) else { return nil }
+                let second = dateComponent(.second, from: date)
+
+                let ord = (minute - 1) * 60 + second + 1
+                return ord
+
+            case .nanosecond:
+                guard let second = ordinality(of: .second, in: .month, for: date) else { return nil }
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                return Int(dseconds * 1.0e9) + 1
+
+            default:
+                return nil
+            }
+        case .weekOfYear, .weekOfMonth: /* kCFCalendarUnitWeek_Deprecated  */
+            switch smaller {
+            case .day, .weekday:
+                let weekday = dateComponent(.weekday, from: date)
+
+                let day = weekday + 1 - firstWeekday
+                if day <= 0 {
+                    return day + 7
+                } else {
+                    return day
+                }
+            case .hour:
+                guard let day = ordinality(of: .day, in: .weekOfYear, for: date) else { return nil }
+                let hour = dateComponent(.hour, from: date)
+
+                let ord = (day - 1) * 24 + hour + 1
+                return ord
+
+            case .minute:
+                guard let hour = ordinality(of: .hour, in: .weekOfYear, for: date) else { return nil }
+                let minute = dateComponent(.minute, from: date)
+
+                let ord = (hour - 1) * 60 + minute + 1
+                return ord
+
+            case .second:
+
+                guard let minute = ordinality(of: .minute, in: .weekOfYear, for: date) else { return nil }
+                let second = dateComponent(.second, from: date)
+
+                let ord = (minute - 1) * 60 + second + 1
+                return ord
+
+            case .nanosecond:
+                guard let second = ordinality(of: .second, in: .weekOfYear, for: date) else { return nil }
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                return Int(dseconds * 1.0e9) + 1
+
+            default:
+                return nil
+            }
+        case .weekday, .day:
+            switch smaller {
+            case .hour:
+                let hour = dateComponent(.hour, from: date)
+                let ord = hour + 1
+                return ord
+
+            case .minute:
+                guard let hour = ordinality(of: .hour, in: .day, for: date) else { return nil }
+                let minute = dateComponent(.minute, from: date)
+                let ord = (hour - 1) * 60 + minute + 1
+                return ord
+
+            case .second:
+                guard let minute = ordinality(of: .minute, in: .day, for: date) else { return nil }
+                let second = dateComponent(.second, from: date)
+                let ord = (minute - 1) * 60 + second + 1
+                return ord
+
+            case .nanosecond:
+                guard let second = ordinality(of: .second, in: .day, for: date) else { return nil }
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                return Int(dseconds * 1.0e9) + 1
+
+            default:
+                return nil
+            }
+        case .hour:
+            switch smaller {
+            case .minute:
+                let minute = dateComponent(.minute, from: date)
+                let ord = minute + 1
+                return ord
+
+            case .second:
+                guard let minute = ordinality(of: .minute, in: .hour, for: date) else { return nil }
+                let second = dateComponent(.second, from: date)
+                let ord = (minute - 1) * 60 + second + 1
+                return ord
+
+            case .nanosecond:
+                guard let second = ordinality(of: .second, in: .hour, for: date) else { return nil }
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                return Int(dseconds * 1.0e9) + 1
+
+            default:
+                return nil
+            }
+        case .minute:
+            switch smaller {
+            case .second:
+                let second = dateComponent(.second, from: date)
+                let ord = second + 1
+                return ord
+
+            case .nanosecond:
+                guard let second = ordinality(of: .second, in: .minute, for: date) else { return nil }
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                return Int(dseconds * 1.0e9) + 1
+
+            default:
+                return nil
+            }
+        case .second:
+            switch smaller {
+            case .nanosecond:
+                return Int(((date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate)) * 1.0e9) + 1)
+
+            default:
+                return nil
+            }
+        case .nanosecond:
+            return nil
+        case .weekdayOrdinal:
+            return nil
+
+        default:
+            return nil
+        }
+
+        // No return here to ensure we've covered all cases in switch statements above, even via `default`.
+    }
+
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
         fatalError()
     }
@@ -470,26 +1245,39 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let n = 12 // the number of effective months in the year, counting the epagomenal days of the mobile calendars as an additional month
         let r = 4 // number of years in leap-year cycle
         let p = 1461
+        // let q = 0
         let v = 3
         let u = 5 // length of any cycle there may be in the pattern of month lengths
         let s = 153
+        // let t = 2
         let w = 2
+        // let A = 184
         let B = 274277
         let C = -38
         let f1 = julianDay + j
         let f: Int
         if useJulianRef {
             f = f1
-        } else { // Gregorian
+        } else {
+            // Gregorian
             f = f1 + (((4 * julianDay + B) / 146097) * 3) / 4 + C
         }
         let e = r * f + v
-        let g = (e % p) / r
+        func remainder(numerator: Int, denominator: Int ) -> Int {
+            let r = numerator % denominator
+            return r >= 0 ? r : r + denominator
+        }
+        var g = remainder(numerator: e, denominator: p) / r
+        assert(g >= 0)
         let h = u * g + w
-
-        let day = (h % s) / u + 1 // day of month
-        let month = (((h / s) + m) % n) + 1
-        let year = e / p - y + (n + m - month) / n
+        assert(h >= 0)
+        func floorDivide(_ numerator: Int, _ denominator: Int) -> Int {
+            return (numerator >= 0) ?
+                numerator / denominator : ((numerator + 1) / denominator) - 1;
+        }
+        let day = floorDivide((h % s), u)  + 1 // day of month
+        let month = ((floorDivide(h, s) + m) % n) + 1
+        let year = floorDivide(e, p) - y + (n + m - month) / n
 
         return (year, month, day)
     }
@@ -579,10 +1367,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             timeInDay += 86400
         }
 
-        let (year, month, day) = Self.yearMonthDayFromJulianDay(julianDay, useJulianRef: useJulianRef)
-
-        let era = year < 1 ? 0 : 1
+        var (year, month, day) = Self.yearMonthDayFromJulianDay(julianDay, useJulianRef: useJulianRef)
         let isLeapYear = gregorianYearIsLeap(year)
+
 
         let hour = Int(timeInDay / 3600) // zero-based
         timeInDay = timeInDay.truncatingRemainder(dividingBy: 3600.0)
@@ -597,9 +1384,14 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         // To calculate day of year, work backwards with month/day
         let dayOfYear = dayOfYear(fromYear: year, month: month, day: day)
 
+        func remainder(numerator: Int, denominator: Int ) -> Int {
+            let r = numerator % denominator
+            return r >= 0 ? r : r + denominator
+        }
         // Week of year calculation, from ICU calendar.cpp :: computeWeekFields
         // 1-based: 1...7
-        let weekday = 1 + (julianDay + 1) % 7
+        let weekday = remainder(numerator: julianDay + 1, denominator: 7) + 1
+
         // 0-based 0...6
         let relativeWeekday = (weekday + 7 - firstWeekday) % 7
         let relativeWeekdayForJan1 = (weekday - dayOfYear + 7001 - firstWeekday) % 7
@@ -645,8 +1437,21 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             dc.calendar = calendar
         }
         if components.contains(.timeZone) { dc.timeZone = timeZone }
-        if components.contains(.era) { dc.era = era }
-        if components.contains(.year) { dc.year = year }
+        if components.contains(.era) {
+            let era: Int
+            if year < 1 {
+                era = 0
+            } else {
+                era = 1
+            }
+            dc.era = era
+        }
+        if components.contains(.year) {
+            if year < 1 {
+                year = 1 - year
+            }
+            dc.year = year
+        }
         if components.contains(.month) { dc.month = month }
         if components.contains(.day) { dc.day = day }
         if components.contains(.hour) { dc.hour = hour }
@@ -655,7 +1460,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if components.contains(.weekday) { dc.weekday = weekday }
         if components.contains(.weekdayOrdinal) { dc.weekdayOrdinal = weekdayOrdinal }
         if components.contains(.quarter) {
-            let quarter = if isLeapYear {
+            let quarter = if !isLeapYear {
                 if dayOfYear < 90 { 1 }
                 else if dayOfYear < 181 { 2 }
                 else if dayOfYear < 273 { 3 }
@@ -682,6 +1487,13 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date) -> DateComponents {
         dateComponents(components, from: date, in: timeZone)
+    }
+
+    func dateComponent(_ component: Calendar.Component, from date: Date) -> Int {
+        guard let value = dateComponents(.init(single: component), from: date, in: timeZone).value(for: component) else {
+            preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
+        }
+        return value
     }
 
     // MARK: - Add
