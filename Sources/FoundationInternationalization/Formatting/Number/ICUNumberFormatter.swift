@@ -33,23 +33,24 @@ internal func resetAllNumberFormatterCaches() {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 internal class ICUNumberFormatterBase {
     internal let uformatter: OpaquePointer
+    /// Stored for testing purposes only
     internal let skeleton: String
 
-    init?(skeleton: String, locale: Locale) {
+    init?(skeleton: String, localeIdentifier: String, preferences: LocalePreferences?) {
         self.skeleton = skeleton
         let ustr = Array(skeleton.utf16)
         var status = U_ZERO_ERROR
-        let formatter = unumf_openForSkeletonAndLocale(ustr, Int32(ustr.count), locale.identifierCapturingPreferences, &status)
-
+        let formatter = unumf_openForSkeletonAndLocale(ustr, Int32(ustr.count), localeIdentifier, &status)
+        
         guard let formatter else {
             return nil
         }
-
+        
         guard status.isSuccess else {
             unumf_close(formatter)
             return nil
         }
-
+        
         uformatter = formatter
     }
 
@@ -246,27 +247,28 @@ internal class ICUNumberFormatterBase {
 final class ICUNumberFormatter : ICUNumberFormatterBase {
     fileprivate struct Signature : Hashable {
         let collection: NumberFormatStyleConfiguration.Collection
-        let locale: Locale
+        let localeIdentifier: String
+        let localePreferences: LocalePreferences?
     }
 
     fileprivate static let cache = FormatterCache<Signature, ICUNumberFormatter?>()
 
     private static func _create(with signature: Signature) -> ICUNumberFormatter? {
         Self.cache.formatter(for: signature) {
-            .init(skeleton: signature.collection.skeleton, locale: signature.locale)
+            .init(skeleton: signature.collection.skeleton, localeIdentifier: signature.localeIdentifier, preferences: signature.localePreferences)
         }
     }
 
     static func create<T: BinaryInteger>(for style: IntegerFormatStyle<T>) -> ICUNumberFormatter? {
-        _create(with: .init(collection: style.collection, locale: style.locale))
+        _create(with: .init(collection: style.collection, localeIdentifier: style.locale.identifierCapturingPreferences, localePreferences: style.locale.prefs))
     }
 
     static func create(for style: Decimal.FormatStyle) -> ICUNumberFormatter? {
-        _create(with: .init(collection: style.collection, locale: style.locale))
+        _create(with: .init(collection: style.collection, localeIdentifier: style.locale.identifierCapturingPreferences, localePreferences: style.locale.prefs))
     }
 
     static func create<T: BinaryFloatingPoint>(for style: FloatingPointFormatStyle<T>) -> ICUNumberFormatter? {
-        _create(with: .init(collection: style.collection, locale: style.locale))
+        _create(with: .init(collection: style.collection, localeIdentifier: style.locale.identifierCapturingPreferences, localePreferences: style.locale.prefs))
     }
 
     func attributedFormat(_ v: Value) -> AttributedString {
@@ -283,7 +285,8 @@ final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase {
     fileprivate struct Signature : Hashable {
         let collection: CurrencyFormatStyleConfiguration.Collection
         let currencyCode: String
-        let locale: Locale
+        let localeIdentifier: String
+        let localePreferences: LocalePreferences?
     }
 
     private static func skeleton(for signature: Signature) -> String {
@@ -301,20 +304,20 @@ final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase {
 
     static private func _create(with signature: Signature) -> ICUCurrencyNumberFormatter? {
         return Self.cache.formatter(for: signature) {
-            .init(skeleton: Self.skeleton(for: signature), locale: signature.locale)
+            .init(skeleton: Self.skeleton(for: signature), localeIdentifier: signature.localeIdentifier, preferences: signature.localePreferences)
         }
     }
 
     static func create<T: BinaryInteger>(for style: IntegerFormatStyle<T>.Currency) -> ICUCurrencyNumberFormatter? {
-        _create(with: .init(collection: style.collection, currencyCode: style.currencyCode, locale: style.locale))
+        _create(with: .init(collection: style.collection, currencyCode: style.currencyCode, localeIdentifier: style.locale.identifierCapturingPreferences, localePreferences: style.locale.prefs))
     }
 
     static func create(for style: Decimal.FormatStyle.Currency) -> ICUCurrencyNumberFormatter? {
-        _create(with: .init(collection: style.collection, currencyCode: style.currencyCode, locale: style.locale))
+        _create(with: .init(collection: style.collection, currencyCode: style.currencyCode, localeIdentifier: style.locale.identifierCapturingPreferences, localePreferences: style.locale.prefs))
     }
 
     static func create<T: BinaryFloatingPoint>(for style: FloatingPointFormatStyle<T>.Currency) -> ICUCurrencyNumberFormatter? {
-        _create(with: .init(collection: style.collection, currencyCode: style.currencyCode, locale: style.locale))
+        _create(with: .init(collection: style.collection, currencyCode: style.currencyCode, localeIdentifier: style.locale.identifierCapturingPreferences, localePreferences: style.locale.prefs))
     }
 
     func attributedFormat(_ v: Value) -> AttributedString {
@@ -330,7 +333,8 @@ final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase {
 final class ICUPercentNumberFormatter : ICUNumberFormatterBase {
     fileprivate struct Signature : Hashable {
         let collection: NumberFormatStyleConfiguration.Collection
-        let locale: Locale
+        let localeIdentifier: String
+        let localePreferences: LocalePreferences?
     }
 
     private static func skeleton(for signature: Signature) -> String {
@@ -346,20 +350,20 @@ final class ICUPercentNumberFormatter : ICUNumberFormatterBase {
 
     private static func _create(with signature: Signature) -> ICUPercentNumberFormatter? {
         return Self.cache.formatter(for: signature) {
-            .init(skeleton: Self.skeleton(for: signature), locale: signature.locale)
+            .init(skeleton: Self.skeleton(for: signature), localeIdentifier: signature.localeIdentifier, preferences: signature.localePreferences)
         }
     }
 
     static func create<T: BinaryInteger>(for style: IntegerFormatStyle<T>.Percent) -> ICUPercentNumberFormatter? {
-        _create(with: .init(collection: style.collection, locale: style.locale))
+        _create(with: .init(collection: style.collection, localeIdentifier: style.locale.identifierCapturingPreferences, localePreferences: style.locale.prefs))
     }
 
     static func create(for style: Decimal.FormatStyle.Percent) -> ICUPercentNumberFormatter? {
-        _create(with: .init(collection: style.collection, locale: style.locale))
+        _create(with: .init(collection: style.collection, localeIdentifier: style.locale.identifierCapturingPreferences, localePreferences: style.locale.prefs))
     }
 
     static func create<T: BinaryFloatingPoint>(for style: FloatingPointFormatStyle<T>.Percent) -> ICUPercentNumberFormatter? {
-        _create(with: .init(collection: style.collection, locale: style.locale))
+        _create(with: .init(collection: style.collection, localeIdentifier: style.locale.identifierCapturingPreferences, localePreferences: style.locale.prefs))
     }
 
     func attributedFormat(_ v: Value) -> AttributedString {
@@ -375,15 +379,16 @@ final class ICUPercentNumberFormatter : ICUNumberFormatterBase {
 final class ICUByteCountNumberFormatter : ICUNumberFormatterBase {
     fileprivate struct Signature : Hashable {
         let skeleton: String
-        let locale: Locale
+        let localeIdentifier: String
+        let localePreferences: LocalePreferences?
     }
 
     fileprivate static let cache = FormatterCache<Signature, ICUByteCountNumberFormatter?>()
 
     static func create(for skeleton: String, locale: Locale) -> ICUByteCountNumberFormatter? {
-        let signature = Signature(skeleton: skeleton, locale: locale)
+        let signature = Signature(skeleton: skeleton, localeIdentifier: locale.identifierCapturingPreferences, localePreferences: locale.prefs)
         return Self.cache.formatter(for: signature) {
-            .init(skeleton: skeleton, locale: locale)
+            .init(skeleton: skeleton, localeIdentifier: locale.identifierCapturingPreferences, preferences: locale.prefs)
         }
     }
 
@@ -433,15 +438,16 @@ final class ICUByteCountNumberFormatter : ICUNumberFormatterBase {
 final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase {
     fileprivate struct Signature : Hashable {
         let skeleton: String
-        let locale: Locale
+        let localeIdentifier: String
+        let localePreferences: LocalePreferences?
     }
 
     fileprivate static let cache = FormatterCache<Signature, ICUMeasurementNumberFormatter?>()
 
     static func create(for skeleton: String, locale: Locale) -> ICUMeasurementNumberFormatter? {
-        let signature = Signature(skeleton: skeleton, locale: locale)
+        let signature = Signature(skeleton: skeleton, localeIdentifier: locale.identifierCapturingPreferences, localePreferences: locale.prefs)
         return Self.cache.formatter(for: signature) {
-            .init(skeleton: skeleton, locale: locale)
+            .init(skeleton: skeleton, localeIdentifier: locale.identifierCapturingPreferences, preferences: locale.prefs)
         }
     }
 

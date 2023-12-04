@@ -250,6 +250,15 @@ struct LocaleCache : Sendable {
         lock.withLock { $0.reset() }
     }
 
+    /// For testing of `autoupdatingCurrent` only. If you want to test `current`, create a custom `Locale` with the appropriate settings using `localeAsIfCurrent(name:overrides:disableBundleMatching:)` and use that instead.
+    /// This mutates global state of the current locale, so it is not safe to use in concurrent testing.
+    func resetCurrent(to preferences: LocalePreferences) {
+        lock.withLock {
+            $0.reset()
+            let _ = $0.current(preferences: preferences, cache: true)
+        }
+    }
+
     var current: any _LocaleProtocol {
         var result = lock.withLock {
             $0.current(preferences: nil, cache: false)

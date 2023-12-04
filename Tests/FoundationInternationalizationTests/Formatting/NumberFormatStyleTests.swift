@@ -441,6 +441,55 @@ final class NumberFormatStyleTests: XCTestCase {
         XCTAssertEqual((-3.14159 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(-3.14159))
         XCTAssertEqual((-3000.14159 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(-3000.14159))
     }
+    
+    func test_autoupdatingCurrentChangesFormatResults() {
+        let locale = Locale.autoupdatingCurrent
+        let number = 50_000
+#if FOUNDATION_FRAMEWORK
+        // Measurement is not yet available in the package
+        let measurement = Measurement(value: 0.8, unit: UnitLength.meters)
+#endif
+        let currency = Decimal(123.45)
+        let percent = 54.32
+        let bytes = 1_234_567_890
+        
+        // Get a formatted result from es-ES
+        var prefs = LocalePreferences()
+        prefs.languages = ["es-ES"]
+        prefs.locale = "es_ES"
+        LocaleCache.cache.resetCurrent(to: prefs)
+        let formattedSpanishNumber = number.formatted(.number.locale(locale))
+#if FOUNDATION_FRAMEWORK
+        let formattedSpanishMeasurement = measurement.formatted(.measurement(width: .narrow).locale(locale))
+#endif
+        let formattedSpanishCurrency = currency.formatted(.currency(code: "USD").locale(locale))
+        let formattedSpanishPercent = percent.formatted(.percent.locale(locale))
+        let formattedSpanishBytes = bytes.formatted(.byteCount(style: .decimal).locale(locale))
+        
+        // Get a formatted result from en-US
+        prefs.languages = ["en-US"]
+        prefs.locale = "en_US"
+        LocaleCache.cache.resetCurrent(to: prefs)
+        let formattedEnglishNumber = number.formatted(.number.locale(locale))
+#if FOUNDATION_FRAMEWORK
+        let formattedEnglishMeasurement = measurement.formatted(.measurement(width: .narrow).locale(locale))
+#endif
+        let formattedEnglishCurrency = currency.formatted(.currency(code: "USD").locale(locale))
+        let formattedEnglishPercent = percent.formatted(.percent.locale(locale))
+        let formattedEnglishBytes = bytes.formatted(.byteCount(style: .decimal).locale(locale))
+        
+        // Reset to current preferences before any possibility of failing this test
+        LocaleCache.cache.reset()
+
+        // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
+        XCTAssertNotEqual(formattedSpanishNumber, formattedEnglishNumber)
+#if FOUNDATION_FRAMEWORK
+        XCTAssertNotEqual(formattedSpanishMeasurement, formattedEnglishMeasurement)
+#endif
+        XCTAssertNotEqual(formattedSpanishCurrency, formattedEnglishCurrency)
+        XCTAssertNotEqual(formattedSpanishPercent, formattedEnglishPercent)
+        XCTAssertNotEqual(formattedSpanishBytes, formattedEnglishBytes)
+    }
 }
 
 extension NumberFormatStyleConfiguration.Collection {
