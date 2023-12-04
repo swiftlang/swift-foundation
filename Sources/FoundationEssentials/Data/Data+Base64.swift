@@ -10,36 +10,40 @@
 //
 //===----------------------------------------------------------------------===//
 
+private enum Base64Error: Error {
+    case invalidElementCount
+    case cannotDecode
+}
+
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
-    
+
     // MARK: - Init from base64
-    
+
     /// Initialize a `Data` from a Base-64 encoded String using the given options.
     ///
     /// Returns nil when the input is not recognized as valid Base-64.
     /// - parameter base64String: The string to parse.
     /// - parameter options: Encoding options. Default value is `[]`.
-    public init?(base64Encoded base64String: __shared String, options: Base64DecodingOptions = []) {
-        let result: UnsafeMutableRawBufferPointer?
-        if let _result = base64String.utf8.withContiguousStorageIfAvailable({ buffer -> UnsafeMutableRawBufferPointer? in
-            let rawBuffer = UnsafeRawBufferPointer(start: buffer.baseAddress!, count: buffer.count)
-            return Self.base64DecodeBytes(rawBuffer, options: options)
-        }) {
-            result = _result
-        } else {
-            // Slow path, unlikely that withContiguousStorageIfAvailable will fail but if it does, fall back to .utf8CString.
-            // This will allocate and copy but it is the simplest way to get a contiguous buffer.
-            result = base64String.utf8CString.withUnsafeBufferPointer { buffer -> UnsafeMutableRawBufferPointer? in
-                let rawBuffer = UnsafeRawBufferPointer(start: buffer.baseAddress!, count: buffer.count - 1) // -1 to ignore the terminating NUL
-                return Self.base64DecodeBytes(rawBuffer, options: options)
+    public init?(
+        base64Encoded base64String: consuming String,
+        options: Base64DecodingOptions = []
+    ) {
+        do {
+            self = try base64String.withUTF8 {
+                // String won't pass an empty buffer with a `nil` `baseAddress`.
+                try Data(
+                    decodingBase64: BufferView(unsafeBufferPointer: $0)!,
+                    options: options
+                )
             }
         }
-        guard let decodedBytes = result else { return nil }
-        self.init(bytesNoCopy: decodedBytes.baseAddress!, count: decodedBytes.count, deallocator: .custom({ (ptr, _) in
-            ptr.deallocate()
-        }))
+        catch {
+            precondition(error is Base64Error)
+            return nil
+        }
     }
+
 
     /// Initialize a `Data` from a Base-64, UTF-8 encoded `Data`.
     ///
@@ -47,35 +51,55 @@ extension Data {
     ///
     /// - parameter base64Data: Base-64, UTF-8 encoded input data.
     /// - parameter options: Decoding options. Default value is `[]`.
-    public init?(base64Encoded base64Data: __shared Data, options: Base64DecodingOptions = []) {
-        guard let decodedBytes = base64Data.withUnsafeBytes({ rawBuffer in
-                Self.base64DecodeBytes(rawBuffer, options: options)
-        }) else {
+    public init?(
+        base64Encoded base64Data: borrowing Data,
+        options: Base64DecodingOptions = []
+    ) {
+        do {
+            self = try base64Data.withBufferView {
+                try Data(decodingBase64: $0, options: options)
+            }
+        }
+        catch {
+            precondition(error is Base64Error)
             return nil
         }
-        self.init(bytesNoCopy: decodedBytes.baseAddress!, count: decodedBytes.count, deallocator: .custom({ (ptr, _) in
-            ptr.deallocate()
-        }))
     }
-    
+
+    private init(decodingBase64 bytes: borrowing BufferView<UInt8>, options: Base64DecodingOptions = []) throws {
+        if !bytes.count.isMultiple(of: 4) &&
+           !options.contains(.ignoreUnknownCharacters) {
+            throw Base64Error.invalidElementCount
+        }
+
+        // Every 4 valid ASCII bytes maps to 3 output bytes: (bytes.count * 3)/4
+        let capacity = (bytes.count * 3) >> 2
+        // A non-trapping version of the calculation goes like this:
+        // let (q, r) = bytes.count.quotientAndRemainder(dividingBy: 4)
+        // let capacity = (q * 3) + (r==0 ? 0 : r-1)
+        self = try Data(
+            capacity: capacity,
+            initializingWith: { //FIXME: should work with borrowed `bytes`
+                [bytes = copy bytes] in
+                try Data.base64DecodeBytes(bytes, &$0, options: options)
+            }
+        )
+    }
+
     // MARK: - Create base64
-    
+
     /// Returns a Base-64 encoded string.
     ///
     /// - parameter options: The options to use for the encoding. Default value is `[]`.
     /// - returns: The Base-64 encoded string.
     public func base64EncodedString(options: Base64EncodingOptions = []) -> String {
-        let dataLength = self.count
-        if dataLength == 0 { return "" }
+        if self.isEmpty { return "" }
 
-        return self.withUnsafeBytes { inputBuffer in
-            let capacity = Self.estimateBase64Size(length: dataLength)
-            let ptr = UnsafeMutableRawPointer.allocate(byteCount: capacity, alignment: 4)
-            defer { ptr.deallocate() }
-            let outputBuffer = UnsafeMutableRawBufferPointer(start: ptr, count: capacity)
-            let length = Self.base64EncodeBytes(inputBuffer, options: options, buffer: outputBuffer)
-
-            return String(decoding: UnsafeRawBufferPointer(start: ptr, count: length), as: Unicode.UTF8.self)
+        return self.withBufferView { inputBuffer in
+            let capacity = Self.estimateBase64Size(length: self.count)
+            return String(utf8Capacity: capacity) {
+                Self.base64EncodeBytes(inputBuffer, &$0, options: options)
+            }
         }
     }
 
@@ -87,18 +111,14 @@ extension Data {
         let dataLength = self.count
         if dataLength == 0 { return Data() }
 
-        return self.withUnsafeBytes { inputBuffer in
+        return self.withBufferView { inputBuffer in
             let capacity = Self.estimateBase64Size(length: dataLength)
-            let ptr = UnsafeMutableRawPointer.allocate(byteCount: capacity, alignment: 4)
-            let outputBuffer = UnsafeMutableRawBufferPointer(start: ptr, count: capacity)
-
-            let length = Self.base64EncodeBytes(inputBuffer, options: options, buffer: outputBuffer)
-            return Data(bytesNoCopy: ptr, count: length, deallocator: .custom({ (ptr, _) in
-                ptr.deallocate()
-            }))
+            return Data(capacity: capacity) {
+                Self.base64EncodeBytes(inputBuffer, &$0, options: options)
+            }
         }
     }
-    
+
     // MARK: - Internal Helpers
 
     static func estimateBase64Size(length: Int) -> Int {
@@ -115,13 +135,18 @@ extension Data {
      This method decodes Base64-encoded data.
 
      If the input contains any bytes that are not valid Base64 characters,
-     this will return nil.
+     this will throw a `Base64Error`.
 
      - parameter bytes:      The Base64 bytes
+     - parameter output:     An OutputBuffer to be filled with decoded bytes
      - parameter options:    Options for handling invalid input
-     - returns:              The decoded bytes.
+     - throws:               When decoding fails
      */
-    static func base64DecodeBytes(_ bytes: UnsafeRawBufferPointer, options: Base64DecodingOptions = []) -> UnsafeMutableRawBufferPointer? {
+    static func base64DecodeBytes(
+        _ bytes: borrowing BufferView<UInt8>,
+        _ output: inout OutputBuffer<UInt8>,
+        options: Base64DecodingOptions = []
+    ) throws {
 
         // This table maps byte values 0-127, input bytes >127 are always invalid.
         // Map the ASCII characters "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" -> 0...63
@@ -142,25 +167,11 @@ extension Data {
         assert(base64Decode.hasPointerRepresentation)
 
         let ignoreUnknown = options.contains(.ignoreUnknownCharacters)
-        if !ignoreUnknown && !bytes.count.isMultiple(of: 4) {
-            return nil
-        }
-
-        let capacity = (bytes.count * 3) / 4    // Every 4 valid ASCII bytes maps to 3 output bytes.
-        let buffer = UnsafeMutableRawPointer.allocate(byteCount: capacity, alignment: 1)
-        var outputIndex = 0
-
-        func append(_ byte: UInt8) {
-            assert(outputIndex < capacity)
-            buffer.storeBytes(of: byte, toByteOffset: outputIndex, as: UInt8.self)
-            outputIndex += 1
-        }
 
         var currentByte: UInt8 = 0
         var validCharacterCount = 0
         var paddingCount = 0
         var index = 0
-        var error = false
 
         for base64Char in bytes {
             var value: UInt8 = 0
@@ -184,16 +195,14 @@ extension Data {
                 if ignoreUnknown {
                     continue
                 } else {
-                    error = true
-                    break
+                    throw Base64Error.cannotDecode
                 }
             }
             validCharacterCount += 1
 
             // Padding found in the middle of the sequence is invalid.
             if paddingCount > 0 {
-                error = true
-                break
+                throw Base64Error.cannotDecode
             }
 
             switch index {
@@ -201,15 +210,15 @@ extension Data {
                 currentByte = (value << 2)
             case 1:
                 currentByte |= (value >> 4)
-                append(currentByte)
+                output.appendElement(currentByte)
                 currentByte = (value << 4)
             case 2:
                 currentByte |= (value >> 2)
-                append(currentByte)
+                output.appendElement(currentByte)
                 currentByte = (value << 6)
             case 3:
                 currentByte |= value
-                append(currentByte)
+                output.appendElement(currentByte)
                 index = -1
             default:
                 fatalError("Invalid state")
@@ -218,25 +227,22 @@ extension Data {
             index += 1
         }
 
-        guard error == false && (validCharacterCount + paddingCount) % 4 == 0 else {
+        guard (validCharacterCount + paddingCount) % 4 == 0 else {
             // Invalid character count of valid input characters.
-            buffer.deallocate()
-            return nil
+            throw Base64Error.cannotDecode
         }
-        return UnsafeMutableRawBufferPointer(start: buffer, count: outputIndex)
     }
 
     /**
      This method encodes data in Base64.
-     
-     - parameter dataBuffer: The UnsafeRawBufferPointer buffer to encode
+
+     - parameter dataBuffer: A BufferView of the bytes to encode
      - parameter options:    Options for formatting the result
      - parameter buffer:     The buffer to write the bytes into
-     - returns:              The number of bytes written into the buffer
 
        NOTE: dataBuffer would be better expressed as a <T: Collection> where T.Element == UInt8, T.Index == Int but this currently gives much poorer performance.
      */
-    static func base64EncodeBytes(_ dataBuffer: UnsafeRawBufferPointer, options: Base64EncodingOptions = [], buffer: UnsafeMutableRawBufferPointer) -> Int {
+    static func base64EncodeBytes(_ dataBuffer: BufferView<UInt8>, _ buffer: inout OutputBuffer<UInt8>, options: Base64EncodingOptions = []) {
         // Use a StaticString for lookup of values 0-63 -> ASCII values
         let base64Chars = StaticString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
         assert(base64Chars.utf8CodeUnitCount == 64)
@@ -282,20 +288,19 @@ extension Data {
         // Read three bytes at a time, which convert to 4 ASCII characters, allowing for byte2 and byte3 being nil
 
         var inputIndex = 0
-        var outputIndex = 0
         var bytesLeft = dataBuffer.count
 
         while bytesLeft > 0 {
 
-            let byte1 = dataBuffer[inputIndex]
+            let byte1 = dataBuffer[offset: inputIndex]
 
             // outputBytes is a UInt32 to allow 4 bytes to be written out at once.
             var outputBytes = lookupBase64Value(UInt16(byte1 >> 2))
 
             if bytesLeft > 2 {
                 // This is the main loop converting 3 bytes at a time.
-                let byte2 = dataBuffer[inputIndex + 1]
-                let byte3 = dataBuffer[inputIndex + 2]
+                let byte2 = dataBuffer[offset: inputIndex + 1]
+                let byte3 = dataBuffer[offset: inputIndex + 2]
                 var value = UInt16(byte1 & 0x3) << 8
                 value |= UInt16(byte2)
 
@@ -312,7 +317,7 @@ extension Data {
             } else {
                 // This runs once at the end of there were 1 or 2 bytes left, byte1 having already been read.
                 // Read byte2 or 0 if there isnt another byte
-                let byte2 = bytesLeft == 1 ? 0 : dataBuffer[inputIndex + 1]
+                let byte2 = bytesLeft == 1 ? 0 : dataBuffer[offset: inputIndex + 1]
                 var value = UInt16(byte1 & 0x3) << 8
                 value |= UInt16(byte2)
 
@@ -328,35 +333,24 @@ extension Data {
 
             // The lowest byte of outputBytes needs to be stored at the lowest address, so make sure
             // the bytes are in the correct order on big endian CPUs.
-            outputBytes = outputBytes.littleEndian
-
-            // The output isnt guaranteed to be aligned on a 4 byte boundary if EOL markers (CR, LF or CRLF)
-            // are written out so use .copyMemory() for safety. On x86 this still translates to a single store
-            // anyway.
-            buffer.baseAddress!.advanced(by: outputIndex).copyMemory(from: &outputBytes, byteCount: 4)
-            outputIndex += 4
+            buffer.appendBytes(of: outputBytes.littleEndian, as: UInt32.self)
             bytesLeft = dataBuffer.count - inputIndex
-            
+
             if lineLength != 0 {
                 // Add required EOL markers.
                 currentLineCount += 4
                 assert(currentLineCount <= lineLength)
 
                 if currentLineCount == lineLength && bytesLeft > 0 {
-                    buffer[outputIndex] = separatorByte1
-                    outputIndex += 1
+                    buffer.appendElement(separatorByte1)
 
-                    if let byte2 = separatorByte2 {
-                        buffer[outputIndex] = byte2
-                        outputIndex += 1
+                    if let separatorByte2 {
+                        buffer.appendElement(separatorByte2)
                     }
                     currentLineCount = 0
                 }
             }
         }
-
-        // Return the number of ASCII bytes written to the buffer
-        return outputIndex
     }
 }
 
