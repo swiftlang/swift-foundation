@@ -639,7 +639,11 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let weekdayOrdinal = (day - 1) / 7 + 1
 
         var dc = DateComponents()
-        if components.contains(.calendar) { dc.calendar = Calendar(identifier: .gregorian) }
+        if components.contains(.calendar) {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = timeZone
+            dc.calendar = calendar
+        }
         if components.contains(.timeZone) { dc.timeZone = timeZone }
         if components.contains(.era) { dc.era = era }
         if components.contains(.year) { dc.year = year }
