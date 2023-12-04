@@ -73,7 +73,7 @@ private extension NSExpression {
 }
 
 extension PredicateExpression {
-    private func _convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+    fileprivate func convertToExpressionOrPredicate(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
         var caughtError: Error?
         do {
             if let convertible = self as? any ConvertibleExpression {
@@ -91,14 +91,14 @@ extension PredicateExpression {
     }
     
     fileprivate func convertToExpression(state: inout NSPredicateConversionState) throws -> NSExpression {
-        switch try self._convert(state: &state) {
+        switch try self.convertToExpressionOrPredicate(state: &state) {
         case .expression(let expr): return expr
         case .predicate(let pred): return pred.asExpression()
         }
     }
     
     fileprivate func convertToPredicate(state: inout NSPredicateConversionState) throws -> NSPredicate {
-        switch try self._convert(state: &state) {
+        switch try self.convertToExpressionOrPredicate(state: &state) {
         case .expression(let expr): return expr.asPredicate()
         case .predicate(let pred): return pred
         }
@@ -188,6 +188,18 @@ extension PredicateExpressions.KeyPath : ConvertibleExpression {
         } else {
             throw NSPredicateConversionError.unsupportedKeyPath
         }
+    }
+}
+
+extension PredicateExpressions.PredicateEvaluate : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        // Evaluate the subtree that provides the Predicate. We can only nest a predicate if the predicate is provided as a constant value
+        guard let predicateValue = try? predicate.evaluate(.init()) else {
+            throw NSPredicateConversionError.unsupportedType
+        }
+        
+        repeat state[(each predicateValue.variable).key] = try (each input).convertToExpression(state: &state)
+        return try predicateValue.expression.convertToExpressionOrPredicate(state: &state)
     }
 }
 

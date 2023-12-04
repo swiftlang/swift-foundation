@@ -37,7 +37,8 @@ private let knownSupportedFunctions: Set<FunctionStructure> = [
     FunctionStructure("max", arguments: []),
     FunctionStructure("localizedStandardContains", arguments: [.unlabeled]),
     FunctionStructure("localizedCompare", arguments: [.unlabeled]),
-    FunctionStructure("caseInsensitiveCompare", arguments: [.unlabeled])
+    FunctionStructure("caseInsensitiveCompare", arguments: [.unlabeled]),
+    FunctionStructure("evaluate", arguments: [.pack(labeled: nil)])
 ]
 
 private let supportedFunctionSuggestions: [FunctionStructure : FunctionStructure] = [
@@ -47,6 +48,47 @@ private let supportedFunctionSuggestions: [FunctionStructure : FunctionStructure
     FunctionStructure("localizedStandardCompare", arguments: [.unlabeled]) : FunctionStructure("localizedCompare", arguments: [.unlabeled])
 ]
 
+extension Array where Element == FunctionStructure.Argument {
+    fileprivate func argumentsEqual(_ other: Self) -> Bool {
+        let currentPackIndex = self.firstIndex { $0.kind == .pack }
+        let otherPackIndex = other.firstIndex { $0.kind == .pack }
+
+        var full: [FunctionStructure.Argument]
+        var prefix: ArraySlice<FunctionStructure.Argument>
+        var suffix: ArraySlice<FunctionStructure.Argument>
+        switch (currentPackIndex, otherPackIndex) {
+        // If neither contains a pack or both contain a pack, just compare arguments as-is
+        case (nil, nil), (.some(_), .some(_)):
+            return self == other
+
+        // If one of them contains a pack, compare the prefix and suffix to allow the pack to lazily consume multiple arguments
+        case (let .some(idx), nil):
+            full = other
+            prefix = self[..<idx]
+            suffix = self[self.index(after: idx)...]
+        case (nil, let .some(idx)):
+            full = self
+            prefix = other[..<idx]
+            suffix = other[other.index(after: idx)...]
+        }
+        return full.starts(with: prefix) && full.reversed().starts(with: suffix.reversed())
+    }
+
+    fileprivate func expandingPackToMatchCount(_ otherCount: Int) -> Self {
+        let countDifference = otherCount - self.count
+        guard countDifference >= 0, let packIdx = self.firstIndex(where: { $0.kind == .pack }) else {
+            return self
+        }
+
+        var copy = self
+        copy[packIdx] = .init(label: copy[packIdx].label, kind: .standard)
+        if countDifference > 0 {
+            copy.insert(contentsOf: Array(repeating: .unlabeled, count: countDifference), at: packIdx + 1)
+        }
+        return copy
+    }
+}
+
 #if FOUNDATION_FRAMEWORK
 private let moduleName = "Foundation"
 #else
@@ -55,25 +97,35 @@ private let moduleName = "FoundationEssentials"
 
 private struct FunctionStructure: Hashable {
     struct Argument : Hashable, ExpressibleByStringLiteral {
+        enum Kind : Hashable {
+            case standard
+            case closure
+            case pack
+        }
+        
         let label: String?
-        let isClosure: Bool
+        let kind: Kind
         
         init(stringLiteral: String) {
             label = stringLiteral
-            isClosure = false
+            kind = .standard
         }
         
-        init(label: String?, closure: Bool) {
+        init(label: String?, kind: Kind) {
             self.label = label
-            self.isClosure = closure
+            self.kind = kind
         }
         
         static func closure(labeled label: String?) -> Self {
-            Self(label: label, closure: true)
+            Self(label: label, kind: .closure)
         }
         
         static var unlabeled: Self {
-            Self(label: nil, closure: false)
+            Self(label: nil, kind: .standard)
+        }
+            
+        static func pack(labeled label: String?) -> Self {
+            Self(label: label, kind: .pack)
         }
         
         static func ==(lhs: Self, rhs: Self) -> Bool {
@@ -85,7 +137,7 @@ private struct FunctionStructure: Hashable {
     let hasTrailingClosure: Bool
     
     var supportsTrailingClosure: Bool {
-        hasTrailingClosure || (arguments.last?.isClosure ?? false)
+        hasTrailingClosure || arguments.last?.kind == .closure
     }
     
     var signature: String {
@@ -104,13 +156,13 @@ private struct FunctionStructure: Hashable {
         
         switch (self.hasTrailingClosure, other.hasTrailingClosure) {
         case (true, true), (false, false):
-            return self.arguments == other.arguments
+            return self.arguments.argumentsEqual(other.arguments)
         case (true, false):
             guard let otherLast = other.arguments.last else { return false }
-            return self.arguments == other.arguments.dropLast() && otherLast.isClosure
+            return self.arguments.argumentsEqual(other.arguments.dropLast()) && otherLast.kind == .closure
         case (false, true):
             guard let last = self.arguments.last else { return false }
-            return self.arguments.dropLast() == other.arguments && last.isClosure
+            return self.arguments.dropLast().argumentsEqual(other.arguments) && last.kind == .closure
         }
     }
     
@@ -676,7 +728,8 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         // Check this function against our known list to provide rich diagnostics for functions we know we don't support
         let name = TokenSyntax(.identifier(functionName), presence: .present).with(\.leadingTrivia, []).with(\.trailingTrivia, [])
         let args = argumentList.map {
-            FunctionStructure.Argument(label: $0.label?.text, closure: $0.expression.is(ClosureExprSyntax.self) || $0.expression.is(KeyPathExprSyntax.self))
+            let isClosure = $0.expression.is(ClosureExprSyntax.self) || $0.expression.is(KeyPathExprSyntax.self)
+            return FunctionStructure.Argument(label: $0.label?.text, kind: isClosure ? .closure : .standard)
         }
         let structure = FunctionStructure(name.text, arguments: args, trailingClosure: trailingClosure != nil)
         guard let knownFunc = _knownMatchingFunction(structure) else {
@@ -707,9 +760,9 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         addArgument(base, label: nil, withComma: !argumentList.isEmpty)
         validOptionalChainingTree = oldValidOptionalChainingTree
         
-        for (sourceArg, knownArgStructure) in zip(argumentList, knownFunc.arguments) {
+        for (sourceArg, knownArgStructure) in zip(argumentList, knownFunc.arguments.expandingPackToMatchCount(argumentList.count)) {
             var expression = sourceArg.expression
-            if knownArgStructure.isClosure, let kpExpr = sourceArg.expression.as(KeyPathExprSyntax.self) {
+            if knownArgStructure.kind == .closure, let kpExpr = sourceArg.expression.as(KeyPathExprSyntax.self) {
                 guard !kpExpr.containsShorthandArgumentIdentifiers,
                       let memberAccess = kpExpr.asDirectExpression(on: DeclReferenceExprSyntax(baseName: .dollarIdentifier("$0"))),
                       let preparedMemberAccess = try? memberAccess.rewrite(with: OptionalChainRewriter()) else {

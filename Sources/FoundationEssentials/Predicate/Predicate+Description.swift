@@ -379,6 +379,15 @@ extension PredicateExpressions.Filter : DebugStringConvertiblePredicateExpressio
     }
 }
 
+@available(FoundationPreview 0.3, *)
+extension PredicateExpressions.PredicateEvaluate : DebugStringConvertiblePredicateExpression where Condition : DebugStringConvertiblePredicateExpression, repeat each Input : DebugStringConvertiblePredicateExpression {
+    package func debugString(state: inout DebugStringConversionState) -> String {
+        var inputStrings: [String] = []
+        repeat inputStrings.append((each input).debugString(state: &state))
+        return "\(predicate.debugString(state: &state)).evaluate(\(inputStrings.joined(separator: ", ")))"
+    }
+}
+
 #if FOUNDATION_FRAMEWORK
 
 @available(FoundationPreview 0.3, *)
