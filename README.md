@@ -69,6 +69,17 @@ Being written in Swift, this new implementation provides some major benefits ove
 
 Even more exciting are the improvements to JSON decoding in the new package. Foundation has a brand-new Swift implementation for `JSONDecoder` and `JSONEncoder`, eliminating costly roundtrips to and from the Objective-C collection types. The tight integration of parsing JSON in Swift for initializing `Codable` types improves performance, too. In benchmarks parsing [test data](https://www.boost.org/doc/libs/master/libs/json/doc/html/json/benchmarks.html), there are improvements in decode time from 200% to almost 500%.
 
+### Benchmarks
+
+Benchmarks for `swift-foundation` are in a separate Swift Package in the `Benchmarks` subfolder of this repository. 
+They use the [`package-benchmark`](https://github.com/ordo-one/package-benchmark) plugin.
+Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics.
+An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`. 
+Afterwards you can run the benchmarks from CLI by going to the `Benchmarks` subfolder (e.g. `cd Benchmarks`) and invoking:
+```
+swift package benchmark
+```
+
 ## Governance
 
 The success of the Swift language is an example of what's possible when a community comes together with a shared interest.
