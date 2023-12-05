@@ -25,7 +25,7 @@ import BigInt
 final class BinaryIntegerFormatStyleTests: XCTestCase {
     // NSR == numericStringRepresentation
     func checkNSR(value: some BinaryInteger, expected: String) {
-        XCTAssertEqual(String(decoding: value.numericStringRepresentation, as: Unicode.ASCII.self), expected)
+        XCTAssertEqual(String(decoding: value.numericStringRepresentation.utf8, as: Unicode.ASCII.self), expected)
     }
 
     func testNumericStringRepresentation_builtinIntegersLimits() throws {
@@ -47,8 +47,8 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
 
     func testNumericStringRepresentation_builtinIntegersAroundDecimalMagnitude() throws {
         func check<I: FixedWidthInteger>(type: I.Type = I.self, magnitude: String, oneLess: String, oneMore: String) {
-            let mag = I.decimalDigitsAndMagnitudePerWord().magnitude
-
+            var mag = I(1); while !mag.multipliedReportingOverflow(by: 10).overflow { mag *= 10 }
+            
             checkNSR(value: mag, expected: magnitude)
             checkNSR(value: mag - 1, expected: oneLess)
             checkNSR(value: mag + 1, expected: oneMore)
@@ -129,124 +129,114 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
     }
 #endif
 #endif // canImport(Numberick) || canImport(BigInt)
+}
 
-    func testMagnitudeBitWidth_builtinIntegers() {
-        XCTAssertEqual(1, 0.magnitudeBitWidth)
-        XCTAssertEqual(1, (0 as UInt).magnitudeBitWidth)
-
-        // Fixed-width unsigned
-        XCTAssertEqual(1, (1 as UInt).magnitudeBitWidth)
-        XCTAssertEqual(2, (2 as UInt).magnitudeBitWidth)
-        XCTAssertEqual(2, (3 as UInt).magnitudeBitWidth)
-        XCTAssertEqual(3, (4 as UInt).magnitudeBitWidth)
-
-        XCTAssertEqual(64, UInt64.max.magnitudeBitWidth)
-        XCTAssertEqual(1, UInt64.min.magnitudeBitWidth)
-
-        // Fixed-width signed
-        XCTAssertEqual(1, 1.magnitudeBitWidth)
-        XCTAssertEqual(2, 2.magnitudeBitWidth)
-        XCTAssertEqual(2, 3.magnitudeBitWidth)
-        XCTAssertEqual(3, 4.magnitudeBitWidth)
-
-        XCTAssertEqual(1, (-1).magnitudeBitWidth)
-        XCTAssertEqual(2, (-2).magnitudeBitWidth)
-        XCTAssertEqual(2, (-3).magnitudeBitWidth)
-        XCTAssertEqual(3, (-4).magnitudeBitWidth)
-
-        XCTAssertEqual(63, Int64.max.magnitudeBitWidth)
-        XCTAssertEqual(64, Int64.min.magnitudeBitWidth)
-        XCTAssertEqual(63, (Int64.min + 1).magnitudeBitWidth)
+final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
+    
+    // MARK: Tests
+    
+    func testInt32() {
+        check( Int32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0")
+        check( Int32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
+        check( Int32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647") //  Int32.max
+        check( Int32(truncatingIfNeeded: 0x80000000 as UInt32), expectation: "-2147483648") //  Int32.min
+        check( Int32(truncatingIfNeeded: 0x81807f7e as UInt32), expectation: "-2122285186")
+        check( Int32(truncatingIfNeeded: 0xfffefdfc as UInt32), expectation:      "-66052")
+        check( Int32(truncatingIfNeeded: 0xffffffff as UInt32), expectation:          "-1")
     }
-
-#if canImport(Numberick)
-    func testMagnitudeBitWidth_largeIntegers() {
-        // Unsigned
-        XCTAssertEqual(128, UInt128.max.magnitudeBitWidth)
-        XCTAssertEqual(64, UInt128(UInt64.max).magnitudeBitWidth)
-        XCTAssertEqual(1, UInt128.min.magnitudeBitWidth)
-        XCTAssertEqual(1, UInt128.zero.magnitudeBitWidth)
-
-        // Signed
-        XCTAssertEqual(127, Int128.max.magnitudeBitWidth)
-        XCTAssertEqual(63, Int128(Int64.max).magnitudeBitWidth)
-        XCTAssertEqual(3, Int128(4).magnitudeBitWidth)
-        XCTAssertEqual(2, Int128(3).magnitudeBitWidth)
-        XCTAssertEqual(2, Int128(2).magnitudeBitWidth)
-        XCTAssertEqual(1, Int128(1).magnitudeBitWidth)
-        XCTAssertEqual(1, Int128.zero.magnitudeBitWidth)
-        XCTAssertEqual(1, Int128(-1).magnitudeBitWidth)
-        XCTAssertEqual(2, Int128(-2).magnitudeBitWidth)
-        XCTAssertEqual(2, Int128(-3).magnitudeBitWidth)
-        XCTAssertEqual(3, Int128(-4).magnitudeBitWidth)
-        XCTAssertEqual(128, Int128.min.magnitudeBitWidth)
+    
+    func testUInt32() {
+        check(UInt32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0") // UInt32.min
+        check(UInt32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
+        check(UInt32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647")
+        check(UInt32(truncatingIfNeeded: 0x80000000 as UInt32), expectation:  "2147483648")
+        check(UInt32(truncatingIfNeeded: 0x81807f7e as UInt32), expectation:  "2172682110")
+        check(UInt32(truncatingIfNeeded: 0xfffefdfc as UInt32), expectation:  "4294901244")
+        check(UInt32(truncatingIfNeeded: 0xffffffff as UInt32), expectation:  "4294967295") // UInt32.max
     }
-#endif
-
-#if canImport(BigInt)
-    func testMagnitudeBitWidth_arbitraryPrecisionIntegers() {
-        // Arbitrary-precision unsigned
-        XCTAssertEqual(64, BigUInt(UInt64.max).magnitudeBitWidth)
-        XCTAssertEqual(1, BigUInt(UInt64.min).magnitudeBitWidth)
-
-        // Arbitrary-precision signed
-        XCTAssertEqual(63, BigInt(Int64.max).magnitudeBitWidth)
-        XCTAssertEqual(64, BigInt(Int64.min).magnitudeBitWidth)
-
-        // Signed & unsigned for multi-word numbers.
-        func checkBigInts(hexString: some StringProtocol, magnitudeBitWidth: Int) {
-            XCTAssertEqual(magnitudeBitWidth, BigUInt(hexString, radix: 16)!.magnitudeBitWidth)
-            XCTAssertEqual(magnitudeBitWidth, BigInt(hexString, radix: 16)!.magnitudeBitWidth)
-            XCTAssertEqual(magnitudeBitWidth, BigInt("-" + hexString, radix: 16)!.magnitudeBitWidth)
-        }
-
-        checkBigInts(hexString: "10000000000000000", magnitudeBitWidth: 65)
-        checkBigInts(hexString: "10000000000000001", magnitudeBitWidth: 65)
-        checkBigInts(hexString: "1ffffffffffffffff", magnitudeBitWidth: 65)
-        checkBigInts(hexString: "20000000000000000", magnitudeBitWidth: 66)
-        checkBigInts(hexString: "7fffffffffffffffffffffffffffffff", magnitudeBitWidth: 127)
-        checkBigInts(hexString: "80000000000000000000000000000000", magnitudeBitWidth: 128)
-        checkBigInts(hexString: "8fffffffffffffffffffffffffffffff", magnitudeBitWidth: 128)
-        checkBigInts(hexString: "100000000000000000000000000000000", magnitudeBitWidth: 129)
+    
+    func testInt64() {
+        check( Int64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0")
+        check( Int64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
+        check( Int64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807") //  Int64.max
+        check( Int64(truncatingIfNeeded: 0x8000000000000000 as UInt64), expectation: "-9223372036854775808") //  Int64.max
+        check( Int64(truncatingIfNeeded: 0x838281807f7e7d7c as UInt64), expectation: "-8970465118873813636")
+        check( Int64(truncatingIfNeeded: 0xfffefdfcfbfaf9f8 as UInt64), expectation:     "-283686952306184")
+        check( Int64(truncatingIfNeeded: 0xffffffffffffffff as UInt64), expectation:                   "-1")
     }
-#endif
-
-    func check<I: BinaryInteger>(type: I.Type = I.self, digits: Int, magnitude: UInt) {
-        let actual = I.decimalDigitsAndMagnitudePerWord()
-
-        let maxDigits = [32: 9, 64: 19][UInt.bitWidth]!
-        let maxMagnitude: UInt = [32: 1_000_000_000, 64: 10_000_000_000_000_000_000][UInt.bitWidth]!
-
-        XCTAssertEqual(actual.digits, min(digits, maxDigits))
-        XCTAssertEqual(actual.magnitude, I(exactly: min(magnitude, maxMagnitude)))
+    
+    func testUInt64() {
+        check(UInt64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0") // UInt64.min
+        check(UInt64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
+        check(UInt64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807")
+        check(UInt64(truncatingIfNeeded: 0x8000000000000000 as UInt64), expectation:  "9223372036854775808")
+        check(UInt64(truncatingIfNeeded: 0x838281807f7e7d7c as UInt64), expectation:  "9476278954835737980")
+        check(UInt64(truncatingIfNeeded: 0xfffefdfcfbfaf9f8 as UInt64), expectation: "18446460386757245432")
+        check(UInt64(truncatingIfNeeded: 0xffffffffffffffff as UInt64), expectation: "18446744073709551615") // UInt64.max
     }
-
-    func testDecimalDigitsAndMagnitudePerWord_builtinIntegers() throws {
-        check(type: Int8.self, digits: 2, magnitude: 100)
-        check(type: Int16.self, digits: 4, magnitude: 10_000)
-        check(type: Int32.self, digits: 9, magnitude: 1_000_000_000)
-        check(type: Int64.self, digits: 18, magnitude: 1_000_000_000_000_000_000)
-
-        check(type: UInt8.self, digits: 2, magnitude: 100)
-        check(type: UInt16.self, digits: 4, magnitude: 10_000)
-        check(type: UInt32.self, digits: 9, magnitude: 1_000_000_000)
-        check(type: UInt64.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
+    
+    // MARK: Tests + Big Integer
+    
+    func testInt128() {
+        check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: true,  expectation:                                        "0")
+        check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: true,  expectation:   "20011376718272490338853433276725592320")
+        check(x64:[0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: true,  expectation:  "170141183460469231731687303715884105727") //  Int128.max
+        check(x64:[0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: true,  expectation: "-170141183460469231731687303715884105728") //  Int128.min
+        check(x64:[0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: true,  expectation:      "-5233100606242806050955395731361296")
+        check(x64:[0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: true,  expectation:                                       "-1")
     }
-
-#if canImport(Numberick)
-    func testDecimalDigitsAndMagnitudePerWord_largeIntegers() throws {
-        check(type: Int128.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
-        check(type: UInt128.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
-
-        check(type: Int256.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
-        check(type: UInt256.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
+    
+    func testUInt128() {
+        check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: false, expectation:                                        "0") // UInt128.min
+        check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: false, expectation:   "20011376718272490338853433276725592320")
+        check(x64:[0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105728")
+        check(x64:[0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: false, expectation:  "340277133820332220657323652036036850160")
+        check(x64:[0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105727")
+        check(x64:[0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: false, expectation:  "340282366920938463463374607431768211455") // UInt128.max
     }
-#endif
-
-#if canImport(BigInt)
-    func testDecimalDigitsAndMagnitudePerWord_arbitraryPrecisionIntegers() throws {
-        check(type: BigInt.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
-        check(type: BigUInt.self, digits: 19, magnitude: 10_000_000_000_000_000_000)
+    
+    // MARK: Tests + Big Integer + Miscellaneous
+    
+    func testWordsIsEmptyResultsInZero() {
+        check(words:[              ] as [UInt], isSigned: true,  expectation:  "0")
+        check(words:[              ] as [UInt], isSigned: false, expectation:  "0")
     }
-#endif
+    
+    func testSignExtendingDoesNotChangeTheResult() {
+        check(words:[ 0            ] as [UInt], isSigned: true,  expectation:  "0")
+        check(words:[ 0,  0        ] as [UInt], isSigned: true,  expectation:  "0")
+        check(words:[ 0,  0,  0    ] as [UInt], isSigned: true,  expectation:  "0")
+        check(words:[ 0,  0,  0,  0] as [UInt], isSigned: true,  expectation:  "0")
+        
+        check(words:[~0            ] as [UInt], isSigned: true,  expectation: "-1")
+        check(words:[~0, ~0        ] as [UInt], isSigned: true,  expectation: "-1")
+        check(words:[~0, ~0, ~0    ] as [UInt], isSigned: true,  expectation: "-1")
+        check(words:[~0, ~0, ~0, ~0] as [UInt], isSigned: true,  expectation: "-1")
+        
+        check(words:[ 0            ] as [UInt], isSigned: false, expectation:  "0")
+        check(words:[ 0,  0        ] as [UInt], isSigned: false, expectation:  "0")
+        check(words:[ 0,  0,  0    ] as [UInt], isSigned: false, expectation:  "0")
+        check(words:[ 0,  0,  0,  0] as [UInt], isSigned: false, expectation:  "0")
+    }
+    
+    // MARK: Assertions
+    
+    func check(_ integer: some BinaryInteger, expectation: String, file: StaticString = #file, line: UInt = #line) {
+        XCTAssertEqual(integer.description, expectation, "integer description does not match expectation", file: file, line: line)
+        check(ascii: integer.numericStringRepresentation.utf8, expectation: expectation, file: file, line: line)
+        check(words: Array(integer.words), isSigned: type(of: integer).isSigned, expectation: expectation, file: file, line: line)
+    }
+    
+    func check(x64: [UInt64], isSigned: Bool, expectation: String, file: StaticString = #file, line: UInt = #line) {
+        check(words: x64.flatMap(\.words), isSigned: isSigned, expectation: expectation, file: file, line: line)
+    }
+    
+    func check(words: [UInt], isSigned: Bool, expectation: String, file: StaticString = #file, line: UInt = #line) {
+        let ascii =  numericStringRepresentationForBinaryInteger(words: words, isSigned: isSigned).utf8
+        check(ascii: ascii, expectation: expectation, file: file, line: line)
+    }
+    
+    func check(ascii: some Collection<UInt8>, expectation: String, file: StaticString = #file, line: UInt = #line) {
+        XCTAssertEqual(String(decoding: ascii, as: Unicode.ASCII.self), expectation, file: file, line: line)
+    }
 }
