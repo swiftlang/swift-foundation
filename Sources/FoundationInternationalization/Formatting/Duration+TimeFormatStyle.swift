@@ -119,6 +119,10 @@ extension Duration {
             self._attributed = Attributed(pattern: pattern, locale: locale)
         }
 
+        fileprivate init(_ attributedStyle: Attributed) {
+            self._attributed = attributedStyle
+        }
+
         // `FormatStyle` conformance
 
         /// Creates a locale-aware string representation from a duration value.
@@ -175,6 +179,8 @@ extension Duration.TimeFormatStyle {
         typealias Pattern = Duration.TimeFormatStyle.Pattern
 
         var pattern: Pattern
+
+        var grouping: NumberFormatStyleConfiguration.Grouping = .automatic
 
         var locale: Locale
 
@@ -314,7 +320,7 @@ extension Duration.TimeFormatStyle {
 
         func formatWithPatternComponents(_ components: [PatternComponent], hour: Double, minute: Double, second: Double) -> AttributedString {
             // The number format does not contain rounding settings because it's handled on the value itself
-            var numberFormatStyle = FloatingPointFormatStyle<Double>(locale: locale)
+            var numberFormatStyle = FloatingPointFormatStyle<Double>(locale: locale).grouping(grouping)
             var result = AttributedString()
 
             let isNegative = hour < 0 || minute < 0 || second < 0
@@ -407,6 +413,61 @@ extension Duration.TimeFormatStyle {
             }
 
             return result
+        }
+    }
+}
+
+@available(FoundationPreview 0.4, *)
+extension Duration.TimeFormatStyle {
+    /// Returns a modified style that applies the given `grouping` rule to the highest field in the
+    /// pattern.
+    public func grouping(_ grouping: NumberFormatStyleConfiguration.Grouping) -> Self {
+        var copy = self
+        copy._attributed.grouping = grouping
+        return copy
+    }
+
+    /// The `grouping` rule applied to high number values on the largest field in the pattern.
+    public var grouping: NumberFormatStyleConfiguration.Grouping {
+        get { _attributed.grouping }
+        set { _attributed.grouping = newValue }
+    }
+}
+
+@available(FoundationPreview 0.4, *)
+extension Duration.TimeFormatStyle.Attributed {
+    /// Returns a modified style that applies the given `grouping` rule to the highest field in the
+    /// pattern.
+    public func grouping(_ grouping: NumberFormatStyleConfiguration.Grouping) -> Self {
+        var copy = self
+        copy.grouping = grouping
+        return copy
+    }
+}
+
+// MARK: Dynamic Member Lookup
+
+@available(FoundationPreview 0.4, *)
+extension Duration.TimeFormatStyle.Attributed {
+    private var innerStyle: Duration.TimeFormatStyle {
+        get {
+            .init(self)
+        }
+        set {
+            self = newValue._attributed
+        }
+    }
+
+    public subscript<T>(dynamicMember key: KeyPath<Duration.TimeFormatStyle, T>) -> T {
+        innerStyle[keyPath: key]
+    }
+
+    public subscript<T>(dynamicMember key: WritableKeyPath<Duration.TimeFormatStyle, T>) -> T {
+        get {
+            innerStyle[keyPath: key]
+        }
+        set {
+            innerStyle[keyPath: key] = newValue
         }
     }
 }

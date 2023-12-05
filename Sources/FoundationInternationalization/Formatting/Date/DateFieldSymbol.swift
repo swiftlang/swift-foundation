@@ -20,22 +20,22 @@ extension Date.FormatStyle {
     public struct Symbol : Hashable, Sendable {
         let symbolType: SymbolType
 
-        public struct Era : Hashable, Sendable { let option: SymbolType.EraOption }
-        public struct Year : Hashable, Sendable { let option: SymbolType.YearOption }
-        public struct YearForWeekOfYear : Hashable, Sendable { let option: SymbolType.YearForWeekOfYearOption }
-        public struct CyclicYear : Hashable, Sendable { let option: SymbolType.CyclicYearOption }
-        public struct Quarter : Hashable, Sendable { let option: SymbolType.QuarterOption }
-        public struct Month : Hashable, Sendable { let option: SymbolType.MonthOption }
-        public struct Week : Hashable, Sendable { let option: SymbolType.WeekOption }
-        public struct Day : Hashable, Sendable { let option: SymbolType.DayOption }
-        public struct DayOfYear : Hashable, Sendable { let option: SymbolType.DayOfYearOption }
-        public struct Weekday : Hashable, Sendable { let option: SymbolType.WeekdayOption }
-        public struct DayPeriod : Hashable, Sendable { let option: SymbolType.DayPeriodOption }
-        public struct Hour : Hashable, Sendable { let option: SymbolType.HourOption }
-        public struct Minute : Hashable, Sendable { let option: SymbolType.MinuteOption }
-        public struct Second : Hashable, Sendable { let option: SymbolType.SecondOption }
-        public struct SecondFraction : Hashable, Sendable { let option: SymbolType.SecondFractionOption }
-        public struct TimeZone : Hashable, Sendable { let option: SymbolType.TimeZoneSymbolOption }
+        public struct Era : Hashable, Sendable { let option: SymbolType.EraOption? }
+        public struct Year : Hashable, Sendable { let option: SymbolType.YearOption? }
+        public struct YearForWeekOfYear : Hashable, Sendable { let option: SymbolType.YearForWeekOfYearOption? }
+        public struct CyclicYear : Hashable, Sendable { let option: SymbolType.CyclicYearOption? }
+        public struct Quarter : Hashable, Sendable { let option: SymbolType.QuarterOption? }
+        public struct Month : Hashable, Sendable { let option: SymbolType.MonthOption? }
+        public struct Week : Hashable, Sendable { let option: SymbolType.WeekOption? }
+        public struct Day : Hashable, Sendable { let option: SymbolType.DayOption? }
+        public struct DayOfYear : Hashable, Sendable { let option: SymbolType.DayOfYearOption? }
+        public struct Weekday : Hashable, Sendable { let option: SymbolType.WeekdayOption? }
+        public struct DayPeriod : Hashable, Sendable { let option: SymbolType.DayPeriodOption? }
+        public struct Hour : Hashable, Sendable { let option: SymbolType.HourOption? }
+        public struct Minute : Hashable, Sendable { let option: SymbolType.MinuteOption? }
+        public struct Second : Hashable, Sendable { let option: SymbolType.SecondOption? }
+        public struct SecondFraction : Hashable, Sendable { let option: SymbolType.SecondFractionOption? }
+        public struct TimeZone : Hashable, Sendable { let option: SymbolType.TimeZoneSymbolOption? }
 
         public struct StandaloneQuarter : Hashable, Sendable { let option: SymbolType.StandaloneQuarterOption }
         public struct StandaloneMonth : Hashable, Sendable { let option: SymbolType.StandaloneMonthOption }
@@ -995,4 +995,102 @@ public extension Date.FormatStyle.Symbol.TimeZone {
     /// The generic location format. Falls back to `longLocalizedGMT` if unavailable. Recommends for presenting possible time zone choices for user selection.
     /// For example, "Los Angeles Time".
     static var genericLocation: Self { .init(option: .genericLocation) }
+}
+
+// MARK: Omitted Symbol Options
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Era {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Year {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.YearForWeekOfYear {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.CyclicYear {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Quarter {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Month {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Week {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Day {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.DayOfYear {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Weekday {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.DayPeriod {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Hour {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Minute {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.Second {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.SecondFraction {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Symbol.TimeZone {
+    /// The option for not including the symbol in the formatted output.
+    public static let omitted: Self = .init(option: nil)
 }

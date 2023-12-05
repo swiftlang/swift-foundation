@@ -585,6 +585,40 @@ final class DateFormatStyleTests : XCTestCase {
             verifyWithFormat(evening, expected: "09:50:00 PM")
         }
     }
+
+    @available(FoundationPreview 0.4, *)
+    func testRemovingFields() {
+        var format: Date.FormatStyle = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
+        func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #file, line: UInt = #line) {
+            let formatted = format.format(date)
+            XCTAssertEqual(formatted, expected, file: file, line: line)
+        }
+
+        #if FOUNDATION_FRAMEWORK
+            let separator = "\u{202f}"
+        #else
+            let separator = " "
+        #endif
+
+        let date = Date(timeIntervalSince1970: 0)
+
+        verifyWithFormat(date, expected: "1/1/1970, 12:00\(separator)AM")
+        format = format.day(.omitted)
+        verifyWithFormat(date, expected: "1/1970, 12:00\(separator)AM")
+        format = format.day(.defaultDigits)
+        verifyWithFormat(date, expected: "1/1/1970, 12:00\(separator)AM")
+        format = format.minute()
+        verifyWithFormat(date, expected: "1/1/1970, 12:00\(separator)AM")
+        format = format.minute(.omitted)
+        verifyWithFormat(date, expected: "1/1/1970, 12\(separator)AM")
+        format = format.day(.omitted)
+        verifyWithFormat(date, expected: "1/1970, 12\(separator)AM")
+
+        format = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
+        format = format.day()
+        format = format.day(.omitted)
+        verifyWithFormat(date, expected: "")
+    }
 }
 
 extension Sequence where Element == (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?) {

@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+// MARK: VerbatimFormatStyle Definition
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
     /// Formats a `Date` using the given format.
@@ -32,7 +34,11 @@ extension Date {
             self.timeZone = timeZone
         }
 
-        /// Returns the corresponding `AttributedStyle` which formats the date with  `AttributeScopes.FoundationAttributes.DateFormatFieldAttribute`
+        /// Returns a type erased attributed variant of this style.
+        @available(macOS, deprecated: 15, introduced: 12, message: "Use attributedStyle instead")
+        @available(iOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
+        @available(tvOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
+        @available(watchOS, deprecated: 11, introduced: 8, message: "Use attributedStyle instead")
         public var attributed: AttributedStyle {
             .init(style: .verbatimFormatStyle(self))
         }
@@ -57,10 +63,67 @@ extension FormatStyle where Self == Date.VerbatimFormatStyle {
     public static func verbatim(_ format: Date.FormatString, locale: Locale? = nil, timeZone: TimeZone, calendar: Calendar) -> Date.VerbatimFormatStyle { .init(format: format, locale: locale, timeZone: timeZone, calendar: calendar) }
 }
 
+// MARK: ParseableFormatStyle Conformance
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.VerbatimFormatStyle: ParseableFormatStyle {
     public var parseStrategy: Date.ParseStrategy {
             .init(format: formatPattern, locale: locale, timeZone: timeZone, calendar: calendar, isLenient: false, twoDigitStartDate: Date(timeIntervalSince1970: 0))
+    }
+}
+
+// MARK: Typed Attributed Style
+
+@available(FoundationPreview 0.4, *)
+extension Date.VerbatimFormatStyle {
+    /// The type preserving attributed variant of this style.
+    ///
+    /// This style attributes the formatted date with the `AttributeScopes.FoundationAttributes.DateFormatFieldAttribute`.
+    public struct Attributed : FormatStyle, Sendable {
+        var base: Date.VerbatimFormatStyle
+
+        public subscript<T>(dynamicMember key: KeyPath<Date.VerbatimFormatStyle, T>) -> T {
+            base[keyPath: key]
+        }
+
+        public subscript<T>(dynamicMember key: WritableKeyPath<Date.VerbatimFormatStyle, T>) -> T {
+            get {
+                base[keyPath: key]
+            }
+            set {
+                base[keyPath: key] = newValue
+            }
+        }
+
+        init(style: Date.VerbatimFormatStyle) {
+            self.base = style
+        }
+
+        public func format(_ value: Date) -> AttributedString {
+            let fm = ICUDateFormatter.cachedFormatter(for: base)
+
+            var result: AttributedString
+            if let (str, attributes) = fm.attributedFormat(value) {
+                result = str._attributedStringFromPositions(attributes)
+            } else {
+                result = AttributedString(value.description)
+            }
+
+            return result
+        }
+
+        public func locale(_ locale: Locale) -> Self {
+            var new = self
+            new.base = base.locale(locale)
+            return new
+        }
+    }
+
+    /// Return the type preserving attributed variant of this style.
+    ///
+    /// This style attributes the formatted date with the `AttributeScopes.FoundationAttributes.DateFormatFieldAttribute`.
+    public var attributedStyle: Attributed {
+        .init(style: self)
     }
 }
 
