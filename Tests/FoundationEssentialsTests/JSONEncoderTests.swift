@@ -167,7 +167,7 @@ final class JSONEncoderTests : XCTestCase {
 
         func formattedLength(of value: Double) -> Int {
         #if canImport(_CShims)
-            return Int(_cshims_get_formatted_str_length(value))
+            return Int(_stringshims_get_formatted_str_length(value))
         #else
             let empty = UnsafeMutablePointer<Int8>.allocate(capacity: 0)
             defer { empty.deallocate() }

@@ -19,15 +19,11 @@
 #include <float.h>
 #include <assert.h>
 
-#if !defined(CF_PRIVATE)
-#define CF_PRIVATE __attribute__((__visibility__("hidden"))) extern
-#endif
-
 #if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
 #include <strings.h>
 #endif
 
-CF_PRIVATE int _cshims_strncasecmp_l(const char * _Nullable s1,
+int _stringshims_strncasecmp_l(const char * _Nullable s1,
                       const char * _Nullable s2,
                       size_t n,
                       locale_t _Nullable loc)
@@ -61,7 +57,7 @@ CF_PRIVATE int _cshims_strncasecmp_l(const char * _Nullable s1,
 #endif // TARGET_OS_WINDOWS
 }
 
-CF_PRIVATE double _cshims_strtod_l(const char * _Nullable restrict nptr,
+double _stringshims_strtod_l(const char * _Nullable restrict nptr,
                  char * _Nullable * _Nullable restrict endptr,
                  locale_t _Nullable loc)
 {
@@ -83,7 +79,7 @@ CF_PRIVATE double _cshims_strtod_l(const char * _Nullable restrict nptr,
 #endif
 }
 
-CF_PRIVATE float _cshims_strtof_l(const char * _Nullable restrict nptr,
+float _stringshims_strtof_l(const char * _Nullable restrict nptr,
                  char * _Nullable * _Nullable restrict endptr,
                  locale_t _Nullable loc)
 {
@@ -105,7 +101,7 @@ CF_PRIVATE float _cshims_strtof_l(const char * _Nullable restrict nptr,
 #endif
 }
 
-CF_PRIVATE int _cshims_get_formatted_str_length(double value)
+int _stringshims_get_formatted_str_length(double value)
 {
     char empty[1];
     return snprintf(empty, 0, "%0.*g", DBL_DECIMAL_DIG, value);
