@@ -1108,3 +1108,304 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
 
     }
 }
+
+// MARK: DiscreteFormatStyle conformance test
+
+@available(FoundationPreview 0.4, *)
+final class TestDurationUnitsDiscreteConformance : XCTestCase {
+    func testBasics() throws {
+        var style: Duration._UnitsFormatStyle
+        style = .units(fractionalPart: .hide(rounded: .down)).locale(Locale(identifier: "en_US"))
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(2))
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero.nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .zero.nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .zero)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-1).nextDown)
+
+
+        style.fractionalPartDisplay.roundingRule = .up
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(0))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .zero.nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero.nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .seconds(-1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-2))
+
+        style.fractionalPartDisplay.roundingRule = .towardZero
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(2))
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .seconds(-1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-2))
+
+        style.fractionalPartDisplay.roundingRule = .awayFromZero
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(0))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .zero.nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .zero.nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .zero)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-1).nextDown)
+
+        style.fractionalPartDisplay.roundingRule = .toNearestOrAwayFromZero
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .milliseconds(1500))
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .milliseconds(500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .milliseconds(1500))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .milliseconds(500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .milliseconds(500))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .milliseconds(-500))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .milliseconds(-500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .milliseconds(-1500))
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .milliseconds(-500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .milliseconds(-1500))
+
+        style.fractionalPartDisplay.roundingRule = .toNearestOrEven
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .milliseconds(1500))
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .milliseconds(500))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .milliseconds(500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .milliseconds(-500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .milliseconds(500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .milliseconds(-500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .milliseconds(500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .milliseconds(-500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .milliseconds(-500))
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .milliseconds(-1500))
+    }
+
+    func testEvaluation() {
+        func assertEvaluation(of style: Duration._UnitsFormatStyle,
+                              rounding roundingRules: [FloatingPointRoundingRule] = [.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven],
+                              in range: ClosedRange<Duration>,
+                              includes expectedExcerpts: [String]...,
+                              file: StaticString = #filePath,
+                              line: UInt = #line) {
+
+            for rule in roundingRules {
+                var style = style.locale(Locale(identifier: "en_US"))
+                style.fractionalPartDisplay.roundingRule = rule
+                verify(
+                    sequence: style.evaluate(from: range.lowerBound, to: range.upperBound).map(\.output),
+                    contains: expectedExcerpts,
+                    "lowerbound to upperbound, rounding \(rule)",
+                    file: file,
+                    line: line)
+
+                verify(
+                    sequence: style.evaluate(from: range.upperBound, to: range.lowerBound).map(\.output),
+                    contains: expectedExcerpts
+                        .reversed()
+                        .map { $0.reversed() },
+                    "upperbound to lowerbound, rounding \(rule)",
+                    file: file,
+                    line: line)
+            }
+        }
+
+
+        assertEvaluation(
+            of: .init(allowedUnits: [.minutes, .seconds], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
+            in: Duration.seconds(61).symmetricRange,
+            includes: [
+                "-1m 1s",
+                "-1m 0s",
+                "-0m 59s",
+                "-0m 58s",
+                "-0m 57s",
+                "-0m 56s",
+                "-0m 55s",
+            ],
+            [
+                "-0m 2s",
+                "-0m 1s",
+                "0m 0s",
+                "0m 1s",
+                "0m 2s",
+            ],
+            [
+                "0m 55s",
+                "0m 56s",
+                "0m 57s",
+                "0m 58s",
+                "0m 59s",
+                "1m 0s",
+                "1m 1s",
+            ])
+
+        assertEvaluation(
+            of: .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .hide),
+            in: Duration.seconds(120).symmetricRange,
+            includes: [
+                "-2m",
+                "-1m",
+                "-59s",
+                "-58s",
+                "-57s",
+                "-56s",
+                "-55s",
+            ],
+            [
+                "-2s",
+                "-1s",
+                "0s",
+                "1s",
+                "2s",
+            ],
+            [
+                "55s",
+                "56s",
+                "57s",
+                "58s",
+                "59s",
+                "1m",
+                "2m",
+            ])
+
+        assertEvaluation(
+            of: .init(allowedUnits: [.hours], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
+            in: Duration.seconds(3 * 3600).symmetricRange,
+            includes: [
+                "-3h",
+                "-2h",
+                "-1h",
+                "0h",
+                "1h",
+                "2h",
+                "3h",
+            ])
+
+        assertEvaluation(
+            of: .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1)),
+            in: Duration.seconds(120).symmetricRange,
+            includes: [
+                "-2.0m",
+                "-1.9m",
+                "-1.8m",
+                "-1.7m",
+                "-1.6m",
+                "-1.5m",
+                "-1.4m",
+                "-1.3m",
+                "-1.2m",
+                "-1.1m",
+                "-1.0m",
+                "-59.9s",
+                "-59.8s",
+                "-59.7s",
+                "-59.6s",
+                "-59.5s",
+                "-59.4s",
+                "-59.3s",
+                "-59.2s",
+                "-59.1s",
+                "-59.0s",
+                "-58.9s",
+            ],
+            [
+                "-1.1s",
+                "-1.0s",
+                "-0.9s",
+                "-0.8s",
+                "-0.7s",
+                "-0.6s",
+                "-0.5s",
+                "-0.4s",
+                "-0.3s",
+                "-0.2s",
+                "-0.1s",
+                "0.0s",
+                "0.1s",
+                "0.2s",
+                "0.3s",
+                "0.4s",
+                "0.5s",
+                "0.6s",
+                "0.7s",
+                "0.8s",
+                "0.9s",
+                "1.0s",
+                "1.1s",
+            ],
+            [
+                "58.9s",
+                "59.0s",
+                "59.1s",
+                "59.2s",
+                "59.3s",
+                "59.4s",
+                "59.5s",
+                "59.6s",
+                "59.7s",
+                "59.8s",
+                "59.9s",
+                "1.0m",
+                "1.1m",
+                "1.2m",
+                "1.3m",
+                "1.4m",
+                "1.5m",
+                "1.6m",
+                "1.7m",
+                "1.8m",
+                "1.9m",
+                "2.0m",
+            ])
+    }
+
+    func testRegressions() throws {
+        var style: Duration._UnitsFormatStyle
+
+        style = .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1, rounded: .toNearestOrAwayFromZero))
+
+        XCTAssertLessThanOrEqual(try XCTUnwrap(style.discreteInput(after: Duration(secondsComponent: -75, attosecondsComponent: -535173016509531840))), Duration(secondsComponent: -73, attosecondsComponent: -122099659011723263))
+
+        style = .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1))
+
+        XCTAssertLessThanOrEqual(try XCTUnwrap(style.discreteInput(after: Duration(secondsComponent: -63, attosecondsComponent: -0))), Duration(secondsComponent: -59, attosecondsComponent: -900000000000000000))
+    }
+
+    func testRandomSamples() throws {
+        let styles: [Duration._UnitsFormatStyle] = [
+            .init(allowedUnits: [.minutes, .seconds], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
+            .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .hide),
+            .init(allowedUnits: [.hours], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
+        ] + [FloatingPointRoundingRule.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven].flatMap { roundingRule in
+            [
+                .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1, rounded: roundingRule)),
+            ]
+        }
+
+
+        for style in styles {
+            try verifyDiscreteFormatStyleConformance(style, samples: 100, "\(style)")
+        }
+    }
+}
+
+extension Duration {
+    var symmetricRange: ClosedRange<Duration> {
+        (.zero - abs(self))...abs(self)
+    }
+}

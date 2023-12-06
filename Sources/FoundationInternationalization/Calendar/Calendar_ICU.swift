@@ -1360,10 +1360,12 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             if components.contains(.nanosecond) {
                 let curr0 = ucal_getMillis(ucalendar, &status)
                 let tmp = floor((goal - curr0) * 1.0e+6)
-                if tmp < Double(Int32.max) {
-                    dc.nanosecond = Int(tmp)
-                } else {
+                if tmp >= Double(Int32.max) {
                     dc.nanosecond = Int(Int32.max)
+                } else if tmp <= Double(Int32.min) {
+                    dc.nanosecond = Int(Int32.min)
+                } else {
+                    dc.nanosecond = Int(tmp)
                 }
             }
 
@@ -2160,6 +2162,45 @@ extension Calendar.Component {
         case .nanosecond: nil
         case .calendar: nil
         case .timeZone: nil
+        }
+    }
+
+    internal init?(_ icuFieldCode: UCalendarDateFields) {
+        switch icuFieldCode {
+        case UCAL_ERA:
+            self = .era
+        case UCAL_YEAR, UCAL_EXTENDED_YEAR:
+            self = .year
+        case UCAL_MONTH:
+            self = .month
+        case UCAL_WEEK_OF_YEAR:
+            self = .weekOfYear
+        case UCAL_WEEK_OF_MONTH:
+            self = .weekOfMonth
+        case UCAL_DATE, UCAL_DAY_OF_MONTH, UCAL_DAY_OF_YEAR:
+            self = .day
+        case UCAL_DAY_OF_WEEK:
+            self = .weekday
+        case UCAL_DAY_OF_WEEK_IN_MONTH:
+            self = .weekdayOrdinal
+        case UCAL_HOUR, UCAL_HOUR_OF_DAY:
+            self = .hour
+        case UCAL_MINUTE:
+            self = .minute
+        case UCAL_SECOND:
+            self = .second
+        case UCAL_ZONE_OFFSET:
+            self = .timeZone
+        case UCAL_YEAR_WOY:
+            self = .yearForWeekOfYear
+        case UCAL_IS_LEAP_MONTH:
+            if #available(FoundationPreview 0.4, *) {
+                self = .isLeapMonth
+            } else {
+                return nil
+            }
+        default:
+            return nil
         }
     }
 }

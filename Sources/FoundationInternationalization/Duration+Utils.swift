@@ -151,13 +151,3 @@ extension Duration {
 func abs(_ duration: Duration) -> Duration {
     duration < .zero ? Duration.zero - duration : duration
 }
-
-extension Duration {
-    var nextUp : Duration {
-        self + .init(secondsComponent: 0, attosecondsComponent: 1)
-    }
-
-    var nextDown: Duration {
-        self - .init(secondsComponent: 0, attosecondsComponent: 1)
-    }
-}

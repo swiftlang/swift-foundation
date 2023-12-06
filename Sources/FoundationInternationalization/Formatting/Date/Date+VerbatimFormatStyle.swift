@@ -137,3 +137,61 @@ extension Date.VerbatimFormatStyle : CustomConsumingRegexComponent {
         try parseStrategy.consuming(input, startingAt: index, in: bounds)
     }
 }
+
+// MARK: DiscreteFormatStyle Conformance
+
+@available(FoundationPreview 0.4, *)
+extension Date.VerbatimFormatStyle : DiscreteFormatStyle {
+    public func discreteInput(before input: Date) -> Date? {
+        guard let (bound, isIncluded) = bound(for: input, isLower: true) else {
+            return nil
+        }
+
+        return isIncluded ? bound.nextDown : bound
+    }
+
+    public func discreteInput(after input: Date) -> Date? {
+        guard let (bound, isIncluded) = bound(for: input, isLower: false) else {
+            return nil
+        }
+
+        return isIncluded ? bound.nextUp : bound
+    }
+
+    public func input(before input: Date) -> Date? {
+        let result = Calendar.nextAccuracyStep(for: input, direction: .backward)
+
+        return result < input ? result : nil
+    }
+
+    public func input(after input: Date) -> Date? {
+        let result = Calendar.nextAccuracyStep(for: input, direction: .forward)
+
+        return result > input ? result : nil
+    }
+
+    func bound(for input: Date, isLower: Bool) -> (bound: Date, includedInRangeOfInput: Bool)? {
+        var calendar = calendar
+        calendar.timeZone = timeZone
+        return calendar.bound(for: input, isLower: isLower, updateSchedule: ICUDateFormatter.DateFormatInfo.cachedUpdateSchedule(for: self))
+    }
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.VerbatimFormatStyle.Attributed : DiscreteFormatStyle {
+    public func discreteInput(before input: Date) -> Date? {
+        base.discreteInput(before: input)
+    }
+
+    public func discreteInput(after input: Date) -> Date? {
+        base.discreteInput(after: input)
+    }
+
+    public func input(before input: Date) -> Date? {
+        base.input(before: input)
+    }
+
+    public func input(after input: Date) -> Date? {
+        base.input(after: input)
+    }
+}

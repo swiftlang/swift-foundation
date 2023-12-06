@@ -263,7 +263,21 @@ final class ICUDateFormatter {
     }
 
     static func cachedFormatter(for format: Date.FormatStyle) -> ICUDateFormatter {
+        return cachedFormatter(for: .init(format))
+    }
 
+    static func cachedFormatter(for format: Date.VerbatimFormatStyle) -> ICUDateFormatter {
+        return cachedFormatter(for: .init(format))
+    }
+
+    // Returns a formatter to retrieve localized calendar symbols
+    static func cachedFormatter(for calendar: Calendar) -> ICUDateFormatter {
+        return cachedFormatter(for: .init(calendar))
+    }
+}
+
+extension ICUDateFormatter.DateFormatInfo {
+    init(_ format: Date.FormatStyle) {
         let calendarIdentifier = format.calendar.identifier
         let datePatternOverride: String?
 #if FOUNDATION_FRAMEWORK
@@ -276,8 +290,8 @@ final class ICUDateFormatter {
         datePatternOverride = nil
 #endif
 
-        let key = PatternCacheKey(localeIdentifier: format.locale.identifierCapturingPreferences, calendarIdentifier: format.calendar.identifier, symbols: format.symbols, datePatternOverride: datePatternOverride)
-        let pattern = patternCache.withLock { state in
+        let key = ICUDateFormatter.PatternCacheKey(localeIdentifier: format.locale.identifierCapturingPreferences, calendarIdentifier: format.calendar.identifier, symbols: format.symbols, datePatternOverride: datePatternOverride)
+        let pattern = ICUDateFormatter.patternCache.withLock { state in
             if let cachedPattern = state[key] {
                 return cachedPattern
             } else {
@@ -300,21 +314,261 @@ final class ICUDateFormatter {
             firstWeekday = format.calendar.firstWeekday
         }
 
-        let info = DateFormatInfo(localeIdentifier: format.locale.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
-
-        return cachedFormatter(for: info)
+        self.init(localeIdentifier: format.locale.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
     }
 
-    static func cachedFormatter(for format: Date.VerbatimFormatStyle) -> ICUDateFormatter {
-        let info = DateFormatInfo(localeIdentifier: format.locale?.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: format.calendar.identifier, firstWeekday: format.calendar.firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format.formatPattern)
-        return cachedFormatter(for: info)
+    init(_ format: Date.VerbatimFormatStyle) {
+        self.init(localeIdentifier: format.locale?.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: format.calendar.identifier, firstWeekday: format.calendar.firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: format.formatPattern)
     }
 
-    // Returns a formatter to retrieve localized calendar symbols
-    static func cachedFormatter(for calendar: Calendar) -> ICUDateFormatter {
+    // Returns the info for as formatter to retrieve localized calendar symbols
+    init(_ calendar: Calendar) {
         // Currently this always uses `.unknown` for capitalization. We should
-        // consider allowing customization with rdar://71815286 
-        let info = DateFormatInfo(localeIdentifier: calendar.locale?.identifier, timeZoneIdentifier: calendar.timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: "")
-        return cachedFormatter(for: info)
+        // consider allowing customization with rdar://71815286
+        self.init(localeIdentifier: calendar.locale?.identifier, timeZoneIdentifier: calendar.timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: "")
+    }
+}
+
+extension ICUDateFormatter.DateFormatInfo {
+    enum UpdateSchedule {
+        /// Update every `10^magnitude` nanoseconds starting from zero.
+        case nanoseconds(magnitude: Int)
+        /// Update at the bounds of all components in the set.
+        case components(Calendar.ComponentSet)
+
+        /// The empty update schedule, which requires no updates at all.
+        init() {
+            self = .components(.init())
+        }
+
+        /// Combine another schedule with this one.
+        ///
+        /// Merge schedules in a way that the minimal amount of `updateIntervals` are generated.
+        mutating func reduce(with other: Self) {
+            switch (self, other) {
+            case let (.nanoseconds(magnitude: a), .nanoseconds(magnitude: b)):
+                self = .nanoseconds(magnitude: min(a, b))
+            case (.nanoseconds, _):
+                break
+            case (_, .nanoseconds):
+                self = other
+            case let (.components(a), .components(b)):
+                let combination = a.union(b)
+
+                guard !combination.contains(.nanosecond) else {
+                    self = .nanoseconds(magnitude: 0)
+                    return
+                }
+
+                if combination.contains(.second) {
+                    self = .components(.second)
+                    return
+                }
+
+                // For larger components the bounds generally don't align so we have to
+                // collect multiple and try which produces the closest bound for a
+                // given combination of date and calendar. Firstly, eras start and end
+                // pretty much arbitrarily. We assume they are always aligned to full
+                // seconds, mostly for better performance.
+                var result = Calendar.ComponentSet()
+
+                if combination.contains(.era) {
+                    result.insert(.era)
+                }
+
+                // Everything from minute to day should have aligned bounds.
+                if combination.contains(.minute) {
+                    result.insert(.minute)
+                    self = .components(result)
+                    return
+                }
+                if combination.contains(.hour) {
+                    result.insert(.hour)
+                    self = .components(result)
+                    return
+                }
+                if combination.contains(.hour) {
+                    result.insert(.hour)
+                    self = .components(result)
+                    return
+                }
+                if combination.contains(.weekday) {
+                    result.insert(.weekday)
+                    self = .components(result)
+                    return
+                }
+                if combination.contains(.day) {
+                    result.insert(.day)
+                    self = .components(result)
+                    return
+                }
+                if combination.contains(.day) {
+                    result.insert(.day)
+                    self = .components(result)
+                    return
+                }
+
+                // Bounds might not be aligned for the following components. E.g. the
+                // end of the month can come before the end of the week.
+                result.formUnion(combination.intersection([.weekOfMonth, .weekOfYear, .month, .quarter, .year, .yearForWeekOfYear]))
+
+                self = .components(result)
+            }
+        }
+
+        /// The intervals at which updates need to be scheduled.
+        ///
+        /// E.g. the value `[(.month, 1), (.weekOfYear, 1)]` means to update at bounds of
+        /// months and weeks. A value of `[(.nanosecond, 100_000_000)]` demands updates
+        /// every tenth of a second, aligned to full seconds.
+        var updateIntervals: [(component: Calendar.Component, multitude: Int)] {
+            switch self {
+            case let .nanoseconds(magnitude: magnitude):
+                return [(.nanosecond, Int(pow(10, Double(magnitude)).nextUp))]
+            case let .components(components):
+                return components.set.map { ($0, 1) }
+            }
+        }
+    }
+
+    static var updateScheduleCache = LockedState<[Self: UpdateSchedule]>(initialState: [:])
+
+    static func cachedUpdateSchedule(for format: Date.VerbatimFormatStyle) -> UpdateSchedule {
+        return Self.updateScheduleCache.withLock { state in
+            let info = Self(format)
+            if let schedule = state[info] {
+                return schedule
+            } else {
+                let schedule = format.formatPattern.updateSchedule
+
+                state[info] = schedule
+                return schedule
+            }
+        }
+    }
+
+    static func cachedUpdateSchedule(for format: Date.FormatStyle) -> UpdateSchedule {
+        return Self.updateScheduleCache.withLock { state in
+            let info = Self(format)
+            if let schedule = state[info] {
+                return schedule
+            } else {
+                let schedule = format.symbols.updateSchedule
+
+                state[info] = schedule
+                return schedule
+            }
+        }
+    }
+}
+
+extension Date.FormatStyle.DateFieldCollection {
+    var updateSchedule: ICUDateFormatter.DateFormatInfo.UpdateSchedule {
+        if let magnitude = secondFraction.map({
+            switch $0 {
+            case let .fractional(length):
+                return 9 - length
+            case .milliseconds:
+                return 0
+            }}) {
+            return .nanoseconds(magnitude: magnitude)
+        }
+        if second != nil {
+            return .components(.second)
+        }
+
+        var schedule = ICUDateFormatter.DateFormatInfo.UpdateSchedule()
+
+        if era != nil {
+            schedule.reduce(with: .components(.era))
+        }
+        if year != nil {
+            schedule.reduce(with: .components(.year))
+        }
+        if quarter != nil {
+            schedule.reduce(with: .components(.quarter))
+        }
+        if month != nil {
+            schedule.reduce(with: .components(.month))
+        }
+        if let week {
+            if week == .weekOfMonth {
+                schedule.reduce(with: .components(.weekOfMonth))
+            } else {
+                schedule.reduce(with: .components(.weekOfYear))
+            }
+        }
+        if day != nil {
+            schedule.reduce(with: .components(.day))
+        }
+        if dayOfYear != nil {
+            schedule.reduce(with: .components(.day))
+        }
+        if weekday != nil {
+            schedule.reduce(with: .components(.weekday))
+        }
+        if dayPeriod != nil || hour != nil {
+            schedule.reduce(with: .components(.hour))
+        }
+        if minute != nil {
+            schedule.reduce(with: .components(.minute))
+        }
+        if timeZoneSymbol != nil {
+            schedule.reduce(with: .components(.timeZone))
+        }
+
+        return schedule
+    }
+}
+
+extension String {
+    /// Calculate the update schedule for an ICU date format pattern string.
+    fileprivate var updateSchedule: ICUDateFormatter.DateFormatInfo.UpdateSchedule {
+        // udat_toCalendarDateField may fail if the date format field doesn't
+        // have a calendar equivalent, but there is explicitly no stable error
+        // code, so we have to check at runtime what value corresponds to `nil`
+        let failureField = udat_toCalendarDateField(.init(CInt.max))
+
+        return self
+            .purgingStringLiterals()
+            .utf16
+            .map { udat_patternCharToDateFormatField($0) }
+            // chunked by equality
+            .reduce(into: [[UDateFormatField]]()) { result, next in
+                if var last = result.last, last.first == next {
+                    last.append(next)
+                    result[result.count - 1] = last
+                } else {
+                    result.append([next])
+                }
+            }
+            .reduce(into: ICUDateFormatter.DateFormatInfo.UpdateSchedule()) { schedule, fields in
+                guard let field = fields.first else {
+                    return
+                }
+
+                if field == .fractionalSecond {
+                    schedule.reduce(with: .nanoseconds(magnitude: 9 - fields.count))
+                } else {
+                    let calendarField = udat_toCalendarDateField(field)
+
+                    if calendarField != failureField,
+                       let component = Calendar.Component(calendarField) {
+                        schedule.reduce(with: .components(.init(single: component)))
+                    }
+                }
+            }
+    }
+
+    /// Remove sections marked with `'` from the string as required to purge string literals from
+    /// `Date/FormatString/rawFormat`.
+    ///
+    /// E.g.: `"'hello, it''s 'hh':'mm"` is turned into `"hhmm"`.
+    fileprivate func purgingStringLiterals() -> String {
+        self.split(separator: "'", omittingEmptySubsequences: false)
+            .enumerated()
+            .filter { offset, _ in offset.isMultiple(of: 2) }
+            .map(\.element)
+            .joined()
     }
 }

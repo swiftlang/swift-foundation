@@ -49,7 +49,7 @@ extension Duration {
         /// Units that a duration can be displayed as with `UnitsFormatStyle`.
         public struct Unit : Codable, Hashable, Sendable {
             // Sorted from largest to smallest
-            enum _Unit : Int, Codable, Hashable, Comparable {
+            enum _Unit : Int, Codable, Hashable, Comparable, CaseIterable {
                 static func < (lhs: Duration.UnitsFormatStyle.Unit._Unit, rhs: Duration.UnitsFormatStyle.Unit._Unit) -> Bool {
                     // It's more intuitive to represent comparison by the unit duration, i.e. .weeks > .hours
                     // But the raw value is ordered the other way; reverse the comparison
@@ -625,5 +625,131 @@ extension Duration.UnitsFormatStyle.Attributed {
         set {
             innerStyle[keyPath: key] = newValue
         }
+    }
+}
+
+// MARK: DiscreteFormatStyle Conformance
+
+@available(FoundationPreview 0.4, *)
+extension Duration.UnitsFormatStyle.Attributed : DiscreteFormatStyle {
+    public func discreteInput(before input: Duration) -> Duration? {
+        self.innerStyle.discreteInput(before: input)
+    }
+
+    public func discreteInput(after input: Duration) -> Duration? {
+        self.innerStyle.discreteInput(after: input)
+    }
+}
+
+@available(FoundationPreview 0.4, *)
+extension Duration.UnitsFormatStyle : DiscreteFormatStyle {
+    public func discreteInput(before input: Duration) -> Duration? {
+        let (bound, isIncluded) = self.bound(for: input, countingDown: true)
+
+        return isIncluded ? bound.nextDown : bound
+    }
+
+    public func discreteInput(after input: Duration) -> Duration? {
+        let (bound, isIncluded) = self.bound(for: input, countingDown: false)
+
+        return isIncluded ? bound.nextUp : bound
+    }
+
+    private func bound(for input: Duration, countingDown: Bool) -> (bound: Duration, includedInRangeOfInput: Bool) {
+        // Initially we determine the interval for the smallest unit that is used to
+        // format `input`. If `forceRoundingToFull` is true, that is because we are
+        // rounding `toNearestOr` and we are close to the point where `interval`
+        // changes.
+        let (interval, forceRoundingToFull) = interval(for: input,
+                                                       countingDown: countingDown,
+                                                       allowedUnits: self.allowedUnits)
+
+        // Thus, if `forceRoundingToFull` is true, we round `.towardZero`. E.g.
+        // if we can only show one unit and we're at -70 seconds, we format that
+        // as "1 minute". By rounding `.towardZero`, we get 60 seconds as the
+        // `unadjustedBound`, not 30 seconds as we would get for `toNearestOr`
+        // rounding.
+        let (unadjustedBound, includedInRangeOfInput) = Duration.bound(for: input,
+                                                                       in: interval,
+                                                                       countingDown: countingDown,
+                                                                       roundingRule: forceRoundingToFull ? .towardZero : self.fractionalPartDisplay.roundingRule)
+
+        // If we didn't `forceRoundingToFull`, we're done at this point. However,
+        // if we did, we determine the bound again, disallowing the unit that
+        // would just fit the `unadjustedBound` (in the example `.minute`), so
+        // we get the appropriate bound for the smaller unit, which would be
+        // 59.5 seconds in the example, rendered as "59 seconds".
+        if forceRoundingToFull {
+            let (bound, includedInRangeOfInput) = Duration.bound(for: unadjustedBound,
+                                                                    in: self.interval(for: unadjustedBound,
+                                                                                      countingDown: countingDown,
+                                                                                      allowedUnits: allowedUnits.filter({ Duration.interval(for: $0) < abs(unadjustedBound) })).duration,
+                                                                    countingDown: countingDown,
+                                                                    roundingRule: self.fractionalPartDisplay.roundingRule)
+
+            return (bound, includedInRangeOfInput)
+        } else {
+            return (unadjustedBound, includedInRangeOfInput)
+        }
+    }
+
+    private func interval(for input: Duration, countingDown: Bool, allowedUnits: Set<Unit>) -> (duration: Duration, forceRoundingToFull: Bool) {
+        let allowedUnits = Unit._Unit.allCases.filter({ allowedUnits.contains(.init(unit: $0)) }).map({ Unit(unit: $0) })
+
+        guard let smallestAllowedUnit = allowedUnits.last else {
+            return (.seconds(Int64.max), false)
+        }
+
+        var remainder = input
+        var visibleUnitLimit = self.maximumUnitCount ?? allowedUnits.count
+        var smallestInterval: Duration!
+        var forceRoundingToFull = false
+
+        let roundsToHalf = self.fractionalPartDisplay.roundingRule == .toNearestOrEven || self.fractionalPartDisplay.roundingRule == .toNearestOrAwayFromZero
+
+        for unit in allowedUnits {
+            guard visibleUnitLimit > 0 else {
+                break
+            }
+
+            let unitInterval = Duration.interval(for: unit)
+
+            let roundedRemainder = input.rounded(increment: Duration.interval(for: smallestAllowedUnit,
+                                                                       fractionalDigits: self.fractionalPartDisplay.maximumLength,
+                                                                       roundingIncrement: self.fractionalPartDisplay.roundingIncrement),
+                                          rule: self.fractionalPartDisplay.roundingRule)
+
+            guard unit == smallestAllowedUnit || unitInterval < abs(roundedRemainder) || unitInterval == abs(roundedRemainder) && (remainder < .zero) == countingDown else {
+                continue
+            }
+
+
+
+            var interval: Duration
+            if unit == smallestAllowedUnit || visibleUnitLimit == 1  {
+                interval = Duration.interval(for: unit, fractionalDigits: self.fractionalPartDisplay.maximumLength, roundingIncrement: self.fractionalPartDisplay.roundingIncrement)
+            } else {
+                interval = Duration.interval(for: unit)
+            }
+
+            if roundsToHalf && countingDown == (remainder > .zero) && abs(remainder) <= unitInterval + interval / 2 && unit != smallestAllowedUnit && visibleUnitLimit == 1 {
+                forceRoundingToFull = true
+            } else {
+                forceRoundingToFull = false
+            }
+
+            let value = roundedRemainder.rounded(increment: interval, rule: .towardZero)
+
+            remainder -= value
+
+            if value != .zero || self.zeroValueUnitsDisplay.length > 0 {
+                visibleUnitLimit -= 1
+            }
+
+            smallestInterval = interval
+        }
+
+
+        return (smallestInterval, forceRoundingToFull)
     }
 }
