@@ -1267,13 +1267,11 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             let r = numerator % denominator
             return r >= 0 ? r : r + denominator
         }
-        var g = remainder(numerator: e, denominator: p) / r
-        assert(g >= 0)
+        let g = remainder(numerator: e, denominator: p) / r
         let h = u * g + w
-        assert(h >= 0)
         func floorDivide(_ numerator: Int, _ denominator: Int) -> Int {
             return (numerator >= 0) ?
-                numerator / denominator : ((numerator + 1) / denominator) - 1;
+                numerator / denominator : ((numerator + 1) / denominator) - 1
         }
         let day = floorDivide((h % s), u)  + 1 // day of month
         let month = ((floorDivide(h, s) + m) % n) + 1
