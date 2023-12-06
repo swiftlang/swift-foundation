@@ -22,7 +22,13 @@ package import FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 internal final class ICURelativeDateFormatter {
-
+    struct Signature : Hashable {
+        let localeIdentifier: String
+        let numberFormatStyle: UNumberFormatStyle.RawValue?
+        let relativeDateStyle: UDateRelativeDateTimeFormatterStyle.RawValue
+        let context: UDisplayContext.RawValue
+    }
+    
     static let sortedAllowedComponents : [Calendar.Component] = [ .year, .month, .weekOfMonth, .day, .hour, .minute, .second ]
 
     static let componentsToURelativeDateUnit : [Calendar.Component: URelativeDateTimeUnit] = [
@@ -37,20 +43,20 @@ internal final class ICURelativeDateFormatter {
 
     let uformatter: OpaquePointer
 
-    internal static let cache = FormatterCache<AnyHashable, ICURelativeDateFormatter?>()
+    internal static let cache = FormatterCache<Signature, ICURelativeDateFormatter?>()
 
-    private init?(uNumberFormatStyle: UNumberFormatStyle?, uRelDateStyle: UDateRelativeDateTimeFormatterStyle, locale: Locale, context: UDisplayContext) {
+    private init?(signature: Signature) {
         var status = U_ZERO_ERROR
         let numberFormat: UnsafeMutablePointer<UNumberFormat?>?
-        if let uNumberFormatStyle {
+        if let numberFormatStyle = signature.numberFormatStyle {
             // The uformatter takes ownership of this after we pass it to the open call below
-            numberFormat = unum_open(uNumberFormatStyle, nil, 0, locale.identifier, nil, &status)
+            numberFormat = unum_open(UNumberFormatStyle(rawValue: numberFormatStyle), nil, 0, signature.localeIdentifier, nil, &status)
             // If status is not a success, simply use nil
         } else {
             numberFormat = nil
         }
 
-        let result = ureldatefmt_open(locale.identifier, numberFormat, uRelDateStyle, context, &status)
+        let result = ureldatefmt_open(signature.localeIdentifier, numberFormat, UDateRelativeDateTimeFormatterStyle(rawValue: signature.relativeDateStyle), UDisplayContext(rawValue: signature.context), &status)
         guard let result, status.isSuccess else { return nil }
         uformatter = result
     }
@@ -73,9 +79,10 @@ internal final class ICURelativeDateFormatter {
         }
     }
 
-    internal static func formatterCreateIfNeeded(format: Date.RelativeFormatStyle) -> ICURelativeDateFormatter {
-        let formatter = Self.cache.formatter(for: format) {
-            ICURelativeDateFormatter(uNumberFormatStyle: format.unitsStyle.icuNumberFormatStyle, uRelDateStyle: format.unitsStyle.icuRelativeDateStyle, locale: format.locale, context: format.capitalizationContext.icuContext)
+    internal static func formatter(for style: Date.RelativeFormatStyle) -> ICURelativeDateFormatter {
+        let signature = Signature(localeIdentifier: style.locale.identifier, numberFormatStyle: style.unitsStyle.icuNumberFormatStyle?.rawValue, relativeDateStyle: style.unitsStyle.icuRelativeDateStyle.rawValue, context: style.capitalizationContext.icuContext.rawValue)
+        let formatter = Self.cache.formatter(for: signature) {
+            ICURelativeDateFormatter(signature: signature)
         }
 
         return formatter!

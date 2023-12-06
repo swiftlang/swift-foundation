@@ -26,6 +26,9 @@ extension Date {
         public var timeZone: TimeZone
         public var calendar: Calendar
 
+        // Internal
+        internal var symbols =  Date.FormatStyle.DateFieldCollection()
+
         /// Creates a new `FormatStyle` with the given configurations.
         /// - Parameters:
         ///   - date: The style for formatting the date part of the given date pairs. Note that if `.omitted` is specified, but the date interval spans more than one day, a locale-specific fallback will be used.
@@ -53,19 +56,7 @@ extension Date {
         // MARK: - FormatStyle conformance
 
         public func format(_ v: Range<Date>) -> String {
-            let formatter = Self.cache.formatter(for: self) {
-                var template = symbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
-
-                if template.isEmpty {
-                    let defaultSymbols = Date.FormatStyle.DateFieldCollection()
-                        .collection(date: .numeric)
-                        .collection(time: .shortened)
-                    template = defaultSymbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
-                }
-
-                return ICUDateIntervalFormatter(locale: locale, calendar: calendar, timeZone: timeZone, dateTemplate: template)
-            }
-            return formatter.string(from: v)
+            ICUDateIntervalFormatter.formatter(for: self).string(from: v)
         }
 
         public func locale(_ locale: Locale) -> Self {
@@ -73,10 +64,6 @@ extension Date {
             new.locale = locale
             return new
         }
-
-        // Internal
-        private var symbols =  Date.FormatStyle.DateFieldCollection()
-        private static let cache = FormatterCache<Self, ICUDateIntervalFormatter>()
     }
 }
 

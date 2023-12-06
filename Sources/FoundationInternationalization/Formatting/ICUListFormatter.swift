@@ -24,14 +24,22 @@ package import FoundationICU
 internal final class ICUListFormatter {
     let uformatter: OpaquePointer
 
-    internal static let cache = FormatterCache<AnyHashable, ICUListFormatter>()
+    struct Signature : Hashable {
+        let localeIdentifier: String
+        let listType: Int // format.listType.rawValue
+        let width: Int // format.width.rawValue
+    }
 
-    static let uListFormatterTypes: [UListFormatterType] = [ .and, .or, .units ]
-    static let uListFormatterWidths: [UListFormatterWidth] = [ .wide, .short, .narrow ]
+    internal static let cache = FormatterCache<Signature, ICUListFormatter>()
 
-    private init(locale: Locale, type: UListFormatterType, width: UListFormatterWidth) {
+    private init(signature: Signature) {
         var status = U_ZERO_ERROR
-        let result = ulistfmt_openForType(locale.identifier, type, width, &status)
+        let uListFormatterTypes: [UListFormatterType] = [ .and, .or, .units ]
+        let uListFormatterWidths: [UListFormatterWidth] = [ .wide, .short, .narrow ]
+        
+        let type = uListFormatterTypes[signature.listType]
+        let width = uListFormatterWidths[signature.width]
+        let result = ulistfmt_openForType(signature.localeIdentifier, type, width, &status)
         guard let result, status.isSuccess else {
             preconditionFailure("Unable to create list formatter: \(status.rawValue)")
         }
@@ -68,11 +76,11 @@ internal final class ICUListFormatter {
         return result ?? ""
     }
 
-    internal static func formatterCreateIfNeeded<Style, Base>(format: ListFormatStyle<Style, Base>) -> ICUListFormatter {
-        let formatter = Self.cache.formatter(for: format) {
-            ICUListFormatter(locale: format.locale, type: uListFormatterTypes[format.listType.rawValue], width: uListFormatterWidths[format.width.rawValue])
+    internal static func formatter<Style, Base>(for style: ListFormatStyle<Style, Base>) -> ICUListFormatter {
+        let signature = Signature(localeIdentifier: style.locale.identifier, listType: style.listType.rawValue, width: style.width.rawValue)
+        let formatter = Self.cache.formatter(for: signature) {
+            ICUListFormatter(signature: signature)
         }
         return formatter
     }
-
 }

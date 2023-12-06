@@ -303,4 +303,28 @@ final class DateRelativeFormatStyleTests: XCTestCase {
         _verifyStyle(725759999.0, relativeTo: 645019200.0, expected: "in 2 years")
 
     }
+    
+    func testAutoupdatingCurrentChangesFormatResults() {
+        let locale = Locale.autoupdatingCurrent
+        let date = Date.now + 3600
+        
+        // Get a formatted result from es-ES
+        var prefs = LocalePreferences()
+        prefs.languages = ["es-ES"]
+        prefs.locale = "es_ES"
+        LocaleCache.cache.resetCurrent(to: prefs)
+        let formattedSpanish = date.formatted(.relative(presentation: .named).locale(locale))
+        
+        // Get a formatted result from en-US
+        prefs.languages = ["en-US"]
+        prefs.locale = "en_US"
+        LocaleCache.cache.resetCurrent(to: prefs)
+        let formattedEnglish = date.formatted(.relative(presentation: .named).locale(locale))
+        
+        // Reset to current preferences before any possibility of failing this test
+        LocaleCache.cache.reset()
+
+        // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
+        XCTAssertNotEqual(formattedSpanish, formattedEnglish)
+    }
 }

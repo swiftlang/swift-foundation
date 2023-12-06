@@ -204,4 +204,27 @@ final class DateIntervalFormatStyleTests: XCTestCase {
         }
     }
 
+    func testAutoupdatingCurrentChangesFormatResults() {
+        let locale = Locale.autoupdatingCurrent
+        let range = Date.now..<(Date.now + 3600)
+        
+        // Get a formatted result from es-ES
+        var prefs = LocalePreferences()
+        prefs.languages = ["es-ES"]
+        prefs.locale = "es_ES"
+        LocaleCache.cache.resetCurrent(to: prefs)
+        let formattedSpanish = range.formatted(.interval.locale(locale))
+        
+        // Get a formatted result from en-US
+        prefs.languages = ["en-US"]
+        prefs.locale = "en_US"
+        LocaleCache.cache.resetCurrent(to: prefs)
+        let formattedEnglish = range.formatted(.interval.locale(locale))
+        
+        // Reset to current preferences before any possibility of failing this test
+        LocaleCache.cache.reset()
+
+        // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
+        XCTAssertNotEqual(formattedSpanish, formattedEnglish)
+    }
 }

@@ -14,6 +14,15 @@
 import TestSupport
 #endif
 
+#if canImport(FoundationInternationalization)
+@testable import FoundationEssentials
+@testable import FoundationInternationalization
+#endif
+
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#endif
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 class ListFormatStyleTests : XCTestCase {
     func test_orList() {
@@ -55,4 +64,28 @@ class ListFormatStyleTests : XCTestCase {
         let _ = [1, 2].formatted(.list(memberStyle: .number, type: .or, width: .standard))
     }
 #endif
+    
+    func testAutoupdatingCurrentChangesFormatResults() {
+        let locale = Locale.autoupdatingCurrent
+        let list = ["one", "two", "three", "four"]
+        
+        // Get a formatted result from es-ES
+        var prefs = LocalePreferences()
+        prefs.languages = ["es-ES"]
+        prefs.locale = "es_ES"
+        LocaleCache.cache.resetCurrent(to: prefs)
+        let formattedSpanish = list.formatted(.list(type: .and).locale(locale))
+        
+        // Get a formatted result from en-US
+        prefs.languages = ["en-US"]
+        prefs.locale = "en_US"
+        LocaleCache.cache.resetCurrent(to: prefs)
+        let formattedEnglish = list.formatted(.list(type: .and).locale(locale))
+        
+        // Reset to current preferences before any possibility of failing this test
+        LocaleCache.cache.reset()
+
+        // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
+        XCTAssertNotEqual(formattedSpanish, formattedEnglish)
+    }
 }
