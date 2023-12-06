@@ -34,6 +34,7 @@
 #define _UUID_UUID_H
 
 #include "_CShimsTargetConditionals.h"
+#include "_CShimsMacros.h"
 
 #if TARGET_OS_MAC
 #include <sys/_types.h>
@@ -60,23 +61,23 @@ typedef __darwin_uuid_string_t    uuid_string_t;
 extern "C" {
 #endif
 
-void uuid_clear(uuid_t uu);
+INTERNAL void uuid_clear(uuid_t uu);
 
-int uuid_compare(const uuid_t uu1, const uuid_t uu2);
+INTERNAL int uuid_compare(const uuid_t uu1, const uuid_t uu2);
 
-void uuid_copy(uuid_t dst, const uuid_t src);
+INTERNAL void uuid_copy(uuid_t dst, const uuid_t src);
 
-void uuid_generate(uuid_t out);
-void uuid_generate_random(uuid_t out);
-void uuid_generate_time(uuid_t out);
+INTERNAL void uuid_generate(uuid_t out);
+INTERNAL void uuid_generate_random(uuid_t out);
+INTERNAL void uuid_generate_time(uuid_t out);
 
-int uuid_is_null(const uuid_t uu);
+INTERNAL int uuid_is_null(const uuid_t uu);
 
-int uuid_parse(const uuid_string_t in, uuid_t uu);
+INTERNAL int uuid_parse(const uuid_string_t in, uuid_t uu);
 
-void uuid_unparse(const uuid_t uu, uuid_string_t out);
-void uuid_unparse_lower(const uuid_t uu, uuid_string_t out);
-void uuid_unparse_upper(const uuid_t uu, uuid_string_t out);
+INTERNAL void uuid_unparse(const uuid_t uu, uuid_string_t out);
+INTERNAL void uuid_unparse_lower(const uuid_t uu, uuid_string_t out);
+INTERNAL void uuid_unparse_upper(const uuid_t uu, uuid_string_t out);
 
 #ifdef __cplusplus
 }
