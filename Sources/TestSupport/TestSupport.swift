@@ -203,3 +203,27 @@ public typealias ComparableComparator = FoundationEssentials.ComparableComparato
 public typealias ComparisonResult = FoundationEssentials.ComparisonResult
 
 #endif // FOUNDATION_FRAMEWORK
+
+/// ICU uses `\u{202f}` and `\u{020f}` interchangeably
+/// This function compares two string and ignoring the separator.
+public func XCTAssertEqualIgnoreSeparator(_ lhs: String, _ rhs: String, file: StaticString = #file, line: UInt = #line) {
+    return XCTAssertEqual(
+        lhs.replacingOccurrences(of: "\u{202f}", with: " "),
+        rhs.replacingOccurrences(of: "\u{202f}", with: " "),
+        file: file,
+        line: line
+    )
+}
+
+public func XCTAssertEqualIgnoreSeparator(_ lhs: AttributedString, _ rhs: AttributedString, file: StaticString = #file, line: UInt = #line) {
+    func sanitize(_ string: AttributedString) -> AttributedString {
+        var str = string
+        while let idx = str.characters.firstIndex(of: "\u{202f}") {
+            str.characters.replaceSubrange(
+                idx ..< str.characters.index(after: idx),
+                with: CollectionOfOne(" "))
+        }
+        return str
+    }
+    return XCTAssertEqual(sanitize(lhs), sanitize(rhs), file: file, line: line)
+}

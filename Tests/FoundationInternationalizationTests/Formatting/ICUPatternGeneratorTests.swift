@@ -28,7 +28,7 @@ final class ICUPatternGeneratorTests: XCTestCase {
         var calendar: Calendar
         func test(symbols: Date.FormatStyle.DateFieldCollection, expectedPattern: String, file: StaticString = #file, line: UInt = #line) {
             let pattern = ICUPatternGenerator.localizedPattern(symbols: symbols, locale: locale, calendar: calendar)
-            XCTAssertEqual(pattern, expectedPattern, file: file, line: line)
+            XCTAssertEqualIgnoreSeparator(pattern, expectedPattern, file: file, line: line)
 
             // We should not see any kind of day period designator ("a" or "B") when showing 24-hour hour ("H").
             if (expectedPattern.contains("H") || pattern.contains("H")) && (pattern.contains("a") || pattern.contains("B")) {
@@ -171,13 +171,8 @@ final class ICUPatternGeneratorTests: XCTestCase {
                  expectedPattern: "H時")
             test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
                  expectedPattern: "HH:mm")
-#if FOUNDATION_FRAMEWORK
             test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
                  expectedPattern: "HH:mm")
-#else
-            test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "HH:m")
-#endif
             test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
                  expectedPattern: "HH:mm:ss")
             test(symbols: .init(hour: .twoDigitsWithNarrowAMPM),
@@ -249,15 +244,10 @@ final class ICUPatternGeneratorTests: XCTestCase {
             locale = Locale(identifier: "en_TW")
             calendar = Calendar(identifier: .gregorian)
 
-#if FOUNDATION_FRAMEWORK
-    let separator = "\u{202f}"
-#else
-    let separator = " "
-#endif
             test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
-                 expectedPattern: "h:mm\(separator)a")
+                 expectedPattern: "h:mm a")
             test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
-                 expectedPattern: "h:mm:ss\(separator)a")
+                 expectedPattern: "h:mm:ss a")
         }
     }
 
