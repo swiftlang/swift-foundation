@@ -392,15 +392,15 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     func firstInstant(of unit: Calendar.Component, at date: Date) -> Date {
         var startAtUnit = unit
         let monthBasedComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday]
-        let allComponents: Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
-        var dc: DateComponents
-
+        let weekBasedComponents: Calendar.ComponentSet = [.era, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .hour, .minute, .second, .nanosecond ]
+        let relevantComponents: Calendar.ComponentSet
         if startAtUnit == .yearForWeekOfYear || startAtUnit == .weekOfYear || startAtUnit == .weekOfMonth {
-            dc = dateComponents(allComponents, from: date, in: timeZone)
+            relevantComponents = weekBasedComponents
         } else {
-            dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
+            relevantComponents = monthBasedComponents
         }
 
+        var dc = dateComponents(relevantComponents, from: date, in: timeZone)
         // For these units, we will adjust which unit to start at then proceed to second check
         switch startAtUnit {
         case .quarter:
@@ -420,19 +420,17 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         case .weekOfMonth, .weekOfYear: /* kCFCalendarUnitWeek_Deprecated */
             // reduce to first day of week, then reduce the rest of the day
             let updatedDate = self.date(from: dc)!
-            let updatedDC = self.dateComponents(allComponents, from: updatedDate, in: timeZone)
 
-            var dow = updatedDC.weekday!
-            var work = date
+            var dow = dateComponent(.weekday, from: updatedDate)
+            var work = updatedDate
             // FIXME: Add a fail-safe for searching functions to prevent infinite loop
             while dow != firstWeekday {
                 work = add(.day, to: work, amount: -3, inTimeZone: timeZone)
                 work = add(.day, to: work, amount: 2, inTimeZone: timeZone)
-                let workDC = dateComponents(allComponents, from: work, in: timeZone)
-                dow = workDC.weekday!
-                dc = workDC
-            }
+                dow = dateComponent(.weekday, from: work)
 
+            }
+            dc = dateComponents(relevantComponents, from: work)
             startAtUnit = .day
 
         default:
@@ -476,21 +474,21 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
 
         let updatedDate = self.date(from: dc)!
-        let newDC = self.dateComponents(allComponents, from: updatedDate, in: timeZone)
 
         let start: Date
         if startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal {
-            let targetDay = newDC.day!
+            let targetDay = dateComponent(.day, from: updatedDate)
             var currentDay = targetDay
-            var udate: Date
+            var udate = updatedDate
             // FIXME: Add a fail-safe for searching functions to prevent infinite loop
+            var prev: Date
             repeat {
-                udate = self.date(from: newDC)!
-                udate = self.add(.second, to: udate, amount: -1, inTimeZone: timeZone)
+                prev = udate
+                udate = self.add(.second, to: prev, amount: -1, inTimeZone: timeZone)
                 currentDay = dateComponent(.day, from: udate)
             } while targetDay == currentDay
 
-            start = udate
+            start = prev
         } else {
             start = updatedDate
         }

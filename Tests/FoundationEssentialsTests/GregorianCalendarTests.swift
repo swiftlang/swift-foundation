@@ -646,4 +646,135 @@ final class GregorianCalendarTests : XCTestCase {
         test(.minute, in: .month, for: date, expected: 16144)
         test(.minute, in: .hour, for: date, expected: 4)
     }
+
+    func testStartOf() {
+        let firstWeekday = 2
+        let minimumDaysInFirstWeek = 4
+        let timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        func test(_ unit: Calendar.Component, at date: Date, expected: Date, file: StaticString = #file, line: UInt = #line) {
+            let new = gregorianCalendar.start(of: unit, at: date)!
+            XCTAssertEqual(new, expected, file: file, line: line)
+        }
+
+        var date: Date
+        date = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01T00:00:00-0800 (1996-01-01T08:00:00Z)
+        test(.hour, at: date, expected: date)
+        test(.day, at: date, expected: date)
+        test(.month, at: date, expected: date)
+        test(.year, at: date, expected: date)
+        test(.yearForWeekOfYear, at: date, expected: date)
+        test(.weekOfYear, at: date, expected: date)
+
+        date = Date(timeIntervalSince1970: 845121787.0) // 1996-10-12T05:03:07-0700 (1996-10-12T12:03:07Z)
+        test(.second, at: date, expected: Date(timeIntervalSince1970: 845121787.0)) // expect: 1996-10-12 12:03:07 +0000
+        test(.minute, at: date, expected: Date(timeIntervalSince1970: 845121780.0)) // expect: 1996-10-12 12:03:00 +0000
+        test(.hour, at: date, expected: Date(timeIntervalSince1970: 845121600.0)) // expect: 1996-10-12 12:00:00 +0000
+        test(.day, at: date, expected: Date(timeIntervalSince1970: 845107200.0)) // expect: 1996-10-12 08:00:00 +0000
+        test(.month, at: date, expected: Date(timeIntervalSince1970: 844156800.0)) // expect: 1996-10-01 08:00:00 +0000
+        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 844675200.0)) // expect: 1996-10-07 08:00:00 +0000
+        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 844675200.0)) // expect: 1996-10-07 08:00:00 +0000
+        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 845107200.0)) // expect: 1996-10-12 08:00:00 +0000
+        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844156800.0)) // expect: 1996-10-01 08:00:00 +0000
+    }
+
+    func testStartOf_DST() {
+        let firstWeekday = 2
+        let minimumDaysInFirstWeek = 4
+        let timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        func test(_ unit: Calendar.Component, at date: Date, expected: Date, file: StaticString = #file, line: UInt = #line) {
+            let new = gregorianCalendar.start(of: unit, at: date)!
+            XCTAssertEqual(new, expected, file: file, line: line)
+        }
+
+        var date: Date
+        date = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01T00:00:00-0800 (1996-01-01T08:00:00Z)
+        test(.hour, at: date, expected: date)
+        test(.day, at: date, expected: date)
+        test(.month, at: date, expected: date)
+        test(.year, at: date, expected: date)
+        test(.yearForWeekOfYear, at: date, expected: date)
+        test(.weekOfYear, at: date, expected: date)
+
+        date = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07 09:03:07 +0000
+        test(.second, at: date, expected: Date(timeIntervalSince1970: 828867787.0)) // expect: 1996-04-07 09:03:07 +0000
+        test(.minute, at: date, expected: Date(timeIntervalSince1970: 828867780.0)) // expect: 1996-04-07 09:03:00 +0000
+        test(.hour, at: date, expected: Date(timeIntervalSince1970: 828867600.0)) // expect: 1996-04-07 09:00:00 +0000
+        test(.day, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
+        test(.month, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
+        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+
+        date = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07 10:03:07 +0000
+        test(.second, at: date, expected: Date(timeIntervalSince1970: 828871387.0)) // expect: 1996-04-07 10:03:07 +0000
+        test(.minute, at: date, expected: Date(timeIntervalSince1970: 828871380.0)) // expect: 1996-04-07 10:03:00 +0000
+        test(.hour, at: date, expected: Date(timeIntervalSince1970: 828871200.0)) // expect: 1996-04-07 10:00:00 +0000
+        test(.day, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
+        test(.month, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
+        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+
+        date = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07 11:03:07 +0000
+        test(.second, at: date, expected: Date(timeIntervalSince1970: 828874987.0)) // expect: 1996-04-07 11:03:07 +0000
+        test(.minute, at: date, expected: Date(timeIntervalSince1970: 828874980.0)) // expect: 1996-04-07 11:03:00 +0000
+        test(.hour, at: date, expected: Date(timeIntervalSince1970: 828874800.0)) // expect: 1996-04-07 11:00:00 +0000
+        test(.day, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
+        test(.month, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 828864000.0)) // expect: 1996-04-07 08:00:00 +0000
+        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 828345600.0)) // expect: 1996-04-01 08:00:00 +0000
+
+        date = Date(timeIntervalSince1970: 846414187.0) // 1996-10-27 11:03:07 +0000
+        test(.second, at: date, expected: Date(timeIntervalSince1970: 846414187.0)) // expect: 1996-10-27 11:03:07 +0000
+        test(.minute, at: date, expected: Date(timeIntervalSince1970: 846414180.0)) // expect: 1996-10-27 11:03:00 +0000
+        test(.hour, at: date, expected: Date(timeIntervalSince1970: 846414000.0)) // expect: 1996-10-27 11:00:00 +0000
+        test(.day, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
+        test(.month, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
+        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
+        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
+        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
+        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
+
+        date = Date(timeIntervalSince1970: 846410587.0) // 1996-10-27 10:03:07 +0000
+        test(.second, at: date, expected: Date(timeIntervalSince1970: 846410587.0)) // expect: 1996-10-27 10:03:07 +0000
+        test(.minute, at: date, expected: Date(timeIntervalSince1970: 846410580.0)) // expect: 1996-10-27 10:03:00 +0000
+        test(.hour, at: date, expected: Date(timeIntervalSince1970: 846410400.0)) // expect: 1996-10-27 10:00:00 +0000
+        test(.day, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
+        test(.month, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
+        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
+        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
+        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
+        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
+
+        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27 09:03:07 +0000
+        test(.second, at: date, expected: Date(timeIntervalSince1970: 846406987.0)) // expect: 1996-10-27 09:03:07 +0000
+        test(.minute, at: date, expected: Date(timeIntervalSince1970: 846406980.0)) // expect: 1996-10-27 09:03:00 +0000
+        test(.hour, at: date, expected: Date(timeIntervalSince1970: 846406800.0)) // expect: 1996-10-27 09:00:00 +0000
+        test(.day, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
+        test(.month, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
+        test(.year, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.yearForWeekOfYear, at: date, expected: Date(timeIntervalSince1970: 820483200.0)) // expect: 1996-01-01 08:00:00 +0000
+        test(.weekOfYear, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
+        test(.weekOfMonth, at: date, expected: Date(timeIntervalSince1970: 845881200.0)) // expect: 1996-10-21 07:00:00 +0000
+        test(.weekday, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
+        test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
+    }
 }

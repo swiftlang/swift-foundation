@@ -1467,6 +1467,13 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Helpers
 
+    // Exposed for testing
+    internal func startOf(of unit: Calendar.Component, at: Date) -> Date? {
+        lock.withLock { _ in
+            _locked_start(of: unit, at: at)
+        }
+    }
+
     private func _locked_start(of unit: Calendar.Component, at: Date) -> Date? {
         // This shares some magic numbers with _locked_dateInterval, but the clarity at the call site of using only the start date vs needing the interval (plus the performance benefit of not calculating it if we don't need it) makes the duplication worth it.
         let capped = at.capped
