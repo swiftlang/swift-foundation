@@ -379,7 +379,12 @@ final class PredicateTests: XCTestCase {
         )
     }
 
+    #if FOUNDATION_FRAMEWORK
     func testNested() {
+        guard #available(FoundationPreview 0.3, *) else {
+            throw XCTSkip("This test is not available on this OS version")
+        }
+        
         let predicateA = Predicate<Object> {
             PredicateExpressions.build_Equal(
                 lhs: PredicateExpressions.build_KeyPath(
@@ -413,4 +418,5 @@ final class PredicateTests: XCTestCase {
         XCTAssertFalse(try predicateB.evaluate(Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         XCTAssertFalse(try predicateB.evaluate(Object(a: 4, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
     }
+    #endif
 }

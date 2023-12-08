@@ -24,7 +24,7 @@ package import SwiftSyntaxBuilder
 // A list of all functions supported by Predicate itself, any other functions called will be diagnosed as an error
 // This allows for checking the function name, the number of arguments, and the argument labels, but the types of the arguments will need to be validated by the post-expansion type checking pass
 // The trailingClosure parameter indicates whether the final argument is a closure and therefore supports dropping the final argument label in favor of a trailing closure
-private let knownSupportedFunctions: Set<FunctionStructure> = [
+private var _knownSupportedFunctions: Set<FunctionStructure> = [
     FunctionStructure("contains", arguments: [.unlabeled]),
     FunctionStructure("contains", arguments: [.closure(labeled: "where")]),
     FunctionStructure("allSatisfy", arguments: [.closure(labeled: nil)]),
@@ -37,9 +37,18 @@ private let knownSupportedFunctions: Set<FunctionStructure> = [
     FunctionStructure("max", arguments: []),
     FunctionStructure("localizedStandardContains", arguments: [.unlabeled]),
     FunctionStructure("localizedCompare", arguments: [.unlabeled]),
-    FunctionStructure("caseInsensitiveCompare", arguments: [.unlabeled]),
-    FunctionStructure("evaluate", arguments: [.pack(labeled: nil)])
+    FunctionStructure("caseInsensitiveCompare", arguments: [.unlabeled])
 ]
+
+private var knownSupportedFunctions: Set<FunctionStructure> {
+    #if FOUNDATION_FRAMEWORK
+    var result = _knownSupportedFunctions
+    result.insert(FunctionStructure("evaluate", arguments: [.pack(labeled: nil)]))
+    return result
+    #else
+    _knownSupportedFunctions
+    #endif
+}
 
 private let supportedFunctionSuggestions: [FunctionStructure : FunctionStructure] = [
     FunctionStructure("hasPrefix", arguments: [.unlabeled]) : FunctionStructure("starts", arguments: ["with"]),

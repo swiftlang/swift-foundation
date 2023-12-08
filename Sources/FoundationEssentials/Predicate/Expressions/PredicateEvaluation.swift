@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     @available(FoundationPreview 0.3, *)
@@ -65,3 +66,4 @@ extension PredicateExpressions.PredicateEvaluate : Codable where Condition : Cod
 
 @available(FoundationPreview 0.3, *)
 extension PredicateExpressions.PredicateEvaluate : Sendable where Condition : Sendable, repeat each Input : Sendable {}
+#endif

@@ -534,6 +534,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
+    #if FOUNDATION_FRAMEWORK
     func testEvaluate() {
         AssertPredicateExpansion(
             """
@@ -581,6 +582,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """
         )
     }
+    #endif
     
     func testDiagnoseUnsupportedFunction() {
         AssertPredicateExpansion(
