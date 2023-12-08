@@ -20,26 +20,25 @@ import FoundationEssentials
 package import FoundationICU
 #endif
 
-final class ICUDateIntervalFormatter : Hashable {
-    let locale: Locale
-    let calendar: Calendar
-    let timeZone: TimeZone
-    let dateTemplate: String
+final class ICUDateIntervalFormatter {
+    struct Signature : Hashable {
+        let localeComponents: Locale.Components
+        let calendarIdentifier: Calendar.Identifier
+        let timeZoneIdentifier: String
+        let dateTemplate: String
+    }
+    
+    internal static let cache = FormatterCache<Signature, ICUDateIntervalFormatter>()
 
     let uformatter: OpaquePointer // UDateIntervalFormat
 
-    init(locale: Locale, calendar: Calendar, timeZone: TimeZone, dateTemplate: String) {
-        self.locale = locale
-        self.calendar = calendar
-        self.timeZone = timeZone
-        self.dateTemplate = dateTemplate
-
-        var comps = Locale.Components(locale: locale)
-        comps.calendar = calendar.identifier
+    private init(signature: Signature) {
+        var comps = signature.localeComponents
+        comps.calendar = signature.calendarIdentifier
         let id = comps.icuIdentifier
 
-        let tz16 = Array(timeZone.identifier.utf16)
-        let dateTemplate16 = Array(dateTemplate.utf16)
+        let tz16 = Array(signature.timeZoneIdentifier.utf16)
+        let dateTemplate16 = Array(signature.dateTemplate.utf16)
 
         var status = U_ZERO_ERROR
         uformatter = tz16.withUnsafeBufferPointer { tz in
@@ -71,14 +70,23 @@ final class ICUDateIntervalFormatter : Hashable {
         return ""
     }
 
-    static func == (lhs: ICUDateIntervalFormatter, rhs: ICUDateIntervalFormatter) -> Bool {
-        lhs.locale == rhs.locale && lhs.calendar == rhs.calendar && lhs.timeZone == rhs.timeZone && lhs.dateTemplate == rhs.dateTemplate
-    }
+    internal static func formatter(for style: Date.IntervalFormatStyle) -> ICUDateIntervalFormatter {
+        var template = style.symbols.formatterTemplate(overridingDayPeriodWithLocale: style.locale)
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(locale)
-        hasher.combine(calendar)
-        hasher.combine(timeZone)
-        hasher.combine(dateTemplate)
+        if template.isEmpty {
+            let defaultSymbols = Date.FormatStyle.DateFieldCollection()
+                .collection(date: .numeric)
+                .collection(time: .shortened)
+            template = defaultSymbols.formatterTemplate(overridingDayPeriodWithLocale: style.locale)
+        }
+
+        // This captures all of the special preferences that may be set on the locale
+        let comps = Locale.Components(locale: style.locale)
+        let signature = Signature(localeComponents: comps, calendarIdentifier: style.calendar.identifier, timeZoneIdentifier: style.timeZone.identifier, dateTemplate: template)
+        
+        let formatter = Self.cache.formatter(for: signature) {
+            ICUDateIntervalFormatter(signature: signature)
+        }
+        return formatter
     }
 }

@@ -25,9 +25,9 @@ internal final class ICULegacyNumberFormatter {
 
     let uformatter: UnsafeMutablePointer<UNumberFormat?>
 
-    private init(type: UNumberFormatStyle, locale: Locale) throws {
+    private init(type: UNumberFormatStyle, localeIdentifier: String) throws {
         var status = U_ZERO_ERROR
-        let result = unum_open(type, nil, 0, locale.identifier, nil, &status)
+        let result = unum_open(type, nil, 0, localeIdentifier, nil, &status)
         guard let result else { throw ICUError(code: U_UNSUPPORTED_ERROR) }
         try status.checkSuccess()
         uformatter = result
@@ -232,9 +232,9 @@ internal final class ICULegacyNumberFormatter {
         case descriptive(DescriptiveNumberFormatConfiguration.Collection)
     }
 
-    private struct CacheSignature : Hashable {
+    private struct Signature : Hashable {
         let type: NumberFormatType
-        let locale: Locale
+        let localeIdentifier: String
         let lenient: Bool
 
         func createNumberFormatter() -> ICULegacyNumberFormatter {
@@ -254,7 +254,7 @@ internal final class ICULegacyNumberFormatter {
                 icuType = config.icuNumberFormatStyle
             }
 
-            let formatter = try! ICULegacyNumberFormatter(type: icuType, locale: locale)
+            let formatter = try! ICULegacyNumberFormatter(type: icuType, localeIdentifier: localeIdentifier)
             formatter.setAttribute(.lenientParse, value: lenient)
 
             switch type {
@@ -317,10 +317,10 @@ internal final class ICULegacyNumberFormatter {
         }
     }
 
-    private static let cache = FormatterCache<CacheSignature, ICULegacyNumberFormatter>()
+    private static let cache = FormatterCache<Signature, ICULegacyNumberFormatter>()
     // lenient is only used for parsing
-    static func numberFormatterCreateIfNeeded(type: NumberFormatType, locale: Locale, lenient: Bool = false) -> ICULegacyNumberFormatter {
-        let sig = CacheSignature(type: type, locale: locale, lenient: lenient)
+    static func formatter(for type: NumberFormatType, locale: Locale, lenient: Bool = false) -> ICULegacyNumberFormatter {
+        let sig = Signature(type: type, localeIdentifier: locale.identifier, lenient: lenient)
         let formatter = ICULegacyNumberFormatter.cache.formatter(for: sig, creator: sig.createNumberFormatter)
 
         return formatter

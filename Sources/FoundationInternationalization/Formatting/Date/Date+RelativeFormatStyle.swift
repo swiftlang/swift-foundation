@@ -132,7 +132,7 @@ extension Date {
             }
 
             let (component, value) = _largestNonZeroComponent(destDate, reference: refDate, adjustComponent: strategy)
-            return ICURelativeDateFormatter.formatterCreateIfNeeded(format: self).format(value: value, component: component, presentation: self.presentation)!
+            return ICURelativeDateFormatter.formatter(for: self).format(value: value, component: component, presentation: self.presentation)!
         }
 
 

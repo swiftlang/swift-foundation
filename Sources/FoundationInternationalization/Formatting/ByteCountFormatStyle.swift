@@ -166,7 +166,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
                 }
 
                 let configuration = DescriptiveNumberFormatConfiguration.Collection(presentation: .cardinal, capitalizationContext: .beginningOfSentence)
-                let spellOutFormatter = ICULegacyNumberFormatter.numberFormatterCreateIfNeeded(type: .descriptive(configuration), locale: locale)
+                let spellOutFormatter = ICULegacyNumberFormatter.formatter(for: .descriptive(configuration), locale: locale)
 
                 guard let zeroFormatted = spellOutFormatter.format(Int64.zero) else {
                     return attributedFormat
