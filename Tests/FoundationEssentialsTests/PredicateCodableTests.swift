@@ -331,6 +331,12 @@ final class PredicateCodableTests: XCTestCase {
         }
         decoded4 = try _encodeDecode(predicate4)
         XCTAssertEqual(try decoded4.evaluate(["A": 1, "B": 2, "C": 3]), try predicate4.evaluate(["A": 1, "B": 2, "C": 3]))
+        
+        let predicate5 = #Predicate<Int> {
+            (0 ..< 4).contains($0)
+        }
+        let decoded5 = try _encodeDecode(predicate5)
+        XCTAssertEqual(try decoded5.evaluate(2), try predicate5.evaluate(2))
     }
     
     func testMalformedData() {
