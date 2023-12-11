@@ -514,7 +514,7 @@ extension IntegerFormatStyle {
             } else if let decimal = Decimal(exactly: value) {
                 numberValue = .decimal(decimal)
             } else {
-                numberValue = .integer(Int64(clamping: value))
+                numberValue = .numericStringRepresentation(value.numericStringRepresentation)
             }
 
             switch style {
