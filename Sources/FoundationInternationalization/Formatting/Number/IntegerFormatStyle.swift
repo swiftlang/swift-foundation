@@ -218,8 +218,6 @@ extension IntegerFormatStyle : FormatStyle {
             // Formatting Int64 is the fastest option -- try that first.
             if let i = Int64(exactly: value) {
                 str = nf.format(i)
-            } else if let decimal = Decimal(exactly: value) {
-                str = nf.format(decimal)
             } else {
                 str = nf.format(value.numericStringRepresentation)
             }
@@ -250,8 +248,6 @@ extension IntegerFormatStyle.Percent : FormatStyle {
             // Formatting Int64 is the fastest option -- try that first.
             if let i = Int64(exactly: value) {
                 str = nf.format(i)
-            } else if let decimal = Decimal(exactly: value) {
-                str = nf.format(decimal)
             } else {
                 str = nf.format(value.numericStringRepresentation)
             }
@@ -282,8 +278,6 @@ extension IntegerFormatStyle.Currency : FormatStyle {
             // Formatting Int64 is the fastest option -- try that first.
             if let i = Int64(exactly: value) {
                 str = nf.format(i)
-            } else if let decimal = Decimal(exactly: value) {
-                str = nf.format(decimal)
             } else {
                 str = nf.format(value.numericStringRepresentation)
             }
@@ -511,8 +505,6 @@ extension IntegerFormatStyle {
             let numberValue: ICUNumberFormatterBase.Value
             if let i = Int64(exactly: value) {
                 numberValue = .integer(i)
-            } else if let decimal = Decimal(exactly: value) {
-                numberValue = .decimal(decimal)
             } else {
                 numberValue = .numericStringRepresentation(value.numericStringRepresentation)
             }
