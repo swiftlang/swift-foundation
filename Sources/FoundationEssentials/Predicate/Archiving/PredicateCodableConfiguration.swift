@@ -353,6 +353,7 @@ extension PredicateCodableConfiguration {
         // Foundation-defined PredicateExpression types
         configuration.allowPartialType(PredicateExpressions.Arithmetic<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Arithmetic")
         configuration.allowPartialType(PredicateExpressions.ClosedRange<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.ClosedRange")
+        configuration.allowPartialType(PredicateExpressions.RangeExpressionContains<PredicateExpressions.Value<Range<Int>>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.RangeExpressionContains")
         configuration.allowPartialType(PredicateExpressions.CollectionContainsCollection<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<[Int]>>.self, identifier: "PredicateExpressions.CollectionContainsCollection")
         configuration.allowPartialType(PredicateExpressions.CollectionIndexSubscript<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.CollectionIndexSubscript")
         configuration.allowPartialType(PredicateExpressions.CollectionRangeSubscript<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Range<Int>>>.self, identifier: "PredicateExpressions.CollectionRangeSubscript")
