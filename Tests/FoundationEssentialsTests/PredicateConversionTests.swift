@@ -387,6 +387,39 @@ final class NSPredicateConversionTests: XCTestCase {
         XCTAssertEqual(converted, NSPredicate(format: "b CONTAINS[cdl] 'ABC'"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
+    
+    func testNested() {
+        let predicateA = Predicate<ObjCObject> {
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.a
+                ),
+                rhs: PredicateExpressions.build_Arg(3)
+            )
+        }
+        
+        let predicateB = Predicate<ObjCObject> {
+            PredicateExpressions.build_Conjunction(
+                lhs: PredicateExpressions.build_evaluate(
+                    PredicateExpressions.build_Arg(predicateA),
+                    PredicateExpressions.build_Arg($0)
+                ),
+                rhs: PredicateExpressions.build_Comparison(
+                    lhs: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.a
+                    ),
+                    rhs: PredicateExpressions.build_Arg(2),
+                    op: .greaterThan
+                )
+            )
+        }
+        
+        let converted = convert(predicateB)
+        XCTAssertEqual(converted, NSPredicate(format: "a == 3 AND a > 2"))
+        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+    }
 }
 
 #endif

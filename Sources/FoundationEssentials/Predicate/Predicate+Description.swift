@@ -382,6 +382,15 @@ extension PredicateExpressions.Filter : DebugStringConvertiblePredicateExpressio
 #if FOUNDATION_FRAMEWORK
 
 @available(FoundationPreview 0.3, *)
+extension PredicateExpressions.PredicateEvaluate : DebugStringConvertiblePredicateExpression where Condition : DebugStringConvertiblePredicateExpression, repeat each Input : DebugStringConvertiblePredicateExpression {
+    package func debugString(state: inout DebugStringConversionState) -> String {
+        var inputStrings: [String] = []
+        repeat inputStrings.append((each input).debugString(state: &state))
+        return "\(predicate.debugString(state: &state)).evaluate(\(inputStrings.joined(separator: ", ")))"
+    }
+}
+
+@available(FoundationPreview 0.3, *)
 extension PredicateExpressions.StringCaseInsensitiveCompare : DebugStringConvertiblePredicateExpression where Root : DebugStringConvertiblePredicateExpression, Other : DebugStringConvertiblePredicateExpression {
     package func debugString(state: inout DebugStringConversionState) -> String {
         "\(root.debugString(state: &state)).caseInsensitiveCompare(\(other.debugString(state: &state)))"

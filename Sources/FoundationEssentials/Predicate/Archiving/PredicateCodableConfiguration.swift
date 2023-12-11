@@ -348,6 +348,7 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(Set<Int>.self, identifier: "Swift.Set")
         configuration.allowPartialType(Optional<Int>.self, identifier: "Swift.Optional")
         configuration.allowPartialType(Slice<String>.self, identifier: "Swift.Slice")
+        configuration.allowPartialType(Predicate<Int>.self, identifier: "Foundation.Predicate")
         
         // Foundation-defined PredicateExpression types
         configuration.allowPartialType(PredicateExpressions.Arithmetic<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Arithmetic")
@@ -383,6 +384,7 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(PredicateExpressions.TypeCheck<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.TypeCheck")
         configuration.allowPartialType(PredicateExpressions.UnaryMinus<PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.UnaryMinus")
         configuration.allowPartialType(PredicateExpressions.NilLiteral<Int>.self, identifier: "PredicateExpressions.NilLiteral")
+        configuration.allowPartialType(PredicateExpressions.PredicateEvaluate<PredicateExpressions.Value<Predicate<Int>>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.PredicateEvaluate")
         
         #if FOUNDATION_FRAMEWORK
         configuration.allowPartialType(PredicateExpressions.StringCaseInsensitiveCompare<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringCaseInsensitiveCompare")

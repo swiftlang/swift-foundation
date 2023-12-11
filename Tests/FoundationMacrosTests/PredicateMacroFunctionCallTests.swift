@@ -534,6 +534,56 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
+    #if FOUNDATION_FRAMEWORK
+    func testEvaluate() {
+        AssertPredicateExpansion(
+            """
+            #Predicate<String> { input in
+                other.evaluate()
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<String>({ input in
+                PredicateExpressions.build_evaluate(
+                    PredicateExpressions.build_Arg(other)
+                )
+            })
+            """
+        )
+        AssertPredicateExpansion(
+            """
+            #Predicate<String> { input in
+                other.evaluate(input)
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<String>({ input in
+                PredicateExpressions.build_evaluate(
+                    PredicateExpressions.build_Arg(other),
+                    PredicateExpressions.build_Arg(input)
+                )
+            })
+            """
+        )
+        AssertPredicateExpansion(
+            """
+            #Predicate<String> { input in
+                other.evaluate(input, input)
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<String>({ input in
+                PredicateExpressions.build_evaluate(
+                    PredicateExpressions.build_Arg(other),
+                    PredicateExpressions.build_Arg(input),
+                    PredicateExpressions.build_Arg(input)
+                )
+            })
+            """
+        )
+    }
+    #endif
+    
     func testDiagnoseUnsupportedFunction() {
         AssertPredicateExpansion(
             """

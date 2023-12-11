@@ -378,4 +378,45 @@ final class PredicateTests: XCTestCase {
             "\(moduleName).Predicate<Pack{\(testModuleName).PredicateTests.Object}>(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\Object.i), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\Object.h), rhs: Value<\(moduleName).Date>(\(date.debugDescription)))))"
         )
     }
+
+    #if FOUNDATION_FRAMEWORK
+    func testNested() throws {
+        guard #available(FoundationPreview 0.3, *) else {
+            throw XCTSkip("This test is not available on this OS version")
+        }
+        
+        let predicateA = Predicate<Object> {
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.a
+                ),
+                rhs: PredicateExpressions.build_Arg(3)
+            )
+        }
+        
+        let predicateB = Predicate<Object> {
+            PredicateExpressions.build_Conjunction(
+                lhs: PredicateExpressions.build_evaluate(
+                    PredicateExpressions.build_Arg(predicateA),
+                    PredicateExpressions.build_Arg($0)
+                ),
+                rhs: PredicateExpressions.build_Comparison(
+                    lhs: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.a
+                    ),
+                    rhs: PredicateExpressions.build_Arg(2),
+                    op: .greaterThan
+                )
+            )
+        }
+        
+        XCTAssertTrue(try predicateA.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertFalse(try predicateA.evaluate(Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertTrue(try predicateB.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertFalse(try predicateB.evaluate(Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertFalse(try predicateB.evaluate(Object(a: 4, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+    }
+    #endif
 }
