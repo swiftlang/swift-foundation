@@ -79,7 +79,7 @@ internal class ICUNumberFormatterBase {
             case .decimal(let num):
                 return num == 0
             case .numericStringRepresentation(let num):
-                return num == "0"
+                return Double(num)!.isZero
             }
         }
 
