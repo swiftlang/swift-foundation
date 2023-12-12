@@ -46,7 +46,19 @@ fileprivate struct ScopeDescription : Sendable {
 }
 
 fileprivate struct LoadedScopeCache : Sendable {
-    private var scopeMangledNames : [String : (any AttributeScope.Type)?]
+    private enum ScopeType : Equatable {
+        case loaded(any AttributeScope.Type)
+        case notLoaded
+        
+        static func == (lhs: LoadedScopeCache.ScopeType, rhs: LoadedScopeCache.ScopeType) -> Bool {
+            switch (lhs, rhs) {
+            case (.notLoaded, .notLoaded): true
+            case (.loaded(let a), .loaded(let b)): a == b
+            default: false
+            }
+        }
+    }
+    private var scopeMangledNames : [String : ScopeType]
     private var lastImageCount: UInt32
     private var scopeContents : [Type : ScopeDescription]
     
@@ -61,7 +73,7 @@ fileprivate struct LoadedScopeCache : Sendable {
         in path: String
     ) -> (any AttributeScope.Type)? {
         if let cached = scopeMangledNames[name] {
-            if let foundScope = cached {
+            if case .loaded(let foundScope) = cached {
                 // We have a cached result, provide it to the caller
                 return foundScope
             }
@@ -73,18 +85,20 @@ fileprivate struct LoadedScopeCache : Sendable {
             // We didn't find the scope last time but new images have been loaded so remove all lookup misses from the cache
             lastImageCount = currentImageCount
             scopeMangledNames = scopeMangledNames.filter {
-                $0.value != nil
+                $0.value != .notLoaded
             }
         }
         
         guard let handle = dlopen(path, RTLD_NOLOAD),
              let symbol = dlsym(handle, name) else {
-            scopeMangledNames[name] = nil
+            scopeMangledNames[name] = .notLoaded
             return nil
         }
         
-        let type = unsafeBitCast(symbol, to: Any.Type.self) as? any AttributeScope.Type
-        scopeMangledNames[name] = type
+        guard let type = unsafeBitCast(symbol, to: Any.Type.self) as? any AttributeScope.Type else {
+            fatalError("Symbol \(name) is not an AttributeScope type")
+        }
+        scopeMangledNames[name] = .loaded(type)
         return type
     }
     
