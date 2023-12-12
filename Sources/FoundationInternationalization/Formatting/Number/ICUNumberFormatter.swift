@@ -70,32 +70,6 @@ internal class ICUNumberFormatterBase {
         case decimal(Decimal)
         case numericStringRepresentation(String)
 
-        var isZero: Bool {
-            switch self {
-            case .integer(let num):
-                return num == 0
-            case .floatingPoint(let num):
-                return num == 0
-            case .decimal(let num):
-                return num == 0
-            case .numericStringRepresentation(let num):
-                return Double(num)!.isZero
-            }
-        }
-
-        var doubleValue: Double {
-            switch self {
-            case .integer(let num):
-                return Double(num)
-            case .floatingPoint(let num):
-                return num
-            case .decimal(let num):
-                return num.doubleValue
-            case .numericStringRepresentation(let num):
-                return Double(num)!
-            }
-        }
-
         var fallbackDescription: String {
             switch self {
             case .integer(let i): return String(i)
