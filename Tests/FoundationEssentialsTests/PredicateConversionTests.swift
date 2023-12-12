@@ -29,6 +29,7 @@ final class NSPredicateConversionTests: XCTestCase {
         @objc var j: String?
         @objc var k: UUID
         @objc var l: Data
+        @objc var m: URL
         var nonObjCKeypath: Int
         
         override init() {
@@ -43,6 +44,7 @@ final class NSPredicateConversionTests: XCTestCase {
             j = nil
             k = UUID()
             l = Data([1, 2, 3])
+            m = URL(string: "http://apple.com")!
             nonObjCKeypath = 8
             super.init()
         }
@@ -330,6 +332,16 @@ final class NSPredicateConversionTests: XCTestCase {
         }
         let converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "l == %@", data as NSData))
+        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+    }
+    
+    func testURL() {
+        let url = URL(string: "http://apple.com")!
+        let predicate = #Predicate<ObjCObject> {
+            $0.m == url
+        }
+        let converted = convert(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "m == %@", url as NSURL))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
     
