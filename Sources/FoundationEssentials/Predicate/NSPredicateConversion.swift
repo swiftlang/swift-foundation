@@ -134,7 +134,7 @@ private func _expressionCompatibleValue(for value: Any) throws -> Any? {
     case Optional<Any>.none:
         return nil
     // Handle supported value types
-    case is String, is UUID, is Date, is Data:
+    case is String, is UUID, is Date, is Data, is URL:
         return value
     // Handle supported numeric types
     case is Int, is Int8, is Int16, is Int32, is Int64,
