@@ -12,6 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 @_spi(_Unicode) import Swift
+@_implementationOnly import Foundation_Private.NSString
 #endif
 
 #if canImport(Darwin)
@@ -80,7 +81,7 @@ extension String {
         }
     }
     
-    #if canImport(Darwin)
+    #if canImport(Darwin) || FOUNDATION_FRAMEWORK
     fileprivate func _fileSystemRepresentation(into buffer: UnsafeMutableBufferPointer<CChar>) -> Bool {
         let result = buffer.withMemoryRebound(to: UInt8.self) { uintBuffer in
             let newBuffer = UnsafeMutableBufferPointer(start: uintBuffer.baseAddress, count: uintBuffer.count - 1)
@@ -92,8 +93,8 @@ extension String {
     #endif
     
     package func withFileSystemRepresentation<R>(_ block: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
-        #if canImport(Darwin)
-        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(MAXPATHLEN)) { buffer in
+        #if canImport(Darwin) || FOUNDATION_FRAMEWORK
+        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(PATH_MAX)) { buffer in
             guard _fileSystemRepresentation(into: buffer) else {
                 return try block(nil)
             }
