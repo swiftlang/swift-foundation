@@ -325,7 +325,42 @@ final class StringTests : XCTestCase {
         XCTAssertEqual(lineResult.end, string.endIndex)
         XCTAssertEqual(lineResult.contentsEnd, string.endIndex)
     }
-
+    
+    func testFileSystemRepresentation() {
+        func assertCString(_ ptr: UnsafePointer<CChar>, equals other: String, file: StaticString = #file, line: UInt = #line) {
+            XCTAssertEqual(String(cString: ptr), other, file: file, line: line)
+        }
+        
+        let original = "/Path1/Path Two/Path Three/Some Really Long File Name Section.txt"
+        original.withFileSystemRepresentation {
+            XCTAssertNotNil($0)
+            assertCString($0!, equals: original)
+        }
+        
+        let withWhitespace = original + "\u{2000}\u{2001}"
+        withWhitespace.withFileSystemRepresentation {
+            XCTAssertNotNil($0)
+            assertCString($0!, equals: withWhitespace)
+        }
+        
+        let withHangul = original + "\u{AC00}\u{AC01}"
+        withHangul.withFileSystemRepresentation { buf1 in
+            XCTAssertNotNil(buf1)
+            buf1!.withMemoryRebound(to: UInt8.self, capacity: strlen(buf1!)) { buf1Rebound in
+                let fsr = String(decodingCString: buf1Rebound, as: UTF8.self)
+                fsr.withFileSystemRepresentation { buf2 in
+                    XCTAssertNotNil(buf2)
+                    XCTAssertEqual(strcmp(buf1!, buf2!), 0)
+                }
+            }
+        }
+        
+        let withNullSuffix = original + "\u{0000}\u{0000}"
+        withNullSuffix.withFileSystemRepresentation {
+            XCTAssertNotNil($0)
+            assertCString($0!, equals: original)
+        }
+    }
 }
 
 
