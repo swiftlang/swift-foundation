@@ -18,8 +18,8 @@ let package = Package(
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(name: "FoundationPreview", targets: ["FoundationPreview"]),
-        .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
-        .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
+        .library(name: "FoundationEssentials", type: .dynamic, targets: ["FoundationEssentials"]),
+        .library(name: "FoundationInternationalization", type: .dynamic, targets: ["FoundationInternationalization"]),
     ],
     dependencies: [
         .package(

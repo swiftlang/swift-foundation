@@ -1,0 +1,112 @@
+
+set -e
+
+LIBRARY=""
+OUTPUT=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -library)
+            LIBRARY=$2
+            shift
+            shift
+            ;;
+        -output)
+            OUTPUT=$2
+            shift
+            shift
+            ;;
+        *)
+            echo "Invalid option '$1'"
+            exit 1
+            ;;
+    esac
+done
+
+if [ "x$LIBRARY" == "x" ]; then
+    echo "Source library (-library) not specified"
+    echo "Usage: create_xcframewour -library <path> -output <path>"
+    exit 1
+fi
+
+if [ "x$OUTPUT" == "x" ]; then
+    echo "Output (-output) not specified."
+    echo "Usage: create_xcframewour -library <path> -output <path>"
+    exit 1
+fi
+
+rm -rf $OUTPUT
+mkdir -p $OUTPUT
+
+OS=""
+ARCH=""
+LIB_EXT=""
+
+if [[ $MACHTYPE == *darwin* ]]; then
+    OS="macos"
+    if [[ $MACHTYPE == *"arm64"* ]]; then
+        ARCH="arm64"
+    else
+        echo "Unsupported platform"
+    fi
+    LIB_EXT=dylib
+elif [[ $MACHTYPE == *linux* ]]; then
+    OS="linux"
+    if [[ $MACHTYPE == *"aarch64"* ]]; then
+        ARCH="aarch64"
+    elif [[ $MACHTYPE == *"x86_64"* ]]; then
+        ARCH="x86_64"
+    else
+        echo "Unsupported platform"
+    fi
+    LIB_EXT=so
+else
+    echo "Unsupported platform '$UNAME'"
+    exit 1
+fi
+
+LIBRARY_DIR=`dirname $LIBRARY`
+LIBRARY_NAME=`basename $LIBRARY`
+
+cat <<EOF >> $OUTPUT/Info.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AvailableLibraries</key>
+	<array>
+		<dict>
+			<key>LibraryIdentifier</key>
+			<string>$OS-$ARCH</string>
+			<key>LibraryPath</key>
+			<string>$LIBRARY_NAME</string>
+			<key>SupportedArchitectures</key>
+			<array>
+                            <string>$ARCH</string>
+                        </array>
+			<key>SupportedPlatform</key>
+			<string>$OS</string>
+		</dict>
+        </array>
+	<key>CFBundlePackageType</key>
+	<string>XFWK</string>
+	<key>XCFrameworkFormatVersion</key>
+	<string>1.0</string>
+</dict>
+</plist>
+EOF
+
+LIBRARY_NAME=${LIBRARY_NAME#lib}
+LIBRARY_NAME=${LIBRARY_NAME%.$LIB_EXT}
+
+OUTPUT_PLATFORM_DIR="$OUTPUT/$OS-$ARCH"
+mkdir -p $OUTPUT_PLATFORM_DIR
+
+cp $LIBRARY $OUTPUT_PLATFORM_DIR
+cp $LIBRARY_DIR/$LIBRARY_NAME.swift* $OUTPUT_PLATFORM_DIR
+
+if [ "x$LIBRARY_NAME" == "xFoundationInternationalization" ]; then
+    cp $LIBRARY_DIR/FoundationICU.swift* $OUTPUT_PLATFORM_DIR
+fi
+
+echo "Created '$OUTPUT'"
