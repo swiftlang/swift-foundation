@@ -156,6 +156,17 @@ extension UnsafeBufferPointer {
             return encoded
         }
         
+        func fillFromSortBuffer() throws {
+            guard !sortBuffer.isEmpty else { return }
+            sortBuffer.sort {
+                $0.properties.canonicalCombiningClass.rawValue < $1.properties.canonicalCombiningClass.rawValue
+            }
+            for scalar in sortBuffer {
+                try appendOutput(encodedScalar(scalar))
+            }
+            sortBuffer.removeAll(keepingCapacity: true)
+        }
+        
         decodingLoop: while bufferIdx < bufferLength {
             var scalar: UnicodeScalar
             switch decoder.decode(&iterator) {
@@ -174,7 +185,13 @@ extension UnsafeBufferPointer {
             }
             
             let isASCII = scalar.isASCII
-            if !isASCII && scalar.properties.canonicalCombiningClass != .notReordered {
+            if isASCII || scalar.properties.canonicalCombiningClass == .notReordered {
+                try fillFromSortBuffer()
+            }
+
+            if isASCII {
+                try appendOutput(UInt8(scalar.value))
+            } else {
 #if FOUNDATION_FRAMEWORK
                 // Only decompose scalars present in the declared set
                 if scalarSet.contains(scalar) {
@@ -187,24 +204,9 @@ extension UnsafeBufferPointer {
                 // TODO: Implement Unicode decomposition in swift-foundation
                 sortBuffer.append(scalar)
 #endif
-            } else {
-                if !sortBuffer.isEmpty {
-                    sortBuffer.sort {
-                        $0.properties.canonicalCombiningClass.rawValue < $1.properties.canonicalCombiningClass.rawValue
-                    }
-                    for scalar in sortBuffer {
-                        try appendOutput(encodedScalar(scalar))
-                    }
-                    sortBuffer.removeAll(keepingCapacity: true)
-                }
-                
-                if isASCII {
-                    try appendOutput(UInt8(scalar.value))
-                } else {
-                    try appendOutput(encodedScalar(scalar))
-                }
             }
         }
+        try fillFromSortBuffer()
         
         if iterator.next() != nil {
             throw DecompositionError.insufficientSpace
@@ -231,20 +233,23 @@ extension NSString {
             // If we have quick access to UTF-16 contents, decompose from UTF-16
             let charsBuffer = UnsafeBufferPointer(start: fastCharacters, count: self.length)
             return (try? charsBuffer._decomposedRebinding(.hfsPlus, as: Unicode.UTF16.self, into: buffer, nullTerminated: true)) != nil
-        } else if let fastUTF8 = self._fastCStringContents(true) {
-            // If we have quick access to UTF-8 contents, decompose from UTF-8
-            let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: strlen(fastUTF8))
-            if self.fastestEncoding == NSASCIIStringEncoding {
-                // If this is an ASCII string, no need to decompose
-                guard utf8Buffer.count < buffer.count else {
+        } else if self.fastestEncoding == NSASCIIStringEncoding, let fastUTF8 = self._fastCStringContents(false) {
+            // If we have quick access to ASCII contents, no need to decompose
+            let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
+
+            // We only allow embedded nulls if there are no non-null characters following the first null character
+            if let embeddedNullIdx = utf8Buffer.firstIndex(of: 0) {
+                if !utf8Buffer[embeddedNullIdx...].allSatisfy({ $0 == 0 }) {
                     return false
                 }
-                let next = buffer.initialize(fromContentsOf: utf8Buffer)
-                buffer[next] = 0
-                return true
-            } else {
-                return (try? utf8Buffer._decomposedRebinding(.hfsPlus, as: Unicode.UTF8.self, into: buffer, nullTerminated: true)) != nil
             }
+            
+            let next = buffer.initialize(fromContentsOf: utf8Buffer)
+            guard next < buffer.endIndex else {
+                return false
+            }
+            buffer[next] = 0
+            return true
         } else {
             // Otherwise, bridge to a String which will create a UTF-8 buffer
             return String(self)._fileSystemRepresentation(into: buffer)
