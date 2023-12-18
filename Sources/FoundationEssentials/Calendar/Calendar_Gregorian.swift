@@ -147,6 +147,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     let kSecondsInWeek = 604_800
     let kSecondsInDay = 86400
     let kSecondsInHour = 3600
+    let kSecondsInMinute = 60
 
     let julianCutoverDay: Int// Julian day (noon-based) of cutover
     let gregorianStartYear: Int
@@ -392,7 +393,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     func firstInstant(of unit: Calendar.Component, at date: Date) -> Date {
         var startAtUnit = unit
         let monthBasedComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday]
-        let weekBasedComponents: Calendar.ComponentSet = [.era, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .hour, .minute, .second, .nanosecond ]
+        let weekBasedComponents: Calendar.ComponentSet = [.era, .weekday, .weekOfYear, .yearForWeekOfYear, .hour, .minute, .second, .nanosecond ]
         let relevantComponents: Calendar.ComponentSet
         if startAtUnit == .yearForWeekOfYear || startAtUnit == .weekOfYear || startAtUnit == .weekOfMonth {
             relevantComponents = weekBasedComponents
@@ -1060,7 +1061,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     // MARK:
 
     func date(from components: DateComponents) -> Date? {
-        date(from: components, inTimeZone: timeZone)
+        // If the date falls into the skipped time frame when transitioning into DST (e.g. 1:00 - 3:00 AM for PDT), we want to treat it as if DST hasn't happened yet. So, use .former for dstRepeatedTimePolicy.
+        // If the date falls into the repeated time frame when DST ends (e.g. 1:00 - 2:00 AM for PDT), we want the first instance, i.e. the instance before turning back the clock. So, use .former for dstSkippedTimePolicy.
+        date(from: components, inTimeZone: timeZone, dstRepeatedTimePolicy: .former, dstSkippedTimePolicy: .former)
     }
 
     //  Returns the weekday with reference to `firstWeekday`, in the range of 0...6
@@ -1187,8 +1190,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return julianDay
     }
 
-
-    func date(from components: DateComponents, inTimeZone timeZone: TimeZone) -> Date? {
+    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, dstRepeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, dstSkippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> Date? {
 
         let resolvedComponents = ResolvedDateComponents(dateComponents: components)
 
@@ -1226,7 +1228,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         var tmpDate = Date(julianDay: julianDay) - 43200 + secondsInDay
 
         // tmpDate now is in GMT. Adjust it back into local time zone
-        let (timeZoneOffset, dstOffset) = timeZone.rawAndDaylightSavingTimeOffset(for: tmpDate)
+        let (timeZoneOffset, dstOffset) = timeZone.rawAndDaylightSavingTimeOffset(for: tmpDate, repeatedTimePolicy: dstRepeatedTimePolicy)
         tmpDate = tmpDate - Double(timeZoneOffset) - dstOffset
 
         return tmpDate
@@ -1544,6 +1546,38 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
     }
 
+    // TODO: This is almost identical to Calendar_ICU's _locked_timeZoneTransitionInterval. We should refactor to share code
+    func timeZoneTransitionInterval(at date: Date, timeZone: TimeZone) -> DateInterval? {
+        // if the given time is before 1900, assume there is no dst transition yet
+        if date.timeIntervalSinceReferenceDate < -3187299600.0 {
+            return nil
+        }
+
+        // start back 48 hours
+        let start = date - 48.0 * 60.0 * 60.0
+        let limit = start + 4 * 86400 * 1000 // ???
+        guard let nextDSTTransition = timeZone.nextDaylightSavingTimeTransition(after: start), nextDSTTransition < limit else {
+            return nil
+        }
+
+        // the transition must be at or before "date" if "date" is within the repeated time frame
+        if nextDSTTransition > date {
+            return nil
+        }
+
+        // gmt offset includes dst offset
+        let preOffset = timeZone.secondsFromGMT(for: nextDSTTransition - 1.0)
+        let nextOffset = timeZone.secondsFromGMT(for: nextDSTTransition + 1.0)
+        let diff = preOffset - nextOffset
+
+        // gmt offset before the transition > gmt offset after the transition => backward dst transition
+        if diff > 0 && date >= nextDSTTransition && date < (nextDSTTransition + Double(diff)) {
+            return DateInterval(start: nextDSTTransition, duration: Double(diff))
+        }
+
+        return nil
+    }
+
     func add(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) -> Date {
 
         let amountInSeconds: Int
@@ -1552,7 +1586,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         // month-based calculations uses .month and .year, while week-based uses .weekOfYear and .yearForWeekOfYear.
         // When performing date adding calculations, we need to be specific whether it's "month based" or "week based". We do not want existing week-related fields in the DateComponents to conflict with the newly set month-related fields when doing month-based calculation, and vice versa. So it's necessary to only include relevant components rather than all components when performing adding calculation.
         let monthBasedComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond]
-        let weekBasedComponents: Calendar.ComponentSet = [.era, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .hour, .minute, .second, .nanosecond ]
+        let weekBasedComponents: Calendar.ComponentSet = [.era, .weekday, .weekOfYear, .yearForWeekOfYear, .hour, .minute, .second, .nanosecond ]
+
+        var result: Date?
 
         switch field {
         case .era:
@@ -1567,8 +1603,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             }
             dc.yearForWeekOfYear = (dc.yearForWeekOfYear ?? 0) + amount
             capDay(in: &dc)
-            let old = self.date(from: dc, inTimeZone: timeZone)!
-            return old
+            // Use .latter for `repeatedTimePolicy` since we handle the repeated time below ourself
+            result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
+
         case .year:
             var dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
             var amount = amount
@@ -1577,57 +1614,97 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             }
             dc.year = (dc.year ?? 0) + amount
             capDay(in: &dc)
-            return self.date(from: dc, inTimeZone: timeZone)!
+            result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
 
         case .month:
             var dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
             dc.month = (dc.month ?? 0) + amount
             capDay(in: &dc) // adding 1 month to Jan 31 should return Feb 29, not Feb 31
-            return self.date(from: dc, inTimeZone: timeZone)!
-
+            result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
         case .quarter:
             // TODO: This isn't supported in Calendar_ICU either. We should do it here though.
             return date
+            // nothing to do for the below fields
+        case .calendar, .timeZone, .isLeapMonth:
+            return date
+        case .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .nanosecond:
+            // Handle below
+            break
+        }
 
+        // If the new date falls in the repeated hour during DST transition day, rewind it back to the first occurrence of that time
+        if let result {
+            if amount > 0, let interval = timeZoneTransitionInterval(at: result, timeZone: timeZone) {
+                let adjusted = result - interval.duration
+                return adjusted
+            } else {
+                return result
+            }
+        }
+
+        // The time in the day should remain unchanged when adding units larger than hour
+        let keepWallTime: Bool
+        switch field {
         case .weekdayOrdinal:
             amountInSeconds = kSecondsInWeek * amount
+            keepWallTime = true
 
         case .weekOfMonth:
             amountInSeconds = kSecondsInWeek * amount
+            keepWallTime = true
 
         case .weekOfYear:
             amountInSeconds = kSecondsInWeek * amount
+            keepWallTime = true
 
         case .day:
             amountInSeconds = amount * kSecondsInDay
+            keepWallTime = true
 
         case .weekday:
             amountInSeconds = amount * kSecondsInDay
+            keepWallTime = true
 
         case .hour:
             amountInSeconds = amount * kSecondsInHour
+            keepWallTime = false
 
         case .minute:
             amountInSeconds = amount * 60
+            keepWallTime = false
 
         case .second:
             amountInSeconds = amount
+            keepWallTime = false
 
         case .nanosecond:
             amountInSeconds = 0
             nanoseconds = Double(amount) / 1_000_000_000
+            keepWallTime = false
 
-        // nothing to do for the below fields
-        case .calendar, .timeZone, .isLeapMonth:
-            return date
+        case .era, .year, .month, .quarter, .yearForWeekOfYear, .calendar, .timeZone, .isLeapMonth:
+            preconditionFailure("Should not reach")
         }
 
-        let newDate = date + Double(amountInSeconds) + nanoseconds
-        let dstOffset = timeZone.daylightSavingTimeOffset(for: newDate)
 
-        // No need for normal gmt-offset adjustment because the revelant bits are handled above individually
-        // We do have to adjust dst offset in the case of, say, adding an hour to dst transitioning day
-        return newDate - Double(dstOffset)
+        var newDate = date + Double(amountInSeconds) + nanoseconds
+
+        if keepWallTime {
+            let newOffset = timeZone.daylightSavingTimeOffset(for: newDate)
+            let prevOffset = timeZone.daylightSavingTimeOffset(for: date)
+            // No need for normal gmt-offset adjustment because the revelant bits are handled above individually
+            // We do have to adjust DST offset when the new date crosses DST boundary, such as adding an hour to dst transitioning day
+            if newOffset != prevOffset {
+                newDate = newDate + Double(prevOffset - newOffset)
+            }
+
+            // If the new date falls in the repeated hour during DST transition day, rewind it back to the first occurrence of that time
+            if amount > 0, let interval = timeZoneTransitionInterval(at: newDate, timeZone: timeZone) {
+                newDate = newDate - interval.duration
+            }
+        }
+
+        return newDate
     }
 
 
@@ -1653,7 +1730,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         // month-based calculations uses .day, .month, and .year, while week-based uses .weekday, .weekOfYear and .yearForWeekOfYear.
         // When performing date adding calculations, we need to be specific whether it's "month based" or "week based". We do not want existing week-related fields in the DateComponents to conflict with the newly set month-related fields when doing month-based calculation, and vice versa. So it's necessary to only include relevant components rather than all components when performing adding calculation.
         let monthBasedComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond]
-        let weekBasedComponents: Calendar.ComponentSet = [.era, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .hour, .minute, .second, .nanosecond ]
+        let weekBasedComponents: Calendar.ComponentSet = [.era, .weekday, .weekOfYear, .yearForWeekOfYear, .hour, .minute, .second, .nanosecond ]
+
+        var result: Date
 
         switch field {
         case .era:
@@ -1678,7 +1757,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             dc.year = newValue
             capDay(in: &dc) // day in month may change if the year changes from a leap year to a non-leap year for Feb
 
-            return self.date(from: dc, inTimeZone: timeZone)!
+            // Use .latter for `repeatedTimePolicy` since we handle the repeated time below ourself
+            result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
 
         case .month:
             var dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
@@ -1689,16 +1769,28 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             dc.month = newMonth
 
             capDay(in: &dc) // adding 1 month to Jan 31 should return Feb 29, not Feb 31
-            return self.date(from: dc, inTimeZone: timeZone)!
+            result = self.date(from: dc, inTimeZone: timeZone)!
 
         case .day:
-            let (_, monthStart, daysInMonth, _) = dayOfMonthConsideringGregorianCutover(date, inTimeZone: timeZone)
-            let monthLengthInSec = Double(daysInMonth * kSecondsInDay)
-            var timeIntervalIntoMonth = (date.timeIntervalSince(monthStart) + Double(amount * kSecondsInDay)).remainder(dividingBy: monthLengthInSec)
-            if timeIntervalIntoMonth < 0 {
-                timeIntervalIntoMonth += monthLengthInSec
+            let (_, monthStart, daysInMonth, inGregorianCutoverMonth) = dayOfMonthConsideringGregorianCutover(date, inTimeZone: timeZone)
+
+            if inGregorianCutoverMonth {
+                // Manipulating time directly generally does not work with DST. In these cases we want to go through our normal path as below
+                let monthLengthInSec = Double(daysInMonth * kSecondsInDay)
+                var timeIntervalIntoMonth = (date.timeIntervalSince(monthStart) + Double(amount * kSecondsInDay)).remainder(dividingBy: monthLengthInSec)
+                if timeIntervalIntoMonth < 0 {
+                    timeIntervalIntoMonth += monthLengthInSec
+                }
+                return monthStart + timeIntervalIntoMonth
+            } else {
+                var dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
+
+                let day = dateComponent(.day, from: date)
+                let range = minMaxRange(of: .day, in: dc)!
+                let newDay = add(amount: amount, to: day, wrappingTo: range)
+                dc.day = newDay
+                result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
             }
-            return monthStart + timeIntervalIntoMonth
 
         case .hour:
             let dc = dateComponents([.hour], from: date, in: timeZone)
@@ -1711,32 +1803,20 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             return newDate
 
         case .minute:
-            var dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
-            guard let minute = dc.minute else {
-                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
-            }
-
+            let minute = dateComponent(.minute, from: date)
             let newMinute = add(amount: amount, to: minute, wrappingTo: 0..<60)
-            dc.minute = newMinute
+            let newDate = date + Double((newMinute - minute) * kSecondsInMinute)
 
-            return self.date(from: dc, inTimeZone: timeZone)!
+            return newDate
 
         case .second:
-            var dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
-            guard let second = dc.second else {
-                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
-            }
-
+            let second = dateComponent(.second, from: date)
             let newSecond = add(amount: amount, to: second, wrappingTo: 0..<60)
-            dc.second = newSecond
-            return self.date(from: dc, inTimeZone: timeZone)!
+            let newDate = date + Double(newSecond - second)
+            return newDate
 
         case .weekday:
-
-            guard let weekday = dateComponents([.weekday], from: date, in: timeZone).weekday else {
-                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
-            }
-
+            let weekday = dateComponent(.weekday, from: date)
             var dayOffset = weekday - firstWeekday
             if dayOffset < 0 {
                 dayOffset += 7
@@ -1751,7 +1831,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 newSecondsOffset += Double(kSecondsInWeek)
             }
 
-            return rewindedDate + newSecondsOffset
+            result = rewindedDate + newSecondsOffset
 
         case .weekdayOrdinal:
             // similar to weekday calculation
@@ -1771,7 +1851,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 newSecondsOffset += gap
             }
 
-            return rewindedDate + newSecondsOffset
+            result = rewindedDate + newSecondsOffset
 
         case .quarter:
             // TODO: This isn't supported in Calendar_ICU either. We should do it here though.
@@ -1817,13 +1897,13 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 newDayOfMonth = nDaysInMonth
             }
 
+            // Manipulating time directly does not work well with DST. Go through our normal path as below
             if inGregorianCutoverMonth {
-                // Manipulating time directly generally does not work with DST. In these cases we want to go through our normal path as below
                 return monthStart + TimeInterval((newDayOfMonth - 1) * kSecondsInDay) - TimeInterval(tzOffset)
             } else {
                 var dc = dateComponents(monthBasedComponents, from: date, in: .gmt)
                 dc.day = newDayOfMonth
-                return self.date(from: dc, inTimeZone: timeZone)!
+                result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
             }
 
         case .weekOfYear:
@@ -1862,7 +1942,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
             dc.weekOfYear = newWeekOfYear
 
-            return self.date(from: dc, inTimeZone: timeZone)!
+            result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
 
         case .yearForWeekOfYear:
             // basically the same as year calculation
@@ -1884,17 +1964,20 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             dc.yearForWeekOfYear = newValue
             capDay(in: &dc) // day in month may change if the year changes from a leap year to a non-leap year for Feb
 
-            return self.date(from: dc, inTimeZone: timeZone)!
+            result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
 
         case .nanosecond:
             return date + (Double(amount) * 1.0e-9)
-        case .calendar:
-            return date
-        case .timeZone:
-            return date
-        case .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth:
             return date
         }
+
+        // If the new date falls in the repeated hour during DST transition day, rewind it back to the first occurrence of that time
+        if amount > 0, let interval = timeZoneTransitionInterval(at: result, timeZone: timeZone) {
+            result = result - interval.duration
+        }
+
+        return result
     }
 
 
@@ -1976,7 +2059,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
         // `week` is for backward compatibility only, and is only used if weekOfYear is missing
         if let amount = components.week, components.weekOfYear == nil {
-            result = addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+            result = add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }        
         if let amount = components.weekOfMonth {
             result = add(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)

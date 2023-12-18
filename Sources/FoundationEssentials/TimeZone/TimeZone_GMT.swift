@@ -47,7 +47,7 @@ package final class _TimeZoneGMT : _TimeZoneProtocol, @unchecked Sendable {
         0.0
     }
     
-    package func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+    package func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
         (offset, 0)
     }
 
