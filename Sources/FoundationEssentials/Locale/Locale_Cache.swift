@@ -85,7 +85,9 @@ struct LocaleCache : Sendable {
             }
         }
 
-        mutating func current(preferences: LocalePreferences?, cache: Bool) -> (any _LocaleProtocol)? {
+        /// Get or create the current locale.
+        /// `disableBundleMatching` should normally be disabled (`false`). The only reason to turn it on (`true`) is if we are attempting to create a testing scenario that does not use the main bundle's languages.
+        mutating func current(preferences: LocalePreferences?, cache: Bool, disableBundleMatching: Bool) -> (any _LocaleProtocol)? {
             resetCurrentIfNeeded()
 
             if let cachedCurrentLocale {
@@ -98,7 +100,7 @@ struct LocaleCache : Sendable {
                 return nil
             }
 
-            let locale = LocaleCache.localeICUClass.init(name: nil, prefs: preferences, disableBundleMatching: false)
+            let locale = LocaleCache.localeICUClass.init(name: nil, prefs: preferences, disableBundleMatching: disableBundleMatching)
             if cache {
                 // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
                 self.cachedCurrentLocale = locale
@@ -255,13 +257,14 @@ struct LocaleCache : Sendable {
     func resetCurrent(to preferences: LocalePreferences) {
         lock.withLock {
             $0.reset()
-            let _ = $0.current(preferences: preferences, cache: true)
+            // Disable bundle matching so we can emulate a non-English main bundle during test
+            let _ = $0.current(preferences: preferences, cache: true, disableBundleMatching: true)
         }
     }
 
     var current: any _LocaleProtocol {
         var result = lock.withLock {
-            $0.current(preferences: nil, cache: false)
+            $0.current(preferences: nil, cache: false, disableBundleMatching: false)
         }
         
         if let result { return result }
@@ -270,7 +273,7 @@ struct LocaleCache : Sendable {
         let (prefs, doCache) = preferences()
         
         result = lock.withLock {
-            $0.current(preferences: prefs, cache: doCache)
+            $0.current(preferences: prefs, cache: doCache, disableBundleMatching: false)
         }
         
         guard let result else {
