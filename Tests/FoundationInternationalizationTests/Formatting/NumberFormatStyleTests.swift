@@ -442,6 +442,7 @@ final class NumberFormatStyleTests: XCTestCase {
         XCTAssertEqual((-3000.14159 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(-3000.14159))
     }
     
+#if FOUNDATION_FRAMEWORK
     func test_autoupdatingCurrentChangesFormatResults() {
         let locale = Locale.autoupdatingCurrent
         let number = 50_000
@@ -490,6 +491,7 @@ final class NumberFormatStyleTests: XCTestCase {
         XCTAssertNotEqual(formattedSpanishPercent, formattedEnglishPercent)
         XCTAssertNotEqual(formattedSpanishBytes, formattedEnglishBytes)
     }
+#endif // FOUNDATION_PREVIEW
 }
 
 extension NumberFormatStyleConfiguration.Collection {
