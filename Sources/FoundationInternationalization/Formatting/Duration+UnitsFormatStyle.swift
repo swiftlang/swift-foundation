@@ -381,7 +381,7 @@ extension Duration {
                 let middle = _getListPattern(UATIMEUNITLISTPAT_MIDDLE_PIECE)
                 let end = _getListPattern(UATIMEUNITLISTPAT_END_PIECE)
 
-                for i in 0 ..< length - 1 {
+                for i in 0 ..< length {
                     if i == 0 {
                         pattern = start
                     } else if i != length - 1 {
