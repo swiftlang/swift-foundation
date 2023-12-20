@@ -4,6 +4,7 @@ ARCH=""
 LIB_DIR=""
 LIB_EXT=""
 PLATFORM_DIR=""
+CONFIGURATION="release"
 
 if [[ $MACHTYPE == *linux* ]]; then
     if [[ $MACHTYPE == *aarch64* ]]; then
@@ -14,7 +15,7 @@ if [[ $MACHTYPE == *linux* ]]; then
         echo "Unsupported platform '$MACHTYPE'"
         exit 1
     fi
-    LIB_DIR=".build/$ARCH-unknown-linux-gnu/release"
+    LIB_DIR=".build/$ARCH-unknown-linux-gnu/$CONFIGURATION"
     LIB_EXT=so
     PLATFORM_DIR="linux-$ARCH"
 elif [[ $MACHTYPE == *darwin* ]]; then
@@ -23,7 +24,7 @@ elif [[ $MACHTYPE == *darwin* ]]; then
     else
         echo "Unsupported platform '$MACHTYPE'"
     fi
-    LIB_DIR=".build/$ARCH-apple-macosx/release"
+    LIB_DIR=".build/$ARCH-apple-macosx/$CONFIGURATION"
     LIB_EXT=dylib
     PLATFORM_DIR="macos-$ARCH"
 else
@@ -32,12 +33,12 @@ else
 fi
 
 # rm -rf .build
-swift build -c release
+swift build -c $CONFIGURATION
 
 rm -rf $PLATFORM_DIR
 mkdir -p $PLATFORM_DIR
 
-for lib in FoundationEssentials FoundationInternationalization; do
+for lib in FoundationPreview; do
     ./create_xcframework -library $LIB_DIR/lib$lib.$LIB_EXT -output $lib.xcframework
     zip -r9 $lib.xcframework.zip $lib.xcframework
     mv $lib.xcframework.zip $PLATFORM_DIR

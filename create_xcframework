@@ -104,9 +104,8 @@ mkdir -p $OUTPUT_PLATFORM_DIR
 
 cp $LIBRARY $OUTPUT_PLATFORM_DIR
 cp $LIBRARY_DIR/$LIBRARY_NAME.swift* $OUTPUT_PLATFORM_DIR
-
-if [ "x$LIBRARY_NAME" == "xFoundationInternationalization" ]; then
-    cp $LIBRARY_DIR/FoundationICU.swift* $OUTPUT_PLATFORM_DIR
-fi
+cp $LIBRARY_DIR/FoundationEssentials.swift* $OUTPUT_PLATFORM_DIR
+cp $LIBRARY_DIR/FoundationInternationalization.swift* $OUTPUT_PLATFORM_DIR
+cp $LIBRARY_DIR/FoundationICU.swift* $OUTPUT_PLATFORM_DIR
 
 echo "Created '$OUTPUT'"

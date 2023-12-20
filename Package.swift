@@ -17,9 +17,9 @@ let package = Package(
     platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
-        .library(name: "FoundationPreview", targets: ["FoundationPreview"]),
-        .library(name: "FoundationEssentials", type: .dynamic, targets: ["FoundationEssentials"]),
-        .library(name: "FoundationInternationalization", type: .dynamic, targets: ["FoundationInternationalization"]),
+        .library(name: "FoundationPreview", type: .dynamic, targets: ["FoundationPreview"]),
+        .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
+        .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
     ],
     dependencies: [
         .package(
