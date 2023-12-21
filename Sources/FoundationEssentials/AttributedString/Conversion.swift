@@ -207,9 +207,13 @@ extension NSAttributedString {
         for run in attrStr._guts.runs {
             let stringEnd = attrStr._guts.string.utf8.index(stringStart, offsetBy: run.length)
             let utf16Length = attrStr._guts.string.utf16.distance(from: stringStart, to: stringEnd)
-            let range = NSRange(location: nsStartIndex, length: utf16Length)
-            let attributes = try Dictionary(AttributeContainer(run.attributes), attributeTable: attributeTable, options: options)
-            result.setAttributes(attributes, range: range)
+            if !run.attributes.isEmpty {
+                let range = NSRange(location: nsStartIndex, length: utf16Length)
+                let attributes = try Dictionary(AttributeContainer(run.attributes), attributeTable: attributeTable, options: options)
+                if !attributes.isEmpty {
+                    result.setAttributes(attributes, range: range)
+                }
+            }
             nsStartIndex += utf16Length
             stringStart = stringEnd
         }
