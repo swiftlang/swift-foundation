@@ -98,11 +98,11 @@ extension Array where Element == FunctionStructure.Argument {
     }
 }
 
-#if FOUNDATION_FRAMEWORK
-private let moduleName = "Foundation"
-#else
+//#if FOUNDATION_FRAMEWORK
+//private let moduleName = "Foundation"
+//#else
 private let moduleName = "FoundationEssentials"
-#endif
+// #endif
 
 private struct FunctionStructure: Hashable {
     struct Argument : Hashable, ExpressibleByStringLiteral {
