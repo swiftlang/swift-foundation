@@ -371,25 +371,25 @@ extension Duration {
             let lastPlaceholder = "{1}"
 
             var pattern: String!
-            if length == 1 {
-                pattern = placeholder
-            } else if length == 2 {
-                pattern = _getListPattern(UATIMEUNITLISTPAT_TWO_ONLY)
-                pattern.replace(lastPlaceholder, with: placeholder)
-            } else {
-                let start = _getListPattern(UATIMEUNITLISTPAT_START_PIECE)
-                let middle = _getListPattern(UATIMEUNITLISTPAT_MIDDLE_PIECE)
-                let end = _getListPattern(UATIMEUNITLISTPAT_END_PIECE)
 
-                for i in 0 ..< length {
-                    if i == 0 {
-                        pattern = start
-                    } else if i != length - 1 {
-                        pattern.replace(lastPlaceholder, with: middle)
-                    } else {
-                        pattern.replace(lastPlaceholder, with: end)
-                    }
+            switch length {
+            case 1:
+                pattern = placeholder
+            case 2:
+                pattern = self._getListPattern(UATIMEUNITLISTPAT_TWO_ONLY)
+                pattern.replace(lastPlaceholder, with: placeholder)
+            case let length:
+                let middle = self._getListPattern(UATIMEUNITLISTPAT_MIDDLE_PIECE)
+
+                pattern = self._getListPattern(UATIMEUNITLISTPAT_START_PIECE)
+                // Each of the three pieces provides _two_ placeholders each,
+                // such that we start with two and each replacement adds one
+                // more, so start the loop at 2 as well.
+                for _ in 2 ..< (length - 1) {
+                    pattern.replace(lastPlaceholder, with: middle)
                 }
+
+                pattern.replace(lastPlaceholder, with: self._getListPattern(UATIMEUNITLISTPAT_END_PIECE))
                 pattern.replace(lastPlaceholder, with: placeholder)
             }
             return pattern
