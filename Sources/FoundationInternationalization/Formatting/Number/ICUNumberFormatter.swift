@@ -68,34 +68,14 @@ internal class ICUNumberFormatterBase {
         case integer(Int64)
         case floatingPoint(Double)
         case decimal(Decimal)
-
-        var isZero: Bool {
-            switch self {
-            case .integer(let num):
-                return num == 0
-            case .floatingPoint(let num):
-                return num == 0
-            case .decimal(let num):
-                return num == 0
-            }
-        }
-
-        var doubleValue: Double {
-            switch self {
-            case .integer(let num):
-                return Double(num)
-            case .floatingPoint(let num):
-                return num
-            case .decimal(let num):
-                return num.doubleValue
-            }
-        }
+        case numericStringRepresentation(String)
 
         var fallbackDescription: String {
             switch self {
             case .integer(let i): return String(i)
             case .floatingPoint(let d): return String(d)
             case .decimal(let d): return d.description
+            case .numericStringRepresentation(let i): return i
             }
         }
     }
@@ -137,6 +117,8 @@ internal class ICUNumberFormatterBase {
         case .floatingPoint(let v):
             result = try? FormatResult(formatter: uformatter, value: v)
         case .decimal(let v):
+            result = try? FormatResult(formatter: uformatter, value: v)
+        case .numericStringRepresentation(let v):
             result = try? FormatResult(formatter: uformatter, value: v)
         }
 

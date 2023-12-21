@@ -151,10 +151,10 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
 
             return false
         }
-
-        func _format(_ value: ICUNumberFormatter.Value) -> AttributedString {
+        
+        func _format(_ formatterValue: ICUNumberFormatter.Value, doubleValue: Double) -> AttributedString {
             let unit: Unit = allowedUnits.contains(.kb) ? .kilobyte : .byte
-            if spellsOutZero && value.isZero {
+            if spellsOutZero && doubleValue.isZero {
                 let numberFormatter = ICUByteCountNumberFormatter.create(for: "measure-unit/digital-\(unit.name)\(unit == .byte ? " unit-width-full-name" : "")", locale: locale)
                 guard var attributedFormat = numberFormatter?.attributedFormat(.integer(.zero), unit: unit) else {
                     // fallback to English if ICU formatting fails
@@ -192,7 +192,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
                 maxSizes = Self.maxBinarySizes
             }
 
-            let absValue = abs(value.doubleValue)
+            let absValue = abs(doubleValue)
             let bestUnit: Unit = {
                 var bestUnit = allowedUnits.smallestUnit
                 for (idx, size) in maxSizes.enumerated() {
@@ -209,7 +209,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
             }()
 
             let denominator = decimal ? bestUnit.decimalSize : bestUnit.binarySize
-            let unitValue = value.doubleValue/Double(denominator)
+            let unitValue = doubleValue/Double(denominator)
 
             let precisionSkeleton: String
             switch bestUnit {
@@ -231,7 +231,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
                 let localizedParens = localizedParens(locale: locale)
                 attributedString.append(AttributedString(localizedParens.0))
 
-                var attributedBytes = byteFormatter!.attributedFormat(value, unit: .byte)
+                var attributedBytes = byteFormatter!.attributedFormat(formatterValue, unit: .byte)
                 for (value, range) in attributedBytes.runs[\.byteCount] where value == .value {
                     attributedBytes[range].byteCount = .actualByteCount
                 }
@@ -242,13 +242,11 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
 
             return attributedString
         }
-
-
+        
         public func format(_ value: Int64) -> AttributedString {
-            _format(.integer(value))
+            _format(.integer(value), doubleValue: Double(value))
         }
     }
-
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)

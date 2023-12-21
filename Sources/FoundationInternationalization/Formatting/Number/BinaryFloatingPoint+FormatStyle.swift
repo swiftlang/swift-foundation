@@ -19,7 +19,7 @@ extension BinaryFloatingPoint {
 
     /// Format `self` with `FloatingPointFormatStyle()`.
     public func formatted() -> String {
-        FloatingPointFormatStyle().format(Double(self))
+        FloatingPointFormatStyle().format(self)
     }
 
     /// Format `self` with the given format.

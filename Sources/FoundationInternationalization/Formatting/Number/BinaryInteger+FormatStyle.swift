@@ -25,7 +25,7 @@ extension BinaryInteger {
 
     /// Format `self` using `IntegerFormatStyle()`
     public func formatted() -> String {
-        IntegerFormatStyle().format(Int(self))
+        IntegerFormatStyle().format(self)
     }
 
     /// Format `self` with the given format.

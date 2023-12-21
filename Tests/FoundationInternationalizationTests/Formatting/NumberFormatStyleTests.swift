@@ -1948,11 +1948,11 @@ extension NumberFormatStyleTests {
         XCTAssertEqual(parseableWrapperFunc(GenericWrapper<Double>(), style: .number), parseableWrapperFunc(GenericWrapper<Double>(), style: FloatingPointFormatStyle.number))
     }
 }
+#endif
 
-// MARK: - Decimal Tests
-// TODO: Reenable once Decimal has been moved: https://github.com/apple/swift-foundation/issues/43
+// MARK: - Big Integer Tests
+
 extension NumberFormatStyleTests {
-
 
     func testIntegerFormatStyleBigNumberNoCrash() throws {
         let uint64Style: IntegerFormatStyle<UInt64> = .init(locale: enUSLocale)
@@ -1966,7 +1966,6 @@ extension NumberFormatStyleTests {
         let uint64Currency: IntegerFormatStyle<UInt64>.Currency = .init(code: "USD", locale: enUSLocale)
         XCTAssertEqual(uint64Currency.format(UInt64.max), "$18,446,744,073,709,551,615.00")
         XCTAssertEqual(UInt64.max.formatted(.currency(code: "USD").locale(enUSLocale)), "$18,446,744,073,709,551,615.00")
-
 
         let uint64StyleAttributed: IntegerFormatStyle<UInt64>.Attributed = IntegerFormatStyle<UInt64>(locale: enUSLocale).attributed
         XCTAssertEqual(String(uint64StyleAttributed.format(UInt64.max).characters), "18,446,744,073,709,551,615")
@@ -1999,4 +1998,3 @@ extension NumberFormatStyleTests {
         XCTAssertEqual(Int64.min.formatted(.currency(code: "USD").locale(enUSLocale)), "-$9,223,372,036,854,775,808.00")
     }
 }
-#endif
