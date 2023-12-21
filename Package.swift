@@ -13,7 +13,7 @@ let availabilityMacros: [SwiftSetting] = [
 ].map { .enableExperimentalFeature("AvailabilityMacro=\($0)") }
 
 let evolutionMode: [SwiftSetting] = [
-    .unsafeFlags(["-enable-library-evolution"])
+    // .unsafeFlags(["-enable-library-evolution"])
 ]
 
 let package = Package(
