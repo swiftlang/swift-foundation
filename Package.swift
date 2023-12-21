@@ -12,6 +12,10 @@ let availabilityMacros: [SwiftSetting] = [
     "FoundationPreview 0.4:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
 ].map { .enableExperimentalFeature("AvailabilityMacro=\($0)") }
 
+let evolutionMode: [SwiftSetting] = [
+    .unsafeFlags(["-enable-library-evolution"])
+]
+
 let package = Package(
     name: "FoundationPreview",
     platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
@@ -42,7 +46,9 @@ let package = Package(
                 "FoundationEssentials",
                 "FoundationInternationalization",
             ],
-            path: "Sources/Foundation"),
+            // swiftSettings: [.unsafeFlags(["-enable-library-evolution"])],
+            path: "Sources/Foundation"
+        ),
 
         // _CShims (Internal)
         .target(name: "_CShims",
@@ -53,7 +59,7 @@ let package = Package(
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
             "FoundationInternationalization",
-        ], swiftSettings: availabilityMacros),
+        ], swiftSettings: availabilityMacros + evolutionMode),
 
         // FoundationEssentials
         .target(
@@ -65,7 +71,7 @@ let package = Package(
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
-          ] + availabilityMacros
+          ] + availabilityMacros + evolutionMode
         ),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
@@ -82,9 +88,9 @@ let package = Package(
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros
+            ] + availabilityMacros + evolutionMode
         ),
-        
+
         // FoundationMacros
         .macro(
             name: "FoundationMacros",
