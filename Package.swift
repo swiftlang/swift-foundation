@@ -13,19 +13,28 @@ let availabilityMacros: [SwiftSetting] = [
 ].map { .enableExperimentalFeature("AvailabilityMacro=\($0)") }
 
 let package = Package(
-    name: "FoundationPreviewMacros",
-    platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
+    name: "FoundationPreview",
+    platforms: [.macOS("14"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
     products: [
         .library(name: "FoundationMacrosLinux", targets: ["FoundationMacrosLinux"]),
-    ],    dependencies: [
+    ],
+    dependencies: [
         .package(
             url: "https://github.com/apple/swift-syntax.git",
             from: "509.0.2")
     ],
     targets: [
-        .target(name: "FoundationMacrosLinux", dependencies: ["FoundationMacros"]),
+        .target(
+            name: "FoundationMacrosLinux",
+            dependencies: ["FoundationMacrosOrdo"],
+            swiftSettings: [
+                .enableExperimentalFeature(
+                    "AccessLevelOnImport"
+                )
+            ] + availabilityMacros
+        ),
         .macro(
-            name: "FoundationMacros",
+            name: "FoundationMacrosOrdo",
             dependencies: [
                 .product(name: "SwiftSyntax", package: "swift-syntax"),
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
@@ -41,9 +50,11 @@ let package = Package(
         .testTarget(
             name: "FoundationMacrosTests",
             dependencies: [
-                "FoundationMacros"
+                "FoundationMacrosOrdo"
             ],
-            swiftSettings: availabilityMacros
+            swiftSettings: [
+                .enableExperimentalFeature("AccessLevelOnImport")
+            ] + availabilityMacros
         )
     ]
 )

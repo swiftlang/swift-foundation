@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import FoundationMacros
+import FoundationMacrosOrdo
 import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftParser
