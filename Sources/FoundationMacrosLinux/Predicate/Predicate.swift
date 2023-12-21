@@ -29,7 +29,7 @@ public struct Predicate<each Input> : Sendable {
 
 @freestanding(expression)
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-public macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacrosOrdo", type: "PredicateMacro")
+public macro PredicateOrdo<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacrosOrdo", type: "PredicateMacro")
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Predicate {
