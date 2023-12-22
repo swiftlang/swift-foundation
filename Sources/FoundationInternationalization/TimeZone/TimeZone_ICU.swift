@@ -162,7 +162,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
     }
 
-    func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+    func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
         return lock.withLock {
             guard let calendar = $0.calendar(identifier) else { return (0, 0) }
             var rawOffset: Int32 = 0
@@ -174,9 +174,23 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
             }
             ucal_setMillis(calendar, date.udate, &status)
 
-            // If the date falls into the skipped time frame when transitioning into DST (e.g. 1:00 - 3:00 AM for PDT), we want to treat it as if DST hasn't happened yet. So, use UCAL_TZ_LOCAL_FORMER for nonExistingTimeOpt.
-            // If the date falls into the repeated time frame when DST ends (e.g. 1:00 - 2:00 AM for PDT), we want the first instance, i.e. the instance before turning back the clock. So, use UCAL_TZ_LOCAL_FORMER for duplicatedTimeOpt.
-            ucal_getTimeZoneOffsetFromLocal(calendar, UCAL_TZ_LOCAL_FORMER, UCAL_TZ_LOCAL_FORMER, &rawOffset, &dstOffset, &status)
+            let icuDuplicatedTime: UTimeZoneLocalOption
+            switch repeatedTimePolicy {
+            case .former:
+                icuDuplicatedTime = UCAL_TZ_LOCAL_FORMER
+            case .latter:
+                icuDuplicatedTime = UCAL_TZ_LOCAL_LATTER
+            }
+
+            let icuSkippedTime: UTimeZoneLocalOption
+            switch skippedTimePolicy {
+            case .former:
+                icuSkippedTime = UCAL_TZ_LOCAL_FORMER
+            case .latter:
+                icuSkippedTime = UCAL_TZ_LOCAL_LATTER
+            }
+
+            ucal_getTimeZoneOffsetFromLocal(calendar, icuSkippedTime, icuDuplicatedTime, &rawOffset, &dstOffset, &status)
 
             return (Int(rawOffset / 1000), TimeInterval(dstOffset / 1000))
         }

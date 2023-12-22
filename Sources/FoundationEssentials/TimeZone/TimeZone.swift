@@ -152,8 +152,8 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz.secondsFromGMT(for: date)
     }
 
-    internal func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
-        _tz.rawAndDaylightSavingTimeOffset(for: date)
+    internal func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+        _tz.rawAndDaylightSavingTimeOffset(for: date, repeatedTimePolicy: repeatedTimePolicy, skippedTimePolicy: skippedTimePolicy)
     }
 
     /// Returns the abbreviation for the time zone at a given date.
@@ -372,4 +372,14 @@ extension TimeZone {
 #else
     internal static let TZDEFAULT = "/var/db/timezone/localtime"
 #endif // os(macOS) || targetEnvironment(simulator)
+}
+
+extension TimeZone {
+    // Specifies which occurrence of time to use when it falls into the repeated hour or the skipped hour during DST transition day
+    // For the skipped time frame when transitioning into DST (e.g. 1:00 - 3:00 AM for PDT), use `.former`  if asking for the occurrence when DST hasn't happened yet
+    // For the repeated time frame when DST ends (e.g. 1:00 - 2:00 AM for PDT), use .former if asking for the instance before turning back the clock
+    package enum DaylightSavingTimePolicy {
+        case former
+        case latter
+    }
 }

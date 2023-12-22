@@ -51,7 +51,7 @@ internal final class _TimeZoneAutoupdating : _TimeZoneProtocol, Sendable {
         TimeZoneCache.cache.current.localizedName(for: style, locale: locale)
     }
     
-    func rawAndDaylightSavingTimeOffset(for date: Date) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+    func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
         TimeZoneCache.cache.current.rawAndDaylightSavingTimeOffset(for: date)
     }
 

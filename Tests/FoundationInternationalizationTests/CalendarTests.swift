@@ -1076,5 +1076,81 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         verifyAdding(.init(day: -7, weekOfMonth: 1),                 to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: march1_1996, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
     }
+
+    func testAddComponentsCompatibility_DST() {
+
+
+        let firstWeekday = 3
+        let minimumDaysInFirstWeek = 5
+        let timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+
+        var date = Date(timeIntervalSince1970: 846403387.0) // 1996-10-27T01:03:07-0700
+
+        verifyAdding(.init(day: -1, hour: 1),   to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(month: -1, hour: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(month: -1, day: 30), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(year: 4, day: -1),   to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -1, hour: 24),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -1, weekday: 1),                     to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -7, weekOfYear: 1),                  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -7, weekOfMonth: 1),                 to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(hour: 1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(hour: -1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(hour: 1, yearForWeekOfYear: -1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(hour: -1, yearForWeekOfYear: -1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(year: -1, day: 2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false) // result is also DST transition day
+        verifyAdding(.init(weekOfMonth: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(month: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(month: -12, day: 2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+
+        verifyAdding(.init(day: -1, hour: 1),   to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(month: -1, hour: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(month: -1, day: 30), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(year: 4, day: -1),   to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(year: -1, day: 2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // result is also DST transition day
+        verifyAdding(.init(day: -1, hour: 24),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(day: -1, weekday: 1),                     to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(day: -7, weekOfYear: 1),                  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(day: -7, weekOfMonth: 1),                 to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(hour: 1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(hour: -1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(hour: 1, yearForWeekOfYear: -1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(hour: -1, yearForWeekOfYear: -1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(weekOfMonth: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(month: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(month: -12, day: 2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // Also DST
+
+        date = Date(timeIntervalSince1970: 814953787.0) // 1995-10-29T01:03:07-0700
+        verifyAdding(.init(year: 1, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false) // result is also DST transition day
+        verifyAdding(.init(hour: 1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(hour: -1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(weekOfYear: 43),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(month: 12, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false) // Also DST
+
+        verifyAdding(.init(year: 1, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // result is also DST transition day
+        verifyAdding(.init(hour: 1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(hour: -1, yearForWeekOfYear: 1),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(weekOfYear: 43),  to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(month: 12, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // Also DST
+
+        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27T01:03:07-0800
+        verifyAdding(.init(year: -1, day: 2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false) // result is also DST transition day
+        verifyAdding(.init(weekOfMonth: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(month: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false)
+        verifyAdding(.init(month: 12, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: false) // Also DST
+
+        verifyAdding(.init(year: -1, day: 2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // result is also DST transition day
+        verifyAdding(.init(weekOfMonth: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(weekOfYear: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(month: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
+        verifyAdding(.init(month: 12, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // Also DST
+    }
 }
 #endif // ENABLE_CALENDAR_COMPATIBILITY_TEST
