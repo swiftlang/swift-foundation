@@ -128,6 +128,8 @@ package.targets.append(contentsOf: [
 
 if let index = package.targets.firstIndex(where: { $0.name == "FoundationPreview" }) {
     package.targets[index].swiftSettings = evolutionMode
+} else {
+    fatalError("Target 'FoundationPreview' not found.")
 }
 
 #if !os(Windows)
