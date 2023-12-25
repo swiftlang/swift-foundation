@@ -6,16 +6,14 @@ import CompilerPluginSupport
 
 // Availability Macros
 let availabilityMacros: [SwiftSetting] = [
-    "FoundationPreview 0.1:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-    "FoundationPreview 0.2:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-    "FoundationPreview 0.3:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-    "FoundationPreview 0.4:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+//    "FoundationPreview 0.1:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+//    "FoundationPreview 0.2:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+//    "FoundationPreview 0.3:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+//    "FoundationPreview 0.4:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
 ].map { .enableExperimentalFeature("AvailabilityMacro=\($0)") }
 
 let evolutionMode: [SwiftSetting] = [
-    .unsafeFlags(["-enable-library-evolution",
-                  "-emit-module-interface",
-                  "-user-module-version", "1.0"]),
+    .unsafeFlags(["-enable-library-evolution", "-emit-module-interface"])
 ]
 
 let package = Package(
@@ -48,7 +46,7 @@ let package = Package(
                 "FoundationEssentials",
                 "FoundationInternationalization",
             ],
-            // swiftSettings: [.unsafeFlags(["-enable-library-evolution"])],
+            // swiftSettings: evolutionMode,
             path: "Sources/Foundation"
         ),
 
@@ -127,6 +125,10 @@ package.targets.append(contentsOf: [
     ], swiftSettings: availabilityMacros),
 ])
 #endif
+
+if let index = package.targets.firstIndex(where: { $0.name == "FoundationPreview" }) {
+    package.targets[index].swiftSettings = evolutionMode
+}
 
 #if !os(Windows)
 // Using macros at build-time is not yet supported on Windows

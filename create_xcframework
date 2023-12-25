@@ -103,9 +103,16 @@ OUTPUT_PLATFORM_DIR="$OUTPUT/$OS-$ARCH"
 mkdir -p $OUTPUT_PLATFORM_DIR
 
 cp $LIBRARY $OUTPUT_PLATFORM_DIR
-cp $LIBRARY_DIR/$LIBRARY_NAME.swift* $OUTPUT_PLATFORM_DIR
-cp $LIBRARY_DIR/FoundationEssentials.swift* $OUTPUT_PLATFORM_DIR
-cp $LIBRARY_DIR/FoundationInternationalization.swift* $OUTPUT_PLATFORM_DIR
-cp $LIBRARY_DIR/FoundationICU.swift* $OUTPUT_PLATFORM_DIR
+#cp $LIBRARY_DIR/$LIBRARY_NAME.swift* $OUTPUT_PLATFORM_DIR
+#cp $LIBRARY_DIR/FoundationEssentials.swift* $OUTPUT_PLATFORM_DIR
+#cp $LIBRARY_DIR/FoundationInternationalization.swift* $OUTPUT_PLATFORM_DIR
+#cp $LIBRARY_DIR/FoundationICU.swift* $OUTPUT_PLATFORM_DIR
+
+for F in $LIBRARY_NAME FoundationEssentials FoundationInternationalization; do
+    cp $LIBRARY_DIR/$F.abi.json $OUTPUT_PLATFORM_DIR
+    cp $LIBRARY_DIR/$F.private.swiftinterface $OUTPUT_PLATFORM_DIR
+    cp $LIBRARY_DIR/$F.swiftdoc $OUTPUT_PLATFORM_DIR
+    cp $LIBRARY_DIR/$F.swiftinterface $OUTPUT_PLATFORM_DIR
+done
 
 echo "Created '$OUTPUT'"
