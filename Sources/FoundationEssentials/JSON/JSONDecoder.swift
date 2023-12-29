@@ -28,11 +28,25 @@ package import _CShims
 /// The marker protocol also provides access to the type of the `Decodable` values,
 /// which is needed for the implementation of the key conversion strategy exemption.
 private protocol _JSONStringDictionaryDecodableMarker {
+    static var keyType: Decodable.Type { get }
     static var elementType: Decodable.Type { get }
+
+    init()
+    mutating func reserveCapacity(_ minimumCapacity: Int)
+
+    mutating func updateAnyValue(_ value: Any?, forKey key: Any)
 }
 
-extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String, Value: Decodable {
+extension Dictionary : _JSONStringDictionaryDecodableMarker where Key: Decodable, Value: Decodable {
+    static var keyType: Decodable.Type { return Key.self }
     static var elementType: Decodable.Type { return Value.self }
+
+    mutating func updateAnyValue(_ value: Any?, forKey key: Any) {
+        guard let key = key as? Key, let value = value as? Value else {
+            return
+        }
+        self[key]._setIfNil(to: value)
+    }
 }
 
 //===----------------------------------------------------------------------===//
@@ -768,7 +782,7 @@ extension JSONDecoderImpl: Decoder {
             ))
         }
 
-        var result = [String: Any]()
+        var result = dictType.init()
         result.reserveCapacity(region.count / 2)
 
         let dictCodingPathNode = codingPathNode.pushing(additionalKey)
@@ -776,9 +790,10 @@ extension JSONDecoderImpl: Decoder {
         var iter = jsonMap.makeObjectIterator(from: region.startOffset)
         while let (keyValue, value) = iter.next() {
             // Failing to unwrap a string here is impossible, as scanning already guarantees that dictionary keys are strings.
-            let key = try! self.unwrapString(from: keyValue, for: dictCodingPathNode, _JSONKey?.none)
-            let value = try self.unwrap(value, as: dictType.elementType, for: dictCodingPathNode, _JSONKey(stringValue: key)!)
-            result[key]._setIfNil(to: value)
+            let stringKey = try! self.unwrapString(from: keyValue, for: dictCodingPathNode, _JSONKey?.none)
+            let key = try self.unwrap(keyValue, as: dictType.keyType, for: dictCodingPathNode, _JSONKey?.none)
+            let value = try self.unwrap(value, as: dictType.elementType, for: dictCodingPathNode, _JSONKey(stringValue: stringKey)!)
+            result.updateAnyValue(value, forKey: key)
         }
 
         return result as! T
