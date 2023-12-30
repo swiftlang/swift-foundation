@@ -118,7 +118,7 @@ The new `Sequence`-based API is a great fit for Swift because it composes with a
 let cal = Calendar(identifier: .gregorian)
 let date = Date(timeIntervalSinceReferenceDate: 682869758.712307)   // August 22, 2022 at 7:02:38 AM PDT
 let dates = zip(
-    cal.dates(startingAt: date, matching: DateComponents(minute: 0), matchingPolicy: .nextTime),
+    cal.dates(byMatching: DateComponents(minute: 0), startingAt: date, matchingPolicy: .nextTime)
     ["1st period", "2nd period", "3rd period"]
 )
 
@@ -134,7 +134,7 @@ Another example is using the generic `prefix` function. Here, it is combined wit
 var matchingComps = DateComponents()
 matchingComps.dayOfYear = 234
 // Including a leap year, find the next 5 "day 234"s
-let result = cal.dates(startingAt: date, matching: matchingComps).prefix(5)
+let result = cal.dates(byMatching: matchingComps, startingAt: date).prefix(5)
 /* 
   Result:
     2022-08-22 00:00:00 +0000
@@ -159,7 +159,7 @@ cal.timeZone = TimeZone.gmt
 var dc = DateComponents()
 dc.hour = 22
 
-let result = cal.dates(startingAt: startDate, in: startDate..<endDate, matching: dc)
+let result = cal.dates(byMatching: dc, startingAt: startDate, in: startDate..<endDate)
 /*
   Result:
     2022-08-23 22:00:00 +0000
@@ -171,7 +171,7 @@ let result = cal.dates(startingAt: startDate, in: startDate..<endDate, matching:
 The API also allows for backwards searches. Note that the `Range` remains ordered forward in time as Swift does not allow for reverse ranges. The separation of the starting point from the range allows for the caller to control where they want the search to start in the range (start or end, for example). The search can also start outside of the range, and will return results as long as the first result is inside of the range. The sequence terminates as soon as a result is not contained in the range.
 
 ```swift
-let result = cal.dates(startingAt: endDate, in: startDate..<endDate, matching: dc, direction: .backward)
+let result = cal.dates(byMatching: dc, startingAt: endDate, in: startDate..<endDate, direction: .backward)
 /*
   Result:
     2022-08-25 22:00:00 +0000
@@ -202,7 +202,7 @@ let endDate = startDate + (86400 * 3) + (3600 * 2) // 3 days + 2 hours later - c
 var cal = Calendar(identifier: .gregorian)
 cal.timeZone = TimeZone(name: "America/Los_Angeles")!
 
-let result = cal.dates(startingAt: startDate, in: startDate..<endDate, byAdding: .day)
+let result = cal.dates(byAdding: .day, startingAt: startDate, in: startDate..<endDate)
 /* 
   Result:
     2022-11-05 22:02:38 +0000
@@ -218,9 +218,10 @@ The new `dayOfYear` option composes with existing `Calendar` API, and can be use
 ```swift
 let date = Date(timeIntervalSinceReferenceDate: 682898558.712307) // 2022-08-22 22:02:38 UTC, day 234
 let dayOfYear = cal.component(.dayOfYear, from: date) // 234
+let leapYearDate = cal.date(from: .init(year: 2024, month: 1, day: 1))!
 
 let range1 = cal.range(of: .dayOfYear, in: .year, for: date) // 1..<366
-let range2 = cal.range(of: .dayOfYear, in: .year, for: leapYearDate // 1..<367
+let range2 = cal.range(of: .dayOfYear, in: .year, for: leapYearDate) // 1..<367
 
 // What day of the week is the 100th day of the year?
 let whatDay = cal.date(bySetting: .dayOfYear, value: 100, of: Date.now)!
