@@ -58,7 +58,7 @@ extension IntegerParseStrategy: ParseStrategy {
         if let value = parser.parseAsInt(substr, upperBound: &upperBound) {
             let upperBoundInSubstr = String.Index(utf16Offset: upperBound, in: substr)
             return (upperBoundInSubstr, Format.FormatInput(value))
-        } else if let value = parser.parseAsInt(substr, upperBound: &upperBound) {
+        } else if let value = parser.parseAsDouble(substr, upperBound: &upperBound) {
             let upperBoundInSubstr = String.Index(utf16Offset: upperBound, in: substr)
             return (upperBoundInSubstr, Format.FormatInput(clamping: Int64(value)))
         }
