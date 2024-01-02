@@ -36,12 +36,10 @@ import Darwin
 fileprivate struct ScopeDescription : Sendable {
     var attributes: [String : any AttributedStringKey.Type] = [:]
     var markdownAttributes: [String : any MarkdownDecodableAttributedStringKey.Type] = [:]
-    var subscopes: [any AttributeScope.Type] = []
     
     mutating func merge(_ other: Self) {
         attributes.merge(other.attributes, uniquingKeysWith: { current, new in new })
         markdownAttributes.merge(other.markdownAttributes, uniquingKeysWith: { current, new in new })
-        subscopes.append(contentsOf: other.subscopes)
     }
 }
 
@@ -183,7 +181,7 @@ internal extension AttributeScope {
                     desc.markdownAttributes[markdownAttribute.markdownName] = markdownAttribute
                 }
             case let scope as any AttributeScope.Type:
-                desc.subscopes.append(scope)
+                desc.merge(scope.scopeDescription)
             default: break
             }
         }
@@ -195,17 +193,11 @@ internal extension AttributeScope {
     }
     
     static func attributeKeyTypes() -> [String : any AttributedStringKey.Type] {
-        let description = Self.scopeDescription
-        return description.subscopes.reduce(description.attributes) {
-            $0.merging($1.attributeKeyTypes(), uniquingKeysWith: { current, new in new })
-        }
+        Self.scopeDescription.attributes
     }
     
     static func markdownKeyTypes() -> [String : any MarkdownDecodableAttributedStringKey.Type] {
-        let description = Self.scopeDescription
-        return description.subscopes.reduce(description.markdownAttributes) {
-            $0.merging($1.markdownKeyTypes(), uniquingKeysWith: { current, new in new })
-        }
+        Self.scopeDescription.markdownAttributes
     }
 }
 
