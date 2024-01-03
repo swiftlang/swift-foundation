@@ -664,6 +664,20 @@ final class CalendarTests : XCTestCase {
         _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents)
         _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .previousTimePreservingSmallerComponents)
     }
+
+    func test_weekendRangeNilLocale() {
+        var c = Calendar(identifier: .gregorian)
+        c.locale = Locale(identifier: "en_001")
+
+        var c_nilLocale = Calendar(identifier: .gregorian)
+        c_nilLocale.locale = nil
+
+        let date = Date(timeIntervalSince1970: 0)
+        let weekend = c.nextWeekend(startingAfter: date)
+        let weekendForNilLocale = c_nilLocale.nextWeekend(startingAfter: date)
+        XCTAssertNotNil(weekend)
+        XCTAssertEqual(weekend, weekendForNilLocale)
+    }
 }
 
 

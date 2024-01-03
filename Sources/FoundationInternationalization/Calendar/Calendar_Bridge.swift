@@ -215,11 +215,6 @@ internal final class _CalendarBridged: _CalendarProtocol, @unchecked Sendable {
     func isDateInWeekend(_ date: Date) -> Bool {
         _calendar.isDateInWeekend(date)
     }
-
-    func weekendRange() -> WeekendRange? {
-        // This has no ObjC equivalent. Get it from a fixed calendar with same identifier.
-        CalendarCache.cache.fixed(identifier).weekendRange()
-    }
     
     // MARK: -
     //

@@ -234,7 +234,11 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     var firstDayOfWeek: Locale.Weekday {
         LocaleCache.cache.fixed(identifier).firstDayOfWeek
     }
-    
+
+    var weekendRange: WeekendRange? {
+        LocaleCache.cache.fixed(identifier).weekendRange
+    }
+
     var language: Locale.Language {
         LocaleCache.cache.fixed(identifier).language
     }

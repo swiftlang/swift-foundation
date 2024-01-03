@@ -43,7 +43,7 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval?
     
     func isDateInWeekend(_ date: Date) -> Bool
-    func weekendRange() -> WeekendRange?
+   
     func date(from components: DateComponents) -> Date?
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date) -> DateComponents

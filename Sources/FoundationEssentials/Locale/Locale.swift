@@ -468,6 +468,10 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.variant
     }
 
+    internal var weekendRange: WeekendRange? {
+        _locale.weekendRange
+    }
+
     // MARK: - Preferences support (Internal)
 
     package var forceHourCycle: HourCycle? {

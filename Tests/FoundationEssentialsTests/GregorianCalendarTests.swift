@@ -2546,6 +2546,84 @@ final class GregorianCalendarTests : XCTestCase {
         test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
     }
 
+    // MARK: - Weekend
+
+    func testIsDateInWeekend() {
+        let c = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+
+        let sat0000_mon0000 = WeekendRange(onsetTime: 0, ceaseTime: 0, start: 7, end: 2) // Sat 00:00:00 ..< Mon 00:00:00
+        let sat1200_sun1200 = WeekendRange(onsetTime: 43200, ceaseTime: 43200, start: 7, end: 1) // Sat 12:00:00 ..< Sun 12:00:00
+        let sat_sun = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1) // Sat 00:00:00 ... Sun 23:59:59
+        let mon = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 2, end: 2)
+        let sunPM = WeekendRange(onsetTime: 43200, ceaseTime: 86400, start: 1, end: 1) // Sun 12:00:00 ... Sun 23:59:59
+        let mon_tue = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 2, end: 3) // Mon 00:00:00 ... Tue 23:59:59
+
+        var date = Date(timeIntervalSince1970: 846320587) // 1996-10-26, Sat 09:03:07
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
+
+        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27, Sun 09:03:07
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sunPM))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon_tue))
+
+        date = Date(timeIntervalSince1970: 846450187) // 1996-10-27, Sun 19:03:07
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))        
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sunPM))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon_tue))
+
+        date = Date(timeIntervalSince1970: 846536587) // 1996-10-28, Mon 19:03:07
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat_sun))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sunPM))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: mon))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: mon_tue))
+    }
+
+    func testIsDateInWeekend_wholeDays() {
+        let c = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+
+        let sat_mon = WeekendRange(start: 7, end: 2)
+        let sat_sun = WeekendRange(start: 7, end: 1)
+        let mon = WeekendRange(start: 2, end: 2)
+        let sun = WeekendRange(start: 1, end: 1)
+        let mon_tue = WeekendRange(start: 2, end: 3)
+
+        var date = Date(timeIntervalSince1970: 846320587) // 1996-10-26, Sat 09:03:07
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_mon))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sun))
+
+        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27, Sun 09:03:07
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_mon))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sun))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon_tue))
+
+        date = Date(timeIntervalSince1970: 846450187) // 1996-10-27, Sun 19:03:07
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_mon))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sun))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon_tue))
+
+        date = Date(timeIntervalSince1970: 846536587) // 1996-10-28, Mon 19:03:07
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_mon))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat_sun))
+        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sun))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: mon))
+        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: mon_tue))
+    }
+
     // MARK: - DateInterval
 
     func testDateInterval() {
@@ -2733,3 +2811,4 @@ final class GregorianCalendarTests : XCTestCase {
         test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 820569600.0), end: Date(timeIntervalSince1970: 852019200.0))
     }
 }
+
