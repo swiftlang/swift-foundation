@@ -83,11 +83,9 @@ extension String {
     
     #if canImport(Darwin) || FOUNDATION_FRAMEWORK
     fileprivate func _fileSystemRepresentation(into buffer: UnsafeMutableBufferPointer<CChar>) -> Bool {
-        let result = buffer.withMemoryRebound(to: UInt8.self) { uintBuffer in
-            let newBuffer = UnsafeMutableBufferPointer(start: uintBuffer.baseAddress, count: uintBuffer.count - 1)
-            return _decomposed(.hfsPlus, into: newBuffer, nullTerminated: true)
+        let result = buffer.withMemoryRebound(to: UInt8.self) { rebound in
+            _decomposed(.hfsPlus, into: rebound, nullTerminated: true)
         }
-        
         return result != nil
     }
     #endif

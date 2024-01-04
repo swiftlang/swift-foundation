@@ -360,6 +360,18 @@ final class StringTests : XCTestCase {
             XCTAssertNotNil($0)
             assertCString($0!, equals: original)
         }
+        
+#if canImport(Darwin) || FOUNDATION_FRAMEWORK
+        // A string of length PATH_MAX-1 should perfectly fit in the buffer (with the null byte)
+        Array(repeating: "A", count: Int(PATH_MAX) - 1).joined().withFileSystemRepresentation { ptr in
+            XCTAssertNotNil(ptr)
+        }
+        
+        // This will not fit in the buffer with the null byte
+        Array(repeating: "A", count: Int(PATH_MAX)).joined().withFileSystemRepresentation { ptr in
+            XCTAssertNil(ptr)
+        }
+#endif
     }
 }
 
