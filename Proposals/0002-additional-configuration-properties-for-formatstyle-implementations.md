@@ -1,12 +1,11 @@
 #  Additional Configuration Properties for Foundation's `FormatStyle` Implementations
 
-* Proposal: [FOU-NNNN](NNNN-additional-configuration-properties-for-formatstyle-implementations.md)
+* Proposal: [SF-0002](0002-additional-configuration-properties-for-formatstyle-implementations.md)
 * Authors: [Max Obermeier](https://github.com/themomax)
-* Review Manager: TBD
-* Status: **Awaiting review**
+* Review Manager: [Tina Liu](https://github.com/itingliu)
+* Status: **Active review: Jan 4, 2024...Jan 11, 2024**
 * Implementation: [apple/swift-foundation#338](https://github.com/apple/swift-foundation/issues/338)
-<!--* Previous Revision: *if applicable* [1](https://github.com/apple/swift-evolution/blob/...commit-ID.../proposals/NNNN-filename.md)-->
-<!--* Review: ([pitch](https://forums.swift.org/...))-->
+* Review: [Pitch](https://forums.swift.org/t/fou-formatstyle-enhancements/68858)
 
 ## Introduction
 
