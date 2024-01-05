@@ -21,5 +21,17 @@ let package = Package(
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
         ),
+        .executableTarget(
+            name: "CalendarBenchmarks",
+            dependencies: [
+                .product(name: "FoundationEssentials", package: "swift-foundation-local"),
+                .product(name: "FoundationInternationalization", package: "swift-foundation-local"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+            ],
+            path: "Benchmarks/Calendar",
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
     ]
 )
