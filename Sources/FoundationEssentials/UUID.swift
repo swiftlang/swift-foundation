@@ -90,22 +90,13 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     }
 
     public static func ==(lhs: UUID, rhs: UUID) -> Bool {
-        return lhs.uuid.0 == rhs.uuid.0 &&
-            lhs.uuid.1 == rhs.uuid.1 &&
-            lhs.uuid.2 == rhs.uuid.2 &&
-            lhs.uuid.3 == rhs.uuid.3 &&
-            lhs.uuid.4 == rhs.uuid.4 &&
-            lhs.uuid.5 == rhs.uuid.5 &&
-            lhs.uuid.6 == rhs.uuid.6 &&
-            lhs.uuid.7 == rhs.uuid.7 &&
-            lhs.uuid.8 == rhs.uuid.8 &&
-            lhs.uuid.9 == rhs.uuid.9 &&
-            lhs.uuid.10 == rhs.uuid.10 &&
-            lhs.uuid.11 == rhs.uuid.11 &&
-            lhs.uuid.12 == rhs.uuid.12 &&
-            lhs.uuid.13 == rhs.uuid.13 &&
-            lhs.uuid.14 == rhs.uuid.14 &&
-            lhs.uuid.15 == rhs.uuid.15
+        withUnsafeBytes(of: lhs) { lhsPtr in
+            withUnsafeBytes(of: rhs) { rhsPtr in
+                let lhsTuple = lhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+                let rhsTuple = rhsPtr.loadUnaligned(as: (UInt64, UInt64).self)
+                return (lhsTuple.0 ^ rhsTuple.0) | (lhsTuple.1 ^ rhsTuple.1) == 0
+            }
+        }
     }
 }
 
