@@ -64,7 +64,12 @@ enum ResolvedDateComponents {
     // Pick the year field between yearForWeekOfYear and year and resovles era
     static func yearMonth(forDateComponent components: DateComponents) -> (year: Int, month: Int) {
         var rawYear: Int
+        // Don't adjust for era if week is also specified
+        var adjustEra = true
         if let yearForWeekOfYear = components.yearForWeekOfYear {
+            if components.weekOfYear != nil {
+                adjustEra = false
+            }
             rawYear = yearForWeekOfYear
         } else if let year = components.year {
             rawYear = year
@@ -72,7 +77,7 @@ enum ResolvedDateComponents {
             rawYear = 1
         }
 
-        if components.era == 0 /* BC */{
+        if adjustEra && components.era == 0 /* BC */{
            rawYear = 1 - rawYear
         }
 
@@ -152,6 +157,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     let julianCutoverDay: Int// Julian day (noon-based) of cutover
     let gregorianStartYear: Int
     let gregorianStartDate: Date
+
+    let inf_ti : TimeInterval = 4398046511104.0
 
     // Only respects Gregorian identifier
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
@@ -503,7 +510,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     func start(of unit: Calendar.Component, at: Date) -> Date? {
         let capped = at.capped
 
-        let inf_ti : TimeInterval = 4398046511104.0
         let time = capped.timeIntervalSinceReferenceDate
 
         var effectiveUnit = unit
@@ -1047,7 +1053,89 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
-        fatalError()
+
+        let capped = date.capped
+        let time = capped.timeIntervalSinceReferenceDate
+        var effectiveUnit = component
+        switch effectiveUnit {
+        case .calendar, .timeZone, .isLeapMonth:
+            return nil
+        case .era:
+            if time < -63113904000.0 {
+                return DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0 - inf_ti), duration: inf_ti)
+            } else {
+                return DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0), duration: inf_ti)
+            }
+
+        case .hour:
+            let ti = Double(timeZone.secondsFromGMT(for: capped))
+            var fixedTime = time + ti // compute local time
+            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = fixedTime - ti // compute GMT
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: fixedTime), duration: 3600.0)
+        case .minute:
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0), duration: 60.0)
+        case .second:
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time)), duration: 1.0)
+        case .nanosecond:
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time * 1.0e+9) * 1.0e-9), duration: 1.0e-9)
+        case .year, .yearForWeekOfYear, .quarter, .month, .day, .weekOfMonth, .weekOfYear:
+            // Continue to below
+            break
+        case .weekdayOrdinal, .weekday:
+            // Continue to below, after changing the unit
+            effectiveUnit = .day
+            break
+        }
+
+        let start = firstInstant(of: effectiveUnit, at: capped)
+
+        var upperBound: Date
+        switch effectiveUnit {
+        case .era:
+            let newUDate = add(.era, to: start, amount: 1, inTimeZone: timeZone)
+            guard newUDate != start else {
+                // Probably because we are at the limit of era.
+                return DateInterval(start: start, duration: inf_ti)
+            }
+            upperBound = start
+
+        case .year:
+            upperBound = add(.year, to: start, amount: 1, inTimeZone: timeZone)
+
+        case .yearForWeekOfYear:
+            upperBound = add(.yearForWeekOfYear, to: start, amount: 1, inTimeZone: timeZone)
+
+        case .quarter:
+            upperBound = add(.month, to: start, amount: 3, inTimeZone: timeZone)
+
+        case .month:
+            upperBound = add(.month, to: start, amount: 1, inTimeZone: timeZone)
+
+        case .weekOfYear: /* kCFCalendarUnitWeek_Deprecated */
+            upperBound = add(.weekOfYear, to: start, amount: 1, inTimeZone: timeZone)
+
+        case .weekOfMonth:
+            upperBound = add(.weekOfMonth, to: start, amount: 1, inTimeZone: timeZone)
+
+        case .day:
+            upperBound = add(.day, to: start, amount: 1, inTimeZone: timeZone)
+
+        default:
+            upperBound = start
+        }
+
+        // move back to 0h0m0s, in case the start of the unit wasn't at 0h0m0s
+        upperBound = firstInstant(of: .day, at: upperBound)
+
+        if let tzTransition = timeZoneTransitionInterval(at: upperBound, timeZone: timeZone) {
+            return DateInterval(start: start, end: upperBound - tzTransition.duration)
+        } else if upperBound > start {
+            return DateInterval(start: start, end: upperBound)
+        } else {
+            // Out of range
+            return nil
+        }
     }
     
     func isDateInWeekend(_ date: Date) -> Bool {

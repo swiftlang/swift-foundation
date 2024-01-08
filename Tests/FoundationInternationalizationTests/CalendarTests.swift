@@ -1152,5 +1152,65 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         verifyAdding(.init(month: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
         verifyAdding(.init(month: 12, day: -2), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true) // Also DST
     }
+
+    func testDateIntervalCompatibility() {
+        let firstWeekday = 2
+        let minimumDaysInFirstWeek = 4
+        let timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+
+        let units: [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .nanosecond]
+        let dates: [Date] = [
+            Date(timeIntervalSince1970: 851990400.0), // 1996-12-30T16:00:00-0800 (1996-12-31T00:00:00Z),
+            Date(timeIntervalSince1970: 820483200.0), // 1996-01-01T00:00:00-0800 (1996-01-01T08:00:00Z),
+            Date(timeIntervalSince1970: 828838987.0), // 1996-04-07T01:03:07Z
+            Date(timeIntervalSince1970: -62135765813.0), // 0001-01-01T01:03:07Z
+            Date(timeIntervalSince1970: 825723300), // 1996-03-01
+            Date(timeIntervalSince1970: -12218515200.0),  // 1582-10-14
+        ]
+
+        self.continueAfterFailure = false
+        for date in dates {
+            for unit in units {
+                let old = icuCalendar.dateInterval(of: unit, for: date)
+                let new = gregorianCalendar.dateInterval(of: unit, for: date)
+                let msg = "unit: \(unit), date: \(date)"
+                XCTAssertEqual(old?.start, new?.start, msg)
+                XCTAssertEqual(old?.end, new?.end, msg)
+            }
+        }
+    }
+
+    func testDateIntervalCompatibility_DST() {
+        let firstWeekday = 2
+        let minimumDaysInFirstWeek = 4
+        let timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+
+        let units: [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .nanosecond]
+        let dates: [Date] = [
+            Date(timeIntervalSince1970: 828867787.0), // 1996-04-07T01:03:07-0800
+            Date(timeIntervalSince1970: 828871387.0), // 1996-04-07T03:03:07-0700
+            Date(timeIntervalSince1970: 828874987.0), // 1996-04-07T04:03:07-0700
+            Date(timeIntervalSince1970: 846403387.0), // 1996-10-27T01:03:07-0700
+            Date(timeIntervalSince1970: 846406987.0), // 1996-10-27T01:03:07-0800
+            Date(timeIntervalSince1970: 846410587.0), // 1996-10-27T02:03:07-0800
+        ]
+
+        self.continueAfterFailure = false
+        for date in dates {
+            for unit in units {
+                let old = icuCalendar.dateInterval(of: unit, for: date)
+                let new = gregorianCalendar.dateInterval(of: unit, for: date)
+                let msg = "unit: \(unit), date: \(date)"
+                XCTAssertEqual(old?.start, new?.start, msg)
+                XCTAssertEqual(old?.end, new?.end, msg)
+            }
+        }
+    }
+
+
 }
 #endif // ENABLE_CALENDAR_COMPATIBILITY_TEST
