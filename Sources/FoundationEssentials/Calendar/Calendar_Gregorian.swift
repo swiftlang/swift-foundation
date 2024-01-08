@@ -314,7 +314,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
 
         guard ord2 >= ord1 else {
-            // Protect against an unexpected value from ICU for ord2
             return ord1..<ord1
         }
 
@@ -374,7 +373,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
 
         guard ord2 >= ord1 else {
-            // Protect against an unexpected value from ICU for ord2
             return ord1..<ord1
         }
 
