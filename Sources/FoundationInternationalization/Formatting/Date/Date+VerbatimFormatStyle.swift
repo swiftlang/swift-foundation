@@ -79,6 +79,7 @@ extension Date.VerbatimFormatStyle {
     /// The type preserving attributed variant of this style.
     ///
     /// This style attributes the formatted date with the `AttributeScopes.FoundationAttributes.DateFormatFieldAttribute`.
+    @dynamicMemberLookup
     public struct Attributed : FormatStyle, Sendable {
         var base: Date.VerbatimFormatStyle
 

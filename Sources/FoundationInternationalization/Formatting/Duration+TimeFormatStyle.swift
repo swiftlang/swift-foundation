@@ -174,6 +174,7 @@ extension Duration.TimeFormatStyle {
     /// 26.25 { durationField: .seconds }
     /// ```
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+    @dynamicMemberLookup
     public struct Attributed : FormatStyle, Sendable {
 
         typealias Pattern = Duration.TimeFormatStyle.Pattern
