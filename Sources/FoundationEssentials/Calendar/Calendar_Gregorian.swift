@@ -244,6 +244,10 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         hasher.combine(preferredMinimumDaysInFirstweek)
     }
     
+    // MARK: - Range
+
+    // Returns the range of a component in Gregorian Calendar.
+    // When there are multiple possible upper bounds, the smallest one is returned.
     func minimumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
         case .era: 0..<2
@@ -266,30 +270,257 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
     }
     
+    // Returns the range of a component in Gregorian Calendar.
+    // When there are multiple possible upper bounds, the largest one is returned.
     func maximumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
-        case .era: 0..<2
-        case .year: 1..<144684
-        case .month: 1..<13
-        case .day: 1..<32
-        case .hour: 0..<24
-        case .minute: 0..<60
-        case .second: 0..<60
-        case .weekday: 1..<8
-        case .weekdayOrdinal: 1..<6
-        case .quarter: 1..<5
-        case .weekOfMonth: 1..<7
-        case .weekOfYear: 1..<54
-        case .yearForWeekOfYear: 140742..<144684
-        case .nanosecond: 0..<1000000000
-        case .isLeapMonth: 0..<2
+        case .era: return 0..<2
+        case .year: return 1..<144684
+        case .month: return 1..<13
+        case .day: return 1..<32
+        case .hour: return 0..<24
+        case .minute: return 0..<60
+        case .second: return 0..<60
+        case .weekday: return 1..<8
+        case .weekdayOrdinal:
+            return 1..<6
+        case .quarter: return 1..<5
+        case .weekOfMonth:
+            let lowerBound = minimumDaysInFirstWeek == 1 ? 1 : 0
+            let daysInMonthLimit = 31
+            let upperBound = (daysInMonthLimit + 6 + (7 - minimumDaysInFirstWeek)) / 7;
+            return lowerBound ..< (upperBound + 1)
+        case .weekOfYear: return 1..<54
+        case .yearForWeekOfYear: return 140742..<144684
+        case .nanosecond: return 0..<1000000000
+        case .isLeapMonth: return 0..<2
         case .calendar, .timeZone:
-            nil
+            return nil
         }
     }
-    
+
+    // There is a chance of refactoring Calendar_ICU to use these
+    func _algorithmA(smaller: Calendar.Component, larger: Calendar.Component, at: Date) -> Range<Int>? {
+        guard let interval = dateInterval(of: larger, for: at) else {
+            return nil
+        }
+
+        guard let ord1 = ordinality(of: smaller, in: larger, for: interval.start + 0.1) else {
+            return nil
+        }
+
+        guard let ord2 = ordinality(of: smaller, in: larger, for: interval.start + interval.duration - 0.1) else {
+            return nil
+        }
+
+        guard ord2 >= ord1 else {
+            return ord1..<ord1
+        }
+
+        return ord1..<(ord2 + 1)
+    }
+
+    private func _algorithmB(smaller: Calendar.Component, larger: Calendar.Component, at: Date) -> Range<Int>? {
+        guard let interval = dateInterval(of: larger, for: at) else {
+            return nil
+        }
+
+        var counter = 15 // stopgap in case something goes wrong
+        let end = interval.start + interval.duration - 1.0
+        var current = interval.start + 1.0
+
+        var result: Range<Int>?
+        repeat {
+            guard let innerInterval = dateInterval(of: .month, for: current) else {
+                return result
+            }
+
+            guard let ord1 = ordinality(of: smaller, in: .month, for: innerInterval.start + 0.1) else {
+                return result
+            }
+
+            guard let ord2 = ordinality(of: smaller, in: .month, for: innerInterval.start + innerInterval.duration - 0.1) else {
+                return result
+            }
+
+            if let lastResult = result {
+                let mn = min(lastResult.first!, ord1)
+                result = mn..<(mn + lastResult.count + ord2)
+            } else if ord2 >= ord1 {
+                result = ord1..<(ord2 + 1)
+            } else {
+                return ord1..<ord1
+            }
+
+            counter -= 1
+            current = innerInterval.start + innerInterval.duration + 1.0
+        } while current < end && 0 < counter
+
+        return result
+    }
+
+    private func _algorithmC(smaller: Calendar.Component, larger: Calendar.Component, at: Date) -> Range<Int>? {
+        guard let interval = dateInterval(of: larger, for: at) else {
+            return nil
+        }
+
+        guard let ord1 = ordinality(of: smaller, in: .year, for: interval.start + 0.1) else {
+            return nil
+        }
+
+        guard let ord2 = ordinality(of: smaller, in: .year, for: interval.start + interval.duration - 0.1) else {
+            return nil
+        }
+
+        guard ord2 >= ord1 else {
+            return ord1..<ord1
+        }
+
+        return ord1..<(ord2 + 1)
+    }
+
+    private func _algorithmD(at: Date) -> Range<Int>? {
+        guard let weekInterval = dateInterval(of: .weekOfMonth, for: at) else {
+            return nil
+        }
+
+        guard let monthInterval = dateInterval(of: .month, for: at) else {
+            return nil
+        }
+
+        let start = weekInterval.start < monthInterval.start ? monthInterval.start : weekInterval.start
+        let end = weekInterval.end < monthInterval.end ? weekInterval.end : monthInterval.end
+
+        guard let ord1 = ordinality(of: .day, in: .month, for: start + 0.1) else {
+            return nil
+        }
+
+        guard let ord2 = ordinality(of: .day, in: .month, for: end - 0.1) else {
+            return nil
+        }
+
+        guard ord2 >= ord1 else {
+            return ord1..<ord1
+        }
+
+        return ord1..<(ord2 + 1)
+    }
+
     func range(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Range<Int>? {
-        fatalError()
+        func isValidComponent(_ c: Calendar.Component) -> Bool {
+            return !(c == .calendar || c == .timeZone || c == .weekdayOrdinal || c == .nanosecond)
+        }
+
+        guard isValidComponent(larger) else { return nil }
+
+        let capped = date.capped
+
+        // The range of these fields are fixed, and so are independent of what larger fields are
+        switch smaller {
+        case .weekday:
+            switch larger {
+            case .second, .minute, .hour, .day, .weekday:
+                return nil
+            default:
+                return maximumRange(of: smaller)
+            }
+        case .hour:
+            switch larger {
+            case .second, .minute, .hour:
+                return nil
+            default:
+                return maximumRange(of: smaller)
+            }
+        case .minute:
+            switch larger {
+            case .second, .minute:
+                return nil
+            default:
+                return maximumRange(of: smaller)
+            }
+        case .second:
+            switch larger {
+            case .second:
+                return nil
+            default:
+                return maximumRange(of: smaller)
+            }
+        case .nanosecond:
+            return maximumRange(of: smaller)
+        default:
+            break // Continue search
+        }
+
+        switch larger {
+        case .era:
+            // assume it cycles through every possible combination in an era at least once; this is a little dodgy for the Japanese calendar but this calculation isn't terribly useful either
+            switch smaller {
+            case .year, .quarter, .month, .weekOfYear, .weekOfMonth, .day:
+                return maximumRange(of: smaller)
+            case .weekdayOrdinal:
+                guard let r = maximumRange(of: .day) else { return nil }
+                return 1..<(((r.lowerBound + (r.upperBound - r.lowerBound) - 1 + 6) / 7) + 1)
+            default:
+                break
+            }
+        case .year:
+            switch smaller {
+            case .month:
+                return 1..<13
+            case .quarter, .weekOfYear: /* deprecated week */
+                return _algorithmA(smaller: smaller, larger: larger, at: capped)
+            case .day:
+                let year = dateComponent(.year, from: date)
+                let max = gregorianYearIsLeap(year) ? 366 : 365
+                return 1 ..< max + 1
+            case .weekOfMonth, .weekdayOrdinal:
+                return _algorithmB(smaller: smaller, larger: larger, at: capped)
+            default:
+                break
+            }
+        case .yearForWeekOfYear:
+            switch smaller {
+            case .quarter, .month, .weekOfYear:
+                return _algorithmA(smaller: smaller, larger: larger, at: capped)
+            case .weekOfMonth:
+                break
+            case .day, .weekdayOrdinal:
+                return _algorithmB(smaller: smaller, larger: larger, at: capped)
+            default:
+                break
+            }
+        case .quarter:
+            switch smaller {
+            case .month, .weekOfYear: /* deprecated week */
+                return _algorithmC(smaller: smaller, larger: larger, at: capped)
+            case .weekOfMonth, .day, .weekdayOrdinal:
+                return _algorithmB(smaller: smaller, larger: larger, at: capped)
+            default:
+                break
+            }
+        case .month:
+            switch smaller {
+            case .weekOfYear: /* deprecated week */
+                return _algorithmC(smaller: smaller, larger: larger, at: capped)
+            case .weekOfMonth, .day, .weekdayOrdinal:
+                return _algorithmA(smaller: smaller, larger: larger, at: capped)
+            default:
+                break
+            }
+        case .weekOfYear:
+            break
+        case .weekOfMonth: /* deprecated week */
+            switch smaller {
+            case .day:
+                return _algorithmD(at: capped)
+            default:
+                break
+            }
+        default:
+            break
+        }
+
+        return nil
     }
     
     func minMaxRange(of component: Calendar.Component, in dateComponent: DateComponents) -> Range<Int>? {
