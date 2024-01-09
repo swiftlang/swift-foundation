@@ -175,6 +175,10 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
         LocaleCache.cache.current.firstDayOfWeek
     }
     
+    var weekendRange: WeekendRange? {
+        LocaleCache.cache.current.weekendRange
+    }
+
     var language: Locale.Language {
         LocaleCache.cache.current.language
     }

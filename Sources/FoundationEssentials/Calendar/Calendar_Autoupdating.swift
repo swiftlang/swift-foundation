@@ -105,10 +105,6 @@ internal final class _CalendarAutoupdating: _CalendarProtocol, @unchecked Sendab
         CalendarCache.cache.current.isDateInWeekend(date)
     }
     
-    func weekendRange() -> WeekendRange? {
-        CalendarCache.cache.current.weekendRange()
-    }
-    
     func date(from components: DateComponents) -> Date? {
         CalendarCache.cache.current.date(from: components)
     }

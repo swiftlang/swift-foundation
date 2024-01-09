@@ -41,6 +41,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         var numberingSystem: Locale.NumberingSystem?
         var availableNumberingSystems: [Locale.NumberingSystem]?
         var firstDayOfWeek: Locale.Weekday?
+        var weekendRange: WeekendRange??
         var minimalDaysInFirstWeek: Int?
         var hourCycle: Locale.HourCycle?
         var measurementSystem: Locale.MeasurementSystem?
@@ -1226,6 +1227,115 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 state.firstDayOfWeek = .sunday
                 return .sunday
             }
+        }
+    }
+
+    var weekendRange: WeekendRange? {
+        let firstWeekday = self.firstDayOfWeek
+        return lock.withLock { state -> WeekendRange? in
+
+            if let r = state.weekendRange {
+                return r
+            }
+
+            var result = WeekendRange(start: 0, end: 0)
+
+            var weekdaysIndex : [UInt32] = [0, 0, 0, 0, 0, 0, 0]
+            weekdaysIndex[0] = UInt32(firstWeekday.icuIndex)
+            for i in 1..<7 {
+                weekdaysIndex[i] = (weekdaysIndex[i - 1] % 7) + 1
+            }
+
+            var weekdayTypes : [UCalendarWeekdayType] = [UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY]
+
+            var onset: UInt32?
+            var cease: UInt32?
+
+            var status = U_ZERO_ERROR
+            let cal = ucal_open(nil, 0, identifier, UCAL_DEFAULT, &status)
+            defer { ucal_close(cal) }
+
+            for i in 0..<7 {
+                var status = U_ZERO_ERROR
+                weekdayTypes[i] = ucal_getDayOfWeekType(cal, UCalendarDaysOfWeek(CInt(weekdaysIndex[i])), &status)
+                if weekdayTypes[i] == UCAL_WEEKEND_ONSET {
+                    onset = weekdaysIndex[i]
+                } else if weekdayTypes[i] == UCAL_WEEKEND_CEASE {
+                    cease = weekdaysIndex[i]
+                }
+            }
+
+            let hasWeekend = weekdayTypes.contains {
+                $0 == UCAL_WEEKEND || $0 == UCAL_WEEKEND_ONSET || $0 == UCAL_WEEKEND_CEASE
+            }
+
+            guard hasWeekend else {
+                return nil
+            }
+
+            if let onset {
+                var status = U_ZERO_ERROR
+                // onsetTime is milliseconds after midnight at which the weekend starts. Divide to get to TimeInterval (seconds)
+                result.onsetTime = Double(ucal_getWeekendTransition(cal, UCalendarDaysOfWeek(rawValue: onset), &status)) / 1000.0
+            }
+
+            if let cease {
+                var status = U_ZERO_ERROR
+                // onsetTime is milliseconds after midnight at which the weekend ends. Divide to get to TimeInterval (seconds)
+                result.ceaseTime = Double(ucal_getWeekendTransition(cal, UCalendarDaysOfWeek(rawValue: cease), &status)) / 1000.0
+            }
+
+            var weekendStart: UInt32?
+            var weekendEnd: UInt32?
+
+            if let onset {
+                weekendStart = onset
+            } else {
+                if weekdayTypes[0] == UCAL_WEEKEND && weekdayTypes[6] == UCAL_WEEKEND {
+                    for i in (0...5).reversed() {
+                        if weekdayTypes[i] != UCAL_WEEKEND {
+                            weekendStart = weekdaysIndex[i + 1]
+                            break
+                        }
+                    }
+                } else {
+                    for i in 0..<7 {
+                        if weekdayTypes[i] == UCAL_WEEKEND {
+                            weekendStart = weekdaysIndex[i]
+                            break
+                        }
+                    }
+                }
+            }
+
+            if let cease {
+                weekendEnd = cease
+            } else {
+                if weekdayTypes[0] == UCAL_WEEKEND && weekdayTypes[6] == UCAL_WEEKEND {
+                    for i in 1..<7 {
+                        if weekdayTypes[i] != UCAL_WEEKEND {
+                            weekendEnd = weekdaysIndex[i - 1]
+                            break
+                        }
+                    }
+                } else {
+                    for i in (0...6).reversed() {
+                        if weekdayTypes[i] == UCAL_WEEKEND {
+                            weekendEnd = weekdaysIndex[i]
+                            break
+                        }
+                    }
+                }
+            }
+
+            // There needs to be a start and end to have a next weekend
+            guard let weekendStart, let weekendEnd else {
+                return nil
+            }
+
+            result.start = Int(weekendStart)
+            result.end = Int(weekendEnd)
+            return result
         }
     }
 

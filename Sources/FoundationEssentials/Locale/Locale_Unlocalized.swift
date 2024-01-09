@@ -172,7 +172,12 @@ internal final class _LocaleUnlocalized : _LocaleProtocol, @unchecked Sendable {
     var firstDayOfWeek: Locale.Weekday {
         .monday
     }
-    
+
+    var weekendRange: WeekendRange? {
+        // Weekend range for 001 region
+        WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1)
+    }
+
     var language: Locale.Language {
         Locale.Language(components: .init(languageCode: .init("en"), script: nil, region: .init("001")))
     }

@@ -978,9 +978,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A `DateInterval`, or nil if weekends do not exist in the specific calendar or locale.
     @available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *)
     public func nextWeekend(startingAfter date: Date, direction: SearchDirection = .forward) -> DateInterval? {
-        let weekend = _calendar.weekendRange()
-
-        guard let weekend else {
+        guard let weekend = locale?.weekendRange else {
             return nil
         }
 
@@ -1460,7 +1458,7 @@ extension Calendar : Codable {
 extension Calendar.Identifier : Codable {}
 
 /// Internal-use struct for holding the range of a Weekend
-package struct WeekendRange {
+package struct WeekendRange: Equatable, Hashable {
     package var onsetTime: TimeInterval?
     package var ceaseTime: TimeInterval?
     package var start: Int

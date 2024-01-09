@@ -1138,12 +1138,57 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
     }
     
-    func isDateInWeekend(_ date: Date) -> Bool {
-        fatalError()
+    func timeInDay(for date: Date) -> TimeInterval {
+        let timeInDay = dateComponents([.hour, .minute, .second], from: date)
+        guard let hour = timeInDay.hour, let minute = timeInDay.minute, let second = timeInDay.second else {
+            preconditionFailure("Unexpected nil values for hour, minute, or second")
+        }
+        return TimeInterval(hour * kSecondsInHour + minute * 60 + second)
     }
-    
-    func weekendRange() -> WeekendRange? {
-        fatalError()
+
+    func isDateInWeekend(_ date: Date) -> Bool {
+        let weekendRange: WeekendRange
+        if let localeWeekendRange = locale?.weekendRange {
+            weekendRange = localeWeekendRange
+        } else {
+            // Weekend range for 001 region
+            weekendRange = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1)
+        }
+
+        return isDateInWeekend(date, weekendRange: weekendRange)
+    }
+
+    // For testing purpose
+    internal func isDateInWeekend(_ date: Date, weekendRange: WeekendRange) -> Bool {
+
+        // First, compare the day of the week
+        let dayOfWeek = dateComponent(.weekday, from: date)
+        if weekendRange.start == weekendRange.end && dayOfWeek != weekendRange.start {
+            return false
+        } else if weekendRange.start < weekendRange.end && (dayOfWeek < weekendRange.start || dayOfWeek > weekendRange.end)  {
+            return false
+        } else if weekendRange.start > weekendRange.end && (dayOfWeek > weekendRange.end && dayOfWeek < weekendRange.start) {
+            return false
+        }
+
+        // Then compare the time in the day if the day falls on the start or the end of weekend
+        if dayOfWeek == weekendRange.start {
+            guard let onsetTime = weekendRange.onsetTime, onsetTime != 0 else {
+                return true
+            }
+
+            let timeInDay = timeInDay(for: date)
+            return timeInDay >= onsetTime
+        } else if dayOfWeek == weekendRange.end {
+            guard let ceaseTime = weekendRange.ceaseTime, ceaseTime < 86400 else {
+                return true
+            }
+
+            let timeInDay = timeInDay(for: date)
+            return timeInDay < ceaseTime
+        } else {
+            return true
+        }
     }
     
     // MARK:
