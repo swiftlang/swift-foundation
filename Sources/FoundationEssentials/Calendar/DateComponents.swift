@@ -227,7 +227,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         get { _dayOfYear }
         set { _dayOfYear = converted(newValue) }
     }
-
+    
     /// This exists only for compatibility with NSDateComponents deprecated `week` value.
     package var week: Int? {
         get { _week }
