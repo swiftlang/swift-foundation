@@ -32,10 +32,20 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 fileprivate let _pageSize: Int = Int(getpagesize())
 #endif // canImport(Darwin)
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly import _CShims
+#else
+package import _CShims
+#endif
+
 internal struct Platform {
     static var pageSize: Int {
         _pageSize
     }
+
+    // FIXME: Windows SEPARATOR
+    static let PATH_SEPARATOR: Character = "/"
+    static let MAX_HOSTNAME_LENGTH = 1024
 
     static func roundDownToMultipleOfPageSize(_ size: Int) -> Int {
         return size & ~(self.pageSize - 1)
@@ -58,4 +68,38 @@ internal struct Platform {
         memmove(dest, source, length)
 #endif // canImport(Darwin)
     }
+}
+
+// MARK: - EUID & EGID
+extension Platform {
+#if !NO_PROCESS
+    static func getUGIDs() -> (euid: UInt32, egid: UInt32) {
+        var euid: UInt32 = 0
+        var egid: UInt32 = 0
+    #if canImport(Darwin)
+        if pthread_getugid_np(&euid, &egid) != 0 {
+            euid = geteuid()
+            egid = getegid()
+        }
+    #else
+        euid = getegid()
+        egid = getegid()
+    #endif
+        return (euid: euid, egid: egid)
+    }
+#endif // !NO_PROCESS
+}
+
+// MARK: - Hostname
+extension Platform {
+#if !FOUNDATION_FRAMEWORK
+    static func getHostname() -> String {
+        return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Platform.MAX_HOSTNAME_LENGTH + 1) {
+            guard gethostname($0.baseAddress!, Platform.MAX_HOSTNAME_LENGTH) == 0 else {
+                return ""
+            }
+            return String(cString: $0.baseAddress!)
+        }
+    }
+#endif // !FOUNDATION_FRAMEWORK
 }
