@@ -354,7 +354,7 @@ extension Locale {
                 _identifier
             }
             set {
-                _normalizedIdentifier = newValue.capitalized
+                _normalizedIdentifier = newValue.lowercased()
                 _identifier = newValue
             }
         }
@@ -392,7 +392,7 @@ extension Locale {
         public init(from decoder: Decoder) throws {
             do {
                 _identifier = try decoder.singleValueContainer().decode(String.self)
-                _normalizedIdentifier = _identifier.capitalized
+                _normalizedIdentifier = _identifier.lowercased()
             } catch {
                 // backward compatibility: we used to encode both _identifier and _normalizedIdentifier. Fall back to this if there's not a matched single value container
                 let container = try decoder.container(keyedBy: CodingKeys.self)
