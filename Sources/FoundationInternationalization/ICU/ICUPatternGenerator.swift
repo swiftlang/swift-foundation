@@ -38,8 +38,8 @@ final class ICUPatternGenerator {
 
     func _patternForSkeleton(_ skeleton: String) -> String {
         var status = U_ZERO_ERROR
-        try! status.checkSuccess()
         let clonedPatternGenerator = udatpg_clone(upatternGenerator, &status)
+        try! status.checkSuccess()
         defer {
              udatpg_close(clonedPatternGenerator)
         }
