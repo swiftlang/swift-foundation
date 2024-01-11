@@ -1800,11 +1800,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             } while ucal_get(ucalendar, UCAL_ERA, &status) < targetEra
         }
 
-        let useDayOfMonth = if #available(FoundationPreview 0.4, *) {
-            startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal || startAtUnit == .dayOfYear
-        } else {
-            startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal
-        }
+        let useDayOfMonth = startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal
         
         if useDayOfMonth {
             let targetDay = ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)

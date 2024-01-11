@@ -114,9 +114,8 @@ enum ResolvedDateComponents {
         var (year, month) = Self.yearMonth(forDateComponent: components)
         let minWeekdayOrdinal = 1
         
-        if #available(FoundationPreview 0.4, *), let doy = components.dayOfYear {
-            fatalError("TODO - day of year calculation")
-        } else if let d = components.day {
+        // TODO: Handle day of year
+        if let d = components.day {
             if components.yearForWeekOfYear != nil, let weekOfYear = components.weekOfYear {
                 if components.month == nil && weekOfYear >= 52 {
                     year += 1
