@@ -14,22 +14,6 @@
 
 // FIXME: rdar://103535015 (Implement stub methods in struct Data)
 extension Data {
-    /// Initialize a `Data` with the contents of a `URL`.
-    ///
-    /// - parameter url: The `URL` to read.
-    /// - parameter options: Options for the read operation. Default value is `[]`.
-    /// - throws: An error in the Cocoa domain, if `url` cannot be read.
-    @inlinable // This is @inlinable as a convenience initializer.
-    public init(contentsOf url: __shared URL, options: Data.ReadingOptions = []) throws {
-        // FIXME: Implement Data IO
-        fatalError("Not implemented")
-    }
-
-    internal init(contentsOfFile path: String, options: Data.ReadingOptions = []) throws {
-        // FIXME: Implement Data IO
-        fatalError("Not implemented")
-    }
-
     /// Initialize a `Data` from a Base-64 encoded String using the given options.
     ///
     /// Returns nil when the input is not recognized as valid Base-64.
@@ -49,17 +33,6 @@ extension Data {
     /// - parameter options: Decoding options. Default value is `[]`.
     @inlinable // This is @inlinable as a convenience initializer.
     public init?(base64Encoded base64Data: __shared Data, options: Data.Base64DecodingOptions = []) {
-        // FIXME: Implement Data IO
-        fatalError("Not implemented")
-    }
-
-    /// Write the contents of the `Data` to a location.
-    ///
-    /// - parameter url: The location to write the data into.
-    /// - parameter options: Options for writing the data. Default value is `[]`.
-    /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
-    public func write(to url: URL, options: Data.WritingOptions = []) throws {
-        // this should not be marked as inline since in objc contexts we correct atomicity via _shouldUseNonAtomicWriteReimplementation
         // FIXME: Implement Data IO
         fatalError("Not implemented")
     }
@@ -97,4 +70,52 @@ extension Data {
     }
 }
 
+internal struct FileAttributeKey: RawRepresentable, Equatable, Hashable {
+    typealias RawValue = String
+    let rawValue: String
+}
+
+// Placeholder for Progress
+internal final class Progress {
+    var completedUnitCount: Int64
+    var totalUnitCount: Int64
+    
+    init(totalUnitCount: Int64) {
+        self.completedUnitCount = 0
+        self.totalUnitCount = totalUnitCount
+    }
+    
+    func becomeCurrent(withPendingUnitCount: Int64) { }
+    func resignCurrent() { }
+    var isCancelled: Bool { false }
+    static func current() -> Progress? { nil }
+    var fractionCompleted: Double {
+        0.0
+    }
+}
+
 #endif // !FOUNDATION_FRAMEWORK
+
+internal enum PathOrURL {
+    case path(String)
+    case url(URL)
+    
+    func withFileSystemRepresentation<R>(_ block: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
+        return try path.withFileSystemRepresentation(block)
+    }
+
+    func withMutableFileSystemRepresentation<R>(_ block: (UnsafeMutablePointer<CChar>?) throws -> R) rethrows -> R {
+        return try path.withMutableFileSystemRepresentation(block)
+    }
+
+    var isEmpty: Bool {
+        path.isEmpty
+    }
+    
+    var path: String {
+        switch self {
+        case .path(let p): return p
+        case .url(let u): return u.path
+        }
+    }
+}

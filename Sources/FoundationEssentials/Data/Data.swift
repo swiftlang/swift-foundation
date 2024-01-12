@@ -2004,6 +2004,90 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         _representation = representation
     }
 
+#if FOUNDATION_FRAMEWORK
+    public typealias ReadingOptions = NSData.ReadingOptions
+    public typealias WritingOptions = NSData.WritingOptions
+#else
+    public struct ReadingOptions : OptionSet {
+        public let rawValue: UInt
+        public init(rawValue: UInt) { self.rawValue = rawValue }
+        
+        static let mappedIfSafe = ReadingOptions(rawValue: 1 << 0)
+        static let uncached = ReadingOptions(rawValue: 1 << 1)
+        static let alwaysMapped = ReadingOptions(rawValue: 1 << 3)
+    }
+    
+    // This is imported from the ObjC 'option set', which is actually a combination of an option and an enumeration (file protection).
+    public struct WritingOptions : OptionSet {
+        public let rawValue: UInt
+        public init(rawValue: UInt) { self.rawValue = rawValue }
+
+        /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
+        static let atomic = WritingOptions(rawValue: 1 << 0)
+        
+        /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
+        static let withoutOverwriting = WritingOptions(rawValue: 1 << 1)
+        
+        /// An option to not encrypt the file when writing it out.
+        static let noFileProtection = WritingOptions(rawValue: 0x10000000)
+        
+        /// An option to make the file accessible only while the device is unlocked.
+        static let completeFileProtection = WritingOptions(rawValue: 0x20000000)
+        
+        /// An option to allow the file to be accessible while the device is unlocked or the file is already open.
+        static let completeFileProtectionUnlessOpen = WritingOptions(rawValue: 0x30000000)
+        
+        /// An option to allow the file to be accessible after a user first unlocks the device.
+        static let completeFileProtectionUntilFirstUserAuthentication = WritingOptions(rawValue: 0x40000000)
+        
+        /// An option the system uses when determining the file protection options that the system assigns to the data.
+        static let fileProtectionMask = WritingOptions(rawValue: 0xf0000000)
+    }
+#endif
+
+#if FOUNDATION_FRAMEWORK
+    /// Initialize a `Data` with the contents of a `URL`.
+    ///
+    /// - parameter url: The `URL` to read.
+    /// - parameter options: Options for the read operation. Default value is `[]`.
+    /// - throws: An error in the Cocoa domain, if `url` cannot be read.
+    public init(contentsOf url: __shared URL, options: ReadingOptions = []) throws {
+#if NO_FILESYSTEM
+        let d = try NSData(contentsOf: url, options: NSData.ReadingOptions(rawValue: options.rawValue))
+        self.init(referencing: d)
+#else
+        if url.isFileURL {
+            self = try readDataFromFile(path: .url(url), reportProgress: true, options: options)
+        } else {
+            // Fallback to NSData, to read via NSURLSession
+            let d = try NSData(contentsOf: url, options: NSData.ReadingOptions(rawValue: options.rawValue))
+            self.init(referencing: d)
+        }
+#endif
+    }
+#else
+    /// Temporary usage, until `URL` is ported. Non-framework only. Same as of `contentsOfFile:options:`.
+    public init(contentsOf path: String, options: ReadingOptions = []) throws {
+        self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
+    }
+#endif
+    
+#if FOUNDATION_FRAMEWORK
+    internal init(contentsOfFile path: String, options: ReadingOptions = []) throws {
+#if NO_FILESYSTEM
+        let d = try NSData(contentsOfFile: path, options: NSData.ReadingOptions(rawValue: options.rawValue))
+        self.init(referencing: d)
+#else
+        self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
+#endif
+    }
+#else
+    /// Temporary usage, until `URL` is ported. Non-framework only.
+    public init(contentsOfFile path: String, options: ReadingOptions = []) throws {
+        self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
+    }
+#endif
+    
     // -----------------------------------
     // MARK: - Properties and Functions
 
@@ -2312,6 +2396,40 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     }
 
     // MARK: -
+    
+    /// Write the contents of the `Data` to a location.
+    ///
+    /// - parameter url: The location to write the data into.
+    /// - parameter options: Options for writing the data. Default value is `[]`.
+    /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
+    public func write(to url: URL, options: Data.WritingOptions = []) throws {
+        if options.contains(.withoutOverwriting) && options.contains(.atomic) {
+            fatalError("withoutOverwriting is not supported with atomic")
+        }
+        
+        guard url.isFileURL else {
+            throw CocoaError(.fileWriteUnsupportedScheme)
+        }
+        
+#if !NO_FILESYSTEM
+        try writeDataToFile(path: .url(url), data: self, options: options, reportProgress: true)
+#else
+        throw CocoaError(.featureUnsupported)
+#endif
+    }
+    
+#if !FOUNDATION_FRAMEWORK
+    // We don't intend for this to be long-term API, preferring URL. But for now, this allows us to provide the functionality until URL is fully ported.
+    public func write(to path: String, options: Data.WritingOptions = []) throws {
+        if options.contains(.withoutOverwriting) && options.contains(.atomic) {
+            fatalError("withoutOverwriting is not supported with atomic")
+        }
+        
+        try writeDataToFile(path: .path(path), data: self, options: options, reportProgress: true)
+    }
+#endif
+
+    // MARK: -
     //
 
     /// The hash value for the data.
@@ -2514,76 +2632,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 #if !FOUNDATION_FRAMEWORK
 // MARK: Exported Types
 extension Data {
-    public struct ReadingOptions : OptionSet, Sendable {
-        public let rawValue: UInt
-
-        public init(rawValue: UInt) {
-            self.rawValue = rawValue
-        }
-        /// Hint to map the file in if possible and safe
-        public static let mappedIfSafe      = ReadingOptions(rawValue: 1 << 0)
-        /// Hint to get the file not to be cached in the kernel
-        public static let uncached          = ReadingOptions(rawValue: 1 << 1)
-        /// Hint to map the file in if possible. This takes precedence over `mappedIfSafe` if both are given.
-        @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let alwaysMapped      = ReadingOptions(rawValue: 1 << 3)
-        /// Deprecated name for `.mappedIfSafe`
-        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "mappedIfSafe")
-        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "mappedIfSafe")
-        @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "mappedIfSafe")
-        @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "mappedIfSafe")
-        public static let dataReadingMapped = ReadingOptions.mappedIfSafe
-        /// Deprecated name for `.mappedIfSafe`
-        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "mappedIfSafe")
-        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "mappedIfSafe")
-        @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "mappedIfSafe")
-        @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "mappedIfSafe")
-        public static let mappedRead        = ReadingOptions.mappedIfSafe
-        /// Deprecated name for `.uncached`
-        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "uncached")
-        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "uncached")
-        @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "uncached")
-        @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "uncached")
-        public static let uncachedRead      = ReadingOptions.uncached
-    }
-
-    public struct WritingOptions : OptionSet, Sendable {
-        public let rawValue: UInt
-
-        public init(rawValue: UInt) {
-            self.rawValue = rawValue
-        }
-
-        /// Hint to use auxiliary file when saving;
-        public static let atomic    = WritingOptions(rawValue: 1 << 0)
-        /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
-        /// You can’t combine this constant with `atomic` because atomic allows the system
-        /// to overwrite the original file.
-        public static let withoutOverwriting        = WritingOptions(rawValue: 1 << 1)
-        /// An option to not encrypt the file when writing it out.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let noFileProtection          = WritingOptions(rawValue: 0x10000000)
-        /// An option to make the file accessible only while the device is unlocked.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let completeFileProtection    = WritingOptions(rawValue: 0x20000000)
-        /// An option to allow the file to be accessible while the device is unlocked or the file is already open.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let completeFileProtectionUnlessOpen = WritingOptions(rawValue: 0x30000000)
-        /// An option to allow the file to be accessible after a user first unlocks the device.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let completeFileProtectionUntilFirstUserAuthentication =
-            WritingOptions(rawValue: 0x40000000)
-        /// An option the system uses when determining the file protection options that the system assigns to the data.
-        @available(macOS 10.16, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-        public static let fileProtectionMask        = WritingOptions(rawValue: 0xf0000000)
-        /// Deprecated name for `.atomic`
-        @available(macOS, introduced: 10.10, deprecated: 10.15, renamed: "atomic")
-        @available(iOS, introduced: 8.0, deprecated: 13.0, renamed: "atomic")
-        @available(watchOS, introduced: 2.0, deprecated: 6.0, renamed: "atomic")
-        @available(tvOS, introduced: 9.0, deprecated: 13.0, renamed: "atomic")
-        public static let atomicWrite               = WritingOptions.atomic
-    }
-
     public struct SearchOptions : OptionSet, Sendable {
         public let rawValue: UInt
 

@@ -44,5 +44,17 @@ let package = Package(
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
         ),
+        .executableTarget(
+            name: "DataIOBenchmarks",
+            dependencies: [
+                .product(name: "FoundationEssentials", package: "swift-foundation"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+            ],
+            path: "Benchmarks/DataIO",
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+
     ]
 )

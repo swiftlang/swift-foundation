@@ -104,6 +104,33 @@ extension String {
         }
         #endif
     }
+    
+    package func withMutableFileSystemRepresentation<R>(_ block: (UnsafeMutablePointer<CChar>?) throws -> R) rethrows -> R {
+        #if canImport(Darwin) || FOUNDATION_FRAMEWORK
+        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(PATH_MAX)) { buffer in
+            guard _fileSystemRepresentation(into: buffer) else {
+                return try block(nil)
+            }
+            return try block(buffer.baseAddress!)
+        }
+        #else
+        var mut = self
+        return try mut.withUTF8 { utf8Buffer in
+            // Leave space for a null byte at the end
+            try withUnsafeTemporaryAllocation(of: CChar.self, capacity: utf8Buffer.count + 1) { temporaryBuffer in
+                try utf8Buffer.withMemoryRebound(to: CChar.self) { utf8CCharBuffer in
+                    let nullByteIndex = temporaryBuffer.initialize(fromContentsOf: utf8CCharBuffer)
+                    // Null-terminate
+                    temporaryBuffer.initializeElement(at: nullByteIndex, to: CChar(0))
+                    let result = try block(temporaryBuffer.baseAddress)
+                    temporaryBuffer.prefix(through: nullByteIndex).deinitialize()
+                    return result
+                }
+            }
+        }
+        #endif
+    }
+
 }
 
 extension UnsafeBufferPointer {
