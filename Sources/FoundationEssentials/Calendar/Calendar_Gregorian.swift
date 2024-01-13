@@ -231,7 +231,28 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     func copy(changingLocale: Locale?, changingTimeZone: TimeZone?, changingFirstWeekday: Int?, changingMinimumDaysInFirstWeek: Int?) -> _CalendarProtocol {
-        fatalError()
+        let newTimeZone = changingTimeZone ?? self.timeZone
+        let newLocale = changingLocale ?? self.locale
+
+        let newFirstWeekday: Int?
+        if let changingFirstWeekday {
+            newFirstWeekday = changingFirstWeekday
+        } else if let _firstWeekday {
+            newFirstWeekday = _firstWeekday
+        } else {
+            newFirstWeekday = nil
+        }
+
+        let newMinDays: Int?
+        if let changingMinimumDaysInFirstWeek {
+            newMinDays = changingMinimumDaysInFirstWeek
+        } else if let _minimumDaysInFirstWeek {
+            newMinDays = _minimumDaysInFirstWeek
+        } else {
+            newMinDays = nil
+        }
+
+        return _CalendarGregorian.init(identifier: identifier, timeZone: newTimeZone, locale: newLocale, firstWeekday: newFirstWeekday, minimumDaysInFirstWeek: newMinDays, gregorianStartDate: nil)
     }
     
     func hash(into hasher: inout Hasher) {

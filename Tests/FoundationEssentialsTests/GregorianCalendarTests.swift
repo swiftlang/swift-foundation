@@ -22,6 +22,31 @@ import TestSupport
 // Tests for _GregorianCalendar
 final class GregorianCalendarTests : XCTestCase {
 
+    func testCopy() {
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: nil, locale: nil, firstWeekday: 5, minimumDaysInFirstWeek: 3, gregorianStartDate: nil)
+
+        let newLocale = Locale(identifier: "new locale")
+        let tz = TimeZone(identifier: "America/Los_Angeles")!
+        let copied = gregorianCalendar.copy(changingLocale: newLocale, changingTimeZone: tz, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: nil)
+        // newly set values
+        XCTAssertEqual(copied.locale, newLocale)
+        XCTAssertEqual(copied.timeZone, tz)
+        // unset values stay the same
+        XCTAssertEqual(copied.firstWeekday, 5)
+        XCTAssertEqual(copied.minimumDaysInFirstWeek, 3)
+
+        let copied2 = gregorianCalendar.copy(changingLocale: nil, changingTimeZone: nil, changingFirstWeekday: 1, changingMinimumDaysInFirstWeek: 1)
+
+        // unset values stay the same
+        XCTAssertEqual(copied2.locale, gregorianCalendar.locale)
+        XCTAssertEqual(copied2.timeZone, gregorianCalendar.timeZone)
+
+        // overriding existing values
+        XCTAssertEqual(copied2.firstWeekday, 1)
+        XCTAssertEqual(copied2.minimumDaysInFirstWeek, 1)
+    }
+
+    // MARK: Date from components
     func testDateFromComponents_DST() {
         // The expected dates were generated using ICU Calendar
 
