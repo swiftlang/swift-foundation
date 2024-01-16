@@ -21,18 +21,22 @@ struct CalendarCache : Sendable {
     // MARK: - Concrete Classes
     
     // _CalendarICU, if present
-    static var calendarICUClass: _CalendarProtocol.Type = {
+    static func calendarICUClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
 #if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
         _CalendarICU.self
 #else
         if let name = _typeByName("FoundationInternationalization._CalendarICU"), let t = name as? _CalendarProtocol.Type {
             return t
         } else {
-            // Use the default gregorian class
-            return _CalendarGregorian.self
+            if identifier == .gregorian {
+                // Use the default gregorian class
+                return _CalendarGregorian.self
+            } else {
+                return nil
+            }
         }
 #endif
-    }()
+    }
 
     // MARK: - State
     
@@ -71,7 +75,9 @@ struct CalendarCache : Sendable {
                 return currentCalendar
             } else {
                 let id = Locale.current._calendarIdentifier
-                let calendar = CalendarCache.calendarICUClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+                // If we cannot create the right kind of class, we fail immediately here
+                let calendarClass = CalendarCache.calendarICUClass(identifier: id)!
+                let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 currentCalendar = calendar
                 return calendar
             }
@@ -92,7 +98,9 @@ struct CalendarCache : Sendable {
             if let cached = fixedCalendars[id] {
                 return cached
             } else {
-                let new = CalendarCache.calendarICUClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+                // If we cannot create the right kind of class, we fail immediately here
+                let calendarClass = CalendarCache.calendarICUClass(identifier: id)!
+                let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 fixedCalendars[id] = new
                 return new
             }
@@ -129,6 +137,8 @@ struct CalendarCache : Sendable {
     
     func fixed(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
         // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
-        return CalendarCache.calendarICUClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+        // If we cannot create the right kind of class, we fail immediately here
+        let calendarClass = CalendarCache.calendarICUClass(identifier: identifier)!
+        return calendarClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 }

@@ -56,7 +56,8 @@ extension Date {
 /// This helper records which components should take precedence.
 enum ResolvedDateComponents {
 
-    case dayOfYear(year: Int, dayOfYear: Int)
+    // TODO: Day of Year
+    // case dayOfYear(year: Int, dayOfYear: Int)
     case day(year: Int, month: Int, day: Int?, weekOfYear: Int?)
     case weekdayOrdinal(year: Int, month: Int, weekdayOrdinal: Int, weekday: Int?)
     case weekOfYear(year: Int, weekOfYear: Int?, weekday: Int?)
@@ -114,7 +115,7 @@ enum ResolvedDateComponents {
         var (year, month) = Self.yearMonth(forDateComponent: components)
         let minWeekdayOrdinal = 1
         
-        // TODO: Handle day of year
+        // TODO: Check day of year value here
         if let d = components.day {
             if components.yearForWeekOfYear != nil, let weekOfYear = components.weekOfYear {
                 if components.month == nil && weekOfYear >= 52 {
@@ -1509,8 +1510,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         var rawYear: Int
         switch resolvedComponents {
-        case .dayOfYear(_, _):
-            fatalError("TODO - day of year calculation")
         case .day(let year, let month, _, _):
             rawMonth = month
             rawYear = year
@@ -1534,8 +1533,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         let julianDay: Int
         switch resolvedComponents {
-        case .dayOfYear(_, _):
-            fatalError("TODO - day of year calculation")
         case .day(_, _, let day, _):
             julianDay = julianDayAtBeginningOfYear + (day ?? 1)
         case .weekdayOrdinal(_, _, let weekdayOrdinal, let weekday):
@@ -1603,7 +1600,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             useJulianReference = year == gregorianStartYear
         case .weekOfMonth(_, _, _, _): break
         case .day(_, _, _, _): break
-        case .dayOfYear(_, _): break
         case .weekdayOrdinal(_, _, _, _): break
         }
 
