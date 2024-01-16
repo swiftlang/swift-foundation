@@ -47,7 +47,7 @@ let package = Package(
         .executableTarget(
             name: "DataIOBenchmarks",
             dependencies: [
-                .product(name: "FoundationEssentials", package: "swift-foundation"),
+                .product(name: "FoundationEssentials", package: "swift-foundation-local"),
                 .product(name: "Benchmark", package: "package-benchmark"),
             ],
             path: "Benchmarks/DataIO",
