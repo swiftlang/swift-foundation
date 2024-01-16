@@ -4,7 +4,7 @@
 * Author(s): [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: TBD
 * Status: **Pitch**
-* Implementation: _coming soon_
+* Implementation: [apple/swift-foundation#380](https://github.com/apple/swift-foundation/pull/380)
 
 ## Introduction/Motivation
 
