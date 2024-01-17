@@ -56,7 +56,7 @@ macOS Ventura 13.3.1 is the minimum supported version.
 - Download the latest Xcode from the App Store
 - Download and install the Swift 5.9 toolchain for Xcode from [swift.org](https://www.swift.org/download)
 - Launch Xcode and select the downloaded 5.9 toolchains via *Xcode > Toolchains*
-- Open `Package.swift` and select *Debug > Test*
+- Open `Package.swift` and select *Product > Test*
 
 ### Linux
 - Download the latest [Swift 5.9 docker image](https://hub.docker.com/r/swiftlang/swift/tags?name=5.9) and follow instructions to attach
