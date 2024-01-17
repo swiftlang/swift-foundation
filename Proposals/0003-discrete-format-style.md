@@ -3,7 +3,7 @@
 * Proposal: [SF-0003](0003-discrete-format-style.md)
 * Authors: [Max Obermeier](https://github.com/themomax)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Active review: Jan 4, 2024...Jan 11, 2024**
+* Status: **Accepted**
 * Implementation: [themomax/swift-foundation#2](https://github.com/theMomax/swift-foundation/pull/2)
 * Review: [Pitch](https://forums.swift.org/t/fou-formatstyle-enhancements/68858)
 

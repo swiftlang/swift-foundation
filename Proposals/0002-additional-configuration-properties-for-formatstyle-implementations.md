@@ -3,7 +3,7 @@
 * Proposal: [SF-0002](0002-additional-configuration-properties-for-formatstyle-implementations.md)
 * Authors: [Max Obermeier](https://github.com/themomax)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Active review: Jan 4, 2024...Jan 11, 2024**
+* Status:**Accepted**
 * Implementation: [apple/swift-foundation#338](https://github.com/apple/swift-foundation/issues/338)
 * Review: [Pitch](https://forums.swift.org/t/fou-formatstyle-enhancements/68858)
 
