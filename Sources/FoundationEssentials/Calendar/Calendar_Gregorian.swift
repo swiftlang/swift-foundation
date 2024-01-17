@@ -110,7 +110,7 @@ enum ResolvedDateComponents {
 
         return (year,  month)
     }
-
+    
     init(dateComponents components: DateComponents) {
         var (year, month) = Self.yearMonth(forDateComponent: components)
         let minWeekdayOrdinal = 1
@@ -2128,7 +2128,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         // month-based calculations uses .day, .month, and .year, while week-based uses .weekday, .weekOfYear and .yearForWeekOfYear.
         // When performing date adding calculations, we need to be specific whether it's "month based" or "week based". We do not want existing week-related fields in the DateComponents to conflict with the newly set month-related fields when doing month-based calculation, and vice versa. So it's necessary to only include relevant components rather than all components when performing adding calculation.
-        let monthBasedComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .dayOfYear, .hour, .minute, .second, .nanosecond]
+        let monthBasedComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond]
         let weekBasedComponents: Calendar.ComponentSet = [.era, .weekday, .weekOfYear, .yearForWeekOfYear, .hour, .minute, .second, .nanosecond ]
 
         var result: Date
@@ -2172,7 +2172,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         case .dayOfYear:
             if #available(FoundationPreview 0.4, *) {
-                let dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
+                var monthIncludingDayOfYear = monthBasedComponents
+                monthIncludingDayOfYear.insert(.dayOfYear)
+                let dc = dateComponents(monthIncludingDayOfYear, from: date, in: timeZone)
                 guard let year = dc.year, let dayOfYear = dc.dayOfYear else {
                     preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
                 }
