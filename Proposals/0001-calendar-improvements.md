@@ -3,7 +3,7 @@
 * Proposal: [SF-0001](0001-calendar-improvements.md)
 * Authors: [Tony Parker](https://github.com/parkera)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Active review: Dec 18, 2023...Dec 26, 2023**
+* Status: **Accepted**
 * Implementation: [Pull Request](https://github.com/apple/swift-foundation/pull/322)
 * Review: [Pitch](https://forums.swift.org/t/pitch-calendar-sequence-enumeration/68521)
 
