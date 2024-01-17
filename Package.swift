@@ -6,10 +6,13 @@ import CompilerPluginSupport
 
 // Availability Macros
 let availabilityMacros: [SwiftSetting] = [
-    "FoundationPreview 0.1:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-    "FoundationPreview 0.2:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-    "FoundationPreview 0.3:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
-    "FoundationPreview 0.4:macOS 9999, iOS 9999, tvOS 9999, watchOS 9999",
+    "FoundationPreview 0.1:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4",
+    "FoundationPredicate 0.1:macOS 14, iOS 17, tvOS 17, watchOS 10",
+    "FoundationPreview 0.2:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4",
+    "FoundationPreview 0.3:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4",
+    "FoundationPredicate 0.3:macOS 14, iOS 17, tvOS 17, watchOS 10",
+    "FoundationPreview 0.4:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4",
+    "FoundationPredicate 0.4:macOS 14, iOS 17, tvOS 17, watchOS 10",
 ].map { .enableExperimentalFeature("AvailabilityMacro=\($0)") }
 
 let package = Package(

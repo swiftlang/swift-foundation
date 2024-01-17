@@ -15,7 +15,7 @@
 @_implementationOnly
 import ReflectionInternal
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 enum PredicateCodableError : Error, CustomStringConvertible {
     case disallowedType(typeName: String, path: String)
     case disallowedIdentifier(String, path: String)
@@ -32,7 +32,7 @@ enum PredicateCodableError : Error, CustomStringConvertible {
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 private struct ExpressionStructure : Codable {
     let identifier: String
     let args: [ExpressionStructure]
@@ -115,7 +115,7 @@ private struct ExpressionStructure : Codable {
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 class PredicateArchivingState {
     let configuration: PredicateCodableConfiguration
     
@@ -136,7 +136,7 @@ class PredicateArchivingState {
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension _ThreadLocal.Key<PredicateArchivingState> {
     static let predicateArchivingState = Self<PredicateArchivingState>()
 }
@@ -147,7 +147,7 @@ enum PredicateExpressionCodingKeys : CodingKey {
     case structure
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 fileprivate extension PredicateCodableConfiguration {
     mutating func allowInputs<each Input>(_ input: repeat (each Input).Type) {
         var inputTypes = [Any.Type]()
@@ -158,7 +158,7 @@ fileprivate extension PredicateCodableConfiguration {
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
     mutating func _encode<T: PredicateExpression & Encodable, each Input>(_ expression: T, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
         var predicateConfiguration = predicateConfiguration
@@ -174,7 +174,7 @@ extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
     mutating func _decode<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var predicateConfiguration = predicateConfiguration
