@@ -18,6 +18,12 @@ import TestSupport
 import Glibc
 #endif
 
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#else
+@testable import FoundationEssentials
+#endif // FOUNDATION_FRAMEWORK
+
 extension Data {
     func withUnsafeUInt8Bytes<R>(_ c: (UnsafePointer<UInt8>) throws -> R) rethrows -> R {
         return try self.withUnsafeBytes { (ptr) in
@@ -1698,70 +1704,6 @@ class DataTests : XCTestCase {
         data[100] = 4
     }
     #endif
-}
-
-extension DataTests {
-#if FOUNDATION_FRAMEWORK // FIXME: Enable tests after .write(to:) is implemented
-    func test_basicReadWrite() {
-        let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent("testfile")
-
-        let count = 1 << 24
-        let randomMemory = malloc(count)!
-        let ptr = randomMemory.bindMemory(to: UInt8.self, capacity: count)
-        let data = Data(bytesNoCopy: ptr, count: count, deallocator: .free)
-        do {
-            try data.write(to: url)
-            let readData = try Data(contentsOf: url)
-            XCTAssertEqual(data, readData)
-        } catch {
-            XCTAssertTrue(false, "Should not have thrown")
-        }
-
-        do {
-            try FileManager.default.removeItem(at: url)
-        } catch {
-            // ignore
-        }
-    }
-
-    func test_writeFailure() {
-        let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent("testfile")
-
-        let data = Data()
-        do {
-            try data.write(to: url)
-        } catch let error as NSError {
-            print(error)
-            XCTAssertTrue(false, "Should not have thrown")
-        }
-
-        do {
-            try data.write(to: url, options: [.withoutOverwriting])
-            XCTAssertTrue(false, "Should have thrown")
-        } catch let error as NSError {
-            XCTAssertEqual(error.code, NSFileWriteFileExistsError)
-        }
-
-        do {
-            try FileManager.default.removeItem(at: url)
-        } catch {
-            // ignore
-        }
-
-        // Make sure clearing the error condition allows the write to succeed
-        do {
-            try data.write(to: url, options: [.withoutOverwriting])
-        } catch {
-            XCTAssertTrue(false, "Should not have thrown")
-        }
-
-        do {
-            try FileManager.default.removeItem(at: url)
-        } catch {
-            // ignore
-        }
-    }
-#endif // FOUNDATION_FRAMEWORK
 }
 
 #if FOUNDATION_FRAMEWORK // FIXME: Re-enable test after String.data(using:) is implemented

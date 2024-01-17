@@ -42,7 +42,7 @@ public struct CocoaError : CustomNSError, _StoredError, Hashable {
     public let code: Code
     public let userInfo: [String: AnyHashable]
     
-    public init(code: Code, userInfo: [String: AnyHashable]) {
+    public init(_ code: Code, userInfo: [String: AnyHashable] = [:]) {
         self.code = code
         self.userInfo = userInfo
     }
@@ -187,7 +187,7 @@ extension CocoaError {
         if let url = url {
             info["NSURLErrorKey"] = url
         }
-        return CocoaError(code: code, userInfo: info)
+        return CocoaError(code, userInfo: info)
     }
 #endif
 }
@@ -275,3 +275,11 @@ public extension Error {
 #endif
 
 
+#if FOUNDATION_FRAMEWORK
+#else
+// These are loosely typed, as a typedef for String called NSErrorUserInfoKey
+internal let NSUnderlyingErrorKey = "NSUnderlyingErrorKey"
+internal let NSUserStringVariantErrorKey = "NSUserStringVariantErrorKey"
+internal let NSFilePathErrorKey = "NSFilePathErrorKey"
+internal let NSURLErrorKey = "NSURLErrorKey"
+#endif

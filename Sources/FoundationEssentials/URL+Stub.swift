@@ -13,7 +13,10 @@
 #if !FOUNDATION_FRAMEWORK
 
 public struct URL : Hashable, Sendable, Codable {
+    private init() { }
     
+    public var isFileURL: Bool { false }
+    public var path: String { "" }
 }
 
-#endif // !Foundation_FRAMEWORK
+#endif // !FOUNDATION_FRAMEWORK

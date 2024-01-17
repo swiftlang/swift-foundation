@@ -370,16 +370,19 @@ public struct POSIXError : _BridgedStoredNSError {
 #else
 
 /// Describes an error in the POSIX error domain.
-@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct POSIXError : _StoredError {
+public struct POSIXError : _StoredError, Hashable {
     public let code: Code
 
     public static var errorDomain: String { return "NSPOSIXErrorDomain" }
 
-    public var hashValue: Int {
-        return code.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(code)
     }
 
+    public init(_ code: Code) {
+        self.code = code
+    }
+    
     public typealias Code = POSIXErrorCode
 }
 #endif
