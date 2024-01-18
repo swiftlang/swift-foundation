@@ -2836,6 +2836,65 @@ final class GregorianCalendarTests : XCTestCase {
         test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 820569600.0), end: Date(timeIntervalSince1970: 852019200.0))
     }
 
+    // MARK: - Day Of Year
+    func test_dayOfYear() {
+        // An arbitrary date, for which we know the answers
+        let date = Date(timeIntervalSinceReferenceDate: 682898558) // 2022-08-22 22:02:38 UTC, day 234
+        let leapYearDate = Date(timeIntervalSinceReferenceDate: 745891200) // 2024-08-21 00:00:00 UTC, day 234
+        let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+
+        // Ordinality
+        XCTAssertEqual(cal.ordinality(of: .dayOfYear, in: .year, for: date), 234)
+        XCTAssertEqual(cal.ordinality(of: .hour, in: .dayOfYear, for: date), 23)
+        XCTAssertEqual(cal.ordinality(of: .minute, in: .dayOfYear, for: date), 1323)
+        XCTAssertEqual(cal.ordinality(of: .second, in: .dayOfYear, for: date), 79359)
+
+        // Nonsense ordinalities. Since day of year is already relative, we don't count the Nth day of year in an era.
+        XCTAssertEqual(cal.ordinality(of: .dayOfYear, in: .era, for: date), nil)
+        XCTAssertEqual(cal.ordinality(of: .year, in: .dayOfYear, for: date), nil)
+
+        // Interval
+        let interval = cal.dateInterval(of: .dayOfYear, for: date)
+        XCTAssertEqual(interval, DateInterval(start: Date(timeIntervalSinceReferenceDate: 682819200), duration: 86400))
+
+        // Specific component values
+        XCTAssertEqual(cal.dateComponent(.dayOfYear, from: date), 234)
+
+
+        // Ranges
+        let min = cal.minimumRange(of: .dayOfYear)
+        let max = cal.maximumRange(of: .dayOfYear)
+        XCTAssertEqual(min, 1..<366) // hard coded for gregorian
+        XCTAssertEqual(max, 1..<367)
+
+        XCTAssertEqual(cal.range(of: .dayOfYear, in: .year, for: date), 1..<366)
+        XCTAssertEqual(cal.range(of: .dayOfYear, in: .year, for: leapYearDate), 1..<367)
+
+        // Addition
+        let d1 = cal.add(.dayOfYear, to: date, amount: 1, inTimeZone: .gmt)
+        XCTAssertEqual(d1, date + 86400)
+
+        let d2 = cal.addAndWrap(.dayOfYear, to: date, amount: 365, inTimeZone: .gmt)
+        XCTAssertEqual(d2, date)
+
+        // Conversion from DateComponents
+        var dc = DateComponents(year: 2022, hour: 22, minute: 2, second: 38)
+        dc.dayOfYear = 234
+        let d = cal.date(from: dc)
+        XCTAssertEqual(d, date)
+
+        var subtractMe = DateComponents()
+        subtractMe.dayOfYear = -1
+        let firstDay = Date(timeIntervalSinceReferenceDate: 662688000)
+        let previousDay = cal.date(byAdding: subtractMe, to:firstDay, wrappingComponents: false)
+        XCTAssertNotNil(previousDay)
+        let previousDayComps = cal.dateComponents([.year, .dayOfYear], from: previousDay!)
+        var previousDayExpectationComps = DateComponents()
+        previousDayExpectationComps.year = 2021
+        previousDayExpectationComps.dayOfYear = 365
+        XCTAssertEqual(previousDayComps, previousDayExpectationComps)
+    }
+
     // MARK: - Range of
 
     func testRangeOf() {

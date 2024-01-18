@@ -56,8 +56,7 @@ extension Date {
 /// This helper records which components should take precedence.
 enum ResolvedDateComponents {
 
-    // TODO: Day of Year
-    // case dayOfYear(year: Int, dayOfYear: Int)
+    case dayOfYear(year: Int, dayOfYear: Int)
     case day(year: Int, month: Int, day: Int?, weekOfYear: Int?)
     case weekdayOrdinal(year: Int, month: Int, weekdayOrdinal: Int, weekday: Int?)
     case weekOfYear(year: Int, weekOfYear: Int?, weekday: Int?)
@@ -131,6 +130,8 @@ enum ResolvedDateComponents {
             self = .weekOfMonth(year: year, month: month, weekOfMonth: wom, weekday: weekday)
         } else if let weekdayOrdinal = components.weekdayOrdinal, let weekday = components.weekday {
             self = .weekdayOrdinal(year: year, month: month, weekdayOrdinal: weekdayOrdinal, weekday: weekday)
+        } else if let dayOfYear = components.dayOfYear {
+            self = .dayOfYear(year: year, dayOfYear: dayOfYear)
         } else if components.year != nil {
             self = .day(year: year, month: month, day: components.day, weekOfYear: components.weekOfYear)
         } else if components.yearForWeekOfYear != nil  {
@@ -496,7 +497,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 return 1..<13
             case .quarter, .weekOfYear: /* deprecated week */
                 return _algorithmA(smaller: smaller, larger: larger, at: capped)
-            case .day:
+            case .day, .dayOfYear:
                 let year = dateComponent(.year, from: date)
                 let max = gregorianYearIsLeap(year) ? 366 : 365
                 return 1 ..< max + 1
@@ -991,7 +992,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 let nthWeekday = dateWeek - startWeek + 1
                 return nthWeekday
 
-            case .day:
+            case .day, .dayOfYear:
                 let dc = self.dateComponents([.year, .month, .day], from: date, in: timeZone)
                 let doy = dayOfYear(fromYear: dc.year!, month: dc.month!, day: dc.day!)
                 return doy
@@ -1049,7 +1050,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 let nthWeekday = dateWeek - startWeek + 1
                 return nthWeekday
 
-            case .day:
+            case .day, .dayOfYear:
                 guard let start = start(of: .yearForWeekOfYear, at: date) else { return nil }
                 let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
                 return day
@@ -1116,11 +1117,12 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 let nthWeekday = dateWeek - startWeek + 1
                 return nthWeekday
 
-            case .day:
+            case .day, .dayOfYear:
                 let start = start(of: .quarter, at: date)
                 guard let start else { return nil }
                 let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
                 return day
+
             case .hour:
                 guard let day = ordinality(of: .day, in: .quarter, for: date) else { return nil }
                 let hour = dateComponent(.hour, from: date)
@@ -1236,7 +1238,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             default:
                 return nil
             }
-        case .weekday, .day:
+        case .weekday, .day, .dayOfYear:
             switch smaller {
             case .hour:
                 let hour = dateComponent(.hour, from: date)
@@ -1522,9 +1524,10 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         case .weekOfMonth(let year, let month, _, _):
             rawMonth = month
             rawYear = year
+        case .dayOfYear(let year, _):
+            rawMonth = monthStart
+            rawYear = year
         }
-
-        assert(rawMonth >= 1 || rawMonth <= 12)
 
         // `julianDayAtBeginningOfYear` points to the noon of the day *before* the beginning of year/month
         let julianDayAtBeginningOfYear = Self.julianDay(ofDay: 0, month: rawMonth, year: rawYear, useJulianReference: usingJulianReference)
@@ -1585,6 +1588,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             date = date + (weekOfMonth - 1) * 7
 
             julianDay = julianDayAtBeginningOfYear + date
+        case .dayOfYear(_, let dayOfYear):
+            julianDay = julianDayAtBeginningOfYear + dayOfYear
         }
 
         return julianDay
@@ -1598,9 +1603,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         switch resolvedComponents {
         case .weekOfYear(let year, _, _):
             useJulianReference = year == gregorianStartYear
-        case .weekOfMonth(_, _, _, _): break
-        case .day(_, _, _, _): break
-        case .weekdayOrdinal(_, _, _, _): break
+        case .weekOfMonth, .day, .weekdayOrdinal, .dayOfYear:
+            break
         }
 
         var julianDay = self.julianDay(usingJulianReference: useJulianReference, resolvedComponents: resolvedComponents)
@@ -2424,6 +2428,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if let amount = components.day {
             result = addAndWrap(.day, to: result, amount: amount, inTimeZone: timeZone)
         }
+        if let amount = components.dayOfYear {
+            result = addAndWrap(.dayOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }
         if let amount = components.weekOfYear {
             result = addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
@@ -2475,6 +2482,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
         if let amount = components.day {
             result = add(.day, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.dayOfYear {
+            result = add(.dayOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.weekOfYear {
             result = add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
