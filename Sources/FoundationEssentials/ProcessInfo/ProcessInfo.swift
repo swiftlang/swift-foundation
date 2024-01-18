@@ -151,7 +151,7 @@ final class _ProcessInfo: Sendable {
         }
     }
 
-    private lazy var _canEUIDsChange: Bool = {
+    private var _canEUIDsChange: Bool {
 #if os(macOS)
         let euid = geteuid()
         let uid = getuid()
@@ -163,7 +163,7 @@ final class _ProcessInfo: Sendable {
 #else
         return true
 #endif
-    }()
+    }
 }
 
 // MARK: - Getting Host Information
