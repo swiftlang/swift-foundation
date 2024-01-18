@@ -2546,7 +2546,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             let advanced = add(component, to: start, amount: diff, inTimeZone: timeZone)
             return (diff, advanced)
 
-        case .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear:
+        case .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear:
             // continue to below
             break
         }
@@ -2653,7 +2653,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         for component in orderedComponents(components) {
             switch component {
-            case .era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .weekOfMonth, .nanosecond:
+            case .era, .year, .month, .day, .dayOfYear, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .weekOfMonth, .nanosecond:
                 do {
                     let (diff, newStart) = try difference(inComponent: component, from: curr, to: goal)
                     dc.setValue(diff, for: component)

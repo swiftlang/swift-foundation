@@ -3141,6 +3141,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: 60)
         test(.weekOfYear, expected: 60)
         test(.yearForWeekOfYear, expected: 1)
+        test(.dayOfYear, expected: 425)
 
         // leap to non leap
         start = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
@@ -3155,6 +3156,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: 52)
         test(.weekOfYear, expected: 52)
         test(.yearForWeekOfYear, expected: 1)
+        test(.dayOfYear, expected: 366)
 
         // within leap
         start = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
@@ -3169,6 +3171,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: 8)
         test(.weekOfYear, expected: 8)
         test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: 59)
 
         start = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
         end = Date(timeIntervalSince1970: 825667200.0) // 1996-03-01
@@ -3182,6 +3185,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: 8)
         test(.weekOfYear, expected: 8)
         test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: 60)
 
         // within non leap
         start = Date(timeIntervalSince1970: 788947200.0) // 1995-01-01
@@ -3196,6 +3200,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: 8)
         test(.weekOfYear, expected: 8)
         test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: 59)
 
         // Backwards
         // non leap to leap
@@ -3211,6 +3216,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: -60)
         test(.weekOfYear, expected: -60)
         test(.yearForWeekOfYear, expected: -1)
+        test(.dayOfYear, expected: -425)
 
         // leap to non leap
         start = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
@@ -3225,6 +3231,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: -52)
         test(.weekOfYear, expected: -52)
         test(.yearForWeekOfYear, expected: -1)
+        test(.dayOfYear, expected: -365)
 
         // within leap
         start = Date(timeIntervalSince1970: 825667200.0) // 1996-03-01
@@ -3239,6 +3246,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: -8)
         test(.weekOfYear, expected: -8)
         test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: -60)
 
         start = Date(timeIntervalSince1970: 825580800.0) // 1996-02-29
         end = Date(timeIntervalSince1970: 820483200.0) // 1996-01-01
@@ -3252,6 +3260,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: -8)
         test(.weekOfYear, expected: -8)
         test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: -59)
 
         // within non leap
         start = Date(timeIntervalSince1970: 794044800.0) // 1995-03-01
@@ -3266,6 +3275,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.weekOfMonth, expected: -8)
         test(.weekOfYear, expected: -8)
         test(.yearForWeekOfYear, expected: 0)
+        test(.dayOfYear, expected: -59)
 
         // Time
 
