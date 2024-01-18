@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions {
     public struct OptionalFlatMap<
         LHS : PredicateExpression,
@@ -111,37 +111,37 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.OptionalFlatMap : CustomStringConvertible {
     public var description: String {
         "OptionalFlatMap(wrapped: \(wrapped), variable: \(variable), transform: \(transform))"
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.NilCoalesce : CustomStringConvertible {
     public var description: String {
         "NilCoalesce(lhs: \(lhs), rhs: \(rhs))"
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.ForcedUnwrap : CustomStringConvertible {
     public var description: String {
         "ForcedUnwrap(inner: \(inner))"
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.OptionalFlatMap : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.NilCoalesce : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.ForcedUnwrap : StandardPredicateExpression where Inner : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.OptionalFlatMap : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -158,7 +158,7 @@ extension PredicateExpressions.OptionalFlatMap : Codable where LHS : Codable, RH
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.NilCoalesce : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -173,7 +173,7 @@ extension PredicateExpressions.NilCoalesce : Codable where LHS : Codable, RHS : 
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.ForcedUnwrap : Codable where Inner : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -186,16 +186,16 @@ extension PredicateExpressions.ForcedUnwrap : Codable where Inner : Codable {
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.OptionalFlatMap : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.NilCoalesce : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.ForcedUnwrap : Sendable where Inner : Sendable {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions {
     public struct NilLiteral<Wrapped> : StandardPredicateExpression, Codable, Sendable {
         public typealias Output = Optional<Wrapped>

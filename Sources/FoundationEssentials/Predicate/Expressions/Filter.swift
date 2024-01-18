@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions {
     public struct Filter<
         LHS : PredicateExpression,
@@ -47,17 +47,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.Filter : CustomStringConvertible {
     public var description: String {
         "Filter(sequence: \(sequence), variable: \(variable), filter: \(filter))"
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.Filter : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -74,5 +74,5 @@ extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codab
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.Filter : Sendable where LHS : Sendable, RHS : Sendable {}

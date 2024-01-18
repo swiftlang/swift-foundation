@@ -340,7 +340,7 @@ final class PredicateTests: XCTestCase {
     }
     
     func testDebugDescription() throws {
-        guard #available(FoundationPreview 0.3, *) else {
+        guard #available(FoundationPredicate 0.3, *) else {
             throw XCTSkip("This test is not available on this OS version")
         }
         
@@ -381,7 +381,7 @@ final class PredicateTests: XCTestCase {
 
     #if FOUNDATION_FRAMEWORK
     func testNested() throws {
-        guard #available(FoundationPreview 0.3, *) else {
+        guard #available(FoundationPredicate 0.3, *) else {
             throw XCTSkip("This test is not available on this OS version")
         }
         

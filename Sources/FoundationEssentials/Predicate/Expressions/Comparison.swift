@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions {
     public enum ComparisonOperator: Codable, Sendable {
         case lessThan, lessThanOrEqual, greaterThan, greaterThanOrEqual
@@ -54,17 +54,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.Comparison : CustomStringConvertible {
     public var description: String {
         "Comparison(lhs: \(lhs), operator: \(op), rhs: \(rhs))"
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.Comparison : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.Comparison : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -81,5 +81,5 @@ extension PredicateExpressions.Comparison : Codable where LHS : Codable, RHS : C
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.Comparison : Sendable where LHS : Sendable, RHS : Sendable {}

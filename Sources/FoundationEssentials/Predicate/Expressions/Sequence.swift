@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions {
     public struct SequenceContains<
         LHS : PredicateExpression,
@@ -141,40 +141,40 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.SequenceContains : CustomStringConvertible {
     public var description: String {
         "SequenceContains(sequence: \(sequence), element: \(element))"
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.SequenceContainsWhere : CustomStringConvertible {
     public var description: String {
         "SequenceContainsWhere(sequence: \(sequence), variable: \(variable), test: \(test))"
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.SequenceAllSatisfy : CustomStringConvertible {
     public var description: String {
         "SequenceAllSatisfy(sequence: \(sequence), variable: \(variable), test: \(test))"
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceContains : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceContainsWhere : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceAllSatisfy : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceStartsWith : StandardPredicateExpression where Base : StandardPredicateExpression, Prefix : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceContains : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -189,7 +189,7 @@ extension PredicateExpressions.SequenceContains : Codable where LHS : Codable, R
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceContainsWhere : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -206,7 +206,7 @@ extension PredicateExpressions.SequenceContainsWhere : Codable where LHS : Codab
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceAllSatisfy : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -223,7 +223,7 @@ extension PredicateExpressions.SequenceAllSatisfy : Codable where LHS : Codable,
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceStartsWith : Codable where Base : Codable, Prefix : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -238,14 +238,14 @@ extension PredicateExpressions.SequenceStartsWith : Codable where Base : Codable
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceContains : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceContainsWhere : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceAllSatisfy : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.SequenceStartsWith : Sendable where Base : Sendable, Prefix : Sendable {}

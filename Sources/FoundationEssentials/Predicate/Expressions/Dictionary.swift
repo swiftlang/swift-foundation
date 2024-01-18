@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions {
     public struct DictionaryKeySubscript<
         Wrapped : PredicateExpression,
@@ -40,17 +40,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.DictionaryKeySubscript : CustomStringConvertible {
     public var description: String {
         "DictionaryKeySubscript(wrapped: \(wrapped), key: \(key))"
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.DictionaryKeySubscript : Sendable where Wrapped : Sendable, Key : Sendable {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.DictionaryKeySubscript : Codable where Wrapped : Codable, Key : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -65,10 +65,10 @@ extension PredicateExpressions.DictionaryKeySubscript : Codable where Wrapped : 
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.DictionaryKeySubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Key : StandardPredicateExpression {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions {
     public struct DictionaryKeyDefaultValueSubscript<
         Wrapped : PredicateExpression,
@@ -103,17 +103,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 0.3, *)
+@available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : CustomStringConvertible {
     public var description: String {
         "DictionaryKeyDefaultValueSubscript(wrapped: \(wrapped), key: \(key), defaultValue: \(`default`))"
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : Sendable where Wrapped : Sendable, Key : Sendable, Default : Sendable {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : Codable where Wrapped : Codable, Key : Codable, Default : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -130,5 +130,5 @@ extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : Codable wher
     }
 }
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension PredicateExpressions.DictionaryKeyDefaultValueSubscript : StandardPredicateExpression where Wrapped : StandardPredicateExpression, Key : StandardPredicateExpression, Default : StandardPredicateExpression {}

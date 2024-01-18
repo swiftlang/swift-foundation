@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 public struct Predicate<each Input> : Sendable {
     public let expression : any StandardPredicateExpression<Bool>
     public let variable: (repeat PredicateExpressions.Variable<each Input>)
@@ -28,10 +28,10 @@ public struct Predicate<each Input> : Sendable {
 }
 
 @freestanding(expression)
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 public macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension Predicate {
     private init(value: Bool) {
         self.variable = (repeat PredicateExpressions.Variable<each Input>())
@@ -49,10 +49,10 @@ extension Predicate {
 
 
 // Namespace for operator expressions
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 @frozen @_nonSendable public enum PredicateExpressions {}
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(FoundationPredicate 0.1, *)
 extension Sequence {
     public func filter(_ predicate: Predicate<Element>) throws -> [Element] {
         try self.filter {
