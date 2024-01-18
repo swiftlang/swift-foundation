@@ -25,6 +25,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     internal var _year: Int?
     internal var _month: Int?
     internal var _day: Int?
+    internal var _dayOfYear: Int?
     internal var _hour: Int?
     internal var _minute: Int?
     internal var _second: Int?
@@ -72,6 +73,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         self.weekOfMonth = weekOfMonth
         self.weekOfYear = weekOfYear
         self.yearForWeekOfYear = yearForWeekOfYear
+        self.dayOfYear = nil
     }
 
     package init?(component: Calendar.Component, value: Int) {
@@ -213,7 +215,16 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         get { _weekOfYear }
         set { _weekOfYear = converted(newValue) }
     }
-
+    
+    /// A day of the year.
+    /// For example, in the Gregorian calendar, can go from 1 to 365 or 1 to 366 in leap years.
+    /// - note: This value is interpreted in the context of the calendar in which it is used.
+    @available(FoundationPreview 0.4, *)
+    public var dayOfYear: Int? {
+        get { _dayOfYear }
+        set { _dayOfYear = converted(newValue) }
+    }
+    
     /// This exists only for compatibility with NSDateComponents deprecated `week` value.
     package var week: Int? {
         get { _week }
@@ -236,7 +247,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         get { _isLeapMonth }
         set { _isLeapMonth = newValue }
     }
-
+    
     /// Returns a `Date` calculated from the current components using the `calendar` property.
     public var date: Date? {
         guard let calendar = _calendar else { return nil }
@@ -272,6 +283,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         case .weekOfYear: self.weekOfYear = value
         case .yearForWeekOfYear: self.yearForWeekOfYear = value
         case .nanosecond: self.nanosecond = value
+        case .dayOfYear: self.dayOfYear = value
         case .calendar, .timeZone, .isLeapMonth:
             // Do nothing
             break
@@ -298,6 +310,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         case .weekOfYear: return self.weekOfYear
         case .yearForWeekOfYear: return self.yearForWeekOfYear
         case .nanosecond: return self.nanosecond
+        case .dayOfYear: return self.dayOfYear
         case .calendar, .timeZone, .isLeapMonth:
             return nil
         }
@@ -349,7 +362,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         }
 
         // This is similar to the list of units and keys\. in Calendar_Enumerate.swift, but this one does not include nanosecond or leap month
-        let units : [Calendar.Component] = [.era, .year, .quarter, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
+        let units : [Calendar.Component] = [.era, .year, .quarter, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear]
 
         let newComponents = calendar.dateComponents(Set(units), from: date)
 
@@ -366,8 +379,30 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         if let weekOfMonth = _weekOfMonth, weekOfMonth != newComponents.weekOfMonth { return false }
         if let weekOfYear = _weekOfYear, weekOfYear != newComponents.weekOfYear { return false }
         if let yearForWeekOfYear = _yearForWeekOfYear, yearForWeekOfYear != newComponents.yearForWeekOfYear { return false }
+        if let dayOfYear = _dayOfYear, dayOfYear != newComponents.dayOfYear { return false }
 
         return true
+    }
+    
+    // MARK: -
+    
+    /// Returns a new `DateComponents` where the subset of fields that can be scaled have been mulitplied by `value`.
+    internal func scaled(by value: Int) -> DateComponents {
+        var dc = self
+        if let era = _era { dc.era = era * value }
+        if let year = _year { dc.year = year * value }
+        if let month = _month { dc.month = month * value }
+        if let day = _day { dc.day = day * value }
+        if let hour = _hour { dc.hour = hour * value }
+        if let minute = _minute { dc.minute = minute * value }
+        if let second = _second { dc.second = second * value }
+        if let nanosecond = _nanosecond { dc.nanosecond = nanosecond * value }
+        if let quarter = _quarter { dc.quarter = quarter * value }
+        if let week = _week { dc.week = week * value }
+        if let weekOfMonth = _weekOfMonth { dc.weekOfMonth = weekOfMonth * value }
+        if let weekOfYear = _weekOfYear { dc.weekOfYear = weekOfYear * value }
+        if let yearForWeekOfYear = _yearForWeekOfYear { dc.yearForWeekOfYear = yearForWeekOfYear * value }
+        return dc
     }
 
     // MARK: -
@@ -390,6 +425,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         hasher.combine(_weekOfYear)
         hasher.combine(_yearForWeekOfYear)
         hasher.combine(_isLeapMonth)
+        hasher.combine(_dayOfYear)
     }
 
     // MARK: - Bridging Helpers
@@ -409,6 +445,10 @@ public struct DateComponents : Hashable, Equatable, Sendable {
             lhs.weekOfYear != rhs.weekOfYear ||
             lhs.yearForWeekOfYear != rhs.yearForWeekOfYear ||
             lhs.nanosecond != rhs.nanosecond {
+            return false
+        }
+        
+        if lhs.dayOfYear != rhs.dayOfYear {
             return false
         }
 
@@ -455,6 +495,7 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
         if let r = quarter { c.append((label: "quarter", value: r)) }
         if let r = weekOfMonth { c.append((label: "weekOfMonth", value: r)) }
         if let r = weekOfYear { c.append((label: "weekOfYear", value: r)) }
+        if let r = dayOfYear { c.append((label: "dayOfYear", value: r)) }
         if let r = yearForWeekOfYear { c.append((label: "yearForWeekOfYear", value: r)) }
         if let r = isLeapMonth { c.append((label: "isLeapMonth", value: r)) }
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
@@ -481,6 +522,7 @@ extension DateComponents : Codable {
         case weekOfYear
         case yearForWeekOfYear
         case isLeapMonth
+        case dayOfYear
     }
 
     public init(from decoder: Decoder) throws {
@@ -505,6 +547,8 @@ extension DateComponents : Codable {
 
         let isLeapMonth = try container.decodeIfPresent(Bool.self, forKey: .isLeapMonth)
 
+        let dayOfYear = try container.decodeIfPresent(Int.self, forKey: .dayOfYear)
+        
         self.init(calendar: calendar,
                   timeZone: timeZone,
                   era: era,
@@ -524,6 +568,10 @@ extension DateComponents : Codable {
 
         if let isLeapMonth {
             self.isLeapMonth = isLeapMonth
+        }
+        
+        if let dayOfYear {
+            self.dayOfYear = dayOfYear
         }
     }
 
@@ -546,6 +594,7 @@ extension DateComponents : Codable {
         try container.encodeIfPresent(self.weekOfYear, forKey: .weekOfYear)
         try container.encodeIfPresent(self.yearForWeekOfYear, forKey: .yearForWeekOfYear)
         try container.encodeIfPresent(self.isLeapMonth, forKey: .isLeapMonth)
+        try container.encodeIfPresent(self.dayOfYear, forKey: .dayOfYear)
     }
 }
 
@@ -582,6 +631,7 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
         if let _weekOfMonth { ns.weekOfMonth = _weekOfMonth }
         if let _weekOfYear { ns.weekOfYear = _weekOfYear }
         if let _yearForWeekOfYear { ns.yearForWeekOfYear = _yearForWeekOfYear }
+        if let _dayOfYear { ns.dayOfYear = _dayOfYear }
         if let _isLeapMonth { ns.isLeapMonth = _isLeapMonth }
         if let _week { __NSDateComponentsSetWeek(ns, _week) }
         return ns
@@ -611,6 +661,7 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
         if ns.weekOfMonth != NSInteger.max { dc.weekOfMonth = ns.weekOfMonth }
         if ns.weekOfYear != NSInteger.max { dc.weekOfYear = ns.weekOfYear }
         if ns.yearForWeekOfYear != NSInteger.max { dc.yearForWeekOfYear = ns.yearForWeekOfYear }
+        if ns.dayOfYear != NSInteger.max { dc.dayOfYear = ns.dayOfYear }
         if (__NSDateComponentsIsLeapMonthSet(ns)) {
             dc.isLeapMonth = ns.isLeapMonth
         }

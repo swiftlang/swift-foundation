@@ -611,6 +611,7 @@ private func _fromNSCalendarUnits(_ units : NSCalendar.Unit) -> Set<Calendar.Com
     if units.contains(.weekOfMonth) { result.insert(.weekOfMonth) }
     if units.contains(.weekOfYear) { result.insert(.weekOfYear) }
     if units.contains(.yearForWeekOfYear) { result.insert(.yearForWeekOfYear) }
+    if units.contains(.dayOfYear) { result.insert(.dayOfYear) }
     if units.contains(.nanosecond) { result.insert(.nanosecond) }
     if units.contains(.calendar) { result.insert(.calendar) }
     if units.contains(.timeZone) { result.insert(.timeZone) }
@@ -633,6 +634,7 @@ private func _fromNSCalendarUnit(_ unit: NSCalendar.Unit) -> Calendar.Component?
     case .weekOfMonth: return .weekOfMonth
     case .weekOfYear: return .weekOfYear
     case .yearForWeekOfYear: return .yearForWeekOfYear
+    case .dayOfYear: return .dayOfYear
     case .nanosecond: return .nanosecond
     case .calendar: return .calendar
     case .timeZone: return .timeZone
