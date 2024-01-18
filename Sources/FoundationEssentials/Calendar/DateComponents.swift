@@ -73,10 +73,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         self.weekOfMonth = weekOfMonth
         self.weekOfYear = weekOfYear
         self.yearForWeekOfYear = yearForWeekOfYear
-        
-        if #available(FoundationPreview 0.4, *) {
-            self.dayOfYear = nil
-        }
+        self.dayOfYear = nil
     }
 
     package init?(component: Calendar.Component, value: Int) {
@@ -286,8 +283,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         case .weekOfYear: self.weekOfYear = value
         case .yearForWeekOfYear: self.yearForWeekOfYear = value
         case .nanosecond: self.nanosecond = value
-        case .dayOfYear: 
-            if #available(FoundationPreview 0.4, *) { self.dayOfYear = value }
+        case .dayOfYear: self.dayOfYear = value
         case .calendar, .timeZone, .isLeapMonth:
             // Do nothing
             break
@@ -314,7 +310,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         case .weekOfYear: return self.weekOfYear
         case .yearForWeekOfYear: return self.yearForWeekOfYear
         case .nanosecond: return self.nanosecond
-        case .dayOfYear: if #available(FoundationPreview 0.4, *) { return self.dayOfYear } else { return nil }
+        case .dayOfYear: return self.dayOfYear
         case .calendar, .timeZone, .isLeapMonth:
             return nil
         }
@@ -366,12 +362,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         }
 
         // This is similar to the list of units and keys\. in Calendar_Enumerate.swift, but this one does not include nanosecond or leap month
-        let units : [Calendar.Component]
-        if #available(FoundationPreview 0.4, *) {
-            units = [.era, .year, .quarter, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear]
-        } else {
-            units = [.era, .year, .quarter, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
-        }
+        let units : [Calendar.Component] = [.era, .year, .quarter, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear]
 
         let newComponents = calendar.dateComponents(Set(units), from: date)
 
@@ -388,9 +379,8 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         if let weekOfMonth = _weekOfMonth, weekOfMonth != newComponents.weekOfMonth { return false }
         if let weekOfYear = _weekOfYear, weekOfYear != newComponents.weekOfYear { return false }
         if let yearForWeekOfYear = _yearForWeekOfYear, yearForWeekOfYear != newComponents.yearForWeekOfYear { return false }
-        if #available(FoundationPreview 0.4, *) {
-            if let dayOfYear = _dayOfYear, dayOfYear != newComponents.dayOfYear { return false }
-        }
+        if let dayOfYear = _dayOfYear, dayOfYear != newComponents.dayOfYear { return false }
+
         return true
     }
     
@@ -458,10 +448,8 @@ public struct DateComponents : Hashable, Equatable, Sendable {
             return false
         }
         
-        if #available(FoundationPreview 0.4, *) {
-            if lhs.dayOfYear != rhs.dayOfYear {
-                return false
-            }
+        if lhs.dayOfYear != rhs.dayOfYear {
+            return false
         }
 
         if !((lhs.isLeapMonth == false && rhs.isLeapMonth == nil) ||
@@ -507,9 +495,7 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
         if let r = quarter { c.append((label: "quarter", value: r)) }
         if let r = weekOfMonth { c.append((label: "weekOfMonth", value: r)) }
         if let r = weekOfYear { c.append((label: "weekOfYear", value: r)) }
-        if #available(FoundationPreview 0.4, *) {
-            if let r = dayOfYear { c.append((label: "dayOfYear", value: r)) }
-        }
+        if let r = dayOfYear { c.append((label: "dayOfYear", value: r)) }
         if let r = yearForWeekOfYear { c.append((label: "yearForWeekOfYear", value: r)) }
         if let r = isLeapMonth { c.append((label: "isLeapMonth", value: r)) }
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
@@ -584,10 +570,8 @@ extension DateComponents : Codable {
             self.isLeapMonth = isLeapMonth
         }
         
-        if #available(FoundationPreview 0.4, *) {
-            if let dayOfYear {
-                self.dayOfYear = dayOfYear
-            }
+        if let dayOfYear {
+            self.dayOfYear = dayOfYear
         }
     }
 
@@ -610,9 +594,7 @@ extension DateComponents : Codable {
         try container.encodeIfPresent(self.weekOfYear, forKey: .weekOfYear)
         try container.encodeIfPresent(self.yearForWeekOfYear, forKey: .yearForWeekOfYear)
         try container.encodeIfPresent(self.isLeapMonth, forKey: .isLeapMonth)
-        if #available(FoundationPreview 0.4, *) {
-            try container.encodeIfPresent(self.dayOfYear, forKey: .dayOfYear)
-        }
+        try container.encodeIfPresent(self.dayOfYear, forKey: .dayOfYear)
     }
 }
 

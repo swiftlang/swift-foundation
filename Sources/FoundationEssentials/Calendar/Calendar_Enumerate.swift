@@ -84,11 +84,9 @@ extension DateComponents {
             guard calendar.value(v, isValidFor: .year) else { return false }
         }
         
-        if #available(FoundationPreview 0.4, *) {
-            if let v = self.dayOfYear {
-                hasAtLeastOneFieldSet = true
-                guard calendar.value(v, isValidFor: .dayOfYear) else { return false }
-            }
+        if let v = self.dayOfYear {
+            hasAtLeastOneFieldSet = true
+            guard calendar.value(v, isValidFor: .dayOfYear) else { return false }
         }
 
         if let v = self.quarter {
@@ -162,9 +160,7 @@ extension DateComponents {
         // A note on performance: this approach is much faster than using key paths, which require a lot more allocations.
         if self.era != nil { return .era }
         if self.year != nil { return .year }
-        if #available(FoundationPreview 0.4, *) {
-            if self.dayOfYear != nil { return .dayOfYear }
-        }
+        if self.dayOfYear != nil { return .dayOfYear }
         if self.quarter != nil { return .quarter }
         if self.month != nil { return .month }
         if self.day != nil { return .day }
@@ -198,9 +194,7 @@ extension DateComponents {
         if self.day != nil { return .day }
         if self.month != nil { return .month }
         if self.quarter != nil { return .quarter }
-        if #available(FoundationPreview 0.4, *) {
-            if self.dayOfYear != nil { return .dayOfYear }
-        }
+        if self.dayOfYear != nil { return .dayOfYear }
         if self.year != nil { return .year }
         if self.era != nil { return .era }
         return nil
@@ -221,9 +215,7 @@ extension DateComponents {
         if self.weekOfMonth != nil { units.insert(.weekOfMonth) }
         if self.weekOfYear != nil { units.insert(.weekOfYear) }
         if self.yearForWeekOfYear != nil { units.insert(.yearForWeekOfYear) }
-        if #available(FoundationPreview 0.4, *) {
-            if self.dayOfYear != nil { units.insert(.dayOfYear) }
-        }
+        if self.dayOfYear != nil { units.insert(.dayOfYear) }
         if self.nanosecond != nil { units.insert(.nanosecond) }
         return units
     }
@@ -251,9 +243,7 @@ extension DateComponents {
         if self.yearForWeekOfYear != other.yearForWeekOfYear { mismatched.insert(.yearForWeekOfYear) }
         if self.nanosecond != other.nanosecond { mismatched.insert(.nanosecond) }
         if self.isLeapMonth != other.isLeapMonth { mismatched.insert(.isLeapMonth) }
-        if #available(FoundationPreview 0.4, *) {
-            if self.dayOfYear != other.dayOfYear { mismatched.insert(.dayOfYear) }
-        }
+        if self.dayOfYear != other.dayOfYear { mismatched.insert(.dayOfYear) }
         
         return mismatched
     }
@@ -1344,10 +1334,8 @@ extension Calendar {
             searchStartDate = result
         }
         
-        if #available(FoundationPreview 0.4, *) {
-            if let result = try dateAfterMatchingDayOfYear(startingAt: searchStartDate, components: comps, direction: direction) {
-                searchStartDate = result
-            }
+        if let result = try dateAfterMatchingDayOfYear(startingAt: searchStartDate, components: comps, direction: direction) {
+            searchStartDate = result
         }
 
         if let result = try dateAfterMatchingMonth(startingAt: searchStartDate, components: comps, direction: direction, strictMatching: isStrictMatching) {

@@ -194,25 +194,15 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if contains(.nanosecond) { result.insert(.nanosecond) }
             if contains(.calendar) { result.insert(.calendar) }
             if contains(.timeZone) { result.insert(.timeZone) }
-            if contains(.isLeapMonth) { 
-                if #available(FoundationPreview 0.1, *) {
-                    result.insert(.isLeapMonth)
-                }
-            }
-            if contains(.dayOfYear) {
-                if #available(FoundationPreview 0.4, *) {
-                    result.insert(.dayOfYear)
-                }
-            }
+            if contains(.isLeapMonth) { result.insert(.isLeapMonth) }
+            if contains(.dayOfYear) { result.insert(.dayOfYear) }
             return result
         }
 
         package var highestSetUnit: Calendar.Component? {
             if self.contains(.era) { return .era }
             if self.contains(.year) { return .year }
-            if #available(FoundationPreview 0.4, *) {
-                if self.contains(.dayOfYear) { return .dayOfYear }
-            }
+            if self.contains(.dayOfYear) { return .dayOfYear }
             if self.contains(.quarter) { return .quarter }
             if self.contains(.month) { return .month }
             if self.contains(.day) { return .day }
@@ -227,9 +217,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if self.contains(.nanosecond) { return .nanosecond }
 
             // The algorithms that call this function assume that isLeapMonth counts as a 'highest unit set', but the order is after nanosecond.
-            if #available(FoundationPreview 0.1, *) {
-                if self.contains(.isLeapMonth) { return .isLeapMonth }
-            }
+            if self.contains(.isLeapMonth) { return .isLeapMonth }
 
             // The calendar and timeZone properties do not count as a 'highest unit set', since they are not ordered in time like the others are.
             return nil
@@ -1247,13 +1235,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: `true` if the date matches all of the components, otherwise `false`.
     @available(iOS 8.0, *)
     public func date(_ date: Date, matchesComponents components: DateComponents) -> Bool {
-        let comparedUnits: Set<Calendar.Component> 
-        
-        if #available(FoundationPreview 0.4, *) {
-            comparedUnits = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .nanosecond]
-        } else {
-            comparedUnits = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .nanosecond]
-        }
+        let comparedUnits: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .nanosecond]
             
 
         let actualUnits = comparedUnits.filter { u in

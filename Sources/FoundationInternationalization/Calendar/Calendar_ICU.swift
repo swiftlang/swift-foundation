@@ -1194,9 +1194,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             if let value = components.second { ucal_set(ucalendar, UCAL_SECOND, Int32(truncatingIfNeeded: value)) }
             if let value = components.nanosecond { nanosecond = Double(value) }
             if let isLeap = components.isLeapMonth, isLeap { ucal_set(ucalendar, UCAL_IS_LEAP_MONTH, 1) }
-            if #available(FoundationPreview 0.4, *) {
-                if let value = components.dayOfYear { ucal_set(ucalendar, UCAL_DAY_OF_YEAR, Int32(truncatingIfNeeded: value)) }
-            }
+            if let value = components.dayOfYear { ucal_set(ucalendar, UCAL_DAY_OF_YEAR, Int32(truncatingIfNeeded: value)) }
             
             var status = U_ZERO_ERROR
             let udate = ucal_getMillis(ucalendar, &status)
@@ -1239,9 +1237,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             // ICU's Month is -1 from DateComponents
             if components.contains(.month) { dc.month = Int(ucal_get(ucalendar, UCAL_MONTH, &status)) + 1 }
             if components.contains(.day) { dc.day = Int(ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)) }
-            if #available(FoundationPreview 0.4, *) {
-                if components.contains(.dayOfYear) { dc.dayOfYear = Int(ucal_get(ucalendar, UCAL_DAY_OF_YEAR, &status)) }
-            }
+            if components.contains(.dayOfYear) { dc.dayOfYear = Int(ucal_get(ucalendar, UCAL_DAY_OF_YEAR, &status)) }
             if components.contains(.weekOfYear) { dc.weekOfYear = Int(ucal_get(ucalendar, UCAL_WEEK_OF_YEAR, &status)) }
             if components.contains(.weekOfMonth) { dc.weekOfMonth = Int(ucal_get(ucalendar, UCAL_WEEK_OF_MONTH, &status)) }
             if components.contains(.yearForWeekOfYear) { dc.yearForWeekOfYear = Int(ucal_get(ucalendar, UCAL_YEAR_WOY, &status)) }
@@ -1294,9 +1290,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             // if let _ = components.quarter {  }
             if let amount = components.month { _ = _locked_add(UCAL_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.day { _ = _locked_add(UCAL_DAY_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
-            if #available(FoundationPreview 0.4, *) {
-                if let amount = components.dayOfYear { _ = _locked_add(UCAL_DAY_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
-            }
+            if let amount = components.dayOfYear { _ = _locked_add(UCAL_DAY_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.weekOfYear { _ = _locked_add(UCAL_WEEK_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
             // `week` is for backward compatibility only, and is only used if weekOfYear is missing
             if let amount = components.week, components.weekOfYear == nil { _ = _locked_add(UCAL_WEEK_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
@@ -1357,9 +1351,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             if components.contains(.weekOfYear) { dc.weekOfYear = Int(ucal_getFieldDifference(ucalendar, goal, UCAL_WEEK_OF_YEAR, &status)) }
             if components.contains(.weekOfMonth) { dc.weekOfMonth = Int(ucal_getFieldDifference(ucalendar, goal, UCAL_WEEK_OF_MONTH, &status)) }
             if components.contains(.day) { dc.day = Int(ucal_getFieldDifference(ucalendar, goal, UCAL_DAY_OF_MONTH, &status)) }
-            if #available(FoundationPreview 0.4, *) {
-                if components.contains(.dayOfYear) { dc.dayOfYear = Int(ucal_getFieldDifference(ucalendar, goal, UCAL_DAY_OF_YEAR, &status)) }
-            }
+            if components.contains(.dayOfYear) { dc.dayOfYear = Int(ucal_getFieldDifference(ucalendar, goal, UCAL_DAY_OF_YEAR, &status)) }
             if components.contains(.weekday) { dc.weekday = Int(ucal_getFieldDifference(ucalendar, goal, UCAL_DAY_OF_WEEK, &status)) }
             if components.contains(.weekdayOrdinal) { dc.weekdayOrdinal = Int(ucal_getFieldDifference(ucalendar, goal, UCAL_DAY_OF_WEEK_IN_MONTH, &status)) }
             if components.contains(.hour) { dc.hour = Int(ucal_getFieldDifference(ucalendar, goal, UCAL_HOUR_OF_DAY, &status)) }

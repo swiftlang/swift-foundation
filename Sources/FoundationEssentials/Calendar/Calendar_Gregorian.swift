@@ -1852,9 +1852,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
         if components.contains(.month) { dc.month = month }
         if components.contains(.day) { dc.day = day }
-        if #available(FoundationPreview 0.4, *) {
-            if components.contains(.dayOfYear) { dc.dayOfYear = dayOfYear }
-        }
+        if components.contains(.dayOfYear) { dc.dayOfYear = dayOfYear }
         if components.contains(.hour) { dc.hour = hour }
         if components.contains(.minute) { dc.minute = minute }
         if components.contains(.second) { dc.second = second }
@@ -2171,34 +2169,30 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             result = self.date(from: dc, inTimeZone: timeZone)!
 
         case .dayOfYear:
-            if #available(FoundationPreview 0.4, *) {
-                var monthIncludingDayOfYear = monthBasedComponents
-                monthIncludingDayOfYear.insert(.dayOfYear)
-                let dc = dateComponents(monthIncludingDayOfYear, from: date, in: timeZone)
-                guard let year = dc.year, let dayOfYear = dc.dayOfYear else {
-                    preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
-                }
-                
-                let range: Range<Int>
-                if gregorianYearIsLeap(year) {
-                    // max is 366
-                    range = 1..<367
-                } else {
-                    // max is 365
-                    range = 1..<366
-                }
-                
-                let newDayOfYear = add(amount: amount, to: dayOfYear, wrappingTo: range)
-                // Clear the month and day from the date components. Keep the era, year, and time values (hour, min, etc.)
-                var adjustedDateComponents = dc
-                adjustedDateComponents.month = nil
-                adjustedDateComponents.day = nil
-                adjustedDateComponents.dayOfYear = newDayOfYear
-                result = self.date(from: adjustedDateComponents, inTimeZone: timeZone)!
-            } else {
-                result = date
+            var monthIncludingDayOfYear = monthBasedComponents
+            monthIncludingDayOfYear.insert(.dayOfYear)
+            let dc = dateComponents(monthIncludingDayOfYear, from: date, in: timeZone)
+            guard let year = dc.year, let dayOfYear = dc.dayOfYear else {
+                preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
             }
-
+            
+            let range: Range<Int>
+            if gregorianYearIsLeap(year) {
+                // max is 366
+                range = 1..<367
+            } else {
+                // max is 365
+                range = 1..<366
+            }
+            
+            let newDayOfYear = add(amount: amount, to: dayOfYear, wrappingTo: range)
+            // Clear the month and day from the date components. Keep the era, year, and time values (hour, min, etc.)
+            var adjustedDateComponents = dc
+            adjustedDateComponents.month = nil
+            adjustedDateComponents.day = nil
+            adjustedDateComponents.dayOfYear = newDayOfYear
+            result = self.date(from: adjustedDateComponents, inTimeZone: timeZone)!
+           
         case .day:
             let (_, monthStart, daysInMonth, inGregorianCutoverMonth) = dayOfMonthConsideringGregorianCutover(date, inTimeZone: timeZone)
 
