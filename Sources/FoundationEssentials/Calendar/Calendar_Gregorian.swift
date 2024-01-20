@@ -151,6 +151,13 @@ enum ResolvedDateComponents {
 
 }
 
+
+/// Internal-use error for indicating unexpected situations when finding dates.
+enum GregorianCalendarError : Error {
+    case overflow(Calendar.Component, Date /* failing start date */, Date /* failing end date */)
+    case notAdvancing(Date /* next */, Date /* previous */)
+}
+
 /// This class is a placeholder and work-in-progress to provide an implementation of the Gregorian calendar.
 internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     
@@ -2525,9 +2532,167 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
     }
 
-    
+    // MARK: Differences
+
+    // Calendar::fieldDifference
+    func difference(inComponent component: Calendar.Component, from start: Date, to end: Date) throws -> (difference: Int, newStart: Date) {
+        guard end != start else {
+            return (0, start)
+        }
+
+        switch component {
+        case .calendar, .timeZone, .isLeapMonth:
+            preconditionFailure("Invalid arguments")
+
+        case .era:
+            // Special handling since `add` below doesn't work with `era`
+            let currEra = dateComponent(.era, from: start)
+            let goalEra = dateComponent(.era, from: end)
+
+            return (goalEra - currEra, start)
+        case .nanosecond:
+            let diffInNano = end.timeIntervalSince(start).remainder(dividingBy: 1) * 1.0e+9
+            let diff = diffInNano < Double(Int32.max) ? Int(diffInNano) : Int(Int32.max)
+            let advanced = add(component, to: start, amount: diff, inTimeZone: timeZone)
+            return (diff, advanced)
+
+        case .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear:
+            // continue to below
+            break
+        }
+
+        let forward = end > start
+        var max = forward ? 1 : -1
+        var min = 0
+        while true {
+            let ms = add(component, to: start, amount: max, inTimeZone: timeZone)
+            guard forward ? (ms > start) : (ms < start) else {
+                throw GregorianCalendarError.notAdvancing(start, ms)
+            }
+
+            if ms == end {
+                return (max, ms)
+            } else if (forward && ms > end) || (!forward && ms < end) {
+                break
+            } else {
+                min = max
+                max <<= 1
+                guard forward ? max >= 0 : max < 0 else {
+                    throw GregorianCalendarError.overflow(component, start, end)
+                }
+            }
+        }
+
+        // Binary search
+        while (forward && (max - min) > 1) || (!forward && (min - max > 1)) {
+            let t = min + (max - min) / 2
+
+            let ms = add(component, to: start, amount: t, inTimeZone: timeZone)
+            if ms == end {
+                return (t, ms)
+            } else if (forward && ms > end) || (!forward && ms < end) {
+                max = t
+            } else {
+                min = t
+            }
+        }
+
+        let advanced = add(component, to: start, amount: min, inTimeZone: timeZone)
+
+        return (min, advanced)
+    }
+
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
-        fatalError()
+        let cappedStart = start.capped
+        let cappedEnd = end.capped
+
+        let subseconds = cappedStart.timeIntervalSinceReferenceDate.remainder(dividingBy: 1)
+
+        var curr = cappedStart  - subseconds
+        let goal = cappedEnd - subseconds
+        func orderedComponents(_ components: Calendar.ComponentSet) -> [Calendar.Component] {
+            var comps: [Calendar.Component] = []
+            if components.contains(.era) {
+                comps.append(.era)
+            }
+            if components.contains(.year) {
+                comps.append(.year)
+            }
+            if components.contains(.yearForWeekOfYear) {
+                comps.append(.yearForWeekOfYear)
+            }
+            if components.contains(.quarter) {
+                comps.append(.quarter)
+            }
+            if components.contains(.month) {
+                comps.append(.month)
+            }
+            if components.contains(.weekOfYear) {
+                comps.append(.weekOfYear)
+            }
+            if components.contains(.weekOfMonth) {
+                comps.append(.weekOfMonth)
+            }
+            if components.contains(.day) {
+                comps.append(.day)
+            }
+            if components.contains(.weekday) {
+                comps.append(.weekday)
+            }
+            if components.contains(.weekdayOrdinal) {
+                comps.append(.weekdayOrdinal)
+            }
+            if components.contains(.hour) {
+                comps.append(.hour)
+            }
+            if components.contains(.minute) {
+                comps.append(.minute)
+            }
+            if components.contains(.second) {
+                comps.append(.second)
+            }
+
+            if components.contains(.nanosecond) {
+                comps.append(.nanosecond)
+            }
+
+            return comps
+        }
+
+        var dc = DateComponents()
+
+        for component in orderedComponents(components) {
+            switch component {
+            case .era, .year, .month, .day, .dayOfYear, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .weekOfMonth, .nanosecond:
+                do {
+                    let (diff, newStart) = try difference(inComponent: component, from: curr, to: goal)
+                    dc.setValue(diff, for: component)
+                    curr = newStart
+                } catch let error as GregorianCalendarError {
+#if FOUNDATION_FRAMEWORK
+                    switch error {
+
+                    case .overflow(_, _, _):
+                        Logger(Calendar.log).error("Overflowing in dateComponents(from:start:end:). start: \(start.timeIntervalSinceReferenceDate, privacy: .public) end: \(end.timeIntervalSinceReferenceDate, privacy: .public) component: \(component, privacy: .public)")
+                    case .notAdvancing(_, _):
+                        Logger(Calendar.log).error("Not advancing in dateComponents(from:start:end:). start: \(start.timeIntervalSinceReferenceDate, privacy: .public) end: \(end.timeIntervalSinceReferenceDate, privacy: .public) component: \(component, privacy: .public)")
+                    }
+#endif
+                    dc.setValue(0, for: component)
+                } catch {
+                    preconditionFailure("Unknown error: \(error)")
+                }
+
+            case .timeZone, .isLeapMonth, .calendar:
+                // No leap month support needed here, since these are quantities, not values
+                break
+            case .quarter:
+                // Currently unsupported so always return 0
+                dc.quarter = 0
+            }
+        }
+
+        return dc
     }
     
 #if FOUNDATION_FRAMEWORK
