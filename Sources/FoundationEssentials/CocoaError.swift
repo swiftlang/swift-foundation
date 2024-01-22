@@ -61,7 +61,7 @@ public struct CocoaError : CustomNSError, _StoredError, Hashable {
 
 /// Describes the code of an error.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public protocol _ErrorCodeProtocol : Equatable {
+public protocol _ErrorCodeProtocol : Equatable, RawRepresentable {
 #if FOUNDATION_FRAMEWORK
     /// The corresponding error code.
     associatedtype _ErrorType: _BridgedStoredNSError where _ErrorType.Code == Self
