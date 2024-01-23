@@ -10,13 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(Darwin)
+#if canImport(os)
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import os
 #else
 package import os
-#endif
+#endif // FOUNDATION_FRAMEWORK
 #elseif canImport(Glibc)
 import Glibc
 #endif
@@ -160,7 +159,13 @@ enum GregorianCalendarError : Error {
 
 /// This class is a placeholder and work-in-progress to provide an implementation of the Gregorian calendar.
 internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
-    
+
+#if canImport(os)
+    fileprivate static let logger: Logger = {
+        Logger(subsystem: "com.apple.foundation", category: "gregorian_calendar")
+    }()
+#endif
+
     let kSecondsInWeek = 604_800
     let kSecondsInDay = 86400
     let kSecondsInHour = 3600
@@ -2669,13 +2674,12 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                     dc.setValue(diff, for: component)
                     curr = newStart
                 } catch let error as GregorianCalendarError {
-#if FOUNDATION_FRAMEWORK
+#if canImport(os)
                     switch error {
-
                     case .overflow(_, _, _):
-                        Logger(Calendar.log).error("Overflowing in dateComponents(from:start:end:). start: \(start.timeIntervalSinceReferenceDate, privacy: .public) end: \(end.timeIntervalSinceReferenceDate, privacy: .public) component: \(component, privacy: .public)")
+                        _CalendarGregorian.logger.error("Overflowing in dateComponents(from:start:end:). start: \(start.timeIntervalSinceReferenceDate, privacy: .public). end: \(end.timeIntervalSinceReferenceDate, privacy: .public). component: \(component.debugDescription, privacy: .public)")
                     case .notAdvancing(_, _):
-                        Logger(Calendar.log).error("Not advancing in dateComponents(from:start:end:). start: \(start.timeIntervalSinceReferenceDate, privacy: .public) end: \(end.timeIntervalSinceReferenceDate, privacy: .public) component: \(component, privacy: .public)")
+                        _CalendarGregorian.logger.error("Not advancing in dateComponents(from:start:end:). start: \(start.timeIntervalSinceReferenceDate, privacy: .public) end: \(end.timeIntervalSinceReferenceDate, privacy: .public) component: \(component.debugDescription, privacy: .public)")
                     }
 #endif
                     dc.setValue(0, for: component)
