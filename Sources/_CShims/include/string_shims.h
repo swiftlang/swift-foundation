@@ -34,9 +34,15 @@
 
 INTERNAL int _stringshims_strncasecmp_l(const char * _Nullable s1, const char * _Nullable s2, size_t n, locale_t _Nullable loc);
 
+#ifdef __cplusplus
+INTERNAL double _stringshims_strtod_l(const char * _Nullable __restrict__ nptr, char * _Nullable * _Nullable __restrict__ endptr, locale_t _Nullable loc);
+
+INTERNAL float _stringshims_strtof_l(const char * _Nullable __restrict__ nptr, char * _Nullable * _Nullable __restrict__ endptr, locale_t _Nullable loc);
+#else
 INTERNAL double _stringshims_strtod_l(const char * _Nullable restrict nptr, char * _Nullable * _Nullable restrict endptr, locale_t _Nullable loc);
 
 INTERNAL float _stringshims_strtof_l(const char * _Nullable restrict nptr, char * _Nullable * _Nullable restrict endptr, locale_t _Nullable loc);
+#endif
 
 INTERNAL int _stringshims_get_formatted_str_length(double value);
 
