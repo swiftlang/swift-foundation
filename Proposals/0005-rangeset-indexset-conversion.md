@@ -1,8 +1,9 @@
 # `RangeSet`/`IndexSet` Conversion
 
-* Proposal: SF-NNNN
+* Proposal: SF-0005
 * Author(s): [Jeremy Schonfeld](https://github.com/jmschonfeld)
-* Status: **Pitch**
+* Review Manager: [Charles Hu](https://github.com/iCharlesHu)
+* Status: **Active Review: Jan 26, 2024 ... Feb 2, 2024**
 * Implementation: _coming soon_
 
 ## Introduction/Motivation
