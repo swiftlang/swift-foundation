@@ -161,7 +161,7 @@ enum GregorianCalendarError : Error {
 internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
 #if canImport(os)
-    fileprivate static let logger: Logger = {
+    internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "gregorian_calendar")
     }()
 #endif
@@ -177,6 +177,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     let inf_ti : TimeInterval = 4398046511104.0
 
+    // FIXME: Support other Gregorian-calendar family such as ISO8601
     // Only respects Gregorian identifier
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
 

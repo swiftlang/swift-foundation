@@ -21,19 +21,20 @@ struct CalendarCache : Sendable {
     // MARK: - Concrete Classes
     
     // _CalendarICU, if present
-    static func calendarICUClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
+    static func calendarICUClass(identifier: Calendar.Identifier, useGregorian: Bool = false) -> _CalendarProtocol.Type? {
 #if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
-        _CalendarICU.self
+        if useGregorian && identifier == .gregorian {
+            return _CalendarGregorian.self
+        } else {
+            return _CalendarICU.self
+        }
 #else
-        if let name = _typeByName("FoundationInternationalization._CalendarICU"), let t = name as? _CalendarProtocol.Type {
+        if useGregorian && identifier == .gregorian {
+            return _CalendarGregorian.self
+        } else if let name = _typeByName("FoundationInternationalization._CalendarICU"), let t = name as? _CalendarProtocol.Type {
             return t
         } else {
-            if identifier == .gregorian {
-                // Use the default gregorian class
-                return _CalendarGregorian.self
-            } else {
-                return nil
-            }
+            return nil
         }
 #endif
     }
@@ -45,6 +46,10 @@ struct CalendarCache : Sendable {
         private var currentCalendar: (any _CalendarProtocol)?
         private var autoupdatingCurrentCalendar: _CalendarAutoupdating?
         private var fixedCalendars: [Calendar.Identifier: any _CalendarProtocol] = [:]
+
+        private var _currentGregorian: (any _CalendarProtocol)?
+        private var _autoupdatingCurrentGregorian: _CalendarGregorianAutoupdating?
+        private var _fixedGregorian: [Calendar.Identifier: any _CalendarProtocol] = [:]
         private var noteCount = -1
         private var wasResetManually = false
                 
@@ -105,7 +110,45 @@ struct CalendarCache : Sendable {
                 return new
             }
         }
-        
+
+        // MARK: - Gregorian Calendar debugging
+        mutating func _fixed_gregorian(_ id: Calendar.Identifier) -> any _CalendarProtocol {
+            check()
+            if let cached = fixedCalendars[id] {
+                return cached
+            } else {
+                // If we cannot create the right kind of class, we fail immediately here
+                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: true)!
+                let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+                _fixedGregorian[id] = new
+                return new
+            }
+        }
+
+        mutating func _current_gregorian() -> any _CalendarProtocol {
+            check()
+            if let _currentGregorian {
+                return _currentGregorian
+            } else {
+                let id = Locale.current._calendarIdentifier
+                // If we cannot create the right kind of class, we fail immediately here
+                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: true)!
+                let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+                currentCalendar = calendar
+                return calendar
+            }
+        }
+
+        mutating func _autoupdatingCurrent_gregorian() -> any _CalendarProtocol {
+            if let _autoupdatingCurrentGregorian {
+                return _autoupdatingCurrentGregorian
+            } else {
+                let calendar = _CalendarGregorianAutoupdating()
+                _autoupdatingCurrentGregorian = calendar
+                return calendar
+            }
+        }
+
         mutating func reset() {
             wasResetManually = true
         }
@@ -139,6 +182,27 @@ struct CalendarCache : Sendable {
         // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
         // If we cannot create the right kind of class, we fail immediately here
         let calendarClass = CalendarCache.calendarICUClass(identifier: identifier)!
+        return calendarClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+    }
+
+    // MARK: - Gregorian calendar debugging
+
+    var _current_gregorian: any _CalendarProtocol {
+        lock.withLock { $0._current_gregorian() }
+    }
+
+    var _autoupdatingCurrent_gregorian: any _CalendarProtocol {
+        lock.withLock { $0._autoupdatingCurrent_gregorian() }
+    }
+
+    func _fixed_gregorian(_ id: Calendar.Identifier) -> any _CalendarProtocol {
+        lock.withLock { $0._fixed_gregorian(id) }
+    }
+
+    func _fixed_gregorian(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
+        // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
+        // If we cannot create the right kind of class, we fail immediately here
+        let calendarClass = CalendarCache.calendarICUClass(identifier: identifier, useGregorian: true)!
         return calendarClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 }

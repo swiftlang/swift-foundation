@@ -30,7 +30,8 @@ import CRT
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Calendar : Hashable, Equatable, Sendable {
     private var _calendar: any _CalendarProtocol & AnyObject
-    
+    private var _otherCalendar: any _CalendarProtocol & AnyObject // For validating implementation of _GregorianCalendar
+
     /// Calendar supports many different kinds of calendars. Each is identified by an identifier here.
     public enum Identifier : Sendable, CustomDebugStringConvertible {
         /// The common calendar in Europe, the Western Hemisphere, and elsewhere.
@@ -303,7 +304,11 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// This calendar does not track changes that the user makes to their preferences.
     public static var current : Calendar {
-        Calendar(inner: CalendarCache.cache.current)
+        if _foundation_essentials_feature_enabled() {
+            Calendar(inner: CalendarCache.cache._current_gregorian, otherInner: CalendarCache.cache.current)
+        } else {
+            Calendar(inner: CalendarCache.cache.current, otherInner: CalendarCache.cache._current_gregorian)
+        }
     }
 
     /// A Calendar that tracks changes to user's preferred calendar.
@@ -312,7 +317,11 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: The autoupdating Calendar will only compare equal to another autoupdating Calendar.
     public static var autoupdatingCurrent : Calendar {
-        Calendar(inner: CalendarCache.cache.autoupdatingCurrent)
+        if _foundation_essentials_feature_enabled() {
+            Calendar(inner: CalendarCache.cache._autoupdatingCurrent_gregorian, otherInner: CalendarCache.cache.autoupdatingCurrent)
+        } else {
+            Calendar(inner: CalendarCache.cache.autoupdatingCurrent, otherInner: CalendarCache.cache._autoupdatingCurrent_gregorian)
+        }
     }
 
     // MARK: -
@@ -322,16 +331,29 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - parameter identifier: The kind of calendar to use.
     public init(identifier: __shared Identifier) {
-        _calendar = CalendarCache.cache.fixed(identifier)
+        if _foundation_essentials_feature_enabled() {
+            _calendar = CalendarCache.cache._fixed_gregorian(identifier)
+            _otherCalendar = CalendarCache.cache.fixed(identifier)
+        } else {
+            _calendar = CalendarCache.cache.fixed(identifier)
+            _otherCalendar = CalendarCache.cache._fixed_gregorian(identifier)
+        }
     }
 
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
     internal init(identifier: Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
-        _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+        if _foundation_essentials_feature_enabled() {
+            _calendar = CalendarCache.cache._fixed_gregorian(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+            _otherCalendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+        } else {
+            _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+            _otherCalendar = CalendarCache.cache._fixed_gregorian(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+        }
     }
 
-    internal init(inner: any _CalendarProtocol) {
+    internal init(inner: any _CalendarProtocol, otherInner: any _CalendarProtocol) {
         _calendar = inner
+        _otherCalendar = otherInner
     }
     
     // MARK: -
@@ -341,9 +363,11 @@ public struct Calendar : Hashable, Equatable, Sendable {
     fileprivate init(reference : __shared NSCalendar) {
         if let swift = reference as? _NSSwiftCalendar {
             _calendar = swift.calendar._calendar
+            _otherCalendar = swift.calendar._otherCalendar
         } else {
             // This is a custom NSCalendar subclass
             _calendar = _CalendarBridged(adoptingReference: reference)
+            _otherCalendar = _calendar
         }
     }
     #endif
@@ -359,7 +383,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// The locale of the calendar.
     public var locale : Locale? {
         get {
-            _calendar.locale
+            let res = _calendar.locale
+            validateGregorianCalendarAndLog(res, _otherCalendar.locale)
+            return res
         }
         set {
             guard newValue != _calendar.locale else {
@@ -369,13 +395,16 @@ public struct Calendar : Hashable, Equatable, Sendable {
             
             // TODO: We can't use isKnownUniquelyReferenced on an existential. For now we must always copy. n.b. we must also always copy if _calendar.isAutoupdating is true.
             _calendar = _calendar.copy(changingLocale: newValue, changingTimeZone: nil, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: nil)
+            _otherCalendar = _otherCalendar.copy(changingLocale: newValue, changingTimeZone: nil, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: nil)
         }
     }
 
     /// The time zone of the calendar.
     public var timeZone : TimeZone {
         get {
-            _calendar.timeZone
+            let res = _calendar.timeZone
+            validateGregorianCalendarAndLog(res, _otherCalendar.timeZone)
+            return res
         }
         set {
             guard newValue != _calendar.timeZone else {
@@ -385,6 +414,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
                 
             // TODO: We can't use isKnownUniquelyReferenced on an existential. For now we must always copy. n.b. we must also always copy if _calendar.isAutoupdating is true.
             _calendar = _calendar.copy(changingLocale: nil, changingTimeZone: newValue, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: nil)
+            _otherCalendar = _otherCalendar.copy(changingLocale: nil, changingTimeZone: newValue, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: nil)
         }
     }
 
@@ -395,7 +425,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// The first weekday of the calendar.
     public var firstWeekday : Int {
         get {
-            _calendar.firstWeekday
+            let res = _calendar.firstWeekday
+            validateGregorianCalendarAndLog(res, _otherCalendar.firstWeekday)
+            return res
         }
         set {
             guard newValue != _calendar.firstWeekday else {
@@ -405,13 +437,52 @@ public struct Calendar : Hashable, Equatable, Sendable {
             
             // TODO: We can't use isKnownUniquelyReferenced on an existential. For now we must always copy. n.b. we must also always copy if _calendar.isAutoupdating is true.
             _calendar = _calendar.copy(changingLocale: nil, changingTimeZone: nil, changingFirstWeekday: newValue, changingMinimumDaysInFirstWeek: nil)
+            _otherCalendar = _otherCalendar.copy(changingLocale: nil, changingTimeZone: nil, changingFirstWeekday: newValue, changingMinimumDaysInFirstWeek: nil)
         }
+    }
+
+
+    private func validateGregorianCalendarAndLog<T: Equatable & CustomStringConvertible>(_ c1: T?, _ c2: T?, _ message: @autoclosure @escaping () -> String = "", _ functionName: String = #function) {
+        guard _calendar.identifier == .gregorian else {
+            return
+        }
+#if canImport(os)
+        assert(_otherCalendar.identifier == .gregorian)
+        if c1 != c2 {
+            if _calendar.localeIdentifier != _otherCalendar.localeIdentifier {
+                _CalendarGregorian.logger.debug("1st calendar locale: \(_calendar.localeIdentifier). 2nd calendar locale: \(_otherCalendar.localeIdentifier), ")
+            }
+
+            _CalendarGregorian.logger.debug("different behavior in calendar implementation. \(functionName): 1st: \(c1.debugDescription), 2nd: \(c2.debugDescription). \(message())")
+        }
+#endif
+    }
+
+    private func validateGregorianCalendarAndLog(_ c1: DateComponents?, _ c2: DateComponents?, compareQuarter: Bool = true, _ message: @autoclosure @escaping () -> String = "", _ functionName: String = #function) {
+        guard _calendar.identifier == .gregorian else {
+            return
+        }
+
+#if canImport(os)
+        assert(_otherCalendar.identifier == .gregorian)
+        let (isEqual, diff) = DateComponents.differenceBetween(c1, c2, compareQuarter: compareQuarter)
+        if !isEqual {
+            if _calendar.localeIdentifier != _otherCalendar.localeIdentifier {
+                _CalendarGregorian.logger.debug("1st calendar locale: \(_calendar.localeIdentifier). 2nd calendar locale: \(_otherCalendar.localeIdentifier), ")
+            }
+
+            _CalendarGregorian.logger.debug("different behavior in calendar implementation. \(functionName): \(diff). \(message())")
+        }
+#endif
     }
 
     /// The number of minimum days in the first week.
     public var minimumDaysInFirstWeek : Int {
         get {
-            _calendar.minimumDaysInFirstWeek
+            // FIXME: firstWeekday is related to locale. Should be moved to Locale_ICU, like weekend data
+            let res = _calendar.minimumDaysInFirstWeek
+            validateGregorianCalendarAndLog(res, _otherCalendar.minimumDaysInFirstWeek)
+            return res
         }
         set {
             guard newValue != _calendar.minimumDaysInFirstWeek else {
@@ -421,6 +492,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
                 
             // TODO: We can't use isKnownUniquelyReferenced on an existential. For now we must always copy. n.b. we must also always copy if _calendar.isAutoupdating is true.
             _calendar = _calendar.copy(changingLocale: nil, changingTimeZone: nil, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: newValue)
+            _otherCalendar = _otherCalendar.copy(changingLocale: nil, changingTimeZone: nil, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: newValue)
         }
     }
 
@@ -433,7 +505,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter component: A component to calculate a range for.
     /// - returns: The range, or nil if it could not be calculated.
     public func minimumRange(of component: Component) -> Range<Int>? {
-        _calendar.minimumRange(of: component)
+        let res = _calendar.minimumRange(of: component)
+        validateGregorianCalendarAndLog(res, _otherCalendar.minimumRange(of: component), "component: \(component.debugDescription)")
+        return res
     }
 
     /// The maximum range limits of the values that a given component can take on in the receive
@@ -442,7 +516,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter component: A component to calculate a range for.
     /// - returns: The range, or nil if it could not be calculated.
     public func maximumRange(of component: Component) -> Range<Int>? {
-        _calendar.maximumRange(of: component)
+        let res = _calendar.maximumRange(of: component)
+        validateGregorianCalendarAndLog(res, _otherCalendar.maximumRange(of: component), "component: \(component.debugDescription)")
+        return res
     }
 
 
@@ -454,7 +530,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The absolute time for which the calculation is performed.
     /// - returns: The range of absolute time values smaller can take on in larger at the time specified by date. Returns `nil` if larger is not logically bigger than smaller in the calendar, or the given combination of components does not make sense (or is a computation which is undefined).
     public func range(of smaller: Component, in larger: Component, for date: Date) -> Range<Int>? {
-        _calendar.range(of: smaller, in: larger, for: date)
+        let res = _calendar.range(of: smaller, in: larger, for: date)
+        validateGregorianCalendarAndLog(res, _otherCalendar.range(of: smaller, in: larger, for: date), "small: \(smaller), large: \(larger), date: \(date.timeIntervalSinceReferenceDate)")
+
+        return res
     }
 
     /// Returns, via two inout parameters, the starting time and duration of a given calendar component that contains a given date.
@@ -483,7 +562,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A new `DateInterval` if the starting time and duration of a component could be calculated, otherwise `nil`.
     @available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *)
     public func dateInterval(of component: Component, for date: Date) -> DateInterval? {
-        _calendar.dateInterval(of: component, for: date)
+        let res = _calendar.dateInterval(of: component, for: date)
+        validateGregorianCalendarAndLog(res, _otherCalendar.dateInterval(of: component, for: date), "component: \(component.debugDescription), date: \(date.timeIntervalSinceReferenceDate)")
+
+        return res
     }
 
     /// Returns, for a given absolute time, the ordinal number of a smaller calendar component (such as a day) within a specified larger calendar component (such as a week).
@@ -496,7 +578,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The absolute time for which the calculation is performed.
     /// - returns: The ordinal number of smaller within larger at the time specified by date. Returns `nil` if larger is not logically bigger than smaller in the calendar, or the given combination of components does not make sense (or is a computation which is undefined).
     public func ordinality(of smaller: Component, in larger: Component, for date: Date) -> Int? {
-        _calendar.ordinality(of: smaller, in: larger, for: date)
+        let res = _calendar.ordinality(of: smaller, in: larger, for: date)
+        validateGregorianCalendarAndLog(res , _otherCalendar.ordinality(of: smaller, in: larger, for: date), "smaller: \(smaller), larger: \(larger), date: \(date.timeIntervalSinceReferenceDate)")
+
+        return res
     }
 
     // MARK: - Addition
@@ -508,7 +593,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
     /// - returns: A new date, or nil if a date could not be calculated with the given input.
     public func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool = false) -> Date? {
-        _calendar.date(byAdding: components, to: date, wrappingComponents: wrappingComponents)
+        let res = _calendar.date(byAdding: components, to: date, wrappingComponents: wrappingComponents)
+        validateGregorianCalendarAndLog(res, _otherCalendar.date(byAdding: components, to: date, wrappingComponents: wrappingComponents), "components: \(components.debugDescription), date: \(date.timeIntervalSinceReferenceDate), wrapping: \(wrappingComponents)")
+
+        return res
     }
 
     /// Returns a new `Date` representing the date calculated by adding an amount of a specific component to a given date.
@@ -572,7 +660,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter components: Used as input to the search algorithm for finding a corresponding date.
     /// - returns: A new `Date`, or nil if a date could not be found which matches the components.
     public func date(from components: DateComponents) -> Date? {
-        _calendar.date(from: components)
+        let res = _calendar.date(from: components)
+        validateGregorianCalendarAndLog(res , _otherCalendar.date(from: components), "components: \(components.debugDescription)")
+        return res
     }
 
     /// Returns all the date components of a date, using the calendar time zone.
@@ -582,6 +672,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: The date components of the specified date.
     public func dateComponents(_ components: Set<Component>, from date: Date) -> DateComponents {
         var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: date)
+
+        validateGregorianCalendarAndLog(dc, _otherCalendar.dateComponents(Calendar.ComponentSet(components), from: date), "components: \(components.debugDescription), date: \(date.timeIntervalSinceReferenceDate)")
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -595,6 +687,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
     internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
         var dc = _calendar.dateComponents(components, from: date)
+
+        validateGregorianCalendarAndLog(dc , _otherCalendar.dateComponents(components, from: date), "components: \(components.set.debugDescription), date: \(date.timeIntervalSinceReferenceDate)")
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -613,7 +707,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: All components, calculated using the `Calendar` and `TimeZone`.
     @available(iOS 8.0, *)
     public func dateComponents(in timeZone: TimeZone, from date: Date) -> DateComponents {
-        var dc = _calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: date, in: timeZone)
+        let allComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
+        var dc = _calendar.dateComponents(allComponents, from: date, in: timeZone)
+
+        validateGregorianCalendarAndLog(dc, _otherCalendar.dateComponents(allComponents, from: date, in: timeZone), "timeZone: \(timeZone), date: \(date.timeIntervalSinceReferenceDate)")
 
         // Fill out the Calendar field of dateComponents (the above calls cannot insert this struct into the date components, because they don't know the right value).
         dc.calendar = self
@@ -628,6 +725,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: The result of calculating the difference from start to end.
     public func dateComponents(_ components: Set<Component>, from start: Date, to end: Date) -> DateComponents {
         var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: start, to: end)
+
+        validateGregorianCalendarAndLog(dc, _otherCalendar.dateComponents(Calendar.ComponentSet(components), from: start, to: end), "components: \(components.debugDescription), start: \(start.timeIntervalSinceReferenceDate), end: \(end.timeIntervalSinceReferenceDate)")
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -911,7 +1010,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: `true` if the given date is within a weekend.
     @available(iOS 8.0, *)
     public func isDateInWeekend(_ date: Date) -> Bool {
-        _calendar.isDateInWeekend(date)
+        let res = _calendar.isDateInWeekend(date)
+        validateGregorianCalendarAndLog(res, _otherCalendar.isDateInWeekend(date), "date: \(date.timeIntervalSinceReferenceDate)")
+        return res
     }
 
     /// Finds the range of the weekend around the given date, and returns the starting date and duration of the weekend via two inout parameters.
@@ -1532,3 +1633,43 @@ extension NSCalendar : _HasCustomAnyHashableRepresentation {
     }
 }
 #endif // FOUNDATION_FRAMEWORK
+
+// MARK: - Debug logging
+
+extension DateComponents {
+    fileprivate static func differenceBetween(_ d1: DateComponents?, _ d2: DateComponents?, compareQuarter: Bool, within nanosecondAccuracy: Int = 5000) -> (Bool, String) {
+        let components: [Calendar.Component] = [.era, .year, .month, .day, .dayOfYear, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .weekOfMonth, .timeZone, .isLeapMonth, .calendar, .quarter, .nanosecond]
+        var diffStr = ""
+        var isEqual = true
+        for component in components {
+            let actualValue = d1?.value(for: component)
+            let expectedValue = d2?.value(for: component)
+            switch component {
+            case .era, .year, .month, .day, .dayOfYear, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .weekOfMonth, .timeZone, .isLeapMonth, .calendar:
+                if actualValue != expectedValue {
+                    diffStr += "component: \(component), 1st: \(String(describing: actualValue)), 2nd: \(String(describing: expectedValue))"
+                    isEqual = false
+                }
+            case .quarter:
+                if compareQuarter && actualValue != expectedValue {
+                    diffStr += "component: \(component), 1st: \(String(describing: actualValue)), 2nd: \(String(describing: expectedValue))"
+                    isEqual = false
+                }
+            case .nanosecond:
+                var nanosecondIsEqual = true
+                if let actualValue, let expectedValue, (abs(actualValue - expectedValue) > nanosecondAccuracy) {
+                    nanosecondIsEqual = false
+                } else if actualValue != expectedValue { // one of them is nil
+                    nanosecondIsEqual = false
+                }
+
+                if !nanosecondIsEqual {
+                    diffStr += "component: \(component), 1st: \(String(describing: actualValue)), 2nd: \(String(describing: expectedValue))"
+                    isEqual = false
+                }
+            }
+        }
+
+        return (isEqual, diffStr)
+    }
+}
