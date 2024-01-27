@@ -77,6 +77,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
     
     private var allowedKeyPaths: [String : AllowListKeyPath] = [:]
     private var allowedTypes: [String : AllowListType] = [:]
+    internal var shouldAddInputTypes = true
     
     public init() {}
     

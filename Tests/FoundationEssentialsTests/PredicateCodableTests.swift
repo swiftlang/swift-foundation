@@ -468,63 +468,84 @@ final class PredicateCodableTests: XCTestCase {
         let predicate = #Predicate<Int> { _ in
             a == a
         }
+        
 
-        let encoder = JSONEncoder()
-        var config = PredicateCodableConfiguration.standardConfiguration
-        config.allowPartialType(A< >.self, identifier: "PredicateCodableTests.A")
-        XCTAssertThrowsError(try encoder.encode(predicate, configuration: config)) {
-            XCTAssertTrue(String(describing: $0).contains("type is not allowed because it contains type pack parameters"))
+        struct CustomConfig : PredicateCodingConfigurationProviding {
+            static let config = {
+                var configuration = PredicateCodableConfiguration.standardConfiguration
+                configuration.allowPartialType(A< >.self, identifier: "PredicateCodableTests.A")
+                return configuration
+            }()
         }
         
-        let json = """
-        [
-          {
-            "expression" : [
-              null,
-              null
-            ],
-            "structure" : {
-              "identifier" : "PredicateExpressions.Equal",
-              "args" : [
-                {
-                  "identifier" : "PredicateExpressions.Value",
-                  "args" : [
-                    {
-                      "identifier": "PredicateCodableTests.A",
-                      "args": [
-                        "Swift.String",
-                        "Swift.Int"
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "args" : [
-                    {
-                      "identifier": "PredicateCodableTests.A",
-                      "args": [
-                        "Swift.String",
-                        "Swift.Int"
-                      ]
-                    }
-                  ],
-                  "identifier" : "PredicateExpressions.Value"
-                }
-              ]
-            },
-            "variable" : [
-              {
-                "key" : 0
-              }
-            ]
-          }
+        let decoded = try _encodeDecode(predicate, for: CustomConfig.self)
+        XCTAssertEqual(try decoded.evaluate(2), try predicate.evaluate(2))
+    }
+    
+    func testNestedPredicates() throws {
+        let predicateA = #Predicate<Object> {
+            $0.a == 3
+        }
+        
+        let predicateB = #Predicate<Object> {
+            predicateA.evaluate($0) && $0.a > 2
+        }
+        
+        let decoded = try _encodeDecode(predicateB, for: StandardConfig.self)
+        
+        let objects = [
+            Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3], h: Object2(a: 1, b: "Foo")),
+            Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3], h: Object2(a: 1, b: "Foo")),
+            Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3], h: Object2(a: 1, b: "Foo")),
+            Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3], h: Object2(a: 1, b: "Foo")),
+            Object(a: 4, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3], h: Object2(a: 1, b: "Foo"))
         ]
-        """
         
-        let decoder = JSONDecoder()
-        XCTAssertThrowsError(try decoder.decode(Predicate<Int>.self, from: json.data(using: .utf8)!, configuration: config)) {
-            XCTAssertTrue(String(describing: $0).contains("type is not allowed because it contains type pack parameters"))
+        for object in objects {
+            XCTAssertEqual(try decoded.evaluate(object), try predicateB.evaluate(object), "Evaluation failed to produce equal results for \(object)")
         }
+    }
+    
+    func testNestedPredicateRestrictedConfiguration() throws {
+        struct RestrictedBox<each T> : Codable {
+            let predicate: Predicate<repeat each T>
+            
+            func encode(to encoder: any Encoder) throws {
+                var container = encoder.unkeyedContainer()
+                // Restricted empty configuration
+                try container.encode(predicate, configuration: PredicateCodableConfiguration())
+            }
+            
+            init(_ predicate: Predicate<repeat each T>) {
+                self.predicate = predicate
+            }
+            
+            init(from decoder: any Decoder) throws {
+                var container = try decoder.unkeyedContainer()
+                self.predicate = try container.decode(Predicate<repeat each T>.self, configuration: PredicateCodableConfiguration())
+            }
+        }
+        
+        let predicateA = #Predicate<Object> {
+            $0.a == 3
+        }
+        let box = RestrictedBox(predicateA)
+        
+        let predicateB = #Predicate<Object> {
+            box.predicate.evaluate($0) && $0.a > 2
+        }
+        
+        struct CustomConfig : PredicateCodingConfigurationProviding {
+            static let config = {
+                var configuration = PredicateCodableConfiguration.standardConfiguration
+                configuration.allowKeyPathsForPropertiesProvided(by: PredicateCodableTests.Object.self)
+                configuration.allowKeyPath(\RestrictedBox<Object>.predicate, identifier: "RestrictedBox.Predicate")
+                return configuration
+            }()
+        }
+        
+        // Throws an error because the sub-predicate's configuration won't contain anything in the allowlist
+        XCTAssertThrowsError(try _encodeDecode(predicateB, for: CustomConfig.self))
     }
 }
 

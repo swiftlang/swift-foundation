@@ -385,31 +385,12 @@ final class PredicateTests: XCTestCase {
             throw XCTSkip("This test is not available on this OS version")
         }
         
-        let predicateA = Predicate<Object> {
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_Arg($0),
-                    keyPath: \.a
-                ),
-                rhs: PredicateExpressions.build_Arg(3)
-            )
+        let predicateA = #Predicate<Object> {
+            $0.a == 3
         }
         
-        let predicateB = Predicate<Object> {
-            PredicateExpressions.build_Conjunction(
-                lhs: PredicateExpressions.build_evaluate(
-                    PredicateExpressions.build_Arg(predicateA),
-                    PredicateExpressions.build_Arg($0)
-                ),
-                rhs: PredicateExpressions.build_Comparison(
-                    lhs: PredicateExpressions.build_KeyPath(
-                        root: PredicateExpressions.build_Arg($0),
-                        keyPath: \.a
-                    ),
-                    rhs: PredicateExpressions.build_Arg(2),
-                    op: .greaterThan
-                )
-            )
+        let predicateB = #Predicate<Object> {
+            predicateA.evaluate($0) && $0.a > 2
         }
         
         XCTAssertTrue(try predicateA.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))

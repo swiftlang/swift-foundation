@@ -56,11 +56,15 @@ extension PredicateExpressions.PredicateEvaluate : StandardPredicateExpression w
 @available(FoundationPredicate 0.3, *)
 extension PredicateExpressions.PredicateEvaluate : Codable where Condition : Codable, repeat each Input : Codable {
     public func encode(to encoder: Encoder) throws {
-        throw EncodingError.invalidValue(self, EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Encoding the PredicateEvaluate operator is not yet supported"))
+        var container = encoder.unkeyedContainer()
+        try container.encode(predicate)
+        repeat try container.encode(each input)
     }
     
     public init(from decoder: Decoder) throws {
-        throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Decoding the PredicateEvaluate operator is not yet supported"))
+        var container = try decoder.unkeyedContainer()
+        self.predicate = try container.decode(Condition.self)
+        self.input = (repeat try container.decode((each Input).self))
     }
 }
 
