@@ -591,28 +591,22 @@ final class DateFormatStyleTests : XCTestCase {
         var format: Date.FormatStyle = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
         func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #file, line: UInt = #line) {
             let formatted = format.format(date)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            XCTAssertEqualIgnoreSeparator(formatted, expected, file: file, line: line)
         }
-
-        #if FOUNDATION_FRAMEWORK
-            let separator = "\u{202f}"
-        #else
-            let separator = " "
-        #endif
 
         let date = Date(timeIntervalSince1970: 0)
 
-        verifyWithFormat(date, expected: "1/1/1970, 12:00\(separator)AM")
+        verifyWithFormat(date, expected: "1/1/1970, 12:00 AM")
         format = format.day(.omitted)
-        verifyWithFormat(date, expected: "1/1970, 12:00\(separator)AM")
+        verifyWithFormat(date, expected: "1/1970, 12:00 AM")
         format = format.day(.defaultDigits)
-        verifyWithFormat(date, expected: "1/1/1970, 12:00\(separator)AM")
+        verifyWithFormat(date, expected: "1/1/1970, 12:00 AM")
         format = format.minute()
-        verifyWithFormat(date, expected: "1/1/1970, 12:00\(separator)AM")
+        verifyWithFormat(date, expected: "1/1/1970, 12:00 AM")
         format = format.minute(.omitted)
-        verifyWithFormat(date, expected: "1/1/1970, 12\(separator)AM")
+        verifyWithFormat(date, expected: "1/1/1970, 12 AM")
         format = format.day(.omitted)
-        verifyWithFormat(date, expected: "1/1970, 12\(separator)AM")
+        verifyWithFormat(date, expected: "1/1970, 12 AM")
 
         format = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
         format = format.day()

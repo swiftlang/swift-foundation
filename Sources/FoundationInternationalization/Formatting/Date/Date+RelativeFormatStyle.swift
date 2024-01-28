@@ -98,7 +98,13 @@ extension Date {
         public var locale: Locale
         public var calendar: Calendar
 
-        var _allowedFields: Set<Date.ComponentsFormatStyle.Field>
+        #if FOUNDATION_FRAMEWORK
+        /// The fields that can be used in the formatted output.
+        @available(FoundationPreview 0.4, *)
+        public var allowedFields: Set<Field>
+        #else
+        // allowedFields is unavailable (publicly as well as internally)
+        // for FoundationPreview
 
         /// The fields that can be used in the formatted output.
         @available(FoundationPreview 0.4, *)
@@ -110,6 +116,18 @@ extension Date {
                 _allowedFields = newValue
             }
         }
+
+        var _allowedFields: Set<Date.ComponentsFormatStyle.Field>
+
+        private enum CodingKeys: String, CodingKey {
+            case presentation
+            case unitsStyle
+            case capitalizationContext
+            case locale
+            case calendar
+            case _allowedFields = "allowedFields"
+        }
+        #endif
 
         public init(presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
             self.presentation = presentation
@@ -233,7 +251,6 @@ extension Date {
                 }) else {
                     return nil
                 }
-
 
             let secondLargest = ICURelativeDateFormatter.sortedAllowedComponents.first(where: { component in
                 Date.ComponentsFormatStyle.Field.Option(component: component)! < Date.ComponentsFormatStyle.Field.Option(component: largest)!

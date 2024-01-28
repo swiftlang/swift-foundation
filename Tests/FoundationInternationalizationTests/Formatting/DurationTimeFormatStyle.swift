@@ -290,12 +290,8 @@ final class DurationToMeasurementAdditionTests : XCTestCase {
 
 final class TestDurationTimeFormatStyle : XCTestCase {
     let enUS = Locale(identifier: "en_US")
-    func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, expected: String, file: StaticString = #file, line: UInt = #line) {
-        XCTAssertEqual(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(.time(pattern: pattern).locale(enUS)), expected, file: file, line: line)
-    }
 
-    @available(FoundationPreview 0.4, *)
-    func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, grouping: NumberFormatStyleConfiguration.Grouping?, expected: String, file: StaticString = #file, line: UInt = #line) {
+    func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, grouping: NumberFormatStyleConfiguration.Grouping? = nil, expected: String, file: StaticString = #file, line: UInt = #line) {
         var style = Duration.TimeFormatStyle(pattern: pattern).locale(enUS)
         if let grouping {
             style.grouping = grouping
@@ -322,7 +318,6 @@ final class TestDurationTimeFormatStyle : XCTestCase {
         assertFormattedWithPattern(seconds: 3695, milliseconds: 500, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2), expected: "01:01:35.50")
     }
 
-    @available(FoundationPreview 0.4, *)
     func testDurationPatternGrouping() {
         assertFormattedWithPattern(seconds: 36950000, pattern: .hourMinute(padHourToLength: 2), grouping: nil, expected: "10,263:53")
         assertFormattedWithPattern(seconds: 36950000, pattern: .hourMinute(padHourToLength: 2), grouping: .automatic, expected: "10,263:53")
