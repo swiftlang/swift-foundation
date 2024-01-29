@@ -37,15 +37,7 @@ extension StringProtocol {
     /// strings of the same lengths as the originals.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public var capitalized: String {
-#if FOUNDATION_FRAMEWORK
-        if _foundation_essentials_feature_enabled() {
-            return String(self)._capitalized()
-        }
-
-        return _ns.capitalized
-#else
-        return String(self)._capitalized()
-#endif
+        String(self)._capitalized()
     }
 
 #if FOUNDATION_FRAMEWORK
@@ -54,17 +46,11 @@ extension StringProtocol {
     /// given options.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func rangeOfCharacter(from aSet: CharacterSet, options mask: String.CompareOptions = [], range aRange: Range<Index>? = nil) -> Range<Index>? {
-        if _foundation_essentials_feature_enabled() {
-            var subStr = Substring(self)
-            if let aRange {
-                subStr = subStr[aRange]
-            }
-            return subStr._rangeOfCharacter(from: aSet, options: mask)
+        var subStr = Substring(self)
+        if let aRange {
+            subStr = subStr[aRange]
         }
-
-        return aSet.withUnsafeImmutableStorage {
-            return _optionalRange(_ns._rangeOfCharacter(from: $0, options: mask, range: _toRelativeNSRange(aRange ?? startIndex..<endIndex)))
-        }
+        return subStr._rangeOfCharacter(from: aSet, options: mask)
     }
 #endif // FOUNDATION_FRAMEWORK
 
@@ -117,22 +103,20 @@ extension StringProtocol {
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func components<T : StringProtocol>(separatedBy separator: T) -> [String] {
 #if FOUNDATION_FRAMEWORK
-        if _foundation_essentials_feature_enabled() {
-            if let contiguousSubstring = _asContiguousUTF8Substring(from: startIndex..<endIndex) {
-                let options: String.CompareOptions
-                if separator == "\n" {
-                    // 106365366: Some clients intend to separate strings whose line separator is "\r\n" with "\n".
-                    // Maintain compatibility with `.literal` so that "\n" can match that in "\r\n" on the unicode scalar level.
-                    options = [.literal]
-                } else {
-                    options = []
-                }
+        if let contiguousSubstring = _asContiguousUTF8Substring(from: startIndex..<endIndex) {
+            let options: String.CompareOptions
+            if separator == "\n" {
+                // 106365366: Some clients intend to separate strings whose line separator is "\r\n" with "\n".
+                // Maintain compatibility with `.literal` so that "\n" can match that in "\r\n" on the unicode scalar level.
+                options = [.literal]
+            } else {
+                options = []
+            }
 
-                do {
-                    return try contiguousSubstring._components(separatedBy: Substring(separator), options: options)
-                } catch {
-                    // Otherwise, inputs were unsupported - fallthrough to NSString implementation for compatibility
-                }
+            do {
+                return try contiguousSubstring._components(separatedBy: Substring(separator), options: options)
+            } catch {
+                // Otherwise, inputs were unsupported - fallthrough to NSString implementation for compatibility
             }
         }
 
