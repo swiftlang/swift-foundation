@@ -283,6 +283,12 @@ struct LocaleCache : Sendable {
         return result
     }
     
+    /// This value is immutable, so we can share one instance for the whole process.
+    private static let _unlocalizedCache = _LocaleUnlocalized(identifier: "en_001")
+    var unlocalized: _LocaleUnlocalized {
+        Self._unlocalizedCache
+    }
+    
     var autoupdatingCurrent: _LocaleAutoupdating {
         lock.withLock { $0.autoupdatingCurrent() }
     }

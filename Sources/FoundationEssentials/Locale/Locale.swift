@@ -77,6 +77,11 @@ public struct Locale : Hashable, Equatable, Sendable {
     internal static var system : Locale {
         Locale(inner: LocaleCache.cache.system)
     }
+    
+    /// Unlocalized locale (`en_001`).
+    internal static var unlocalized : Locale {
+        Locale(inner: LocaleCache.cache.unlocalized)
+    }
 
 #if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
