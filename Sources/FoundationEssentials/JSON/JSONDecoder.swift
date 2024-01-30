@@ -855,6 +855,12 @@ extension JSONDecoderImpl: Decoder {
     {
         try checkNotNull(value, expectedType: type, for: codingPathNode, additionalKey)
 
+        // We are always willing to return the number as a Double:
+        // * If the original value was integral, it is guaranteed to fit in a Double;
+        //   we are willing to lose precision past 2^53 if you encoded a UInt64 but requested a Double
+        // * If it was a Float or Double, you will get back the precise value
+        // * If it was Decimal, you will get back the nearest approximation
+
         if case .number(let region, let hasExponent) = value {
             return try withBuffer(for: region) { numberBuffer, fullSource in
                 if options.json5 {
