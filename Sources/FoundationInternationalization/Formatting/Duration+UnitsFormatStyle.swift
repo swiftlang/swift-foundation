@@ -606,5 +606,9 @@ extension Duration.UnitsFormatStyle {
     }
 }
 
+// Conformance has been moved to the FoundatiunICU package
+// to avoid compilation failure (see SC-6478)
+/*
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension UATimeUnitStyle : Codable, Hashable {}
+internal extension UATimeUnitStyle : Codable, Hashable {}
+*/
