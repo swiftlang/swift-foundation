@@ -302,23 +302,23 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                     if zeroPad - 1 > 0 {
                         for _ in 0..<zeroPad-1 { buffer.appendElement(asciiZero) }
                     }
-                    buffer.appendElement(CChar(i + 48))
+                    buffer.appendElement(asciiZero + CChar(i))
                 } else if i < 100 {
                     if zeroPad - 2 > 0 {
                         for _ in 0..<zeroPad-2 { buffer.appendElement(asciiZero) }
                     }
                     let (tens, ones) = i.quotientAndRemainder(dividingBy: 10)
-                    buffer.appendElement(CChar(tens + 48))
-                    buffer.appendElement(CChar(ones + 48))
+                    buffer.appendElement(asciiZero + CChar(tens))
+                    buffer.appendElement(asciiZero + CChar(ones))
                 } else if i < 1000 {
                     if zeroPad - 3 > 0 {
                         for _ in 0..<zeroPad-3 { buffer.appendElement(asciiZero) }
                     }
                     let (hundreds, remainder) = i.quotientAndRemainder(dividingBy: 100)
                     let (tens, ones) = remainder.quotientAndRemainder(dividingBy: 10)
-                    buffer.appendElement(CChar(hundreds + 48))
-                    buffer.appendElement(CChar(tens + 48))
-                    buffer.appendElement(CChar(ones + 48))
+                    buffer.appendElement(asciiZero + CChar(hundreds))
+                    buffer.appendElement(asciiZero + CChar(tens))
+                    buffer.appendElement(asciiZero + CChar(ones))
                 } else if i < 10000 {
                     if zeroPad - 4 > 0 {
                         for _ in 0..<zeroPad-4 { buffer.appendElement(asciiZero) }
@@ -326,10 +326,10 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                     let (thousands, remainder) = i.quotientAndRemainder(dividingBy: 1000)
                     let (hundreds, remainder2) = remainder.quotientAndRemainder(dividingBy: 100)
                     let (tens, ones) = remainder2.quotientAndRemainder(dividingBy: 10)
-                    buffer.appendElement(CChar(thousands + 48))
-                    buffer.appendElement(CChar(hundreds + 48))
-                    buffer.appendElement(CChar(tens + 48))
-                    buffer.appendElement(CChar(ones + 48))
+                    buffer.appendElement(asciiZero + CChar(thousands))
+                    buffer.appendElement(asciiZero + CChar(hundreds))
+                    buffer.appendElement(asciiZero + CChar(tens))
+                    buffer.appendElement(asciiZero + CChar(ones))
                 }
             }
             
@@ -423,7 +423,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                 
                 if includingFractionalSeconds {
                     guard let ns = components.nanosecond else { return "" }
-                    let ms = ns / 1_000
+                    let ms = Int((Double(ns) / 1_000_000.0).rounded(.toNearestOrAwayFromZero))
                     buffer.appendElement(asciiPeriod)
                     append(ms, zeroPad: 3, buffer: &buffer)
                 }
@@ -439,15 +439,12 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                     return ""
                 }
                 
-                // Move up by half a minute so that rounding down via division gets us the right answer
-                let at = abs(secondsFromGMT) + 30
-                let hour = at / 3600
-                let second = at % 3600
-                let minute = second / 60
-                
-                if hour == 0 && minute == 0 {
+                if secondsFromGMT == 0 {
                     buffer.appendElement(asciiZulu)
                 } else {
+                    let (hour, minuteAndSecond) = abs(secondsFromGMT).quotientAndRemainder(dividingBy: 3600)
+                    let (minute, second) = minuteAndSecond.quotientAndRemainder(dividingBy: 60)
+                    
                     if secondsFromGMT < 0 {
                         buffer.appendElement(asciiMinus)
                     } else {
@@ -459,7 +456,9 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                     }
                     append(minute, zeroPad: 2, buffer: &buffer)
                     if second != 0 {
-                        buffer.appendElement(asciiColon)
+                        if timeZoneSeparator == .colon {
+                            buffer.appendElement(asciiColon)
+                        }
                         append(second, zeroPad: 2, buffer: &buffer)
                     }
                 }
