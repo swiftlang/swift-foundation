@@ -98,14 +98,6 @@ extension Date {
         public var locale: Locale
         public var calendar: Calendar
 
-        #if FOUNDATION_FRAMEWORK
-        /// The fields that can be used in the formatted output.
-        @available(FoundationPreview 0.4, *)
-        public var allowedFields: Set<Field>
-        #else
-        // allowedFields is unavailable (publicly as well as internally)
-        // for FoundationPreview
-
         /// The fields that can be used in the formatted output.
         @available(FoundationPreview 0.4, *)
         public var allowedFields: Set<Field> {
@@ -127,7 +119,6 @@ extension Date {
             case calendar
             case _allowedFields = "allowedFields"
         }
-        #endif
 
         public init(presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
             self.presentation = presentation
@@ -165,13 +156,7 @@ extension Date {
             case rounded
         }
 
-        var _componentAdjustmentStrategy: ComponentAdjustmentStrategy?
-
         var componentAdjustmentStrategy: ComponentAdjustmentStrategy {
-            if let strategy = _componentAdjustmentStrategy {
-                return strategy
-            }
-
             switch presentation.option {
             case .numeric:
                 return .rounded
@@ -230,10 +215,10 @@ extension Date {
                 Date.ComponentsFormatStyle.Field.Option(component: $0)! <= Date.ComponentsFormatStyle.Field.Option(component: largestAllowedComponent)!
             })).union([.nanosecond]), from: refDate, to: destDate)
 
-            let largestNonZeroComponent = components.nonZeroComponentsAndValue.first ?? (.nanosecond, components.nanosecond ?? 0)
+            let largestNonZeroComponent = components.nonZeroComponentsAndValue.first?.component
 
             // the smallest allowed component that is greater or equal to the largestNonZeroComponent
-            guard let largest = ICURelativeDateFormatter.sortedAllowedComponents.last(where: { component in
+            let largest = ICURelativeDateFormatter.sortedAllowedComponents.last(where: { component in
                 guard allowedComponents.contains(component) else {
                     return false
                 }
@@ -242,21 +227,23 @@ extension Date {
                     return false
                 }
 
-                guard let largestNonZeroField = Date.ComponentsFormatStyle.Field.Option(component: largestNonZeroComponent.component) else {
-                        // largestNonZeroField is nanosecond
-                        return true
-                    }
-
-                    return field >= largestNonZeroField
-                }) else {
-                    return nil
+                guard let largestNonZeroComponent,
+                      let largestNonZeroField = Date.ComponentsFormatStyle.Field.Option(component: largestNonZeroComponent) else {
+                    return true
                 }
+
+                return field >= largestNonZeroField
+            })
+
+            guard let largest else {
+                return nil
+            }
 
             let secondLargest = ICURelativeDateFormatter.sortedAllowedComponents.first(where: { component in
                 Date.ComponentsFormatStyle.Field.Option(component: component)! < Date.ComponentsFormatStyle.Field.Option(component: largest)!
             }).map { component in
                 (component: component, value: components.value(for: component) ?? 0)
-            } ?? (.nanosecond, components.nanosecond ?? 0)
+            } ?? (.nanosecond, components.nanosecond!)
 
 
             var roundedLargest = (component: largest, value: components.value(for: largest) ?? 0)
@@ -278,11 +265,15 @@ extension Date {
         }
 
         fileprivate func _largestNonZeroComponent(_ destDate: Date, reference refDate: Date, adjustComponent: ComponentAdjustmentStrategy) -> CalendarComponentAndValue? {
+            guard let smallest = self.sortedAllowedComponents.last else {
+                return nil
+            }
+
             // Precision of `Date` is higher than second, which is the smallest supported unit. Round to seconds.
             let refDate = destDate.addingTimeInterval(refDate.timeIntervalSince(destDate).rounded(increment: 1.0, rule: .toNearestOrAwayFromZero))
 
             let components = self.calendar.dateComponents([.year, .second, .nanosecond], from: refDate, to: destDate)
-            let nanosecond = components.nanosecond ?? 0
+            let nanosecond = components.nanosecond!
 
 
             guard var adjustedDestDate = calendar.date(byAdding: .nanosecond, value: -nanosecond, to: destDate) else {
@@ -296,22 +287,19 @@ extension Date {
 
             let allowedComponents = Set(self.sortedAllowedComponents)
 
-            guard let smallest = self.sortedAllowedComponents.last else {
-                return nil
-            }
-
             let dateComponents = self.calendar.dateComponents(allowedComponents, from: refDate, to: adjustedDestDate)
 
             let compAndValue: CalendarComponentAndValue
             let largest = dateComponents.nonZeroComponentsAndValue.first ?? (smallest, 0)
 
-                        let comp = largest.component
-                        if comp == .hour || comp == .minute || comp == .second {
-                            compAndValue = Self._roundedLargestComponentValue(refDate: refDate,
-                                                                              for: adjustedDestDate,
-                                                                              calendar: calendar,
-                                                                              allowedComponents: allowedComponents,
-                                                                              largestAllowedComponent: comp) ?? largest
+            let comp = largest.component
+            if comp == .hour || comp == .minute || comp == .second {
+                compAndValue = Self._roundedLargestComponentValue(
+                    refDate: refDate,
+                    for: adjustedDestDate,
+                    calendar: calendar,
+                    allowedComponents: allowedComponents,
+                    largestAllowedComponent: comp) ?? largest
             } else {
                 compAndValue = Self._alignedComponentValue(component: largest.component, for: adjustedDestDate, reference: refDate, calendar: calendar, allowedComponents: allowedComponents) ?? largest
             }
