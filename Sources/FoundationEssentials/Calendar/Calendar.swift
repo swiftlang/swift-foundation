@@ -1242,20 +1242,13 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return components.value(for: u) != nil
         }
 
-        if actualUnits.isEmpty {
-            // Try leap month
-            if components.isLeapMonth != nil {
-                let monthComponents = _dateComponents(.month, from: date)
-                // Apparently, enough that it's set and we don't check the actual value
-                return monthComponents.isLeapMonth != nil
-            }
-        }
-
         var comp = dateComponents(actualUnits, from: date)
         var tempComp = components
 
-        if comp.isLeapMonth != nil && components.isLeapMonth != nil {
-            tempComp.isLeapMonth = comp.isLeapMonth
+        if components.isLeapMonth != nil {
+            // `isLeapMonth` isn't part of `actualUnits`, so we have to retrieve
+            // it separately
+            comp.isLeapMonth = _dateComponents(.month, from: date).isLeapMonth
         }
 
         // Apply an epsilon to comparison of nanosecond values
