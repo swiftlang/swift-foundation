@@ -27,7 +27,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     public init() {
         withUnsafeMutablePointer(to: &uuid) {
             $0.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<uuid_t>.size) {
-                uuid_generate_random($0)
+                _foundation_uuid_generate_random($0)
             }
         }
     }
@@ -49,7 +49,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     public init?(uuidString string: __shared String) {
         let res = withUnsafeMutablePointer(to: &uuid) {
             $0.withMemoryRebound(to: UInt8.self, capacity: 16) {
-                return uuid_parse(string, $0)
+                return _foundation_uuid_parse(string, $0)
             }
         }
         if res != 0 {
@@ -68,7 +68,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         return withUUIDBytes { valBuffer in
             withUnsafeMutablePointer(to: &bytes) { strPtr in
                 strPtr.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<uuid_string_t>.size) { str in
-                    uuid_unparse_upper(valBuffer.baseAddress!, str)
+                    _foundation_uuid_unparse_upper(valBuffer.baseAddress!, str)
                     return String(cString: str)
                 }
             }

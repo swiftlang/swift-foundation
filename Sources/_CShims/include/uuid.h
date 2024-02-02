@@ -61,23 +61,23 @@ typedef __darwin_uuid_string_t    uuid_string_t;
 extern "C" {
 #endif
 
-INTERNAL void uuid_clear(uuid_t uu);
+INTERNAL void _foundation_uuid_clear(uuid_t uu);
 
-INTERNAL int uuid_compare(const uuid_t uu1, const uuid_t uu2);
+INTERNAL int _foundation_uuid_compare(const uuid_t uu1, const uuid_t uu2);
 
-INTERNAL void uuid_copy(uuid_t dst, const uuid_t src);
+INTERNAL void _foundation_uuid_copy(uuid_t dst, const uuid_t src);
 
-INTERNAL void uuid_generate(uuid_t out);
-INTERNAL void uuid_generate_random(uuid_t out);
-INTERNAL void uuid_generate_time(uuid_t out);
+INTERNAL void _foundation_uuid_generate(uuid_t out);
+INTERNAL void _foundation_uuid_generate_random(uuid_t out);
+INTERNAL void _foundation_uuid_generate_time(uuid_t out);
 
-INTERNAL int uuid_is_null(const uuid_t uu);
+INTERNAL int _foundation_uuid_is_null(const uuid_t uu);
 
-INTERNAL int uuid_parse(const uuid_string_t in, uuid_t uu);
+INTERNAL int _foundation_uuid_parse(const uuid_string_t in, uuid_t uu);
 
-INTERNAL void uuid_unparse(const uuid_t uu, uuid_string_t out);
-INTERNAL void uuid_unparse_lower(const uuid_t uu, uuid_string_t out);
-INTERNAL void uuid_unparse_upper(const uuid_t uu, uuid_string_t out);
+INTERNAL void _foundation_uuid_unparse(const uuid_t uu, uuid_string_t out);
+INTERNAL void _foundation_uuid_unparse_lower(const uuid_t uu, uuid_string_t out);
+INTERNAL void _foundation_uuid_unparse_upper(const uuid_t uu, uuid_string_t out);
 
 #ifdef __cplusplus
 }

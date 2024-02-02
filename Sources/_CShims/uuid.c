@@ -146,25 +146,25 @@ read_time(void)
 }
 
 void
-uuid_clear(uuid_t uu)
+_foundation_uuid_clear(uuid_t uu)
 {
     memset(uu, 0, sizeof(uuid_t));
 }
 
 int
-uuid_compare(const uuid_t uu1, const uuid_t uu2)
+_foundation_uuid_compare(const uuid_t uu1, const uuid_t uu2)
 {
     return memcmp(uu1, uu2, sizeof(uuid_t));
 }
 
 void
-uuid_copy(uuid_t dst, const uuid_t src)
+_foundation_uuid_copy(uuid_t dst, const uuid_t src)
 {
     memcpy(dst, src, sizeof(uuid_t));
 }
 
 void
-uuid_generate_random(uuid_t out)
+_foundation_uuid_generate_random(uuid_t out)
 {
     read_random(out, sizeof(uuid_t));
 
@@ -173,7 +173,7 @@ uuid_generate_random(uuid_t out)
 }
 
 void
-uuid_generate_time(uuid_t out)
+_foundation_uuid_generate_time(uuid_t out)
 {
     uint64_t time;
 
@@ -195,19 +195,19 @@ uuid_generate_time(uuid_t out)
 }
 
 void
-uuid_generate(uuid_t out)
+_foundation_uuid_generate(uuid_t out)
 {
-    uuid_generate_random(out);
+    _foundation_uuid_generate_random(out);
 }
 
 int
-uuid_is_null(const uuid_t uu)
+_foundation_uuid_is_null(const uuid_t uu)
 {
     return !memcmp(uu, UUID_NULL, sizeof(uuid_t));
 }
 
 int
-uuid_parse(const uuid_string_t in, uuid_t uu)
+_foundation_uuid_parse(const uuid_string_t in, uuid_t uu)
 {
     int n = 0;
 
@@ -227,7 +227,7 @@ uuid_parse(const uuid_string_t in, uuid_t uu)
 }
 
 void
-uuid_unparse_lower(const uuid_t uu, uuid_string_t out)
+_foundation_uuid_unparse_lower(const uuid_t uu, uuid_string_t out)
 {
     snprintf(out,
         sizeof(uuid_string_t),
@@ -244,7 +244,7 @@ uuid_unparse_lower(const uuid_t uu, uuid_string_t out)
 }
 
 void
-uuid_unparse_upper(const uuid_t uu, uuid_string_t out)
+_foundation_uuid_unparse_upper(const uuid_t uu, uuid_string_t out)
 {
     snprintf(out,
         sizeof(uuid_string_t),
@@ -261,7 +261,7 @@ uuid_unparse_upper(const uuid_t uu, uuid_string_t out)
 }
 
 void
-uuid_unparse(const uuid_t uu, uuid_string_t out)
+_foundation_uuid_unparse(const uuid_t uu, uuid_string_t out)
 {
-    uuid_unparse_upper(uu, out);
+    _foundation_uuid_unparse_upper(uu, out);
 }
