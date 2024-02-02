@@ -2012,9 +2012,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         public let rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
         
-        static let mappedIfSafe = ReadingOptions(rawValue: 1 << 0)
-        static let uncached = ReadingOptions(rawValue: 1 << 1)
-        static let alwaysMapped = ReadingOptions(rawValue: 1 << 3)
+        public static let mappedIfSafe = ReadingOptions(rawValue: 1 << 0)
+        public static let uncached = ReadingOptions(rawValue: 1 << 1)
+        public static let alwaysMapped = ReadingOptions(rawValue: 1 << 3)
     }
     
     // This is imported from the ObjC 'option set', which is actually a combination of an option and an enumeration (file protection).
@@ -2023,25 +2023,25 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         public init(rawValue: UInt) { self.rawValue = rawValue }
 
         /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
-        static let atomic = WritingOptions(rawValue: 1 << 0)
+        public static let atomic = WritingOptions(rawValue: 1 << 0)
         
         /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
-        static let withoutOverwriting = WritingOptions(rawValue: 1 << 1)
+        public static let withoutOverwriting = WritingOptions(rawValue: 1 << 1)
         
         /// An option to not encrypt the file when writing it out.
-        static let noFileProtection = WritingOptions(rawValue: 0x10000000)
+        public static let noFileProtection = WritingOptions(rawValue: 0x10000000)
         
         /// An option to make the file accessible only while the device is unlocked.
-        static let completeFileProtection = WritingOptions(rawValue: 0x20000000)
+        public static let completeFileProtection = WritingOptions(rawValue: 0x20000000)
         
         /// An option to allow the file to be accessible while the device is unlocked or the file is already open.
-        static let completeFileProtectionUnlessOpen = WritingOptions(rawValue: 0x30000000)
+        public static let completeFileProtectionUnlessOpen = WritingOptions(rawValue: 0x30000000)
         
         /// An option to allow the file to be accessible after a user first unlocks the device.
-        static let completeFileProtectionUntilFirstUserAuthentication = WritingOptions(rawValue: 0x40000000)
+        public static let completeFileProtectionUntilFirstUserAuthentication = WritingOptions(rawValue: 0x40000000)
         
         /// An option the system uses when determining the file protection options that the system assigns to the data.
-        static let fileProtectionMask = WritingOptions(rawValue: 0xf0000000)
+        public static let fileProtectionMask = WritingOptions(rawValue: 0xf0000000)
     }
 #endif
 
