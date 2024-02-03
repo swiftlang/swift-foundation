@@ -269,8 +269,8 @@ extension NSString {
                 }
             }
             
-            let next = buffer.initialize(fromContentsOf: utf8Buffer)
-            guard next < buffer.endIndex else {
+            var (leftoverIterator, next) = buffer.initialize(from: utf8Buffer)
+            guard leftoverIterator.next() == nil && next < buffer.endIndex else {
                 return false
             }
             buffer[next] = 0
