@@ -3,7 +3,7 @@
 * Proposal: SF-0005
 * Author(s): [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: [Charles Hu](https://github.com/iCharlesHu)
-* Status: **Active Review: Jan 26, 2024 ... Feb 2, 2024**
+* Status: **Accepted**
 * Implementation: _coming soon_
 
 ## Introduction/Motivation

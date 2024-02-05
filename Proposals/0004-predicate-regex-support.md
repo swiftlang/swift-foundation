@@ -3,7 +3,7 @@
 * Proposal: SF-0004
 * Author(s): [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: [Charles Hu](https://github.com/iCharlesHu)
-* Status: **Active review: Jan 26, 2024 ... Feb 2, 2024**
+* Status: **Accepted**
 * Implementation: [apple/swift-foundation#380](https://github.com/apple/swift-foundation/pull/380)
 
 ## Introduction/Motivation
