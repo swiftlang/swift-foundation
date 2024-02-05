@@ -202,6 +202,11 @@ public typealias SortComparator = FoundationEssentials.SortComparator
 public typealias ComparableComparator = FoundationEssentials.ComparableComparator
 public typealias ComparisonResult = FoundationEssentials.ComparisonResult
 
+public typealias FileManager = FoundationEssentials.FileManager
+public typealias FileAttributeKey = FoundationEssentials.FileAttributeKey
+public typealias CocoaError = FoundationEssentials.CocoaError
+public typealias FileManagerDelegate = FoundationEssentials.FileManagerDelegate
+
 #endif // FOUNDATION_FRAMEWORK
 
 /// ICU uses `\u{202f}` and `\u{020f}` interchangeably

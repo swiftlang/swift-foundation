@@ -64,6 +64,9 @@ let package = Package(
             "FoundationMacros",
             .product(name: "_RopeModule", package: "swift-collections"),
           ],
+          cSettings: [
+            .define("_GNU_SOURCE", .when(platforms: [.linux]))
+          ],
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
