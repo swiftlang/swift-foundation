@@ -18,6 +18,10 @@ import TestSupport
 @testable import FoundationEssentials
 #endif
 
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#endif
+
 /// The majority of the tests for this are in the FoundationInternationalizationTests suite, but we have a small number here to verify that ISO8601 formatting is functional without ICU present. No parsing is present in the essentials library (yet?).
 @available(OSX 12.0, *)
 final class DateISO8601FormatStyleEssentialsTests: XCTestCase {
@@ -114,5 +118,17 @@ final class DateISO8601FormatStyleEssentialsTests: XCTestCase {
         XCTAssertEqual(date.formatted(.iso8601.time(includingFractionalSeconds: false)), "15:56:32")
         XCTAssertEqual(date.formatted(.iso8601.time(includingFractionalSeconds: true)), "15:56:32.000")
         XCTAssertEqual(date.formatted(.iso8601.time(includingFractionalSeconds: false).timeZone(separator: .omitted)), "15:56:32Z")
+    }
+
+    func test_remoteDate() throws {
+        let date = Date(timeIntervalSince1970: 999999999999.0) // Remote date
+        XCTAssertEqual(date.formatted(.iso8601), "33658-09-27T01:46:39Z")
+        XCTAssertEqual(date.formatted(.iso8601.year().weekOfYear().day()), "33658-W39-05") // day() is the weekday number
+    }
+
+    func test_internal_formatDateComponents() throws {
+        let dc = DateComponents(year: -2025, month: 1, day: 20, hour: 0, minute: 0, second: 0)
+        let str = Date.ISO8601FormatStyle().format(dc, appendingTimeZoneOffset: 0)
+        XCTAssertEqual(str, "-2025-01-20T00:00:00Z")
     }
 }

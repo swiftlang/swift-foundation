@@ -248,30 +248,27 @@ extension Date.ISO8601FormatStyle {
     }
 }
 
-#if FOUNDATION_FRAMEWORK
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension ISO8601DateFormatter.Options : Hashable {}
-#endif // FOUNDATION_FRAMEWORK
-
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.ISO8601FormatStyle : FormatStyle {
+
     public func format(_ value: Date) -> String {
         var whichComponents = Calendar.ComponentSet()
         let fields = formatFields
-        
+
         // If we use week of year, don't bother with year
         if fields.contains(.year) && !fields.contains(.weekOfYear) {
+            whichComponents.insert(.era)
             whichComponents.insert(.year)
         }
-        
+
         if fields.contains(.month) {
             whichComponents.insert(.month)
         }
-        
+
         if fields.contains(.weekOfYear) {
             whichComponents.insert([.weekOfYear, .yearForWeekOfYear])
         }
-        
+
         if fields.contains(.day) {
             if fields.contains(.weekOfYear) {
                 whichComponents.insert(.weekday)
@@ -281,7 +278,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                 whichComponents.insert(.dayOfYear)
             }
         }
-        
+
         if fields.contains(.time) {
             whichComponents.insert([.hour, .minute, .second])
             if includingFractionalSeconds {
@@ -289,7 +286,17 @@ extension Date.ISO8601FormatStyle : FormatStyle {
             }
         }
 
+        let secondsFromGMT: Int?
         let components = _calendar.dateComponents(whichComponents, from: value)
+        if fields.contains(.timeZone) {
+            secondsFromGMT = timeZone.secondsFromGMT(for: value)
+        } else {
+            secondsFromGMT = nil
+        }
+        return format(components, appendingTimeZoneOffset: secondsFromGMT)
+    }
+
+    func format(_ components: DateComponents, appendingTimeZoneOffset timeZoneOffset: Int?) -> String {
         var needSeparator = false
         let capacity = 128 // It is believed no ISO8601 date can exceed this size
         let result = withUnsafeTemporaryAllocation(of: CChar.self, capacity: capacity + 1) { _buffer in
@@ -330,6 +337,14 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                     buffer.appendElement(asciiZero + CChar(hundreds))
                     buffer.appendElement(asciiZero + CChar(tens))
                     buffer.appendElement(asciiZero + CChar(ones))
+                } else {
+                    // Special case - we don't do zero padding
+                    var desc = i.numericStringRepresentation
+                    desc.withUTF8 {
+                        $0.withMemoryRebound(to: CChar.self) { buf in
+                            buffer.append(fromContentsOf: buf)
+                        }
+                    }
                 }
             }
             
@@ -345,14 +360,20 @@ extension Date.ISO8601FormatStyle : FormatStyle {
             let asciiNull = CChar(0)
             
             if formatFields.contains(.year) {
-                if formatFields.contains(.weekOfYear) {
-                    guard let y = components.yearForWeekOfYear else { return "" }
+                if formatFields.contains(.weekOfYear), let y = components.yearForWeekOfYear {
                     append(y, zeroPad: 4, buffer: &buffer)
                 } else {
-                    guard let y = components.year else { return "" }
+                    var y = components.year!
+                    if let era = components.era, era == 0 {
+                        y = 1 - y
+                    }
+                    if y < 0 {
+                        buffer.appendElement(asciiMinus)
+                        y = -y
+                    }
                     append(y, zeroPad: 4, buffer: &buffer)
                 }
-                
+
                 needSeparator = true
             }
             
@@ -360,7 +381,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                 if needSeparator && dateSeparator == .dash {
                     buffer.appendElement(asciiDash)
                 }
-                guard let m = components.month else { return "" }
+                let m = components.month!
                 append(m, zeroPad: 2, buffer: &buffer)
                 needSeparator = true
             }
@@ -369,7 +390,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                 if needSeparator && dateSeparator == .dash {
                     buffer.appendElement(asciiDash)
                 }
-                guard let woy = components.weekOfYear else { return "" }
+                let woy = components.weekOfYear!
                 buffer.appendElement(asciiWeekOfYearSeparator)
                 append(woy, zeroPad: 2, buffer: &buffer)
                 needSeparator = true
@@ -381,15 +402,17 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                 }
                 
                 if formatFields.contains(.weekOfYear) {
-                    guard let weekday = components.weekday else { return "" }
+                    var weekday = components.weekday!
                     // Weekday is always less than 10. Our weekdays are offset by 1.
-                    guard weekday < 10 else { return "" }
+                    if weekday >= 10 {
+                        weekday = 10
+                    }
                     append(weekday - 1, zeroPad: 2, buffer: &buffer)
                 } else if formatFields.contains(.month) {
-                    guard let day = components.day else { return "" }
+                    let day = components.day!
                     append(day, zeroPad: 2, buffer: &buffer)
                 } else {
-                    guard let dayOfYear = components.dayOfYear else { return "" }
+                    let dayOfYear = components.dayOfYear!
                     append(dayOfYear, zeroPad: 3, buffer: &buffer)
                 }
                 
@@ -404,10 +427,10 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                     }
                 }
                 
-                guard let h = components.hour else { return "" }
-                guard let m = components.minute else { return "" }
-                guard let s = components.second else { return "" }
-                
+                let h = components.hour!
+                let m = components.minute!
+                let s = components.second!
+
                 switch timeSeparator {
                 case .colon:
                     append(h, zeroPad: 2, buffer: &buffer)
@@ -422,7 +445,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                 }
                 
                 if includingFractionalSeconds {
-                    guard let ns = components.nanosecond else { return "" }
+                    let ns = components.nanosecond!
                     let ms = Int((Double(ns) / 1_000_000.0).rounded(.toNearestOrAwayFromZero))
                     buffer.appendElement(asciiPeriod)
                     append(ms, zeroPad: 3, buffer: &buffer)
@@ -432,13 +455,14 @@ extension Date.ISO8601FormatStyle : FormatStyle {
             }
 
             if formatFields.contains(.timeZone) {
-                let secondsFromGMT = timeZone.secondsFromGMT(for: value)
-                
                 // A time zone name, not the same as the abbreviated name from TimeZone. e.g., that one includes a `:`.
-                guard !(secondsFromGMT < -18 * 3600 || 18 * 3600 < secondsFromGMT) else {
-                    return ""
+                var secondsFromGMT: Int
+                if let timeZoneOffset, (-18 * 3600 < timeZoneOffset && timeZoneOffset < 18 * 3600)  {
+                    secondsFromGMT = timeZoneOffset
+                } else {
+                    secondsFromGMT = 0
                 }
-                
+
                 if secondsFromGMT == 0 {
                     buffer.appendElement(asciiZulu)
                 } else {
