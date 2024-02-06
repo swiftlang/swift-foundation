@@ -42,6 +42,10 @@ final class DateISO8601FormatStyleTests: XCTestCase {
         // Date is: "2022-01-28 15:35:46"
         verify(iso8601, expectedString: "2022-01-28T15:35:46Z", expectedParsedDate: Date(timeIntervalSinceReferenceDate: 665076946.0))
 
+        var iso8601Pacific = iso8601
+        iso8601Pacific.timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
+        verify(iso8601Pacific.timeSeparator(.omitted), expectedString: "2022-01-28T073546-0800", expectedParsedDate: Date(timeIntervalSinceReferenceDate: 665076946.0))
+
         // Day-only results: the default time is midnight for parsed date when the time piece is missing
         // Date is: "2022-01-28 00:00:00"
         verify(iso8601.year().month().day().dateSeparator(.dash), expectedString: "2022-01-28", expectedParsedDate: Date(timeIntervalSinceReferenceDate: 665020800.0))

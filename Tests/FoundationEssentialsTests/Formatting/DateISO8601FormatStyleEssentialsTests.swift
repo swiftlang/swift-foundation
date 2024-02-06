@@ -24,36 +24,58 @@ final class DateISO8601FormatStyleEssentialsTests: XCTestCase {
 
     func test_ISO8601Format() throws {
         let date = Date(timeIntervalSinceReferenceDate: 665076946.0)
-
-        func verify(_ formatStyle: Date.ISO8601FormatStyle, expectedString: String, expectedParsedDate: Date?, file: StaticString = #file, line: UInt = #line) {
-            let formatted = formatStyle.format(date)
-            XCTAssertEqual(formatted, expectedString, file: file, line: line)
-        }
-
+        let fractionalSecondsDate = Date(timeIntervalSinceReferenceDate: 665076946.011)
         let iso8601 = Date.ISO8601FormatStyle()
 
         // Date is: "2022-01-28 15:35:46"
-        verify(iso8601, expectedString: "2022-01-28T15:35:46Z", expectedParsedDate: Date(timeIntervalSinceReferenceDate: 665076946.0))
+        XCTAssertEqual(iso8601.format(date), "2022-01-28T15:35:46Z")
+
+        XCTAssertEqual(iso8601.time(includingFractionalSeconds: true).format(fractionalSecondsDate), "15:35:46.011")
+
+        XCTAssertEqual(iso8601.year().month().day().time(includingFractionalSeconds: true).format(fractionalSecondsDate), "2022-01-28T15:35:46.011")
 
         // Day-only results: the default time is midnight for parsed date when the time piece is missing
         // Date is: "2022-01-28 00:00:00"
-        verify(iso8601.year().month().day().dateSeparator(.dash), expectedString: "2022-01-28", expectedParsedDate: Date(timeIntervalSinceReferenceDate: 665020800.0))
+        XCTAssertEqual(iso8601.year().month().day().dateSeparator(.dash).format(date), "2022-01-28")
+        
         // Date is: "2022-01-28 00:00:00"
-        verify(iso8601.year().month().day().dateSeparator(.omitted), expectedString: "20220128", expectedParsedDate: Date(timeIntervalSinceReferenceDate: 665020800.0))
+        XCTAssertEqual(iso8601.year().month().day().dateSeparator(.omitted).format(date), "20220128")
 
         // Time-only results: we use the default date of the format style, 1970-01-01, to supplement the parsed date without year, month or day
         // Date is: "1970-01-23 00:00:00"
-        verify(iso8601.weekOfYear().day().dateSeparator(.dash), expectedString: "W04-05", expectedParsedDate: Date(timeIntervalSinceReferenceDate: -976406400.0))
+        XCTAssertEqual(iso8601.weekOfYear().day().dateSeparator(.dash).format(date), "W04-05")
+        
         // Date is: "1970-01-28 15:35:46"
-        verify(iso8601.day().time(includingFractionalSeconds: false).timeSeparator(.colon), expectedString: "028T15:35:46", expectedParsedDate: Date(timeIntervalSinceReferenceDate: -975918254.0))
+        XCTAssertEqual(iso8601.day().time(includingFractionalSeconds: false).timeSeparator(.colon).format(date), "028T15:35:46")
         // Date is: "1970-01-01 15:35:46"
-        verify(iso8601.time(includingFractionalSeconds: false).timeSeparator(.colon), expectedString: "15:35:46", expectedParsedDate: Date(timeIntervalSinceReferenceDate: -978251054.0))
+        XCTAssertEqual(iso8601.time(includingFractionalSeconds: false).timeSeparator(.colon).format(date), "15:35:46")
         // Date is: "1970-01-01 15:35:46"
-        verify(iso8601.time(includingFractionalSeconds: false).timeZone(separator: .omitted), expectedString: "15:35:46Z", expectedParsedDate: Date(timeIntervalSinceReferenceDate: -978251054.0))
+        XCTAssertEqual(iso8601.time(includingFractionalSeconds: false).timeZone(separator: .omitted).format(date), "15:35:46Z")
         // Date is: "1970-01-01 15:35:46"
-        verify(iso8601.time(includingFractionalSeconds: false).timeZone(separator: .colon), expectedString: "15:35:46Z", expectedParsedDate: Date(timeIntervalSinceReferenceDate: -978251054.0))
+        XCTAssertEqual(iso8601.time(includingFractionalSeconds: false).timeZone(separator: .colon).format(date), "15:35:46Z")
         // Date is: "1970-01-01 15:35:46"
-        verify(iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon), expectedString: "15:35:46Z", expectedParsedDate: Date(timeIntervalSinceReferenceDate: -978251054.0))
+        XCTAssertEqual(iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon).format(date), "15:35:46Z")
+                
+        // Time zones
+        
+        var iso8601Pacific = iso8601
+        iso8601Pacific.timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
+        
+        // Has a seconds component (-28830)
+        var iso8601PacificIsh = iso8601
+        iso8601PacificIsh.timeZone = TimeZone(secondsFromGMT: -3600 * 8 - 30)!
+        
+        XCTAssertEqual(iso8601Pacific.timeSeparator(.omitted).format(date), "2022-01-28T073546-0800")
+        XCTAssertEqual(iso8601Pacific.timeSeparator(.omitted).timeZoneSeparator(.colon).format(date), "2022-01-28T073546-08:00")
+
+        XCTAssertEqual(iso8601PacificIsh.timeSeparator(.omitted).format(date), "2022-01-28T073516-080030")
+        XCTAssertEqual(iso8601PacificIsh.timeSeparator(.omitted).timeZoneSeparator(.colon).format(date), "2022-01-28T073516-08:00:30")
+        
+        var iso8601gmtP1 = iso8601
+        iso8601gmtP1.timeZone = TimeZone(secondsFromGMT: 3600)!
+        XCTAssertEqual(iso8601gmtP1.timeSeparator(.omitted).format(date), "2022-01-28T163546+0100")
+        XCTAssertEqual(iso8601gmtP1.timeSeparator(.omitted).timeZoneSeparator(.colon).format(date), "2022-01-28T163546+01:00")
+        
     }
 
     func test_codable() {
