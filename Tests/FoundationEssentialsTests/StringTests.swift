@@ -373,6 +373,32 @@ final class StringTests : XCTestCase {
         }
 #endif
     }
+
+    func testLastPathComponent() {
+        XCTAssertEqual("".lastPathComponent, "")
+        XCTAssertEqual("a".lastPathComponent, "a")
+        XCTAssertEqual("/a".lastPathComponent, "a")
+        XCTAssertEqual("a/".lastPathComponent, "a")
+        XCTAssertEqual("/a/".lastPathComponent, "a")
+
+        XCTAssertEqual("a/b".lastPathComponent, "b")
+        XCTAssertEqual("/a/b".lastPathComponent, "b")
+        XCTAssertEqual("a/b/".lastPathComponent, "b")
+        XCTAssertEqual("/a/b/".lastPathComponent, "b")
+
+        XCTAssertEqual("a//".lastPathComponent, "a")
+        XCTAssertEqual("a////".lastPathComponent, "a")
+        XCTAssertEqual("/a//".lastPathComponent, "a")
+        XCTAssertEqual("/a////".lastPathComponent, "a")
+        XCTAssertEqual("//a//".lastPathComponent, "a")
+        XCTAssertEqual("/a/b//".lastPathComponent, "b")
+        XCTAssertEqual("//a//b////".lastPathComponent, "b")
+
+        XCTAssertEqual("/".lastPathComponent, "/")
+        XCTAssertEqual("//".lastPathComponent, "/")
+        XCTAssertEqual("/////".lastPathComponent, "/")
+        XCTAssertEqual("/./..//./..//".lastPathComponent, "..")
+    }
 }
 
 

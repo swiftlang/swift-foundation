@@ -117,13 +117,18 @@ extension String {
         }
         
         if lastSlash == index(before: endIndex) {
-            // This is a trailing slash. Ignore it.
-            let beforeLastSlash = self[startIndex..<lastSlash].lastIndex { $0 == "/" }
-            if let beforeLastSlash {
-                return String(self[index(after: beforeLastSlash)..<lastSlash])
+            // This is a trailing slash. Ignore it and all slashes that directly precede it.
+            let lastNonSlash = self[startIndex..<lastSlash].lastIndex { $0 != "/" }
+            guard let lastNonSlash else {
+                // String is all slashes, return a bare slash.
+                return "/"
+            }
+            let slashBeforeLastComponent = self[startIndex..<lastNonSlash].lastIndex { $0 == "/" }
+            if let slashBeforeLastComponent {
+                return String(self[index(after: slashBeforeLastComponent)...lastNonSlash])
             } else {
-                // No other slash. Return string minus that slash.
-                return String(self[startIndex..<lastSlash])
+                // No other slash. Return string up to the last non-slash character.
+                return String(self[startIndex...lastNonSlash])
             }
         } else {
             return String(self[index(after: lastSlash)..<endIndex])
