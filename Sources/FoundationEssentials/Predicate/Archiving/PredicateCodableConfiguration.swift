@@ -351,6 +351,9 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(Slice<String>.self, identifier: "Swift.Slice")
         configuration.allowPartialType(Predicate<Int>.self, identifier: "Foundation.Predicate")
         
+        // Foundation-defined operator helper types
+        configuration.allowType(PredicateExpressions.PredicateRegex.self)
+        
         // Foundation-defined PredicateExpression types
         configuration.allowPartialType(PredicateExpressions.Arithmetic<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Arithmetic")
         configuration.allowPartialType(PredicateExpressions.ClosedRange<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.ClosedRange")
@@ -387,6 +390,7 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(PredicateExpressions.UnaryMinus<PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.UnaryMinus")
         configuration.allowPartialType(PredicateExpressions.NilLiteral<Int>.self, identifier: "PredicateExpressions.NilLiteral")
         configuration.allowPartialType(PredicateExpressions.PredicateEvaluate<PredicateExpressions.Value<Predicate<Int>>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.PredicateEvaluate")
+        configuration.allowPartialType(PredicateExpressions.StringContainsRegex<PredicateExpressions.Value<String>, PredicateExpressions.Value<PredicateExpressions.PredicateRegex>>.self, identifier: "PredicateExpressions.StringContainsRegex")
         
         #if FOUNDATION_FRAMEWORK
         configuration.allowPartialType(PredicateExpressions.StringCaseInsensitiveCompare<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringCaseInsensitiveCompare")

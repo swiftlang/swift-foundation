@@ -301,6 +301,12 @@ final class PredicateCodableTests: XCTestCase {
         decoded = try _encodeDecode(predicate)
         XCTAssertEqual(try decoded.evaluate("Hello world"), try predicate.evaluate("Hello world"))
         
+        predicate = #Predicate<String> {
+            $0.contains(/[a-z]/)
+        }
+        decoded = try _encodeDecode(predicate)
+        XCTAssertEqual(try decoded.evaluate("Hello world"), try predicate.evaluate("Hello world"))
+        
         let predicate2 = #Predicate<Object> {
             $0 == $0
         }
