@@ -46,6 +46,8 @@ extension AttributeScopes {
         public let agreementArgument: AgreementArgumentAttribute
         @available(FoundationPreview 0.1, *)
         public let referentConcept: ReferentConceptAttribute
+        @available(FoundationPreview 0.4, *)
+        public let localizedNumberFormat: LocalizedNumberFormatAttribute
         
         // TODO: Support AttributedString markdown in FoundationPreview: https://github.com/apple/swift-foundation/issues/44
         public let inlinePresentationIntent: InlinePresentationIntentAttribute
@@ -154,6 +156,39 @@ extension AttributeScopes.FoundationAttributes {
         public static let markdownName = "assumedFallbackInflection"
     }
     
+    @frozen
+    @_nonSendable
+    @available(FoundationPreview 0.4, *)
+    public enum LocalizedNumberFormatAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
+        public struct Value: Equatable, Hashable, Codable, Sendable {
+            enum Format {
+                case automatic
+            }
+            var format: Format
+            internal init(format: Format) {
+                self.format = format
+            }
+            public static var automatic: Self { .init(format: .automatic) }
+            public init(from decoder: any Decoder) throws {
+                let container = try decoder.singleValueContainer()
+                let format = try container.decode(Bool.self)
+                if format == true {
+                    self.format = .automatic
+                } else {
+                    throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid value for formatNumber attribute. Accepted values: `true`")
+                }
+            }
+            public func encode(to encoder: any Encoder) throws {
+                switch self.format {
+                    case .automatic:
+                        try true.encode(to: encoder)
+                }
+            } 
+        }
+        public static let name = NSAttributedString.Key.localizedNumberFormat.rawValue
+        public static let markdownName = "formatNumber"
+    }
+
 #endif // FOUNDATION_FRAMEWORK
     
     @frozen
@@ -568,6 +603,31 @@ extension AttributeScopes.FoundationAttributes.LanguageIdentifierAttribute : Mar
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScopes.FoundationAttributes.PersonNameComponentAttribute : ObjectiveCConvertibleAttributedStringKey {
     public typealias ObjectiveCValue = NSString
+}
+
+@available(FoundationPreview 0.4, *)
+extension AttributeScopes.FoundationAttributes.LocalizedNumberFormatAttribute.Value: _ObjectiveCBridgeable {
+    public func _bridgeToObjectiveC() -> __NSLocalizedNumberFormatRule {
+        switch self.format {
+        case .automatic:
+            __NSLocalizedNumberFormatRule.automatic()
+        }
+    }
+    
+    public static func _forceBridgeFromObjectiveC(_ source: __NSLocalizedNumberFormatRule, result: inout AttributeScopes.FoundationAttributes.LocalizedNumberFormatAttribute.Value?) {
+        result = .automatic
+    }
+    
+    public static func _conditionallyBridgeFromObjectiveC(_ source: __NSLocalizedNumberFormatRule, result: inout AttributeScopes.FoundationAttributes.LocalizedNumberFormatAttribute.Value?) -> Bool {
+        result = .automatic
+        return true
+    }
+    
+    public static func _unconditionallyBridgeFromObjectiveC(_ source: __NSLocalizedNumberFormatRule?) -> AttributeScopes.FoundationAttributes.LocalizedNumberFormatAttribute.Value {
+        .automatic
+    }
+    
+    public typealias _ObjectiveCType = __NSLocalizedNumberFormatRule
 }
 
 #endif // FOUNDATION_FRAMEWORK
