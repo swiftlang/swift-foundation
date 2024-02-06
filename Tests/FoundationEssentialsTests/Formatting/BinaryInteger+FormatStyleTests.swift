@@ -11,7 +11,13 @@
 
 import XCTest
 
+#if canImport(FoundationEssentials)
 @testable import FoundationEssentials
+#endif
+
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#endif
 
 #if canImport(Numberick) // Not included by default as it's a 3rd party library; requires https://github.com/oscbyspro/Numberick.git be added the package dependencies.
 import Numberick
