@@ -22,10 +22,6 @@ import Darwin
 import Glibc
 #endif
 
-#if canImport(XPC)
-import XPC
-#endif
-
 #if !NO_PROCESS
 
 final class _ProcessInfo: Sendable {
