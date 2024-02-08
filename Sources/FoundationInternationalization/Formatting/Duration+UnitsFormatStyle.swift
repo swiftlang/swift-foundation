@@ -528,6 +528,7 @@ extension Duration.UnitsFormatStyle {
     /// seconds { durationField: .seconds, component: .unit }
     /// ```
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+    @dynamicMemberLookup
     public struct Attributed : FormatStyle, Sendable {
 
         var innerStyle: Duration.UnitsFormatStyle
@@ -608,3 +609,21 @@ extension Duration.UnitsFormatStyle {
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension UATimeUnitStyle : Codable, Hashable {}
+
+// MARK: Dynamic Member Lookup
+
+@available(FoundationPreview 0.4, *)
+extension Duration.UnitsFormatStyle.Attributed {
+    public subscript<T>(dynamicMember key: KeyPath<Duration.UnitsFormatStyle, T>) -> T {
+        innerStyle[keyPath: key]
+    }
+
+    public subscript<T>(dynamicMember key: WritableKeyPath<Duration.UnitsFormatStyle, T>) -> T {
+        get {
+            innerStyle[keyPath: key]
+        }
+        set {
+            innerStyle[keyPath: key] = newValue
+        }
+    }
+}
