@@ -38,7 +38,7 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 package import _CShims
 #endif
 
-internal struct Platform {
+package struct Platform {
     static var pageSize: Int {
         _pageSize
     }
@@ -71,23 +71,96 @@ internal struct Platform {
 }
 
 // MARK: - EUID & EGID
-extension Platform {
+
 #if !NO_PROCESS
-    static func getUGIDs() -> (euid: UInt32, egid: UInt32) {
-        var euid: UInt32 = 0
-        var egid: UInt32 = 0
-    #if canImport(Darwin)
-        if pthread_getugid_np(&euid, &egid) != 0 {
-            euid = geteuid()
-            egid = getegid()
-        }
-    #else
-        euid = getegid()
-        egid = getegid()
-    #endif
-        return (euid: euid, egid: egid)
+#if canImport(Darwin)
+private func _getSVUID() -> uid_t? {
+    var kinfo = kinfo_proc()
+    var len: size_t = 0
+    var mib = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+    let ret = mib.withUnsafeMutableBufferPointer {
+        sysctl($0.baseAddress!, u_int($0.count), &kinfo, &len, nil, 0)
     }
+    guard ret == 0 else { return nil }
+    return kinfo.kp_eproc.e_pcred.p_svuid
+}
+
+private var _canChangeUIDs: Bool = {
+    let euid = geteuid()
+    let uid = getuid()
+    let svuid = _getSVUID()
+    return uid == 0 || uid != euid || svuid != euid || svuid == nil
+}()
+
+private func _lookupUGIDs() -> (uid_t, gid_t) {
+    var uRes = uid_t()
+    var gRes = gid_t()
+    if pthread_getugid_np(&uRes, &gRes) != 0 {
+        uRes = geteuid()
+        gRes = getegid()
+    }
+    return (uRes, gRes)
+}
+
+private var _cachedUGIDs: (uid_t, gid_t) = {
+    _lookupUGIDs()
+}()
+#endif
+
+extension Platform {
+    static func getUGIDs() -> (uid: UInt32, gid: UInt32) {
+        #if canImport(Darwin)
+        if _canChangeUIDs {
+            _lookupUGIDs()
+        } else {
+            _cachedUGIDs
+        }
+        #else
+        return (uid: geteuid(), gid: getegid())
+        #endif
+    }
+}
+
+// MARK: - Environment Variables
+extension Platform {
+    static func getEnvSecure(_ name: String) -> String? {
+        #if canImport(Glibc)
+        if let value = secure_getenv(name) {
+            return String(cString: value)
+        } else {
+            return nil
+        }
+        #else
+        guard issetugid() == 0 else { return nil }
+        if let value = getenv(name) {
+            return String(cString: value)
+        } else {
+            return nil
+        }
+        #endif
+    }
+}
 #endif // !NO_PROCESS
+
+// MARK: - Strings
+extension Platform {
+    @discardableResult
+    package static func copyCString(dst: UnsafeMutablePointer<CChar>, src: UnsafePointer<CChar>, size: Int) -> Int {
+        #if canImport(Darwin)
+        return strlcpy(dst, src, size)
+        #else
+        // Glibc doesn't support strlcpy
+        let dstBuffer = UnsafeMutableBufferPointer(start: dst, count: size)
+        let srcLen = strlen(src)
+        let srcBuffer = UnsafeBufferPointer(start: src, count: srcLen + 1)
+        var (unwrittenIterator, _) = dstBuffer.update(from: srcBuffer)
+        if unwrittenIterator.next() != nil {
+            // Destination's space was insufficient, ensure it is truncated and null terminated
+            dstBuffer[dstBuffer.count - 1] = 0
+        }
+        return srcLen
+        #endif
+    }
 }
 
 // MARK: - Hostname

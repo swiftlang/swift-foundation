@@ -1557,12 +1557,7 @@ extension Locale {
                 return
             }
             var status = U_ZERO_ERROR
-            #if canImport(Glibc) || canImport(ucrt)
-            // Glibc doesn't support strlcpy
-            strcpy(buf, identifier)
-            #else
-            strlcpy(buf, identifier, Int(ULOC_FULLNAME_CAPACITY))
-            #endif
+            Platform.copyCString(dst: buf, src: identifier, size: Int(ULOC_FULLNAME_CAPACITY))
 
             // TODO: This could probably be lifted out of ICU; it is mostly string concatenation
             let len = uloc_setKeywordValue(key.key, value, buf, ULOC_FULLNAME_CAPACITY, &status)

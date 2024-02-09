@@ -70,11 +70,6 @@ extension Data {
     }
 }
 
-internal struct FileAttributeKey: RawRepresentable, Equatable, Hashable {
-    typealias RawValue = String
-    let rawValue: String
-}
-
 // Placeholder for Progress
 internal final class Progress {
     var completedUnitCount: Int64

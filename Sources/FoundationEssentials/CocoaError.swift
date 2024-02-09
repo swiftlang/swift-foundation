@@ -282,4 +282,6 @@ internal let NSUnderlyingErrorKey = "NSUnderlyingErrorKey"
 internal let NSUserStringVariantErrorKey = "NSUserStringVariantErrorKey"
 internal let NSFilePathErrorKey = "NSFilePathErrorKey"
 internal let NSURLErrorKey = "NSURLErrorKey"
+internal let NSSourceFilePathErrorKey = "NSSourceFilePathErrorKey"
+internal let NSDestinationFilePathErrorKey = "NSDestinationFilePathErrorKey"
 #endif

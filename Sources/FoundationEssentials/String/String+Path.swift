@@ -13,11 +13,14 @@
 #if canImport(Darwin)
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import os
+@_implementationOnly import _CShims
 #else
 package import os
+package import _CShims
 #endif
 #elseif canImport(Glibc)
 import Glibc
+package import _CShims
 #endif
 
 extension String {
@@ -135,6 +138,40 @@ extension String {
         }
     }
     
+    #if !NO_FILESYSTEM
+    internal static func homeDirectoryPath(forUser user: String? = nil) -> String {
+        #if targetEnvironment(simulator)
+        if user == nil, let envValue = getenv("CFFIXED_USER_HOME") ?? getenv("HOME") {
+            return String(cString: envValue)
+        }
+        #endif
+        
+        // First check CFFIXED_USER_HOME if the environment is not considered tainted
+        if let envVar = Platform.getEnvSecure("CFFIXED_USER_HOME") {
+            return envVar
+        }
+        
+        // Next, attempt to find the home directory via getpwnam/getpwuid
+        var pass: UnsafeMutablePointer<passwd>?
+        if let user {
+            pass = getpwnam(user)
+        } else {
+            pass = getpwuid(Platform.getUGIDs().uid)
+        }
+        
+        if let dir = pass?.pointee.pw_dir {
+            return String(cString: dir)
+        }
+        
+        // Fallback to HOME for the current user if possible
+        if user == nil, let home = getenv("HOME") {
+            return String(cString: home)
+        }
+        
+        // If all else fails, log and fall back to /var/empty
+        return "/var/empty"
+    }
+    
     // From swift-corelibs-foundation's NSTemporaryDirectory. Internal for now, pending a better public API.
     internal static var temporaryDirectoryPath: String {
 #if os(Windows)
@@ -192,6 +229,11 @@ extension String {
             }
         }
 #endif
+#if !os(WASI)
+        if let envValue = Platform.getEnvSecure("TMPDIR") {
+            return normalizedPath(with: envValue)
+        }
+#endif
 #if os(Android)
         // Bionic uses /data/local/tmp/ as temporary directory. TMPDIR is rarely
         // defined.
@@ -201,5 +243,225 @@ extension String {
 #endif
 #endif
     }
-
+    
+    private func _transmutingCompressingSlashes(replacement: String = "/") -> String {
+        self.replacing(#//+/#, with: { _ in replacement })
+    }
+    
+    private var _droppingTrailingSlashes: String {
+        guard let lastNonSlash = self.lastIndex(where: { $0 != "/"}) else {
+            // It's all /'s so just return a single slash
+            return "/"
+        }
+        return String(self[...lastNonSlash])
+    }
+    
+    static var NETWORK_PREFIX: String { #"\\"# }
+    
+    private var _standardizingPath: String {
+        var result = _transmutingCompressingSlashes()._droppingTrailingSlashes
+        let postNetStart = if result.starts(with: String.NETWORK_PREFIX) {
+            result.firstIndex(of: "/") ?? result.endIndex
+        } else {
+            result.startIndex
+        }
+        let dotDotRegex = #/[^/]\.\.[/$]/#
+        let hasDotDot = result[postNetStart...].contains(dotDotRegex)
+        if hasDotDot, let resolved = result._resolvingSymlinksInPath() {
+            result = resolved
+        }
+        
+        var components = result.split(separator: "/", omittingEmptySubsequences: false)
+        guard !components.isEmpty else { return "/" }
+        
+        // Remove all "." components
+        components.removeAll { $0 == "." }
+        
+        // Since result must be absolute, remove all leading ".." components
+        var toSearchFrom = 0
+        while let dotDotIdx = components[toSearchFrom...].firstIndex(of: "..") {
+            components.remove(at: dotDotIdx)
+            toSearchFrom = dotDotIdx
+            if dotDotIdx > 0 {
+                components.remove(at: dotDotIdx - 1)
+                toSearchFrom -= 1
+            }
+        }
+        
+        // Retain any leading slashes but drop any otherwise empty components
+        result = components.enumerated().filter { $0 == 0 || !$1.isEmpty }.map(\.1).joined(separator: "/")
+        
+        // Automounted paths need to be stripped for various flavors of paths
+        for path in ["/private/var/automount", "/var/automount", "/private"] {
+            if result.starts(with: "\(path)/") {
+                let newPath = String(result.dropFirst(path.count))
+                if FileManager.default.fileExists(atPath: newPath) {
+                    result = newPath
+                }
+                break
+            }
+        }
+        return result
+    }
+    
+    var standardizingPath: String {
+        expandingTildeInPath._standardizingPath
+    }
+    #endif // !NO_FILESYSTEM
+    
+    // _NSPathComponents
+    var pathComponents: [String] {
+        var components = self.components(separatedBy: "/").filter { !$0.isEmpty }
+        if self.first == "/" {
+            components.insert("/", at: 0)
+        }
+        if self.last == "/" && self.count > 1 {
+            components.append("/")
+        }
+        return components
+    }
+    
+    #if !NO_FILESYSTEM
+    var abbreviatingWithTildeInPath: String {
+        guard !self.isEmpty && self != "/" else { return self }
+        let homeDir = String.homeDirectoryPath()
+        guard self.starts(with: homeDir) else { return self }
+        let nextIdxInOriginal = self.unicodeScalars.index(self.startIndex, offsetBy: homeDir.unicodeScalars.count)
+        guard nextIdxInOriginal == self.endIndex || self[nextIdxInOriginal] == "/" else { return self }
+        return "~" + self[nextIdxInOriginal...]
+    }
+    
+    var expandingTildeInPath: String {
+        guard self.first == "~" else { return self }
+        var user: String? = nil
+        let firstSlash = self.firstIndex(of: "/") ?? self.endIndex
+        let indexAfterTilde = self.index(after: self.startIndex)
+        if firstSlash != indexAfterTilde {
+            user = String(self[indexAfterTilde ..< firstSlash])
+        }
+        let userDir = String.homeDirectoryPath(forUser: user)
+        return userDir + self[firstSlash...]
+    }
+    
+    private var _isAbsolutePath: Bool {
+        first == "~" || first == "/"
+    }
+    
+    private static func _resolvingSymlinksInPathUsingFullPathAttribute(_ fsRep: UnsafePointer<CChar>) -> String? {
+        #if canImport(Darwin)
+        var attrs = attrlist()
+        attrs.bitmapcount = u_short(ATTR_BIT_MAP_COUNT)
+        attrs.commonattr = attrgroup_t(ATTR_CMN_FULLPATH)
+        var buffer = FullPathAttributes()
+        guard getattrlist(fsRep, &attrs, &buffer, MemoryLayout<FullPathAttributes>.size, 0) == 0, buffer.fullPathAttr.attr_length > 0 else {
+            return nil
+        }
+        
+        return withUnsafePointer(to: buffer.fullPathBuf) { pathPtr in
+            let start = UnsafeRawPointer(pathPtr).advanced(by: Int(buffer.fullPathAttr.attr_dataoffset))
+            let length = Int(buffer.fullPathAttr.attr_length) // Includes null byte
+            return start.withMemoryRebound(to: CChar.self, capacity: length) { ccharPtr in
+                return String(cString: ccharPtr)
+            }
+        }
+        #else
+        return nil
+        #endif
+    }
+    
+    private func _resolvingSymlinksInPath() -> String? {
+        guard !isEmpty else { return nil }
+        return self.withFileSystemRepresentation { fsPtr -> String? in
+            guard let fsPtr else { return nil }
+            // If not using the cache (which may not require hitting the disk at all if it's warm), try getting the full path from getattrlist.
+            // If it succeeds, this approach always returns an absolute path starting from the root. Since this function returns relative paths when given a relative path to a relative symlink, dont use this approach unless the path is absolute.
+            
+            if !self._isAbsolutePath, let resolved = Self._resolvingSymlinksInPathUsingFullPathAttribute(fsPtr) {
+                return resolved
+            }
+            
+            return withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer -> String? in
+                buffer.initialize(repeating: 0)
+                defer { buffer.deinitialize() }
+                var fullLength = Platform.copyCString(dst: buffer.baseAddress!, src: fsPtr, size: FileManager.MAX_PATH_SIZE) + 1 // Includes null byte
+                return withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { linkBuffer -> String? in
+                    linkBuffer.initialize(repeating: 0)
+                    defer { linkBuffer.deinitialize() }
+                    var scanLoc = buffer.baseAddress!
+                    var links = 0
+                    while true {
+                        var linkResultLen = 0
+                        let lastScanLoc = scanLoc
+                        while scanLoc.pointee == 0x2F /* U+002F Solidus (/) */ {
+                            scanLoc = scanLoc.advanced(by: 1)
+                        }
+                        while scanLoc.pointee != 0x2F && scanLoc.pointee != 0 {
+                            scanLoc = scanLoc.advanced(by: 1)
+                        }
+                        let slash = scanLoc.pointee
+                        scanLoc.pointee = 0
+                        var statBuf = stat()
+                        if lstat(buffer.baseAddress!, &statBuf) < 0 {
+                            return nil
+                        }
+                        if statBuf.st_mode & S_IFMT == S_IFLNK {
+                            /* Examples:
+                             *   fspath == /foo/bar0baz/quux/froboz
+                             *   linkx == /tic/tac/toe
+                             *   result == /tic/tac/toe/baz/quux/froboz
+                             *
+                             *   fspath == /foo/bar0baz/quux/froboz
+                             *   linkx == tic/tac/toe
+                             *   result == /foo/tic/tac/toe/baz/quux/froboz
+                             */
+                            if links > MAXSYMLINKS {
+                                return nil
+                            }
+                            linkResultLen = readlink(buffer.baseAddress!, linkBuffer.baseAddress!, FileManager.MAX_PATH_SIZE - 1)
+                            if linkResultLen < 0 {
+                                return nil
+                            }
+                            linkBuffer[linkResultLen] = 0
+                        }
+                        
+                        scanLoc.pointee = slash
+                        if linkResultLen > 0 {
+                            links += 1
+                            // If the link is not an absolute path, preserve the prefix
+                            let preservedPrefixLength = linkBuffer[0] == 0x2F ? 0 : (buffer.baseAddress!.distance(to: lastScanLoc) + 1)
+                            
+                            let scanLocIdx = buffer.baseAddress!.distance(to: scanLoc)
+                            let suffixLength = fullLength - scanLocIdx // Includes null byte
+                            if preservedPrefixLength + linkResultLen + suffixLength > FileManager.MAX_PATH_SIZE {
+                                return nil
+                            }
+                            
+                            // Shift the suffix + null byte to the correct location
+                            let afterSuffixIdx = buffer[(preservedPrefixLength + linkResultLen)...].update(fromContentsOf: buffer[scanLocIdx ..< (fullLength)])
+                            
+                            // Replace the component with the link
+                            _ = buffer[preservedPrefixLength ..< (preservedPrefixLength + linkResultLen)].update(fromContentsOf: linkBuffer[..<linkResultLen])
+                            
+                            fullLength = afterSuffixIdx
+                            scanLoc = linkBuffer[0] == 0x2F ? buffer.baseAddress! : lastScanLoc
+                        } else {
+                            if scanLoc.pointee == 0 {
+                                break
+                            }
+                        }
+                    }
+                    return String(cString: buffer.baseAddress!)
+                }
+            }
+        }
+    }
+    
+    var resolvingSymlinksInPath: String {
+        var result = expandingTildeInPath
+        if let resolved = result._resolvingSymlinksInPath() {
+            result = resolved
+        }
+        return result._standardizingPath
+    }
+    #endif // !NO_FILESYSTEM
 }
