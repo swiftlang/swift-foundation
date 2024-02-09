@@ -75,7 +75,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, data: Data, reportPr
         }
     }
 
-    var nextRange = 0..<length
+    var nextRange = data.startIndex..<data.startIndex.advanced(by: length)
     var numBytesRemaining = length
     while numBytesRemaining > 0 {
         if let localProgress, localProgress.isCancelled {
@@ -117,7 +117,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, data: Data, reportPr
                     break
                 }
                 
-                nextRange = numBytesWritten..<data.count
+                nextRange = nextRange.startIndex.advanced(by: numBytesWritten)..<data.endIndex
             }
         } while numBytesWritten < 0 && errno == EINTR
     }

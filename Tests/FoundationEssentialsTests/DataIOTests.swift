@@ -43,15 +43,17 @@ class DataIOTests : XCTestCase {
     
     func generateTestData() -> Data {
         // 16 MB file, big enough to trigger things like chunking
-        let count = 1 << 24
+        let count = 16_777_216
         
         let memory = malloc(count)!
         let ptr = memory.bindMemory(to: UInt8.self, capacity: count)
         
         // Set a few bytes so we're sure to not be all zeros
         let buf = UnsafeMutableBufferPointer(start: ptr, count: count)
-        for i in 0..<128 {
-            buf[i] = UInt8.random(in: 1..<42)
+        for i in 0..<15 {
+            for j in 0..<128 {
+                buf[j * 1024 + i] = UInt8.random(in: 1..<42)
+            }
         }
         
         return Data(bytesNoCopy: ptr, count: count, deallocator: .free)
@@ -92,6 +94,25 @@ class DataIOTests : XCTestCase {
     func test_basicReadWrite() throws {
         let url = testURL()
         try writeAndVerifyTestData(to: url)
+        cleanup(at: url)
+    }
+    
+    func test_slicedReadWrite() throws {
+        // Be sure to use progress reporting so we get tests of the chunking
+        let url = testURL()
+        let data = generateTestData()
+        let slice = data[data.startIndex.advanced(by: 1 * 1024 * 1024)..<data.startIndex.advanced(by: 8 * 1024 * 1024)]
+
+#if FOUNDATION_FRAMEWORK
+        let p = Progress(totalUnitCount: 1)
+        p.becomeCurrent(withPendingUnitCount: 1)
+#endif
+        try slice.write(to: url, options: [])
+#if FOUNDATION_FRAMEWORK
+        p.resignCurrent()
+#endif
+        let readData = try Data(contentsOf: url, options: [])
+        XCTAssertEqual(readData, slice)
         cleanup(at: url)
     }
 
