@@ -274,7 +274,7 @@ final class FileManagerTests : XCTestCase {
             "preexisting_file"
         }.test {
             try $0.createDirectory(atPath: "create_dir_test", withIntermediateDirectories: false)
-            XCTAssertEqual(try $0.contentsOfDirectory(atPath: "."), ["create_dir_test", "preexisting_file"])
+            XCTAssertEqual(try $0.contentsOfDirectory(atPath: ".").sorted(), ["create_dir_test", "preexisting_file"])
             try $0.createDirectory(atPath: "create_dir_test2/nested", withIntermediateDirectories: true)
             XCTAssertEqual(try $0.contentsOfDirectory(atPath: "create_dir_test2"), ["nested"])
             try $0.createDirectory(atPath: "create_dir_test2/nested2", withIntermediateDirectories: true)
@@ -408,7 +408,7 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")])
             
             try $0.copyItem(atPath: "does_not_exist", toPath: "dir3")
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError.first, .init("does_not_exist", "dir3", code: .fileNoSuchFile))
+            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError.last, .init("does_not_exist", "dir3", code: .fileNoSuchFile))
             
             #if canImport(Darwin)
             // Not supported on linux because it ends up trying to set attributes that are currently unimplemented

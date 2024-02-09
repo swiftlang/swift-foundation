@@ -547,7 +547,7 @@ extension _FileManagerImpl {
                 .systemFreeSize : _writeFileAttributePrimitive(availSizeBytes, as: UInt64.self),
                 .systemNodes : _writeFileAttributePrimitive(totalFiles, as: UInt64.self),
                 .systemFreeNodes : _writeFileAttributePrimitive(availFiles, as: UInt64.self),
-                .systemNumber : _writeFileAttributePrimitive(fsNumber, as: Int.self)
+                .systemNumber : _writeFileAttributePrimitive(fsNumber, as: UInt.self)
             ]
         }
     }
