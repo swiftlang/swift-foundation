@@ -20,7 +20,9 @@
 import TestSupport
 #endif
 
-final class StringTests : XCTestCase {
+// MARK: - StringTests
+
+final class StringTests: XCTestCase {
     // MARK: - Case mapping
 
     func testCapitalize() {
@@ -41,7 +43,7 @@ final class StringTests : XCTestCase {
         // We don't do title case, so minor words are also capitalized
         test("train your mind for peak performance: a science-based approach for achieving your goals!", "Train Your Mind For Peak Performance: A Science-Based Approach For Achieving Your Goals!")
         test("cAt! ʻeTc.", "Cat! ʻEtc.")
-        test("a ʻCaT. A ʻdOg! ʻeTc.",  "A ʻCat. A ʻDog! ʻEtc.")
+        test("a ʻCaT. A ʻdOg! ʻeTc.", "A ʻCat. A ʻDog! ʻEtc.")
         test("49ERS", "49Ers")
         test("«丰(aBc)»", "«丰(Abc)»")
         test("Nat’s test can’t run", "Nat’s Test Can’t Run")
@@ -124,13 +126,13 @@ final class StringTests : XCTestCase {
         test("+a+b+c+1+2+3++", while: { $0.isSymbol }, "a+b+c+1+2+3")
         test("+a+b+c+1+2+3!!", while: { $0.isPunctuation }, "+a+b+c+1+2+3")
 
-        let alwaysReject: TrimmingPredicate = { _ in return false }
+        let alwaysReject: TrimmingPredicate = { _ in false }
 
         test("", while: alwaysReject, "")
         test("🏳️‍🌈xyz👩‍👩‍👧‍👦", while: alwaysReject, "🏳️‍🌈xyz👩‍👩‍👧‍👦")
         test("11 B\u{0662}\u{0661}", while: alwaysReject, "11 B\u{0662}\u{0661}")
 
-        let alwaysTrim: TrimmingPredicate = { _ in return true }
+        let alwaysTrim: TrimmingPredicate = { _ in true }
 
         test("🏳️‍🌈xyz👩‍👩‍👧‍👦", while: alwaysTrim, "")
         test("11 B\u{0662}\u{0661}", while: alwaysTrim, "")
@@ -140,7 +142,7 @@ final class StringTests : XCTestCase {
         let result = tested._range(of: string, anchored: anchored, backwards: backwards)
         var exp: Range<String.Index>?
         if let expectation {
-            exp = tested.index(tested.startIndex, offsetBy: expectation.lowerBound) ..< tested.index(tested.startIndex, offsetBy: expectation.upperBound)
+            exp = tested.index(tested.startIndex, offsetBy: expectation.lowerBound)..<tested.index(tested.startIndex, offsetBy: expectation.upperBound)
         } else {
             exp = nil
         }
@@ -225,7 +227,6 @@ final class StringTests : XCTestCase {
             test("B👩‍👩‍👧‍👦a", anchored: false, backwards: false, 2..<5)
             test("b🕵️‍♀️", anchored: false, backwards: false, 5..<7)
 
-
             test("🏳️‍🌈A", anchored: true, backwards: false, 0..<2)
             test("ＡＢ", anchored: true, backwards: false, nil)
             test("B👩‍👩‍👧‍👦a", anchored: true, backwards: false, nil)
@@ -236,7 +237,6 @@ final class StringTests : XCTestCase {
             test("🕵️‍♀️", anchored: true, backwards: true, 6..<7)
             test("b🕵️‍♀️", anchored: true, backwards: true, 5..<7)
             test("B🕵️‍♀️", anchored: true, backwards: true, nil)
-
         }
     }
 
@@ -265,26 +265,25 @@ final class StringTests : XCTestCase {
         }
 
         test([], expected: "")
-        test([ 0x00 ], expected: "\u{0000}")
-        test([ 0x24 ], expected: "$")
-        test([ 0x41, 0x42 ], expected: "AB")
-        test([ 0x20AC ], expected: "\u{20AC}")
-        test([ 0x3040, 0x3041, 0xFFEF ], expected: "\u{3040}\u{3041}\u{FFEF}")
-        test([ 0x0939, 0x0940 ], expected: "\u{0939}\u{0940}")
+        test([0x00], expected: "\u{0000}")
+        test([0x24], expected: "$")
+        test([0x41, 0x42], expected: "AB")
+        test([0x20ac], expected: "\u{20AC}")
+        test([0x3040, 0x3041, 0xffef], expected: "\u{3040}\u{3041}\u{FFEF}")
+        test([0x0939, 0x0940], expected: "\u{0939}\u{0940}")
 
         // surrogates
-        test([ 0xD801, 0xDC37 ], expected: "\u{10437}")
-        test([ 0xD852, 0xDF62 ], expected: "\u{24B62}")
-        test([ 0x41, 0x42, 0xD852, 0xDF62 ], expected: "AB\u{24B62}")
+        test([0xd801, 0xdc37], expected: "\u{10437}")
+        test([0xd852, 0xdf62], expected: "\u{24B62}")
+        test([0x41, 0x42, 0xd852, 0xdf62], expected: "AB\u{24B62}")
 
         // invalid input
-        test([ 0xD800 ], expected: nil)
-        test([ 0x42, 0xD800 ], expected: nil)
-        test([ 0xD800, 0x42 ], expected: nil)
+        test([0xd800], expected: nil)
+        test([0x42, 0xd800], expected: nil)
+        test([0xd800, 0x42], expected: nil)
     }
 
     func testTryFromUTF16_roundtrip() {
-
         func test(_ string: String, file: StaticString = #file, line: UInt = #line) {
             let utf16Array = Array(string.utf16)
             let res = utf16Array.withUnsafeBufferPointer {
@@ -307,42 +306,42 @@ final class StringTests : XCTestCase {
         test("\u{1F425}")
         test("🏳️‍🌈AB👩‍👩‍👧‍👦ab🕵️‍♀️")
     }
-    
+
     func testParagraphLineRangeOfSeparator() {
         for separator in ["\n", "\r", "\r\n", "\u{2029}", "\u{2028}", "\u{85}"] {
-            let range = separator.startIndex ..< separator.endIndex
+            let range = separator.startIndex..<separator.endIndex
             let paragraphResult = separator._paragraphBounds(around: range)
             let lineResult = separator._lineBounds(around: range)
-            XCTAssertEqual(paragraphResult.start ..< paragraphResult.end, range)
-            XCTAssertEqual(lineResult.start ..< lineResult.end, range)
+            XCTAssertEqual(paragraphResult.start..<paragraphResult.end, range)
+            XCTAssertEqual(lineResult.start..<lineResult.end, range)
         }
     }
-    
+
     func testAlmostMatchingSeparator() {
         let string = "A\u{200D}B" // U+200D Zero Width Joiner (ZWJ) matches U+2028 Line Separator except for the final UTF-8 scalar
-        let lineResult = string._lineBounds(around: string.startIndex ..< string.startIndex)
+        let lineResult = string._lineBounds(around: string.startIndex..<string.startIndex)
         XCTAssertEqual(lineResult.start, string.startIndex)
         XCTAssertEqual(lineResult.end, string.endIndex)
         XCTAssertEqual(lineResult.contentsEnd, string.endIndex)
     }
-    
+
     func testFileSystemRepresentation() {
         func assertCString(_ ptr: UnsafePointer<CChar>, equals other: String, file: StaticString = #file, line: UInt = #line) {
             XCTAssertEqual(String(cString: ptr), other, file: file, line: line)
         }
-        
+
         let original = "/Path1/Path Two/Path Three/Some Really Long File Name Section.txt"
         original.withFileSystemRepresentation {
             XCTAssertNotNil($0)
             assertCString($0!, equals: original)
         }
-        
+
         let withWhitespace = original + "\u{2000}\u{2001}"
         withWhitespace.withFileSystemRepresentation {
             XCTAssertNotNil($0)
             assertCString($0!, equals: withWhitespace)
         }
-        
+
         let withHangul = original + "\u{AC00}\u{AC01}"
         withHangul.withFileSystemRepresentation { buf1 in
             XCTAssertNotNil(buf1)
@@ -354,19 +353,19 @@ final class StringTests : XCTestCase {
                 }
             }
         }
-        
+
         let withNullSuffix = original + "\u{0000}\u{0000}"
         withNullSuffix.withFileSystemRepresentation {
             XCTAssertNotNil($0)
             assertCString($0!, equals: original)
         }
-        
+
 #if canImport(Darwin) || FOUNDATION_FRAMEWORK
         // A string of length PATH_MAX-1 should perfectly fit in the buffer (with the null byte)
         Array(repeating: "A", count: Int(PATH_MAX) - 1).joined().withFileSystemRepresentation { ptr in
             XCTAssertNotNil(ptr)
         }
-        
+
         // This will not fit in the buffer with the null byte
         Array(repeating: "A", count: Int(PATH_MAX)).joined().withFileSystemRepresentation { ptr in
             XCTAssertNil(ptr)
@@ -401,23 +400,25 @@ final class StringTests : XCTestCase {
     }
 }
 
-
 #if FOUNDATION_FRAMEWORK
 
 extension String {
     var lines: [Substring] {
-        self.split(separator: "\n")
+        split(separator: "\n")
     }
 }
 
 final class StringTestsStdlib: XCTestCase {
-
     // The most simple subclass of NSString that CoreFoundation does not know
     // about.
-    class NonContiguousNSString : NSString {
+    class NonContiguousNSString: NSString {
+        // MARK: Lifecycle
+
+        @available(*, unavailable)
         required init(coder aDecoder: NSCoder) {
             fatalError("don't call this initializer")
         }
+
         required init(itemProviderData data: Data, typeIdentifier: String) throws {
             fatalError("don't call this initializer")
         }
@@ -438,28 +439,29 @@ final class StringTestsStdlib: XCTestCase {
         }
 #endif
 
+        // MARK: Internal
+
+        var _value: [UInt16]
+
+        @objc override var length: Int {
+            return _value.count
+        }
+
         @objc(copyWithZone:) override func copy(with zone: NSZone?) -> Any {
             // Ensure that copying this string produces a class that CoreFoundation
             // does not know about.
             return self
         }
 
-        @objc override var length: Int {
-            return _value.count
-        }
-
         @objc override func character(at index: Int) -> unichar {
             return _value[index]
         }
-
-        var _value: [UInt16]
     }
 
     let temporaryFileContents =
-    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,\n" +
-    "sed do eiusmod tempor incididunt ut labore et dolore magna\n" +
-    "aliqua.\n"
-
+        "Lorem ipsum dolor sit amet, consectetur adipisicing elit,\n" +
+        "sed do eiusmod tempor incididunt ut labore et dolore magna\n" +
+        "aliqua.\n"
 
     func withTemporaryStringFile(_ block: (_ existingURL: URL, _ nonExistentURL: URL) -> ()) {
         let rootURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -472,7 +474,6 @@ final class StringTestsStdlib: XCTestCase {
                 XCTFail()
             }
         }
-
 
         try! Data(temporaryFileContents.utf8).write(to: fileURL)
         let nonExisting = rootURL.appending(path: "-NonExist", directoryHint: .notDirectory)
@@ -506,7 +507,7 @@ final class StringTestsStdlib: XCTestCase {
             .utf32LittleEndian,
             .utf32BigEndian,
             .ascii,
-            .utf8,
+            .utf8
         ]
         checkHashable(instances, equalityOracle: { $0 == $1 })
     }
@@ -516,8 +517,8 @@ final class StringTestsStdlib: XCTestCase {
         expectEqual("Hello, world!%42", String.localizedStringWithFormat(
             "Hello, %@!%%%ld", world, 42))
 
-        expectEqual("0.5", String.init(format: "%g", locale: Locale(identifier: "en_US"), 0.5))
-        expectEqual("0,5", String.init(format: "%g", locale: Locale(identifier: "uk"), 0.5))
+        expectEqual("0.5", String(format: "%g", locale: Locale(identifier: "en_US"), 0.5))
+        expectEqual("0,5", String(format: "%g", locale: Locale(identifier: "uk"), 0.5))
     }
 
     func test_init_contentsOfFile_encoding() {
@@ -533,18 +534,17 @@ final class StringTestsStdlib: XCTestCase {
             }
 
             do {
-                let _ = try String(
+                _ = try String(
                     contentsOfFile: nonExistentURL.path, encoding: .ascii)
                 XCTFail()
-            } catch {
-            }
+            } catch {}
         }
     }
 
     func test_init_contentsOfFile_usedEncoding() {
         withTemporaryStringFile { existingURL, nonExistentURL in
             do {
-                var usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
+                var usedEncoding: String.Encoding = .init(rawValue: 0)
                 let content = try String(
                     contentsOfFile: existingURL.path(), usedEncoding: &usedEncoding)
                 expectNotEqual(0, usedEncoding.rawValue)
@@ -555,7 +555,7 @@ final class StringTestsStdlib: XCTestCase {
                 XCTFail(error.localizedDescription)
             }
 
-            let usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
+            let usedEncoding: String.Encoding = .init(rawValue: 0)
             do {
                 _ = try String(contentsOfFile: nonExistentURL.path())
                 XCTFail()
@@ -563,9 +563,7 @@ final class StringTestsStdlib: XCTestCase {
                 expectEqual(0, usedEncoding.rawValue)
             }
         }
-
     }
-
 
     func test_init_contentsOf_encoding() {
         withTemporaryStringFile { existingURL, nonExistentURL in
@@ -582,16 +580,14 @@ final class StringTestsStdlib: XCTestCase {
             do {
                 _ = try String(contentsOf: nonExistentURL, encoding: .ascii)
                 XCTFail()
-            } catch {
-            }
+            } catch {}
         }
-
     }
 
     func test_init_contentsOf_usedEncoding() {
         withTemporaryStringFile { existingURL, nonExistentURL in
             do {
-                var usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
+                var usedEncoding: String.Encoding = .init(rawValue: 0)
                 let content = try String(
                     contentsOf: existingURL, usedEncoding: &usedEncoding)
 
@@ -603,7 +599,7 @@ final class StringTestsStdlib: XCTestCase {
                 XCTFail(error.localizedDescription)
             }
 
-            var usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
+            var usedEncoding: String.Encoding = .init(rawValue: 0)
             do {
                 _ = try String(contentsOf: nonExistentURL, usedEncoding: &usedEncoding)
                 XCTFail()
@@ -611,7 +607,6 @@ final class StringTestsStdlib: XCTestCase {
                 expectEqual(0, usedEncoding.rawValue)
             }
         }
-
     }
 
     func test_init_cString_encoding() {
@@ -681,9 +676,8 @@ final class StringTestsStdlib: XCTestCase {
         _ localeID: String? = nil,
         _ message: @autoclosure () -> String = "",
         showFrame: Bool = true,
-        file: String = #file, line: UInt = #line
-    ) {
-
+        file: String = #file, line: UInt = #line)
+    {
         let locale = localeID.map {
             Locale(identifier: $0)
         } ?? nil
@@ -695,10 +689,9 @@ final class StringTestsStdlib: XCTestCase {
 
     func test_capitalizedString() {
         expectLocalizedEquality(
-            "Foo Foo Foo Foo",
-            { loc in "foo Foo fOO FOO".capitalized(with: loc) })
+            "Foo Foo Foo Foo") { loc in "foo Foo fOO FOO".capitalized(with: loc) }
 
-        expectLocalizedEquality("Жжж", { loc in "жжж".capitalized(with: loc) })
+        expectLocalizedEquality("Жжж") { loc in "жжж".capitalized(with: loc) }
 
         expectEqual(
             "Foo Foo Foo Foo",
@@ -841,7 +834,6 @@ final class StringTestsStdlib: XCTestCase {
                 expectEqual(existingPath, outputName)
             }
         }
-
     }
 
     func test_components_separatedBy_characterSet() {
@@ -882,24 +874,24 @@ final class StringTestsStdlib: XCTestCase {
     func test_cString() {
         XCTAssertNil("абв".cString(using: .ascii))
 
-        let expectedBytes: [UInt8] = [ 0xd0, 0xb0, 0xd0, 0xb1, 0xd0, 0xb2, 0 ]
+        let expectedBytes: [UInt8] = [0xd0, 0xb0, 0xd0, 0xb1, 0xd0, 0xb2, 0]
         let expectedStr: [CChar] = expectedBytes.map { CChar(bitPattern: $0) }
         expectEqual(expectedStr,
                     "абв".cString(using: .utf8)!)
     }
 
-     func test_data() {
-         XCTAssertNil("あいう".data(using: .ascii, allowLossyConversion: false))
+    func test_data() {
+        XCTAssertNil("あいう".data(using: .ascii, allowLossyConversion: false))
 
-         do {
-             let data = "あいう".data(using: .utf8)!
-             let expectedBytes: [UInt8] = [
+        do {
+            let data = "あいう".data(using: .utf8)!
+            let expectedBytes: [UInt8] = [
                 0xe3, 0x81, 0x82, 0xe3, 0x81, 0x84, 0xe3, 0x81, 0x86
-             ]
+            ]
 
-             expectEqualSequence(expectedBytes, data)
-         }
-     }
+            expectEqualSequence(expectedBytes, data)
+        }
+    }
 
     func test_init() {
         let bytes: [UInt8] = [0xe3, 0x81, 0x82, 0xe3, 0x81, 0x84, 0xe3, 0x81, 0x86]
@@ -937,7 +929,7 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_enumerateLinguisticTagsIn() {
-        let s: String = "Абв. Глокая куздра штеко будланула бокра и кудрячит бокрёнка. Абв."
+        let s = "Абв. Глокая куздра штеко будланула бокра и кудрячит бокрёнка. Абв."
         let startIndex = s.index(s.startIndex, offsetBy: 5)
         let endIndex = s.index(s.startIndex, offsetBy: 62)
         var tags: [String] = []
@@ -979,7 +971,7 @@ final class StringTestsStdlib: XCTestCase {
             s.enumerateSubstrings(in: startIndex..<endIndex,
                                   options: String.EnumerationOptions.byComposedCharacterSequences) {
                 (substring: String?, substringRange: Range<String.Index>,
-                 enclosingRange: Range<String.Index>, stop: inout Bool)
+                 enclosingRange: Range<String.Index>, _: inout Bool)
                 in
                 substrings.append(substring!)
                 expectEqual(substring, String(s[substringRange]))
@@ -992,7 +984,7 @@ final class StringTestsStdlib: XCTestCase {
             s.enumerateSubstrings(in: startIndex..<endIndex,
                                   options: [.byComposedCharacterSequences, .substringNotRequired]) {
                 (substring_: String?, substringRange: Range<String.Index>,
-                 enclosingRange: Range<String.Index>, stop: inout Bool)
+                 enclosingRange: Range<String.Index>, _: inout Bool)
                 in
                 XCTAssertNil(substring_)
                 let substring = s[substringRange]
@@ -1016,7 +1008,7 @@ final class StringTestsStdlib: XCTestCase {
             // 'maxLength' is limiting.
             let bufferLength = 100
             var expectedStr: [UInt8] = Array("def где ".utf8)
-            while (expectedStr.count != bufferLength) {
+            while expectedStr.count != bufferLength {
                 expectedStr.append(0xff)
             }
             var buffer = [UInt8](repeating: 0xff, count: bufferLength)
@@ -1037,7 +1029,7 @@ final class StringTestsStdlib: XCTestCase {
             // completely, since doing that would break a UTF sequence.
             let bufferLength = 5
             var expectedStr: [UInt8] = Array("def ".utf8)
-            while (expectedStr.count != bufferLength) {
+            while expectedStr.count != bufferLength {
                 expectedStr.append(0xff)
             }
             var buffer = [UInt8](repeating: 0xff, count: bufferLength)
@@ -1057,7 +1049,7 @@ final class StringTestsStdlib: XCTestCase {
             // 'range' is converted completely.
             let bufferLength = 100
             var expectedStr: [UInt8] = Array("def где gh жз ".utf8)
-            while (expectedStr.count != bufferLength) {
+            while expectedStr.count != bufferLength {
                 expectedStr.append(0xff)
             }
             var buffer = [UInt8](repeating: 0xff, count: bufferLength)
@@ -1077,7 +1069,7 @@ final class StringTestsStdlib: XCTestCase {
             // Inappropriate encoding.
             let bufferLength = 100
             var expectedStr: [UInt8] = Array("def ".utf8)
-            while (expectedStr.count != bufferLength) {
+            while expectedStr.count != bufferLength {
                 expectedStr.append(0xff)
             }
             var buffer = [UInt8](repeating: 0xff, count: bufferLength)
@@ -1125,7 +1117,7 @@ final class StringTestsStdlib: XCTestCase {
             // The smallest buffer where the result can fit.
             let bufferLength = 17
             var expectedStr = "abc あかさた\0".utf8.map { CChar(bitPattern: $0) }
-            while (expectedStr.count != bufferLength) {
+            while expectedStr.count != bufferLength {
                 expectedStr.append(CChar(bitPattern: 0xff))
             }
             var buffer = Array(
@@ -1150,7 +1142,7 @@ final class StringTestsStdlib: XCTestCase {
         }
         do {
             // String with unpaired surrogates.
-            let illFormedUTF16 = NonContiguousNSString([ 0xd800 ]) as String
+            let illFormedUTF16 = NonContiguousNSString([0xd800]) as String
             let bufferLength = 100
             var buffer = Array(
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
@@ -1193,42 +1185,38 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_hash() {
-        let s: String = "abc"
+        let s = "abc"
         let nsstr: NSString = "abc"
         expectEqual(nsstr.hash, s.hash)
     }
 
     func test_init_bytes_encoding() {
-        var s: String = "abc あかさた"
+        var s = "abc あかさた"
         expectEqual(
             s, String(bytes: s.utf8, encoding: .utf8))
 
-        /*
-         FIXME: Test disabled because the NSString documentation is unclear about
-         what should actually happen in this case.
-
-         XCTAssertNil(String(bytes: bytes, length: bytes.count,
-         encoding: .ascii))
-         */
+        // FIXME: Test disabled because the NSString documentation is unclear about
+        // what should actually happen in this case.
+        //
+        // XCTAssertNil(String(bytes: bytes, length: bytes.count,
+        // encoding: .ascii))
 
         // FIXME: add a test where this function actually returns nil.
     }
 
     @available(*, deprecated)
     func test_init_bytesNoCopy_length_encoding_freeWhenDone() {
-        var s: String = "abc あかさた"
+        var s = "abc あかさた"
         var bytes: [UInt8] = Array(s.utf8)
         expectEqual(s, String(bytesNoCopy: &bytes,
                               length: bytes.count, encoding: .utf8,
                               freeWhenDone: false))
 
-        /*
-         FIXME: Test disabled because the NSString documentation is unclear about
-         what should actually happen in this case.
-
-         XCTAssertNil(String(bytesNoCopy: &bytes, length: bytes.count,
-         encoding: .ascii, freeWhenDone: false))
-         */
+        // FIXME: Test disabled because the NSString documentation is unclear about
+        // what should actually happen in this case.
+        //
+        // XCTAssertNil(String(bytesNoCopy: &bytes, length: bytes.count,
+        // encoding: .ascii, freeWhenDone: false))
 
         // FIXME: add a test where this function actually returns nil.
     }
@@ -1270,7 +1258,7 @@ final class StringTestsStdlib: XCTestCase {
             String(format: "abc абв \u{0001F60A}", arguments: []))
 
         let world: NSString = "world"
-        let args: [CVarArg] = [ world, 42 ]
+        let args: [CVarArg] = [world, 42]
         expectEqual("Hello, world!%42",
                     String(format: "Hello, %@!%%%ld", arguments: args))
     }
@@ -1283,7 +1271,7 @@ final class StringTestsStdlib: XCTestCase {
 
     func test_init_format_locale_arguments() {
         let world: NSString = "world"
-        let args: [CVarArg] = [ world, 42 ]
+        let args: [CVarArg] = [world, 42]
         expectEqual("Hello, world!%42", String(format: "Hello, %@!%%%ld",
                                                locale: nil, arguments: args))
     }
@@ -1308,7 +1296,7 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_linguisticTagsIn() {
-        let s: String = "Абв. Глокая куздра штеко будланула бокра и кудрячит бокрёнка. Абв."
+        let s = "Абв. Глокая куздра штеко будланула бокра и кудрячит бокрёнка. Абв."
         let startIndex = s.index(s.startIndex, offsetBy: 5)
         let endIndex = s.index(s.startIndex, offsetBy: 17)
         var tokenRanges: [Range<String.Index>] = []
@@ -1323,7 +1311,7 @@ final class StringTestsStdlib: XCTestCase {
             NSLinguisticTag.word.rawValue
         ], tags)
         expectEqual(["Глокая", " ", "куздра"],
-                    tokenRanges.map { String(s[$0]) } )
+                    tokenRanges.map { String(s[$0]) })
     }
 
     func test_localizedCaseInsensitiveCompare() {
@@ -1456,8 +1444,8 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_pathComponents() {
-        expectEqual([ "/", "foo", "bar" ] as [NSString], ("/foo/bar" as NSString).pathComponents as [NSString])
-        expectEqual([ "/", "абв", "где" ] as [NSString], ("/абв/где" as NSString).pathComponents as [NSString])
+        expectEqual(["/", "foo", "bar"] as [NSString], ("/foo/bar" as NSString).pathComponents as [NSString])
+        expectEqual(["/", "абв", "где"] as [NSString], ("/абв/где" as NSString).pathComponents as [NSString])
     }
 
     func test_precomposedStringWithCanonicalMapping() {
@@ -1471,14 +1459,12 @@ final class StringTestsStdlib: XCTestCase {
 
     func test_precomposedStringWithCompatibilityMapping() {
         expectEqual("abc", "abc".precomposedStringWithCompatibilityMapping)
-        /*
-         Test disabled because of:
-         <rdar://problem/17041347> NFKD normalization as implemented by
-         'precomposedStringWithCompatibilityMapping:' is not idempotent
-
-         expectEqual("\u{30c0}クテン",
-         "\u{ff80}\u{ff9e}ｸﾃﾝ".precomposedStringWithCompatibilityMapping)
-         */
+        // Test disabled because of:
+        // <rdar://problem/17041347> NFKD normalization as implemented by
+        // 'precomposedStringWithCompatibilityMapping:' is not idempotent
+        //
+        // expectEqual("\u{30c0}クテン",
+        // "\u{ff80}\u{ff9e}ｸﾃﾝ".precomposedStringWithCompatibilityMapping)
         expectEqual("ffi", "\u{fb03}".precomposedStringWithCompatibilityMapping)
     }
 
@@ -1490,7 +1476,7 @@ final class StringTestsStdlib: XCTestCase {
     func test_propertyListFromStringsFileFormat() {
         expectEqual(["foo": "bar", "baz": "baz"],
                     "/* comment */\n\"foo\" = \"bar\";\n\"baz\";"
-            .propertyListFromStringsFileFormat() as Dictionary<String, String>)
+                        .propertyListFromStringsFileFormat() as [String: String])
     }
 
     func test_rangeOfCharacterFrom() {
@@ -1564,12 +1550,14 @@ final class StringTestsStdlib: XCTestCase {
             for: s.index(s.startIndex, offsetBy: 8)..<s.index(s.startIndex, offsetBy: 10))])
     }
 
-    func toIntRange<S : StringProtocol>(
-        _ string: S, _ maybeRange: Range<String.Index>?
-    ) -> Range<Int>? where S.Index == String.Index {
-        guard let range = maybeRange else { return nil }
+    func toIntRange<S: StringProtocol>(
+        _ string: S, _ maybeRange: Range<String.Index>?) -> Range<Int>? where S.Index == String.Index
+    {
+        guard let range = maybeRange else {
+            return nil
+        }
 
-        return string.distance(from: string.startIndex, to: range.lowerBound) ..< string.distance(from: string.startIndex, to: range.upperBound)
+        return string.distance(from: string.startIndex, to: range.lowerBound)..<string.distance(from: string.startIndex, to: range.upperBound)
     }
 
     func test_range() {
@@ -1609,24 +1597,24 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_contains() {
-            expectFalse("".contains(""))
-            expectFalse("".contains("a"))
-            expectFalse("a".contains(""))
-            expectFalse("a".contains("b"))
-            expectTrue("a".contains("a"))
-            expectFalse("a".contains("A"))
-            expectFalse("A".contains("a"))
-            expectFalse("a".contains("a\u{0301}"))
-            expectTrue("a\u{0301}".contains("a\u{0301}"))
-            expectFalse("a\u{0301}".contains("a"))
-            expectFalse("a\u{0301}".contains("\u{0301}")) // Update to match stdlib's `firstRange` and `contains` result
-            expectFalse("a".contains("\u{0301}"))
+        expectFalse("".contains(""))
+        expectFalse("".contains("a"))
+        expectFalse("a".contains(""))
+        expectFalse("a".contains("b"))
+        expectTrue("a".contains("a"))
+        expectFalse("a".contains("A"))
+        expectFalse("A".contains("a"))
+        expectFalse("a".contains("a\u{0301}"))
+        expectTrue("a\u{0301}".contains("a\u{0301}"))
+        expectFalse("a\u{0301}".contains("a"))
+        expectFalse("a\u{0301}".contains("\u{0301}")) // Update to match stdlib's `firstRange` and `contains` result
+        expectFalse("a".contains("\u{0301}"))
 
-            expectFalse("i".contains("I"))
-            expectFalse("I".contains("i"))
-            expectFalse("\u{0130}".contains("i"))
-            expectFalse("i".contains("\u{0130}"))
-            expectFalse("\u{0130}".contains("ı"))
+        expectFalse("i".contains("I"))
+        expectFalse("I".contains("i"))
+        expectFalse("\u{0130}".contains("i"))
+        expectFalse("i".contains("\u{0130}"))
+        expectFalse("\u{0130}".contains("ı"))
     }
 
     func test_localizedCaseInsensitiveContains() {
@@ -1694,10 +1682,10 @@ final class StringTestsStdlib: XCTestCase {
         expectEqual(0..<1, rangeOf("a\u{0301}", "a\u{0301}", locale: en))
         expectEqual(0..<1, rangeOf("a\u{0301}", "a", locale: en))
         do {
-        // FIXME: Indices that don't correspond to grapheme cluster boundaries.
-        let s = "a\u{0301}"
-        expectEqual(
-            "\u{0301}", s[s.localizedStandardRange(of: "\u{0301}", locale: en)!])
+            // FIXME: Indices that don't correspond to grapheme cluster boundaries.
+            let s = "a\u{0301}"
+            expectEqual(
+                "\u{0301}", s[s.localizedStandardRange(of: "\u{0301}", locale: en)!])
         }
         XCTAssertNil(rangeOf("a", "\u{0301}", locale: en))
 
@@ -1705,7 +1693,6 @@ final class StringTestsStdlib: XCTestCase {
         expectEqual(0..<1, rangeOf("I", "i", locale: en))
         expectEqual(0..<1, rangeOf("\u{0130}", "i", locale: en))
         expectEqual(0..<1, rangeOf("i", "\u{0130}", locale: en))
-
 
         let tr = Locale(identifier: "tr")
         expectEqual(0..<1, rangeOf("\u{0130}", "ı", locale: tr))
@@ -1758,10 +1745,9 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_folding() {
-
         func fwo(
-            _ s: String, _ options: String.CompareOptions
-        ) -> (Locale?) -> String {
+            _ s: String, _ options: String.CompareOptions) -> (Locale?) -> String
+        {
             return { loc in s.folding(options: options, locale: loc) }
         }
 
@@ -1978,8 +1964,8 @@ final class StringTestsStdlib: XCTestCase {
     func test_NSString_stringsByAppendingPaths() {
         expectEqual([] as [NSString], ("" as NSString).strings(byAppendingPaths: []) as [NSString])
         expectEqual(
-            [ "/tmp/foo", "/tmp/bar" ] as [NSString],
-            ("/tmp" as NSString).strings(byAppendingPaths: [ "foo", "bar" ]) as [NSString])
+            ["/tmp/foo", "/tmp/bar"] as [NSString],
+            ("/tmp" as NSString).strings(byAppendingPaths: ["foo", "bar"]) as [NSString])
     }
 
     @available(*, deprecated)
@@ -2097,7 +2083,7 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_write_toFile() {
-        withTemporaryStringFile { existingURL, nonExistentURL in
+        withTemporaryStringFile { _, nonExistentURL in
             let nonExistentPath = nonExistentURL.path()
             do {
                 let s = "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
@@ -2109,15 +2095,13 @@ final class StringTestsStdlib: XCTestCase {
 
                 expectEqual(s, content)
             } catch {
-
                 XCTFail(error.localizedDescription)
             }
         }
-
     }
 
     func test_write_to() {
-        withTemporaryStringFile { existingURL, nonExistentURL in
+        withTemporaryStringFile { _, nonExistentURL in
             let nonExistentPath = nonExistentURL.path()
             do {
                 let s = "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
@@ -2132,7 +2116,6 @@ final class StringTestsStdlib: XCTestCase {
                 XCTFail(error.localizedDescription)
             }
         }
-
     }
 
     func test_applyingTransform() {
@@ -2163,8 +2146,8 @@ final class StringTestsStdlib: XCTestCase {
         let xs = "\u{1e69}"
         expectTrue(xs == "s\u{323}\u{307}")
         expectFalse(xs != "s\u{323}\u{307}")
-        expectTrue("s\u{323}\u{307}" == xs)
-        expectFalse("s\u{323}\u{307}" != xs)
+        expectTrue(xs == "s\u{323}\u{307}")
+        expectFalse(xs != "s\u{323}\u{307}")
         expectTrue("\u{1e69}" == "s\u{323}\u{307}")
         expectFalse("\u{1e69}" != "s\u{323}\u{307}")
         expectTrue(xs == xs)
@@ -2181,8 +2164,8 @@ final class StringTestsStdlib: XCTestCase {
         let ys: NSString = "s\u{323}\u{307}"
         expectFalse(ys == "\u{1e69}")
         expectTrue(ys != "\u{1e69}")
-        expectFalse("\u{1e69}" == ys)
-        expectTrue("\u{1e69}" != ys)
+        expectFalse(ys == "\u{1e69}")
+        expectTrue(ys != "\u{1e69}")
         expectFalse(xs as NSString == ys)
         expectTrue(xs as NSString != ys)
         expectTrue(ys == ys)
@@ -2201,15 +2184,15 @@ final class StringTestsStdlib: XCTestCase {
 extension String {
     func range(fromStart: Int, fromEnd: Int) -> Range<String.Index> {
         return index(startIndex, offsetBy: fromStart) ..<
-           index(endIndex, offsetBy: fromEnd)
+            index(endIndex, offsetBy: fromEnd)
     }
+
     subscript(fromStart: Int, fromEnd: Int) -> SubSequence {
         return self[range(fromStart: fromStart, fromEnd: fromEnd)]
     }
 }
 
 final class StdlibSubstringTests: XCTestCase {
-
     func test_range_of_NilRange() {
         let ss = "aabcdd"[1, -1]
         let range = ss.range(of: "bc")
@@ -2322,3 +2305,12 @@ final class StdlibSubstringTests: XCTestCase {
     }
 }
 #endif // FOUNDATION_FRAMEWORK
+
+// MARK: - StringDividingTests
+
+final class StringDividingTests: XCTestCase {
+    func divide() {
+        let remainder = "100" % "25"
+        XCTAssertEqual(remainder, 0)
+    }
+}
