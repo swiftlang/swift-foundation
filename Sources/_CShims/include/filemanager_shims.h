@@ -44,7 +44,8 @@ INTERNAL int _filemanagershims_removefile_state_get_errnum(removefile_state_t st
 
 #endif // __has_include(<removefile.h>)
 
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && __has_include(<sys/types.h>)
+#include <sys/types.h>
 // Darwin-specific API that is implemented but not declared in any header
 // This function behaves exactly like the public mkpath_np(3) API, but it also returns the first directory it actually created, which helps us make sure we set the given attributes on the right directories.
 extern int _mkpath_np(const char *path, mode_t omode, const char **firstdir);
