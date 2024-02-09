@@ -362,14 +362,13 @@ final class StringTests : XCTestCase {
         }
         
 #if canImport(Darwin) || FOUNDATION_FRAMEWORK
-        // A string of length PATH_MAX-1 should perfectly fit in the buffer (with the null byte)
+        // The buffer should dynamically grow and not be limited to a size of PATH_MAX
         Array(repeating: "A", count: Int(PATH_MAX) - 1).joined().withFileSystemRepresentation { ptr in
             XCTAssertNotNil(ptr)
         }
         
-        // This will not fit in the buffer with the null byte
         Array(repeating: "A", count: Int(PATH_MAX)).joined().withFileSystemRepresentation { ptr in
-            XCTAssertNil(ptr)
+            XCTAssertNotNil(ptr)
         }
 #endif
     }

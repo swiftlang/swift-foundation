@@ -88,11 +88,16 @@ extension String {
         }
         return result != nil
     }
+    
+    private var maxFileSystemRepresentationSize: Int {
+        // TODO: Likely an over estimate and slow for non-UTF16 strings, we should investigate to see if it can be smaller and computed more quickly, especially if we know the string is ASCII
+        self.utf16.count * 9 + 1
+    }
     #endif
     
     package func withFileSystemRepresentation<R>(_ block: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
         #if canImport(Darwin) || FOUNDATION_FRAMEWORK
-        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(PATH_MAX)) { buffer in
+        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: maxFileSystemRepresentationSize) { buffer in
             guard _fileSystemRepresentation(into: buffer) else {
                 return try block(nil)
             }
@@ -107,7 +112,7 @@ extension String {
     
     package func withMutableFileSystemRepresentation<R>(_ block: (UnsafeMutablePointer<CChar>?) throws -> R) rethrows -> R {
         #if canImport(Darwin) || FOUNDATION_FRAMEWORK
-        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(PATH_MAX)) { buffer in
+        try withUnsafeTemporaryAllocation(of: CChar.self, capacity: maxFileSystemRepresentationSize) { buffer in
             guard _fileSystemRepresentation(into: buffer) else {
                 return try block(nil)
             }
