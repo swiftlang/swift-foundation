@@ -131,6 +131,12 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .ethiopicAmeteAlem: return "ethiopic-amete-alem"
             }
         }
+        
+#if !FOUNDATION_FRAMEWORK
+        @_spi(SwiftCorelibsFoundation) public var _cfCalendarIdentifier: String {
+            cfCalendarIdentifier
+        }
+#endif
     }
 
     /// Bitwise set of which components in a `DateComponents` are interesting to use. More efficient than`Set<Component>`.

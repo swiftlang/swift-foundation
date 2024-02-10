@@ -209,6 +209,12 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.currencySymbolDisplayName(for: currencySymbol)
     }
     
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation) public func _localizedString(forCurrencySymbol currencySymbol: String) -> String? {
+        localizedString(forCurrencySymbol: currencySymbol)
+    }
+#endif
+    
     /// Returns a localized string for a specified ICU collation identifier.
     ///
     /// For example, in the "en" locale, the result for `"phonebook"` is `"Phonebook Sort Order"`.
@@ -303,6 +309,12 @@ public struct Locale : Hashable, Equatable, Sendable {
     package var _calendarIdentifier: Calendar.Identifier {
         _locale.calendarIdentifier
     }
+    
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation) public var __calendarIdentifier: Calendar.Identifier {
+        _calendarIdentifier
+    }
+#endif
 
     /// Returns the collation identifier for the locale, or nil if it has none.
     ///
