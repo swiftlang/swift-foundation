@@ -388,3 +388,20 @@ extension Date {
         Date.validCalendarRange.contains(self)
     }
 }
+
+@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+extension Date {
+    public typealias Stride = TimeInterval
+    
+    public func distance(to other: Date) -> TimeInterval {
+        return other.timeIntervalSinceReferenceDate - self.timeIntervalSinceReferenceDate
+    }
+    
+    public func advanced(by n: TimeInterval) -> Date {
+        return self + n
+    }
+}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Date: Strideable {
+}
