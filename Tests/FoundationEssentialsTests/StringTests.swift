@@ -370,6 +370,13 @@ final class StringTests : XCTestCase {
         Array(repeating: "A", count: Int(PATH_MAX)).joined().withFileSystemRepresentation { ptr in
             XCTAssertNotNil(ptr)
         }
+        
+        // The buffer should fit the scalars that expand the most during decomposition
+        for string in ["\u{1D160}", "\u{0CCB}", "\u{0390}"] {
+            string.withFileSystemRepresentation { ptr in
+                XCTAssertNotNil(ptr, "Could not create file system representation for \(string.debugDescription)")
+            }
+        }
 #endif
     }
 
