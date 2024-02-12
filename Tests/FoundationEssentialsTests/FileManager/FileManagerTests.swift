@@ -551,4 +551,19 @@ final class FileManagerTests : XCTestCase {
             #endif
         }
     }
+    
+    func testStandardizingPathAutomount() {
+        #if canImport(Darwin)
+        let tests = [
+            "/private/System" : "/private/System",
+            "/private/tmp" : "/tmp",
+            "/private/System/foo" : "/private/System/foo"
+        ]
+        for (input, expected) in tests {
+            XCTAssertEqual(input.standardizingPath, expected, "Standardizing the path '\(input)' did not produce the expected result")
+        }
+        #else
+        throw XCTSkip("This test is not applicable to this platform")
+        #endif
+    }
 }
