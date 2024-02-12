@@ -112,9 +112,8 @@ final class DateIntervalFormatStyleTests: XCTestCase {
         XCTAssertEqual(range.formatted(.interval.day().month().year()), Date.IntervalFormatStyle().day().month().year().format(range))
     }
 
+#if FIXED_ICU_74_DAYPERIOD
     func testForcedHourCycle() {
-
-        let expectedIntervalSeparator = " – "
 
         let default12 = enUSLocale
         let default12force24 = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(force24Hour: true))
@@ -133,23 +132,23 @@ final class DateIntervalFormatStyleTests: XCTestCase {
         verify(time: .shortened, locale: default12,        expected: "12:00 – 1:00 AM")
         verify(time: .shortened, locale: default12force24, expected: "00:00 – 01:00")
         verify(time: .shortened, locale: default12force12, expected: "12:00 – 1:00 AM")
-        verify(time: .shortened, locale: default24,        expected: "00:00–01:00")
-        verify(time: .shortened, locale: default24force24, expected: "00:00–01:00")
-        verify(time: .shortened, locale: default24force12, expected: "12:00\(expectedIntervalSeparator)1:00 am")
+        verify(time: .shortened, locale: default24,        expected: "00:00 – 01:00")
+        verify(time: .shortened, locale: default24force24, expected: "00:00 – 01:00")
+        verify(time: .shortened, locale: default24force12, expected: "12:00 – 1:00 AM")
 
         verify(time: .complete, locale: default12,        expected: "12:00:00 AM GMT – 1:00:00 AM GMT")
         verify(time: .complete, locale: default12force24, expected: "00:00:00 GMT – 01:00:00 GMT")
         verify(time: .complete, locale: default12force12, expected: "12:00:00 AM GMT – 1:00:00 AM GMT")
         verify(time: .complete, locale: default24,        expected: "00:00:00 GMT – 01:00:00 GMT")
         verify(time: .complete, locale: default24force24, expected: "00:00:00 GMT – 01:00:00 GMT")
-        verify(time: .complete, locale: default24force12, expected: "12:00:00 am GMT – 1:00:00 am GMT")
+        verify(time: .complete, locale: default24force12, expected: "12:00:00 AM GMT – 1:00:00 AM GMT")
 
         verify(date: .numeric, time: .standard, locale: default12,        expected: "1/1/2001, 12:00:00 AM – 1:00:00 AM")
         verify(date: .numeric, time: .standard, locale: default12force24, expected: "1/1/2001, 00:00:00 – 01:00:00")
         verify(date: .numeric, time: .standard, locale: default12force12, expected: "1/1/2001, 12:00:00 AM – 1:00:00 AM")
         verify(date: .numeric, time: .standard, locale: default24,        expected: "01/01/2001, 00:00:00 – 01:00:00")
         verify(date: .numeric, time: .standard, locale: default24force24, expected: "01/01/2001, 00:00:00 – 01:00:00")
-        verify(date: .numeric, time: .standard, locale: default24force12, expected: "01/01/2001, 12:00:00 am – 1:00:00 am")
+        verify(date: .numeric, time: .standard, locale: default24force12, expected: "01/01/2001, 12:00:00 AM – 1:00:00 AM")
 
         func verify(_ tests: (locale: Locale, expected: String, expectedAfternoon: String)..., file: StaticString = #file, line: UInt = #line, customStyle: (Date.IntervalFormatStyle) -> (Date.IntervalFormatStyle)) {
 
@@ -161,41 +160,48 @@ final class DateIntervalFormatStyleTests: XCTestCase {
             }
         }
         verify((default12,        "12:00 – 1:00 AM", "1:00 – 3:00 PM"),
-               (default12force24, "00:00 – 01:00", "13:00 – 15:00"),
-               (default24,        "00:00–01:00", "13:00–15:00"),
-               (default24force12, "12:00\(expectedIntervalSeparator)1:00 am", "1:00\(expectedIntervalSeparator)3:00 pm")) { style in
+               (default12force24, "00:00 – 01:00", "13:00 – 15:00")) { style in
+            style.hour().minute()
+        }
+
+       verify((default24,        "00:00 – 01:00",   "13:00 – 15:00"),
+              (default24force12, "12:00 – 1:00 AM", "1:00 – 3:00 PM")) { style in
             style.hour().minute()
         }
 
 #if FIXED_96909465
         // ICU does not yet support two-digit hour configuration
-        verify((default12,        "12:00 – 1:00 AM", "01:00 – 03:00 PM"),
-               (default12force24, "00:00 – 01:00", "13:00 – 15:00"),
-               (default24,        "00:00–01:00", "13:00–15:00"),
-               (default24force12, "12:00–1:00 am", "01:00–03:00 pm")) { style in
+        verify((default12,        "12:00 – 1:00 AM",    "01:00 – 03:00 PM"),
+               (default12force24, "00:00 – 01:00",      "13:00 – 15:00"),
+               (default24,        "00:00 – 01:00",      "13:00 – 15:00"),
+               (default24force12, "12:00 – 1:00 AM",    "01:00 – 03:00 PM")) { style in
             style.hour(.twoDigits(amPM: .abbreviated)).minute()
         }
 #endif
 
         verify((default12,        "12:00 – 1:00", "1:00 – 3:00"),
-               (default12force24, "00:00 – 01:00", "13:00 – 15:00"),
-               (default24,        "00:00–01:00", "13:00–15:00")) { style in
+               (default12force24, "00:00 – 01:00", "13:00 – 15:00")) { style in
+            style.hour(.twoDigits(amPM: .omitted)).minute()
+        }
+
+        verify((default24,        "00:00 – 01:00", "13:00 – 15:00")) { style in
             style.hour(.twoDigits(amPM: .omitted)).minute()
         }
 
 #if FIXED_97447020
-        verify((default24force12, "12:00–1:00", "1:00–3:00")) { style in
+        verify() { style in
             style.hour(.twoDigits(amPM: .omitted)).minute()
         }
 #endif
 
-        verify((default12,        "Jan 1, 12:00 – 1:00 AM", "Jan 1, 1:00\u{2009}–\u{2009}3:00 PM"),
+        verify((default12,        "Jan 1, 12:00 – 1:00 AM", "Jan 1, 1:00 – 3:00 PM"),
                (default12force24, "Jan 1, 00:00 – 01:00", "Jan 1, 13:00 – 15:00"),
-               (default24,        "1 Jan, 00:00–01:00", "1 Jan, 13:00–15:00"),
-               (default24force12, "1 Jan, 12:00\(expectedIntervalSeparator)1:00 am", "1 Jan, 1:00\(expectedIntervalSeparator)3:00 pm")) { style in
+               (default24,        "1 Jan, 00:00 – 01:00", "1 Jan, 13:00 – 15:00"),
+               (default24force12, "1 Jan, 12:00 – 1:00 AM", "1 Jan, 1:00 – 3:00 PM")) { style in
             style.month().day().hour().minute()
         }
     }
+#endif // FIXED_ICU_74_DAYPERIOD
 
     func testAutoupdatingCurrentChangesFormatResults() {
         let locale = Locale.autoupdatingCurrent
