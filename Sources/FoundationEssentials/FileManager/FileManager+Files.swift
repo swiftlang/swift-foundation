@@ -12,6 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import Foundation_Private.NSFileManager
+@_implementationOnly import DarwinPrivate.sys.content_protection
 #endif
 
 #if canImport(Darwin)
