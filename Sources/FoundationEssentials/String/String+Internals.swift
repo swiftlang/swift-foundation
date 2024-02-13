@@ -92,7 +92,7 @@ extension String {
     private var maxFileSystemRepresentationSize: Int {
         // The Darwin file system representation expands the UTF-8 contents to decomposed UTF-8 contents (only decomposing specific scalars)
         // For any given scalar that we decompose, we will increase its UTF-8 length by at most a factor of 3 during decomposition
-        // (ex. U+0390 expands from 2 to 6 UTF-8 scalars, U+1D160 expands from 4 to 12 UTF-8 scalars)
+        // (ex. U+0390 expands from 2 to 6 UTF-8 code-units, U+1D160 expands from 4 to 12 UTF-8 code-units)
         // Therefore in the worst case scenario, the result will be the UTF-8 length multiplied by a factor of 3 plus an additional byte for the null byte
         self.utf8.count * 3 + 1
     }
