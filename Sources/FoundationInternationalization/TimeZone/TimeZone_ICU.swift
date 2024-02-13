@@ -29,9 +29,6 @@ import ucrt
 package import FoundationICU
 #endif
 
-let MIN_TIMEZONE_UDATE = -2177452800000.0  // 1901-01-01 00:00:00 +0000
-let MAX_TIMEZONE_UDATE = 4133980800000.0  // 2101-01-01 00:00:00 +0000
-
 internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     init?(secondsFromGMT: Int) {
         fatalError("Unexpected init")
@@ -105,23 +102,25 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
 
     func secondsFromGMT(for date: Date) -> Int {
         return lock.withLock {
-            var udate = date.udate
-            // make answers agree with nextDaylightSavingTimeTransitionAfterDate
-            if udate < MIN_TIMEZONE_UDATE { udate = MIN_TIMEZONE_UDATE }
-            if MAX_TIMEZONE_UDATE < udate { udate = MAX_TIMEZONE_UDATE }
-
+            let udate = date.udate
             guard let c = $0.calendar(identifier) else {
                 return 0
             }
 
             var status = U_ZERO_ERROR
             ucal_setMillis(c, udate, &status)
-            let offset = (ucal_get(c, UCAL_ZONE_OFFSET, &status) + ucal_get(c, UCAL_DST_OFFSET, &status)) / 1000
-            if status.isSuccess {
-                return Int(offset)
-            } else {
+
+            let zoneOffset = ucal_get(c, UCAL_ZONE_OFFSET, &status)
+            guard status.isSuccess else {
                 return 0
             }
+
+            status = U_ZERO_ERROR
+            let dstOffset = ucal_get(c, UCAL_DST_OFFSET, &status)
+            guard status.isSuccess else {
+                return 0
+            }
+            return Int((zoneOffset + dstOffset) / 1000)
         }
     }
 
@@ -139,9 +138,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
 
     func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
         lock.withLock {
-            var udate = date.udate
-            if udate < MIN_TIMEZONE_UDATE { udate = MIN_TIMEZONE_UDATE }
-            if MAX_TIMEZONE_UDATE < udate { udate = MAX_TIMEZONE_UDATE }
+            let udate = date.udate
 
             guard let c = $0.calendar(identifier) else { return 0.0 }
             var status = U_ZERO_ERROR
@@ -158,7 +155,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
         lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }
-            return Self.nextDaylightSavingTimeTransition(forLocked: c, startingAt: date, limit: Date(udate: MAX_TIMEZONE_UDATE))
+            return Self.nextDaylightSavingTimeTransition(forLocked: c, startingAt: date, limit: Date.validCalendarRange.upperBound)
         }
     }
 
@@ -229,8 +226,8 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
 
     /// The `calendar` argument is mutated by this function. It is the caller's responsibility to make sure that `UCalendar` is protected from concurrent access.
     internal static func nextDaylightSavingTimeTransition(forLocked calendar: UnsafeMutablePointer<UCalendar?>, startingAt: Date, limit: Date) -> Date? {
-        let startingAtUDate = max(startingAt.udate, MIN_TIMEZONE_UDATE)
-        let limitUDate = min(limit.udate, MAX_TIMEZONE_UDATE)
+        let startingAtUDate = startingAt.udate
+        let limitUDate = limit.udate
 
         if limitUDate < startingAtUDate {
             // no transitions searched for after the limit arg, or the max time (for performance)
