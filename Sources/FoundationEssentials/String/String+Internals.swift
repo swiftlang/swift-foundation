@@ -90,8 +90,11 @@ extension String {
     }
     
     private var maxFileSystemRepresentationSize: Int {
-        // TODO: Likely an over estimate and slow for non-UTF16 strings, we should investigate to see if it can be smaller and computed more quickly, especially if we know the string is ASCII
-        self.utf16.count * 9 + 1
+        // The Darwin file system representation expands the UTF-8 contents to decomposed UTF-8 contents (only decomposing specific scalars)
+        // For any given scalar that we decompose, we will increase its UTF-8 length by at most a factor of 3 during decomposition
+        // (ex. U+0390 expands from 2 to 6 UTF-8 code-units, U+1D160 expands from 4 to 12 UTF-8 code-units)
+        // Therefore in the worst case scenario, the result will be the UTF-8 length multiplied by a factor of 3 plus an additional byte for the null byte
+        self.utf8.count * 3 + 1
     }
     #endif
     
