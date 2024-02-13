@@ -2194,11 +2194,7 @@ extension Calendar.Component {
         case UCAL_YEAR_WOY:
             self = .yearForWeekOfYear
         case UCAL_IS_LEAP_MONTH:
-            if #available(FoundationPreview 0.4, *) {
-                self = .isLeapMonth
-            } else {
-                return nil
-            }
+            self = .isLeapMonth
         default:
             return nil
         }

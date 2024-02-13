@@ -508,7 +508,7 @@ extension Date.FormatStyle.DateFieldCollection {
             schedule.reduce(with: .components(.day))
         }
         if dayOfYear != nil {
-            schedule.reduce(with: .components(.day))
+            schedule.reduce(with: .components(.dayOfYear))
         }
         if weekday != nil {
             schedule.reduce(with: .components(.weekday))
