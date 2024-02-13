@@ -20,6 +20,12 @@ import FoundationEssentials
 package import FoundationICU
 #endif
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
+
 typealias UChar = UInt16
 
 final class ICUDateFormatter {
