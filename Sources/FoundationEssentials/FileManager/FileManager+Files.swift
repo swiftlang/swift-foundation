@@ -392,15 +392,17 @@ extension _FileManagerImpl {
         }
     }
     
-    private func _extendedAttribute(_ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data {
+    private func _extendedAttribute(_ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data? {
         #if canImport(Darwin)
         var size = getxattr(path, key, nil, 0, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
         #else
         var size = followSymlinks ? getxattr(path, key, nil, 0) : lgetxattr(path, key, nil, 0)
         #endif
-        guard size > 0 else {
+        guard size != -1 else {
             throw CocoaError.errorWithFilePath(String(cString: path), errno: errno, reading: true)
         }
+        // Historically we've omitted extended attribute keys with no associated data value
+        guard size > 0 else { return nil }
         // Deallocated below in the Data deallocator
         let buffer = malloc(size)!
         #if canImport(Darwin)
@@ -408,9 +410,14 @@ extension _FileManagerImpl {
         #else
         size = followSymlinks ? getxattr(path, key, buffer, size) : lgetxattr(path, key, buffer, size)
         #endif
-        guard size > 0 else {
+        guard size != -1 else {
             free(buffer)
             throw CocoaError.errorWithFilePath(String(cString: path), errno: errno, reading: true)
+        }
+        // Check size again in case something has changed between the two getxattr calls
+        guard size > 0 else {
+            free(buffer)
+            return nil
         }
         return Data(bytesNoCopy: buffer, count: size, deallocator: .free)
     }
@@ -444,7 +451,9 @@ extension _FileManagerImpl {
             }
             #endif
             
-            extendedAttrs[currentKey] = try _extendedAttribute(current, at: path, followSymlinks: false)
+            if let value = try _extendedAttribute(current, at: path, followSymlinks: false) {
+                extendedAttrs[currentKey] = value
+            }
         }
         return extendedAttrs
     }
