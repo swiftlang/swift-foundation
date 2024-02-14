@@ -922,7 +922,6 @@ final class CalendarBridgingTests : XCTestCase {
 #endif
 
 
-#if ENABLE_CALENDAR_COMPATIBILITY_TEST // These tests take a long time to run, so disable them for now
 // This test validates the results against FoundationInternationalization's calendar implementation temporarily until we completely ported the calendar
 final class GregorianCalendarCompatibilityTests: XCTestCase {
 
@@ -1853,4 +1852,3 @@ XCTAssertEqual(gregorianCalendar.date(from: dateComponents)!, Date(timeIntervalS
         XCTAssertEqual(icuResult.timeIntervalSince1970, 983404800) // 2001-03-01 00:00:00 UTC, 2001-02-28 16:00:00 PT
     }
 }
-#endif // ENABLE_CALENDAR_COMPATIBILITY_TEST
