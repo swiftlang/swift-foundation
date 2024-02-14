@@ -44,6 +44,10 @@ final class _ProcessInfo: Sendable {
     }
 
     var environment: [String : String] {
+        _platform_shims_lock_environ()
+        defer {
+            _platform_shims_unlock_environ()
+        }
         var results: [String : String] = [:]
         guard var environments: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> =
                 _platform_shims_get_environ() else {

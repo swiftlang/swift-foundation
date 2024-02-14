@@ -24,7 +24,10 @@
 #include <libkern/OSThermalNotification.h>
 #endif
 
-INTERNAL char ** _platform_shims_get_environ();
+INTERNAL char * _Nullable * _Nullable _platform_shims_get_environ();
+
+INTERNAL void _platform_shims_lock_environ();
+INTERNAL void _platform_shims_unlock_environ();
 
 #if __has_include(<libkern/OSThermalNotification.h>)
 typedef enum {
@@ -45,7 +48,7 @@ typedef enum {
 } _platform_shims_OSThermalPressureLevel;
 
 
-INTERNAL const char *_platform_shims_kOSThermalNotificationPressureLevelName();
+INTERNAL const char * _Nonnull _platform_shims_kOSThermalNotificationPressureLevelName();
 #endif
 
 #endif /* CSHIMS_PLATFORM_SHIMS */
