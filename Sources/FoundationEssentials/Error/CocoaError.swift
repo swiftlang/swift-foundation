@@ -107,7 +107,7 @@ public extension CocoaError {
 #if FOUNDATION_FRAMEWORK
         return _nsUserInfo[NSFilePathErrorKey as NSString] as? String
 #else
-        return userInfo["NSFilePathErrorKey"] as? String
+        return userInfo[NSFilePathErrorKey] as? String
 #endif
     }
 
@@ -127,7 +127,7 @@ public extension CocoaError {
 #if FOUNDATION_FRAMEWORK
         return _nsUserInfo[NSUnderlyingErrorKey as NSString] as? Error
 #else
-        return userInfo["NSUnderlyingErrorKey"] as? Error
+        return userInfo[NSUnderlyingErrorKey] as? Error
 #endif
     }
 
@@ -149,7 +149,7 @@ public extension CocoaError {
             result += coreDataUnderlying
         }
 #else
-        if let underlying = userInfo["NSUnderlyingErrorKey"] as? Error {
+        if let underlying = userInfo[NSUnderlyingErrorKey] as? Error {
             result.append(underlying)
         }
 
@@ -166,7 +166,7 @@ public extension CocoaError {
 #if FOUNDATION_FRAMEWORK
         return _nsUserInfo[NSURLErrorKey as NSString] as? URL
 #else
-        return userInfo["NSURLErrorKey"] as? URL
+        return userInfo[NSURLErrorKey] as? URL
 #endif
     }
 }
@@ -278,10 +278,10 @@ public extension Error {
 #if FOUNDATION_FRAMEWORK
 #else
 // These are loosely typed, as a typedef for String called NSErrorUserInfoKey
-internal let NSUnderlyingErrorKey = "NSUnderlyingErrorKey"
-internal let NSUserStringVariantErrorKey = "NSUserStringVariantErrorKey"
-internal let NSFilePathErrorKey = "NSFilePathErrorKey"
-internal let NSURLErrorKey = "NSURLErrorKey"
+internal let NSUnderlyingErrorKey = "NSUnderlyingError"
+internal let NSUserStringVariantErrorKey = "NSUserStringVariant"
+internal let NSFilePathErrorKey = "NSFilePath"
+internal let NSURLErrorKey = "NSURL"
 internal let NSSourceFilePathErrorKey = "NSSourceFilePathErrorKey"
-internal let NSDestinationFilePathErrorKey = "NSDestinationFilePathErrorKey"
+internal let NSDestinationFilePathErrorKey = "NSDestinationFilePath"
 #endif

@@ -55,7 +55,7 @@ extension CocoaError {
         if let destinationPath {
             userInfo[NSDestinationFilePathErrorKey] = destinationPath
         }
-        return CocoaError.errorWithFilePath(erroneousPath, errno: errNum, reading: false, variant: variant, extra: userInfo)
+        return CocoaError.errorWithFilePath(erroneousPath, errno: errNum, reading: false, variant: variant, additionalUserInfo: userInfo)
     }
     
     fileprivate static func removeFileError(_ errNum: Int32, _ path: String) -> CocoaError {
