@@ -1032,6 +1032,46 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         test(.init(year: 2023, month: 11, day: 5, hour: 3, minute: 34, second: 52))
     }
 
+    func testDateFromComponents_componentsTimeZone() {
+        let timeZone = TimeZone.gmt
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+
+
+        func test(_ dateComponents: DateComponents, file: StaticString = #file, line: UInt = #line) {
+            let date_new = gregorianCalendar.date(from: dateComponents)!
+            let date_old = icuCalendar.date(from: dateComponents)!
+            expectEqual(date_new, date_old, "dateComponents: \(dateComponents)")
+            print("""
+
+XCTAssertEqual(gregorianCalendar.date(from: dateComponents)!, Date(timeIntervalSinceReferenceDate: \(date_old.timeIntervalSinceReferenceDate))) // \(date_old.formatted(.iso8601))
+""")
+        }
+
+        let dcCalendar = Calendar(identifier: .japanese, locale: Locale(identifier: ""), timeZone: .init(secondsFromGMT: -25200), firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+        let dc = DateComponents(calendar: nil, timeZone: nil, era: 1, year: 2022, month: 7, day: 9, hour: 10, minute: 2, second: 55, nanosecond: 891000032, weekday: 7, weekdayOrdinal: 2, quarter: 0, weekOfMonth: 2, weekOfYear: 28, yearForWeekOfYear: 2022)
+        var dc_customCalendarAndTimeZone = dc
+        dc_customCalendarAndTimeZone.calendar = dcCalendar
+        dc_customCalendarAndTimeZone.timeZone = .init(secondsFromGMT: 28800)
+        test(dc_customCalendarAndTimeZone) // calendar.timeZone = .gmt, dc.calendar.timeZone = UTC-7, dc.timeZone = UTC+8
+
+        var dc_customCalendar = dc
+        dc_customCalendar.calendar = dcCalendar
+        dc_customCalendar.timeZone = nil
+        test(dc_customCalendar) // calendar.timeZone = .gmt, dc.calendar.timeZone = UTC-7, dc.timeZone = nil
+
+        var dc_customTimeZone = dc_customCalendarAndTimeZone
+        dc_customTimeZone.calendar = nil
+        dc_customTimeZone.timeZone = .init(secondsFromGMT: 28800)
+        test(dc_customTimeZone) // calendar.timeZone = .gmt, dc.calendar = nil, dc.timeZone = UTC+8
+
+        let dcCalendar_noTimeZone = Calendar(identifier: .japanese, locale: Locale(identifier: ""), timeZone: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+        var dc_customCalendarNoTimeZone_customTimeZone = dc
+        dc_customCalendarNoTimeZone_customTimeZone.calendar = dcCalendar_noTimeZone
+        dc_customCalendarNoTimeZone_customTimeZone.timeZone = .init(secondsFromGMT: 28800)
+        test(dc_customCalendarNoTimeZone_customTimeZone) // calendar.timeZone = .gmt, dc.calendar.timeZone = nil, dc.timeZone = UTC+8
+    }
+
     func testDateComponentsFromDateCompatibility() {
         let componentSet = Calendar.ComponentSet([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar])
 
