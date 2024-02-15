@@ -2177,8 +2177,10 @@ extension Calendar.Component {
             self = .weekOfYear
         case UCAL_WEEK_OF_MONTH:
             self = .weekOfMonth
-        case UCAL_DATE, UCAL_DAY_OF_MONTH, UCAL_DAY_OF_YEAR:
+        case UCAL_DATE, UCAL_DAY_OF_MONTH:
             self = .day
+        case UCAL_DAY_OF_YEAR:
+            self = .dayOfYear
         case UCAL_DAY_OF_WEEK:
             self = .weekday
         case UCAL_DAY_OF_WEEK_IN_MONTH:

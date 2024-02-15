@@ -962,7 +962,12 @@ extension Calendar {
     private func advance(_ date: Date, _ direction: Calendar.SearchDirection, by value: Int, _ component: Component) -> Date? {
         guard component != .nanosecond else {
             // We work with the UDate here because we have to mimic the floating
-            // point rounding behavior of the ICU calendar.
+            // point rounding behavior of the ICU calendar, which is used by the
+            // ICU formatting logic. _Calendar_ICU has a special case for
+            // implementation for `.nanosecond` in which it does not actually
+            // use ICU to calculate the value, but does manual math on `Date`
+            // instead. We explicitly opt out of that special case handling and
+            // implement our own version of what ICU's calendar would do.
             let udate = date.udate
 
             let increment = 1e-6 * Double(value)

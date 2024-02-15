@@ -437,7 +437,7 @@ extension ICUDateFormatter.DateFormatInfo {
         }
     }
 
-    static var updateScheduleCache = LockedState<[Self: UpdateSchedule]>(initialState: [:])
+    static let updateScheduleCache = LockedState<[Self: UpdateSchedule]>(initialState: [:])
 
     static func cachedUpdateSchedule(for format: Date.VerbatimFormatStyle) -> UpdateSchedule {
         return Self.updateScheduleCache.withLock { state in
