@@ -19,6 +19,20 @@
 extern char **environ;
 #endif
 
+#if __has_include(<libc_private.h>)
+#import <libc_private.h>
+void _platform_shims_lock_environ() {
+    environ_lock_np();
+}
+
+void _platform_shims_unlock_environ() {
+    environ_unlock_np();
+}
+#else
+void _platform_shims_lock_environ() { /* noop */ }
+void _platform_shims_unlock_environ() { /* noop */ }
+#endif
+
 char **
 _platform_shims_get_environ()
 {
