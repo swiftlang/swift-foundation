@@ -10,6 +10,12 @@
 ## Revision History
 
 * **v1**: Initial draft
+* **v2**: Minor Updates:
+    - Switched `AsyncBytes` to be backed by `DispatchIO`.
+    - Introduced `resolveExecutablePath(withEnvironment:)` to enable explicit lookup of the executable path.
+    - Added a new option, `closeWhenDone`, to automatically close the file descriptors passed in via `.readFrom` and friends.
+    - Introduced a new parameter, `shouldSendToProcessGroup`, in the `sendSignal` function to control whether the signal should be sent to the process or the process group.
+    - Introduced a section on "Future Directions."
 
 ## Introduction
 
@@ -280,8 +286,9 @@ public struct Subprocess: Sendable {
     // The standard error of the child process, expressed as AsyncSequence<UInt8>
     // This property is `nil` if the standard error is discarded or written to disk
     public var standardError: AsyncBytes? { get }
-
-    public func sendSignal(_ signal: Signal) throws
+    // If `shouldSendToProcessGroup` is `true`, the signal will be send to the entire process
+    // group instead of the current process.
+    public func sendSignal(_ signal: Signal, toProcessGroup shouldSendToProcessGroup: Bool) throws
 }
 
 extension Subprocess {
@@ -491,7 +498,7 @@ _(We welcome community input on which Linux and Windows "escape hatches" we shou
 
 In addition to supporting the direct passing of `Sequence<UInt8>` and `AsyncSequence<UInt8>` as the standard input to the child process, `Subprocess` also provides a `Subprocess.InputMethod` type that includes two additional input options:
 - `.noInput`: Specifies that the subprocess does not require any standard input. This is the default value.
-- `.readingFrom`: Specifies that the subprocess should read its standard input from a file descriptor provided by the developer.
+- `.readFrom`: Specifies that the subprocess should read its standard input from a file descriptor provided by the developer. Subprocess will automatically close the file descriptor after the process exits if `closeWhenDone` is set to `true`.
 
 ```swift
 extension Subprocess {
@@ -501,7 +508,7 @@ extension Subprocess {
     @available(watchOS, unavailable)
     public struct InputMethod: Sendable, Hashable {
         public static var noInput: Self
-        public static func readFrom(_ fd: FileDescriptor) -> Self
+        public static func readFrom(_ fd: FileDescriptor, closeWhenDone: Bool) -> Self
     }
 }
 ```
@@ -514,7 +521,7 @@ let ls = try await Subprocess.run(executing: .named("ls"))
 
 // Alteratively, developers could pass in a file descriptor
 let fd: FileDescriptor = ...
-let cat = try await Subprocess.run(executing: .named("cat"), input: .readingFrom(fd))
+let cat = try await Subprocess.run(executing: .named("cat"), input: .readFrom(fd, closeWhenDone: true))
 
 // Pass in a async sequence directly
 let sequence: AsyncSequence = ...
@@ -526,7 +533,7 @@ let exe = try await Subprocess.run(executing: .at("/some/executable"), input: se
 
 `Subprocess` uses two types to describe where the standard output and standard error of the child process should be redirected. These two types, `Subprocess.collectOutputMethod` and `Subprocess.redirectOutputMethod`, correspond to the two general categories of `run` methods mentioned above. Similar to `InputMethod`, both `OutputMethod`s add two general output destinations:
 - `.discard`: Specifies that the child process's output should be discarded, effectively written to `/dev/null`.
-- `.writeTo`: Specifies that the child process should write its output to a file descriptor provided by the developer. This file descriptor will be closed once the write operation is complete.
+- `.writeTo`: Specifies that the child process should write its output to a file descriptor provided by the developer. Subprocess will automatically close the file descriptor after the process exits if `closeWhenDone` is set to `true`.
 
 `CollectedOutMethod` adds one more option to non-closure-based `run` methods that return a `CollectedResult`: `.collect` and its variation `.collect(limit:)`. This option specifies that `Subprocess` should collect the output as `Data`. Since the output of a child process could be arbitrarily large, `Subprocess` imposes a limit on how many bytes it will collect. By default, this limit is 16kb (when specifying `.collect`). Developers can override this limit by specifying `.collect(limit: newLimit)`:
 
@@ -542,7 +549,7 @@ extension Subprocess {
         // Collect the output as Data with the default 16kb limit
         public static var collect: Self
         // Write the output directly to a FileDescriptor
-        public static func writeTo(_ fd: FileDescriptor) -> Self
+        public static func writeTo(_ fd: FileDescriptor, closeWhenDone: Bool) -> Self
         // Collect the output as Data with modified limit
         public static func collect(limit limit: Int) -> Self
     }
@@ -563,7 +570,7 @@ extension Subprocess {
         // Redirect the output as AsyncSequence
         public static var redirect: Self
         // Write the output directly to a FileDescriptor
-        public static func writeTo(_ fd: FileDescriptor) -> Self
+        public static func writeTo(_ fd: FileDescriptor, closeWhenDone: Bool) -> Self
     }
 }
 ```
@@ -584,7 +591,8 @@ print("curl output: \(String(data: curl.standardOutput!, encoding: .utf8)!)")
 
 // Write to a specific file descriptor
 let fd: FileDescriptor = try .open(...)
-let result = try await Subprocess.run(executing: .at("/some/script"), output: .writeTo(fd))
+let result = try await Subprocess.run(
+    executing: .at("/some/script"), output: .writeTo(fd, closeWhenDone: true))
 
 // Redirect the output as AsyncSequence
 let result2 = try await Subprocess.run(executing: .named("/some/script"), output: .redirect) { subprocess in
@@ -662,6 +670,8 @@ extension Subprocess {
         /// Create an `EnvironmentConfig` with an executable path
         /// such as `/bin/ls`
         public static func at(_ filePath: FilePath) -> Self
+        // Resolves the executable path with the given `Environment` value
+        public func resolveExecutablePath(withEnvironment environment: Environment) -> FilePath?
     }
 }
 ```
@@ -669,7 +679,7 @@ extension Subprocess {
 
 ### `Subprocess.Environment`
 
-`struct Environment` is used to configure how should the process being lunched receive its environment values:
+`struct Environment` is used to configure how should the process being launched receive its environment values:
 
 ```swift
 extension Subprocess {
@@ -824,6 +834,25 @@ extension Subprocess {
 ## Impact on Existing Code
 
 No impact on existing code is anticipated. All introduced changes are additive.
+
+
+## Future Directions
+
+### Automatic Splitting of `Arguments`
+
+Ideally, the `Arguments` feature should automatically split a string, such as "-a -n 1024 -v 'abc'", into an array of arguments. This enhancement would enable `Arguments` to conform to `ExpressibleByStringLiteral`, allowing developers to conveniently pass either a `String` or `[String]` as `Arguments`.
+
+I decided to defer this feature because it turned out to be a "hard problem" -- different platforms handle arguments differently, requiring careful consideration to ensure correctness.
+
+For reference, Python uses [`shlex.split`](https://docs.python.org/3/library/shlex.html), which could serve as a valuable starting point for implementation.
+
+## Combined `stdout` and `stderr`
+
+In Python's `Subprocess`, developers can merge standard output and standard error into a single stream. This is particularly useful when an executable improperly utilizes standard error as standard output (or vice versa). We should explore the most effective way to achieve this enhancement without introducing confusion to existing parameters—perhaps by introducing a new property.
+
+## Automatic `Subprocess` Cancellation
+
+Currently, `Subprocess` does not terminate the spawned process, even if the `Subprocess` instance goes out of scope. It would be beneficial to investigate whether it is more sensible to attempt terminating the spawned process when the `Subprocess` itself goes out of scope or when the parent task is canceled.
 
 
 ## Alternatives Considered
