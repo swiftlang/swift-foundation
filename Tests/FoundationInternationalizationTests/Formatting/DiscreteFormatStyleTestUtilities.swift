@@ -209,6 +209,77 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     )
 }
 
+#if FOUNDATION_FRAMEWORK
+/// Verify that a discrete format style fulfills the protocol requirements.
+///
+/// Takes random samples and verifies that the given `style` implementation behaves as expected for
+/// types conforming to `DiscreteFormatStyle`.
+///
+/// - Parameter strict: If true, the test also fails if it finds a sample where the bounds provided by
+/// `discreteInput(before:)` and `discreteInput(after:)` are shorter than they could
+/// be, i.e. `style.format(style.discreteInput(after: sample)) == style.format(sample)`.
+/// - Parameter samples: The number of random samples to verify.
+/// ````
+@available(FoundationPreview 0.4, *)
+func verifyDiscreteFormatStyleConformance(
+    _ style: Date.ComponentsFormatStyle,
+    strict: Bool = false,
+    samples: Int = 10000,
+    now: Date = .now,
+    min: Date = Date(timeIntervalSinceReferenceDate: -2000 * 365 * 24 * 3600),
+    max: Date = Date(timeIntervalSinceReferenceDate: 2000 * 365 * 24 * 3600),
+    _ message: @autoclosure () -> String = "",
+    file: StaticString = #filePath,
+    line: UInt = #line
+) throws {
+    var style = style
+
+    try verifyDiscreteFormatStyleConformance(
+        style,
+        samples: samples,
+        randomInput: { range in
+            if let range {
+                return Swift.min(range.lowerBound.lowerBound, range.upperBound.lowerBound)..<Date(timeIntervalSinceReferenceDate: Double.random(in: range.lowerBound.upperBound.timeIntervalSinceReferenceDate..<range.upperBound.upperBound.timeIntervalSinceReferenceDate))
+            } else {
+                let bound = now + abs(Double.randomSample(max: max.timeIntervalSince(now)))
+
+                return now..<bound
+            }
+        },
+        isLower: { $0.upperBound < $1.upperBound },
+        min: now..<now,
+        max: now..<max,
+        codeFormatter: { "Date(timeIntervalSinceReferenceDate: \($0.lowerBound.timeIntervalSinceReferenceDate))..<Date(timeIntervalSinceReferenceDate: \($0.upperBound.timeIntervalSinceReferenceDate))" },
+        message() + "\nstyle.isPositive = true",
+        file: file,
+        line: line
+    )
+
+    style.isPositive = false
+
+    try verifyDiscreteFormatStyleConformance(
+        style,
+        samples: samples,
+        randomInput: { range in
+            if let range {
+                return Date(timeIntervalSinceReferenceDate: Double.random(in: range.lowerBound.lowerBound.timeIntervalSinceReferenceDate..<range.upperBound.lowerBound.timeIntervalSinceReferenceDate))..<Swift.max(range.lowerBound.upperBound, range.upperBound.upperBound)
+            } else {
+                let bound = now - abs(Double.randomSample(max: now.timeIntervalSince(min)))
+
+                return bound..<now
+            }
+        },
+        isLower: { $0.lowerBound < $1.lowerBound },
+        min: min..<now,
+        max: now..<now,
+        codeFormatter: { "Date(timeIntervalSinceReferenceDate: \($0.lowerBound.timeIntervalSinceReferenceDate))..<Date(timeIntervalSinceReferenceDate: \($0.upperBound.timeIntervalSinceReferenceDate))" },
+        message() + "\nstyle.isPositive = false",
+        file: file,
+        line: line
+    )
+}
+#endif // FOUNDATION_FRAMEWORK
+
 /// Verify that a discrete format style fulfills the protocol requirements.
 ///
 /// Takes random samples and verifies that the given `style` implementation behaves as expected for
