@@ -130,6 +130,13 @@ final class TimeZoneTests : XCTestCase {
         testAbbreviation("GMT+0800", 28800, "GMT+0800")
         testAbbreviation("UTC", 0, "GMT")
     }
+
+    func testSeondsFromGMT_RemoteDates() {
+        let date = Date(timeIntervalSinceReferenceDate: -5001243627) // "1842-07-09T05:39:33+0000"
+        let europeRome = TimeZone(identifier: "Europe/Rome")!
+        let secondsFromGMT = europeRome.secondsFromGMT(for: date)
+        XCTAssertEqual(secondsFromGMT, 2996) //  Before 1893 the time zone is UTC+00:49:56
+    }
 }
 
 final class TimeZoneGMTTests : XCTestCase {
