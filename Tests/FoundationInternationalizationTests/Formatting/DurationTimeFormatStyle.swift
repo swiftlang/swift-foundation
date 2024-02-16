@@ -555,6 +555,8 @@ final class DurationTimeAttributedStyleTests : XCTestCase {
 
 // MARK: DiscreteFormatStyle conformance test
 
+// This test requires 64-bit integers
+#if arch(x86_64) || arch(arm64)
 @available(FoundationPreview 0.4, *)
 final class TestDurationTimeDiscreteConformance : XCTestCase {
     func testBasics() throws {
@@ -664,3 +666,4 @@ final class TestDurationTimeDiscreteConformance : XCTestCase {
         }
     }
 }
+#endif // arch(x86_64) || arch(arm64)
