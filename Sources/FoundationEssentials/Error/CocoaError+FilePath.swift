@@ -9,6 +9,10 @@
  //
  //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly import _ForSwiftFoundation
+#endif
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
