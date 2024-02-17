@@ -376,7 +376,7 @@ extension String {
             // If not using the cache (which may not require hitting the disk at all if it's warm), try getting the full path from getattrlist.
             // If it succeeds, this approach always returns an absolute path starting from the root. Since this function returns relative paths when given a relative path to a relative symlink, dont use this approach unless the path is absolute.
             
-            if !self._isAbsolutePath, let resolved = Self._resolvingSymlinksInPathUsingFullPathAttribute(fsPtr) {
+            if self._isAbsolutePath, let resolved = Self._resolvingSymlinksInPathUsingFullPathAttribute(fsPtr) {
                 return resolved
             }
             
