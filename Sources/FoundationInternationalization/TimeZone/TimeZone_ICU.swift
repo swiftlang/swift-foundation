@@ -478,7 +478,6 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         return result
     }
 }
-#endif //canImport(FoundationICU)
 
 // MARK: -
 
@@ -493,11 +492,10 @@ extension TimeZone {
         icuTZIdentifiers
     }
 
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
     /// Returns the time zone data version.
     public static var timeZoneDataVersion : String {
-        // At this time only available in Framework build because of dependency on ICU. When TimeZone sinks to FoundationEssentials, we can make this available everywhere as an extension on TimeZone from FoundationInternationalization.
         _TimeZoneICU.timeZoneDataVersion
     }
-#endif
 }
+
+#endif //canImport(FoundationICU)
