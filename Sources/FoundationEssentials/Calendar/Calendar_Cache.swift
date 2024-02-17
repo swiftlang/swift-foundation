@@ -21,19 +21,20 @@ struct CalendarCache : Sendable {
     // MARK: - Concrete Classes
     
     // _CalendarICU, if present
-    static func calendarICUClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
+    static func calendarICUClass(identifier: Calendar.Identifier, useGregorian: Bool) -> _CalendarProtocol.Type? {
 #if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
-        _CalendarICU.self
+        if useGregorian && identifier == .gregorian {
+            return _CalendarGregorian.self
+        } else {
+            return _CalendarICU.self
+        }
 #else
-        if let name = _typeByName("FoundationInternationalization._CalendarICU"), let t = name as? _CalendarProtocol.Type {
+        if useGregorian && identifier == .gregorian {
+            return _CalendarGregorian.self
+        } else if let name = _typeByName("FoundationInternationalization._CalendarICU"), let t = name as? _CalendarProtocol.Type {
             return t
         } else {
-            if identifier == .gregorian {
-                // Use the default gregorian class
-                return _CalendarGregorian.self
-            } else {
-                return nil
-            }
+            return nil
         }
 #endif
     }
@@ -45,6 +46,7 @@ struct CalendarCache : Sendable {
         private var currentCalendar: (any _CalendarProtocol)?
         private var autoupdatingCurrentCalendar: _CalendarAutoupdating?
         private var fixedCalendars: [Calendar.Identifier: any _CalendarProtocol] = [:]
+
         private var noteCount = -1
         private var wasResetManually = false
                 
@@ -75,8 +77,9 @@ struct CalendarCache : Sendable {
                 return currentCalendar
             } else {
                 let id = Locale.current._calendarIdentifier
+                let useCalendarGregorianForGregorianCalendar = _foundation_essentials_feature_enabled()
                 // If we cannot create the right kind of class, we fail immediately here
-                let calendarClass = CalendarCache.calendarICUClass(identifier: id)!
+                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: useCalendarGregorianForGregorianCalendar)!
                 let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 currentCalendar = calendar
                 return calendar
@@ -98,14 +101,15 @@ struct CalendarCache : Sendable {
             if let cached = fixedCalendars[id] {
                 return cached
             } else {
+                let useCalendarGregorianForGregorianCalendar = _foundation_essentials_feature_enabled()
                 // If we cannot create the right kind of class, we fail immediately here
-                let calendarClass = CalendarCache.calendarICUClass(identifier: id)!
+                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: useCalendarGregorianForGregorianCalendar)!
                 let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 fixedCalendars[id] = new
                 return new
             }
         }
-        
+
         mutating func reset() {
             wasResetManually = true
         }
@@ -138,7 +142,9 @@ struct CalendarCache : Sendable {
     func fixed(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
         // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
         // If we cannot create the right kind of class, we fail immediately here
-        let calendarClass = CalendarCache.calendarICUClass(identifier: identifier)!
+        let useCalendarGregorianForGregorianCalendar = _foundation_essentials_feature_enabled()
+        let calendarClass = CalendarCache.calendarICUClass(identifier: identifier, useGregorian: useCalendarGregorianForGregorianCalendar)!
         return calendarClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
+
 }

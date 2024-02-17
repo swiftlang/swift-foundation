@@ -24,13 +24,18 @@ import Glibc
 import CRT
 #endif
 
+#if FOUNDATION_FRAMEWORK
+// For feature flag
+@_implementationOnly import _ForSwiftFoundation
+#endif
+
 /**
  `Calendar` encapsulates information about systems of reckoning time in which the beginning, length, and divisions of a year are defined. It provides information about the calendar and support for calendrical computations such as determining the range of a given calendrical unit and adding units to a given absolute time.
 */
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Calendar : Hashable, Equatable, Sendable {
     private var _calendar: any _CalendarProtocol & AnyObject
-    
+
     /// Calendar supports many different kinds of calendars. Each is identified by an identifier here.
     public enum Identifier : Sendable, CustomDebugStringConvertible {
         /// The common calendar in Europe, the Western Hemisphere, and elsewhere.
@@ -483,7 +488,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: A new `DateInterval` if the starting time and duration of a component could be calculated, otherwise `nil`.
     @available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *)
     public func dateInterval(of component: Component, for date: Date) -> DateInterval? {
-        _calendar.dateInterval(of: component, for: date)
+        _calendar.dateInterval(of: component, for: date.capped)
     }
 
     /// Returns, for a given absolute time, the ordinal number of a smaller calendar component (such as a day) within a specified larger calendar component (such as a week).
@@ -582,7 +587,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: The date components of the specified date.
     public func dateComponents(_ components: Set<Component>, from date: Date) -> DateComponents {
         var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: date)
-
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
             dc.calendar = self
@@ -594,7 +598,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
     /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
     internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
-        var dc = _calendar.dateComponents(components, from: date)
+        var dc = _calendar.dateComponents(components, from: date.capped)
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {

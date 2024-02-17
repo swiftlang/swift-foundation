@@ -113,6 +113,7 @@ public func expectEqual(_ first: DateComponents, _ second: DateComponents, withi
     XCTAssertEqual(first.year, second.year, message(), file: file, line: line)
     XCTAssertEqual(first.month, second.month, message(), file: file, line: line)
     XCTAssertEqual(first.day, second.day, message(), file: file, line: line)
+    XCTAssertEqual(first.dayOfYear, second.dayOfYear, message(), file: file, line: line)
     XCTAssertEqual(first.hour, second.hour, message(), file: file, line: line)
     XCTAssertEqual(first.minute, second.minute, message(), file: file, line: line)
     XCTAssertEqual(first.second, second.second, message(), file: file, line: line)
@@ -126,7 +127,7 @@ public func expectEqual(_ first: DateComponents, _ second: DateComponents, withi
     }
 
     if let ns = first.nanosecond, let otherNS = second.nanosecond {
-        XCTAssertLessThan(abs(ns - otherNS), nanosecondAccuracy, message(), file: file, line: line)
+        XCTAssertLessThanOrEqual(abs(ns - otherNS), nanosecondAccuracy, message(), file: file, line: line)
     } else {
         XCTAssertEqual(first.nanosecond, second.nanosecond, message(), file: file, line: line)
     }
