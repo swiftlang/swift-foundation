@@ -2432,7 +2432,7 @@ extension Calendar {
 }
 
 extension Calendar.Component {
-    var nextHigherUnit: Self? {
+    package var nextHigherUnit: Self? {
         switch self {
         case .timeZone, .calendar:
             return nil // not really components

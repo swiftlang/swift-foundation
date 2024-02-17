@@ -865,6 +865,189 @@ public extension ParseStrategy where Self == Date.FormatStyle {
     static var dateTime: Self { .init() }
 }
 
+// MARK: DiscreteFormatStyle Conformance
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle : DiscreteFormatStyle {
+    public func discreteInput(before input: Date) -> Date? {
+        guard let (bound, isIncluded) = bound(for: input, isLower: true) else {
+            return nil
+        }
+
+        return isIncluded ? bound.nextDown : bound
+    }
+
+    public func discreteInput(after input: Date) -> Date? {
+        guard let (bound, isIncluded) = bound(for: input, isLower: false) else {
+            return nil
+        }
+
+        return isIncluded ? bound.nextUp : bound
+    }
+
+    func bound(for input: Date, isLower: Bool) -> (bound: Date, includedInRangeOfInput: Bool)? {
+        var calendar = calendar
+        calendar.timeZone = timeZone
+        return calendar.bound(for: input, isLower: isLower, updateSchedule: ICUDateFormatter.DateFormatInfo.cachedUpdateSchedule(for: self))
+    }
+
+    public func input(before input: Date) -> Date? {
+        let result = Calendar.nextAccuracyStep(for: input, direction: .backward)
+
+        return result < input ? result : nil
+    }
+
+    public func input(after input: Date) -> Date? {
+        let result = Calendar.nextAccuracyStep(for: input, direction: .forward)
+
+        return result > input ? result : nil
+    }
+}
+
+@available(FoundationPreview 0.4, *)
+extension Date.FormatStyle.Attributed : DiscreteFormatStyle {
+    public func discreteInput(before input: Date) -> Date? {
+        base.discreteInput(before: input)
+    }
+
+    public func discreteInput(after input: Date) -> Date? {
+        base.discreteInput(after: input)
+    }
+
+    public func input(before input: Date) -> Date? {
+        base.input(before: input)
+    }
+
+    public func input(after input: Date) -> Date? {
+        base.input(after: input)
+    }
+}
+
+extension Calendar {
+    /// Gives an approximation for how inaccurate `date` might be in either `direction` if it was produced
+    /// by `bound(for:isLower:updateSchedule)`.
+    static func nextAccuracyStep(for date: Date, direction: Calendar.SearchDirection) -> Date {
+        let conversionLoss = abs(date.timeIntervalSince(date.nextDown)) + abs(date.timeIntervalSince(Date(udate: date.udate.nextDown)))
+        // 9 was determined by experimentation, but seems to be the maximum
+        // number of conversions between `Date` and `Udate` that can happen when
+        // calling `bound(for:isLower:updateSchedule)`
+        let inaccuracy = 9 * conversionLoss
+        return direction == .backward ? date - inaccuracy : date + inaccuracy
+    }
+
+    func bound(for input: Date, isLower: Bool, updateSchedule: ICUDateFormatter.DateFormatInfo.UpdateSchedule) -> (bound: Date, includedInRangeOfInput: Bool)? {
+        let zeroDate = self.date(from: .init()) ?? Date(timeIntervalSince1970: 0)
+
+        let towardZero = isLower ? input > zeroDate : input < zeroDate
+
+        var bound: Date?
+
+        for (component, multitude) in updateSchedule.updateIntervals {
+            if let next = self.advance(input, isLower ? .backward : .forward, by: multitude, component) {
+                if let prev = bound {
+                    bound = isLower ? max(next, prev) : min(next, prev)
+                } else {
+                    bound = next
+                }
+            }
+        }
+
+        guard let bound else {
+            return nil
+        }
+
+        return (bound, bound == input || towardZero)
+    }
+
+    private func advance(_ date: Date, _ direction: Calendar.SearchDirection, by value: Int, _ component: Component) -> Date? {
+        guard component != .nanosecond else {
+            // We work with the UDate here because we have to mimic the floating
+            // point rounding behavior of the ICU calendar, which is used by the
+            // ICU formatting logic. _Calendar_ICU has a special case for
+            // implementation for `.nanosecond` in which it does not actually
+            // use ICU to calculate the value, but does manual math on `Date`
+            // instead. We explicitly opt out of that special case handling and
+            // implement our own version of what ICU's calendar would do.
+            let udate = date.udate
+
+            let increment = 1e-6 * Double(value)
+
+            let floored = min((udate / increment).rounded(.down) * increment, udate)
+
+            switch direction {
+            case .forward:
+                return max(Date(udate: floored + increment), date)
+            case .backward:
+                return min(Date(udate: floored), date)
+            }
+        }
+
+        // Calendar.date(byAdding:value:to:) doesn't work with .era, so we just
+        // use nextDate, even though that often yields inprecise results when
+        // doing big jumps.
+        guard component != .era else {
+            guard let era = self.dateComponents([.era], from: date).era else {
+                return nil
+            }
+
+            return self.nextDate(
+                after: date,
+                matching: .init(era: direction == .backward ? era - value : era + value),
+                matchingPolicy: .nextTime,
+                direction: direction)
+        }
+
+        if direction == .backward {
+            // If we're searching for an earlier date, we first skip one whole
+            // component into the past, so we can then search for the start of
+            // the next component, which is the start of the original component,
+            // i.e. exactly what we want.
+            // `Calendar.nextDate(after:matching)` does have a `direction` option,
+            // but putting that to `.backward` would give us the _start_ of the
+            // previous component, not the _end_.
+            guard let shiftedDate = self.date(byAdding: component, value: -value, to: date) else {
+                return nil
+            }
+
+            var dateComponents = DateComponents()
+            dateComponents.setValue(self.dateComponents([component], from: date).value(for: component), for: component)
+
+            guard let prevDate = self.nextDate(after: shiftedDate, matching: dateComponents, matchingPolicy: .nextTime) else {
+                return nil
+            }
+
+            return prevDate
+        } else {
+            // If we're searching for a later date, `Calendar.nextDate(after:matching)`
+            // gives us exactly what we want, we just have to make sure we pass
+            // a valid target value. E.g. we cannot pass a target of 60 seconds,
+            // but have to manually calculate the modulo based on
+            // `Calendar.range(of:in:for:)`.
+            let currentValue = self.component(component, from: date)
+            let additiveValue = currentValue + value
+
+            let targetValue: Int
+
+            if let higherComponent = component.nextHigherUnit,
+               let validRange = self.range(of: component, in: higherComponent, for: date), !validRange.isEmpty {
+
+                if additiveValue >= validRange.upperBound {
+                    targetValue = validRange.lowerBound + (additiveValue % validRange.upperBound)
+                } else {
+                    targetValue = additiveValue
+                }
+            } else {
+                targetValue = additiveValue
+            }
+
+            var components = DateComponents()
+            components.setValue(targetValue, for: component)
+
+            return self.nextDate(after: date, matching: components, matchingPolicy: .nextTime)
+        }
+    }
+}
+
 // MARK: Utils
 
 extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {

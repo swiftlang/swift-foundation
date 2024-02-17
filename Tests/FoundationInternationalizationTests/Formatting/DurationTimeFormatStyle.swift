@@ -15,8 +15,15 @@ import TestSupport
 #endif
 
 #if canImport(FoundationInternationalization)
+@testable import FoundationEssentials
 @testable import FoundationInternationalization
 #endif
+
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#endif
+
+
 
 extension Duration {
     init(weeks: Int64 = 0, days: Int64 = 0, hours: Int64 = 0, minutes: Int64 = 0, seconds: Int64 = 0, milliseconds: Int64 = 0, microseconds: Int64 = 0) {
@@ -545,3 +552,118 @@ final class DurationTimeAttributedStyleTests : XCTestCase {
             ("35.50", .seconds)])
     }
 }
+
+// MARK: DiscreteFormatStyle conformance test
+
+// This test requires 64-bit integers
+#if arch(x86_64) || arch(arm64)
+@available(FoundationPreview 0.4, *)
+final class TestDurationTimeDiscreteConformance : XCTestCase {
+    func testBasics() throws {
+        var style: Duration._TimeFormatStyle
+        style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .down)).locale(Locale(identifier: "en_US"))
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(2))
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero.nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .zero.nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .zero)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-1).nextDown)
+
+
+        style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .up))
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(0))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .zero.nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero.nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .seconds(-1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-2))
+
+
+        style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .towardZero))
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(2))
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .seconds(1))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1))
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .seconds(-1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-2))
+
+        style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .awayFromZero))
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(0))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .zero.nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .zero.nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .zero)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-1).nextDown)
+
+
+        style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .toNearestOrAwayFromZero))
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .milliseconds(1500))
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .milliseconds(500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .milliseconds(1500))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .milliseconds(500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .milliseconds(500))
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .milliseconds(-500))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .milliseconds(-500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .milliseconds(-1500))
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .milliseconds(-500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .milliseconds(-1500))
+
+        style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .toNearestOrEven))
+
+        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .milliseconds(1500))
+        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .milliseconds(500))
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .milliseconds(500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .milliseconds(-500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .milliseconds(500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .milliseconds(-500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .milliseconds(500).nextUp)
+        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .milliseconds(-500).nextDown)
+        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .milliseconds(-500))
+        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .milliseconds(-1500))
+    }
+
+    func testRegressions() throws {
+        var style: Duration._TimeFormatStyle
+
+        style = .init(pattern: .hourMinute(padHourToLength: 0, roundSeconds: .toNearestOrAwayFromZero))
+
+        XCTAssertLessThanOrEqual(try XCTUnwrap(style.discreteInput(after: Duration(secondsComponent: -8, attosecondsComponent: -531546586433266880))), Duration(secondsComponent: 30, attosecondsComponent: 0))
+    }
+
+    func testRandomSamples() throws {
+        let styles: [Duration._TimeFormatStyle] = [FloatingPointRoundingRule.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven].flatMap { roundingRule in
+            [
+                .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: roundingRule)),
+                .init(pattern: .minuteSecond(padMinuteToLength: 0, fractionalSecondsLength: 2, roundFractionalSeconds: roundingRule)),
+                .init(pattern: .hourMinute(padHourToLength: 0, roundSeconds: roundingRule))
+            ]
+        }
+
+
+        for style in styles {
+            try verifyDiscreteFormatStyleConformance(style, samples: 100, "\(style)")
+        }
+    }
+}
+#endif // arch(x86_64) || arch(arm64)

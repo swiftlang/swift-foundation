@@ -2558,7 +2558,13 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             return (goalEra - currEra, start)
         case .nanosecond:
             let diffInNano = end.timeIntervalSince(start).remainder(dividingBy: 1) * 1.0e+9
-            let diff = diffInNano < Double(Int32.max) ? Int(diffInNano) : Int(Int32.max)
+            let diff = if diffInNano >= Double(Int32.max) {
+                Int(Int32.max)
+            } else if diffInNano <= Double(Int32.min) {
+                Int(Int32.min)
+            } else {
+                Int(diffInNano)
+            }
             let advanced = add(component, to: start, amount: diff, inTimeZone: timeZone)
             return (diff, advanced)
 

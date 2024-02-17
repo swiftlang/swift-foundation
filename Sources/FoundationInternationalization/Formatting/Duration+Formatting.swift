@@ -36,6 +36,67 @@ extension Duration {
 }
 
 extension Duration {
+    static func bound(
+        for input: Duration,
+        in interval: Duration,
+        countingDown: Bool,
+        roundingRule: FloatingPointRoundingRule
+    ) -> (bound: Duration, includedInRangeOfInput: Bool) {
+        let (rounded, roundsToEven) = input.rounded(roundingRule, toMultipleOf: interval)
+
+        let shift: Duration
+        switch (roundingRule, input >= .zero) {
+        case (.toNearestOrAwayFromZero, _), (.toNearestOrEven, _):
+            shift = countingDown ? interval / -2 : interval / 2
+        case (.up, _):
+            shift = countingDown ? .zero - interval : .zero
+        case (.down, _):
+            shift = countingDown ? .zero : interval
+        case (.towardZero, let inputGeqZero):
+            let direction: Int
+            if rounded == .zero && countingDown == inputGeqZero {
+                direction = countingDown ? -1 : 1
+            } else if countingDown == inputGeqZero {
+                direction = 0
+            } else if inputGeqZero {
+                direction = 1
+            } else {
+                direction = -1
+            }
+
+            shift = interval * direction
+        case (.awayFromZero, _):
+            if input == .zero || countingDown != (input >= .zero) {
+                shift = .zero
+            } else {
+                shift = input >= .zero ? .zero - interval : interval
+            }
+        @unknown default:
+            fatalError("Unknown FloatingPointRoundingRule \(roundingRule)")
+        }
+
+        let bound = rounded + shift
+
+        let doesBoundRoundToInput: Bool
+        switch (roundingRule, input >= .zero) {
+        case (.down, _), (.awayFromZero, false):
+            doesBoundRoundToInput = countingDown
+        case (.up, _), (.awayFromZero, true):
+            doesBoundRoundToInput = !countingDown
+        case (.toNearestOrAwayFromZero, _):
+            doesBoundRoundToInput = countingDown && bound > .zero
+            || !countingDown && bound < .zero
+        case (.toNearestOrEven, _):
+            doesBoundRoundToInput = roundsToEven
+        case (.towardZero, _):
+            doesBoundRoundToInput = (bound >= .zero) == countingDown
+        @unknown default:
+            fatalError("Unknown FloatingPointRoundingRule \(roundingRule)")
+        }
+
+        return (bound, doesBoundRoundToInput || input == bound)
+    }
+
     // Returns an array of values corresponding to each unit in `units`
     func valuesForUnits(
         _ units: [UnitsFormatStyle.Unit],

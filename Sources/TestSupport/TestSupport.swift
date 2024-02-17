@@ -209,20 +209,38 @@ public typealias FileManagerDelegate = FoundationEssentials.FileManagerDelegate
 
 #endif // FOUNDATION_FRAMEWORK
 
-/// ICU uses `\u{202f}` and `\u{020f}` interchangeably
-/// This function compares two string and ignoring the separator.
+/// ICU uses `\u{202f}` and `\u{020f}` interchangeably.
+/// This function compares two strings ignoring the separator.
 public func XCTAssertEqualIgnoreSeparator(_ lhs: String, _ rhs: String, file: StaticString = #file, line: UInt = #line) {
     return XCTAssertEqual(
-        lhs.replacingOccurrences(of: "\u{202f}", with: " "),
-        rhs.replacingOccurrences(of: "\u{202f}", with: " "),
+        lhs.normalizingICUSeparator(),
+        rhs.normalizingICUSeparator(),
         file: file,
         line: line
     )
 }
 
+/// ICU uses `\u{202f}` and `\u{020f}` interchangeably.
+/// This function compares two attributed strings ignoring the separator.
 public func XCTAssertEqualIgnoreSeparator(_ lhs: AttributedString, _ rhs: AttributedString, file: StaticString = #file, line: UInt = #line) {
-    func sanitize(_ string: AttributedString) -> AttributedString {
-        var str = string
+    return XCTAssertEqual(lhs.normalizingICUSeparator(), rhs.normalizingICUSeparator(), file: file, line: line)
+}
+
+extension String {
+    /// This function normalizes whitespace used by ICU to `\u{020f}`.
+    ///
+    /// ICU uses `\u{202f}` and `\u{020f}` interchangeably.
+    public func normalizingICUSeparator() -> String {
+        replacingOccurrences(of: "\u{202f}", with: " ")
+    }
+}
+
+extension AttributedString {
+    /// This function normalizes whitespace used by ICU to `\u{020f}`.
+    ///
+    /// ICU uses `\u{202f}` and `\u{020f}` interchangeably.
+    public func normalizingICUSeparator() -> AttributedString {
+        var str = self
         while let idx = str.characters.firstIndex(of: "\u{202f}") {
             str.characters.replaceSubrange(
                 idx ..< str.characters.index(after: idx),
@@ -230,5 +248,4 @@ public func XCTAssertEqualIgnoreSeparator(_ lhs: AttributedString, _ rhs: Attrib
         }
         return str
     }
-    return XCTAssertEqual(sanitize(lhs), sanitize(rhs), file: file, line: line)
 }

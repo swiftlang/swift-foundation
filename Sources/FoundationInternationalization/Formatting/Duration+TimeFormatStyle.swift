@@ -45,6 +45,15 @@ extension Duration {
 
             var paddingForLargestField: Int?
 
+            var roundingRule: FloatingPointRoundingRule {
+                switch fields {
+                case .hourMinute(roundSeconds: let rule),
+                     .hourMinuteSecond(fractionalSecondsLength: _, roundFractionalSeconds: let rule),
+                     .minuteSecond(fractionalSecondsLength: _, roundFractionalSeconds: let rule):
+                    return rule
+                }
+            }
+
             init(fields: Fields, paddingForLargestField: Int? = nil) {
                 self.fields = fields
                 self.paddingForLargestField = paddingForLargestField
@@ -469,6 +478,45 @@ extension Duration.TimeFormatStyle.Attributed {
         }
         set {
             innerStyle[keyPath: key] = newValue
+        }
+    }
+}
+
+// MARK: DiscreteFormatStyle Conformance
+
+@available(FoundationPreview 0.4, *)
+extension Duration.TimeFormatStyle.Attributed : DiscreteFormatStyle {
+    public func discreteInput(before input: Duration) -> Duration? {
+        Duration.TimeFormatStyle(pattern: pattern, locale: locale).discreteInput(before: input)
+    }
+
+    public func discreteInput(after input: Duration) -> Duration? {
+        Duration.TimeFormatStyle(pattern: pattern, locale: locale).discreteInput(after: input)
+    }
+}
+
+@available(FoundationPreview 0.4, *)
+extension Duration.TimeFormatStyle : DiscreteFormatStyle {
+    public func discreteInput(before input: Duration) -> Duration? {
+        let (bound, isIncluded) = Duration.bound(for: input, in: interval(for: input), countingDown: true, roundingRule: self.pattern.roundingRule)
+
+        return isIncluded ? bound.nextDown : bound
+    }
+
+    public func discreteInput(after input: Duration) -> Duration? {
+        let (bound, isIncluded) = Duration.bound(for: input, in: interval(for: input), countingDown: false, roundingRule: self.pattern.roundingRule)
+
+        return isIncluded ? bound.nextUp : bound
+    }
+
+    private func interval(for input: Duration) -> Duration {
+        switch pattern.fields {
+        case .hourMinute:
+            return .seconds(60)
+        case .hourMinuteSecond(fractionalSecondsLength: let length, _):
+            return Duration.interval(for: .seconds, fractionalDigits: length)
+        case .minuteSecond(fractionalSecondsLength: let length, _):
+            return Duration.interval(for: .seconds, fractionalDigits: length)
         }
     }
 }

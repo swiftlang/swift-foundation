@@ -1351,3 +1351,455 @@ extension DateFormatStyleTests {
     }
 }
 #endif
+
+// MARK: DiscreteFormatStyle conformance test
+
+@available(FoundationPreview 0.4, *)
+final class TestDateStyleDiscreteConformance : XCTestCase {
+    let enUSLocale = Locale(identifier: "en_US")
+    var calendar = Calendar(identifier: .gregorian)
+
+    override func setUp() {
+        calendar.timeZone = TimeZone(abbreviation: "GMT")!
+    }
+
+    func date(_ string: String) -> Date {
+        try! Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZoneSeparator: .omitted, timeZone: .gmt).locale(enUSLocale).parse(string)
+    }
+
+    func testBasics() throws {
+        let style = Date.FormatStyle(date: .complete, time: .complete)
+        let date = date("2021-05-05 16:00:00Z")
+
+        XCTAssertEqual(style.discreteInput(after: date + 1), (date + 2))
+        XCTAssertEqual(style.discreteInput(before: date + 1), (date + 1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: date + 0.5), (date + 1))
+        XCTAssertEqual(style.discreteInput(before: date + 0.5), (date + 0).nextDown)
+        XCTAssertEqual(style.discreteInput(after: date + 0), (date + 1))
+        XCTAssertEqual(style.discreteInput(before: date + 0), (date + 0).nextDown)
+        XCTAssertEqual(style.discreteInput(after: date + -0.5), (date + 0))
+        XCTAssertEqual(style.discreteInput(before: date + -0.5), (date + -1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: date + -1), (date + 0))
+        XCTAssertEqual(style.discreteInput(before: date + -1), (date + -1).nextDown)
+    }
+
+    func testEvaluation() {
+        func assertEvaluation(of style: Date.FormatStyle,
+                              in range: ClosedRange<Date>,
+                              includes expectedExcerpts: [String]...,
+                              file: StaticString = #filePath,
+                              line: UInt = #line) {
+            var style = style.locale(Locale(identifier: "en_US"))
+            style.calendar = calendar
+            style.timeZone = calendar.timeZone
+
+            verify(
+                sequence: style.evaluate(from: range.lowerBound, to: range.upperBound) { prev, bound in
+                    if style.format(prev) == style.format(bound) {
+                        return bound + 0.00001
+                    } else {
+                        return bound
+                    }
+                }.lazy.map(\.output).map { $0.normalizingICUSeparator() },
+                contains: expectedExcerpts,
+                "(lowerbound to upperbound)",
+                file: file,
+                line: line)
+
+            verify(
+                sequence: style.evaluate(from: range.upperBound, to: range.lowerBound) { prev, bound in
+                    if style.format(prev) == style.format(bound) {
+                        return bound - 0.00001
+                    } else {
+                        return bound
+                    }
+                }.lazy.map(\.output).map { $0.normalizingICUSeparator() },
+                contains: expectedExcerpts
+                    .reversed()
+                    .map { $0.reversed() },
+                "(upperbound to lowerbound)",
+                file: file,
+                line: line)
+        }
+
+        let now = date("2023-05-15 08:47:20Z")
+
+        assertEvaluation(
+            of: .init(date: .complete, time: .complete).secondFraction(.fractional(2)),
+            in: (now - 0.1)...(now + 0.1),
+            includes: [
+                "Monday, May 15, 2023 at 8:47:19.90 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.91 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.92 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.93 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.94 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.95 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.96 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.97 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.98 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.99 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.00 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.01 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.02 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.03 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.04 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.05 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.06 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.07 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.08 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.09 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.10 AM GMT",
+            ])
+
+        assertEvaluation(
+            of: .init(date: .complete, time: .complete),
+            in: (now - 3)...(now + 3),
+            includes: [
+                "Monday, May 15, 2023 at 8:47:17 AM GMT",
+                "Monday, May 15, 2023 at 8:47:18 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20 AM GMT",
+                "Monday, May 15, 2023 at 8:47:21 AM GMT",
+                "Monday, May 15, 2023 at 8:47:22 AM GMT",
+                "Monday, May 15, 2023 at 8:47:23 AM GMT",
+            ])
+
+        assertEvaluation(
+            of: .init().hour(.twoDigits(amPM: .abbreviated)).minute(),
+            in: (now - 180)...(now + 180),
+            includes: [
+                "08:44 AM",
+                "08:45 AM",
+                "08:46 AM",
+                "08:47 AM",
+                "08:48 AM",
+                "08:49 AM",
+                "08:50 AM",
+            ])
+
+        assertEvaluation(
+            of: .init(date: .omitted, time: .omitted).year().month(),
+            in: (now - 8 * 31 * 24 * 3600)...(now + 8 * 31 * 24 * 3600),
+            includes: [
+                "Sep 2022",
+                "Oct 2022",
+                "Nov 2022",
+                "Dec 2022",
+                "Jan 2023",
+                "Feb 2023",
+                "Mar 2023",
+                "Apr 2023",
+                "May 2023",
+                "Jun 2023",
+                "Jul 2023",
+                "Aug 2023",
+                "Sep 2023",
+                "Oct 2023",
+                "Nov 2023",
+                "Dec 2023",
+                "Jan 2024",
+            ])
+
+        assertEvaluation(
+            of: .init(date: .omitted, time: .omitted).year().month().week(),
+            in: (now - 8 * 31 * 24 * 3600)...(now - 4 * 31 * 24 * 3600),
+            includes: [
+                "Sep 2022 (week: 37)",
+                "Sep 2022 (week: 38)",
+                "Sep 2022 (week: 39)",
+                "Sep 2022 (week: 40)",
+                "Oct 2022 (week: 40)",
+                "Oct 2022 (week: 41)",
+                "Oct 2022 (week: 42)",
+                "Oct 2022 (week: 43)",
+                "Oct 2022 (week: 44)",
+                "Oct 2022 (week: 45)",
+                "Nov 2022 (week: 45)",
+                "Nov 2022 (week: 46)",
+                "Nov 2022 (week: 47)",
+                "Nov 2022 (week: 48)",
+                "Nov 2022 (week: 49)",
+                "Dec 2022 (week: 49)",
+                "Dec 2022 (week: 50)",
+                "Dec 2022 (week: 51)",
+                "Dec 2022 (week: 52)",
+                "Dec 2022 (week: 53)",
+                "Jan 2023 (week: 1)",
+                "Jan 2023 (week: 2)",
+            ])
+
+        assertEvaluation(
+            of: .init(date: .omitted, time: .omitted).year().month().week().era(),
+            in: (now - 8 * 31 * 24 * 3600)...(now - 4 * 31 * 24 * 3600),
+            includes: [
+                "Sep 2022 AD (week: 37)",
+                "Sep 2022 AD (week: 38)",
+                "Sep 2022 AD (week: 39)",
+                "Sep 2022 AD (week: 40)",
+                "Oct 2022 AD (week: 40)",
+                "Oct 2022 AD (week: 41)",
+                "Oct 2022 AD (week: 42)",
+                "Oct 2022 AD (week: 43)",
+                "Oct 2022 AD (week: 44)",
+                "Oct 2022 AD (week: 45)",
+                "Nov 2022 AD (week: 45)",
+                "Nov 2022 AD (week: 46)",
+                "Nov 2022 AD (week: 47)",
+                "Nov 2022 AD (week: 48)",
+                "Nov 2022 AD (week: 49)",
+                "Dec 2022 AD (week: 49)",
+                "Dec 2022 AD (week: 50)",
+                "Dec 2022 AD (week: 51)",
+                "Dec 2022 AD (week: 52)",
+                "Dec 2022 AD (week: 53)",
+                "Jan 2023 AD (week: 1)",
+                "Jan 2023 AD (week: 2)",
+            ])
+    }
+
+    func testRegressions() throws {
+        var style: Date.FormatStyle
+
+        style = .init(date: .complete, time: .complete).secondFraction(.fractional(2))
+        style.timeZone = .gmt
+        XCTAssertLessThan(try XCTUnwrap(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 15538915.899999967))), Date(timeIntervalSinceReferenceDate: 15538915.899999967))
+
+        style = .init(date: .complete, time: .complete).secondFraction(.fractional(2))
+        style.timeZone = .gmt
+        XCTAssertNotNil(style.input(after: Date(timeIntervalSinceReferenceDate: 1205656112.7299998)))
+    }
+
+    func testRandomSamples() throws {
+        var style: Date.FormatStyle
+
+        style = .init(date: .complete, time: .complete).secondFraction(.fractional(3))
+        style.timeZone = .gmt
+        try verifyDiscreteFormatStyleConformance(style, samples: 100)
+
+        style = .init(date: .complete, time: .complete).secondFraction(.fractional(2))
+        style.timeZone = .gmt
+        try verifyDiscreteFormatStyleConformance(style, samples: 100)
+
+        style = .init(date: .complete, time: .complete)
+        style.timeZone = .gmt
+        try verifyDiscreteFormatStyleConformance(style, samples: 100)
+
+        style = .init().hour(.twoDigits(amPM: .abbreviated)).minute()
+        style.timeZone = .gmt
+        try verifyDiscreteFormatStyleConformance(style, samples: 100)
+
+        style = .init(date: .omitted, time: .omitted).year().month()
+        style.timeZone = .gmt
+        try verifyDiscreteFormatStyleConformance(style, samples: 100)
+
+        style = .init(date: .omitted, time: .omitted).year().month().era()
+        style.timeZone = .gmt
+        try verifyDiscreteFormatStyleConformance(style, samples: 100)
+    }
+}
+
+@available(FoundationPreview 0.4, *)
+final class TestDateVerbatimStyleDiscreteConformance : XCTestCase {
+    let enUSLocale = Locale(identifier: "en_US")
+    var calendar = Calendar(identifier: .gregorian)
+
+    override func setUp() {
+        calendar.timeZone = TimeZone(abbreviation: "GMT")!
+    }
+
+    func date(_ string: String) -> Date {
+        try! Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZoneSeparator: .omitted, timeZone: .gmt).locale(enUSLocale).parse(string)
+    }
+
+    func testExamples() throws {
+        let style = Date.VerbatimFormatStyle(
+            format: "\(year: .extended())-\(month: .twoDigits)-\(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .oneBased)):\(minute: .twoDigits):\(second: .twoDigits)",
+            timeZone: Calendar.current.timeZone, calendar: .current)
+        let date = date("2021-05-05 16:00:00Z")
+
+        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(1)), date.addingTimeInterval(2))
+        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(1)), date.addingTimeInterval(1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(0.5)), date.addingTimeInterval(1))
+        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(0.5)), date.addingTimeInterval(0).nextDown)
+        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(0)), date.addingTimeInterval(1))
+        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(0)), date.addingTimeInterval(0).nextDown)
+        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(-0.5)), date.addingTimeInterval(0))
+        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(-0.5)), date.addingTimeInterval(-1).nextDown)
+        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(-1)), date.addingTimeInterval(0))
+        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(-1)), date.addingTimeInterval(-1).nextDown)
+    }
+
+    func testCounting() {
+        func assertEvaluation(of style: Date.VerbatimFormatStyle,
+                              in range: ClosedRange<Date>,
+                              includes expectedExcerpts: [String]...,
+                              file: StaticString = #filePath,
+                              line: UInt = #line) {
+            var style = style.locale(enUSLocale)
+            style.calendar = calendar
+            style.timeZone = calendar.timeZone
+
+            verify(
+                sequence: style.evaluate(from: range.lowerBound, to: range.upperBound) { prev, bound in
+                    if style.format(prev) == style.format(bound) {
+                        return bound + 0.00001
+                    } else {
+                        return bound
+                    }
+                }.lazy.map(\.output),
+                contains: expectedExcerpts,
+                "(lowerbound to upperbound)",
+                file: file,
+                line: line)
+
+            verify(
+                sequence: style.evaluate(from: range.upperBound, to: range.lowerBound) { prev, bound in
+                    if style.format(prev) == style.format(bound) {
+                        return bound - 0.00001
+                    } else {
+                        return bound
+                    }
+                }.lazy.map(\.output),
+                contains: expectedExcerpts
+                    .reversed()
+                    .map { $0.reversed() },
+                "(upperbound to lowerbound)",
+                file: file,
+                line: line)
+        }
+
+        let now = date("2023-05-15 08:47:20Z")
+
+        assertEvaluation(
+            of: .init(format: "\(weekday: .wide), \(month: .wide) \(day: .defaultDigits), \(year: .extended()) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .oneBased)):\(minute: .twoDigits):\(second: .twoDigits).\(secondFraction: .fractional(2)) \(dayPeriod: .standard(.abbreviated)) \(timeZone: .genericName(.short))", timeZone: calendar.timeZone, calendar: calendar),
+            in: now.addingTimeInterval(-0.1)...now.addingTimeInterval(0.1),
+            includes: [
+                "Monday, May 15, 2023 at 8:47:19.90 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.91 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.92 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.93 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.94 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.95 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.96 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.97 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.98 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.99 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.00 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.01 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.02 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.03 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.04 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.05 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.06 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.07 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.08 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.09 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.10 AM GMT",
+            ])
+
+        assertEvaluation(
+            of: .init(format: "'\(weekday: .wide),' '\(month: .wide)'' ss\(day: .defaultDigits), \(year: .extended()) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .oneBased)):\(minute: .twoDigits):\(second: .twoDigits) \(dayPeriod: .standard(.abbreviated)) \(timeZone: .genericName(.short))", timeZone: calendar.timeZone, calendar: calendar),
+            in: now.addingTimeInterval(-3)...now.addingTimeInterval(3),
+            includes: [
+                "'Monday,' 'May'' ss15, 2023 at 8:47:17 AM GMT",
+                "'Monday,' 'May'' ss15, 2023 at 8:47:18 AM GMT",
+                "'Monday,' 'May'' ss15, 2023 at 8:47:19 AM GMT",
+                "'Monday,' 'May'' ss15, 2023 at 8:47:20 AM GMT",
+                "'Monday,' 'May'' ss15, 2023 at 8:47:21 AM GMT",
+                "'Monday,' 'May'' ss15, 2023 at 8:47:22 AM GMT",
+                "'Monday,' 'May'' ss15, 2023 at 8:47:23 AM GMT",
+            ])
+
+        assertEvaluation(
+            of: .init(format: "'\(hour: .twoDigits(clock: .twelveHour, hourCycle: .oneBased)):\(minute: .twoDigits) ss \(dayPeriod: .standard(.abbreviated))", timeZone: calendar.timeZone, calendar: calendar),
+            in: now.addingTimeInterval(-180)...now.addingTimeInterval(180),
+            includes: [
+                "'08:44 ss AM",
+                "'08:45 ss AM",
+                "'08:46 ss AM",
+                "'08:47 ss AM",
+                "'08:48 ss AM",
+                "'08:49 ss AM",
+                "'08:50 ss AM",
+            ])
+
+        assertEvaluation(
+            of: .init(format: "\(month: .abbreviated)''''\(year: .extended())", timeZone: calendar.timeZone, calendar: calendar),
+            in: now.addingTimeInterval(-8 * 31 * 24 * 3600)...now.addingTimeInterval(8 * 31 * 24 * 3600),
+            includes: [
+                "Sep''''2022",
+                "Oct''''2022",
+                "Nov''''2022",
+                "Dec''''2022",
+                "Jan''''2023",
+                "Feb''''2023",
+                "Mar''''2023",
+                "Apr''''2023",
+                "May''''2023",
+                "Jun''''2023",
+                "Jul''''2023",
+                "Aug''''2023",
+                "Sep''''2023",
+                "Oct''''2023",
+                "Nov''''2023",
+                "Dec''''2023",
+                "Jan''''2024",
+            ])
+
+        assertEvaluation(
+            of: .init(format: "\(month: .abbreviated) \(year: .extended())'ss'(week: \(week: .defaultDigits))", timeZone: calendar.timeZone, calendar: calendar),
+            in: now.addingTimeInterval(-8 * 31 * 24 * 3600)...now.addingTimeInterval(-4 * 31 * 24 * 3600),
+            includes: [
+                "Sep 2022'ss'(week: 37)",
+                "Sep 2022'ss'(week: 38)",
+                "Sep 2022'ss'(week: 39)",
+                "Sep 2022'ss'(week: 40)",
+                "Oct 2022'ss'(week: 40)",
+                "Oct 2022'ss'(week: 41)",
+                "Oct 2022'ss'(week: 42)",
+                "Oct 2022'ss'(week: 43)",
+                "Oct 2022'ss'(week: 44)",
+                "Oct 2022'ss'(week: 45)",
+                "Nov 2022'ss'(week: 45)",
+                "Nov 2022'ss'(week: 46)",
+                "Nov 2022'ss'(week: 47)",
+                "Nov 2022'ss'(week: 48)",
+                "Nov 2022'ss'(week: 49)",
+                "Dec 2022'ss'(week: 49)",
+                "Dec 2022'ss'(week: 50)",
+                "Dec 2022'ss'(week: 51)",
+                "Dec 2022'ss'(week: 52)",
+                "Dec 2022'ss'(week: 53)",
+                "Jan 2023'ss'(week: 1)",
+                "Jan 2023'ss'(week: 2)",
+            ])
+
+        assertEvaluation(
+            of: .init(format: "\(month: .abbreviated)''ss''' \(year: .extended()) \(era: .abbreviated) (week: \(week: .defaultDigits))", timeZone: calendar.timeZone, calendar: calendar),
+            in: now.addingTimeInterval(-8 * 31 * 24 * 3600)...now.addingTimeInterval(-4 * 31 * 24 * 3600),
+            includes: [
+                "Sep''ss''' 2022 AD (week: 37)",
+                "Sep''ss''' 2022 AD (week: 38)",
+                "Sep''ss''' 2022 AD (week: 39)",
+                "Sep''ss''' 2022 AD (week: 40)",
+                "Oct''ss''' 2022 AD (week: 40)",
+                "Oct''ss''' 2022 AD (week: 41)",
+                "Oct''ss''' 2022 AD (week: 42)",
+                "Oct''ss''' 2022 AD (week: 43)",
+                "Oct''ss''' 2022 AD (week: 44)",
+                "Oct''ss''' 2022 AD (week: 45)",
+                "Nov''ss''' 2022 AD (week: 45)",
+                "Nov''ss''' 2022 AD (week: 46)",
+                "Nov''ss''' 2022 AD (week: 47)",
+                "Nov''ss''' 2022 AD (week: 48)",
+                "Nov''ss''' 2022 AD (week: 49)",
+                "Dec''ss''' 2022 AD (week: 49)",
+                "Dec''ss''' 2022 AD (week: 50)",
+                "Dec''ss''' 2022 AD (week: 51)",
+                "Dec''ss''' 2022 AD (week: 52)",
+                "Dec''ss''' 2022 AD (week: 53)",
+                "Jan''ss''' 2023 AD (week: 1)",
+                "Jan''ss''' 2023 AD (week: 2)",
+            ])
+    }
+}
