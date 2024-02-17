@@ -132,11 +132,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             }
         }
         
-#if !FOUNDATION_FRAMEWORK
-        @_spi(SwiftCorelibsFoundation) public static func _fromIdentifierString(_ id: String) -> Identifier? {
-            .init(identifierString: id)
-        }
-        
+#if !FOUNDATION_FRAMEWORK        
         @_spi(SwiftCorelibsFoundation) public var _cfCalendarIdentifier: String {
             cfCalendarIdentifier
         }
@@ -337,7 +333,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
-    internal init(identifier: Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
+    internal init(identifier: Calendar.Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
         _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 
