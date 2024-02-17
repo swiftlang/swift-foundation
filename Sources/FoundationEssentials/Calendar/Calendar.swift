@@ -133,6 +133,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
         
 #if !FOUNDATION_FRAMEWORK
+        @_spi(SwiftCorelibsFoundation) public static func _fromIdentifierString(_ id: String) -> Identifier? {
+            .init(identifierString: id)
+        }
+        
         @_spi(SwiftCorelibsFoundation) public var _cfCalendarIdentifier: String {
             cfCalendarIdentifier
         }
