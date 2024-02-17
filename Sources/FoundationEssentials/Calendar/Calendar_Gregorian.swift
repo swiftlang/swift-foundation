@@ -204,8 +204,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         if let firstWeekday, (firstWeekday >= 1 && firstWeekday <= 7) {
             _firstWeekday = firstWeekday
-        } else if let localePrefs, let forcedWeekdayNumber = localePrefs.firstWeekday?[identifier], Locale.Weekday(forcedWeekdayNumber) != nil {
-            _firstWeekday = forcedWeekdayNumber
         }
 
         if var minimumDaysInFirstWeek {
@@ -215,8 +213,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 minimumDaysInFirstWeek = 7
             }
             _minimumDaysInFirstWeek = minimumDaysInFirstWeek
-        } else if let localePrefs, let forcedMinimumDaysInFirstWeek = localePrefs.minDaysInFirstWeek?[identifier] {
-            _minimumDaysInFirstWeek = forcedMinimumDaysInFirstWeek
         }
     }
 
@@ -248,7 +244,13 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
 
         get {
-            _firstWeekday ?? 1
+            if let _firstWeekday {
+                return _firstWeekday
+            } else if let localePrefs, let forcedWeekdayNumber = localePrefs.firstWeekday?[identifier], Locale.Weekday(forcedWeekdayNumber) != nil {
+                return forcedWeekdayNumber
+            } else {
+                return 1
+            }
         }
     }
 
@@ -265,7 +267,13 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
 
         get {
-            _minimumDaysInFirstWeek ?? 1
+            if let _minimumDaysInFirstWeek {
+                return _minimumDaysInFirstWeek
+            } else if let localePrefs, let forcedMinimumDaysInFirstWeek = localePrefs.minDaysInFirstWeek?[identifier] {
+                return forcedMinimumDaysInFirstWeek
+            } else {
+                return 1
+            }
         }
     }
 
