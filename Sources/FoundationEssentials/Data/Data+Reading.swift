@@ -180,7 +180,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     }
         
     guard fd >= 0 else {
-        throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: true)
+        throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
     }
     
     defer {
@@ -198,13 +198,13 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     let err = fstat(fd, &filestat)
     
     guard err == 0 else {
-        throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: true)
+        throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
     }
     
     // The following check is valid for 64-bit platforms.
     if filestat.st_size > Int.max {
         // We cannot hold this in `Data`, which uses Int as its count.
-        throw fileReadingOrWritingError(posixErrno: EFBIG, path: inPath, reading: true)
+        throw CocoaError.errorWithFilePath(inPath, errno: EFBIG, reading: true)
     }
     
     let fileSize = min(Int(clamping: filestat.st_size), maxLength ?? Int.max)
@@ -219,17 +219,17 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     if fileType != S_IFREG {
         // EACCES is still an odd choice, but at least we have a better error for directories.
         let code = (fileType == S_IFDIR) ? EISDIR : EACCES
-        throw fileReadingOrWritingError(posixErrno: code, path: inPath, reading: true)
+        throw CocoaError.errorWithFilePath(inPath, errno: code, reading: true)
     }
     
     if fileSize < 0 {
-        throw fileReadingOrWritingError(posixErrno: ENOMEM, path: inPath, reading: true)
+        throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
     }
     
 #if _pointerBitWidth(_32)
     // Refuse to do more than 2 GB on 32-bit platforms
     if fileSize > SSIZE_MAX {
-        throw fileReadingOrWritingError(posixErrno: EFBIG, path: inPath, reading: true)
+        throw CocoaError.errorWithFilePath(inPath, errno: EFBIG, reading: true)
     }
 #endif
     
@@ -243,11 +243,11 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     } else if shouldMap {
 #if !NO_FILESYSTEM
         guard let bytes = mmap(nil, Int(fileSize), PROT_READ, MAP_PRIVATE, fd, 0) else {
-            throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: true)
+            throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
         }
         
         guard bytes != MAP_FAILED else {
-            throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: true)
+            throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
         }
         
         // Using bytes as the unit in this case doesn't really make any sense, since the amount of work required for mmap isn't meanginfully proportional to the size being mapped.
@@ -262,7 +262,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     } else {
         // We've verified above that fileSize will fit in `Int`
         guard let bytes = malloc(Int(fileSize)) else {
-            throw fileReadingOrWritingError(posixErrno: ENOMEM, path: inPath, reading: true)
+            throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
         }
         
         localProgress?.becomeCurrent(withPendingUnitCount: Int64(fileSize))
@@ -323,9 +323,10 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
         } while numBytesRead < 0 && errno == EINTR
         
         if numBytesRead < 0 {
-            logFileIOErrno(errno, at: "read")
+            let errNum = errno
+            logFileIOErrno(errNum, at: "read")
             // The read failed
-            throw fileReadingOrWritingError(posixErrno: errno, path: path, reading: true)
+            throw CocoaError.errorWithFilePath(path, errno: errNum, reading: true)
         } else if numBytesRead == 0 {
             // Getting zero here is weird, since it may imply unexpected end of file... If we do, return the number of bytes read so far (which is compatible with the way read() would work with just one call).
             break

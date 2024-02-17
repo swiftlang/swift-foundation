@@ -161,7 +161,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             // The warning diligently tells us we shouldn't be using mktemp() because blindly opening the returned path opens us up to a TOCTOU race. However, in this case, we're being careful by doing O_CREAT|O_EXCL and repeating, just like the implementation of mkstemp.
             // Furthermore, we can't compatibly switch to mkstemp() until we have the ability to set fchmod correctly, which requires the ability to query the current umask, which we don't have. (22033100)
             guard mktemp(templateFileSystemRep) != nil else {
-                throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
             }
             
             let flags: Int32 = O_CREAT | O_EXCL | O_RDWR
@@ -173,7 +173,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             
             // If the file exists, we repeat. Otherwise throw the error.
             if errno != EEXIST {
-                throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
             }
 
             // Try again
@@ -211,7 +211,7 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
                 return (fd, auxFile, temporaryDirectoryPath)
             } else {
                 cleanupTemporaryDirectory(at: temporaryDirectoryPath)
-                throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
             }
         }
     }
@@ -233,14 +233,14 @@ private func write(data: Data, toFileDescriptor fd: Int32, path: PathOrURL, pare
         if count > 0 {
             let result = try writeToFileDescriptorWithProgress(fd, data: region, reportProgress: parentProgress != nil)
             if result != count {
-                throw fileReadingOrWritingError(posixErrno: errno, path: path, reading: false)
+                throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
             }
         }
     }
     
     if !data.isEmpty {
         if fsync(fd) < 0 {
-            throw fileReadingOrWritingError(posixErrno: errno, path: path, reading: false)
+            throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
         }
     }
 }
@@ -306,7 +306,7 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
                 }
             }
         } else if (errno != ENOENT) && (errno != ENAMETOOLONG) {
-            throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: false)
+            throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
         }
 #else
         let newPath = inPath.path
@@ -332,7 +332,7 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
             let savedErrno = errno
             // Cleanup temporary directory
             cleanupTemporaryDirectory(at: temporaryDirectoryPath)
-            throw fileReadingOrWritingError(posixErrno: savedErrno, path: inPath, reading: false)
+            throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
         }
         
         defer { close(fd) }
@@ -353,7 +353,7 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
             if parentProgress?.isCancelled ?? false {
                 throw CocoaError(.userCancelled)
             } else {
-                throw fileReadingOrWritingError(posixErrno: 0, path: inPath, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: 0, reading: false)
             }
         }
         
@@ -398,7 +398,7 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
                                 unlink(auxPathFileSystemRep)
                                 cleanupTemporaryDirectory(at: temporaryDirectoryPath)
                                 cleanupTemporaryDirectory(at: temporaryDirectoryPath2)
-                                throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: false)
+                                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
                             }
                             
                             unlink(auxPath2FileSystemRep)
@@ -415,7 +415,7 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
                     } else {
                         unlink(auxPathFileSystemRep)
                         cleanupTemporaryDirectory(at: temporaryDirectoryPath)
-                        throw fileReadingOrWritingError(posixErrno: errno, path: inPath, reading: false)
+                        throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
                     }
                 }
                 
@@ -467,7 +467,7 @@ private func writeDataToFileNoAux(path inPath: PathOrURL, data: Data, options: D
         
         guard fd >= 0 else {
             let savedErrno = errno
-            throw fileReadingOrWritingError(posixErrno: savedErrno, path: inPath, reading: false)
+            throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
         }
         
         defer { close(fd) }
@@ -483,7 +483,7 @@ private func writeDataToFileNoAux(path inPath: PathOrURL, data: Data, options: D
                 unlink(pathFileSystemRep)
                 throw CocoaError(.userCancelled)
             } else {
-                throw fileReadingOrWritingError(posixErrno: 0, path: inPath, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: 0, reading: false)
             }
         }
         
