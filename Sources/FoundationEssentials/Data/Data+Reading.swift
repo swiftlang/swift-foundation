@@ -323,9 +323,10 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
         } while numBytesRead < 0 && errno == EINTR
         
         if numBytesRead < 0 {
-            logFileIOErrno(errno, at: "read")
+            let errNum = errno
+            logFileIOErrno(errNum, at: "read")
             // The read failed
-            throw CocoaError.errorWithFilePath(path, errno: errno, reading: true)
+            throw CocoaError.errorWithFilePath(path, errno: errNum, reading: true)
         } else if numBytesRead == 0 {
             // Getting zero here is weird, since it may imply unexpected end of file... If we do, return the number of bytes read so far (which is compatible with the way read() would work with just one call).
             break
