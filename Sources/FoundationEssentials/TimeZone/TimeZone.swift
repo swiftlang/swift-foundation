@@ -16,6 +16,8 @@ import Darwin
 import Glibc
 #endif
 
+internal import _CShims
+
 /**
  `TimeZone` defines the behavior of a time zone. Time zone values represent geopolitical regions. Consequently, these values have names for these regions. Time zone values also represent a temporal offset, either plus or minus, from Greenwich Mean Time (GMT) and an abbreviation (such as PST for Pacific Standard Time).
 
@@ -137,6 +139,17 @@ public struct TimeZone : Hashable, Equatable, Sendable {
             TimeZoneCache.cache.setDefault(newValue)
         }
     }
+    
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation) public static var _default : TimeZone! {
+        get {
+            TimeZone.default
+        }
+        set {
+            TimeZone.default = newValue
+        }
+    }
+#endif
 
     // MARK: -
     //
@@ -366,21 +379,6 @@ extension NSTimeZone : _HasCustomAnyHashableRepresentation {
 #endif
 
 extension TimeZone {
-    // Defines from tzfile.h
-#if targetEnvironment(simulator)
-    internal static let TZDIR = "/usr/share/zoneinfo"
-#else
-    internal static let TZDIR = "/var/db/timezone/zoneinfo"
-#endif // targetEnvironment(simulator)
-
-#if os(macOS) || targetEnvironment(simulator)
-    internal static let TZDEFAULT = "/etc/localtime"
-#else
-    internal static let TZDEFAULT = "/var/db/timezone/localtime"
-#endif // os(macOS) || targetEnvironment(simulator)
-}
-
-extension TimeZone {
     // Specifies which occurrence of time to use when it falls into the repeated hour or the skipped hour during DST transition day
     // For the skipped time frame when transitioning into DST (e.g. 1:00 - 3:00 AM for PDT), use `.former`  if asking for the occurrence when DST hasn't happened yet
     // For the repeated time frame when DST ends (e.g. 1:00 - 2:00 AM for PDT), use .former if asking for the instance before turning back the clock
@@ -395,7 +393,7 @@ extension TimeZone {
 #if NO_TZFILE
         return Data()
 #else
-        let path = TimeZone.TZDIR + "/" + name
+        let path = TZDIR + "/" + name
         guard !path.contains("..") else {
             // No good reason for .. to be present anywhere in the path
             return Data()

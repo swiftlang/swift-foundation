@@ -22,6 +22,8 @@ import ucrt
 import WinSDK
 #endif
 
+internal import _CShims
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 internal import CoreFoundation_Private.CFNotificationCenter
@@ -165,7 +167,7 @@ struct TimeZoneCache : Sendable {
             defer { buffer.deallocate() }
             buffer.initialize(repeating: 0)
 
-            let ret = readlink(TimeZone.TZDEFAULT, buffer.baseAddress!, Int(PATH_MAX))
+            let ret = readlink(TZDEFAULT, buffer.baseAddress!, Int(PATH_MAX))
             if ret >= 0 {
                 // Null-terminate the value
                 buffer[ret] = 0
@@ -173,7 +175,12 @@ struct TimeZoneCache : Sendable {
 #if targetEnvironment(simulator) && (os(iOS) || os(tvOS) || os(watchOS))
                     let lookFor = "zoneinfo/"
 #else
-                    let lookFor = TimeZone.TZDIR + "/"
+                    let lookFor: String
+                    if let l = TZDIR.last, l == "/" {
+                        lookFor = TZDIR
+                    } else {
+                        lookFor = TZDIR + "/"
+                    }
 #endif
                     if let rangeOfZoneInfo = file._range(of: lookFor, anchored: false, backwards: false) {
                         let name = file[rangeOfZoneInfo.upperBound...]
@@ -183,6 +190,21 @@ struct TimeZoneCache : Sendable {
                     }
                 }
             }
+            
+#if os(Linux) && !os(WASI)
+            // Try localtime
+            tzset()
+            var t = time(nil)
+            var lt : tm = tm()
+            localtime_r(&t, &lt)
+
+            if let name = String(validatingUTF8: lt.tm_zone) {
+                if let result = fixed(name) {
+                    return TimeZone(inner: result)
+                }
+            }
+#endif
+
 #endif
 #endif //!NO_TZFILE
             // Last option as a default is the GMT value (again, using the cached version directly to avoid recursive lock)
