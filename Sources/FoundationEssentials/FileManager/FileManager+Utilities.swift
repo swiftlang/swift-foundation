@@ -97,7 +97,7 @@ extension _FileManagerImpl {
         #endif
     }
     
-    private static let _catInfoKeys = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden, .creationDate]
+    private static let _catInfoKeys: [FileAttributeKey] = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden, .creationDate]
     static func _setCatInfoAttributes(_ attributes: [FileAttributeKey : Any], path: String) throws {
         let hasRelevantKeys = attributes.keys.contains(where: { _catInfoKeys.contains($0) })
         guard hasRelevantKeys else { return }
