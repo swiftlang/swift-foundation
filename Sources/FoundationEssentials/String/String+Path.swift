@@ -292,10 +292,14 @@ extension String {
         result = components.enumerated().filter { $0 == 0 || !$1.isEmpty }.map(\.1).joined(separator: "/")
         
         // Automounted paths need to be stripped for various flavors of paths
+        let exclusionList = ["/Applications", "/Library", "/System", "/Users", "/Volumes", "/bin", "/cores", "/dev", "/opt", "/private", "/sbin", "/usr"]
         for path in ["/private/var/automount", "/var/automount", "/private"] {
             if result.starts(with: "\(path)/") {
                 let newPath = String(result.dropFirst(path.count))
-                if FileManager.default.fileExists(atPath: newPath) {
+                let isExcluded = exclusionList.contains {
+                    newPath == $0 || newPath.starts(with: "\($0)/")
+                }
+                if !isExcluded && FileManager.default.fileExists(atPath: newPath) {
                     result = newPath
                 }
                 break
