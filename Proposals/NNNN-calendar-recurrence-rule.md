@@ -71,10 +71,12 @@ extension Calendar {
         /// For example, an event with daily recurrence rule that starts at 1 am
         /// on November 2 in PST will repeat on:
         ///
-        /// - 2.11.2024 01:00 PDT (08:00 UTC)
-        /// - 3.11.2024 01:00 PDT (08:00 UTC)
-        /// - 3.11.2024 01:00 PST (09:00 UTC)
-        /// - 4.11.2024 01:00 PST (09:00 UTC)
+        /// - 2024-11-02 01:00 PDT (08:00 UTC)
+        /// - 2024-11-03 01:00 PDT (08:00 UTC)
+        ///   (Time zone switches from PST to PDT - clock jumps back one hour at
+        ///    02:00 PDT)
+        /// - 2024-11-03 01:00 PST (09:00 UTC)
+        /// - 2024-11-04 01:00 PST (09:00 UTC)
         ///
         /// Due to the time zone switch on November 3, there are different times
         /// when the event might repeat.
@@ -106,6 +108,8 @@ extension Calendar {
             public static var never: Self
         }
         /// For how long the event repeats
+        ///
+        /// Default value is `.never`
         public var end: End
         
         public enum Weekday: Sendable, Codable {
@@ -183,7 +187,8 @@ extension Calendar {
         ///
         /// The calculations are implemented according to RFC-5545 and RFC-7529.
         ///
-        /// - Parameter start: the date at which to start search for recurrences
+        /// - Parameter start: the date which defines the starting point for the
+        ///   recurrence rule.
         /// - Parameter range: a range of dates which to search for recurrences.
         ///   If `nil`, return all recurrences of the event.
         /// - Returns: a sequence of dates conforming to the recurrence rule, in
@@ -219,10 +224,10 @@ A recurrence rule of a given frequency repeats the start date with the interval 
 ```swift
 var recurrence = Calendar.RecurrenceRule(calendar: .current, frequency: .daily)
 for date in recurrence.recurrences(of: .now) {
-    // 09 February 2024, 13:43
-    // 10 February 2024, 13:43
-    // 11 February 2024, 13:43
-    // 12 February 2024, 13:43
+    // 2024-02-09, 13:43
+    // 2024-02-10, 13:43
+    // 2024-02-11, 13:43
+    // 2024-02-12, 13:43
     // ...
 }
 ```
@@ -232,11 +237,11 @@ A recurrence can be limited by a given end date:
 let until: Date // = 01 March 2024, 00:00
 var recurrence = Calendar.RecurrenceRule(calendar: .current, frequency: .daily, until: until)
 for date in recurrence.recurrences(of: .now) {
-    // 09 February 2024, 13:43
-    // 10 February 2024, 13:43
+    // 2024-02-09, 13:43
+    // 2024-02-10, 13:43
     // ...
-    // 28 February 2024, 13:43
-    // 29 February 2024, 13:43
+    // 2024-02-28, 13:43
+    // 2024-02-29, 13:43
 }
 ```
 
@@ -244,9 +249,9 @@ or by a given count:
 ```swift
 var recurrence = Calendar.RecurrenceRule(calendar: .current, frequency: .daily, count: 3)
 for date in recurrence.recurrences(of: .now) {
-    // 09 February 2024, 13:43
-    // 10 February 2024, 13:43
-    // 11 February 2024, 13:43
+    // 2024-02-09, 13:43
+    // 2024-02-10, 13:43
+    // 2024-02-11, 13:43
 }
 ```
 
@@ -255,9 +260,9 @@ An internal can be specified so we don't repeat at every unit of the frequency. 
 var recurrence = Calendar.RecurrenceRule(calendar: .current, frequency: .weekly)
 recurrence.interval = 2
 for date in recurrence.recurrences(of: .now) {
-    // 09 February 2024, 13:43
-    // 23 February 2024, 13:43
-    // 08 March    2024, 13:43
+    // 2024-02-09, 13:43
+    // 2024-02-23, 13:43
+    // 2024-03-08, 13:43
 }
 ```
 
@@ -266,11 +271,11 @@ The `minutes`, `hours`, `weekdays`, `daysOfTheMonth`, `months`, and `daysOfTheYe
 var recurrence = Calendar.RecurrenceRule(calendar: .current, frequency: .weekly)
 recurrence.weekdays = [.every(.tuesday), .every(.wednesday), .every(.thursday)]
 for date in recurrence.recurrences(of: .now) {
-    // 13 February 2024, 13:43 (Tuesday)
-    // 14 February 2024, 13:43 (Wednesday)
-    // 15 February 2024, 13:43 (Thursday)
-    // 20 February 2024, 13:43 (Tuesday)
-    // 21 February 2024, 13:43 (Wednesday)
+    // 2024-02-13, 13:43 (Tuesday)
+    // 2024-02-14, 13:43 (Wednesday)
+    // 2024-02-15, 13:43 (Thursday)
+    // 2024-02-20, 13:43 (Tuesday)
+    // 2024-02-21, 13:43 (Wednesday)
     // ...
 }
 ```
@@ -282,11 +287,11 @@ The same fields can be used to limit the search. For example, if we want all the
 var recurrence = Calendar.RecurrenceRule(calendar: .current, frequency: .weekly)
 recurrence.weekdays = [.every(.friday)]
 for date in recurrence.recurrences(of: .now) {
-    // 09 February 2024, 13:43
-    // 16 February 2024, 13:43
-    // 19 February 2024, 13:43
-    // 23 February 2024, 13:43
-    // 07 February 2025, 13:43
+    // 2024-02-09, 13:43
+    // 2024-02-16, 13:43
+    // 2024-02-19, 13:43
+    // 2024-02-23, 13:43
+    // 2025-02-07, 13:43
     // ...
 }
 ```
@@ -298,8 +303,8 @@ var recurrence = Calendar.RecurrenceRule(calendar: .current, frequency: .monthly
 recurrence.weekdays = [.every(.saturday), .every(.sunday)]
 recurrence.setPositions = [1]
 for date in recurrence.recurrences(of: .now) {
-    // 01 March 2024, 13:43
-    // 06 April 2024, 13:43
+    // 2024-03-01, 13:43
+    // 2024-04-06, 13:43
     // ...
 }
 ```
@@ -337,11 +342,11 @@ If we want to choose Feburary 28 to observe the birthday on non-leap years, we c
 ```swift
 recurrence.matchingPolicy = .previousTimePreservingSmallerComponents
 let birthdays = recurrence.recurrences(of: birthday)
-// 29 February 1996 14:00
-// 28 February 1997 14:00
-// 28 February 1998 14:00
-// 28 February 1999 14:00
-// 29 February 2000 14:00
+// 1996-02-29 14:00
+// 1997-02-28 14:00
+// 1998-02-28 14:00
+// 1999-02-28 14:00
+// 2000-02-29 14:00
 // ...
 ```
 
@@ -349,11 +354,11 @@ If we would like to use March 1st, we may use `.nextTimePreservingSmallerCompone
 ```swift
 recurrence.matchingPolicy = .nextTimePreservingSmallerComponents
 let birthdays = recurrence.recurrences(of: birthday)
-// 29 February 1996 14:00
-// 01 March    1997 14:00
-// 01 March    1998 14:00
-// 01 March    1999 14:00
-// 29 February 2000 14:00
+// 1996-02-29 14:00
+// 1997-03-01 14:00
+// 1998-03-01 14:00
+// 1999-03-01 14:00
+// 2000-02-29 14:00
 // ...
 ```
 
@@ -361,9 +366,9 @@ Alternatively, if we only care about exact matches, we can use `.strict`:
 ```swift
 recurrence.matchingPolicy = .strict
 let birthdays = recurrence.recurrences(of: birthday)
-// 29 February 1996 14:00
-// 29 February 2000 14:00
-// 29 February 2004 14:00
+// 1996-02-29 14:00
+// 2000-02-29 14:00
+// 2004-02-29 14:00
 // ...
 ```
 
