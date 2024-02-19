@@ -552,7 +552,7 @@ final class FileManagerTests : XCTestCase {
         }
     }
     
-    func testStandardizingPathAutomount() {
+    func testStandardizingPathAutomount() throws {
         #if canImport(Darwin)
         let tests = [
             "/private/System" : "/private/System",
