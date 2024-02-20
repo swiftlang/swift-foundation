@@ -239,8 +239,6 @@ extension Data {
      - parameter dataBuffer: A BufferView of the bytes to encode
      - parameter options:    Options for formatting the result
      - parameter buffer:     The buffer to write the bytes into
-
-       NOTE: dataBuffer would be better expressed as a <T: Collection> where T.Element == UInt8, T.Index == Int but this currently gives much poorer performance.
      */
     static func base64EncodeBytes(_ dataBuffer: BufferView<UInt8>, _ buffer: inout OutputBuffer<UInt8>, options: Base64EncodingOptions = []) {
         // Use a StaticString for lookup of values 0-63 -> ASCII values
@@ -267,16 +265,14 @@ extension Data {
                 lineLength = 0
             }
 
-            if options.contains(.endLineWithCarriageReturn) && options.contains(.endLineWithLineFeed) {
+            switch (options.contains(.endLineWithCarriageReturn), options.contains(.endLineWithLineFeed)) {
+            case (true, true), (false, false):
                 separatorByte1 = UInt8(ascii: "\r")
                 separatorByte2 = UInt8(ascii: "\n")
-            } else if options.contains(.endLineWithCarriageReturn) {
+            case (true, false):
                 separatorByte1 = UInt8(ascii: "\r")
-            } else if options.contains(.endLineWithLineFeed) {
+            case (false, true):
                 separatorByte1 = UInt8(ascii: "\n")
-            } else {
-                separatorByte1 = UInt8(ascii: "\r")
-                separatorByte2 = UInt8(ascii: "\n")
             }
         }
 
