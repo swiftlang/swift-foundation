@@ -545,10 +545,8 @@ final class FileManagerTests : XCTestCase {
             let attributes = try $0.attributesOfItem(atPath: "foo")
             // Ensure the unconventional UInt16 was accepted as input
             XCTAssertEqual(attributes[.posixPermissions] as? UInt, 0o644)
-            #if FOUNDATION_FRAMEWORK
-            // Where we have NSNumber, ensure that we can get the value back as an unconventional Double value
+            // Ensure that we can read attribute values as any type, even an unconventional type like Double
             XCTAssertEqual(attributes[.posixPermissions] as? Double, Double(0o644))
-            #endif
         }
     }
     

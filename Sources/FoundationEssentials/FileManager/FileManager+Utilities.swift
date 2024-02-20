@@ -75,19 +75,19 @@ extension _FileManagerImpl {
             let finderInfo = finderInfoData.withUnsafeBytes({ $0.load(as: _HFSFinderInfo.self) })
             // Record the creator and file type of a file.
             if statInfo.isRegular {
-                attributes[.hfsCreatorCode] = _writeFileAttributePrimitive(finderInfo.fileInfo.fdCreator, as: UInt.self)
-                attributes[.hfsTypeCode] = _writeFileAttributePrimitive(finderInfo.fileInfo.fdType, as: UInt.self)
+                attributes[.hfsCreatorCode] = AnyHashable(finderInfo.fileInfo.fdCreator)
+                attributes[.hfsTypeCode] = AnyHashable(finderInfo.fileInfo.fdType)
             } else if statInfo.isSymbolicLink {
-                attributes[.hfsCreatorCode] = _writeFileAttributePrimitive(kSymLinkCreator, as: UInt.self)
-                attributes[.hfsTypeCode] = _writeFileAttributePrimitive(kSymLinkFileType, as: UInt.self)
+                attributes[.hfsCreatorCode] = AnyHashable(kSymLinkCreator)
+                attributes[.hfsTypeCode] = AnyHashable(kSymLinkFileType)
             }
-            attributes[.busy] = _writeFileAttributePrimitive((finderInfo.extendedFileInfo.extended_flags & 0x80 /*kExtendedFlagObjectIsBusy*/) != 0)
+            attributes[.busy] = AnyHashable((finderInfo.extendedFileInfo.extended_flags & 0x80 /*kExtendedFlagObjectIsBusy*/) != 0)
         }
         #endif
         
         // Record whether or not the file or directory's name extension is hidden.
         if let value = values.hasHiddenExtension {
-            attributes[.extensionHidden] = _writeFileAttributePrimitive(value)
+            attributes[.extensionHidden] = AnyHashable(value)
         }
 
         // Record the creation date of the object.

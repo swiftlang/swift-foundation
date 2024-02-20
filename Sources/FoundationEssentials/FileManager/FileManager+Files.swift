@@ -58,11 +58,10 @@ extension mode_t {
 
 func _readFileAttributePrimitive<T: BinaryInteger>(_ value: Any?, as type: T.Type) -> T? {
     guard let value else { return nil }
-    #if FOUNDATION_FRAMEWORK
-    if let nsNumber = value as? NSNumber, let result = nsNumber as? T {
-        return result
+    
+    if let castValue = value as? T {
+        return castValue
     }
-    #endif
     
     if let binInt = value as? (any BinaryInteger), let result = T(exactly: binInt) {
         return result
@@ -72,11 +71,10 @@ func _readFileAttributePrimitive<T: BinaryInteger>(_ value: Any?, as type: T.Typ
 
 func _readFileAttributePrimitive(_ value: Any?, as type: Bool.Type) -> Bool? {
     guard let value else { return nil }
-    #if FOUNDATION_FRAMEWORK
-    if let nsNumber = value as? NSNumber, let result = nsNumber as? Bool {
-        return result
+    
+    if let boolValue = value as? Bool {
+        return boolValue
     }
-    #endif
     
     if let binInt = value as? (any BinaryInteger), let result = Int(exactly: binInt) {
         switch result {
@@ -86,26 +84,6 @@ func _readFileAttributePrimitive(_ value: Any?, as type: Bool.Type) -> Bool? {
         }
     }
     return nil
-}
-
-func _writeFileAttributePrimitive<T: BinaryInteger, U: BinaryInteger>(_ value: T, as type: U.Type) -> Any {
-    #if FOUNDATION_FRAMEWORK
-    if let int = Int64(exactly: value) {
-        NSNumber(value: int)
-    } else {
-        NSNumber(value: UInt64(value))
-    }
-    #else
-    U(value)
-    #endif
-}
-
-func _writeFileAttributePrimitive(_ value: Bool) -> Any {
-    #if FOUNDATION_FRAMEWORK
-    NSNumber(value: value)
-    #else
-    value
-    #endif
 }
 
 extension stat {
@@ -128,16 +106,16 @@ extension stat {
     fileprivate var fileAttributes: [FileAttributeKey : Any] {
         let fileType = st_mode.fileType
         var result: [FileAttributeKey : Any] = [
-            .size : _writeFileAttributePrimitive(st_size, as: UInt.self),
+            .size : AnyHashable(st_size),
             .modificationDate : modificationDate,
             .creationDate : creationDate,
-            .posixPermissions : _writeFileAttributePrimitive(st_mode & 0o7777, as: UInt.self),
-            .referenceCount : _writeFileAttributePrimitive(st_nlink, as: UInt.self),
-            .systemNumber : _writeFileAttributePrimitive(st_dev, as: UInt.self),
-            .systemFileNumber : _writeFileAttributePrimitive(st_ino, as: UInt64.self),
+            .posixPermissions : AnyHashable(st_mode & 0o7777),
+            .referenceCount : AnyHashable(st_nlink),
+            .systemNumber : AnyHashable(st_dev),
+            .systemFileNumber : AnyHashable(st_ino),
             .type : fileType,
-            .ownerAccountID : _writeFileAttributePrimitive(st_uid, as: UInt.self),
-            .groupOwnerAccountID : _writeFileAttributePrimitive(st_gid, as: UInt.self)
+            .ownerAccountID : AnyHashable(st_uid),
+            .groupOwnerAccountID : AnyHashable(st_gid)
         ]
         if let userName = _nameFor(uid: st_uid) {
             result[.ownerAccountName] = userName
@@ -146,14 +124,14 @@ extension stat {
             result[.groupOwnerAccountName] = groupName
         }
         if fileType == .typeBlockSpecial || fileType == .typeCharacterSpecial {
-            result[.deviceIdentifier] = _writeFileAttributePrimitive(st_rdev, as: UInt.self)
+            result[.deviceIdentifier] = AnyHashable(st_rdev)
         }
         #if canImport(Darwin)
         if (st_flags & UInt32(UF_IMMUTABLE)) != 0 || (st_flags & UInt32(SF_IMMUTABLE)) != 0 {
-            result[.immutable] = _writeFileAttributePrimitive(true)
+            result[.immutable] = AnyHashable(true)
         }
         if (st_flags & UInt32(UF_APPEND)) != 0 || (st_flags & UInt32(SF_APPEND)) != 0 {
-            result[.appendOnly] = _writeFileAttributePrimitive(true)
+            result[.appendOnly] = AnyHashable(true)
         }
         #endif
         return result
@@ -553,11 +531,11 @@ extension _FileManagerImpl {
             #endif
             
             return [
-                .systemSize : _writeFileAttributePrimitive(totalSizeBytes, as: UInt64.self),
-                .systemFreeSize : _writeFileAttributePrimitive(availSizeBytes, as: UInt64.self),
-                .systemNodes : _writeFileAttributePrimitive(totalFiles, as: UInt64.self),
-                .systemFreeNodes : _writeFileAttributePrimitive(availFiles, as: UInt64.self),
-                .systemNumber : _writeFileAttributePrimitive(fsNumber, as: UInt.self)
+                .systemSize : AnyHashable(totalSizeBytes),
+                .systemFreeSize : AnyHashable(availSizeBytes),
+                .systemNodes : AnyHashable(totalFiles),
+                .systemFreeNodes : AnyHashable(availFiles),
+                .systemNumber : AnyHashable(fsNumber)
             ]
         }
     }
