@@ -9,7 +9,8 @@
 
 ## Revision history
 
-* **v1** Initial draft
+* **v1** Initial version
+* **v2** Make filters on `RecurrenceRule` not optional, and use `[]` to signify no filter is applied
 
 ## Introduction
 
@@ -186,39 +187,39 @@ extension Calendar {
         
         /// On which seconds of the minute the event should repeat. Valid values
         /// between 0 and 60
-        public var seconds: [Int]?
+        public var seconds: [Int]
         /// On which minutes of the hour the event should repeat. Accepts values
         /// between 0 and 59
-        public var minutes: [Int]?
+        public var minutes: [Int]
         /// On which hours of a 24-hour day the event should repeat.
-        public var hours: [Int]?
+        public var hours: [Int]
         /// On which days of the week the event should occur
-        public var weekdays: [Weekday]?
+        public var weekdays: [Weekday]
         /// On which days in the month the event should occur
         /// - 1 signifies the first day of the month.
         /// - Negative values point to a day counted backwards from the last day
         ///   of the month
         /// This field is unused when `frequency` is `.weekly`.
-        public var daysOfTheMonth: [Int]?
+        public var daysOfTheMonth: [Int]
         /// On which days of the year the event may occur.
         /// - 1 signifies the first day of the year.
         /// - Negative values point to a day counted backwards from the last day
         ///   of the year
         /// This field is unused when `frequency` is any of `.daily`, `.weekly`,
         /// or `.monthly`.
-        public var daysOfTheYear: [Int]?
+        public var daysOfTheYear: [Int]
         /// On which months the event should occur.
         /// - 1 is the first month of the year (January in Gregorian calendars)
-        public var months: [Month]?
+        public var months: [Month]
         /// On which weeks of the year the event should occur.
         /// - 1 is the first week of the year. `calendar.minimumDaysInFirstWeek`
         ///   defines which week is considered first.
         /// - Negative values refer to weeks if counting backwards from the last
         ///   week of the year. -1 is the last week of the year.
         /// This field is unused when `frequency` is other than `.yearly`.
-        public var weeks: [Int]?
+        public var weeks: [Int]
         /// Which occurrences within every interval should be returned
-        public var setPositions: [Int]?
+        public var setPositions: [Int]
 
         public init(calendar: Calendar,
                     frequency: Frequency,
@@ -226,15 +227,15 @@ extension Calendar {
                     end: End = .never,
                     matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents,
                     repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst,
-                    months: [Month]? = nil,
-                    daysOfTheYear: [Int]? = nil,
-                    daysOfTheMonth: [Int]? = nil,
-                    weeks: [Int]? = nil,
-                    weekdays: [Weekday]? = nil,
-                    hours: [Int]? = nil,
-                    minutes: [Int]? = nil,
-                    seconds: [Int]? = nil,
-                    setPositions: [Int]? = nil) -> Self
+                    months: [Month] = [],
+                    daysOfTheYear: [Int] = [],
+                    daysOfTheMonth: [Int] = [],
+                    weeks: [Int] = [],
+                    weekdays: [Weekday] = [],
+                    hours: [Int] = [],
+                    minutes: [Int] = [],
+                    seconds: [Int] = [],
+                    setPositions: [Int] = []) -> Self
 
         /// Find recurrences of the given date
         ///
@@ -252,17 +253,17 @@ extension Calendar {
                                 ) -> some (Sequence<Date> & Sendable)
 
         /// A recurrence that repeats every `interval` minutes
-        public static func minutely(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month]? = nil, daysOfTheYear: [Int]? = nil, daysOfTheMonth: [Int]? = nil, weekdays: [Weekday]? = nil, hours: [Int]? = nil, minutes: [Int]? = nil, seconds: [Int]? = nil setPositions: [Int]? = nil) -> Self
+        public static func minutely(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month] = [], daysOfTheYear: [Int] = [], daysOfTheMonth: [Int] = [], weekdays: [Weekday] = [], hours: [Int] = [], minutes: [Int] = [], seconds: [Int] = [] setPositions: [Int] = []) -> Self
         /// A recurrence that repeats every `interval` hours
-        public static func hourly(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month]? = nil, daysOfTheYear: [Int]? = nil, daysOfTheMonth: [Int]? = nil, weekdays: [Weekday]? = nil, hours: [Int]? = nil, minutes: [Int]? = nil, seconds: [Int]? = nil setPositions: [Int]? = nil) -> Self
+        public static func hourly(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month] = [], daysOfTheYear: [Int] = [], daysOfTheMonth: [Int] = [], weekdays: [Weekday] = [], hours: [Int] = [], minutes: [Int] = [], seconds: [Int] = [] setPositions: [Int] = []) -> Self
         /// A recurrence that repeats every `interval` days
-        public static func daily(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month]? = nil, daysOfTheMonth: [Int]? = nil, weekdays: [Weekday]? = nil, hours: [Int]? = nil, minutes: [Int]? = nil, seconds: [Int]? = nil setPositions: [Int]? = nil) -> Self
+        public static func daily(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month] = [], daysOfTheMonth: [Int] = [], weekdays: [Weekday] = [], hours: [Int] = [], minutes: [Int] = [], seconds: [Int] = [] setPositions: [Int] = []) -> Self
         /// A recurrence that repeats every `interval` weeks
-        public static func weekly(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month]? = nil, weekdays: [Weekday]? = nil, hours: [Int]? = nil, minutes: [Int]? = nil, seconds: [Int]? = nil setPositions: [Int]? = nil) -> Self
+        public static func weekly(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month] = [], weekdays: [Weekday] = [], hours: [Int] = [], minutes: [Int] = [], seconds: [Int] = [] setPositions: [Int] = []) -> Self
         /// A recurrence that repeats every `interval` months
-        public static func monthly(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month]? = nil, daysOfTheMonth: [Int?] = nil, weekdays: [Weekday]? = nil, hours: [Int]? = nil, minutes: [Int]? = nil, seconds: [Int]? = nil setPositions: [Int]? = nil) -> Self
+        public static func monthly(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month] = [], daysOfTheMonth: [Int] = [], weekdays: [Weekday] = [], hours: [Int] = [], minutes: [Int] = [], seconds: [Int] = [] setPositions: [Int] = []) -> Self
         /// A recurrence that repeats every `interval` years
-        public static func yearly(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month]? = nil, daysOfTheYear: [Int]? = nil, daysOfTheMonth: [Int]? = nil, weeks: [Int]? = nil, weekdays: [Weekday]? = nil, hours: [Int]? = nil, minutes: [Int]? = nil, seconds: [Int]? = nil setPositions: [Int]? = nil) -> Self
+        public static func yearly(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month] = [], daysOfTheYear: [Int] = [], daysOfTheMonth: [Int] = [], weeks: [Int] = [], weekdays: [Weekday] = [], hours: [Int] = [], minutes: [Int] = [], seconds: [Int] = [] setPositions: [Int] = []) -> Self
     }
 }
 ```
@@ -319,7 +320,7 @@ for date in recurrence.recurrences(of: .now) {
 }
 ```
 
-The `minutes`, `hours`, `weekdays`, `daysOfTheMonth`, `months`, and `daysOfTheYear` can be used to limit or expand the search so it returns multiple results per unit of repetitions. For example, if we want to repeat an event every Tuesday, Wednesday, and Thursday:
+The `minutes`, `hours`, `weekdays`, `daysOfTheMonth`, `months`, and `daysOfTheYear` can be used to limit or expand the search so it returns multiple results per unit of repetitions. A value of `[]` is unused and does not affect the recurrence. For example, if we want to repeat an event every Tuesday, Wednesday, and Thursday:
 ```swift
 var recurrence = Calendar.RecurrenceRule(calendar: .current, frequency: .weekly)
 recurrence.weekdays = [.every(.tuesday), .every(.wednesday), .every(.thursday)]
