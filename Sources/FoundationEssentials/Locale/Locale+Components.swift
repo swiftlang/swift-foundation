@@ -566,6 +566,13 @@ extension Locale {
             self = Self.weekdays[Int(icuIndex) - 1]
         }
 
+        package init?(_ localePrefIndex: Int) {
+            guard let innerSelf = Weekday(Int32(localePrefIndex)) else {
+                return nil
+            }
+            self = innerSelf
+        }
+
         package var icuIndex: Int {
             Self.weekdays.firstIndex(of: self)! + 1
         }
