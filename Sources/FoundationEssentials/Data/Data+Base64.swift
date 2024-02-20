@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2023 Apple Inc. and the Swift project authors
+// Copyright (c) 2023-2024 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -25,23 +25,14 @@ extension Data {
     /// Returns nil when the input is not recognized as valid Base-64.
     /// - parameter base64String: The string to parse.
     /// - parameter options: Encoding options. Default value is `[]`.
-    public init?(
-        base64Encoded base64String: consuming String,
-        options: Base64DecodingOptions = []
-    ) {
-        do {
-            self = try base64String.withUTF8 {
-                // String won't pass an empty buffer with a `nil` `baseAddress`.
-                try Data(
-                    decodingBase64: BufferView(unsafeBufferPointer: $0)!,
-                    options: options
-                )
-            }
+    public init?(base64Encoded base64String: __shared String, options: Base64DecodingOptions = []) {
+        var encoded = base64String
+        let decoded = encoded.withUTF8 {
+            // String won't pass an empty buffer with a `nil` `baseAddress`.
+            Data(decodingBase64: BufferView(unsafeBufferPointer: $0)!, options: options)
         }
-        catch {
-            precondition(error is Base64Error)
-            return nil
-        }
+        guard let decoded else { return nil }
+        self = decoded
     }
 
 
@@ -51,39 +42,32 @@ extension Data {
     ///
     /// - parameter base64Data: Base-64, UTF-8 encoded input data.
     /// - parameter options: Decoding options. Default value is `[]`.
-    public init?(
-        base64Encoded base64Data: borrowing Data,
-        options: Base64DecodingOptions = []
-    ) {
-        do {
-            self = try base64Data.withBufferView {
-                try Data(decodingBase64: $0, options: options)
-            }
+    public init?(base64Encoded base64Data: __shared Data, options: Base64DecodingOptions = []) {
+        let decoded = base64Data.withBufferView {
+            Data(decodingBase64: $0, options: options)
         }
-        catch {
-            precondition(error is Base64Error)
-            return nil
-        }
+        guard let decoded else { return nil }
+        self = decoded
     }
 
-    private init(decodingBase64 bytes: borrowing BufferView<UInt8>, options: Base64DecodingOptions = []) throws {
-        if !bytes.count.isMultiple(of: 4) &&
-           !options.contains(.ignoreUnknownCharacters) {
-            throw Base64Error.invalidElementCount
-        }
+    init?(decodingBase64 bytes: borrowing BufferView<UInt8>, options: Base64DecodingOptions = []) {
+        guard bytes.count.isMultiple(of: 4) || options.contains(.ignoreUnknownCharacters)
+        else { return nil }
 
         // Every 4 valid ASCII bytes maps to 3 output bytes: (bytes.count * 3)/4
         let capacity = (bytes.count * 3) >> 2
         // A non-trapping version of the calculation goes like this:
         // let (q, r) = bytes.count.quotientAndRemainder(dividingBy: 4)
         // let capacity = (q * 3) + (r==0 ? 0 : r-1)
-        self = try Data(
+        let decoded = try? Data(
             capacity: capacity,
             initializingWith: { //FIXME: should work with borrowed `bytes`
                 [bytes = copy bytes] in
                 try Data.base64DecodeBytes(bytes, &$0, options: options)
             }
         )
+        guard let decoded else { return nil }
+        self = decoded
     }
 
     // MARK: - Create base64
@@ -143,10 +127,10 @@ extension Data {
      - throws:               When decoding fails
      */
     static func base64DecodeBytes(
-        _ bytes: borrowing BufferView<UInt8>,
-        _ output: inout OutputBuffer<UInt8>,
-        options: Base64DecodingOptions = []
+        _ bytes: borrowing BufferView<UInt8>, _ output: inout OutputBuffer<UInt8>, options: Base64DecodingOptions = []
     ) throws {
+        guard bytes.count.isMultiple(of: 4) || options.contains(.ignoreUnknownCharacters)
+        else { throw Base64Error.invalidElementCount }
 
         // This table maps byte values 0-127, input bytes >127 are always invalid.
         // Map the ASCII characters "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" -> 0...63
@@ -240,7 +224,9 @@ extension Data {
      - parameter options:    Options for formatting the result
      - parameter buffer:     The buffer to write the bytes into
      */
-    static func base64EncodeBytes(_ dataBuffer: BufferView<UInt8>, _ buffer: inout OutputBuffer<UInt8>, options: Base64EncodingOptions = []) {
+    static func base64EncodeBytes(
+        _ dataBuffer: BufferView<UInt8>, _ buffer: inout OutputBuffer<UInt8>, options: Base64EncodingOptions = []
+    ) {
         // Use a StaticString for lookup of values 0-63 -> ASCII values
         let base64Chars = StaticString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
         assert(base64Chars.utf8CodeUnitCount == 64)
