@@ -195,7 +195,7 @@ extension _FileManagerImpl {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, url)
         }
         
-        try createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
+        try fileManager.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
     #endif
     
