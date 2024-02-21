@@ -35,7 +35,6 @@ extension Data {
         self = decoded
     }
 
-
     /// Initialize a `Data` from a Base-64, UTF-8 encoded `Data`.
     ///
     /// Returns nil when the input is not recognized as valid Base-64.
