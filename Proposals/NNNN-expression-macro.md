@@ -5,7 +5,7 @@
 * Review Manager: TBD
 * Bug: rdar://122026982
 * Status: **Pitch**
-* Implementation: _coming soon_
+* Implementation: [apple/swift-foundation#432](https://github.com/apple/swift-foundation/pull/432)
 
 ## Revision history
 
