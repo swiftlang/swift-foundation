@@ -1,10 +1,10 @@
 # `#Expression` Macro and Type
 
-* Proposal: [SF-NNNN](NNNN-expression-macro.md)
+* Proposal: [SF-0006](0006-expression-macro.md)
 * Author(s): [Jeremy Schonfeld](https://github.com/jmschonfeld)
-* Review Manager: TBD
+* Review Manager: [Tina Liu](https://github.com/itingliu)
 * Bug: rdar://122026982
-* Status: **Pitch**
+* Status: **Active review: Feb 22, 2024...Feb 29, 2024**
 * Implementation: [apple/swift-foundation#432](https://github.com/apple/swift-foundation/pull/432)
 
 ## Revision history
