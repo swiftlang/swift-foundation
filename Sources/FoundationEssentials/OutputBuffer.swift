@@ -177,34 +177,11 @@ extension OutputBuffer {
     }
 }
 
-extension Array {
-
-    init(
-        capacity: Int,
-        initializingWith initializer: (inout OutputBuffer<Element>) throws -> Void
-    ) rethrows {
-        try self.init(
-            unsafeUninitializedCapacity: capacity,
-            initializingWith: { (buffer, count) in
-                var output = OutputBuffer(
-                    initializing: buffer.baseAddress.unsafelyUnwrapped,
-                    capacity: buffer.count
-                )
-                try initializer(&output)
-                let initialized = output.relinquishBorrowedMemory()
-                assert(initialized.baseAddress == buffer.baseAddress)
-                count = initialized.count
-            }
-        )
-    }
-}
-
 extension String {
 
     // also see https://github.com/apple/swift/pull/23050
     // and `final class __SharedStringStorage`
 
-    @available(macOS 11, *)
     init(
         utf8Capacity capacity: Int,
         initializingWith initializer: (inout OutputBuffer<UInt8>) throws -> Void
