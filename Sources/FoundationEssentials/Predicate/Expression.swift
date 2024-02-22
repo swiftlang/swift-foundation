@@ -10,6 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly
+import Synchronization
+#endif
+
 @available(FoundationPredicate 0.1, *)
 public protocol PredicateExpression<Output> {
     associatedtype Output
@@ -81,15 +86,23 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
 extension PredicateExpressions {
     public struct VariableID: Hashable, Codable, Sendable {
         let id: UInt
+        #if FOUNDATION_FRAMEWORK
+        private static let nextID = Atomic<UInt>(0)
+        #else
         private static let nextID = LockedState(initialState: UInt(0))
+        #endif
         
         init() {
+            #if FOUNDATION_FRAMEWORK
+            self.id = Self.nextID.wrappingAdd(1, ordering: .relaxed).oldValue
+            #else
             self.id = Self.nextID.withLock { value in
                 defer {
                     (value, _) = value.addingReportingOverflow(1)
                 }
                 return value
             }
+            #endif
         }
         
         public func encode(to encoder: Encoder) throws {
