@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
+@_implementationOnly
 import Synchronization
 #endif
 
