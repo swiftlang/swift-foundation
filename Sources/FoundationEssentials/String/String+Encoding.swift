@@ -100,7 +100,7 @@ extension String.Encoding : CustomStringConvertible {
 #if FOUNDATION_FRAMEWORK && !NO_LOCALIZATION
         return String.localizedName(of: self)
 #else
-        return "\(self)"
+        return "\(self.rawValue)"
 #endif
     }
 }
