@@ -12,16 +12,19 @@
 
 import Benchmark
 import func Benchmark.blackHole
+
+#if FOUNDATION_FRAMEWORK
+import Foundation
+#else
 import FoundationEssentials
 import FoundationInternationalization
+#endif
 
 let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
-    //    Benchmark.defaultConfiguration.metrics = .arc + [.cpuTotal, .wallClock, .mallocCountTotal, .throughput] // use ARC to see traffic
-    //  Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput] // skip ARC as it has some overhead
-    Benchmark.defaultConfiguration.metrics = .all // Use all metrics to easily see which ones are of interest for this benchmark suite
+    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput]
     
     let thanksgivingComponents = DateComponents(month: 11, weekday: 5, weekOfMonth: 4)
     let cal = Calendar(identifier: .gregorian)

@@ -12,13 +12,18 @@
 
 import Benchmark
 import func Benchmark.blackHole
+
+#if FOUNDATION_FRAMEWORK
+import Foundation
+#else
 import FoundationEssentials
+#endif
 
 let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
-    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput] // use ARC to see traffic
+    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
     
     // MARK: UUID
     
