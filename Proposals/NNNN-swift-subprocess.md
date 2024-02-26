@@ -16,6 +16,11 @@
     - Added a new option, `closeWhenDone`, to automatically close the file descriptors passed in via `.readFrom` and friends.
     - Introduced a new parameter, `shouldSendToProcessGroup`, in the `sendSignal` function to control whether the signal should be sent to the process or the process group.
     - Introduced a section on "Future Directions."
+* **v3**: Minor updates:
+    - Added a section describing `Task Cancellation`
+    - Clarified for `readFrom()` and `writeTo()` Subprocess will close the passed in file descriptor right after spawning the process when `closeWhenDone` is set to true.
+    - Adjusted argument orders in `Arguments`.
+    - Added `Subprocess.run(withConfiguration:...)` in favor or `Configuration.run()`.
 
 ## Introduction
 
@@ -213,6 +218,13 @@ extension Subprocess {
         error: RedirectedOutputMethod = .discard,
         _ body: (@Sendable @escaping (Subprocess, StandardInputWriter) async throws -> R)
     ) async throws -> Result<R>
+
+    public static func run<R>(
+        withConfiguration configuration: Configuration,
+        output: RedirectedOutputMethod = .redirect,
+        error: RedirectedOutputMethod = .redirect,
+        _ body: (@Sendable @escaping (Subprocess, StandardInputWriter) async throws -> R)
+    ) async throws -> Result<R>
 }
 ```
 
@@ -351,17 +363,11 @@ extension Subprocess {
     @available(tvOS, unavailable)
     @available(watchOS, unavailable)
     public struct StandardInputWriter: Sendable {
-        @discardableResult
-        public func write<S>(_ sequence: S) async throws -> Int where S : Sequence, S.Element == UInt8
+        public func write<S>(_ sequence: S) async throws where S : Sequence, S.Element == UInt8
+        public func write<S>(_ sequence: S) async throws where S : Sequence, S.Element == CChar
 
-        @discardableResult
-        public func write<S>(_ sequence: S) async throws -> Int where S : Sequence, S.Element == CChar
-
-        @discardableResult
-        public func write<S: AsyncSequence>(_ asyncSequence: S) async throws -> Int where S.Element == CChar
-
-        @discardableResult
-        public func write<S: AsyncSequence>(_ asyncSequence: S) async throws -> Int where S.Element == UInt8
+        public func write<S: AsyncSequence>(_ asyncSequence: S) async throws where S.Element == CChar
+        public func write<S: AsyncSequence>(_ asyncSequence: S) async throws where S.Element == UInt8
 
         public func finish() async throws
     }
@@ -394,19 +400,6 @@ public extension Subprocess {
             workingDirectory: FilePath? = nil,
             platformOptions: PlatformOptions = .default
         )
-
-        public func run<R>(
-            input: InputMethod,
-            output: RedirectedOutputMethod,
-            error: RedirectedOutputMethod,
-            _ body: (@Sendable @escaping (Subprocess) async throws -> R)
-        ) async throws -> Result<R>
-
-        public func run<R>(
-            output: RedirectedOutputMethod,
-            error: RedirectedOutputMethod,
-            _ body: @Sendable @escaping (Subprocess, StandardInputWriter) async throws -> R
-        ) async throws -> Result<R>
     }
 }
 ```
@@ -443,19 +436,17 @@ extension Subprocess {
         // Create a new process group
         public var createProcessGroup: Bool
         public var launchRequirementData: Data?
-        public var additionalSpawnAttributeConfiguration: (@Sendable (inout posix_spawnattr_t?) throws -> Void)?
-        public var additionalFileAttributeConfiguration: (@Sendable (inout posix_spawn_file_actions_t?) throws -> Void)?
+        public var additionalSpawnAttributeConfigurator: (@Sendable (inout posix_spawnattr_t?) throws -> Void)?
+        public var additionalFileAttributeConfigurator: (@Sendable (inout posix_spawn_file_actions_t?) throws -> Void)?
 
         public init(
             qualityOfService: QualityOfService,
             userID: Int? = nil,
             groupID: Int? = nil,
-            supplementaryGroups: [Int]? = nil,
+            supplementaryGroups: [Int]?,
             createSession: Bool,
             createProcessGroup: Bool,
-            launchRequirementData: Data? = nil,
-            additionalSpawnAttributeConfiguration: (@Sendable (inout posix_spawnattr_t?) throws -> Void)? = nil,
-            additionalFileAttributeConfiguration: (@Sendable (inout posix_spawn_file_actions_t?) throws -> Void)? = nil
+            launchRequirementData: Data?
         )
 
         public static var `default`: Self
@@ -467,11 +458,11 @@ extension Subprocess {
 
 For Darwin, we are proposing two such APIs:
 
-- `.additionalSpawnAttributeConfiguration: (@Sendable (inout posix_spawnattr_t?) throws -> Void)?` gives developers an opportunity to configure the `posix_spawnattr_t` object just before it's passed to `posix_spawn()`. For instance, developers can set additional spawn flags:
+- `.additionalSpawnAttributeConfigurator: (@Sendable (inout posix_spawnattr_t?) throws -> Void)?` gives developers an opportunity to configure the `posix_spawnattr_t` object just before it's passed to `posix_spawn()`. For instance, developers can set additional spawn flags:
 
 ```swift
 let config = Subprocess.Configuration(executing: .at("/my/executable"))
-config.additionalSpawnAttributeConfiguration = { spawnAttr in
+config.additionalSpawnAttributeConfigurator = { spawnAttr in
     let flags: Int32 = POSIX_SPAWN_CLOEXEC_DEFAULT |
         POSIX_SPAWN_SETSIGMASK |
         POSIX_SPAWN_SETSIGDEF |
@@ -480,12 +471,12 @@ config.additionalSpawnAttributeConfiguration = { spawnAttr in
 }
 ```
 
-- Similarly, `.additionalFileAttributeConfiguration: (@Sendable (inout posix_spawn_file_actions_t?) throws -> Void)` allows developers to customize `posix_spawn_file_actions_t`. For instance, a developer might want to bind child file descriptors, other than standard input (fd 0), standard output (fd 1), and standard error (fd 2), to parent file descriptors:
+- Similarly, `.additionalFileAttributeConfigurator: (@Sendable (inout posix_spawn_file_actions_t?) throws -> Void)` allows developers to customize `posix_spawn_file_actions_t`. For instance, a developer might want to bind child file descriptors, other than standard input (fd 0), standard output (fd 1), and standard error (fd 2), to parent file descriptors:
 
 ```swift
 let config = Subprocess.Configuration(executing: .at("/my/executable"))
 // Bind child fd 4 to a parent fd
-config.additionalFileAttributeConfiguration = { fileAttr in
+config.additionalFileAttributeConfigurator = { fileAttr in
     let parentFd: FileDescriptor = ...
     posix_spawn_file_actions_adddup2(&fileAttr, parentFd.rawValue, 4)
 } 
@@ -498,7 +489,7 @@ _(We welcome community input on which Linux and Windows "escape hatches" we shou
 
 In addition to supporting the direct passing of `Sequence<UInt8>` and `AsyncSequence<UInt8>` as the standard input to the child process, `Subprocess` also provides a `Subprocess.InputMethod` type that includes two additional input options:
 - `.noInput`: Specifies that the subprocess does not require any standard input. This is the default value.
-- `.readFrom`: Specifies that the subprocess should read its standard input from a file descriptor provided by the developer. Subprocess will automatically close the file descriptor after the process exits if `closeWhenDone` is set to `true`.
+- `.readFrom`: Specifies that the subprocess should read its standard input from a file descriptor provided by the developer. Subprocess will automatically close the file descriptor after the process is spawned if `closeWhenDone` is set to `true`.
 
 ```swift
 extension Subprocess {
@@ -529,11 +520,11 @@ let exe = try await Subprocess.run(executing: .at("/some/executable"), input: se
 ```
 
 
-## `Subprocess` Output Methods
+### `Subprocess` Output Methods
 
 `Subprocess` uses two types to describe where the standard output and standard error of the child process should be redirected. These two types, `Subprocess.collectOutputMethod` and `Subprocess.redirectOutputMethod`, correspond to the two general categories of `run` methods mentioned above. Similar to `InputMethod`, both `OutputMethod`s add two general output destinations:
 - `.discard`: Specifies that the child process's output should be discarded, effectively written to `/dev/null`.
-- `.writeTo`: Specifies that the child process should write its output to a file descriptor provided by the developer. Subprocess will automatically close the file descriptor after the process exits if `closeWhenDone` is set to `true`.
+- `.writeTo`: Specifies that the child process should write its output to a file descriptor provided by the developer. Subprocess will automatically close the file descriptor after the process is spawned if `closeWhenDone` is set to `true`.
 
 `CollectedOutMethod` adds one more option to non-closure-based `run` methods that return a `CollectedResult`: `.collect` and its variation `.collect(limit:)`. This option specifies that `Subprocess` should collect the output as `Data`. Since the output of a child process could be arbitrarily large, `Subprocess` imposes a limit on how many bytes it will collect. By default, this limit is 16kb (when specifying `.collect`). Developers can override this limit by specifying `.collect(limit: newLimit)`:
 
@@ -550,7 +541,7 @@ extension Subprocess {
         public static var collect: Self
         // Write the output directly to a FileDescriptor
         public static func writeTo(_ fd: FileDescriptor, closeWhenDone: Bool) -> Self
-        // Collect the output as Data with modified limit
+        // Collect the output as Data with modified limit (in bytes).
         public static func collect(limit limit: Int) -> Self
     }
 }
@@ -665,13 +656,13 @@ extension Subprocess {
     @available(tvOS, unavailable)
     @available(watchOS, unavailable)
     public struct Executable: Sendable, Hashable {
-        /// Create an `EnvironmentConfig` with an executable name such as `ls`
+        /// Create an `Executable` with an executable name such as `ls`
         public static func named(_ executableName: String) -> Self
-        /// Create an `EnvironmentConfig` with an executable path
+        /// Create an `Executable` with an executable path
         /// such as `/bin/ls`
         public static func at(_ filePath: FilePath) -> Self
         // Resolves the executable path with the given `Environment` value
-        public func resolveExecutablePath(withEnvironment environment: Environment) -> FilePath?
+        public func resolveExecutablePath(in environment: Environment) -> FilePath?
     }
 }
 ```
@@ -748,11 +739,15 @@ extension Subprocess {
         /// Creates an Arguments object using the given literal values
         public init(arrayLiteral elements: ArrayLiteralElement...)
         /// Overrides the first arguments (aka the executable path)
-        /// with the given value
-        public init(_ array: [String], executablePathOverride: String)
-        // Instead of [String], initialize `Arguments` with an array of raw bytes
-        public init(_ array: [Data],
-            executablePathOverride: Data? = nil)
+        /// with the given value. If `executablePathOverride` is nil,
+        /// `Arguments` will automatically use the executable path
+        /// as the first argument.
+        public init(executablePathOverride: String?, remainingValues: [String])
+        /// Overrides the first arguments (aka the executable path)
+        /// with the given value. If `executablePathOverride` is nil,
+        /// `Arguments` will automatically use the executable path
+        /// as the first argument.
+        public init(executablePathOverride: Data?, remainingValues: [Data])
     }
 }
 ```
@@ -831,6 +826,11 @@ extension Subprocess {
 ```
 
 
+### Task Cancellation
+
+If the task running `Subprocess.run` is cancelled while the child process is running, `Subprocess` will attempt to release all the resources it acquired (i.e. file descriptors) and then terminate the child process via `SIGKILL`.
+
+
 ## Impact on Existing Code
 
 No impact on existing code is anticipated. All introduced changes are additive.
@@ -849,10 +849,6 @@ For reference, Python uses [`shlex.split`](https://docs.python.org/3/library/shl
 ## Combined `stdout` and `stderr`
 
 In Python's `Subprocess`, developers can merge standard output and standard error into a single stream. This is particularly useful when an executable improperly utilizes standard error as standard output (or vice versa). We should explore the most effective way to achieve this enhancement without introducing confusion to existing parameters—perhaps by introducing a new property.
-
-## Automatic `Subprocess` Cancellation
-
-Currently, `Subprocess` does not terminate the spawned process, even if the `Subprocess` instance goes out of scope. It would be beneficial to investigate whether it is more sensible to attempt terminating the spawned process when the `Subprocess` itself goes out of scope or when the parent task is canceled.
 
 
 ## Alternatives Considered
