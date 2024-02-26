@@ -108,6 +108,7 @@ let package = Package(
             "FoundationMacros",
             .product(name: "_RopeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
+            .product(name: "SystemPackage", package: "swift-system"),
           ],
           exclude: [
             "Formatting/CMakeLists.txt",
