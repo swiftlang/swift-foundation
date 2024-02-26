@@ -361,11 +361,10 @@ extension String {
             return nil
         }
         
+        let length = Int(buffer.fullPathAttr.attr_length) // Includes null byte
         return withUnsafePointer(to: buffer.fullPathBuf) { pathPtr in
-            let start = UnsafeRawPointer(pathPtr).advanced(by: Int(buffer.fullPathAttr.attr_dataoffset))
-            let length = Int(buffer.fullPathAttr.attr_length) // Includes null byte
-            return start.withMemoryRebound(to: CChar.self, capacity: length) { ccharPtr in
-                return String(cString: ccharPtr)
+            pathPtr.withMemoryRebound(to: CChar.self, capacity: length) { ccharPtr in
+                String(cString: ccharPtr)
             }
         }
         #else
@@ -373,7 +372,7 @@ extension String {
         #endif
     }
     
-    private func _resolvingSymlinksInPath() -> String? {
+    func _resolvingSymlinksInPath() -> String? {
         guard !isEmpty else { return nil }
         return self.withFileSystemRepresentation { fsPtr -> String? in
             guard let fsPtr else { return nil }

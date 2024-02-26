@@ -566,4 +566,15 @@ final class FileManagerTests : XCTestCase {
         throw XCTSkip("This test is not applicable to this platform")
         #endif
     }
+    
+    func testResolveSymlinksViaGetAttrList() throws {
+        try FileManagerPlayground {
+            "destination"
+        }.test {
+            try $0.createSymbolicLink(atPath: "link", withDestinationPath: "destination")
+            let absolutePath = $0.currentDirectoryPath.appendingPathComponent("link")
+            let resolved = absolutePath._resolvingSymlinksInPath() // Call internal function to avoid path standardization
+            XCTAssertEqual(resolved, $0.currentDirectoryPath.appendingPathComponent("destination"))
+        }
+    }
 }
