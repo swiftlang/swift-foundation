@@ -1792,6 +1792,10 @@ XCTAssertEqual(gregorianCalendar.date(from: dateComponents)!, Date(timeIntervalS
             for component in allComponents {
                 let c1 = icuCalendar.firstInstant(of: component, at: date)
                 let c2 = gregorianCalendar.firstInstant(of: component, at: date)
+                guard let c2 else {
+                    XCTFail("unexpected nil first instant")
+                    continue
+                }
                 XCTAssertEqual(c1, c2, "c1: \(c1.timeIntervalSinceReferenceDate), c2: \(c2.timeIntervalSinceReferenceDate), \(date.timeIntervalSinceReferenceDate)")
             }
         }
