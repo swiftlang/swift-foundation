@@ -510,7 +510,7 @@ Here are some examples:
 // By default `InputMethod` is set to `.noInput`
 let ls = try await Subprocess.run(executing: .named("ls"))
 
-// Alteratively, developers could pass in a file descriptor
+// Alternatively, developers could pass in a file descriptor
 let fd: FileDescriptor = ...
 let cat = try await Subprocess.run(executing: .named("cat"), input: .readFrom(fd, closeWhenDone: true))
 
