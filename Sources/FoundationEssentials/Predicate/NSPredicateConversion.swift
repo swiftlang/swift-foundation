@@ -144,6 +144,8 @@ private func _expressionCompatibleValue(for value: Any) throws -> Any? {
         return value
     case let result as ComparisonResult:
         return result.rawValue
+    case let regex as PredicateExpressions.PredicateRegex:
+        return regex.stringRepresentation
     case let c as Character:
         return String(c)
     case let sequence as any Sequence:
@@ -477,6 +479,21 @@ extension PredicateExpressions.SequenceStartsWith : ConvertibleExpression where 
 extension PredicateExpressions.NilLiteral : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
         .expression(NSExpression(forConstantValue: nil))
+    }
+}
+
+extension PredicateExpressions.StringContainsRegex : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        .predicate(NSComparisonPredicate(leftExpression: try subject.convertToExpression(state: &state), rightExpression: try regex.convertToExpression(state: &state).mapRegexForContains(), modifier: .direct, type: .matches))
+    }
+}
+
+extension NSExpression {
+    fileprivate func mapRegexForContains() -> NSExpression {
+        guard let value = self.constantValue as? String else {
+            return self
+        }
+        return NSExpression(forConstantValue: ".*\(value).*")
     }
 }
 

@@ -379,6 +379,15 @@ extension PredicateExpressions.Filter : DebugStringConvertiblePredicateExpressio
     }
 }
 
+#if compiler(>=5.11)
+@available(FoundationPredicateRegex 0.4, *)
+extension PredicateExpressions.StringContainsRegex : DebugStringConvertiblePredicateExpression where Subject : DebugStringConvertiblePredicateExpression, Regex : DebugStringConvertiblePredicateExpression {
+    package func debugString(state: inout DebugStringConversionState) -> String {
+        "\(subject.debugString(state: &state)).contains(\(subject.debugString(state: &state)))"
+    }
+}
+#endif
+
 #if FOUNDATION_FRAMEWORK
 
 @available(FoundationPredicate 0.3, *)

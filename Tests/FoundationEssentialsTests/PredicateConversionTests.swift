@@ -432,6 +432,16 @@ final class NSPredicateConversionTests: XCTestCase {
         XCTAssertEqual(converted, NSPredicate(format: "a == 3 AND a > 2"))
         XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
     }
+    
+    func testRegex() {
+        let regex = #/[e-f][l-m]/#
+        let predicate = #Predicate<ObjCObject> {
+            $0.b.contains(regex)
+        }
+        let converted = convert(predicate)
+        XCTAssertEqual(converted, NSPredicate(format: "b MATCHES '.*[e-f][l-m].*'"))
+        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+    }
 }
 
 #endif

@@ -5,15 +5,36 @@ import PackageDescription
 import CompilerPluginSupport
 
 // Availability Macros
-let availabilityMacros: [SwiftSetting] = [
-    "FoundationPreview 0.1:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4",
-    "FoundationPredicate 0.1:macOS 14, iOS 17, tvOS 17, watchOS 10",
-    "FoundationPreview 0.2:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4",
-    "FoundationPreview 0.3:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4",
-    "FoundationPredicate 0.3:macOS 14, iOS 17, tvOS 17, watchOS 10",
-    "FoundationPreview 0.4:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4",
-    "FoundationPredicate 0.4:macOS 14, iOS 17, tvOS 17, watchOS 10",
-].map { .enableExperimentalFeature("AvailabilityMacro=\($0)") }
+
+let availabilityTags: [_Availability] = [
+    _Availability("FoundationPreview"), // Default FoundationPreview availability,
+    _Availability("FoundationPredicate", availability: .macOS14_0), // Predicate relies on pack parameter runtime support
+    _Availability("FoundationPredicateRegex", availability: .future) // Predicate regexes rely on new stdlib APIs
+]
+let versionNumbers = ["0.1", "0.2", "0.3", "0.4"]
+
+// Availability Macro Utilities
+
+enum _OSAvailability: String {
+    case alwaysAvailable = "macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4" // This should match the package's deployment target
+    case macOS14_0 = "macOS 14, iOS 17, tvOS 17, watchOS 10"
+    // Use 9998 for future availability to avoid compiler magic around the 9999 version number
+    case future = "macOS 9998, iOS 9998, tvOS 9998, watchOS 9998"
+}
+struct _Availability {
+    let name: String
+    let osAvailability: _OSAvailability
+    
+    init(_ name: String, availability: _OSAvailability = .alwaysAvailable) {
+        self.name = name
+        self.osAvailability = availability
+    }
+}
+let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
+    availabilityTags.map {
+        .enableExperimentalFeature("AvailabilityMacro=\($0.name) \(version):\($0.osAvailability.rawValue)")
+    }
+}
 
 let package = Package(
     name: "FoundationPreview",

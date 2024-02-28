@@ -14,6 +14,10 @@
 import TestSupport
 #endif
 
+#if canImport(RegexBuilder)
+import RegexBuilder
+#endif
+
 #if !FOUNDATION_FRAMEWORK
 // Resolve ambiguity between Foundation.#Predicate and FoundationEssentials.#Predicate
 @freestanding(expression)
@@ -338,6 +342,54 @@ final class PredicateTests: XCTestCase {
             $0.a == $0.c && $0.b == now
         }
     }
+    
+    #if compiler(>=5.11)
+    func testRegex() throws {
+        guard #available(FoundationPredicateRegex 0.4, *) else {
+            throw XCTSkip("This test is not available on this OS version")
+        }
+        
+        let literalRegex = #/[AB0-9]\/?[^\n]+/#
+        var predicate = #Predicate<Object> {
+            $0.b.contains(literalRegex)
+        }
+        XCTAssertTrue(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        XCTAssertFalse(try predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        predicate = #Predicate<Object> {
+            $0.b.contains(#/[AB0-9]\/?[^\n]+/#)
+        }
+        XCTAssertTrue(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        XCTAssertFalse(try predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+    }
+    
+    func testRegex_RegexBuilder() throws {
+        #if !canImport(RegexBuilder)
+        throw XCTSkip("RegexBuilder is unavavailable on this platform")
+        #elseif !os(Linux) && !FOUNDATION_FRAMEWORK
+        // Disable this test in swift-foundation macOS CI because of incorrect availability annotations in the StringProcessing module
+        throw XCTSkip("This test is currently disabled on this platform")
+        #else
+        guard #available(FoundationPredicateRegex 0.4, *) else {
+            throw XCTSkip("This test is not available on this OS version")
+        }
+        
+        let builtRegex = Regex {
+            ChoiceOf {
+                "A"
+                "B"
+                CharacterClass.digit
+            }
+            Optionally("/")
+            OneOrMore(.anyNonNewline)
+        }
+        let predicate = #Predicate<Object> {
+            $0.b.contains(builtRegex)
+        }
+        XCTAssertTrue(try predicate.evaluate(Object(a: 0, b: "_0/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        XCTAssertFalse(try predicate.evaluate(Object(a: 0, b: "_C/bc", c: 0, d: 0, e: " ", f: true, g: [])))
+        #endif
+    }
+    #endif
     
     func testDebugDescription() throws {
         guard #available(FoundationPredicate 0.3, *) else {
