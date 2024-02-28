@@ -1,9 +1,9 @@
 # Introducing Swift Subprocess
 
-* Proposal: [SF-NNNN](NNNN-swift-subprocess.md)
+* Proposal: [SF-0007](0007-swift-subprocess.md)
 * Authors: [Charles Hu](https://github.com/iCharlesHu)
-* Review Manager: TBD
-* Status: **Draft**
+* Review Manager: [Tina Liu](https://github.com/itingliu)
+* Status: **Active Review: Feb 28, 2024...Mar 06, 2024**
 * Bugs: [rdar://118127512](rdar://118127512), [apple/swift-foundation#309](https://github.com/apple/swift-foundation/issues/309)
 
 
