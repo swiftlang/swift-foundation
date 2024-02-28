@@ -42,6 +42,7 @@ extension PredicateExpressions {
         }
     }
     
+    @_disfavoredOverload
     public static func build_contains<Subject, Regex>(_ subject: Subject, _ regex: Regex) -> StringContainsRegex<Subject, Regex> {
         StringContainsRegex(subject: subject, regex: regex)
     }

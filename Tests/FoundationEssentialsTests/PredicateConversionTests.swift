@@ -434,13 +434,13 @@ final class NSPredicateConversionTests: XCTestCase {
     }
     
     func testRegex() {
-        let regex = #/[AB0-9]\/?[^\n]+/#
+        let regex = #/[e-f][l-m]/#
         let predicate = #Predicate<ObjCObject> {
             $0.b.contains(regex)
         }
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "b MATCHES '[AB0-9]\\/?[^\\n]+'"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        XCTAssertEqual(converted, NSPredicate(format: "b MATCHES '.*[e-f][l-m].*'"))
+        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
     }
 }
 

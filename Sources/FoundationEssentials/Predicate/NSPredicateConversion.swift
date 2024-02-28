@@ -484,7 +484,16 @@ extension PredicateExpressions.NilLiteral : ConvertibleExpression {
 
 extension PredicateExpressions.StringContainsRegex : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
-        .predicate(NSComparisonPredicate(leftExpression: try subject.convertToExpression(state: &state), rightExpression: try regex.convertToExpression(state: &state), modifier: .direct, type: .matches))
+        .predicate(NSComparisonPredicate(leftExpression: try subject.convertToExpression(state: &state), rightExpression: try regex.convertToExpression(state: &state).mapRegexForContains(), modifier: .direct, type: .matches))
+    }
+}
+
+extension NSExpression {
+    fileprivate func mapRegexForContains() -> NSExpression {
+        guard let value = self.constantValue as? String else {
+            return self
+        }
+        return NSExpression(forConstantValue: ".*\(value).*")
     }
 }
 
