@@ -301,7 +301,10 @@ enum _FileOperations {
             _filemanagershims_removefile_attach_callbacks(state, ctxPtr)
             
             let err = removefile(pathPtr, state, removefile_flags_t(REMOVEFILE_RECURSIVE))
-            if err > 0 {
+            if err < 0 {
+                if errno != 0 {
+                    throw CocoaError.removeFileError(Int32(errno), pathStr)
+                }
                 throw CocoaError.removeFileError(Int32(_filemanagershims_removefile_state_get_errnum(state)), pathStr)
             }
             

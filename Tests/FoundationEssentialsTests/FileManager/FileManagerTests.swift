@@ -447,6 +447,58 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo"), .init("other"), .init("does_not_exist")])
             XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [.init("does_not_exist", code: .fileNoSuchFile)])
         }
+
+        #if canImport(Darwin)
+        // not supported on linux as the test depends on FileManager.removeItem calling removefile(3)
+        // not supported on older versions of Darwin where removefile would return ENOENT instead of ENAMETOOLONG
+        if #available(macOS 14.4, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
+            try FileManagerPlayground {
+            }.test {
+                // Create hierarchy in which the leaf is a long path (length > PATH_MAX)
+                let rootDir = $0.currentDirectoryPath
+                let aas = Array(repeating: "a", count: Int(NAME_MAX) - 3).joined()
+                let bbs = Array(repeating: "b", count: Int(NAME_MAX) - 3).joined()
+                let ccs = Array(repeating: "c", count: Int(NAME_MAX) - 3).joined()
+                let dds = Array(repeating: "d", count: Int(NAME_MAX) - 3).joined()
+                let ees = Array(repeating: "e", count: Int(NAME_MAX) - 3).joined()
+                let leaf = "longpath"
+                
+                try $0.createDirectory(atPath: aas, withIntermediateDirectories: true)
+                XCTAssertTrue($0.changeCurrentDirectoryPath(aas))
+                try $0.createDirectory(atPath: bbs, withIntermediateDirectories: true)
+                XCTAssertTrue($0.changeCurrentDirectoryPath(bbs))
+                try $0.createDirectory(atPath: ccs, withIntermediateDirectories: true)
+                XCTAssertTrue($0.changeCurrentDirectoryPath(ccs))
+                try $0.createDirectory(atPath: dds, withIntermediateDirectories: true)
+                XCTAssertTrue($0.changeCurrentDirectoryPath(dds))
+                try $0.createDirectory(atPath: ees, withIntermediateDirectories: true)
+                XCTAssertTrue($0.changeCurrentDirectoryPath(ees))
+                try $0.createDirectory(atPath: leaf, withIntermediateDirectories: true)
+                
+                XCTAssertTrue($0.changeCurrentDirectoryPath(rootDir))
+                let fullPath = "\(aas)/\(bbs)/\(ccs)/\(dds)/\(ees)/\(leaf)"
+                XCTAssertThrowsError(try $0.removeItem(atPath: fullPath)) {
+                    let underlyingPosixError = ($0 as? CocoaError)?.underlying as? POSIXError
+                    XCTAssertEqual(underlyingPosixError?.code, .ENAMETOOLONG, "removeItem didn't fail with ENAMETOOLONG; produced error: \($0)")
+                }
+                
+                // Clean up
+                XCTAssertTrue($0.changeCurrentDirectoryPath(aas))
+                XCTAssertTrue($0.changeCurrentDirectoryPath(bbs))
+                XCTAssertTrue($0.changeCurrentDirectoryPath(ccs))
+                XCTAssertTrue($0.changeCurrentDirectoryPath(dds))
+                try $0.removeItem(atPath: ees)
+                XCTAssertTrue($0.changeCurrentDirectoryPath(".."))
+                try $0.removeItem(atPath: dds)
+                XCTAssertTrue($0.changeCurrentDirectoryPath(".."))
+                try $0.removeItem(atPath: ccs)
+                XCTAssertTrue($0.changeCurrentDirectoryPath(".."))
+                try $0.removeItem(atPath: bbs)
+                XCTAssertTrue($0.changeCurrentDirectoryPath(".."))
+                try $0.removeItem(atPath: aas)
+            }
+        }
+        #endif
     }
     
     func testFileExistsAtPath() throws {

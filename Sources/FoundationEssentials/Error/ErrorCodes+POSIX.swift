@@ -38,7 +38,7 @@ public struct POSIXError : _BridgedStoredNSError {
 #else
 
 /// Describes an error in the POSIX error domain.
-public struct POSIXError : _StoredError, Hashable {
+public struct POSIXError : Error, _StoredError, Hashable {
     public let code: Code
 
     public static var errorDomain: String { return "NSPOSIXErrorDomain" }
