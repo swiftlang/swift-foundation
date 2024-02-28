@@ -200,6 +200,22 @@ class DataIOTests : XCTestCase {
         try data.write(to: url)
         let read = try Data(contentsOf: url, options: [])
         XCTAssertEqual(data, read)
+        
+        cleanup(at: url)
+    }
+    
+    func test_largeFile() throws {
+#if !os(watchOS)
+        // More than 2 GB
+        let size = 0x80010000
+        let url = testURL()
+
+        let data = Data(count: size)
+        
+        try data.write(to: url)
+        
+        cleanup(at: url)
+#endif
     }
 
     // MARK: - String Path Tests
