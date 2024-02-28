@@ -51,13 +51,13 @@ extension FileManager.SearchPathDomainMask {
 private func foundation_sysdir_start_search_path_enumeration(_ directory: UInt, _ domainMask: UInt) -> sysdir_search_path_enumeration_state {
     #if FOUNDATION_FRAMEWORK
     sysdir_start_search_path_enumeration_private(
-        sysdir_search_path_directory_t(UInt32(directory)),
-        sysdir_search_path_domain_private_mask_t(rawValue: UInt32(domainMask))
+        sysdir_search_path_directory_t(UInt32(truncatingIfNeeded: directory)),
+        sysdir_search_path_domain_private_mask_t(rawValue: UInt32(truncatingIfNeeded: domainMask))
     )
     #else
     sysdir_start_search_path_enumeration(
-        sysdir_search_path_directory_t(UInt32(directory)),
-        sysdir_search_path_domain_mask_t(rawValue: UInt32(domainMask))
+        sysdir_search_path_directory_t(UInt32(truncatingIfNeeded: directory)),
+        sysdir_search_path_domain_mask_t(rawValue: UInt32(truncatingIfNeeded: domainMask))
     )
     #endif
 }
