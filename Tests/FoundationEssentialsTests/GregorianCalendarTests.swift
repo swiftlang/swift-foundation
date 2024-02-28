@@ -3534,7 +3534,10 @@ final class GregorianCalendarTests : XCTestCase {
         calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -8*3600), locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         start = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
         end = Date(timeIntervalSinceReferenceDate: 5458822.0) // 2001-03-04 20:20:22 PT
-        test([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], expected: .init(era: 0, year: 0, month: 2, day: 4, hour: 4, minute: 20, second: 22, nanosecond: 0, weekday: 0, weekdayOrdinal: 0, quarter: 0 , weekOfMonth: 0, weekOfYear: 0,  yearForWeekOfYear: 0))
+        var expected = DateComponents(era: 0, year: 0, month: 2, day: 4, hour: 4, minute: 20, second: 22, nanosecond: 0, weekday: 0, weekdayOrdinal: 0, quarter: 0 , weekOfMonth: 0, weekOfYear: 0,  yearForWeekOfYear: 0)
+        // FIXME 123202377: This is wrong, but it's the same as Calendar_ICU's current behavior
+        expected.dayOfYear = 0
+        test([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], expected: expected)
     }
 
     func testDifference() {
@@ -3702,82 +3705,83 @@ final class GregorianCalendarTests : XCTestCase {
         test(.hour, expected: 1441)
         test(.minute, expected: 86460)
         test(.second, expected: 5187600)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.max))
 
         start = Date(timeIntervalSince1970: 852105540.0) // 1996-12-31 23:59:00
         end = Date(timeIntervalSince1970: 857203205.0) // 1997-03-01 00:00:05
         test(.hour, expected: 1416)
         test(.minute, expected: 84961)
         test(.second, expected: 5097665)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.max))
 
         start = Date(timeIntervalSince1970: 825580720.0) // 1996-02-28 23:58:40
         end = Date(timeIntervalSince1970: 825580805.0) // 1996-02-29 00:00:05
         test(.hour, expected: 0)
         test(.minute, expected: 1)
         test(.second, expected: 85)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.max))
 
         start = Date(timeIntervalSince1970: 825580720.0) // 1996-02-28 23:58:40
         end = Date(timeIntervalSince1970: 825667205.0) // 1996-03-01 00:00:05
         test(.hour, expected: 24)
         test(.minute, expected: 1441)
         test(.second, expected: 86485)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.max))
 
         start = Date(timeIntervalSince1970: 794044710.0) // 1995-02-28 23:58:30
         end = Date(timeIntervalSince1970: 794044805.0) // 1995-03-01 00:00:05
         test(.hour, expected: 0)
         test(.minute, expected: 1)
         test(.second, expected: 95)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.max))
 
         start = Date(timeIntervalSince1970: 857203205.0) // 1997-03-01 00:00:05
         end = Date(timeIntervalSince1970: 852105520.0) // 1996-12-31 23:58:40
         test(.hour, expected: -1416)
         test(.minute, expected: -84961)
         test(.second, expected: -5097685)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.min))
 
         start = Date(timeIntervalSince1970: 825667205.0) // 1996-03-01 00:00:05
         end = Date(timeIntervalSince1970: 820483120.0) // 1995-12-31 23:58:40
         test(.hour, expected: -1440)
         test(.minute, expected: -86401)
         test(.second, expected: -5184085)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.min))
 
         start = Date(timeIntervalSince1970: 825667205.0) // 1996-03-01 00:00:05
         end = Date(timeIntervalSince1970: 825580720.0) // 1996-02-28 23:58:40
         test(.hour, expected: -24)
         test(.minute, expected: -1441)
         test(.second, expected: -86485)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.min))
 
         start = Date(timeIntervalSince1970: 825580805.0) // 1996-02-29 00:00:05
         end = Date(timeIntervalSince1970: 825580720.0) // 1996-02-28 23:58:40
         test(.hour, expected: 0)
         test(.minute, expected: -1)
         test(.second, expected: -85)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.min))
 
         start = Date(timeIntervalSince1970: 825580805.0) // 1996-02-29 00:00:05
         end = Date(timeIntervalSince1970: 820569520.0) // 1996-01-01 23:58:40
         test(.hour, expected: -1392)
         test(.minute, expected: -83521)
         test(.second, expected: -5011285)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.min))
 
         start = Date(timeIntervalSince1970: 794044805.0) // 1995-03-01 00:00:05
         end = Date(timeIntervalSince1970: 794044710.0) // 1995-02-28 23:58:30
         test(.hour, expected: 0)
         test(.minute, expected: -1)
         test(.second, expected: -95)
-        test(.nanosecond, expected: 0)
+        test(.nanosecond, expected: Int(Int32.min))
 
         calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -8*3600), locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         start = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
         end = Date(timeIntervalSinceReferenceDate: 5458822.0) // 2001-03-04 20:20:22 PT
         test(.month, expected: 2)
+        test(.dayOfYear, expected: 63)
     }
 
     func testDifference_DST() {

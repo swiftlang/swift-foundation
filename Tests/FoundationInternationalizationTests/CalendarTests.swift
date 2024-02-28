@@ -1851,4 +1851,74 @@ XCTAssertEqual(gregorianCalendar.date(from: dateComponents)!, Date(timeIntervalS
         XCTAssertEqual(added, icuResult)
         XCTAssertEqual(icuResult.timeIntervalSince1970, 983404800) // 2001-03-01 00:00:00 UTC, 2001-02-28 16:00:00 PT
     }
+    func testAdd_precision() {
+        let timeZone = TimeZone.gmt
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+
+
+        let d1 = Date(timeIntervalSinceReferenceDate: 729900523.547439)
+        let added = gregorianCalendar.add(.month, to: d1, amount: -277, inTimeZone: timeZone)
+        var gregResult: Date
+        var icuResult: Date
+
+        gregResult = gregorianCalendar.date(byAdding: .init(month: -277), to: d1, wrappingComponents: false)!
+        icuResult = icuCalendar.date(byAdding: .init(month: -277), to: d1, wrappingComponents: false)!
+        XCTAssertEqual(gregResult, icuResult, "greg: \(gregResult.timeIntervalSinceReferenceDate), icu: \(icuResult.timeIntervalSinceReferenceDate)")
+        XCTAssertEqual(added, icuResult)
+
+        let d2 = Date(timeIntervalSinceReferenceDate: -0.4525610214656613)
+        gregResult = gregorianCalendar.date(byAdding: .init(nanosecond: 500000000), to: d2, wrappingComponents: false)!
+        icuResult = icuCalendar.date(byAdding: .init(nanosecond: 500000000), to: d2, wrappingComponents: false)!
+        XCTAssertEqual(gregResult, icuResult, "greg: \(gregResult.timeIntervalSinceReferenceDate), icu: \(icuResult.timeIntervalSinceReferenceDate)")
+
+        let d3 = Date(timeIntervalSinceReferenceDate: 729900523.547439)
+        gregResult = gregorianCalendar.date(byAdding: .init(year: -60), to: d3, wrappingComponents: false)!
+        icuResult = icuCalendar.date(byAdding: .init(year: -60), to: d3, wrappingComponents: false)!
+        XCTAssertEqual(gregResult, icuResult, "greg: \(gregResult.timeIntervalSinceReferenceDate), icu: \(icuResult.timeIntervalSinceReferenceDate)")
+    }
+
+    func testDateComponentsFromTo_precision() {
+        let timeZone = TimeZone.gmt
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+
+        let allComponents : Calendar.ComponentSet = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone]
+        let tests: [(Double, Double)] = [ /*start, finish*/
+            (0, 1.005),
+            (0, 1.0005),
+            (0, 1.4),
+            (0, 1.5),
+            (0, 1.6),
+            (1.005, 0),
+        ]
+
+        var a: DateComponents
+        var b: DateComponents
+        for (i, (ti1, ti2)) in tests.enumerated() {
+            let d1 = Date(timeIntervalSinceReferenceDate: ti1)
+            let d2 = Date(timeIntervalSinceReferenceDate: ti2)
+            a = icuCalendar.dateComponents(allComponents, from: d1, to: d2)
+            b = gregorianCalendar.dateComponents(allComponents, from: d1, to: d2)
+            XCTAssertEqual(a, b, "test: \(i)")
+
+            expectEqual(a, b, "test: \(i)")
+        }
+
+        for (i, (ti1, ti2)) in tests.enumerated() {
+            let d1 = Date(timeIntervalSinceReferenceDate: ti1)
+            let d2 = Date(timeIntervalSinceReferenceDate: ti2)
+            a = icuCalendar.dateComponents([.nanosecond], from: d1, to: d2)
+            b = gregorianCalendar.dateComponents([.nanosecond], from: d1, to: d2)
+            XCTAssertEqual(a, b, "test: \(i)")
+            if ti1 < ti2 {
+                XCTAssertGreaterThanOrEqual(b.nanosecond!, 0, "test: \(i)")
+            } else {
+                XCTAssertLessThanOrEqual(b.nanosecond!, 0, "test: \(i)")
+            }
+            expectEqual(a, b, "test: \(i)")
+        }
+
+    }
+
 }
