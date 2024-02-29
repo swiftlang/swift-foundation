@@ -18,8 +18,8 @@ let versionNumbers = ["0.1", "0.2", "0.3", "0.4"]
 enum _OSAvailability: String {
     case alwaysAvailable = "macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4" // This should match the package's deployment target
     case macOS14_0 = "macOS 14, iOS 17, tvOS 17, watchOS 10"
-    // Use 9998 for future availability to avoid compiler magic around the 9999 version number
-    case future = "macOS 9998, iOS 9998, tvOS 9998, watchOS 9998"
+    // Use 10000 for future availability to avoid compiler magic around the 9999 version number but ensure it is greater than 9999
+    case future = "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000"
 }
 struct _Availability {
     let name: String
