@@ -204,6 +204,27 @@ class DataIOTests : XCTestCase {
         cleanup(at: url)
     }
     
+#if FOUNDATION_FRAMEWORK
+    // String(contentsOf:) is not available outside the framework yet
+    func test_emptyFileString() {
+        let data = Data()
+        let url = testURL()
+        
+        do {
+            try data.write(to: url)
+            let readString = try String(contentsOf: url)
+            XCTAssertEqual(readString, "")
+            
+            let readStringWithEncoding = try String(contentsOf: url, encoding: String._Encoding.utf8)
+            XCTAssertEqual(readStringWithEncoding, "")
+            
+            cleanup(at: url)
+        } catch {
+            XCTFail("Could not read file: \(error)")
+        }
+    }
+#endif
+    
     func test_largeFile() throws {
 #if !os(watchOS)
         // More than 2 GB
