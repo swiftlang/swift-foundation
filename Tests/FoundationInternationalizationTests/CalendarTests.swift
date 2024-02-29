@@ -924,6 +924,24 @@ final class CalendarTests : XCTestCase {
         let c = Calendar(identifier: .gregorian)
         _ = c.dateComponents([.month], from: Date(timeIntervalSinceReferenceDate: 7.968993439840418e+23))
     }
+
+    func test_dateBySettingDay() {
+        func firstDayOfMonth(_ calendar: Calendar, for date: Date) -> Date? {
+            var startOfCurrentMonthComponents = calendar.dateComponents(in: calendar.timeZone, from: date)
+            startOfCurrentMonthComponents.day = 1
+            return calendar.date(from: startOfCurrentMonthComponents)
+        }
+        var iso8601calendar = Calendar(identifier: .iso8601)
+        iso8601calendar.timeZone = .gmt
+        var gregorianCalendar = Calendar(identifier: .gregorian)
+        gregorianCalendar.timeZone = .gmt
+        let date = Date(timeIntervalSince1970: 1609459199) // 2020-12-31T23:59:59Z
+        XCTAssertEqual(firstDayOfMonth(iso8601calendar, for: date), Date(timeIntervalSinceReferenceDate: 628559999.0)) // 2020-12-01T23:59:59Z
+        XCTAssertEqual(firstDayOfMonth(gregorianCalendar, for: date), Date(timeIntervalSinceReferenceDate: 628559999.0)) // 2020-12-01T23:59:59Z
+        let date2 = Date(timeIntervalSinceReferenceDate: 730860719) // 2024-02-29T00:51:59Z
+        XCTAssertEqual(firstDayOfMonth(iso8601calendar, for: date2), Date(timeIntervalSinceReferenceDate: 728441519)) // 2024-02-01T00:51:59Z
+        XCTAssertEqual(firstDayOfMonth(gregorianCalendar, for: date2), Date(timeIntervalSinceReferenceDate: 728441519.0)) // 2024-02-01T00:51:59Z
+    }
 }
 
 
