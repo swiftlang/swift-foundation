@@ -12,8 +12,12 @@
 
 import Benchmark
 import func Benchmark.blackHole
+
+#if FOUNDATION_FRAMEWORK
+import Foundation
+#else
 import FoundationEssentials
-import FoundationInternationalization
+#endif
 
 let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000

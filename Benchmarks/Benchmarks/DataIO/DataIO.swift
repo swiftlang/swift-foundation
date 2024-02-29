@@ -12,7 +12,13 @@
 
 import Benchmark
 import func Benchmark.blackHole
+
+#if FOUNDATION_FRAMEWORK
+import Foundation
+#else
 @testable import FoundationEssentials
+#endif
+
 
 #if canImport(Glibc)
 import Glibc
@@ -21,10 +27,16 @@ import Glibc
 import Darwin
 #endif
 
+#if !FOUNDATION_FRAMEWORK
 func testPath() -> String {
     // Generate a random file name
-    String.temporaryDirectoryPath.appendingPathComponent("testfile-\(UUID().uuidString)")
+    FileManager.default.temporaryDirectory.path.appendingPathComponent("testfile-\(UUID().uuidString)")
 }
+#else
+func testPath() -> URL {
+    FileManager.default.temporaryDirectory.appending(path: "testfile-\(UUID().uuidString)", directoryHint: .notDirectory)
+}
+#endif
 
 func generateTestData() -> Data {
     // 16 MB file, big enough to trigger things like chunking
@@ -42,10 +54,17 @@ func generateTestData() -> Data {
     return Data(bytesNoCopy: ptr, count: count, deallocator: .free)
 }
 
+#if !FOUNDATION_FRAMEWORK
 func cleanup(at path: String) {
-    _ = unlink(path)
+    try? FileManager.default.removeItem(atPath: path)
     // Ignore any errors
 }
+#else
+func cleanup(at path: URL) {
+    try? FileManager.default.removeItem(at: path)
+    // Ignore any errors
+}
+#endif
 
 let data = generateTestData()
 let readMe = testPath()
@@ -54,9 +73,7 @@ let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
-//    Benchmark.defaultConfiguration.metrics = .arc + [.cpuTotal, .wallClock, .mallocCountTotal, .throughput] // use ARC to see traffic
-//  Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput] // skip ARC as it has some overhead
-  Benchmark.defaultConfiguration.metrics = .all // Use all metrics to easily see which ones are of interest for this benchmark suite
+    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput]
 
     Benchmark("read-write-emptyFile") { benchmark in
         let path = testPath()
