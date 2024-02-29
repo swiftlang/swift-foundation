@@ -943,7 +943,12 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
     func testRandomSamples() throws {
         var style: Date.AnchoredRelativeFormatStyle
 
+#if FIXME_RANDOMIZED_SAMPLES_123465054
         let now = Date.now
+#else
+        let now = Date(timeIntervalSinceReferenceDate: 730056022.401144)
+#endif
+
         lazy var message = "now = Date(timeIntervalSinceReferenceDate: \(now.timeIntervalSinceReferenceDate))"
 
         style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
@@ -974,4 +979,5 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
         style.calendar = self.calendar
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
     }
+
 }
