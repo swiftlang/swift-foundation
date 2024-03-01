@@ -585,6 +585,26 @@ final class CalendarTests : XCTestCase {
         XCTAssertTrue(c.date(d, matchesComponents: DateComponents(month: 7)))
         XCTAssertFalse(c.date(d, matchesComponents: DateComponents(month: 7, day: 31)))
     }
+    
+    func test_leapMonthProperty() throws {
+        let c = Calendar(identifier: .chinese)
+        /// 2023-02-20 08:00:00 +0000 -- non-leap month in the Chinese calendar
+        let d1 = Date(timeIntervalSinceReferenceDate: 698572800.0)
+        /// 2023-03-22 07:00:00 +0000 -- leap month in the Chinese calendar
+        let d2 = Date(timeIntervalSinceReferenceDate: 701161200.0)
+        
+        var components = DateComponents()
+        components.isLeapMonth = true
+        XCTAssertFalse(c.date(d1, matchesComponents: components))
+        XCTAssertTrue(c.date(d2, matchesComponents: components))
+        components.isLeapMonth = false
+        XCTAssertTrue(c.date(d1, matchesComponents: components))
+        XCTAssertFalse(c.date(d2, matchesComponents: components))
+        components.day = 1
+        components.isLeapMonth = true
+        XCTAssertFalse(c.date(d1, matchesComponents: components))
+        XCTAssertTrue(c.date(d2, matchesComponents: components))
+    }
 
     func test_addingDeprecatedWeek() throws {
         let date = try Date("2024-02-24 01:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))
