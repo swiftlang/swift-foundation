@@ -29,6 +29,7 @@ public typealias Decimal = Foundation.Decimal
 public typealias TimeInterval = Foundation.TimeInterval
 public typealias JSONEncoder = Foundation.JSONEncoder
 public typealias JSONDecoder = Foundation.JSONDecoder
+public typealias IndexPath = Foundation.IndexPath
 
 // XCTest implicitly imports Foundation
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
@@ -207,6 +208,7 @@ public typealias FileAttributeKey = FoundationEssentials.FileAttributeKey
 public typealias CocoaError = FoundationEssentials.CocoaError
 public typealias POSIXError = FoundationEssentials.POSIXError
 public typealias FileManagerDelegate = FoundationEssentials.FileManagerDelegate
+public typealias IndexPath = FoundationEssentials.IndexPath
 
 #endif // FOUNDATION_FRAMEWORK
 
