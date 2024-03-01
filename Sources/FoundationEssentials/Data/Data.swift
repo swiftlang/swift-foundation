@@ -10,6 +10,36 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+@usableFromInline let calloc = ucrt.calloc
+@usableFromInline let malloc = ucrt.malloc
+@usableFromInline let free = ucrt.free
+@usableFromInline let memset = ucrt.memset
+@usableFromInline let memcpy = ucrt.memcpy
+@usableFromInline let memcmp = ucrt.memcmp
+#endif
+#if canImport(Glibc)
+@usableFromInline let calloc = Glibc.calloc
+@usableFromInline let malloc = Glibc.malloc
+@usableFromInline let free = Glibc.free
+@usableFromInline let memset = Glibc.memset
+@usableFromInline let memcpy = Glibc.memcpy
+@usableFromInline let memcmp = Glibc.memcmp
+#elseif canImport(Musl)
+@usableFromInline let calloc = Musl.calloc
+@usableFromInline let malloc = Musl.malloc
+@usableFromInline let free = Musl.free
+@usableFromInline let memset = Musl.memset
+@usableFromInline let memcpy = Musl.memcpy
+@usableFromInline let memcmp = Musl.memcmp
+#elseif canImport(WASILibc)
+@usableFromInline let calloc = WASILibc.calloc
+@usableFromInline let malloc = WASILibc.malloc
+@usableFromInline let free = WASILibc.free
+@usableFromInline let memset = WASILibc.memset
+@usableFromInline let memcpy = WASILibc.memcpy
+@usableFromInline let memcmp = WASILibc.memcmp
+#endif
 
 #if canImport(Darwin)
 import Darwin
@@ -22,27 +52,21 @@ internal func __DataInvokeDeallocatorVirtualMemory(_ mem: UnsafeMutableRawPointe
         fatalError("*** __DataInvokeDeallocatorVirtualMemory(\(mem), \(length)) failed")
     }
 }
+#endif
 
-#elseif canImport(Glibc)
-import Glibc
-
-private func malloc_good_size(_ size: Int) -> Int {
+#if !canImport(Darwin)
+@inlinable // This is @inlinable as trivially computable.
+internal func malloc_good_size(_ size: Int) -> Int {
     return size
 }
+#endif
 
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif canImport(ucrt)
 import ucrt
-
-private func malloc_good_size(_ size: Int) -> Int {
-    return size
-}
-
-#elseif canImport(C)
-
-private func malloc_good_size(_ size: Int) -> Int {
-    return size
-}
-
 #endif
 
 #if os(Windows)

@@ -12,6 +12,7 @@
 
 #if !FOUNDATION_FRAMEWORK
 
+#if false
 // FIXME: rdar://103535015 (Implement stub methods in struct Data)
 extension Data {
     /// Find the given `Data` in the content of this `Data`.
@@ -26,6 +27,7 @@ extension Data {
         fatalError("Not implemented")
     }
 }
+#endif
 
 // Placeholder for Progress
 internal final class Progress {
