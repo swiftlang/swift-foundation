@@ -82,10 +82,8 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, data: Data, reportPr
             throw CocoaError(.userCancelled)
         }
         
-        // Don't ever attempt to write more than 4GB to workaround this:
-        // If the value of nbyte is greater than {SSIZE_MAX}, the result is implementation-defined.
-        // (4660458)
-        let numBytesRequested = min(preferredChunkSize, SSIZE_MAX - 1)
+        // Don't ever attempt to write more than (2GB - 1 byte). Some platforms will return an error over that amount.
+        let numBytesRequested = min(preferredChunkSize, (1 << 31) - 1)
         let smallestAmountToRead = min(numBytesRequested, numBytesRemaining)
         let upperBound = nextRange.startIndex + smallestAmountToRead
         nextRange = nextRange.startIndex..<upperBound
@@ -342,6 +340,8 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
         do {
             try write(data: data, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
         } catch {
+            let savedError = errno
+            
             if let auxPath {
                 auxPath.withFileSystemRepresentation { pathFileSystemRep in
                     guard let pathFileSystemRep else { return }
@@ -353,7 +353,7 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
             if parentProgress?.isCancelled ?? false {
                 throw CocoaError(.userCancelled)
             } else {
-                throw CocoaError.errorWithFilePath(inPath, errno: 0, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: savedError, reading: false)
             }
         }
         
@@ -477,13 +477,15 @@ private func writeDataToFileNoAux(path inPath: PathOrURL, data: Data, options: D
         do {
             try write(data: data, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
         } catch {
+            let savedError = errno
+
             if parentProgress?.isCancelled ?? false {
                 // We could have deleted the partially written data above, but for max binary compatibility we'll only delete if a progress is in use.
                 // Ignore any error; it doesn't matter at this point.
                 unlink(pathFileSystemRep)
                 throw CocoaError(.userCancelled)
             } else {
-                throw CocoaError.errorWithFilePath(inPath, errno: 0, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: savedError, reading: false)
             }
         }
         
