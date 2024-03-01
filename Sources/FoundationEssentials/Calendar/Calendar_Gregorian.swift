@@ -31,13 +31,22 @@ import CRT
 /// maps to JulianDay  `2451545`                 (Jan 01 2000, 12:00)
 extension Date {
     static let julianDayAtDateReference: Double = 2_451_910.5 // 2001 Jan 1, midnight, UTC
+    static let maxJulianDay = 0x7F000000
+    static let minJulianDay = -0x7F000000
 
     var julianDate: Double {
         timeIntervalSinceReferenceDate / 86400 + Self.julianDayAtDateReference
     }
 
     var julianDay: Int {
-        Int((julianDate + 0.5).rounded(.down))
+        let jd = (julianDate + 0.5).rounded(.down)
+        guard jd <= Double(Self.maxJulianDay) else {
+            return Self.maxJulianDay
+        }
+        guard jd >= Double(Self.minJulianDay) else {
+            return Self.minJulianDay
+        }
+        return Int(jd)
     }
 
     init(julianDay: Int) {

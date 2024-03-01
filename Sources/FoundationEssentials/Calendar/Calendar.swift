@@ -459,7 +459,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The absolute time for which the calculation is performed.
     /// - returns: The range of absolute time values smaller can take on in larger at the time specified by date. Returns `nil` if larger is not logically bigger than smaller in the calendar, or the given combination of components does not make sense (or is a computation which is undefined).
     public func range(of smaller: Component, in larger: Component, for date: Date) -> Range<Int>? {
-        _calendar.range(of: smaller, in: larger, for: date)
+        _calendar.range(of: smaller, in: larger, for: date.capped)
     }
 
     /// Returns, via two inout parameters, the starting time and duration of a given calendar component that contains a given date.
@@ -472,7 +472,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The specified date.
     /// - returns: `true` if the starting time and duration of a component could be calculated, otherwise `false`.
     public func dateInterval(of component: Component, start: inout Date, interval: inout TimeInterval, for date: Date) -> Bool {
-        guard let timeRange = dateInterval(of: component, for: date) else {
+        guard let timeRange = dateInterval(of: component, for: date.capped) else {
             return false
         }
 
@@ -501,7 +501,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The absolute time for which the calculation is performed.
     /// - returns: The ordinal number of smaller within larger at the time specified by date. Returns `nil` if larger is not logically bigger than smaller in the calendar, or the given combination of components does not make sense (or is a computation which is undefined).
     public func ordinality(of smaller: Component, in larger: Component, for date: Date) -> Int? {
-        _calendar.ordinality(of: smaller, in: larger, for: date)
+        _calendar.ordinality(of: smaller, in: larger, for: date.capped)
     }
 
     // MARK: - Addition
@@ -513,7 +513,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
     /// - returns: A new date, or nil if a date could not be calculated with the given input.
     public func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool = false) -> Date? {
-        _calendar.date(byAdding: components, to: date, wrappingComponents: wrappingComponents)
+        _calendar.date(byAdding: components, to: date.capped, wrappingComponents: wrappingComponents)
     }
 
     /// Returns a new `Date` representing the date calculated by adding an amount of a specific component to a given date.
@@ -529,7 +529,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return nil
         }
         
-        return self.date(byAdding: dc, to: date, wrappingComponents: wrappingComponents)
+        return self.date(byAdding: dc, to: date.capped, wrappingComponents: wrappingComponents)
     }
 
     /// Returns a sequence of `Date`s, calculated by adding a scaled amount of `Calendar.Component`s to a starting `Date`.
@@ -551,7 +551,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             preconditionFailure("Attempt to add with an invalid Calendar.Component argument")
         }
         
-        return DatesByAdding(calendar: self, start: start, range: range, components: components, wrappingComponents: wrappingComponents)
+        return DatesByAdding(calendar: self, start: start.capped, range: range, components: components, wrappingComponents: wrappingComponents)
     }
     
     /// Returns a sequence of `Date`s, calculated by repeatedly adding an amount of `DateComponents` to a starting `Date` and then to each subsequent result.
@@ -567,7 +567,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
                       startingAt start: Date,
                       in range: Range<Date>? = nil,
                       wrappingComponents: Bool = false) -> some (Sequence<Date> & Sendable) {
-        DatesByAdding(calendar: self, start: start, range: range, components: components, wrappingComponents: wrappingComponents)
+        DatesByAdding(calendar: self, start: start.capped, range: range, components: components, wrappingComponents: wrappingComponents)
     }
     
     // MARK: -
@@ -586,13 +586,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter date: The `Date` to use.
     /// - returns: The date components of the specified date.
     public func dateComponents(_ components: Set<Component>, from date: Date) -> DateComponents {
-        var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: date)
-        // Fill out the Calendar field of dateComponents, if requested.
-        if components.contains(.calendar) {
-            dc.calendar = self
-        }
-
-        return dc
+        _dateComponents(Calendar.ComponentSet(components), from: date.capped)
     }
 
     /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
@@ -617,7 +611,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: All components, calculated using the `Calendar` and `TimeZone`.
     @available(iOS 8.0, *)
     public func dateComponents(in timeZone: TimeZone, from date: Date) -> DateComponents {
-        var dc = _calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: date, in: timeZone)
+        var dc = _calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: date.capped, in: timeZone)
 
         // Fill out the Calendar field of dateComponents (the above calls cannot insert this struct into the date components, because they don't know the right value).
         dc.calendar = self
@@ -631,7 +625,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter end: The ending date.
     /// - returns: The result of calculating the difference from start to end.
     public func dateComponents(_ components: Set<Component>, from start: Date, to end: Date) -> DateComponents {
-        var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: start, to: end)
+        var dc = _calendar.dateComponents(Calendar.ComponentSet(components), from: start.capped, to: end.capped)
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -671,7 +665,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return DateComponents(calendar: self)
         }
 
-        return dateComponents(components, from: startDate, to: endDate)
+        return dateComponents(components, from: startDate.capped, to: endDate.capped)
     }
 
     /// Returns the value for one component of a date.
@@ -915,7 +909,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - returns: `true` if the given date is within a weekend.
     @available(iOS 8.0, *)
     public func isDateInWeekend(_ date: Date) -> Bool {
-        _calendar.isDateInWeekend(date)
+        _calendar.isDateInWeekend(date.capped)
     }
 
     /// Finds the range of the weekend around the given date, and returns the starting date and duration of the weekend via two inout parameters.

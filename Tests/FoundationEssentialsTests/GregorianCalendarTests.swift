@@ -63,6 +63,12 @@ final class GregorianCalendarTests : XCTestCase {
         XCTAssertEqual(gregorianCalendar.numberOfDaysInMonth(50, year: 2024), 29) //  equivalent to month: 2, year: 2028, leap
     }
 
+    func testRemoteJulianDayCrash() {
+        // Accessing the integer julianDay of a remote date should not crash
+        let d = Date(julianDate: 9223372036854775808) // Int64.max + 1
+        _ = d.julianDay
+    }
+
     // MARK: Date from components
     func testDateFromComponents_DST() {
         // The expected dates were generated using ICU Calendar

@@ -899,6 +899,11 @@ final class CalendarTests : XCTestCase {
         XCTAssertTrue(shouldBeEmpty.isEmpty)
     }
 
+    func test_dateComponentsFromFarDateCrash() {
+        // Calling dateComponents(:from:) on a remote date should not crash
+        let c = Calendar(identifier: .gregorian)
+        _ = c.dateComponents([.month], from: Date(timeIntervalSinceReferenceDate: 7.968993439840418e+23))
+    }
 }
 
 
