@@ -284,4 +284,5 @@ internal let NSFilePathErrorKey = "NSFilePath"
 internal let NSURLErrorKey = "NSURL"
 internal let NSSourceFilePathErrorKey = "NSSourceFilePathErrorKey"
 internal let NSDestinationFilePathErrorKey = "NSDestinationFilePath"
+internal let NSDebugDescriptionErrorKey = "NSDebugDescription"
 #endif

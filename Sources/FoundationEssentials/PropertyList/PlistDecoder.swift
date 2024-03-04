@@ -29,6 +29,15 @@ package import _CShims
 @_objcRuntimeName(_TtC10Foundation20_PropertyListDecoder)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 open class PropertyListDecoder {
+#if FOUNDATION_FRAMEWORK
+    public typealias PropertyListFormat = PropertyListSerialization.PropertyListFormat
+#else
+    public enum PropertyListFormat : UInt, Sendable  {
+        case xml
+        case binary
+        case openStep
+    }
+#endif
     // MARK: Options
 
     /// Contextual user-provided information for use during decoding.
@@ -78,7 +87,7 @@ open class PropertyListDecoder {
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not a valid property list.
     /// - throws: An error if any value throws an error during decoding.
     open func decode<T : Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        var format: PropertyListSerialization.PropertyListFormat = .binary
+        var format: PropertyListDecoder.PropertyListFormat = .binary
         return try decode(type, from: data, format: &format)
     }
 
@@ -90,36 +99,36 @@ open class PropertyListDecoder {
     /// - returns: A value of the requested type along with the detected format of the property list.
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not a valid property list.
     /// - throws: An error if any value throws an error during decoding.
-    open func decode<T : Decodable>(_ type: T.Type, from data: Data, format: inout PropertyListSerialization.PropertyListFormat) throws -> T {
+    open func decode<T : Decodable>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
         try _decode({
             try $0.decode(type)
         }, from: data, format: &format)
     }
     
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     open func decode<T : DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
-        var format: PropertyListSerialization.PropertyListFormat = .binary
+        var format: PropertyListDecoder.PropertyListFormat = .binary
         return try decode(type, from: data, format: &format, configuration: configuration)
     }
     
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C : DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, configuration: C.decodingConfiguration)
     }
     
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    open func decode<T, C>(_ type: T.Type, from data: Data, format: inout PropertyListSerialization.PropertyListFormat, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C: DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
+    @available(FoundationPreview 0.1, *)
+    open func decode<T, C>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C: DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, format: &format, configuration: C.decodingConfiguration)
     }
     
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    open func decode<T : DecodableWithConfiguration>(_ type: T.Type, from data: Data, format: inout PropertyListSerialization.PropertyListFormat, configuration: T.DecodingConfiguration) throws -> T {
+    @available(FoundationPreview 0.1, *)
+    open func decode<T : DecodableWithConfiguration>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat, configuration: T.DecodingConfiguration) throws -> T {
         try _decode({
             try $0.decode(type, configuration: configuration)
         }, from: data, format: &format)
     }
     
-    private func _decode<T>(_ doDecode: (any _PlistDecoderEntryPointProtocol) throws -> T, from data: Data, format: inout PropertyListSerialization.PropertyListFormat) throws -> T {
+    private func _decode<T>(_ doDecode: (any _PlistDecoderEntryPointProtocol) throws -> T, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
         return try Self.detectFormatAndConvertEncoding(for: data, binaryPlist: { utf8Buffer in
             var decoder: _PlistDecoder<_BPlistDecodingFormat>
             do {
@@ -152,6 +161,7 @@ open class PropertyListDecoder {
             format = .xml
             return result
         }, openstep: { utf16View in
+#if FOUNDATION_FRAMEWORK
             let value: Any
             do {
                 value = try __ParseOldStylePropertyList(utf16: utf16View)
@@ -161,6 +171,10 @@ open class PropertyListDecoder {
             let decoder = __PlistDictionaryDecoder(referencing: value, at: [], options: options)
             format = .openStep
             return try doDecode(decoder)
+#else
+            // Unsupported until __PlistDictionaryDecoder is available
+            throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The openStep format is unsupported on this platform."))
+#endif
         })
     }
     
@@ -339,6 +353,9 @@ open class PropertyListDecoder {
         return try closure(string.utf16)
     }
 
+#if FOUNDATION_FRAMEWORK
+    // __PlistDictionaryDecoder is only available in the framework for now
+    
     /// Decodes a top-level value of the given type from the given property list container (top-level array or dictionary).
     ///
     /// - parameter type: The type of the value to decode.
@@ -363,6 +380,7 @@ open class PropertyListDecoder {
 
         return value
     }
+#endif
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)

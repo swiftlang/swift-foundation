@@ -16,9 +16,15 @@
 private protocol _BPlistStringDictionaryEncodableMarker { }
 extension Dictionary : _BPlistStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
 
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import _CShims
+#else
+package import _CShims
+#endif
 #if canImport(CollectionsInternal)
 @_implementationOnly import CollectionsInternal
+#elseif canImport(OrderedCollections)
+internal import OrderedCollections
 #endif
 
 // MARK: - __PlistEncoder
@@ -653,7 +659,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
 
             case array(ContiguousArray<Reference>)
             // Ordered, because some clients are expecting some level of stability from binary plist encoding
-#if canImport(CollectionsInternal)
+#if canImport(CollectionsInternal) || canImport(OrderedCollections)
             case dictionary(OrderedDictionary<Reference,Reference>)
 #else
             case dictionary(Dictionary<Reference,Reference>)
@@ -988,7 +994,6 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
                 return
             }
             
-            // TODO: We need a way to efficiently generate UTF-16 BE output that can be used from FoundationEssentials.
             let utf16BEData = str.data(using: .utf16BigEndian)!
             append(.utf16String, count: utf16BEData.count / MemoryLayout<UInt16>.size)
             utf16BEData.withUnsafeBytes { buf in
@@ -1058,7 +1063,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             write(sizedInteger: dateAsTimeInterval.bitPattern)
         }
 
-#if canImport(CollectionsInternal)
+#if canImport(CollectionsInternal) || canImport(OrderedCollections)
         mutating func append(_ dictionary: OrderedDictionary<Reference,Reference>) {
             // First write the indexes of the dictionary contents, then write the actual contents to the output in a pre-order traversal.
             append(.dict, count: dictionary.count)
@@ -1144,7 +1149,12 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
         if allASCII {
             backing = .string(str, hash: str.hashValue, isASCII: true)
         } else {
+#if FOUNDATION_FRAMEWORK
+            // NSString-backed Strings are only present on Darwin in the framework build
             backing = .string(str, hash: (str as NSString).hash, isASCII: false)
+#else
+            backing = .string(str, hash: str.hashValue, isASCII: false)
+#endif
         }
         
         return unique(backing)
@@ -1188,7 +1198,12 @@ extension _BPlistEncodingFormat.Reference : Hashable {
             if lhIsASCII, rhIsASCII {
                 return lh == rh
             } else if !lhIsASCII && !rhIsASCII {
+#if FOUNDATION_FRAMEWORK
+            // NSString-backed Strings are only present on Darwin in the framework build
                 return (lh as NSString) == (rh as NSString)
+#else
+                return lh == rh
+#endif                
             } else {
                 return false
             }

@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_implementationOnly import os
-
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import _CShims
 #else
@@ -290,7 +288,7 @@ class XMLPlistMap : PlistDecodingMap {
                 return self.withBuffer(for: region) { bufferView, _ in
                     bufferView.withUnsafeRawPointer { ptr, _ in
                         cfuid.withUTF8Buffer { cfuidBuf in
-                            memcmp(ptr, cfuidBuf.baseAddress, cfuid.utf8CodeUnitCount) == 0
+                            memcmp(ptr, cfuidBuf.baseAddress!, cfuid.utf8CodeUnitCount) == 0
                         }
                     }
                 }

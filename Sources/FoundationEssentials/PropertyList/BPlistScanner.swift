@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_implementationOnly import os
+#if FOUNDATION_FRAMEWORK
 @_implementationOnly import _CShims
-
+#else
+package import _CShims
+#endif
 typealias BPlistObjectIndex = Int
 
 private enum BPlistTypeMarker: UInt8 {

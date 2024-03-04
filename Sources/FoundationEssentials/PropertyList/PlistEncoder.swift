@@ -26,7 +26,7 @@ open class PropertyListEncoder {
     // MARK: - Options
 
     /// The output format to write the property list data in. Defaults to `.binary`.
-    open var outputFormat: PropertyListSerialization.PropertyListFormat {
+    open var outputFormat: PropertyListDecoder.PropertyListFormat {
         get {
             optionsLock.lock()
             defer { optionsLock.unlock() }
@@ -73,7 +73,7 @@ open class PropertyListEncoder {
 
     /// Options set on the top-level encoder to pass down the encoding hierarchy.
     internal struct _Options {
-        var outputFormat: PropertyListSerialization.PropertyListFormat = .binary
+        var outputFormat: PropertyListDecoder.PropertyListFormat = .binary
         var userInfo: [CodingUserInfoKey : Any] = [:]
     }
 
@@ -103,8 +103,10 @@ open class PropertyListEncoder {
                 return try _encodeXML(value)
             case .openStep:
                 throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Property list format .openStep not supported for writing"])
+#if FOUNDATION_FRAMEWORK
             @unknown default:
                 throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Unknown property list format \(options.outputFormat)"])
+#endif
             }
         } catch {
             throw EncodingError.invalidValue(value,
@@ -162,7 +164,7 @@ open class PropertyListEncoder {
         return try writer.serializePlist(topLevel)
     }
     
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     open func encode<T : EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration) throws -> Data {
         do {
             switch options.outputFormat {
@@ -172,8 +174,10 @@ open class PropertyListEncoder {
                 return try _encodeXML(value, configuration: configuration)
             case .openStep:
                 throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Property list format .openStep not supported for writing"])
+#if FOUNDATION_FRAMEWORK
             @unknown default:
                 throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Unknown property list format \(options.outputFormat)"])
+#endif
             }
         } catch {
             throw EncodingError.invalidValue(value,
@@ -193,7 +197,7 @@ open class PropertyListEncoder {
         return try writer.serializePlist(topLevel)
     }
     
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationPreview 0.1, *)
     open func encode<T, C>(_ value: T, configuration: C.Type) throws -> Data where T : EncodableWithConfiguration, C : EncodingConfigurationProviding, T.EncodingConfiguration == C.EncodingConfiguration {
         try encode(value, configuration: C.encodingConfiguration)
     }

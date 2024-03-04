@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="foobar"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>aBoolean</key>
+	<true/>
+	<key>aString</key>
+	<string>foobar</string>
+	<key>anArray</key>
+	<array>
+		<string>alpha</string>
+		<string>beta</string>
+		<string>gamma</string>
+	</array>
+</dict>
+</plist>

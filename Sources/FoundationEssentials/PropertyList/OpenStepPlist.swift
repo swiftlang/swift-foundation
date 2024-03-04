@@ -10,6 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Darwin)
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly import os
+#else
+package import os
+#endif
+#elseif canImport(Glibc)
+import Glibc
+#endif
+
+#if canImport(CRT)
+import CRT
+#endif
+
 private struct _ParseInfo {
     let utf16 : String.UTF16View
     var curr : String.UTF16View.Index

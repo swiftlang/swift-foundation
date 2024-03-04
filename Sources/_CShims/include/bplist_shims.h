@@ -6,8 +6,6 @@
 #ifndef _bplist_h
 #define _bplist_h
 
-#include "_CStdlib.h"
-
 typedef struct {
     uint8_t    _unused[5];
     uint8_t     _sortVersion;

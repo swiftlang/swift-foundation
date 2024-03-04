@@ -29,6 +29,9 @@ public typealias Decimal = Foundation.Decimal
 public typealias TimeInterval = Foundation.TimeInterval
 public typealias JSONEncoder = Foundation.JSONEncoder
 public typealias JSONDecoder = Foundation.JSONDecoder
+public typealias PropertyListEncoder = Foundation.PropertyListEncoder
+public typealias PropertyListDecoder = Foundation.PropertyListDecoder
+public typealias ProcessInfo = Foundation.ProcessInfo
 public typealias IndexPath = Foundation.IndexPath
 
 // XCTest implicitly imports Foundation
@@ -123,6 +126,8 @@ public typealias Decimal = FoundationEssentials.Decimal
 public typealias TimeInterval = FoundationEssentials.TimeInterval
 public typealias JSONEncoder = FoundationEssentials.JSONEncoder
 public typealias JSONDecoder = FoundationEssentials.JSONDecoder
+public typealias PropertyListEncoder = FoundationEssentials.PropertyListEncoder
+public typealias PropertyListDecoder = FoundationEssentials.PropertyListDecoder
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias FormatStyle = FoundationEssentials.FormatStyle
@@ -208,6 +213,7 @@ public typealias FileAttributeKey = FoundationEssentials.FileAttributeKey
 public typealias CocoaError = FoundationEssentials.CocoaError
 public typealias POSIXError = FoundationEssentials.POSIXError
 public typealias FileManagerDelegate = FoundationEssentials.FileManagerDelegate
+public typealias ProcessInfo = FoundationEssentials.ProcessInfo
 public typealias IndexPath = FoundationEssentials.IndexPath
 
 #endif // FOUNDATION_FRAMEWORK

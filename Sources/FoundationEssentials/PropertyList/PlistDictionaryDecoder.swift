@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Relies on NSNumber
+#if FOUNDATION_FRAMEWORK
+
 // MARK: - __PlistDictionaryDecoder
 
 internal class __PlistDictionaryDecoder : Decoder, _PlistDecoderEntryPointProtocol {
@@ -1025,3 +1028,5 @@ extension __PlistDictionaryDecoder {
         return try type.init(from: self, configuration: configuration)
     }
 }
+
+#endif // FOUNDATION_FRAMEWORK

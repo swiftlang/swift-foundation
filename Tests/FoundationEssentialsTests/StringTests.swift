@@ -405,6 +405,126 @@ final class StringTests : XCTestCase {
         XCTAssertEqual("/////".lastPathComponent, "/")
         XCTAssertEqual("/./..//./..//".lastPathComponent, "..")
     }
+    
+    func test_dataUsingEncoding() {
+        let s = "hello 🧮"
+        
+        // Verify things work on substrings too
+        let s2 = "x" + s + "x"
+        let subString = s2[s2.index(after: s2.startIndex)..<s2.index(before: s2.endIndex)]
+        
+        // UTF16 - specific endianness
+        
+        let utf16BEExpected = Data([0, 104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 216, 62, 221, 238])
+        let utf16BEOutput = s.data(using: String._Encoding.utf16BigEndian)
+        XCTAssertEqual(utf16BEOutput, utf16BEExpected)
+        
+        let utf16BEOutputSubstring = subString.data(using: String._Encoding.utf16BigEndian)
+        XCTAssertEqual(utf16BEOutputSubstring, utf16BEExpected)
+        
+        let utf16LEExpected = Data([104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 0, 62, 216, 238, 221])
+        let utf16LEOutput = s.data(using: String._Encoding.utf16LittleEndian)
+        XCTAssertEqual(utf16LEOutput, utf16LEExpected)
+
+        let utf16LEOutputSubstring = subString.data(using: String._Encoding.utf16LittleEndian)
+        XCTAssertEqual(utf16LEOutputSubstring, utf16LEExpected)
+
+        // UTF32 - specific endianness
+        
+        let utf32BEExpected = Data([0, 0, 0, 104, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 32, 0, 1, 249, 238])
+        let utf32BEOutput = s.data(using: String._Encoding.utf32BigEndian)
+        XCTAssertEqual(utf32BEOutput, utf32BEExpected)
+
+        let utf32LEExpected = Data([104, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 32, 0, 0, 0, 238, 249, 1, 0])
+        let utf32LEOutput = s.data(using: String._Encoding.utf32LittleEndian)
+        XCTAssertEqual(utf32LEOutput, utf32LEExpected)
+        
+        
+        // UTF16 and 32, platform endianness
+        let utf16LEWithBOM = Data([0xFF, 0xFE]) + utf16LEExpected
+        let utf32LEWithBOM = Data([0xFF, 0xFE, 0x00, 0x00]) + utf32LEExpected
+        let utf16BEWithBOM = Data([0xFE, 0xFF]) + utf16BEExpected
+        let utf32BEWithBOM = Data([0x00, 0x00, 0xFE, 0xFF]) + utf32BEExpected
+
+        let utf16Output = s.data(using: String._Encoding.utf16)!
+        let utf32Output = s.data(using: String._Encoding.utf32)!
+        
+        let bom = 0xFFFE
+        
+        if bom.littleEndian == bom {
+            // We are on a little endian system. Expect a LE BOM
+            XCTAssertEqual(utf16Output, utf16LEWithBOM)
+            XCTAssertEqual(utf32Output, utf32LEWithBOM)
+        } else if bom.bigEndian == bom {
+            // We are on a big endian system. Expect a BE BOM
+            XCTAssertEqual(utf16Output, utf16BEWithBOM)
+            XCTAssertEqual(utf32Output, utf32BEWithBOM)
+        } else {
+            fatalError("Unknown endianness")
+        }
+        
+        // UTF16
+        
+        let utf16BEString = String(bytes: utf16BEExpected, encoding: String._Encoding.utf16BigEndian)
+        XCTAssertEqual(s, utf16BEString)
+        
+        let utf16LEString = String(bytes: utf16LEExpected, encoding: String._Encoding.utf16LittleEndian)
+        XCTAssertEqual(s, utf16LEString)
+        
+        let utf16LEBOMString = String(bytes: utf16LEWithBOM, encoding: String._Encoding.utf16)
+        XCTAssertEqual(s, utf16LEBOMString)
+        
+        let utf16BEBOMString = String(bytes: utf16BEWithBOM, encoding: String._Encoding.utf16)
+        XCTAssertEqual(s, utf16BEBOMString)
+        
+        // No BOM, no encoding specified. We assume the data is big endian, which leads to garbage (but not nil).
+        let utf16LENoBOMString = String(bytes: utf16LEExpected, encoding: String._Encoding.utf16)
+        XCTAssertNotNil(utf16LENoBOMString)
+
+        // No BOM, no encoding specified. We assume the data is big endian, which leads to an expected value.
+        let utf16BENoBOMString = String(bytes: utf16BEExpected, encoding: String._Encoding.utf16)
+        XCTAssertEqual(s, utf16BENoBOMString)
+
+        // UTF32
+        
+        let utf32BEString = String(bytes: utf32BEExpected, encoding: String._Encoding.utf32BigEndian)
+        XCTAssertEqual(s, utf32BEString)
+        
+        let utf32LEString = String(bytes: utf32LEExpected, encoding: String._Encoding.utf32LittleEndian)
+        XCTAssertEqual(s, utf32LEString)
+        
+        
+        let utf32BEBOMString = String(bytes: utf32BEWithBOM, encoding: String._Encoding.utf32)
+        XCTAssertEqual(s, utf32BEBOMString)
+        
+        let utf32LEBOMString = String(bytes: utf32LEWithBOM, encoding: String._Encoding.utf32)
+        XCTAssertEqual(s, utf32LEBOMString)
+        
+        // No BOM, no encoding specified. We assume the data is big endian, which leads to a nil.
+        let utf32LENoBOMString = String(bytes: utf32LEExpected, encoding: String._Encoding.utf32)
+        XCTAssertNil(utf32LENoBOMString)
+        
+        // No BOM, no encoding specified. We assume the data is big endian, which leads to an expected value.
+        let utf32BENoBOMString = String(bytes: utf32BEExpected, encoding: String._Encoding.utf32)
+        XCTAssertEqual(s, utf32BEString)
+
+        // Check what happens when we mismatch a string with a BOM and the encoding. The bytes are interpreted according to the specified encoding regardless of the BOM, the BOM is preserved, and the String will look garbled. However the bytes are preserved as-is. This is the expected behavior for UTF16.
+        let utf16LEBOMStringMismatch = String(bytes: utf16LEWithBOM, encoding: String._Encoding.utf16BigEndian)
+        let utf16LEBOMStringMismatchBytes = utf16LEBOMStringMismatch?.data(using: String._Encoding.utf16BigEndian)
+        XCTAssertEqual(utf16LEWithBOM, utf16LEBOMStringMismatchBytes)
+        
+        let utf16BEBOMStringMismatch = String(bytes: utf16BEWithBOM, encoding: String._Encoding.utf16LittleEndian)
+        let utf16BEBomStringMismatchBytes = utf16BEBOMStringMismatch?.data(using: String._Encoding.utf16LittleEndian)
+        XCTAssertEqual(utf16BEWithBOM, utf16BEBomStringMismatchBytes)
+
+        // For a UTF32 mismatch, the string creation simply returns nil.
+        let utf32LEBOMStringMismatch = String(bytes: utf32LEWithBOM, encoding: String._Encoding.utf32BigEndian)
+        XCTAssertNil(utf32LEBOMStringMismatch)
+        
+        let utf32BEBOMStringMismatch = String(bytes: utf32BEWithBOM, encoding: String._Encoding.utf32LittleEndian)
+        XCTAssertNil(utf32BEBOMStringMismatch)
+    }
+
 }
 
 

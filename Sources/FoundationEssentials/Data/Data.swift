@@ -162,7 +162,7 @@ internal final class __DataStorage : @unchecked Sendable {
     func withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
         return try apply(UnsafeRawBufferPointer(start: _bytes?.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
     }
-
+    
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
     @discardableResult
     func withUnsafeMutableBytes<Result>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
@@ -2130,6 +2130,13 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
     public func withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
         return try _representation.withUnsafeBytes(body)
+    }
+    
+    @_alwaysEmitIntoClient
+    public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
+        return try _representation.withUnsafeBytes {
+            return try $0.withMemoryRebound(to: UInt8.self, body)
+        }
     }
 
     /// Mutate the bytes in the data.
