@@ -4,7 +4,7 @@
 * Author(s): [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
 * Bug: rdar://122026982
-* Status: **Active review: Feb 22, 2024...Feb 29, 2024**
+* Status: **Accepted**
 * Implementation: [apple/swift-foundation#432](https://github.com/apple/swift-foundation/pull/432)
 
 ## Revision history
