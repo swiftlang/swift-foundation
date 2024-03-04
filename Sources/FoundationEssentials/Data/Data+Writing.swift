@@ -83,7 +83,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, data: Data, reportPr
         }
         
         // Don't ever attempt to write more than (2GB - 1 byte). Some platforms will return an error over that amount.
-        let numBytesRequested = min(preferredChunkSize, (1 << 31) - 1)
+        let numBytesRequested = min(preferredChunkSize, Int(Int32.max))
         let smallestAmountToRead = min(numBytesRequested, numBytesRemaining)
         let upperBound = nextRange.startIndex + smallestAmountToRead
         nextRange = nextRange.startIndex..<upperBound
