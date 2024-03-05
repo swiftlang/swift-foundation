@@ -1188,14 +1188,16 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             if let value = components.weekdayOrdinal { ucal_set(ucalendar, UCAL_DAY_OF_WEEK_IN_MONTH, Int32(truncatingIfNeeded: value)) }
             // DateComponents month field is +1 from ICU
             if let value = components.month { ucal_set(ucalendar, UCAL_MONTH, Int32(truncatingIfNeeded: value - 1)) }
+
+            // The later the value is set via `ucal_set` the higher priority it takes when ICU resolves ambiguous components. For compatibility, always set `day of year` before `day (of month)`
+            if let value = components.dayOfYear { ucal_set(ucalendar, UCAL_DAY_OF_YEAR, Int32(truncatingIfNeeded: value)) }
             if let value = components.day { ucal_set(ucalendar, UCAL_DAY_OF_MONTH, Int32(truncatingIfNeeded: value)) }
             if let value = components.hour { ucal_set(ucalendar, UCAL_HOUR_OF_DAY, Int32(truncatingIfNeeded: value)) }
             if let value = components.minute { ucal_set(ucalendar, UCAL_MINUTE, Int32(truncatingIfNeeded: value)) }
             if let value = components.second { ucal_set(ucalendar, UCAL_SECOND, Int32(truncatingIfNeeded: value)) }
             if let value = components.nanosecond { nanosecond = Double(value) }
             if let isLeap = components.isLeapMonth, isLeap { ucal_set(ucalendar, UCAL_IS_LEAP_MONTH, 1) }
-            if let value = components.dayOfYear { ucal_set(ucalendar, UCAL_DAY_OF_YEAR, Int32(truncatingIfNeeded: value)) }
-            
+
             var status = U_ZERO_ERROR
             let udate = ucal_getMillis(ucalendar, &status)
             var date = Date(udate: udate) + nanosecond * 1.0e-9
