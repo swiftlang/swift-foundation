@@ -12,14 +12,8 @@
 
 import SwiftSyntax
 import SwiftSyntaxMacros
-
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import SwiftDiagnostics
-@_implementationOnly import SwiftSyntaxBuilder
-#else
-package import SwiftDiagnostics
-package import SwiftSyntaxBuilder
-#endif
+internal import SwiftDiagnostics
+internal import SwiftSyntaxBuilder
 
 // A list of all functions supported by Predicate itself, any other functions called will be diagnosed as an error
 // This allows for checking the function name, the number of arguments, and the argument labels, but the types of the arguments will need to be validated by the post-expansion type checking pass

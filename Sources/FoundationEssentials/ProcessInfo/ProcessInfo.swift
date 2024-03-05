@@ -10,11 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims
-#else
-package import _CShims
-#endif
+internal import _CShims
 
 #if canImport(Darwin)
 import Darwin

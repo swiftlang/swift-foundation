@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import Foundation_Private.NSFileManager
+internal import Foundation_Private.NSFileManager
 
 @objc(_NSFileManagerBridge)
 @objcMembers

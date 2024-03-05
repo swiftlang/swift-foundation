@@ -12,9 +12,9 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 import CoreFoundation
-@_implementationOnly import os
+internal import os
 
 @objc
 extension NSTimeZone {

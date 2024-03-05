@@ -11,17 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import os
-@_implementationOnly import _CShims
-#else
-package import os
-package import _CShims
-#endif
+internal import os
 #elseif canImport(Glibc)
 import Glibc
-package import _CShims
 #endif
+
+internal import _CShims
 
 extension String {
     internal func deletingLastPathComponent() -> String {

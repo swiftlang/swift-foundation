@@ -16,13 +16,12 @@ import FoundationEssentials
 
 #if FOUNDATION_FRAMEWORK
 // for CFXPreferences call
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 // For Logger
-@_implementationOnly import os
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
+internal import os
 #endif
+
+internal import FoundationICU
 
 #if canImport(Glibc)
 import Glibc

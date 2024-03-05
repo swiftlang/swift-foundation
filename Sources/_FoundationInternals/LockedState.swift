@@ -11,13 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(os)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import os
-#if canImport(C.os.lock)
-@_implementationOnly import C.os.lock
-#endif
-#else
-package import os
+internal import os
+#if FOUNDATION_FRAMEWORK && canImport(C.os.lock)
+internal import C.os.lock
 #endif
 #elseif canImport(Glibc)
 import Glibc

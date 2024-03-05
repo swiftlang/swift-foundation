@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 // for CFXPreferences call
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 #endif
 
 /// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identifier locales never have preferences.

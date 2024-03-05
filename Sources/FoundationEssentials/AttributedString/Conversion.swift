@@ -13,10 +13,10 @@
 
 #if FOUNDATION_FRAMEWORK
 import Darwin
-@_implementationOnly import os
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
+internal import os
+@_spi(Unstable) internal import CollectionsInternal
 #else
-package import _RopeModule
+internal import _RopeModule
 #endif
 
 extension String {

@@ -11,8 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly
-import Synchronization
+internal import Synchronization
 #endif
 
 @available(FoundationPredicate 0.1, *)

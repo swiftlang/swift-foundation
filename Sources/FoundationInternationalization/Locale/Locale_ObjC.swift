@@ -12,14 +12,14 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 import CoreFoundation
-@_implementationOnly import os
+internal import os
 #if canImport(CoreFoundation_Private.CFLocale)
-@_implementationOnly import CoreFoundation_Private.CFLocale
+internal import CoreFoundation_Private.CFLocale
 #endif
 #if canImport(Foundation_Private.NSLocale)
-@_implementationOnly import Foundation_Private.NSLocale
+internal import Foundation_Private.NSLocale
 #endif
 
 /// Entry points for the ObjC and C code to call into the common Swift implementation.

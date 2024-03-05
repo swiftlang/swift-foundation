@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 
 /// Wraps an `NSCalendar` with more Swift-like `Calendar` API. See also: `_NSSwiftCalendar`.
 /// This is only used in the case where we have custom Objective-C subclasses of `NSCalendar`. It is assumed that the subclass is Sendable.

@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import XPCPrivate
-@_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import Foundation_Private.NSFileManager
-@_implementationOnly import DarwinPrivate
+internal import XPCPrivate
+internal import _ForSwiftFoundation
+internal import Foundation_Private.NSFileManager
+internal import DarwinPrivate
 
 #if os(macOS)
-@_implementationOnly import QuarantinePrivate
+internal import QuarantinePrivate
 #endif
 #endif
 
@@ -25,7 +25,7 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-package import _CShims
+internal import _CShims
 #endif
 
 extension stat {

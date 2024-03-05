@@ -14,7 +14,7 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-package import _CShims
+internal import _CShims
 #endif
 
 // MARK: Directory Iteration

@@ -602,7 +602,7 @@ extension DateComponents : Codable {
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
