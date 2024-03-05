@@ -20,25 +20,13 @@ internal final class _NSSwiftProcessInfo: ProcessInfo {
 
     private static let _shared: _NSSwiftProcessInfo = _NSSwiftProcessInfo()
 
+    internal static let _globalState: LockedState<GlobalState> = .init(initialState: .init())
     internal var _state: LockedState<State>
     private let _processInfo: _ProcessInfo
 
     override static var processInfo: ProcessInfo {
         return _shared
     }
-
-#if canImport(notify)
-    internal lazy var _thermalNotificationRegisted: Bool = {
-        _registerThermalStateNotification()
-        return true
-    }()
-
-    internal lazy var _powerStateNotificationRegisted: Bool = {
-        _registerPowerStateNotification()
-        return true
-    }()
-#endif
-
 
     override init() {
         _state = .init(initialState: .init())
