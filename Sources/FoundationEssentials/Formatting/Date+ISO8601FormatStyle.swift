@@ -446,7 +446,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
                 
                 if includingFractionalSeconds {
                     let ns = components.nanosecond!
-                    let ms = Int((Double(ns) / 1_000_000.0).rounded(.toNearestOrAwayFromZero))
+                    let ms = Int((Double(ns) / 1_000_000.0).rounded(.towardZero))
                     buffer.appendElement(asciiPeriod)
                     append(ms, zeroPad: 3, buffer: &buffer)
                 }

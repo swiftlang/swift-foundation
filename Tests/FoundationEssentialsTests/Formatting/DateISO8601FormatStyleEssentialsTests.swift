@@ -131,4 +131,11 @@ final class DateISO8601FormatStyleEssentialsTests: XCTestCase {
         let str = Date.ISO8601FormatStyle().format(dc, appendingTimeZoneOffset: 0)
         XCTAssertEqual(str, "-2025-01-20T00:00:00Z")
     }
+    
+    func test_rounding() {
+        // Date is: "1970-01-01 15:35:45.9999"
+        let date = Date(timeIntervalSinceReferenceDate: -978251054.0 - 0.0001)
+        let str = Date.ISO8601FormatStyle().timeZone(separator: .colon).time(includingFractionalSeconds: true).timeSeparator(.colon).format(date)
+        XCTAssertEqual(str, "15:35:45.999Z")
+    }
 }
