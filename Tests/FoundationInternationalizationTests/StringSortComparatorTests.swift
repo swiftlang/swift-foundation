@@ -30,5 +30,23 @@ class StringSortComparatorTests: XCTestCase {
         XCTAssertEqual(swedishComparator.compare("ă", "ã"), .orderedAscending)
         XCTAssertEqual(swedishComparator.locale, Locale(identifier: "sv"))
     }
-#endif    
+    
+    func test_nil_locale() {
+        let swedishComparator = String.Comparator(options: [], locale: nil)
+        XCTAssertEqual(swedishComparator.compare("ă", "ã"), .orderedDescending)
+    }
+    
+    func test_standard_localized() throws {
+        // This test is only verified to work with en
+        guard Locale.current.language.languageCode == .english else {
+            throw XCTSkip("Test only verified to work with English as current language")
+        }
+        
+        let localizedStandard = String.StandardComparator.localizedStandard
+        XCTAssertEqual(localizedStandard.compare("ă", "ã"), .orderedAscending)
+        
+        let unlocalizedStandard = String.StandardComparator.lexical
+        XCTAssertEqual(unlocalizedStandard.compare("ă", "ã"), .orderedDescending)
+    }
+#endif
 }
