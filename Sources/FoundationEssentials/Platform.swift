@@ -12,6 +12,12 @@
 #if canImport(Darwin)
 import Darwin
 
+#if FOUNDATION_FRAMEWORK
+@_implementationOnly import MachO.dyld
+#else
+package import MachO.dyld
+#endif // FOUNDATION_FRAMEWORK
+
 fileprivate var _pageSize: Int {
     Int(vm_page_size)
 }
@@ -34,6 +40,7 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import _CShims
+@_implementationOnly import CoreFoundation_Private
 #else
 package import _CShims
 #endif
@@ -175,4 +182,45 @@ extension Platform {
         }
     }
 #endif // !FOUNDATION_FRAMEWORK
+}
+
+// MARK: - Executable Path
+extension Platform {
+    static func getFullExecutablePath() -> String? {
+#if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
+        guard let cPath = _CFProcessPath() else {
+            return nil
+        }
+        return String(cString: cPath).standardizingPath
+#elseif canImport(Darwin)
+        // Apple platforms, first check for env override
+        #if os(macOS)
+        if let override = Self.getEnvSecure("CFProcessPath") {
+            return override.standardizingPath
+        }
+        #endif
+
+        // use _NSGetExecutablePath
+        return withUnsafeTemporaryAllocation(
+            of: CChar.self, capacity: FileManager.MAX_PATH_SIZE
+        ) { buffer -> String? in
+            var size: UInt32 = UInt32(FileManager.MAX_PATH_SIZE)
+            guard _NSGetExecutablePath(buffer.baseAddress!, &size) == 0 else {
+                return nil
+            }
+            #if NO_FILESYSTEM
+            return String(cString: buffer.baseAddress!)
+            #else
+            return String(cString: buffer.baseAddress!).standardizingPath
+            #endif
+        }
+#elseif os(Linux)
+        // For Linux, read /proc/self/exe
+        return try? FileManager.default.destinationOfSymbolicLink(
+            atPath: "/proc/self/exe").standardizingPath
+#else
+        // TODO: Implement for other platforms
+        return nil
+#endif
+    }
 }

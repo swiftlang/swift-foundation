@@ -40,7 +40,23 @@ final class _ProcessInfo: Sendable {
     }
 
     var arguments: [String] {
-        return CommandLine.arguments
+        // Bin compat: always use full executable path
+        // for arg0. CommandLine.arguments.first may not
+        // always be the full executable path, most
+        // noticeably when you launch the process via `$PATH`
+        // instead of full path.
+        return state.withLock {
+            if let existing = $0.arguments {
+                return existing
+            }
+            var current = CommandLine.arguments
+            // Replace the process path
+            if let fullPath = Platform.getFullExecutablePath() {
+                current[0] = fullPath
+            }
+            $0.arguments = current
+            return current
+        }
     }
 
     var environment: [String : String] {
@@ -302,6 +318,7 @@ extension _ProcessInfo {
 extension _ProcessInfo {
     struct State {
         var processName: String
+        var arguments: [String]?
     }
 
     private static func _getProcessName() -> String {
