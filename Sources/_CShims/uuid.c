@@ -36,6 +36,54 @@
 #include <TargetConditionals.h>
 #endif
 
+#if TARGET_OS_MAC
+
+INTERNAL void _foundation_uuid_clear(uuid_t uu) {
+    uuid_clear(uu);
+}
+
+INTERNAL int _foundation_uuid_compare(const uuid_t uu1, const uuid_t uu2) {
+    return uuid_compare(uu1, uu2);
+}
+
+INTERNAL void _foundation_uuid_copy(uuid_t dst, const uuid_t src) {
+    uuid_copy(dst, src);
+}
+
+INTERNAL void _foundation_uuid_generate(uuid_t out) {
+    uuid_generate(out);
+}
+
+INTERNAL void _foundation_uuid_generate_random(uuid_t out) {
+    uuid_generate_random(out);
+}
+
+INTERNAL void _foundation_uuid_generate_time(uuid_t out) {
+    uuid_generate_time(out);
+}
+
+INTERNAL int _foundation_uuid_is_null(const uuid_t uu) {
+    return uuid_is_null(uu);
+}
+
+INTERNAL int _foundation_uuid_parse(const uuid_string_t in, uuid_t uu) {
+    return uuid_parse(in, uu);
+}
+
+INTERNAL void _foundation_uuid_unparse(const uuid_t uu, uuid_string_t out) {
+    uuid_unparse(uu, out);
+}
+
+INTERNAL void _foundation_uuid_unparse_lower(const uuid_t uu, uuid_string_t out) {
+    uuid_unparse_lower(uu, out);
+}
+
+INTERNAL void _foundation_uuid_unparse_upper(const uuid_t uu, uuid_string_t out) {
+    uuid_unparse_upper(uu, out);
+}
+
+#else
+
 #include <stdint.h>
 #include <string.h>
 #include <fcntl.h>
@@ -49,23 +97,7 @@
 #endif
 #include <stdio.h>
 
-#if TARGET_OS_MAC
-#include <sys/socket.h>
-#include <sys/time.h>
-
-#include <mach/mach_time.h>
-
-#include <net/if.h>
-#include <net/if_dl.h>
-#include <net/if_types.h>
-
-static inline void nanotime(struct timespec *tv) {
-    uint64_t now = mach_absolute_time();
-    tv->tv_sec = now / 1000000000;
-    tv->tv_nsec = now - (tv->tv_sec * 1000000000);
-}
-
-#elif TARGET_OS_LINUX || TARGET_OS_BSD || TARGET_OS_WASI
+#if TARGET_OS_LINUX || TARGET_OS_BSD || TARGET_OS_WASI
 #include <time.h>
 
 static inline void nanotime(struct timespec *tv) {
@@ -76,14 +108,14 @@ static inline void nanotime(struct timespec *tv) {
 #include <time.h>
 
 static inline void nanotime(struct timespec *tv) {
-  FILETIME ftTime;
-
-  GetSystemTimePreciseAsFileTime(&ftTime);
-
-  uint64_t Value = (((uint64_t)ftTime.dwHighDateTime << 32) | ftTime.dwLowDateTime);
-
-  tv->tv_sec = Value / 1000000000;
-  tv->tv_nsec = Value - (tv->tv_sec * 1000000000);
+    FILETIME ftTime;
+    
+    GetSystemTimePreciseAsFileTime(&ftTime);
+    
+    uint64_t Value = (((uint64_t)ftTime.dwHighDateTime << 32) | ftTime.dwLowDateTime);
+    
+    tv->tv_sec = Value / 1000000000;
+    tv->tv_nsec = Value - (tv->tv_sec * 1000000000);
 }
 #endif
 
@@ -96,7 +128,7 @@ static inline void read_random(void *buffer, unsigned numBytes) {
 #include <sys/random.h>
 
 static inline void read_random(void *buffer, unsigned numBytes) {
-  getentropy(buffer, numBytes);
+    getentropy(buffer, numBytes);
 }
 #else
 static inline void read_random(void *buffer, unsigned numBytes) {
@@ -106,17 +138,14 @@ static inline void read_random(void *buffer, unsigned numBytes) {
 }
 #endif
 
-
 UUID_DEFINE(UUID_NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-static void
-read_node(uint8_t *node)
-{
+static void read_node(uint8_t *node) {
 #if NETWORKING
     struct ifnet *ifp;
     struct ifaddr *ifa;
     struct sockaddr_dl *sdl;
-
+    
     ifnet_head_lock_shared();
     TAILQ_FOREACH(ifp, &ifnet_head, if_link) {
         TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
@@ -130,56 +159,44 @@ read_node(uint8_t *node)
     }
     ifnet_head_done();
 #endif /* NETWORKING */
-
+    
     read_random(node, 6);
     node[0] |= 0x01;
 }
 
-static uint64_t
-read_time(void)
-{
+static uint64_t read_time(void) {
     struct timespec tv;
-
+    
     nanotime(&tv);
-
+    
     return (tv.tv_sec * 10000000ULL) + (tv.tv_nsec / 100ULL) + 0x01B21DD213814000ULL;
 }
 
-void
-_foundation_uuid_clear(uuid_t uu)
-{
+void _foundation_uuid_clear(uuid_t uu) {
     memset(uu, 0, sizeof(uuid_t));
 }
 
-int
-_foundation_uuid_compare(const uuid_t uu1, const uuid_t uu2)
-{
+int _foundation_uuid_compare(const uuid_t uu1, const uuid_t uu2) {
     return memcmp(uu1, uu2, sizeof(uuid_t));
 }
 
-void
-_foundation_uuid_copy(uuid_t dst, const uuid_t src)
-{
+void _foundation_uuid_copy(uuid_t dst, const uuid_t src) {
     memcpy(dst, src, sizeof(uuid_t));
 }
 
-void
-_foundation_uuid_generate_random(uuid_t out)
-{
+void _foundation_uuid_generate_random(uuid_t out) {
     read_random(out, sizeof(uuid_t));
-
+    
     out[6] = (out[6] & 0x0F) | 0x40;
     out[8] = (out[8] & 0x3F) | 0x80;
 }
 
-void
-_foundation_uuid_generate_time(uuid_t out)
-{
+void _foundation_uuid_generate_time(uuid_t out) {
     uint64_t time;
-
+    
     read_node(&out[10]);
     read_random(&out[8], 2);
-
+    
     time = read_time();
     out[0] = (uint8_t)(time >> 24);
     out[1] = (uint8_t)(time >> 16);
@@ -189,79 +206,73 @@ _foundation_uuid_generate_time(uuid_t out)
     out[5] = (uint8_t)(time >> 32);
     out[6] = (uint8_t)(time >> 56);
     out[7] = (uint8_t)(time >> 48);
-
+    
     out[6] = (out[6] & 0x0F) | 0x10;
     out[8] = (out[8] & 0x3F) | 0x80;
 }
 
-void
-_foundation_uuid_generate(uuid_t out)
+void _foundation_uuid_generate(uuid_t out)
 {
     _foundation_uuid_generate_random(out);
 }
 
-int
-_foundation_uuid_is_null(const uuid_t uu)
+int _foundation_uuid_is_null(const uuid_t uu)
 {
     return !memcmp(uu, UUID_NULL, sizeof(uuid_t));
 }
 
-int
-_foundation_uuid_parse(const uuid_string_t in, uuid_t uu)
+int _foundation_uuid_parse(const uuid_string_t in, uuid_t uu)
 {
     int n = 0;
-
+    
     sscanf(in,
-        "%2hhx%2hhx%2hhx%2hhx-"
-        "%2hhx%2hhx-"
-        "%2hhx%2hhx-"
-        "%2hhx%2hhx-"
-        "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%n",
-        &uu[0], &uu[1], &uu[2], &uu[3],
-        &uu[4], &uu[5],
-        &uu[6], &uu[7],
-        &uu[8], &uu[9],
-        &uu[10], &uu[11], &uu[12], &uu[13], &uu[14], &uu[15], &n);
-
+           "%2hhx%2hhx%2hhx%2hhx-"
+           "%2hhx%2hhx-"
+           "%2hhx%2hhx-"
+           "%2hhx%2hhx-"
+           "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%n",
+           &uu[0], &uu[1], &uu[2], &uu[3],
+           &uu[4], &uu[5],
+           &uu[6], &uu[7],
+           &uu[8], &uu[9],
+           &uu[10], &uu[11], &uu[12], &uu[13], &uu[14], &uu[15], &n);
+    
     return (n != 36 || in[n] != '\0' ? -1 : 0);
 }
 
-void
-_foundation_uuid_unparse_lower(const uuid_t uu, uuid_string_t out)
-{
+void _foundation_uuid_unparse_lower(const uuid_t uu, uuid_string_t out) {
     snprintf(out,
-        sizeof(uuid_string_t),
-        "%02x%02x%02x%02x-"
-        "%02x%02x-"
-        "%02x%02x-"
-        "%02x%02x-"
-        "%02x%02x%02x%02x%02x%02x",
-        uu[0], uu[1], uu[2], uu[3],
-        uu[4], uu[5],
-        uu[6], uu[7],
-        uu[8], uu[9],
-        uu[10], uu[11], uu[12], uu[13], uu[14], uu[15]);
+             sizeof(uuid_string_t),
+             "%02x%02x%02x%02x-"
+             "%02x%02x-"
+             "%02x%02x-"
+             "%02x%02x-"
+             "%02x%02x%02x%02x%02x%02x",
+             uu[0], uu[1], uu[2], uu[3],
+             uu[4], uu[5],
+             uu[6], uu[7],
+             uu[8], uu[9],
+             uu[10], uu[11], uu[12], uu[13], uu[14], uu[15]);
 }
 
-void
-_foundation_uuid_unparse_upper(const uuid_t uu, uuid_string_t out)
-{
+void _foundation_uuid_unparse_upper(const uuid_t uu, uuid_string_t out) {
     snprintf(out,
-        sizeof(uuid_string_t),
-        "%02X%02X%02X%02X-"
-        "%02X%02X-"
-        "%02X%02X-"
-        "%02X%02X-"
-        "%02X%02X%02X%02X%02X%02X",
-        uu[0], uu[1], uu[2], uu[3],
-        uu[4], uu[5],
-        uu[6], uu[7],
-        uu[8], uu[9],
-        uu[10], uu[11], uu[12], uu[13], uu[14], uu[15]);
+             sizeof(uuid_string_t),
+             "%02X%02X%02X%02X-"
+             "%02X%02X-"
+             "%02X%02X-"
+             "%02X%02X-"
+             "%02X%02X%02X%02X%02X%02X",
+             uu[0], uu[1], uu[2], uu[3],
+             uu[4], uu[5],
+             uu[6], uu[7],
+             uu[8], uu[9],
+             uu[10], uu[11], uu[12], uu[13], uu[14], uu[15]);
 }
 
-void
-_foundation_uuid_unparse(const uuid_t uu, uuid_string_t out)
-{
+void _foundation_uuid_unparse(const uuid_t uu, uuid_string_t out) {
     _foundation_uuid_unparse_upper(uu, out);
 }
+
+#endif
+
