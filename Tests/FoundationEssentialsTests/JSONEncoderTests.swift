@@ -3338,7 +3338,7 @@ private struct CodableTypeWithConfiguration : CodableWithConfiguration, Equatabl
 // MARK: - Helper Types
 
 /// A key type which can take on any string or integer value.
-/// This needs to mirror _JSONKey.
+/// This needs to mirror _CodingKey.
 fileprivate struct _TestKey : CodingKey {
   var stringValue: String
   var intValue: Int?

@@ -19,6 +19,12 @@ extension String {
 }
 
 extension Data {
+    init(bufferView: BufferView<UInt8>) {
+        self = bufferView.withUnsafeBufferPointer {
+            Data(buffer: $0)
+        }
+    }
+    
     func withBufferView<ResultType>(
         _ body: (BufferView<UInt8>) throws -> ResultType
     ) rethrows -> ResultType {
@@ -30,16 +36,24 @@ extension Data {
 }
 
 extension BufferView<UInt8> {
-    internal subscript(region: JSONMap.Region) -> BufferView {
+    internal func slice(from startOffset: Int, count sliceCount: Int) -> BufferView {
         precondition(
-            region.startOffset >= 0 && region.startOffset < count && region.count >= 0
-                && region.count <= count && region.startOffset &+ region.count <= count
+            startOffset >= 0 && startOffset < count && sliceCount >= 0
+                && sliceCount <= count && startOffset &+ sliceCount <= count
         )
-        return self[unchecked: region]
+        return uncheckedSlice(from: startOffset, count: sliceCount)
+    }
+    
+    internal func uncheckedSlice(from startOffset: Int, count sliceCount: Int) -> BufferView {
+        let address = startIndex.advanced(by: startOffset)
+        return BufferView(start: address, count: sliceCount)
+    }
+    
+    internal subscript(region: JSONMap.Region) -> BufferView {
+        slice(from: region.startOffset, count: region.count)
     }
 
     internal subscript(unchecked region: JSONMap.Region) -> BufferView {
-        let address = startIndex.advanced(by: region.startOffset)
-        return BufferView(start: address, count: region.count)
+        uncheckedSlice(from: region.startOffset, count: region.count)
     }
 }
