@@ -11,11 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import os
-#else
-package import os
-#endif
+internal import os
 #elseif canImport(Glibc)
 import Glibc
 #endif
@@ -26,7 +22,7 @@ import CRT
 
 #if FOUNDATION_FRAMEWORK
 // For feature flag
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 #endif
 
 /**

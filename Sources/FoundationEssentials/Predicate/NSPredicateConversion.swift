@@ -13,8 +13,8 @@
 #if FOUNDATION_FRAMEWORK
 
 #if canImport(Foundation_Private.NSExpression)
-@_implementationOnly import Foundation_Private.NSExpression
-@_implementationOnly import Foundation_Private.NSPredicate
+internal import Foundation_Private.NSExpression
+internal import Foundation_Private.NSPredicate
 
 private struct NSPredicateConversionState {
     private var nextLocalVariable: UInt = 1

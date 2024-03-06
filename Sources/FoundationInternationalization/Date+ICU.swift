@@ -13,11 +13,7 @@
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import FoundationICU
 
 #if canImport(Glibc)
 import Glibc

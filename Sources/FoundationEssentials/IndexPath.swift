@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 #endif
 
 /**

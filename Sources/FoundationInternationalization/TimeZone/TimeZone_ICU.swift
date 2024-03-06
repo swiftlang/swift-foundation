@@ -23,11 +23,7 @@ import ucrt
 #endif
 
 #if canImport(FoundationICU)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import FoundationICU
-#else
-package import FoundationICU
-#endif
+internal import FoundationICU
 
 internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     init?(secondsFromGMT: Int) {

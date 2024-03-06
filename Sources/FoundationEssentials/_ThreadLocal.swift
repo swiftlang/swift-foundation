@@ -16,17 +16,9 @@ import Glibc
 #elseif canImport(WinSDK)
 import WinSDK
 #elseif canImport(threads_h)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import threads_h
-#else
-package import threads_h
-#endif
+internal import threads_h
 #elseif canImport(threads)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import threads
-#else
-package import threads
-#endif
+internal import threads
 #endif
 
 struct _ThreadLocal {

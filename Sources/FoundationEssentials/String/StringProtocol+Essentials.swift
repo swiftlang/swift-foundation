@@ -10,7 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 #else
 internal func _foundation_essentials_feature_enabled() -> Bool { return true }
 #endif

@@ -12,9 +12,9 @@
 
 #if FOUNDATION_FRAMEWORK
 // For Logger
-@_implementationOnly import os
-@_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import _CShims
+internal import os
+internal import _ForSwiftFoundation
+internal import _CShims
 #endif
 
 internal func logFileIOErrno(_ err: Int32, at place: String) {

@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 @_spi(_Unicode) import Swift
-@_implementationOnly import Foundation_Private.NSString
+internal import Foundation_Private.NSString
 #endif
 
 #if canImport(Darwin)

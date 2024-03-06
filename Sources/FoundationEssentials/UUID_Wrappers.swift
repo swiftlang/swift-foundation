@@ -11,7 +11,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 
 #if canImport(Darwin.uuid)
 // Needed this for backward compatibility even though we don't use it.

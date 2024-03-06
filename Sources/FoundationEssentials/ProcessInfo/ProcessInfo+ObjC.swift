@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK && !NO_PROCESS
-@_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import MachO_Private.dyld
-@_implementationOnly import CoreFoundation_Private
+internal import _ForSwiftFoundation
+internal import MachO_Private.dyld
+internal import CoreFoundation_Private
 
 @objc(_NSSwiftProcessInfo)
 internal final class _NSSwiftProcessInfo: ProcessInfo {

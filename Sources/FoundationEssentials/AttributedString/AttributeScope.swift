@@ -30,8 +30,8 @@ public enum AttributeScopes { }
 #if FOUNDATION_FRAMEWORK
 
 import Darwin
-@_implementationOnly import MachO.dyld
-@_implementationOnly import ReflectionInternal
+internal import MachO.dyld
+@preconcurrency internal import ReflectionInternal
 
 fileprivate struct ScopeDescription : Sendable {
     var attributes: [String : any AttributedStringKey.Type] = [:]

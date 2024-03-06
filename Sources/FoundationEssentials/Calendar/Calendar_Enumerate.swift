@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 // For Logger
-@_implementationOnly import os
+internal import os
 #endif
 
 /// Internal-use error for indicating unexpected situations when finding dates.

@@ -21,7 +21,7 @@ import TestSupport
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
+@_spi(Unstable) import CollectionsInternal
 #else
 import _RopeModule
 #endif

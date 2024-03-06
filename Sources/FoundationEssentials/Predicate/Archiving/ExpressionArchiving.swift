@@ -12,8 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly
-import ReflectionInternal
+@preconcurrency internal import ReflectionInternal
 
 @available(FoundationPredicate 0.1, *)
 enum PredicateCodableError : Error, CustomStringConvertible {

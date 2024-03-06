@@ -23,8 +23,8 @@ import WinSDK
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import CoreFoundation_Private.CFNotificationCenter
+internal import _ForSwiftFoundation
+internal import CoreFoundation_Private.CFNotificationCenter
 #endif
 
 /// Singleton which listens for notifications about preference changes for TimeZone and holds cached values for current, fixed time zones, etc.

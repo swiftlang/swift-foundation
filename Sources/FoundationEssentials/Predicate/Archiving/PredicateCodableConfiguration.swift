@@ -13,8 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 
 #if canImport(ReflectionInternal)
-@_implementationOnly
-import ReflectionInternal
+@preconcurrency internal import ReflectionInternal
 
 @available(FoundationPredicate 0.1, *)
 public protocol PredicateCodableKeyPathProviding {

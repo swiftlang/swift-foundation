@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import Foundation_Private.NSFileManager
-@_implementationOnly import DarwinPrivate.sys.content_protection
+internal import Foundation_Private.NSFileManager
+internal import DarwinPrivate.sys.content_protection
 #endif
 
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-package import _CShims
+internal import _CShims
 #endif
 
 extension Date {

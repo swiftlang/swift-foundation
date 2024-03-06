@@ -12,10 +12,10 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 import CoreFoundation
-@_implementationOnly import os
-@_implementationOnly import CoreFoundation_Private.CFLocale
+internal import os
+internal import CoreFoundation_Private.CFLocale
 
 extension NSCalendar.Unit {
     // Avoid the deprecation warning for .NSWeekCalendarUnit

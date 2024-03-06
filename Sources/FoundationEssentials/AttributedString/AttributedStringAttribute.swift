@@ -11,10 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import ReflectionInternal
-@_implementationOnly @_spi(Unstable) import CollectionsInternal
+@_spi(Unstable) internal import CollectionsInternal
 #else
-package import _RopeModule
+internal import _RopeModule
 #endif
 
 // MARK: AttributedStringKey API

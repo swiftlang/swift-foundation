@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import Foundation_Private.NSFileManager
-@_implementationOnly import Foundation_Private.NSPathUtilities
-@_implementationOnly import DarwinPrivate.dirhelper
-@_implementationOnly import DarwinPrivate.sysdir
-@_implementationOnly import _ForSwiftFoundation
+internal import Foundation_Private.NSFileManager
+internal import Foundation_Private.NSPathUtilities
+internal import DarwinPrivate.dirhelper
+internal import DarwinPrivate.sysdir
+internal import _ForSwiftFoundation
 #endif
 
 #if canImport(Darwin)

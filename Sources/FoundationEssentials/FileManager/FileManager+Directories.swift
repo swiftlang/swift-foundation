@@ -11,18 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import containermanager
-@_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import _CShims
-@_implementationOnly import os
+internal import containermanager
+internal import _ForSwiftFoundation
+internal import os
 #endif
 
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-package import _CShims
 #endif
+
+internal import _CShims
 
 #if FOUNDATION_FRAMEWORK
 var _shouldLog: Bool = {
