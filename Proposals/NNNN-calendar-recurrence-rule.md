@@ -12,6 +12,7 @@
 
 * **v1** Initial version
 * **v2** Make filters on `RecurrenceRule` not optional, and use `[]` to signify no filter is applied
+* **v3** Use `Calendar.RepeatedTimePolicy` instead of a new type, Make `RecurrenceRule` conform to `Codable`
 
 ## Introduction
 
@@ -49,7 +50,7 @@ There are slight differences from the iCalendar RFCs and Apple's existing APIs:
 extension Calendar {
     /// A rule which specifies how often an event should repeat in the future
     @available(FoundationPreview 0.4, *)
-    public struct RecurrenceRule: Codable, Sendable {
+    public struct RecurrenceRule: Equatable, Codable, Sendable {
         /// The calendar in which the recurrence occurs
         public var calendar: Calendar
         /// What to do when a recurrence is not a valid date
@@ -109,16 +110,6 @@ extension Calendar {
         ///
         /// Default value is `.nextTimePreservingSmallerComponents`
         public var matchingPolicy: Calendar.MatchingPolicy
-        /// Which dates to consider when two dates occur at the same time during
-        /// the day, but in different time zones due to a daylight saving switch
-        public enum RepeatedTimePolicy : Sendable, Codable {
-            /// Consider only the earlier date
-            case onlyFirst
-            /// Consider only the later date
-            case onlyLast
-            /// Consider both dates
-            case both
-        }
         /// What to do when there are multiple recurrences occurring at the same
         /// time of the day but in different time zones due to a daylight saving
         /// transition.
@@ -137,7 +128,7 @@ extension Calendar {
         /// when the event might repeat.
         ///
         /// Default value is `.onlyFirst`
-        public var repeatedTimePolicy: RepeatedTimePolicy
+        public var repeatedTimePolicy: Calendar.RepeatedTimePolicy
         /// How often a recurring event repeats
         public enum Frequency: Sendable, Codable {
             case minutely, hourly, daily, weekly, monthly, yearly
@@ -167,7 +158,7 @@ extension Calendar {
         /// Default value is `.never`
         public var end: End
         
-        public enum Weekday: Sendable, Codable {
+        public enum Weekday: Sendable, Codable, Equatable {
             /// Repeat on every weekday
             case every(Locale.Weekday)
             /// Repeat on the n-th instance of the specified weekday in a month,
@@ -179,7 +170,7 @@ extension Calendar {
         }
         
         /// Uniquely identifies a month in any calendar system
-        public struct Month: Sendable, Codable, ExpressibleByIntegerLiteral {
+        public struct Month: Equatable, Codable, Sendable, ExpressibleByIntegerLiteral {
             public var index: Int
             public var isLeap: Bool
 
