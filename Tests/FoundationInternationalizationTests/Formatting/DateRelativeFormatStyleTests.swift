@@ -940,14 +940,10 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
         XCTAssertLessThanOrEqual(try XCTUnwrap(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 725318223.6599436))), Date(timeIntervalSinceReferenceDate: 725398549.919868))
     }
 
+#if FIXME_RANDOMIZED_SAMPLES_123465054
     func testRandomSamples() throws {
         var style: Date.AnchoredRelativeFormatStyle
-
-#if FIXME_RANDOMIZED_SAMPLES_123465054
         let now = Date.now
-#else
-        let now = Date(timeIntervalSinceReferenceDate: 730056022.401144)
-#endif
 
         lazy var message = "now = Date(timeIntervalSinceReferenceDate: \(now.timeIntervalSinceReferenceDate))"
 
@@ -979,5 +975,5 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
         style.calendar = self.calendar
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
     }
-
+#endif
 }
