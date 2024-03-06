@@ -44,28 +44,44 @@ final class _ProcessInfo: Sendable {
     }
 
     var environment: [String : String] {
-        _platform_shims_lock_environ()
-        defer {
-            _platform_shims_unlock_environ()
-        }
-        var results: [String : String] = [:]
-        guard var environments: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> =
-                _platform_shims_get_environ() else {
-            return [:]
-        }
-        while let str = environments.pointee {
-            environments = environments + 1
-            let environmentString = String(cString: str)
+        return withCopiedEnv { environments in
+            var results: [String : String] = [:]
+            for env in environments {
+                let environmentString = String(cString: env)
 
-            guard let delimiter = environmentString.firstIndex(of: "=") else {
-                continue
+                guard let delimiter = environmentString.firstIndex(of: "=") else {
+                    continue
+                }
+
+                let key = String(environmentString[environmentString.startIndex ..< delimiter])
+                let value = String(environmentString[environmentString.index(after: delimiter) ..< environmentString.endIndex])
+                results[key] = value
             }
-
-            let key = String(environmentString[environmentString.startIndex ..< delimiter])
-            let value = String(environmentString[environmentString.index(after: delimiter) ..< environmentString.endIndex])
-            results[key] = value
+            return results
         }
-        return results
+    }
+
+    private func withCopiedEnv<R>(_ body: ([UnsafeMutablePointer<CChar>]) -> R) -> R {
+        // This lock is taken by calls to getenv, so we want as few callouts to other code as possible here.
+        _platform_shims_lock_environ()
+        var values: [UnsafeMutablePointer<CChar>] = []
+        guard let environments: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> =
+                _platform_shims_get_environ() else {
+            _platform_shims_unlock_environ()
+            return body([])
+        }
+        var curr = environments
+        while let value = curr.pointee {
+            values.append(strdup(value))
+            curr = curr.advanced(by: 1)
+        }
+        _platform_shims_unlock_environ()
+
+        let returnValue = body(values)
+        for ptr in values {
+            free(ptr)
+        }
+        return returnValue
     }
 
     var globallyUniqueString: String {
