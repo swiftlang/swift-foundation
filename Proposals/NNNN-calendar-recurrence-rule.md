@@ -5,6 +5,7 @@
 * Status: **Draft**
 * Review Manager: TBD
 * Status: **Draft**
+* Implementation: [apple/swift-foundation#464](https://github.com/apple/swift-foundation/pull/464)
 * Bugs: <rdar://120559017>
 
 ## Revision history
