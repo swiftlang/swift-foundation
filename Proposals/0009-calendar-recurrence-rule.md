@@ -1,10 +1,9 @@
 # Recurrence rules in `Calendar`
 
-* Proposal: SF-NNNN
+* Proposal: SF-0009
 * Author: Hristo Staykov <https://github.com/hristost>
-* Status: **Draft**
-* Review Manager: TBD
-* Status: **Draft**
+* Review Manager: [Tina Liu](https://github.com/itingliu)
+* Status: **Active review: Mar 07, 2024...Mar 14, 2024**
 * Implementation: [apple/swift-foundation#464](https://github.com/apple/swift-foundation/pull/464)
 * Bugs: <rdar://120559017>
 
@@ -12,7 +11,7 @@
 
 * **v1** Initial version
 * **v2** Make filters on `RecurrenceRule` not optional, and use `[]` to signify no filter is applied
-* **v3** Use `Calendar.RepeatedTimePolicy` instead of a new type, Make `RecurrenceRule` conform to `Codable`
+* **v3** Use `Calendar.RepeatedTimePolicy` instead of a new type, make `RecurrenceRule` conform to `Equatable`. Mark `Calendar.MatchingPolicy` as `Codable`.
 
 ## Introduction
 
@@ -145,10 +144,10 @@ extension Calendar {
             /// - Parameter count: how many times to repeat the event, including
             ///                    the first occurrence. `count` must be greater
             ///                    than `0`
-            public static func afterOcurrences(_ count: Int) -> Self
+            public static func afterOccurrences(_ count: Int) -> Self
             /// The event stops repeating after a given date
             /// - Parameter date: the date on which the event may last occur. No
-            ///                   further ocurrences will be found after that
+            ///                   further occurrences will be found after that
             public static func afterDate(_ date: Date) -> Self
             /// The event repeats indefinitely
             public static var never: Self
@@ -258,6 +257,9 @@ extension Calendar {
         public static func yearly(calendar: Calendar, interval: Int = 1, end: End = .never, matchingPolicy: Calendar.MatchingPolicy = .nextTimePreservingSmallerComponents, repeatedTimePolicy: RepeatedTimePolicy = .onlyFirst, months: [Month] = [], daysOfTheYear: [Int] = [], daysOfTheMonth: [Int] = [], weeks: [Int] = [], weekdays: [Weekday] = [], hours: [Int] = [], minutes: [Int] = [], seconds: [Int] = [] setPositions: [Int] = []) -> Self
     }
 }
+
+@available(FoundationPreview 0.4, *)
+extension Calendar.MatchingPolicy: Codable {}
 ```
 
 
@@ -384,7 +386,7 @@ let birthday: Date // = 29 February 1996 14:00
 var recurrence = Calendar.RecurrenceRule(calendar.current, frequency: .yearly)
 ```
 
-If we want to choose Feburary 28 to observe the birthday on non-leap years, we can use `.previousTimePreservingSmallerComponents`:
+If we want to choose February 28 to observe the birthday on non-leap years, we can use `.previousTimePreservingSmallerComponents`:
 ```swift
 recurrence.matchingPolicy = .previousTimePreservingSmallerComponents
 let birthdays = recurrence.recurrences(of: birthday)
