@@ -142,13 +142,13 @@ extension String {
     internal static func homeDirectoryPath(forUser user: String? = nil) -> String {
         #if targetEnvironment(simulator)
         if user == nil, let envValue = getenv("CFFIXED_USER_HOME") ?? getenv("HOME") {
-            return String(cString: envValue)
+            return String(cString: envValue).standardizingPath
         }
         #endif
         
         // First check CFFIXED_USER_HOME if the environment is not considered tainted
         if let envVar = Platform.getEnvSecure("CFFIXED_USER_HOME") {
-            return envVar
+            return envVar.standardizingPath
         }
         
         // Next, attempt to find the home directory via getpwnam/getpwuid
@@ -160,12 +160,12 @@ extension String {
         }
         
         if let dir = pass?.pointee.pw_dir {
-            return String(cString: dir)
+            return String(cString: dir).standardizingPath
         }
         
         // Fallback to HOME for the current user if possible
         if user == nil, let home = getenv("HOME") {
-            return String(cString: home)
+            return String(cString: home).standardizingPath
         }
         
         // If all else fails, log and fall back to /var/empty
