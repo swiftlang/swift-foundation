@@ -179,6 +179,10 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
         LocaleCache.cache.current.weekendRange
     }
 
+    var minimumDaysInFirstWeek: Int {
+        LocaleCache.cache.current.minimumDaysInFirstWeek
+    }
+
     var language: Locale.Language {
         LocaleCache.cache.current.language
     }

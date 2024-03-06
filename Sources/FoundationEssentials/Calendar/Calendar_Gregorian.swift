@@ -255,8 +255,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         get {
             if let _firstWeekday {
                 return _firstWeekday
-            } else if let localePrefs, let forcedWeekdayNumber = localePrefs.firstWeekday?[identifier], Locale.Weekday(forcedWeekdayNumber) != nil {
-                return forcedWeekdayNumber
+            } else if let locale {
+                return locale.firstDayOfWeek.icuIndex
             } else {
                 return 1
             }
@@ -278,8 +278,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         get {
             if let _minimumDaysInFirstWeek {
                 return _minimumDaysInFirstWeek
-            } else if let localePrefs, let forcedMinimumDaysInFirstWeek = localePrefs.minDaysInFirstWeek?[identifier] {
-                return forcedMinimumDaysInFirstWeek
+            } else if let locale {
+                return locale.minimumDaysInFirstWeek
             } else {
                 return 1
             }
