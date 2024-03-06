@@ -37,8 +37,7 @@
 #include "_CShimsMacros.h"
 
 #if TARGET_OS_MAC
-#include <sys/_types.h>
-#include <sys/_types/_uuid_t.h>
+#include <uuid/uuid.h>
 #else
 #include <sys/types.h>
 typedef    unsigned char __darwin_uuid_t[16];
@@ -47,15 +46,11 @@ typedef    char __darwin_uuid_string_t[37];
 #undef uuid_t
 #endif
 typedef __darwin_uuid_t    uuid_t;
-#endif
-
-#ifndef _UUID_STRING_T
-#define _UUID_STRING_T
 typedef __darwin_uuid_string_t    uuid_string_t;
-#endif /* _UUID_STRING_T */
 
 #define UUID_DEFINE(name,u0,u1,u2,u3,u4,u5,u6,u7,u8,u9,u10,u11,u12,u13,u14,u15) \
     static const uuid_t name __attribute__ ((unused)) = {u0,u1,u2,u3,u4,u5,u6,u7,u8,u9,u10,u11,u12,u13,u14,u15}
+#endif
 
 #ifdef __cplusplus
 extern "C" {
