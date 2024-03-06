@@ -1514,6 +1514,31 @@ extension Calendar.MatchingPolicy: Codable {
     }
 }
 
+@available(FoundationPreview 0.4, *)
+extension Calendar.RepeatedTimePolicy: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        switch try container.decode(Int.self) {
+        case 0:
+            self = .first
+        case 1:
+            self = .last
+        default: 
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unknown RepeatedTimePolicy"))
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .first:
+            try container.encode(0)
+        case .last:
+            try container.encode(1)
+        }
+    }
+}
+
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
