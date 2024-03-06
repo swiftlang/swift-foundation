@@ -125,12 +125,13 @@ private struct _SearchPathsSequence: Sequence {
         private func _specialFindReturn(_ buffer: UnsafeMutableBufferPointer<CChar>) -> String? {
             guard buffer.baseAddress!.pointee != 0 else { return nil }
             
+            let path = String(cString: buffer.baseAddress!)
             // strip trailing slashes because NSPathUtilities doesn't return paths with trailing slashes.
-            let len = strlen(buffer.baseAddress!)
-            let lastNonSlash = buffer.prefix(upTo: len).lastIndex {
-                $0 != 0x2F // Slash Character
+            guard let endIndex = path.unicodeScalars.lastIndex(where: { $0 != "/" }) else {
+                // It's only slashes, so just return a single slash
+                return "/"
             }
-            return FileManager.default.string(withFileSystemRepresentation: buffer.baseAddress!, length: lastNonSlash ?? len)
+            return String(path[...endIndex])
         }
         
         private func _specialFind(_ directory: FileManager.SearchPathDirectory, in mask: FileManager.SearchPathDomainMask) -> String? {
