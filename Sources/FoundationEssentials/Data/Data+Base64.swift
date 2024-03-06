@@ -26,6 +26,13 @@ extension Data {
     /// - parameter base64String: The string to parse.
     /// - parameter options: Encoding options. Default value is `[]`.
     public init?(base64Encoded base64String: __shared String, options: Base64DecodingOptions = []) {
+#if FOUNDATION_FRAMEWORK
+        if let d = NSData(base64Encoded: base64String, options: NSData.Base64DecodingOptions(rawValue: options.rawValue)) {
+            self.init(referencing: d)
+        } else {
+            return nil
+        }
+#else
         var encoded = base64String
         let decoded = encoded.withUTF8 {
             // String won't pass an empty buffer with a `nil` `baseAddress`.
@@ -33,6 +40,7 @@ extension Data {
         }
         guard let decoded else { return nil }
         self = decoded
+#endif
     }
 
     /// Initialize a `Data` from a Base-64, UTF-8 encoded `Data`.
@@ -42,11 +50,19 @@ extension Data {
     /// - parameter base64Data: Base-64, UTF-8 encoded input data.
     /// - parameter options: Decoding options. Default value is `[]`.
     public init?(base64Encoded base64Data: __shared Data, options: Base64DecodingOptions = []) {
+#if FOUNDATION_FRAMEWORK
+        if let d = NSData(base64Encoded: base64Data, options: NSData.Base64DecodingOptions(rawValue: options.rawValue)) {
+            self.init(referencing: d)
+        } else {
+            return nil
+        }
+#else
         let decoded = base64Data.withBufferView {
             Data(decodingBase64: $0, options: options)
         }
         guard let decoded else { return nil }
         self = decoded
+#endif
     }
 
     init?(decodingBase64 bytes: borrowing BufferView<UInt8>, options: Base64DecodingOptions = []) {
@@ -76,6 +92,14 @@ extension Data {
     /// - parameter options: The options to use for the encoding. Default value is `[]`.
     /// - returns: The Base-64 encoded string.
     public func base64EncodedString(options: Base64EncodingOptions = []) -> String {
+#if FOUNDATION_FRAMEWORK
+        // Previously inlinable
+        return _representation.withInteriorPointerReference {
+            return $0.base64EncodedString(
+                options: NSData.Base64EncodingOptions(
+                    rawValue: options.rawValue))
+        }
+#else
         if self.isEmpty { return "" }
 
         return self.withBufferView { inputBuffer in
@@ -84,6 +108,7 @@ extension Data {
                 Self.base64EncodeBytes(inputBuffer, &$0, options: options)
             }
         }
+#endif
     }
 
     /// Returns a Base-64 encoded `Data`.
@@ -91,6 +116,14 @@ extension Data {
     /// - parameter options: The options to use for the encoding. Default value is `[]`.
     /// - returns: The Base-64 encoded data.
     public func base64EncodedData(options: Base64EncodingOptions = []) -> Data {
+#if FOUNDATION_FRAMEWORK
+        // Previously inlinable
+        return _representation.withInteriorPointerReference {
+            return $0.base64EncodedData(
+                options: NSData.Base64EncodingOptions(
+                    rawValue: options.rawValue))
+        }
+#else
         let dataLength = self.count
         if dataLength == 0 { return Data() }
 
@@ -100,6 +133,7 @@ extension Data {
                 Self.base64EncodeBytes(inputBuffer, &$0, options: options)
             }
         }
+#endif
     }
 
     // MARK: - Internal Helpers
