@@ -1016,7 +1016,7 @@ extension JSONScanner {
         let digitBytes = jsonBytes.prefix(4)
         precondition(digitBytes.count == 4, "Scanning should have ensured that all escape sequences are valid shape")
 
-        guard let result: UInt16 = _parseJSONHexIntegerDigits(digitBytes, isNegative: false)
+        guard let result: UInt16 = _parseHexIntegerDigits(digitBytes, isNegative: false)
         else {
             let hexString = String(decoding: digitBytes, as: Unicode.UTF8.self)
             throw JSONError.invalidHexDigitSequence(hexString, location: .sourceLocation(at: digitBytes.startIndex, fullSource: fullSource))
@@ -1211,37 +1211,6 @@ extension Float : PrevalidatedJSONNumberBufferConvertible {
     }
 }
 
-internal func _parseIntegerDigits<Result: FixedWidthInteger>(
-    _ codeUnits: BufferView<UInt8>, isNegative: Bool
-) -> Result? {
-    guard _fastPath(!codeUnits.isEmpty) else { return nil }
-
-    // ASCII constants, named for clarity:
-    let _0 = 48 as UInt8
-
-    let numericalUpperBound: UInt8 = _0 &+ 10
-    let multiplicand: Result = 10
-    var result: Result = 0
-
-    var iter = codeUnits.makeIterator()
-    while let digit = iter.next() {
-        let digitValue: Result
-        if _fastPath(digit >= _0 && digit < numericalUpperBound) {
-            digitValue = Result(truncatingIfNeeded: digit &- _0)
-        } else {
-            return nil
-        }
-        let overflow1: Bool
-        (result, overflow1) = result.multipliedReportingOverflow(by: multiplicand)
-        let overflow2: Bool
-        (result, overflow2) = isNegative
-        ? result.subtractingReportingOverflow(digitValue)
-        : result.addingReportingOverflow(digitValue)
-        guard _fastPath(!overflow1 && !overflow2) else { return nil }
-    }
-    return result
-}
-
 internal func _parseInteger<Result: FixedWidthInteger>(_ codeUnits: BufferView<UInt8>) -> Result? {
     guard _fastPath(!codeUnits.isEmpty) else { return nil }
 
@@ -1264,59 +1233,6 @@ extension FixedWidthInteger {
             return nil
         }
         self = val
-    }
-}
-
-extension UInt8 {
-
-    internal static var _space: UInt8 { UInt8(ascii: " ") }
-    internal static var _return: UInt8 { UInt8(ascii: "\r") }
-    internal static var _newline: UInt8 { UInt8(ascii: "\n") }
-    internal static var _tab: UInt8 { UInt8(ascii: "\t") }
-
-    internal static var _colon: UInt8 { UInt8(ascii: ":") }
-    internal static var _comma: UInt8 { UInt8(ascii: ",") }
-
-    internal static var _openbrace: UInt8 { UInt8(ascii: "{") }
-    internal static var _closebrace: UInt8 { UInt8(ascii: "}") }
-
-    internal static var _openbracket: UInt8 { UInt8(ascii: "[") }
-    internal static var _closebracket: UInt8 { UInt8(ascii: "]") }
-
-    internal static var _quote: UInt8 { UInt8(ascii: "\"") }
-    internal static var _backslash: UInt8 { UInt8(ascii: "\\") }
-
-}
-
-internal var _asciiNumbers: ClosedRange<UInt8> { UInt8(ascii: "0") ... UInt8(ascii: "9") }
-internal var _hexCharsUpper: ClosedRange<UInt8> { UInt8(ascii: "A") ... UInt8(ascii: "F") }
-internal var _hexCharsLower: ClosedRange<UInt8> { UInt8(ascii: "a") ... UInt8(ascii: "f") }
-internal var _allLettersUpper: ClosedRange<UInt8> { UInt8(ascii: "A") ... UInt8(ascii: "Z") }
-internal var _allLettersLower: ClosedRange<UInt8> { UInt8(ascii: "a") ... UInt8(ascii: "z") }
-
-extension UInt8 {
-    internal var hexDigitValue: UInt8? {
-        switch self {
-        case _asciiNumbers:
-            return self - _asciiNumbers.lowerBound
-        case _hexCharsUpper:
-            // uppercase letters
-            return self - _hexCharsUpper.lowerBound &+ 10
-        case _hexCharsLower:
-            // lowercase letters
-            return self - _hexCharsLower.lowerBound &+ 10
-        default:
-            return nil
-        }
-    }
-
-    internal var isValidHexDigit: Bool {
-        switch self {
-        case _asciiNumbers, _hexCharsUpper, _hexCharsLower:
-            return true
-        default:
-            return false
-        }
     }
 }
 

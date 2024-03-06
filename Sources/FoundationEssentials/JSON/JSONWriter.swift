@@ -92,7 +92,7 @@ extension JSONReference {
         return .number(num.description)
     }
 
-    static func number<T: BinaryFloatingPoint & CustomStringConvertible>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, for codingPathNode: _JSONCodingPathNode, _ additionalKey: (some CodingKey)? = Optional<_JSONKey>.none) throws -> JSONReference {
+    static func number<T: BinaryFloatingPoint & CustomStringConvertible>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = Optional<_CodingKey>.none) throws -> JSONReference {
         guard !float.isNaN, !float.isInfinite else {
             if case .convertToString(let posInfString, let negInfString, let nanString) = options {
                 switch float {
@@ -106,7 +106,7 @@ extension JSONReference {
                 }
             }
 
-            let path = codingPathNode.path(with: additionalKey)
+            let path = codingPathNode.path(byAppending: additionalKey)
             throw EncodingError.invalidValue(float, .init(
                 codingPath: path,
                 debugDescription: "Unable to encode \(T.self).\(float) directly in JSON."
