@@ -64,6 +64,7 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
     var availableNumberingSystems: [Locale.NumberingSystem] { get }
     var firstDayOfWeek: Locale.Weekday { get }
     var weekendRange: WeekendRange? { get }
+    var minimumDaysInFirstWeek: Int { get }
     var language: Locale.Language { get }
     var hourCycle: Locale.HourCycle { get }
     var collation: Locale.Collation { get }

@@ -948,6 +948,45 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(firstDayOfMonth(gregorianCalendar, for: date2), Date(timeIntervalSinceReferenceDate: 728441519.0)) // 2024-02-01T00:51:59Z
     }
 
+    func test_firstWeekday() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US")
+        XCTAssertEqual(calendar.firstWeekday, 1)
+
+        calendar.locale = Locale(identifier: "en_GB")
+        XCTAssertEqual(calendar.firstWeekday, 2)
+
+        var calendarWithCustomLocale = Calendar(identifier: .gregorian)
+        calendarWithCustomLocale.locale = Locale(identifier: "en_US", preferences: .init(firstWeekday: [.gregorian: 3]))
+        XCTAssertEqual(calendarWithCustomLocale.firstWeekday, 3)
+
+        calendarWithCustomLocale.firstWeekday = 5
+        XCTAssertEqual(calendarWithCustomLocale.firstWeekday, 5) // Returns the one set directly on Calendar
+
+        var calendarWithCustomLocaleAndCustomWeekday = Calendar(identifier: .gregorian)
+        calendarWithCustomLocaleAndCustomWeekday.firstWeekday = 2
+        calendarWithCustomLocaleAndCustomWeekday.locale = Locale(identifier: "en_US", preferences: .init(firstWeekday: [.gregorian: 3]))
+        XCTAssertEqual(calendarWithCustomLocaleAndCustomWeekday.firstWeekday, 2) // Returns the one set directly on Calendar even if `.locale` is set later
+    }
+
+    func test_minDaysInFirstWeek() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_GB")
+        XCTAssertEqual(calendar.minimumDaysInFirstWeek, 4)
+
+        calendar.minimumDaysInFirstWeek = 5
+        XCTAssertEqual(calendar.minimumDaysInFirstWeek, 5)
+
+        var calendarWithCustomLocale = Calendar(identifier: .gregorian)
+        calendarWithCustomLocale.locale = Locale(identifier: "en_US", preferences: .init(minDaysInFirstWeek: [.gregorian: 6]))
+        XCTAssertEqual(calendarWithCustomLocale.minimumDaysInFirstWeek, 6)
+
+        var calendarWithCustomLocaleAndCustomMinDays = Calendar(identifier: .gregorian)
+        calendarWithCustomLocaleAndCustomMinDays.minimumDaysInFirstWeek = 2
+        calendarWithCustomLocaleAndCustomMinDays.locale = Locale(identifier: "en_US", preferences: .init(minDaysInFirstWeek: [.gregorian: 6]))
+        XCTAssertEqual(calendarWithCustomLocaleAndCustomMinDays.minimumDaysInFirstWeek, 2)
+
+    }
 }
 
 // MARK: - Bridging Tests
