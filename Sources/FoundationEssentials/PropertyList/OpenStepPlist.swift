@@ -11,11 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import os
-#else
-package import os
-#endif
+import Darwin
 #elseif canImport(Glibc)
 import Glibc
 #endif

@@ -21,7 +21,9 @@ internal import _CShims
 // name. The two must coexist, so it was renamed. The old name must not
 // be used in the new runtime. _TtC10Foundation20_PropertyListDecoder
 // is the mangled name for Foundation._PropertyListDecoder.
+#if FOUNDATION_FRAMEWORK
 @_objcRuntimeName(_TtC10Foundation20_PropertyListDecoder)
+#endif
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 open class PropertyListDecoder {
 #if FOUNDATION_FRAMEWORK

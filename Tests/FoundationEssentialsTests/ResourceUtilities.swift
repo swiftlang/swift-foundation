@@ -25,8 +25,10 @@ import Glibc
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
+#if FOUNDATION_FRAMEWORK
 // Always compiled into the Tests project
 final internal class Canary { }
+#endif
 
 func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) -> Data? {
 #if FOUNDATION_FRAMEWORK
@@ -36,19 +38,17 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     return try? Data(contentsOf: url)
 #else
 #if os(macOS)
-    // swiftpm creates an XCTest bundle on this platform
-    // For now, rely on the fact that XCTest has imported the system Foundation
-    let resourceBundlePath = Foundation.Bundle(for: Canary.self).url(forResource: "FoundationPreview_FoundationEssentialsTests", withExtension: "bundle")!
-    let resourceBundle = Foundation.Bundle(url: resourceBundlePath)!
     let subdir: String
     if let subdirectory {
         subdir = "Resources/" + subdirectory
     } else {
         subdir = "Resources"
     }
-    guard let url = resourceBundle.url(forResource: resource, withExtension: ext, subdirectory: subdir) else {
+
+    guard let url = Bundle.module.url(forResource: resource, withExtension: ext, subdirectory: subdir) else {
         return nil
     }
+
     return try? Data(contentsOf: url.path(percentEncoded: false))
 #else
     // swiftpm drops the resources next to the executable, at:
