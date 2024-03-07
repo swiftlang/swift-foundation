@@ -10,11 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims
-#else
-package import _CShims
-#endif
+internal import _CShims
 
 private let plistBytes : StaticString = "plist"
 private let arrayBytes : StaticString = "array"
@@ -222,7 +218,7 @@ class XMLPlistMap : PlistDecodingMap {
                 return (.init(raw), capacity+1)
             }
 
-            state = (buffer: .init(baseAddress: p, count: c), allocation: p)
+            state = (buffer: .init(unsafeBaseAddress: p, count: c), allocation: p)
         }
     }
 

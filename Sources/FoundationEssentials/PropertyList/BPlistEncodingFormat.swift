@@ -16,13 +16,9 @@
 private protocol _BPlistStringDictionaryEncodableMarker { }
 extension Dictionary : _BPlistStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims
-#else
-package import _CShims
-#endif
+internal import _CShims
 #if canImport(CollectionsInternal)
-@_implementationOnly import CollectionsInternal
+internal import CollectionsInternal
 #elseif canImport(OrderedCollections)
 internal import OrderedCollections
 #endif
