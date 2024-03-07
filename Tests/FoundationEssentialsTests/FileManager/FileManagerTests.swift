@@ -591,6 +591,7 @@ final class FileManagerTests : XCTestCase {
     }
     
     func testBooleanFileAttributes() throws {
+        #if canImport(Darwin)
         try FileManagerPlayground {
             "none"
             File("immutable", attributes: [.immutable: true])
@@ -613,6 +614,9 @@ final class FileManagerTests : XCTestCase {
                 try $0.setAttributes([.immutable: false, .appendOnly: false], ofItemAtPath: test.path)
             }
         }
+        #else
+        throw XCTSkip("This test is not applicable on this platform")
+        #endif
     }
     
     func testImplicitlyConvertibleFileAttributes() throws {
