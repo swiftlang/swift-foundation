@@ -590,6 +590,31 @@ final class FileManagerTests : XCTestCase {
         }
     }
     
+    func testBooleanFileAttributes() throws {
+        try FileManagerPlayground {
+            "none"
+            File("immutable", attributes: [.immutable: true])
+            File("appendOnly", attributes: [.appendOnly: true])
+            File("immutable_appendOnly", attributes: [.immutable: true, .appendOnly: true])
+        }.test {
+            let tests: [(path: String, immutable: Bool, appendOnly: Bool)] = [
+                ("none", false, false),
+                ("immutable", true, false),
+                ("appendOnly", false, true),
+                ("immutable_appendOnly", true, true)
+            ]
+            
+            for test in tests {
+                let result = try $0.attributesOfItem(atPath: test.path)
+                XCTAssertEqual(result[.immutable] as? Bool, test.immutable, "Item at path '\(test.path)' did not provide expected result for immutable key")
+                XCTAssertEqual(result[.appendOnly] as? Bool, test.appendOnly, "Item at path '\(test.path)' did not provide expected result for appendOnly key")
+                
+                // Manually clean up attributes so removal does not fail
+                try $0.setAttributes([.immutable: false, .appendOnly: false], ofItemAtPath: test.path)
+            }
+        }
+    }
+    
     func testImplicitlyConvertibleFileAttributes() throws {
         try FileManagerPlayground {
             File("foo", attributes: [.posixPermissions : UInt16(0o644)])
