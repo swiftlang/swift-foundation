@@ -658,4 +658,14 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual(resolved, $0.currentDirectoryPath.appendingPathComponent("destination"))
         }
     }
+    
+    #if os(macOS) && FOUNDATION_FRAMEWORK
+    func testSpecialTrashDirectoryTruncation() throws {
+        try FileManagerPlayground {}.test {
+            if let trashURL = try? $0.url(for: .trashDirectory, in: .allDomainsMask, appropriateFor: nil, create: false) {
+                XCTAssertEqual(trashURL.pathComponents.last, ".Trash")
+            }
+        }
+    }
+    #endif
 }
