@@ -78,7 +78,9 @@ func _readFileAttributePrimitive(_ value: Any?, as type: Bool.Type) -> Bool? {
     }
     #endif
     
-    if let binInt = value as? (any BinaryInteger), let result = Int(exactly: binInt) {
+    if let boolValue = value as? Bool {
+        return boolValue
+    } else if let binInt = value as? (any BinaryInteger), let result = Int(exactly: binInt) {
         switch result {
         case 0: return false
         case 1: return true
@@ -149,12 +151,10 @@ extension stat {
             result[.deviceIdentifier] = _writeFileAttributePrimitive(st_rdev, as: UInt.self)
         }
         #if canImport(Darwin)
-        if (st_flags & UInt32(UF_IMMUTABLE)) != 0 || (st_flags & UInt32(SF_IMMUTABLE)) != 0 {
-            result[.immutable] = _writeFileAttributePrimitive(true)
-        }
-        if (st_flags & UInt32(UF_APPEND)) != 0 || (st_flags & UInt32(SF_APPEND)) != 0 {
-            result[.appendOnly] = _writeFileAttributePrimitive(true)
-        }
+        let immutable = (st_flags & UInt32(UF_IMMUTABLE)) != 0 || (st_flags & UInt32(SF_IMMUTABLE)) != 0
+        result[.immutable] = _writeFileAttributePrimitive(immutable)
+        let appendOnly = (st_flags & UInt32(UF_APPEND)) != 0 || (st_flags & UInt32(SF_APPEND)) != 0
+        result[.appendOnly] = _writeFileAttributePrimitive(appendOnly)
         #endif
         return result
     }
