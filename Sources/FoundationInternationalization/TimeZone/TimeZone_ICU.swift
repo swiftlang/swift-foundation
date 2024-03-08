@@ -30,7 +30,8 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         fatalError("Unexpected init")
     }
     
-    struct State {
+    // This type is safely sendable because it is guarded by a lock in _TimeZoneICU and we never vend it outside of the lock so it can only ever be accessed from within the lock
+    struct State : @unchecked Sendable {
         /// Access must be serialized
         private var _calendar: UnsafeMutablePointer<UCalendar?>?
 
@@ -58,6 +59,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
     }
 
+    // Note: it is unsafe to allow the wrapped state (or anything it references) to escape outside of the lock
     let lock: LockedState<State>
     let name: String
     

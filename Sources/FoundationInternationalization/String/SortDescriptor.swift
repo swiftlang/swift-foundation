@@ -114,13 +114,12 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
         
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
-            let rawValue: Int
             switch self {
 #if FOUNDATION_FRAMEWORK
             case .compare:
-                rawValue = 0
+                try container.encode(0, forKey: .rawValue)
             case let .compareString(comparator):
-                rawValue = 1
+                try container.encode(1, forKey: .rawValue)
                 try container.encode(comparator, forKey: .stringComparator)
 #endif
             case .comparable, .comparableString, .comparableOptionalString:
@@ -135,7 +134,6 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
                     )
                 )
             }
-            try container.encode(rawValue, forKey: .rawValue)
         }
     }
 
