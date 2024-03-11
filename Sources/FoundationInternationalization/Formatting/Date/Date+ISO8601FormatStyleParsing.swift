@@ -15,7 +15,7 @@ import FoundationEssentials
 #endif
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle {
+extension Date.ISO8601FormatStyle : ParseStrategy {
     private var format: String {
         let fields = formatFields
 
@@ -109,28 +109,12 @@ extension Date.ISO8601FormatStyle {
     }
 }
 
-#if FOUNDATION_FRAMEWORK || compiler(<5.10)
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle : ParseStrategy {}
-#else
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle : @retroactive ParseStrategy {}
-#endif
-
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle {
+extension Date.ISO8601FormatStyle: ParseableFormatStyle {
     public var parseStrategy: Self {
         return self
     }
 }
-
-#if FOUNDATION_FRAMEWORK || compiler(<5.10)
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle : ParseableFormatStyle {}
-#else
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle : @retroactive ParseableFormatStyle {}
-#endif
 
 // MARK: `FormatStyle` protocol membership
 
@@ -148,7 +132,7 @@ public extension ParseStrategy where Self == Date.ISO8601FormatStyle {
 // MARK: Regex
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.ISO8601FormatStyle {
+extension Date.ISO8601FormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Date
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)? {
         guard index < bounds.upperBound else {
@@ -157,14 +141,6 @@ extension Date.ISO8601FormatStyle {
         return formatter.parse(input, in: index..<bounds.upperBound)
     }
 }
-
-#if FOUNDATION_FRAMEWORK || compiler(<5.10)
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.ISO8601FormatStyle : CustomConsumingRegexComponent {}
-#else
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension Date.ISO8601FormatStyle : @retroactive CustomConsumingRegexComponent {}
-#endif
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension RegexComponent where Self == Date.ISO8601FormatStyle {
