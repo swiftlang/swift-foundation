@@ -619,6 +619,20 @@ final class FileManagerTests : XCTestCase {
         #endif
     }
     
+    func testMalformedModificationDateAttribute() throws {
+        let sentinelDate = Date(timeIntervalSince1970: 100)
+        try FileManagerPlayground {
+            File("foo", attributes: [.modificationDate: sentinelDate])
+        }.test {
+            XCTAssertEqual(try $0.attributesOfItem(atPath: "foo")[.modificationDate] as? Date, sentinelDate)
+            for value in [Double.infinity, -Double.infinity, Double.nan] {
+                // Malformed modification dates should be dropped instead of throwing or crashing
+                try $0.setAttributes([.modificationDate : Date(timeIntervalSince1970: value)], ofItemAtPath: "foo")
+            }
+            XCTAssertEqual(try $0.attributesOfItem(atPath: "foo")[.modificationDate] as? Date, sentinelDate)
+        }
+    }
+    
     func testImplicitlyConvertibleFileAttributes() throws {
         try FileManagerPlayground {
             File("foo", attributes: [.posixPermissions : UInt16(0o644)])

@@ -656,15 +656,18 @@ extension _FileManagerImpl {
             }
             
             if let date = attributes[.modificationDate] as? Date {
-                var timevals = (timeval(), timeval())
                 let (isecs, fsecs) = modf(date.timeIntervalSince1970)
-                timevals.0.tv_sec = time_t(isecs)
-                timevals.0.tv_usec = suseconds_t(round(fsecs * 1000000.0))
-                timevals.1 = timevals.0
-                try withUnsafePointer(to: timevals) {
-                    try $0.withMemoryRebound(to: timeval.self, capacity: 2) {
-                        if utimes(fileSystemRepresentation, $0) != 0 {
-                            throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
+                if let tv_sec = time_t(exactly: isecs),
+                   let tv_usec = suseconds_t(exactly: round(fsecs * 1000000.0)) {
+                    var timevals = (timeval(), timeval())
+                    timevals.0.tv_sec = tv_sec
+                    timevals.0.tv_usec = tv_usec
+                    timevals.1 = timevals.0
+                    try withUnsafePointer(to: timevals) {
+                        try $0.withMemoryRebound(to: timeval.self, capacity: 2) {
+                            if utimes(fileSystemRepresentation, $0) != 0 {
+                                throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
+                            }
                         }
                     }
                 }
