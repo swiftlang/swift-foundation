@@ -968,7 +968,6 @@ internal struct XMLPlistScanner {
             throw XMLPlistError.other("Encountered unknown tag \(markerStr) on line \(reader.lineNumber)")
         }
         
-        let start = reader.readIndex
         reader.advance(tag.tagLength)
 
         while let ch = reader.read(), ch != ._closeangle { }
