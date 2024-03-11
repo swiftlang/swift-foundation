@@ -310,7 +310,7 @@ final class DateFormatStyleTests : XCTestCase {
         guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
             throw XCTSkip("This test can only be run with the system set to the en_US language")
         }
-        
+
         let fixedTimeZone = TimeZone(identifier: TimeZone.current.identifier)!
         let fixedCalendar = Calendar(identifier: Calendar.current.identifier)
 
@@ -948,8 +948,10 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
         // Weekday: standalone
         verify("\(weekday: .abbreviated)", localeID: "en_GB", calendarID: .gregorian, expectedString: "Thu")
 
+#if FIXED_ICU_74_DAYPERIOD
         // Day period: formatting
         verify("\(hour: .twoDigits(clock: .twelveHour, hourCycle: .zeroBased)) \(dayPeriod: .standard(.abbreviated))", localeID: "en_GB", calendarID: .gregorian, expectedString: "00 am")
+#endif
     }
 
     func test_95845290() throws {
