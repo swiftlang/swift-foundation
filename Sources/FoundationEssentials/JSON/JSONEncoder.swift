@@ -76,14 +76,14 @@ open class JSONEncoder {
         /// Encode the `Date` as a string formatted by the given formatter.
         case formatted(DateFormatter)
 #endif // FOUNDATION_FRAMEWORK
-
+        
         /// Encode the `Date` as a custom value encoded by the given closure.
         ///
         /// If the closure fails to encode a value into the given encoder, the encoder will encode an empty automatic container in its place.
         @preconcurrency
         case custom(@Sendable (Date, Encoder) throws -> Void)
     }
-
+    
     /// The strategy to use for encoding `Data` values.
     public enum DataEncodingStrategy : Sendable {
         /// Defer to `Data` for choosing an encoding.

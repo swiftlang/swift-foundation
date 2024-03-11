@@ -92,7 +92,9 @@ extension String {
     public init?<S: Sequence>(bytes: __shared S, encoding: Encoding)
         where S.Iterator.Element == UInt8
     {
-#if FOUNDATION_FRAMEWORK // TODO: Move init?(bytes:encoding) to Swift
+        // TODO: Move init?(bytes:encoding) to Swift
+        // We can unify the below paths, and fall back to NSString for non-Unicode encodings in the framework only.
+#if FOUNDATION_FRAMEWORK
         func makeString(bytes: UnsafeBufferPointer<UInt8>) -> String? {
             if encoding == .utf8 || encoding == .ascii,
                let str = String._tryFromUTF8(bytes) {
@@ -115,27 +117,80 @@ extension String {
             return nil
         }
 #else
-        guard encoding == .utf8 || encoding == .ascii else {
-            return nil
-        }
-        func makeString(buffer: UnsafeBufferPointer<UInt8>) -> String? {
-            if let string = String._tryFromUTF8(buffer),
-               (encoding == .utf8 || (encoding == .ascii && string._guts._isContiguousASCII)) {
-                return string
-            }
-
-            return buffer.withMemoryRebound(to: CChar.self) { ptr in
-                guard let address = ptr.baseAddress else {
-                    return nil
+        switch encoding {
+        case .utf8, .ascii:
+            func makeString(buffer: UnsafeBufferPointer<UInt8>) -> String? {
+                // TODO: _isContiguousASCII will return false for small strings, even if they are all ASCII. We can still return them directly if we can prove it is indeed ASCII. We should check that directly instead.
+                if let string = String._tryFromUTF8(buffer),
+                   (encoding == .utf8 || (encoding == .ascii && string._guts._isContiguousASCII)) {
+                    return string
                 }
-                return String(validatingUTF8: address)
-            }
-        }
 
-        if let string = bytes.withContiguousStorageIfAvailable(makeString) ??
-            Array(bytes).withUnsafeBufferPointer(makeString) {
-            self = string
-        } else {
+                return String(_validating: buffer, as: UTF8.self)
+            }
+
+            if let string = bytes.withContiguousStorageIfAvailable(makeString) ??
+                Array(bytes).withUnsafeBufferPointer(makeString) {
+                self = string
+            } else {
+                return nil
+            }
+        case .utf16BigEndian, .utf16LittleEndian, .utf16:
+            // See also the package extension String?(_utf16:), which does something similar to this without the swapping of big/little.
+            let e = Endianness(encoding)
+            let maybe = bytes.withContiguousStorageIfAvailable { buffer -> String? in
+                withUnsafeTemporaryAllocation(of: UTF8.CodeUnit.self, capacity: buffer.count * 3) { contents in
+                    let s = UTF16EndianAdaptor(buffer, endianness: e)
+                    var count = 0
+                    let error = transcode(s.makeIterator(), from: UTF16.self, to: UTF8.self, stoppingOnError: true) { codeUnit in
+                        contents[count] = codeUnit
+                        count += 1
+                    }
+                    
+                    guard !error else {
+                        return nil
+                    }
+                    
+                    // Unfortunately no way to skip the validation inside String at this time
+                    return String._tryFromUTF8(UnsafeBufferPointer(rebasing: contents[..<count]))
+                }
+            }
+            
+            if let maybe, let maybe {
+                self = maybe
+            } else if let result = String(_validating: UTF16EndianAdaptor(bytes, endianness: e), as: UTF16.self) {
+                self = result
+            } else {
+                return nil
+            }
+        case .utf32BigEndian, .utf32LittleEndian, .utf32:
+            let e = Endianness(encoding)
+            let maybe = bytes.withContiguousStorageIfAvailable { buffer -> String? in
+                withUnsafeTemporaryAllocation(of: UTF8.CodeUnit.self, capacity: buffer.count * 3) { contents in
+                    let s = UTF32EndianAdaptor(buffer, endianness: e)
+                    var count = 0
+                    let error = transcode(s.makeIterator(), from: UTF32.self, to: UTF8.self, stoppingOnError: true) { codeUnit in
+                        contents[count] = codeUnit
+                        count += 1
+                    }
+                    
+                    guard !error else {
+                        return nil
+                    }
+                    
+                    // Unfortunately no way to skip the validation inside String at this time
+                    return String._tryFromUTF8(UnsafeBufferPointer(rebasing: contents[..<count]))
+                }
+            }
+            
+            if let maybe, let maybe {
+                self = maybe
+            } else if let result = String(_validating: UTF32EndianAdaptor(bytes, endianness: e), as: UTF32.self) {
+                self = result
+            } else {
+                return nil
+            }
+        default:
             return nil
         }
 #endif // FOUNDATION_FRAMEWORK
@@ -157,7 +212,37 @@ extension String {
         guard let s = NSString(data: data, encoding: encoding.rawValue) else { return nil }
         self = String._unconditionallyBridgeFromObjectiveC(s)
 #else
+        // Try the other initializer
+        if let str = String(bytes: data, encoding: encoding) {
+            self = str
+        }
         return nil
 #endif // FOUNDATION_FRAMEWORK
+    }
+}
+
+
+// TODO: This is part of the stdlib as of 5.11. This is a copy to support building on previous Swift stdlib versions, but should be replaced with the stdlib one as soon as possible.
+extension String {
+    internal init?<Encoding: Unicode.Encoding>(_validating codeUnits: some Sequence<Encoding.CodeUnit>, as encoding: Encoding.Type) {
+        var transcoded: [UTF8.CodeUnit] = []
+        transcoded.reserveCapacity(codeUnits.underestimatedCount)
+        var isASCII = true
+        let error = transcode(
+            codeUnits.makeIterator(),
+            from: Encoding.self,
+            to: UTF8.self,
+            stoppingOnError: true,
+            into: {
+                uint8 in
+                transcoded.append(uint8)
+                if isASCII && (uint8 & 0x80) == 0x80 { isASCII = false }
+            }
+        )
+        if error { return nil }
+        let res = transcoded.withUnsafeBufferPointer{
+            String._tryFromUTF8($0)
+        }
+        if let res { self = res } else { return nil }
     }
 }

@@ -1104,7 +1104,7 @@ final class JSONEncoderTests : XCTestCase {
         let encs : [String._Encoding] = [.utf8, .utf16BigEndian, .utf16LittleEndian, .utf32BigEndian, .utf32LittleEndian]
 #else
         // TODO: Reenable other encoding once string.data(using:) is fully implemented.
-        let encs: [String._Encoding] = [.utf8]
+        let encs : [String._Encoding] = [.utf8, .utf16BigEndian, .utf16LittleEndian]
 #endif
         let decoder = JSONDecoder()
         for enc in encs {
@@ -1141,9 +1141,6 @@ final class JSONEncoderTests : XCTestCase {
     }
 
     func test_JSONUnicodeEscapes() throws {
-#if os(Linux) || os(Windows)
-        throw XCTSkip("#148 - current development swift builds cause a stack overflow")
-#endif
         let testCases = [
             // e-acute and greater-than-or-equal-to
             "\"\\u00e9\\u2265\"" : "é≥",
@@ -1467,9 +1464,6 @@ final class JSONEncoderTests : XCTestCase {
         let utf8_BOM = Data([0xEF, 0xBB, 0xBF])
         XCTAssertEqual("👍🏻", try decoder.decode(String.self, from: utf8_BOM + json.data(using: String._Encoding.utf8)!))
 
-#if FOUNDATION_FRAMEWORK
-        // TODO: Reenable these once string.data(using:) is fully implemented
-
         // UTF-16 BE
         let utf16_BE_BOM = Data([0xFE, 0xFF])
         XCTAssertEqual("👍🏻", try decoder.decode(String.self, from: utf16_BE_BOM + json.data(using: String._Encoding.utf16BigEndian)!))
@@ -1488,9 +1482,10 @@ final class JSONEncoderTests : XCTestCase {
 
         // Try some mismatched BOMs
         XCTAssertThrowsError(try decoder.decode(String.self, from: utf32_LE_BOM + json.data(using: String._Encoding.utf32BigEndian)!))
+        
         XCTAssertThrowsError(try decoder.decode(String.self, from: utf16_BE_BOM + json.data(using: String._Encoding.utf32LittleEndian)!))
+        
         XCTAssertThrowsError(try decoder.decode(String.self, from: utf8_BOM + json.data(using: String._Encoding.utf16BigEndian)!))
-#endif // FOUNDATION_FRAMEWORK
     }
 
     func test_valueNotFoundError() {
@@ -2256,54 +2251,7 @@ extension JSONEncoderTests {
             XCTAssertEqual(expected, resultString)
         }
     }
-}
-
-// MARK: - FoundationPreview Disabled Tests
-#if FOUNDATION_FRAMEWORK
-extension JSONEncoderTests {
-    // TODO: Reenable once .iso8601 formatter is moved
-    func testEncodingDateISO8601() {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = .withInternetDateTime
-
-        let timestamp = Date(timeIntervalSince1970: 1000)
-        let expectedJSON = "\"\(formatter.string(from: timestamp))\"".data(using: String._Encoding.utf8)!
-
-        _testRoundTrip(of: timestamp,
-                       expectedJSON: expectedJSON,
-                       dateEncodingStrategy: .iso8601,
-                       dateDecodingStrategy: .iso8601)
-
-
-        // Optional dates should encode the same way.
-        _testRoundTrip(of: Optional(timestamp),
-                       expectedJSON: expectedJSON,
-                       dateEncodingStrategy: .iso8601,
-                       dateDecodingStrategy: .iso8601)
-    }
-
-    // TODO: Reenable once DateFormatStyle is moved
-    func testEncodingDateFormatted() {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .full
-        formatter.timeStyle = .full
-
-        let timestamp = Date(timeIntervalSince1970: 1000)
-        let expectedJSON = "\"\(formatter.string(from: timestamp))\"".data(using: String._Encoding.utf8)!
-
-        _testRoundTrip(of: timestamp,
-                       expectedJSON: expectedJSON,
-                       dateEncodingStrategy: .formatted(formatter),
-                       dateDecodingStrategy: .formatted(formatter))
-
-        // Optional dates should encode the same way.
-        _testRoundTrip(of: Optional(timestamp),
-                       expectedJSON: expectedJSON,
-                       dateEncodingStrategy: .formatted(formatter),
-                       dateDecodingStrategy: .formatted(formatter))
-    }
-
-    // TODO: Reenable once string.data(using:) is fully implemented
+    
     func test_twoByteUTF16Inputs() {
         let json = "7"
         let decoder = JSONDecoder()
@@ -2311,19 +2259,11 @@ extension JSONEncoderTests {
         XCTAssertEqual(7, try decoder.decode(Int.self, from: json.data(using: .utf16BigEndian)!))
         XCTAssertEqual(7, try decoder.decode(Int.self, from: json.data(using: .utf16LittleEndian)!))
     }
-
+    
     private func _run_passTest<T:Codable & Equatable>(name: String, json5: Bool = false, type: T.Type) {
-        let bundle = Bundle(for: Self.self)
-        let jsonURL = bundle.url(forResource: name, withExtension: json5 ? "json5" : "json" , subdirectory: json5 ? "JSON5/pass" : "JSON/pass")!
-        let jsonData = try! Data(contentsOf: jsonURL)
+        let jsonData = testData(forResource: name, withExtension: json5 ? "json5" : "json" , subdirectory: json5 ? "JSON5/pass" : "JSON/pass")!
 
-        let plistData : Data?
-        if let plistURL = bundle.url(forResource: name, withExtension: "plist", subdirectory: "JSON/pass") {
-            plistData = try! Data(contentsOf: plistURL)
-        } else {
-            plistData = nil
-        }
-
+        let plistData = testData(forResource: name, withExtension: "plist", subdirectory: "JSON/pass")
         let decoder = json5Decoder
 
         let decoded: T
@@ -2355,7 +2295,6 @@ extension JSONEncoderTests {
         _run_passTest(name: "pass1-utf16le", type: JSONPass.Test1.self)
         _run_passTest(name: "pass1-utf32be", type: JSONPass.Test1.self)
         _run_passTest(name: "pass1-utf32le", type: JSONPass.Test1.self)
-
         _run_passTest(name: "pass2", type: JSONPass.Test2.self)
         _run_passTest(name: "pass3", type: JSONPass.Test3.self)
         _run_passTest(name: "pass4", type: JSONPass.Test4.self)
@@ -2381,9 +2320,7 @@ extension JSONEncoderTests {
     }
 
     private func _run_failTest<T:Decodable>(name: String, type: T.Type) {
-        let bundle = Bundle(for: Self.self)
-        let jsonURL = bundle.url(forResource: name, withExtension: "json", subdirectory: "JSON/fail")!
-        let jsonData = try! Data(contentsOf: jsonURL)
+        let jsonData = testData(forResource: name, withExtension: "json", subdirectory: "JSON/fail")!
 
         let decoder = JSONDecoder()
         decoder.assumesTopLevelDictionary = true
@@ -2440,11 +2377,9 @@ extension JSONEncoderTests {
     }
 
     func _run_json5SpecTest<T:Decodable>(_ category: String, _ name: String, testType: JSON5SpecTestType, type: T.Type) {
-        let bundle = Bundle(for: Self.self)
         let subdirectory = "/JSON5/spec/\(category)"
         let ext = testType.fileExtension
-        let jsonURL = bundle.url(forResource: name, withExtension: ext, subdirectory: subdirectory)!
-        let jsonData = try! Data(contentsOf: jsonURL)
+        let jsonData = testData(forResource: name, withExtension: ext, subdirectory: subdirectory)!
 
         let json5 = json5Decoder
         let json = JSONDecoder()
@@ -2618,6 +2553,54 @@ extension JSONEncoderTests {
         _run_json5SpecTest("strings", "unescaped-multi-line-string", testType: .malformed, type: String.self)
 
     }
+
+}
+
+// MARK: - FoundationPreview Disabled Tests
+#if FOUNDATION_FRAMEWORK
+extension JSONEncoderTests {
+    // TODO: Reenable once .iso8601 formatter is moved
+    func testEncodingDateISO8601() {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = .withInternetDateTime
+
+        let timestamp = Date(timeIntervalSince1970: 1000)
+        let expectedJSON = "\"\(formatter.string(from: timestamp))\"".data(using: String._Encoding.utf8)!
+
+        _testRoundTrip(of: timestamp,
+                       expectedJSON: expectedJSON,
+                       dateEncodingStrategy: .iso8601,
+                       dateDecodingStrategy: .iso8601)
+
+
+        // Optional dates should encode the same way.
+        _testRoundTrip(of: Optional(timestamp),
+                       expectedJSON: expectedJSON,
+                       dateEncodingStrategy: .iso8601,
+                       dateDecodingStrategy: .iso8601)
+    }
+
+    // TODO: Reenable once DateFormatStyle is moved
+    func testEncodingDateFormatted() {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .full
+        formatter.timeStyle = .full
+
+        let timestamp = Date(timeIntervalSince1970: 1000)
+        let expectedJSON = "\"\(formatter.string(from: timestamp))\"".data(using: String._Encoding.utf8)!
+
+        _testRoundTrip(of: timestamp,
+                       expectedJSON: expectedJSON,
+                       dateEncodingStrategy: .formatted(formatter),
+                       dateDecodingStrategy: .formatted(formatter))
+
+        // Optional dates should encode the same way.
+        _testRoundTrip(of: Optional(timestamp),
+                       expectedJSON: expectedJSON,
+                       dateEncodingStrategy: .formatted(formatter),
+                       dateDecodingStrategy: .formatted(formatter))
+    }
+
 
     // TODO: Reenable once Data.base64EncodedString() is implemented
     func testEncodingDataBase64() {
