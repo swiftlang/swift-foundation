@@ -50,6 +50,9 @@ public typealias NumberFormatStyleConfiguration = Foundation.NumberFormatStyleCo
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias CurrencyFormatStyleConfiguration = Foundation.CurrencyFormatStyleConfiguration
 
+@available(FoundationPreview 0.4, *)
+public typealias DiscreteFormatStyle = FoundationEssentials.DiscreteFormatStyle
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias StringStyle = Foundation.StringStyle
 
@@ -143,6 +146,9 @@ public typealias FloatingPointFormatStyle = FoundationInternationalization.Float
 public typealias NumberFormatStyleConfiguration = FoundationInternationalization.NumberFormatStyleConfiguration
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias CurrencyFormatStyleConfiguration = FoundationInternationalization.CurrencyFormatStyleConfiguration
+
+@available(FoundationPreview 0.4, *)
+public typealias DiscreteFormatStyle = FoundationEssentials.DiscreteFormatStyle
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias StringStyle = FoundationInternationalization.StringStyle
