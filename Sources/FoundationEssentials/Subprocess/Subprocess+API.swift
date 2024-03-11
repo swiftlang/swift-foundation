@@ -32,10 +32,11 @@ extension Subprocess {
             output: .init(method: output.method),
             error: .init(method: error.method)
         ) { subprocess in
+            let (standardOutput, standardError) = try await subprocess.captureIOs()
             return (
                 processIdentifier: subprocess.processIdentifier,
-                standardOutput: try subprocess.captureStandardOutput(),
-                standardError: try subprocess.captureStandardError()
+                standardOutput: standardOutput,
+                standardError: standardError
             )
         }
         return CollectedResult(
@@ -64,13 +65,14 @@ extension Subprocess {
             platformOptions: platformOptions,
             output: .init(method: output.method),
             error: .init(method: output.method)
-        ) { execution, writer in
+        ) { subprocess, writer in
             try await writer.write(input)
             try await writer.finish()
+            let (standardOutput, standardError) = try await subprocess.captureIOs()
             return (
-                processIdentifier: execution.processIdentifier,
-                standardOutput: try execution.captureStandardOutput(),
-                standardError: try execution.captureStandardError()
+                processIdentifier: subprocess.processIdentifier,
+                standardOutput: standardOutput,
+                standardError: standardError
             )
         }
         return CollectedResult(
@@ -99,13 +101,14 @@ extension Subprocess {
             platformOptions: platformOptions,
             output: .init(method: output.method),
             error: .init(method: output.method)
-        ) { execution, writer in
+        ) { subprocess, writer in
             try await writer.write(input)
             try await writer.finish()
+            let (standardOutput, standardError) = try await subprocess.captureIOs()
             return (
-                processIdentifier: execution.processIdentifier,
-                standardOutput: try execution.captureStandardOutput(),
-                standardError: try execution.captureStandardError()
+                processIdentifier: subprocess.processIdentifier,
+                standardOutput: standardOutput,
+                standardError: standardError
             )
         }
         return CollectedResult(

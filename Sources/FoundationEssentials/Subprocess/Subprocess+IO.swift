@@ -9,6 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
 import SystemPackage
 
 // MARK: - Input
@@ -29,9 +30,9 @@ extension Subprocess {
             switch self.method {
             case .noInput:
                 let devnull: FileDescriptor = try .open("/dev/null", .readOnly)
-                return .noInput(devnull)
+                return .init(storage: .noInput(devnull))
             case .fileDescriptor(let fileDescriptor, let closeWhenDone):
-                return .fileDescriptor(fileDescriptor, closeWhenDone)
+                return .init(storage: .fileDescriptor(fileDescriptor, closeWhenDone))
             }
         }
 
@@ -80,12 +81,12 @@ extension Subprocess {
             case .discarded:
                 // Bind to /dev/null
                 let devnull: FileDescriptor = try .open("/dev/null", .writeOnly)
-                return .discarded(devnull)
+                return .init(storage: .discarded(devnull))
             case .fileDescriptor(let fileDescriptor, let closeWhenDone):
-                return .fileDescriptor(fileDescriptor, closeWhenDone)
+                return .init(storage: .fileDescriptor(fileDescriptor, closeWhenDone))
             case .collected(let limit):
                 let (readFd, writeFd) = try FileDescriptor.pipe()
-                return .collected(limit, readFd, writeFd)
+                return .init(storage: .collected(limit, readFd, writeFd))
             }
         }
     }
@@ -116,12 +117,12 @@ extension Subprocess {
             case .discarded:
                 // Bind to /dev/null
                 let devnull: FileDescriptor = try .open("/dev/null", .writeOnly)
-                return .discarded(devnull)
+                return .init(storage: .discarded(devnull))
             case .fileDescriptor(let fileDescriptor, let closeWhenDone):
-                return .fileDescriptor(fileDescriptor, closeWhenDone)
+                return .init(storage: .fileDescriptor(fileDescriptor, closeWhenDone))
             case .collected(let limit):
                 let (readFd, writeFd) = try FileDescriptor.pipe()
-                return .collected(limit, readFd, writeFd)
+                return .init(storage: .collected(limit, readFd, writeFd))
             }
         }
     }
@@ -129,128 +130,223 @@ extension Subprocess {
 
 // MARK: - Execution IO
 extension Subprocess {
-    internal enum ExecutionInput {
-        case noInput(FileDescriptor)
-        case customWrite(FileDescriptor, FileDescriptor)
-        case fileDescriptor(FileDescriptor, Bool)
+    internal final class ExecutionInput {
+        
+        internal enum Storage {
+            case noInput(FileDescriptor?)
+            case customWrite(FileDescriptor?, FileDescriptor?)
+            case fileDescriptor(FileDescriptor?, Bool)
+        }
+        
+        let storage: LockedState<Storage>
+        
+        internal init(storage: Storage) {
+            self.storage = .init(initialState: storage)
+        }
 
-        internal func getReadFileDescriptor() -> FileDescriptor {
-            switch self {
-            case .noInput(let readFd):
-                return readFd
-            case .customWrite(let readFd, _):
-                return readFd
-            case .fileDescriptor(let readFd, _):
-                return readFd
+        internal func getReadFileDescriptor() -> FileDescriptor? {
+            return self.storage.withLock { $0
+                switch $0 {
+                case .noInput(let readFd):
+                    return readFd
+                case .customWrite(let readFd, _):
+                    return readFd
+                case .fileDescriptor(let readFd, _):
+                    return readFd
+                }
             }
         }
 
         internal func getWriteFileDescriptor() -> FileDescriptor? {
-            switch self {
-            case .noInput(_), .fileDescriptor(_, _):
-                return nil
-            case .customWrite(_, let writeFd):
-                return writeFd
+            return self.storage.withLock {
+                switch $0 {
+                case .noInput(_), .fileDescriptor(_, _):
+                    return nil
+                case .customWrite(_, let writeFd):
+                    return writeFd
+                }
             }
         }
 
         internal func closeChildSide() throws {
-            switch self {
-            case .noInput(let devnull):
-                try devnull.close()
-            case .customWrite(let readFd, _):
-                try readFd.close()
-            case .fileDescriptor(let fd, let closeWhenDone):
-                // User passed in fd
-                if closeWhenDone {
-                    try fd.close()
+            try self.storage.withLock {
+                switch $0 {
+                case .noInput(let devnull):
+                    try devnull?.close()
+                    $0 = .noInput(nil)
+                case .customWrite(let readFd, let writeFd):
+                    try readFd?.close()
+                    $0 = .customWrite(nil, writeFd)
+                case .fileDescriptor(let fd, let closeWhenDone):
+                    // User passed in fd
+                    if closeWhenDone {
+                        try fd?.close()
+                        $0 = .fileDescriptor(nil, closeWhenDone)
+                    }
                 }
-                break
             }
         }
 
         internal func closeParentSide() throws {
-            switch self {
-            case .noInput(_), .fileDescriptor(_, _):
-                break
-            case .customWrite(_, _):
-                // The parent fd should have been closed
-                // in the `body` when writer.finish() is called
-                break
+            try self.storage.withLock {
+                switch $0 {
+                case .noInput(_), .fileDescriptor(_, _):
+                    break
+                case .customWrite(let readFd, let writeFd):
+                    // The parent fd should have been closed
+                    // in the `body` when writer.finish() is called
+                    // But in case it isn't call it agian
+                    try readFd?.close()
+                    $0 = .customWrite(nil, writeFd)
+                }
             }
         }
 
         internal func closeAll() throws {
-            switch self {
-            case .noInput(let readFd):
-                try readFd.close()
-            case .customWrite(let readFd, let writeFd):
-                try readFd.close()
-                try writeFd.close()
-            case .fileDescriptor(let fd, _):
-                try fd.close()
+            try self.storage.withLock {
+                switch $0 {
+                case .noInput(let readFd):
+                    try readFd?.close()
+                    $0 = .noInput(nil)
+                case .customWrite(let readFd, let writeFd):
+                    var readFdCloseError: Error?
+                    var writeFdCloseError: Error?
+                    do {
+                        try readFd?.close()
+                    } catch {
+                        readFdCloseError = error
+                    }
+                    do {
+                        try writeFd?.close()
+                    } catch {
+                        writeFdCloseError = error
+                    }
+                    $0 = .customWrite(nil, nil)
+                    if let readFdCloseError {
+                        throw readFdCloseError
+                    }
+                    if let writeFdCloseError {
+                        throw writeFdCloseError
+                    }
+                case .fileDescriptor(let fd, let closeWhenDone):
+                    try fd?.close()
+                    $0 = .fileDescriptor(nil, closeWhenDone)
+                }
             }
         }
     }
 
-    internal enum ExecutionOutput {
-        case discarded(FileDescriptor)
-        case fileDescriptor(FileDescriptor, Bool)
-        case collected(Int, FileDescriptor, FileDescriptor)
+    internal final class ExecutionOutput: Sendable {
+        internal enum Storage: Sendable {
+            case discarded(FileDescriptor?)
+            case fileDescriptor(FileDescriptor?, Bool)
+            case collected(Int, FileDescriptor?, FileDescriptor?)
+        }
+        
+        private let storage: LockedState<Storage>
+        
+        internal init(storage: Storage) {
+            self.storage = .init(initialState: storage)
+        }
 
-        internal func getWriteFileDescriptor() -> FileDescriptor {
-            switch self {
-            case .discarded(let writeFd):
-                return writeFd
-            case .fileDescriptor(let writeFd, _):
-                return writeFd
-            case .collected(_, _, let writeFd):
-                return writeFd
+        internal func getWriteFileDescriptor() -> FileDescriptor? {
+            return self.storage.withLock {
+                switch $0 {
+                case .discarded(let writeFd):
+                    return writeFd
+                case .fileDescriptor(let writeFd, _):
+                    return writeFd
+                case .collected(_, _, let writeFd):
+                    return writeFd
+                }
             }
         }
 
         internal func getReadFileDescriptor() -> FileDescriptor? {
-            switch self {
-            case .discarded(_), .fileDescriptor(_, _):
-                return nil
-            case .collected(_, let readFd, _):
-                return readFd
+            return self.storage.withLock {
+                switch $0 {
+                case .discarded(_), .fileDescriptor(_, _):
+                    return nil
+                case .collected(_, let readFd, _):
+                    return readFd
+                }
+            }
+        }
+        
+        internal func consumeCollectedFileDescriptor() -> (limit: Int, fd: FileDescriptor?)? {
+            return self.storage.withLock {
+                switch $0 {
+                case .discarded(_), .fileDescriptor(_, _):
+                    // The output has been written somewhere else
+                    return nil
+                case .collected(let limit, let readFd, let writeFd):
+                    $0 = .collected(limit, nil, writeFd)
+                    return (limit, readFd)
+                }
             }
         }
 
         internal func closeChildSide() throws {
-            switch self {
-            case .discarded(let writeFd):
-                try writeFd.close()
-            case .fileDescriptor(let fd, let closeWhenDone):
-                // User passed fd
-                if closeWhenDone {
-                    try fd.close()
+            try self.storage.withLock {
+                switch $0 {
+                case .discarded(let writeFd):
+                    try writeFd?.close()
+                    $0 = .discarded(nil)
+                case .fileDescriptor(let fd, let closeWhenDone):
+                    // User passed fd
+                    if closeWhenDone {
+                        try fd?.close()
+                        $0 = .fileDescriptor(nil, closeWhenDone)
+                    }
+                case .collected(let limit, let readFd, let writeFd):
+                    try writeFd?.close()
+                    $0 = .collected(limit, readFd, nil)
                 }
-                break
-            case .collected(_, _, let writeFd):
-                try writeFd.close()
             }
         }
 
         internal func closeParentSide() throws {
-            switch self {
-            case .discarded(_), .fileDescriptor(_, _):
-                break
-            case .collected(_, let readFd, _):
-                try readFd.close()
+            try self.storage.withLock {
+                switch $0 {
+                case .discarded(_), .fileDescriptor(_, _):
+                    break
+                case .collected(let limit, let readFd, let writeFd):
+                    try readFd?.close()
+                    $0 = .collected(limit, nil, writeFd)
+                }
             }
         }
 
         internal func closeAll() throws {
-            switch self {
-            case .discarded(let writeFd):
-                try writeFd.close()
-            case .fileDescriptor(let fd, _):
-                try fd.close()
-            case .collected(_, let readFd, let writeFd):
-                try readFd.close()
-                try writeFd.close()
+            try self.storage.withLock {
+                switch $0 {
+                case .discarded(let writeFd):
+                    try writeFd?.close()
+                    $0 = .discarded(nil)
+                case .fileDescriptor(let fd, let closeWhenDone):
+                    try fd?.close()
+                    $0 = .fileDescriptor(nil, closeWhenDone)
+                case .collected(let limit, let readFd, let writeFd):
+                    var readFdCloseError: Error?
+                    var writeFdCloseError: Error?
+                    do {
+                        try readFd?.close()
+                    } catch {
+                        readFdCloseError = error
+                    }
+                    do {
+                        try writeFd?.close()
+                    } catch {
+                        writeFdCloseError = error
+                    }
+                    $0 = .collected(limit, nil, nil)
+                    if let readFdCloseError {
+                        throw readFdCloseError
+                    }
+                    if let writeFdCloseError {
+                        throw writeFdCloseError
+                    }
+                }
             }
         }
     }
@@ -258,10 +354,44 @@ extension Subprocess {
 
 // MARK: - Private Helpers
 extension FileDescriptor {
-    internal func read(upToLength maxLength: Int) throws -> [UInt8] {
-        let buffer: UnsafeMutableBufferPointer<UInt8> = .allocate(capacity: maxLength)
-        let readCount = try self.read(into: .init(buffer))
-        let resizedBuffer: UnsafeBufferPointer<UInt8> = .init(start: buffer.baseAddress, count: readCount)
-        return Array(resizedBuffer)
+    internal func read(upToLength maxLength: Int) async throws -> [UInt8] {
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchIO.read(
+                fromFileDescriptor: self.rawValue,
+                maxLength: maxLength,
+                runningHandlerOn: .main
+            ) { data, error in
+                guard error == 0 else {
+                    continuation.resume(
+                        throwing: POSIXError(
+                            .init(rawValue: error) ?? .ENODEV)
+                    )
+                    return
+                }
+                continuation.resume(returning: Array(data))
+            }
+        }
+    }
+    
+    internal func write<S: Sequence>(_ data: S) async throws where S.Element == UInt8 {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) -> Void in
+            let dispatchData: DispatchData = Array(data).withUnsafeBytes {
+                return DispatchData(bytes: $0)
+            }
+            DispatchIO.write(
+                toFileDescriptor: self.rawValue,
+                data: dispatchData,
+                runningHandlerOn: .main
+            ) { _, error in
+                guard error == 0 else {
+                    continuation.resume(
+                        throwing: POSIXError(
+                            .init(rawValue: error) ?? .ENODEV)
+                    )
+                    return
+                }
+                continuation.resume()
+            }
+        }
     }
 }

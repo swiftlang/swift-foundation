@@ -11,12 +11,20 @@
 
 import SystemPackage
 
+/// An object that represents a subprocess of the current process.
+///
+/// Using `Subprocess`, your program can run another program as a subprocess
+/// and can monitor that program’s execution. A `Subprocess` object creates a
+/// **separate executable** entity; it’s different from `Thread` because it doesn’t
+/// share memory space with the process that creates it.
 public struct Subprocess: Sendable {
+    /// The process identifier of the current subprocess
     public let processIdentifier: ProcessIdentifier
 
     internal let executionInput: ExecutionInput
     internal let executionOutput: ExecutionOutput
     internal let executionError: ExecutionOutput
+    internal var extracted: Bool = false
 
     internal init(
         processIdentifier: ProcessIdentifier,
@@ -30,40 +38,26 @@ public struct Subprocess: Sendable {
         self.executionError = executionError
     }
 
-    public var standardOutput: AsyncBytes? {
-        switch self.executionOutput {
-        case .discarded(_), .fileDescriptor(_, _):
-            // The output has been written somewhere else
-            return nil
-        case .collected(_, let readFd, _):
-            return AsyncBytes(fileDescriptor: readFd)
+    public var standardOutput: AsyncBytes {
+        guard let (_, fd) = self.executionOutput
+            .consumeCollectedFileDescriptor() else {
+            fatalError("The standard output was not redirected")
         }
+        guard let fd = fd else {
+            fatalError("The standard output has already been consumed")
+        }
+        return AsyncBytes(fileDescriptor: fd)
     }
 
-    public var standardError: AsyncBytes? {
-        switch self.executionError {
-        case .discarded(_), .fileDescriptor(_, _):
-            // The output has been written somewhere else
-            return nil
-        case .collected(_, let readFd, _):
-            return AsyncBytes(fileDescriptor: readFd)
+    public var standardError: AsyncBytes {
+        guard let (_, fd) = self.executionError
+            .consumeCollectedFileDescriptor() else {
+            fatalError("The standard error was not redirected")
         }
-    }
-
-    internal func captureStandardOutput() throws -> Data? {
-        guard case .collected(let limit, let readFd, _) = self.executionOutput else {
-            return nil
+        guard let fd = fd else {
+            fatalError("The standard error has already been consumed")
         }
-        let captured = try readFd.read(upToLength: limit)
-        return Data(captured)
-    }
-
-    internal func captureStandardError() throws -> Data? {
-        guard case .collected(let limit, let readFd, _) = self.executionError else {
-            return nil
-        }
-        let captured = try readFd.read(upToLength: limit)
-        return Data(captured)
+        return AsyncBytes(fileDescriptor: fd)
     }
 }
 
@@ -155,9 +149,61 @@ extension Subprocess {
     }
 }
 
-
 extension Subprocess.Result: Equatable where T : Equatable {}
 
 extension Subprocess.Result: Hashable where T : Hashable {}
 
 extension POSIXError : Swift.Error {}
+
+// MARK: Internal
+extension Subprocess {
+    internal enum OutputCapturingState {
+        case standardOutputCaptured(Data?)
+        case standardErrorCaptured(Data?)
+    }
+    
+    internal func captureStandardOutput() async throws -> Data? {
+        guard let (limit, readFd) = self.executionOutput
+            .consumeCollectedFileDescriptor(),
+              let readFd = readFd else {
+            return nil
+        }
+        let captured = try await readFd.read(upToLength: limit)
+        return Data(captured)
+    }
+
+    internal func captureStandardError() async throws -> Data? {
+        guard let (limit, readFd) = self.executionError
+            .consumeCollectedFileDescriptor(),
+              let readFd = readFd else {
+            return nil
+        }
+        let captured = try await readFd.read(upToLength: limit)
+        return Data(captured)
+    }
+    
+    internal func captureIOs() async throws -> (standardOut: Data?, standardError: Data?) {
+        return try await withThrowingTaskGroup(of: OutputCapturingState.self) { group in
+            group.addTask {
+                let stdout = try await self.captureStandardOutput()
+                return .standardOutputCaptured(stdout)
+            }
+            group.addTask {
+                let stderr = try await self.captureStandardError()
+                return .standardErrorCaptured(stderr)
+            }
+            
+            var stdout: Data?
+            var stderror: Data?
+            while let state = try await group.next() {
+                switch state {
+                case .standardOutputCaptured(let output):
+                    stdout = output
+                case .standardErrorCaptured(let error):
+                    stderror = error
+                }
+            }
+            return (standardOut: stdout, standardError: stderror)
+        }
+    }
+}

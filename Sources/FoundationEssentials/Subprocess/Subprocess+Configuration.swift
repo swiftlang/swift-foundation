@@ -184,7 +184,7 @@ extension Subprocess {
             _ body: @Sendable @escaping (Subprocess, StandardInputWriter) async throws -> R
         ) async throws -> Result<R> {
             let (readFd, writeFd) = try FileDescriptor.pipe()
-            let executionInput: ExecutionInput = .customWrite(readFd, writeFd)
+            let executionInput: ExecutionInput = .init(storage: .customWrite(readFd, writeFd))
             let executionOutput: ExecutionOutput = try output.createExecutionOutput()
             let executionError: ExecutionOutput = try error.createExecutionOutput()
             let process: Subprocess = try self.spawn(

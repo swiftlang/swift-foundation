@@ -41,9 +41,8 @@ extension Subprocess {
                 }
                 try Task.checkCancellation()
                 do {
-                    self.buffer = try await self.read(
-                        from: self.fileDescriptor,
-                        maxLength: AsyncBytes.bufferSize)
+                    self.buffer = try await self.fileDescriptor.read(
+                        upToLength: AsyncBytes.bufferSize)
                     self.currentPosition = 0
                     if self.buffer.count < AsyncBytes.bufferSize {
                         self.finished = true

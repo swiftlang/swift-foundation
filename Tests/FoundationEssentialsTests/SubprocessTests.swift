@@ -26,6 +26,16 @@ final class SubprocessTests: XCTestCase {
         XCTAssert(ls.terminationStatus.isSuccess)
         XCTAssert(!result.isEmpty)
     }
+    
+    func testLongText() async throws {
+        let cat = try await Subprocess.run(
+            executing: .named("cat"),
+            arguments: ["/Users/icharleshu/Downloads/PaP.txt"],
+            output: .collect(limit: 1024 * 1024)
+        )
+        print("after")
+        print("Result: \(cat.standardOutput?.count ?? -1)")
+    }
 
     func testComplex() async throws {
         struct Address: Codable {
@@ -36,7 +46,8 @@ final class SubprocessTests: XCTestCase {
             executing: .named("curl"),
             arguments: ["http://ip.jsontest.com/"]
         ) { execution in
-            let output: [UInt8] = try await Array(execution.standardOutput!)
+            let output: [UInt8] = try await Array(execution.standardOutput)
+            print("Output2: \(output)")
             let decoder = FoundationEssentials.JSONDecoder()
             return try decoder.decode(Address.self, from: Data(output))
         }
@@ -49,10 +60,7 @@ final class SubprocessTests: XCTestCase {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
                     // Stream output line by line
-                    guard let stream = subprocess.standardOutput else {
-                        return
-                    }
-                    let lineSequence = AsyncLineSequence(underlyingSequence: stream)
+                    let lineSequence = AsyncLineSequence(underlyingSequence: subprocess.standardOutput)
                     for try await line in lineSequence {
                         print("> \(line)")
                     }
