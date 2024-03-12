@@ -25,6 +25,12 @@ public struct URL : Hashable, Sendable, Codable {
         self.path = fileURLWithPath
     }
     
+    // Temporary initializer, just to be able to stash URLs in things without any functionality.
+    @_spi(SwiftCorelibsFoundation)
+    public init(path: String) {
+        self.path = path
+    }
+    
     public var isFileURL: Bool { true }
     public var lastPathComponent: String { path.lastPathComponent }
     public var scheme: String? { "file" }
