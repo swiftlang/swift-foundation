@@ -51,7 +51,7 @@ public typealias NumberFormatStyleConfiguration = Foundation.NumberFormatStyleCo
 public typealias CurrencyFormatStyleConfiguration = Foundation.CurrencyFormatStyleConfiguration
 
 @available(FoundationPreview 0.4, *)
-public typealias DiscreteFormatStyle = FoundationEssentials.DiscreteFormatStyle
+public typealias DiscreteFormatStyle = Foundation.DiscreteFormatStyle
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias StringStyle = Foundation.StringStyle
