@@ -506,7 +506,7 @@ final class StringTests : XCTestCase {
         
         // No BOM, no encoding specified. We assume the data is big endian, which leads to an expected value.
         let utf32BENoBOMString = String(bytes: utf32BEExpected, encoding: String._Encoding.utf32)
-        XCTAssertEqual(s, utf32BEString)
+        XCTAssertEqual(s, utf32BENoBOMString)
 
         // Check what happens when we mismatch a string with a BOM and the encoding. The bytes are interpreted according to the specified encoding regardless of the BOM, the BOM is preserved, and the String will look garbled. However the bytes are preserved as-is. This is the expected behavior for UTF16.
         let utf16LEBOMStringMismatch = String(bytes: utf16LEWithBOM, encoding: String._Encoding.utf16BigEndian)
