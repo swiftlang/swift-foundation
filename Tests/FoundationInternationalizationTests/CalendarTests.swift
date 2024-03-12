@@ -948,6 +948,45 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(firstDayOfMonth(gregorianCalendar, for: date2), Date(timeIntervalSinceReferenceDate: 728441519.0)) // 2024-02-01T00:51:59Z
     }
 
+    func test_firstWeekday() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US")
+        XCTAssertEqual(calendar.firstWeekday, 1)
+
+        calendar.locale = Locale(identifier: "en_GB")
+        XCTAssertEqual(calendar.firstWeekday, 2)
+
+        var calendarWithCustomLocale = Calendar(identifier: .gregorian)
+        calendarWithCustomLocale.locale = Locale(identifier: "en_US", preferences: .init(firstWeekday: [.gregorian: 3]))
+        XCTAssertEqual(calendarWithCustomLocale.firstWeekday, 3)
+
+        calendarWithCustomLocale.firstWeekday = 5
+        XCTAssertEqual(calendarWithCustomLocale.firstWeekday, 5) // Returns the one set directly on Calendar
+
+        var calendarWithCustomLocaleAndCustomWeekday = Calendar(identifier: .gregorian)
+        calendarWithCustomLocaleAndCustomWeekday.firstWeekday = 2
+        calendarWithCustomLocaleAndCustomWeekday.locale = Locale(identifier: "en_US", preferences: .init(firstWeekday: [.gregorian: 3]))
+        XCTAssertEqual(calendarWithCustomLocaleAndCustomWeekday.firstWeekday, 2) // Returns the one set directly on Calendar even if `.locale` is set later
+    }
+
+    func test_minDaysInFirstWeek() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_GB")
+        XCTAssertEqual(calendar.minimumDaysInFirstWeek, 4)
+
+        calendar.minimumDaysInFirstWeek = 5
+        XCTAssertEqual(calendar.minimumDaysInFirstWeek, 5)
+
+        var calendarWithCustomLocale = Calendar(identifier: .gregorian)
+        calendarWithCustomLocale.locale = Locale(identifier: "en_US", preferences: .init(minDaysInFirstWeek: [.gregorian: 6]))
+        XCTAssertEqual(calendarWithCustomLocale.minimumDaysInFirstWeek, 6)
+
+        var calendarWithCustomLocaleAndCustomMinDays = Calendar(identifier: .gregorian)
+        calendarWithCustomLocaleAndCustomMinDays.minimumDaysInFirstWeek = 2
+        calendarWithCustomLocaleAndCustomMinDays.locale = Locale(identifier: "en_US", preferences: .init(minDaysInFirstWeek: [.gregorian: 6]))
+        XCTAssertEqual(calendarWithCustomLocaleAndCustomMinDays.minimumDaysInFirstWeek, 2)
+
+    }
 }
 
 // MARK: - Bridging Tests
@@ -1127,10 +1166,6 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
             let date_new = gregorianCalendar.date(from: dateComponents)!
             let date_old = icuCalendar.date(from: dateComponents)!
             expectEqual(date_new, date_old, "dateComponents: \(dateComponents)")
-            print("""
-
-XCTAssertEqual(gregorianCalendar.date(from: dateComponents)!, Date(timeIntervalSinceReferenceDate: \(date_old.timeIntervalSinceReferenceDate))) // \(date_old.formatted(.iso8601))
-""")
         }
 
         let dcCalendar = Calendar(identifier: .japanese, locale: Locale(identifier: ""), timeZone: .init(secondsFromGMT: -25200), firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
@@ -1276,7 +1311,6 @@ XCTAssertEqual(gregorianCalendar.date(from: dateComponents)!, Date(timeIntervalS
         }
 
         let testStrides = stride(from: -864000, to: 864000, by: 100)
-        let gmtPlusOne = TimeZone(secondsFromGMT: 3600)!
 
         for ti in testStrides {
             let date = Date(timeIntervalSince1970: TimeInterval(ti))
@@ -1341,15 +1375,12 @@ XCTAssertEqual(gregorianCalendar.date(from: dateComponents)!, Date(timeIntervalS
 
     func testDateComponentsFromDate_distantDates() {
 
-//        let componentSet = Calendar.ComponentSet([.day])
-
         let componentSet = Calendar.ComponentSet([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar])
         func test(_ date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
             let gregResult = gregorianCalendar.dateComponents(componentSet, from: date, in: gregorianCalendar.timeZone)
             let icuResult = icuCalendar.dateComponents(componentSet, from: date, in: icuCalendar.timeZone)
             // The original implementation does not set quarter
-            expectEqual(gregResult, icuResult, expectQuarter: false, expectCalendar: false, message().appending("\ndate: \(date.timeIntervalSince1970), \(date.formatted(Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)))\nnew:\n\(gregResult)\nold:\n\(icuResult)\ndiff:\n\(DateComponents.differenceBetween(gregResult, icuResult, compareQuarter: false))"), file: file, line: line)
-
+            expectEqual(gregResult, icuResult, expectQuarter: false, expectCalendar: false, message().appending("\ndate: \(date.timeIntervalSince1970), \(date.formatted(Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)))\nnew:\n\(gregResult)\nold:\n\(icuResult)\ndiff:\n\(DateComponents.differenceBetween(gregResult, icuResult, compareQuarter: false) ?? "nil")"), file: file, line: line)
         }
 
         do {
@@ -1655,7 +1686,7 @@ XCTAssertEqual(gregorianCalendar.date(from: dateComponents)!, Date(timeIntervalS
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
-        var date = Date(timeIntervalSinceReferenceDate:  -702180000) // 1978-10-01T23:00:00+0100
+        let date = Date(timeIntervalSinceReferenceDate:  -702180000) // 1978-10-01T23:00:00+0100
         verifyAdding(.init(hour: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
 
         // Expected
@@ -1682,7 +1713,7 @@ XCTAssertEqual(gregorianCalendar.date(from: dateComponents)!, Date(timeIntervalS
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
-        var date = Date(timeIntervalSinceReferenceDate: 2557249259.5) // 2082-1-13 19:00:59.5 +0000
+        let date = Date(timeIntervalSinceReferenceDate: 2557249259.5) // 2082-1-13 19:00:59.5 +0000
         verifyAdding(.init(day: 1), to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: true)
     }
 

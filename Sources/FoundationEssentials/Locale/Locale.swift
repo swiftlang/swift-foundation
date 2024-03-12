@@ -489,6 +489,10 @@ public struct Locale : Hashable, Equatable, Sendable {
         _locale.weekendRange
     }
 
+    internal var minimumDaysInFirstWeek: Int {
+        _locale.minimumDaysInFirstWeek
+    }
+    
     // MARK: - Preferences support (Internal)
 
     package var forceHourCycle: HourCycle? {

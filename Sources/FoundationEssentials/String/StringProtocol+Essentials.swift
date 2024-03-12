@@ -15,6 +15,70 @@ internal import _ForSwiftFoundation
 internal func _foundation_essentials_feature_enabled() -> Bool { return true }
 #endif
 
+// These provides concrete implementations for String and Substring, enhancing performance over generic StringProtocol.
+
+@available(FoundationPreview 0.4, *)
+extension String {
+    public func data(using encoding: String.Encoding, allowLossyConversion: Bool = false) -> Data? {
+        switch encoding {
+        case .utf8:
+            return Data(self.utf8)
+        default:
+#if FOUNDATION_FRAMEWORK
+            // TODO: Implement data(using:allowLossyConversion:) in Swift
+            return _ns.data(
+                using: encoding.rawValue,
+                allowLossyConversion: allowLossyConversion)
+#else
+            switch encoding {
+            case .utf16BigEndian, .utf16LittleEndian:
+                // This creates a contiguous storage for Data to simply memcpy, the most efficient way to give it bytes.
+                return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: self.utf16.count * 2) { utf16Buffer in
+                    _ = utf16Buffer.initialize(from: UTF16ToDataAdaptor(self.utf16, endianness: Endianness(encoding)!))
+                    defer { utf16Buffer.deinitialize() }
+                    return Data(utf16Buffer)
+                }
+            case .utf16:
+#if _endian(little)
+                let data = Data([0xFF, 0xFE])
+                let hostEncoding : String.Encoding = .utf16LittleEndian
+#else
+                let data = Data([0xFE, 0xFF])
+                let hostEncoding : String.Encoding  = .utf16BigEndian
+#endif
+                guard let swapped = self.data(using: hostEncoding, allowLossyConversion: allowLossyConversion) else {
+                    return nil
+                }
+                
+                return data + swapped
+            case .utf32BigEndian, .utf32LittleEndian:
+                // This creates a contiguous storage for Data to simply memcpy, the most efficient way to give it bytes.
+                return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: self.unicodeScalars.count * 4) { utf32Buffer in
+                    _ = utf32Buffer.initialize(from: UnicodeScalarToDataAdaptor(self.unicodeScalars, endianness: Endianness(encoding)!))
+                    defer { utf32Buffer.deinitialize() }
+                    return Data(utf32Buffer)
+                }
+            case .utf32:
+#if _endian(little)
+                let data = Data([0xFF, 0xFE, 0x00, 0x00])
+                let hostEncoding : String.Encoding = .utf32LittleEndian
+#else
+                let data = Data([0x00, 0x00, 0xFE, 0xFF])
+                let hostEncoding : String.Encoding = .utf32BigEndian
+#endif
+                guard let swapped = self.data(using: hostEncoding, allowLossyConversion: allowLossyConversion) else {
+                    return nil
+                }
+                
+                return data + swapped
+            default:
+                return nil
+            }
+#endif
+        }
+    }
+}
+
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension StringProtocol {
     /// A copy of the string with each word changed to its corresponding
@@ -62,12 +126,14 @@ extension StringProtocol {
         case .utf8:
             return Data(self.utf8)
         default:
-#if FOUNDATION_FRAMEWORK // TODO: Implement data(using:allowLossyConversion:) in Swift
+#if FOUNDATION_FRAMEWORK
+            // TODO: Implement data(using:allowLossyConversion:) in Swift
             return _ns.data(
                 using: encoding.rawValue,
                 allowLossyConversion: allowLossyConversion)
 #else
-            return nil
+            // Get a String, use the concrete implementation there
+            return String(self).data(using: encoding, allowLossyConversion: allowLossyConversion)
 #endif
         }
     }
@@ -226,3 +292,4 @@ extension StringProtocol {
         }
     }
 }
+

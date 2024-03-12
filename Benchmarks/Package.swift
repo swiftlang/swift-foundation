@@ -67,6 +67,16 @@ let package = Package(
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
         ),
-
+        .executableTarget(
+            name: "StringBenchmarks",
+            dependencies: [
+                .product(name: "FoundationEssentials", package: "swift-foundation-local"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+            ],
+            path: "Benchmarks/String",
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
     ]
 )

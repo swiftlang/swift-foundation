@@ -48,7 +48,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/apple/swift-collections",
-            revision: "d8003787efafa82f9805594bc51100be29ac6903"), // on release/1.1
+            from: "1.1.0"),
         .package(
             url: "https://github.com/apple/swift-foundation-icu",
             exact: "0.0.5"),
@@ -84,6 +84,7 @@ let package = Package(
             "_CShims",
             "FoundationMacros",
             .product(name: "_RopeModule", package: "swift-collections"),
+            .product(name: "OrderedCollections", package: "swift-collections"),
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux]))
@@ -93,10 +94,17 @@ let package = Package(
             .enableExperimentalFeature("AccessLevelOnImport")
           ] + availabilityMacros
         ),
-        .testTarget(name: "FoundationEssentialsTests", dependencies: [
-            "TestSupport",
-            "FoundationEssentials"
-        ], swiftSettings: availabilityMacros),
+        .testTarget(
+            name: "FoundationEssentialsTests",
+            dependencies: [
+                "TestSupport",
+                "FoundationEssentials"
+            ],
+            resources: [
+                .copy("Resources")
+            ],
+            swiftSettings: availabilityMacros
+        ),
 
         // FoundationInternationalization
         .target(

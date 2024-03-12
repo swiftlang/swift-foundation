@@ -27,6 +27,11 @@ extension Duration {
         public struct UnitWidth : Codable, Hashable, Sendable {
             var width: Measurement<UnitDuration>.FormatStyle.UnitWidth
             var patternStyle: UATimeUnitStyle
+            
+            private init(width: Measurement<UnitDuration>.FormatStyle.UnitWidth, patternStyle: UATimeUnitStyle) {
+                self.width = width
+                self.patternStyle = patternStyle
+            }
 
             /// Shows the full unit name, such as "3 hours" for a 3-hour duration in the en_US locale.
             public static var wide: UnitWidth { .init(width: .wide, patternStyle: UATIMEUNITSTYLE_FULL) }
@@ -39,6 +44,29 @@ extension Duration {
 
             /// Shows the shortest unit name, such as "3h" for a 3-hour duration in the en_US locale.
             public static var narrow: UnitWidth { .init(width: .narrow, patternStyle: UATIMEUNITSTYLE_NARROW) }
+            
+            private enum CodingKeys: CodingKey {
+                case width
+                case patternStyle
+            }
+            
+            public init(from decoder: any Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.width = try container.decode(Measurement<UnitDuration>.FormatStyle.UnitWidth.self, forKey: .width)
+                let rawValue = try container.decode(UATimeUnitStyle.RawValue.self, forKey: .patternStyle)
+                self.patternStyle = UATimeUnitStyle(rawValue)
+            }
+            
+            public func encode(to encoder: any Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(self.width, forKey: .width)
+                try container.encode(self.patternStyle.rawValue, forKey: .patternStyle)
+            }
+            
+            public func hash(into hasher: inout Hasher) {
+                hasher.combine(width)
+                hasher.combine(patternStyle.rawValue)
+            }
         }
 
         /// Units that a duration can be displayed as with `UnitsFormatStyle`.
@@ -601,9 +629,6 @@ extension Duration.UnitsFormatStyle {
         }
     }
 }
-
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-extension UATimeUnitStyle : Codable, Hashable {}
 
 // MARK: Dynamic Member Lookup
 

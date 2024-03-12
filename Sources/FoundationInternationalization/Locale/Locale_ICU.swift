@@ -62,47 +62,62 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         var collationIdentifierDisplayNames: [String : String?] = [:]
         var currencySymbolDisplayNames: [String : String?] = [:]
         var currencyCodeDisplayNames: [String : String?] = [:]
+        var numberFormatters = NumberFormattersBox()
+        
+        // This type is @unchecked Sendable because it stores mutable pointers
+        // The mutable pointers are only ever "mutated" during the call to cleanup, so this type can be safely sent across concurrency boundaries so long as care is taken to ensure that during a call to cleanup that you have exclusive access to this box
+        // This is done by ensuring that cleanup is called from within the _LocaleICU lock
+        struct NumberFormattersBox : Hashable, @unchecked Sendable {
+            private var numberFormatters: [UInt32 /* UNumberFormatStyle */ : UnsafeMutablePointer<UNumberFormat?>] = [:]
 
-        var numberFormatters: [UInt32 /* UNumberFormatStyle */ : UnsafeMutablePointer<UNumberFormat?>] = [:]
+            mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafePointer<UNumberFormat?>? {
+                if let nf = numberFormatters[UInt32(style.rawValue)] {
+                    return UnsafePointer(nf)
+                }
 
-        mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafeMutablePointer<UNumberFormat?>? {
-            if let nf = numberFormatters[UInt32(style.rawValue)] {
-                return nf
-            }
+                var status = U_ZERO_ERROR
+                guard let nf = unum_open(style, nil, 0, identifier, nil, &status) else {
+                    return nil
+                }
 
-            var status = U_ZERO_ERROR
-            guard let nf = unum_open(style, nil, 0, identifier, nil, &status) else {
-                return nil
-            }
+                let multiplier = unum_getAttribute(nf, UNUM_MULTIPLIER)
+                if multiplier != 1 {
+                    unum_setAttribute(nf, UNUM_MULTIPLIER, 1)
+                }
 
-            let multiplier = unum_getAttribute(nf, UNUM_MULTIPLIER)
-            if multiplier != 1 {
-                unum_setAttribute(nf, UNUM_MULTIPLIER, 1)
-            }
+                unum_setAttribute(nf, UNUM_LENIENT_PARSE, 0)
+                unum_setContext(nf, UDISPCTX_CAPITALIZATION_NONE, &status)
 
-            unum_setAttribute(nf, UNUM_LENIENT_PARSE, 0)
-            unum_setContext(nf, UDISPCTX_CAPITALIZATION_NONE, &status)
-
-            if let numberSymbols {
-                for (sym, str) in numberSymbols {
-                    let utf16 = Array(str.utf16)
-                    utf16.withUnsafeBufferPointer {
-                        var status = U_ZERO_ERROR
-                        unum_setSymbol(nf, UNumberFormatSymbol(CInt(sym)), $0.baseAddress, Int32($0.count), &status)
+                if let numberSymbols {
+                    for (sym, str) in numberSymbols {
+                        let utf16 = Array(str.utf16)
+                        utf16.withUnsafeBufferPointer {
+                            var status = U_ZERO_ERROR
+                            unum_setSymbol(nf, UNumberFormatSymbol(CInt(sym)), $0.baseAddress, Int32($0.count), &status)
+                        }
                     }
                 }
+
+                numberFormatters[UInt32(style.rawValue)] = nf
+                
+                // Vending non-mutable pointers ensures callers don't mutate state
+                return UnsafePointer(nf)
             }
+            
+            mutating func cleanup() {
+                for nf in numberFormatters.values {
+                    unum_close(nf)
+                }
+                numberFormatters = [:]
+            }
+        }
 
-            numberFormatters[UInt32(style.rawValue)] = nf
-
-            return nf
+        mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafePointer<UNumberFormat?>? {
+            numberFormatters.formatter(for: style, identifier: identifier, numberSymbols: numberSymbols)
         }
         
         mutating func cleanup() {
-            for nf in numberFormatters.values {
-                unum_close(nf)
-            }
-            numberFormatters = [:]
+            numberFormatters.cleanup()
         }
     }
 
@@ -267,6 +282,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     
     deinit {
         lock.withLock { state in
+            // We can safely call this here because we have exclusive access to state within the lock
             state.cleanup()
         }
     }
@@ -1339,6 +1355,35 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     }
 
     // MARK: Min days in first week
+
+    var minimumDaysInFirstWeek: Int {
+        lock.withLock { state in
+            if let minDays = state.minimalDaysInFirstWeek {
+                return minDays
+            }
+
+            // Check prefs
+            if let minDays = forceMinDaysInFirstWeek(_lockedCalendarIdentifier(&state)) {
+                state.minimalDaysInFirstWeek = minDays
+                return minDays
+            }
+
+            // Use locale's value
+            var status = U_ZERO_ERROR
+            let cal = ucal_open(nil, 0, identifier, UCAL_DEFAULT, &status)
+            defer { ucal_close(cal) }
+
+            guard status.isSuccess else {
+                // fallback to 001's value
+                state.minimalDaysInFirstWeek = 1
+                return 1
+            }
+
+            let minDays = Int(ucal_getAttribute(cal, UCAL_MINIMAL_DAYS_IN_FIRST_WEEK))
+            state.minimalDaysInFirstWeek = minDays
+            return minDays
+        }
+    }
 
     func forceMinDaysInFirstWeek(_ calendar: Calendar.Identifier) -> Int? {
         if let prefs {

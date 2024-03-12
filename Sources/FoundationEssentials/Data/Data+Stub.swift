@@ -12,23 +12,6 @@
 
 #if !FOUNDATION_FRAMEWORK
 
-#if false
-// FIXME: rdar://103535015 (Implement stub methods in struct Data)
-extension Data {
-    /// Find the given `Data` in the content of this `Data`.
-    ///
-    /// - parameter dataToFind: The data to be searched for.
-    /// - parameter options: Options for the search. Default value is `[]`.
-    /// - parameter range: The range of this data in which to perform the search. Default value is `nil`, which means the entire content of this data.
-    /// - returns: A `Range` specifying the location of the found data, or nil if a match could not be found.
-    /// - precondition: `range` must be in the bounds of the Data.
-    public func range(of dataToFind: Data, options: Data.SearchOptions = [], in range: Range<Index>? = nil) -> Range<Index>? {
-        // FIXME: Implement Data IO
-        fatalError("Not implemented")
-    }
-}
-#endif
-
 // Placeholder for Progress
 internal final class Progress {
     var completedUnitCount: Int64

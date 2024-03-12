@@ -38,17 +38,14 @@ func testPath() -> URL {
 }
 #endif
 
-func generateTestData() -> Data {
-    // 16 MB file, big enough to trigger things like chunking
-    let count = 1 << 24
-    
+func generateTestData(count: Int) -> Data {
     let memory = malloc(count)!
     let ptr = memory.bindMemory(to: UInt8.self, capacity: count)
     
     // Set a few bytes so we're sure to not be all zeros
     let buf = UnsafeMutableBufferPointer(start: ptr, count: count)
     for i in 0..<128 {
-        buf[i] = UInt8.random(in: 1..<42)
+        buf[i] = UInt8.random(in: UInt8.min..<UInt8.max)
     }
     
     return Data(bytesNoCopy: ptr, count: count, deallocator: .free)
@@ -66,8 +63,12 @@ func cleanup(at path: URL) {
 }
 #endif
 
-let data = generateTestData()
+// 16 MB file, big enough to trigger things like chunking
+let data = generateTestData(count: 1 << 24)
 let readMe = testPath()
+
+let base64Data = generateTestData(count: 1024 * 1024)
+let base64DataString = base64Data.base64EncodedString()
 
 let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
@@ -101,4 +102,24 @@ let benchmarks = {
     ) { benchmark in
         blackHole(try Data(contentsOf: readMe))
     }
+    
+    // MARK: base64
+        
+    Benchmark("base64-encode", configuration: .init(scalingFactor: .kilo)) { benchmark in
+        for _ in benchmark.scaledIterations {
+            autoreleasepool {
+                blackHole(base64Data.base64EncodedString())
+            }
+        }
+    }
+    
+    
+    Benchmark("base64-decode", configuration: .init(scalingFactor: .kilo)) { benchmark in
+        for _ in benchmark.scaledIterations {
+            autoreleasepool {
+                blackHole(Data(base64Encoded: base64DataString))
+            }
+        }
+    }
+
 }
