@@ -35,10 +35,15 @@ public struct POSIXError : _BridgedStoredNSError {
 
     public typealias Code = POSIXErrorCode
 }
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension POSIXErrorCode : _ErrorCodeProtocol {
+    public typealias _ErrorType = POSIXError
+}
 #else
 
 /// Describes an error in the POSIX error domain.
-public struct POSIXError : Error, _StoredError, Hashable {
+public struct POSIXError : Error, Hashable {
     public let code: Code
 
     public static var errorDomain: String { return "NSPOSIXErrorDomain" }
@@ -54,11 +59,6 @@ public struct POSIXError : Error, _StoredError, Hashable {
     public typealias Code = POSIXErrorCode
 }
 #endif
-
-@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension POSIXErrorCode : _ErrorCodeProtocol {
-    public typealias _ErrorType = POSIXError
-}
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension POSIXError {

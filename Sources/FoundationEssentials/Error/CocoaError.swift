@@ -27,39 +27,12 @@ public struct CocoaError : _BridgedStoredNSError {
         return _nsError.hashValue
     }
 }
-#else
-
-public protocol _StoredError {
-    associatedtype Code: _ErrorCodeProtocol, RawRepresentable where Code.RawValue: FixedWidthInteger
-    
-    var code: Code { get }
-}
-
-/// Describes errors within the Cocoa error domain, including errors that Foundation throws.
-@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct CocoaError : CustomNSError, _StoredError {
-    // On not-Darwin, CocoaError is backed by a simple code.
-    public let code: Code
-    public let userInfo: [String: Any]
-    
-    public init(_ code: Code, userInfo: [String: Any] = [:]) {
-        self.code = code
-        self.userInfo = userInfo
-    }
-    
-    public static var errorDomain: String { "NSCocoaErrorDomain" }    
-}
-#endif
 
 /// Describes the code of an error.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public protocol _ErrorCodeProtocol : Equatable {
-#if FOUNDATION_FRAMEWORK
     /// The corresponding error code.
     associatedtype _ErrorType: _BridgedStoredNSError where _ErrorType.Code == Self
-#else
-    associatedtype _ErrorType: _StoredError where _ErrorType.Code == Self
-#endif
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -72,12 +45,33 @@ extension _ErrorCodeProtocol {
     }
 }
 
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension CocoaError.Code : _ErrorCodeProtocol {
+    public typealias _ErrorType = CocoaError
+}
+
+#else
+
+/// Describes errors within the Cocoa error domain, including errors that Foundation throws.
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+public struct CocoaError : Error {
+    // On not-Darwin, CocoaError is backed by a simple code.
+    public let code: Code
+    public let userInfo: [String: Any]
+    
+    public init(_ code: Code, userInfo: [String: Any] = [:]) {
+        self.code = code
+        self.userInfo = userInfo
+    }
+    
+    public static var errorDomain: String { "NSCocoaErrorDomain" }
+}
+#endif
+
 extension CocoaError {
     /// The error code itself.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-    public struct Code : RawRepresentable, Hashable, _ErrorCodeProtocol, Sendable {
-        public typealias _ErrorType = CocoaError
-
+    public struct Code : RawRepresentable, Hashable, Sendable {
         public let rawValue: Int
 
         public init(rawValue: Int) {
@@ -209,6 +203,8 @@ public extension LocalizedError {
     var helpAnchor: String? { return nil }
 }
 
+#if FOUNDATION_FRAMEWORK
+
 /// Describes an error type that specifically provides a domain, code,
 /// and user-info dictionary.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -256,7 +252,6 @@ public extension Error where Self: CustomNSError, Self: RawRepresentable, Self.R
     var _code: Int { return self.errorCode }
 }
 
-#if FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public extension Error {
     /// Retrieve the localized description for this error.
