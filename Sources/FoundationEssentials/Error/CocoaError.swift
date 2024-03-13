@@ -37,25 +37,17 @@ public protocol _StoredError {
 
 /// Describes errors within the Cocoa error domain, including errors that Foundation throws.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-public struct CocoaError : CustomNSError, _StoredError, Hashable {
+public struct CocoaError : CustomNSError, _StoredError {
     // On not-Darwin, CocoaError is backed by a simple code.
     public let code: Code
-    public let userInfo: [String: AnyHashable]
+    public let userInfo: [String: Any]
     
-    public init(_ code: Code, userInfo: [String: AnyHashable] = [:]) {
+    public init(_ code: Code, userInfo: [String: Any] = [:]) {
         self.code = code
         self.userInfo = userInfo
     }
     
-    public static var errorDomain: String { "NSCocoaErrorDomain" }
-    
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(code)
-    }
-    
-    public static func ==(lhs: Self, rhs: Self) -> Bool {
-        return lhs.code == rhs.code && lhs.userInfo == rhs.userInfo
-    }
+    public static var errorDomain: String { "NSCocoaErrorDomain" }    
 }
 #endif
 
