@@ -2590,7 +2590,10 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     internal func date(byAddingAndWrapping components: DateComponents, to date: Date) -> Date? {
         let timeZone = components.timeZone ?? self.timeZone
         var result = date
+
         // No leap month support needed here, since these are quantities, not values
+
+        // Add from the largest component to the smallest
         if let amount = components.era {
             result = addAndWrap(.era, to: result, amount: amount, inTimeZone: timeZone) }
         if let amount = components.year {
@@ -2605,12 +2608,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if let amount = components.month {
             result = addAndWrap(.month, to: result, amount: amount, inTimeZone: timeZone)
         }
-        if let amount = components.day {
-            result = addAndWrap(.day, to: result, amount: amount, inTimeZone: timeZone)
-        }
-        if let amount = components.dayOfYear {
-            result = addAndWrap(.dayOfYear, to: result, amount: amount, inTimeZone: timeZone)
-        }
+
+        // Weeks
         if let amount = components.weekOfYear {
             result = addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
@@ -2621,12 +2620,22 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if let amount = components.weekOfMonth {
             result = addAndWrap(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)
         }
-        if let amount = components.weekday {
-            result = addAndWrap(.weekday, to: result, amount: amount, inTimeZone: timeZone)
-        }
         if let amount = components.weekdayOrdinal {
             result = addAndWrap(.weekdayOrdinal, to: result, amount: amount, inTimeZone: timeZone)
         }
+
+        // Days
+        if let amount = components.day {
+            result = addAndWrap(.day, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.dayOfYear {
+            result = addAndWrap(.dayOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekday {
+            result = addAndWrap(.weekday, to: result, amount: amount, inTimeZone: timeZone)
+        }
+
+        // Time
         if let amount = components.hour {
             result = addAndWrap(.hour, to: result, amount: amount, inTimeZone: timeZone)
         }
@@ -2645,7 +2654,10 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     internal func date(byAddingAndCarryingOverComponents components: DateComponents, to date: Date) -> Date? {
         let timeZone = components.timeZone ?? self.timeZone
         var result = date
+
         // No leap month support needed here, since these are quantities, not values
+
+        // Add from the largest component to the smallest
         if let amount = components.era {
             result = add(.era, to: result, amount: amount, inTimeZone: timeZone) }
         if let amount = components.year {
@@ -2660,28 +2672,34 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if let amount = components.month {
             result = add(.month, to: result, amount: amount, inTimeZone: timeZone)
         }
+
+        // Weeks
+        if let amount = components.weekOfYear {
+            result = add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekOfMonth {
+            result = add(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        if let amount = components.weekdayOrdinal {
+            result = add(.weekdayOrdinal, to: result, amount: amount, inTimeZone: timeZone)
+        }
+        // `week` is for backward compatibility only, and is only used if weekOfYear is missing
+        if let amount = components.week, components.weekOfYear == nil {
+            result = add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+        }
+
+        // Days
         if let amount = components.day {
             result = add(.day, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.dayOfYear {
             result = add(.dayOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
-        if let amount = components.weekOfYear {
-            result = add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
-        }
-        // `week` is for backward compatibility only, and is only used if weekOfYear is missing
-        if let amount = components.week, components.weekOfYear == nil {
-            result = add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
-        }
-        if let amount = components.weekOfMonth {
-            result = add(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)
-        }
         if let amount = components.weekday {
             result = add(.weekday, to: result, amount: amount, inTimeZone: timeZone)
         }
-        if let amount = components.weekdayOrdinal {
-            result = add(.weekdayOrdinal, to: result, amount: amount, inTimeZone: timeZone)
-        }
+
+        // Time
         if let amount = components.hour {
             result = add(.hour, to: result, amount: amount, inTimeZone: timeZone)
         }

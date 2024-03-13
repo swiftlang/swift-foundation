@@ -1262,20 +1262,27 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             var nanosecond = 0
 
             // No leap month support needed here, since these are quantities, not values
+
+            // Add from the largest component to the smallest
             if let amount = components.era { _ = _locked_add(UCAL_ERA, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.year { _ = _locked_add(UCAL_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.yearForWeekOfYear { _ = _locked_add(UCAL_YEAR_WOY, amount: amount, wrap: wrappingComponents, status: &status) }
             // TODO: Support quarter
             // if let _ = components.quarter {  }
             if let amount = components.month { _ = _locked_add(UCAL_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
-            if let amount = components.day { _ = _locked_add(UCAL_DAY_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
-            if let amount = components.dayOfYear { _ = _locked_add(UCAL_DAY_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
+
+            // Weeks
             if let amount = components.weekOfYear { _ = _locked_add(UCAL_WEEK_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
+            if let amount = components.weekOfMonth { _ = _locked_add(UCAL_WEEK_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
+            if let amount = components.weekdayOrdinal { _ = _locked_add(UCAL_DAY_OF_WEEK_IN_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
             // `week` is for backward compatibility only, and is only used if weekOfYear is missing
             if let amount = components.week, components.weekOfYear == nil { _ = _locked_add(UCAL_WEEK_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
-            if let amount = components.weekOfMonth { _ = _locked_add(UCAL_WEEK_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
+
+            // Days
+            if let amount = components.day { _ = _locked_add(UCAL_DAY_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
+            if let amount = components.dayOfYear { _ = _locked_add(UCAL_DAY_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.weekday { _ = _locked_add(UCAL_DAY_OF_WEEK, amount: amount, wrap: wrappingComponents, status: &status) }
-            if let amount = components.weekdayOrdinal { _ = _locked_add(UCAL_DAY_OF_WEEK_IN_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
+
             if let amount = components.hour { _ = _locked_add(UCAL_HOUR_OF_DAY, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.minute { _ = _locked_add(UCAL_MINUTE, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.second { _ = _locked_add(UCAL_SECOND, amount: amount, wrap: wrappingComponents, status: &status) }
@@ -1814,6 +1821,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
 
     private func _locked_add(_ field: UCalendarDateFields, amount: Int, wrap: Bool, status: inout UErrorCode) -> UDate {
+        let original = ucal_getMillis(ucalendar, &status)
         // we rely on ICU to add and roll units which are larger than or equal to DAYs
         // we have an assumption which is we assume that there is no time zone with a backward repeated day
         // at the time of writing this code, there is only one instance of DST that forwards a day
@@ -1882,6 +1890,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 dst = ucal_get(ucalendar, UCAL_DST_OFFSET, &status) + ucal_get(ucalendar, UCAL_ZONE_OFFSET, &status)
                 hour = ucal_get(ucalendar, UCAL_HOUR_OF_DAY, &status)
             }
+
 
             var result = ucal_getMillis(ucalendar, &status)
             result += Double(newAmount) * unitLength
