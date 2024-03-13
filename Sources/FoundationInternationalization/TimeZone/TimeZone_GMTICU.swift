@@ -62,7 +62,7 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
     }
 
     var debugDescription: String {
-        "gmt icu offset \(offset)"
+        "GMT (\(offset))"
     }
     
     package func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
