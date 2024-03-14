@@ -2130,6 +2130,10 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     func add(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) -> Date {
 
+        guard amount != 0 else {
+            return date
+        }
+
         let ti = date.timeIntervalSinceReferenceDate
         var startingFrac = ti.truncatingRemainder(dividingBy: 1)
         var startingInt = ti - startingFrac

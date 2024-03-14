@@ -987,6 +987,25 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(calendarWithCustomLocaleAndCustomMinDays.minimumDaysInFirstWeek, 2)
 
     }
+
+    func test_addingZeroComponents() {
+        var calendar = Calendar(identifier: .gregorian)
+        let timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        calendar.timeZone = timeZone
+
+        // 2021-11-07 08:30:00 GMT, which is 2021-11-07 01:30:00 PDT. Daylight saving time ends 30 minutes after this.
+        let date = Date(timeIntervalSinceReferenceDate: 657966600)
+        let dateComponents = DateComponents(era: 0, year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0)
+        let result = calendar.date(byAdding: dateComponents, to: date)
+        XCTAssertEqual(date, result)
+
+        let allComponents : [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second]
+        for component in allComponents {
+            let res = calendar.date(byAdding: component, value: 0, to: date)
+            XCTAssertEqual(res, date, "component: \(component)")
+        }
+    }
+    
 }
 
 // MARK: - Bridging Tests
