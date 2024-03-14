@@ -48,7 +48,12 @@ final class _ProcessInfo: Sendable {
             var current = CommandLine.arguments
             // Replace the process path
             if let fullPath = Platform.getFullExecutablePath() {
-                current[0] = fullPath
+                // Swift's CommandLine.arguments can be empty
+                if current.isEmpty {
+                    current = [fullPath]
+                } else {
+                    current[0] = fullPath
+                }
             }
             $0.arguments = current
             return current
