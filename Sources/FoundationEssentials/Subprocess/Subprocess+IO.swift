@@ -130,9 +130,9 @@ extension Subprocess {
 
 // MARK: - Execution IO
 extension Subprocess {
-    internal final class ExecutionInput {
-        
-        internal enum Storage {
+    internal final class ExecutionInput: Sendable {
+
+        internal enum Storage: Sendable {
             case noInput(FileDescriptor?)
             case customWrite(FileDescriptor?, FileDescriptor?)
             case fileDescriptor(FileDescriptor?, Bool)
@@ -145,7 +145,7 @@ extension Subprocess {
         }
 
         internal func getReadFileDescriptor() -> FileDescriptor? {
-            return self.storage.withLock { $0
+            return self.storage.withLock {
                 switch $0 {
                 case .noInput(let readFd):
                     return readFd
@@ -196,8 +196,8 @@ extension Subprocess {
                     // The parent fd should have been closed
                     // in the `body` when writer.finish() is called
                     // But in case it isn't call it agian
-                    try readFd?.close()
-                    $0 = .customWrite(nil, writeFd)
+                    try writeFd?.close()
+                    $0 = .customWrite(readFd, nil)
                 }
             }
         }

@@ -26,6 +26,8 @@ import SystemPackage
 package import _CShims
 #endif
 
+import Dispatch
+
 
 // MARK: - Signals
 extension Subprocess {
@@ -270,17 +272,40 @@ extension Subprocess.Configuration {
 @Sendable
 internal func monitorProcessTermination(
     forProcessWithIdentifier pid: Subprocess.ProcessIdentifier
-) -> Subprocess.TerminationStatus {
-    var status: Int32 = -1
-    // Block and wait
-    waitpid(pid.value, &status, 0)
-    if _was_process_exited(status) != 0 {
-        return .exit(_get_exit_code(status))
+) async -> Subprocess.TerminationStatus {
+    return await withCheckedContinuation { continuation in
+        let source = DispatchSource.makeProcessSource(
+            identifier: pid.value,
+            eventMask: [.exit, .signal]
+        )
+        source.setEventHandler {
+            source.cancel()
+            var status: Int32 = -1
+            waitpid(pid.value, &status, WNOHANG)
+            if _was_process_exited(status) != 0 {
+                continuation.resume(returning: .exit(_get_exit_code(status)))
+                return
+            }
+            if _was_process_signaled(status) != 0 {
+                continuation.resume(returning: .unhandledException(_get_signal_code(status)))
+                return
+            }
+            fatalError("Unexpected exit status type: \(status)")
+        }
+        source.resume()
     }
-    if _was_process_signaled(status) != 0 {
-        return .unhandledException(_get_signal_code(status))
+}
+
+// MARK: - Read Buffer Size
+extension Subprocess {
+    @inline(__always)
+    internal static var readBufferSize: Int {
+#if canImport(Darwin)
+        return 16384
+#else
+        return Platform.pageSize
+#endif // canImport(Darwin)
     }
-    fatalError("Unexpected exit status type: \(status)")
 }
 
 #endif // canImport(Darwin) || canImport(Glibc)

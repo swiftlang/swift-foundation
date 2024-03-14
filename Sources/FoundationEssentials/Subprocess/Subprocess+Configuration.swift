@@ -201,13 +201,13 @@ extension Subprocess {
             return try await withTaskCancellationHandler {
                 return try await withThrowingTaskGroup(of: RunState<R>.self) { group in
                     group.addTask {
-                        let status = monitorProcessTermination(
+                        let status = await monitorProcessTermination(
                             forProcessWithIdentifier: process.processIdentifier)
                         return .monitorChildProcess(status)
                     }
                     group.addTask {
                         do {
-                            let result = try await body(process, .init(fileDescriptor: writeFd))
+                            let result = try await body(process, .init(input: executionInput))
                             try self.cleanup(
                                 process: process,
                                 childSide: false,
@@ -276,7 +276,7 @@ extension Subprocess {
             return try await withTaskCancellationHandler {
                 return try await withThrowingTaskGroup(of: RunState<R>.self) { group in
                     group.addTask {
-                        let status = monitorProcessTermination(
+                        let status = await monitorProcessTermination(
                             forProcessWithIdentifier: process.processIdentifier)
                         return .monitorChildProcess(status)
                     }

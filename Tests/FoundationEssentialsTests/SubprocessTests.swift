@@ -25,13 +25,15 @@ final class SubprocessTests: XCTestCase {
         let result = String(data: ls.standardOutput!, encoding: .utf8)!
         XCTAssert(ls.terminationStatus.isSuccess)
         XCTAssert(!result.isEmpty)
+        print(result)
     }
     
     func testLongText() async throws {
         let cat = try await Subprocess.run(
             executing: .named("cat"),
             arguments: ["/Users/icharleshu/Downloads/PaP.txt"],
-            output: .collect(limit: 1024 * 1024)
+            output: .collect(limit: 1024 * 1024),
+            error: .discard
         )
         print("after")
         print("Result: \(cat.standardOutput?.count ?? -1)")

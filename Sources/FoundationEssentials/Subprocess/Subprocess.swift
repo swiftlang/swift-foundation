@@ -63,57 +63,38 @@ public struct Subprocess: Sendable {
 
 // MARK: - StandardInputWriter
 extension Subprocess {
-    internal actor StandardInputWriterActor {
-        private let fileDescriptor: FileDescriptor
+    @_nonSendable
+    public struct StandardInputWriter {
 
-        internal init(fileDescriptor: FileDescriptor) {
-            self.fileDescriptor = fileDescriptor
-        }
+        private let input: ExecutionInput
 
-        @discardableResult
-        public func write<S>(_ sequence: S) async throws -> Int where S : Sequence, S.Element == UInt8 {
-            return try self.fileDescriptor.writeAll(sequence)
-        }
-
-        @discardableResult
-        public func write<S: AsyncSequence>(_ asyncSequence: S) async throws -> Int where S.Element == UInt8 {
-            let sequence = try await Array(asyncSequence)
-            return try self.fileDescriptor.writeAll(sequence)
-        }
-
-        public func finish() async throws {
-            try self.fileDescriptor.close()
-        }
-    }
-
-    public struct StandardInputWriter: Sendable {
-
-        private let actor: StandardInputWriterActor
-
-        init(fileDescriptor: FileDescriptor) {
-            self.actor = StandardInputWriterActor(fileDescriptor: fileDescriptor)
+        init(input: ExecutionInput) {
+            self.input = input
         }
 
         public func write<S>(_ sequence: S) async throws where S : Sequence, S.Element == UInt8 {
-            try await self.actor.write(sequence)
+            guard let fd: FileDescriptor = self.input.getWriteFileDescriptor() else {
+                fatalError("Attempting to write to a file descriptor that's already closed")
+            }
+            try await fd.write(sequence)
         }
 
         public func write<S>(_ sequence: S) async throws where S : Sequence, S.Element == CChar {
-            try await self.actor.write(sequence.map { UInt8($0) })
+            try await self.write(sequence.map { UInt8($0) })
         }
 
         public func write<S: AsyncSequence>(_ asyncSequence: S) async throws where S.Element == CChar {
             let sequence = try await Array(asyncSequence).map { UInt8($0) }
-            try await self.actor.write(sequence)
+            try await self.write(sequence)
         }
 
         public func write<S: AsyncSequence>(_ asyncSequence: S) async throws where S.Element == UInt8 {
             let sequence = try await Array(asyncSequence)
-            try await self.actor.write(sequence)
+            try await self.write(sequence)
         }
 
         public func finish() async throws {
-            try await self.actor.finish()
+            try self.input.closeParentSide()
         }
     }
 }
@@ -153,23 +134,33 @@ extension Subprocess.Result: Equatable where T : Equatable {}
 
 extension Subprocess.Result: Hashable where T : Hashable {}
 
-extension POSIXError : Swift.Error {}
-
 // MARK: Internal
 extension Subprocess {
     internal enum OutputCapturingState {
         case standardOutputCaptured(Data?)
         case standardErrorCaptured(Data?)
     }
-    
+
+    private func capture(fileDescriptor: FileDescriptor, maxLength: Int) async throws -> Data{
+        let chunkSize: Int = min(Subprocess.readBufferSize, maxLength)
+        var buffer: [UInt8] = []
+        while buffer.count < maxLength {
+            let captured = try await fileDescriptor.read(upToLength: chunkSize)
+            buffer += captured
+            if captured.count < chunkSize {
+                break
+            }
+        }
+        return Data(buffer)
+    }
+
     internal func captureStandardOutput() async throws -> Data? {
         guard let (limit, readFd) = self.executionOutput
             .consumeCollectedFileDescriptor(),
               let readFd = readFd else {
             return nil
         }
-        let captured = try await readFd.read(upToLength: limit)
-        return Data(captured)
+        return try await self.capture(fileDescriptor: readFd, maxLength: limit)
     }
 
     internal func captureStandardError() async throws -> Data? {
@@ -178,8 +169,7 @@ extension Subprocess {
               let readFd = readFd else {
             return nil
         }
-        let captured = try await readFd.read(upToLength: limit)
-        return Data(captured)
+        return try await self.capture(fileDescriptor: readFd, maxLength: limit)
     }
     
     internal func captureIOs() async throws -> (standardOut: Data?, standardError: Data?) {

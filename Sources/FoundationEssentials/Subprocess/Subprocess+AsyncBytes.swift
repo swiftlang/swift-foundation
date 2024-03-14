@@ -14,9 +14,6 @@ import Dispatch
 
 extension Subprocess {
     public struct AsyncBytes: AsyncSequence, Sendable {
-        @inline(__always) static var bufferSize: Int {
-            16384
-        }
         public typealias Element = UInt8
 
         @_nonSendable
@@ -42,9 +39,9 @@ extension Subprocess {
                 try Task.checkCancellation()
                 do {
                     self.buffer = try await self.fileDescriptor.read(
-                        upToLength: AsyncBytes.bufferSize)
+                        upToLength: Subprocess.readBufferSize)
                     self.currentPosition = 0
-                    if self.buffer.count < AsyncBytes.bufferSize {
+                    if self.buffer.count < Subprocess.readBufferSize {
                         self.finished = true
                     }
                 } catch {
