@@ -121,6 +121,8 @@ extension Platform {
         #else
         result = (uid: geteuid(), gid: getegid())
         #endif
+        // Some callers need to use the real UID in cases where a process has called seteuid(0)
+        // If that is the case for this caller, and the eUID is the root user, return the real UID instead
         if !allowEffectiveRootUID && result.uid == Self.ROOT_USER {
             result.uid = getuid()
         }

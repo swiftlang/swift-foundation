@@ -151,6 +151,8 @@ extension String {
         if let user {
             pass = getpwnam(user)
         } else {
+            // We use the real UID instead of the EUID here when the EUID is the root user (i.e. a process has called seteuid(0))
+            // In this instance, we historically do this to ensure a stable home directory location for processes that call seteuid(0)
             pass = getpwuid(Platform.getUGIDs(allowEffectiveRootUID: false).uid)
         }
         
