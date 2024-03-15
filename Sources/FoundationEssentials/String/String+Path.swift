@@ -151,7 +151,7 @@ extension String {
         if let user {
             pass = getpwnam(user)
         } else {
-            pass = getpwuid(Platform.getUGIDs().uid)
+            pass = getpwuid(Platform.getUGIDs(allowEffectiveRootUID: false).uid)
         }
         
         if let dir = pass?.pointee.pw_dir {
