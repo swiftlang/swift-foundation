@@ -44,7 +44,7 @@ public struct Subprocess: Sendable {
             fatalError("The standard output was not redirected")
         }
         guard let fd = fd else {
-            fatalError("The standard output has already been consumed")
+            fatalError("The standard output has already been closed")
         }
         return AsyncBytes(fileDescriptor: fd)
     }
@@ -55,7 +55,7 @@ public struct Subprocess: Sendable {
             fatalError("The standard error was not redirected")
         }
         guard let fd = fd else {
-            fatalError("The standard error has already been consumed")
+            fatalError("The standard error has already been closed")
         }
         return AsyncBytes(fileDescriptor: fd)
     }
@@ -114,8 +114,20 @@ extension Subprocess {
     public struct CollectedResult: Sendable, Hashable {
         public let processIdentifier: ProcessIdentifier
         public let terminationStatus: TerminationStatus
-        public let standardOutput: Data?
-        public let standardError: Data?
+        private let _standardOutput: Data?
+        private let _standardError: Data?
+        public var standardOutput: Data {
+            guard let output = self._standardOutput else {
+                fatalError("standardOutput is only available if the Subprocess was ran with .collect as output")
+            }
+            return output
+        }
+        public var standardError: Data {
+            guard let output = self._standardError else {
+                fatalError("standardError is only available if the Subprocess was ran with .collect as error ")
+            }
+            return output
+        }
 
         internal init(
             processIdentifier: ProcessIdentifier,
@@ -124,8 +136,8 @@ extension Subprocess {
             standardError: Data?) {
             self.processIdentifier = processIdentifier
             self.terminationStatus = terminationStatus
-            self.standardOutput = standardOutput
-            self.standardError = standardError
+            self._standardOutput = standardOutput
+            self._standardError = standardError
         }
     }
 }
@@ -144,7 +156,7 @@ extension Subprocess {
     private func capture(fileDescriptor: FileDescriptor, maxLength: Int) async throws -> Data{
         let chunkSize: Int = min(Subprocess.readBufferSize, maxLength)
         var buffer: [UInt8] = []
-        while buffer.count < maxLength {
+        while buffer.count <= maxLength {
             let captured = try await fileDescriptor.read(upToLength: chunkSize)
             buffer += captured
             if captured.count < chunkSize {
@@ -171,7 +183,7 @@ extension Subprocess {
         }
         return try await self.capture(fileDescriptor: readFd, maxLength: limit)
     }
-    
+
     internal func captureIOs() async throws -> (standardOut: Data?, standardError: Data?) {
         return try await withThrowingTaskGroup(of: OutputCapturingState.self) { group in
             group.addTask {

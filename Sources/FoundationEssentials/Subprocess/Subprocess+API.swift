@@ -13,7 +13,7 @@ import SystemPackage
 
 extension Subprocess {
     public static func run(
-        executing executable: Executable,
+        _ executable: Executable,
         arguments: Arguments = [],
         environment: Environment = .inherit,
         workingDirectory: FilePath? = nil,
@@ -23,7 +23,7 @@ extension Subprocess {
         error: CollectedOutputMethod = .collect
     ) async throws -> CollectedResult {
         let result = try await self.run(
-            executing: executable,
+            executable,
             arguments: arguments,
             environment: environment,
             workingDirectory: workingDirectory,
@@ -48,7 +48,7 @@ extension Subprocess {
     }
 
     public static func run(
-        executing executable: Executable,
+        _ executable: Executable,
         arguments: Arguments = [],
         environment: Environment = .inherit,
         workingDirectory: FilePath? = nil,
@@ -58,7 +58,7 @@ extension Subprocess {
         error: CollectedOutputMethod = .collect
     ) async throws -> CollectedResult {
         let result = try await self.run(
-            executing: executable,
+            executable,
             arguments: arguments,
             environment: environment,
             workingDirectory: workingDirectory,
@@ -84,7 +84,7 @@ extension Subprocess {
     }
 
     public static func run<S: AsyncSequence>(
-        executing executable: Executable,
+        _ executable: Executable,
         arguments: Arguments = [],
         environment: Environment = .inherit,
         workingDirectory: FilePath? = nil,
@@ -94,7 +94,7 @@ extension Subprocess {
         error: CollectedOutputMethod = .collect
     ) async throws -> CollectedResult where S.Element == UInt8 {
         let result =  try await self.run(
-            executing: executable,
+            executable,
             arguments: arguments,
             environment: environment,
             workingDirectory: workingDirectory,
@@ -123,7 +123,7 @@ extension Subprocess {
 // MARK: Custom Execution Body
 extension Subprocess {
     public static func run<R>(
-        executing executable: Executable,
+        _ executable: Executable,
         arguments: Arguments = [],
         environment: Environment = .inherit,
         workingDirectory: FilePath? = nil,
@@ -144,7 +144,7 @@ extension Subprocess {
     }
 
     public static func run<R>(
-        executing executable: Executable,
+        _ executable: Executable,
         arguments: Arguments = [],
         environment: Environment = .inherit,
         workingDirectory: FilePath? = nil,
@@ -169,7 +169,7 @@ extension Subprocess {
     }
 
     public static func run<R, S: AsyncSequence>(
-        executing executable: Executable,
+        _ executable: Executable,
         arguments: Arguments = [],
         environment: Environment = .inherit,
         workingDirectory: FilePath? = nil,
@@ -194,7 +194,7 @@ extension Subprocess {
     }
 
     public static func run<R>(
-        executing executable: Executable,
+        _ executable: Executable,
         arguments: Arguments = [],
         environment: Environment = .inherit,
         workingDirectory: FilePath? = nil,

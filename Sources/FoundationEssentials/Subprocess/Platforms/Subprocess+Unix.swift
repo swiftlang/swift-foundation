@@ -281,7 +281,7 @@ internal func monitorProcessTermination(
         source.setEventHandler {
             source.cancel()
             var status: Int32 = -1
-            waitpid(pid.value, &status, WNOHANG)
+            waitpid(pid.value, &status, 0)
             if _was_process_exited(status) != 0 {
                 continuation.resume(returning: .exit(_get_exit_code(status)))
                 return

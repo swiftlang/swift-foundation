@@ -19,24 +19,40 @@
 import TestSupport
 #endif
 
+import SystemPackage
+
 final class SubprocessTests: XCTestCase {
     func testSimple() async throws {
-        let ls = try await Subprocess.run(executing: .named("ls"), output: .collect, error: .discard)
-        let result = String(data: ls.standardOutput!, encoding: .utf8)!
+        let ls = try await Subprocess.run(.named("ls"))
+        let result = String(data: ls.standardOutput, encoding: .utf8)!
         XCTAssert(ls.terminationStatus.isSuccess)
         XCTAssert(!result.isEmpty)
         print(result)
     }
-    
+
+    func testInteractive() async throws {
+        let su = try await Subprocess.run(.at("/Users/icharleshu/Developer/super.sh"), input: .readFrom(.standardInput, closeWhenDone: false))
+        XCTAssert(!su.terminationStatus.isSuccess)
+    }
+
+    func testChained() async throws {
+        let (readFd, writeFd) = try FileDescriptor.pipe()
+        try await Subprocess.run(
+            .named("ls"), output: .writeTo(writeFd, closeWhenDone: true), error: .discard)
+        let grep = try await Subprocess.run(.named("grep"), arguments: ["com"], input: .readFrom(readFd, closeWhenDone: true))
+        var output = String(data: grep.standardOutput, encoding: .utf8) ?? "Failed to decode"
+        print("Output: \(output)")
+    }
+
     func testLongText() async throws {
         let cat = try await Subprocess.run(
-            executing: .named("cat"),
+            .named("cat"),
             arguments: ["/Users/icharleshu/Downloads/PaP.txt"],
             output: .collect(limit: 1024 * 1024),
             error: .discard
         )
         print("after")
-        print("Result: \(cat.standardOutput?.count ?? -1)")
+        print("Result: \(cat.standardOutput.count)")
     }
 
     func testComplex() async throws {
@@ -45,7 +61,7 @@ final class SubprocessTests: XCTestCase {
         }
 
         let result = try await Subprocess.run(
-            executing: .named("curl"),
+            .named("curl"),
             arguments: ["http://ip.jsontest.com/"]
         ) { execution in
             let output: [UInt8] = try await Array(execution.standardOutput)
@@ -57,8 +73,10 @@ final class SubprocessTests: XCTestCase {
     }
 
     func testShell() async throws {
-        let result = try await Subprocess.run(executing: .named("sh")) { subprocess, writer in
-            // Stream all outputs
+        let result = try await Subprocess.run(.named("sh")) { subprocess, writer in
+            try await writer.write("ls | grep 'apple'\n".utf8)
+            try await writer.finish()
+            // Stream outputs
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
                     // Stream output line by line
@@ -66,10 +84,6 @@ final class SubprocessTests: XCTestCase {
                     for try await line in lineSequence {
                         print("> \(line)")
                     }
-                }
-                group.addTask {
-                    try await writer.write("ls\n".utf8)
-                    try await writer.finish()
                 }
                 try await group.waitForAll()
             }
