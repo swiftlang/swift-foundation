@@ -530,15 +530,16 @@ final class GregorianCalendarTests : XCTestCase {
 
     func testAddDateComponents() {
 
+        let s = Date.ISO8601FormatStyle(timeZone: TimeZone(secondsFromGMT: 3600)!)
         func testAdding(_ comp: DateComponents, to date: Date, wrap: Bool, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
             let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expected, file: file, line: line)
+            XCTAssertEqual(result, expected, "actual = \(result.timeIntervalSince1970), \(s.format(result))", file: file, line: line)
         }
 
         var gregorianCalendar: _CalendarGregorian
         gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 7, gregorianStartDate: nil)
 
-        let march1_1996 = Date(timeIntervalSince1970: 825723300)
+        let march1_1996 = Date(timeIntervalSince1970: 825723300) // 1996-03-01 23:35:00 +0000
         testAdding(.init(day: -1, hour: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825640500.0))
         testAdding(.init(month: -1, hour: 1 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:823221300.0))
         testAdding(.init(month: -1, day: 30 ), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970:825809700.0))
@@ -554,32 +555,37 @@ final class GregorianCalendarTests : XCTestCase {
         testAdding(.init(month: -1, day: 30 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:823304100.0))
         testAdding(.init(year: 4, day: -1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:951867300.0))
         testAdding(.init(day: -1, hour: 24 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:825636900.0))
-        testAdding(.init(day: -1, weekday: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:825723300.0))
-        testAdding(.init(day: -7, weekOfYear: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:828401700.0))
-        testAdding(.init(day: -7, weekOfMonth: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:825982500.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:829006500.0))
+        testAdding(.init(day: -1, weekday: 1), to: march1_1996, wrap: true, expected: march1_1996)
+        testAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, wrap: true, expected: march1_1996)
+        testAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, wrap: true, expected: march1_1996)
 
-        let oct14_1582 = Date(timeIntervalSince1970: -12218515200.0)
-        testAdding(.init(day: -1, hour: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218598000.0))
-        testAdding(.init(month: -1, hour: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12220239600.0))
-        testAdding(.init(month: -1, day: 30), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217651200.0))
-        testAdding(.init(year: 4, day: -1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12092371200.0))
-        testAdding(.init(day: -1, hour: 24), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -1, weekday: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfYear: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: oct14_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217910400.0))
+        let oct24_1582 = Date(timeIntervalSince1970: -12218515200.0) // Expect: 1582-10-24T00:00:00Z
+        testAdding(.init(day: -1, hour: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218598000.0))
+        testAdding(.init(month: -1, hour: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12220239600.0))
+        testAdding(.init(month: -1, day: 30), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217651200.0))
+        testAdding(.init(year: 4, day: -1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12092371200.0))
+        testAdding(.init(day: -1, hour: 24), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -1, weekday: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfYear: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfMonth: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfMonth: 2), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217910400.0))
+        testAdding(.init(day: -7, weekOfYear: 2), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12217910400.0))
 
-        testAdding(.init(day: -1, hour: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218598000.0))
-        testAdding(.init(month: -1, hour: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220239600.0))
-        testAdding(.init(month: -1, day: 30), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220243200.0))
-        testAdding(.init(year: 4, day: -1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12092371200.0))
-        testAdding(.init(day: -1, hour: 24), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218601600.0))
-        testAdding(.init(day: -1, weekday: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfYear: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: oct14_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0))
+        testAdding(.init(day: -1, hour: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218598000.0))
+        testAdding(.init(month: -1, hour: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220239600.0))
+        testAdding(.init(month: -1, day: 30), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12220243200.0))
+        testAdding(.init(year: 4, day: -1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12092371200.0))
+        testAdding(.init(day: -1, hour: 24), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218601600.0))
+        testAdding(.init(day: -1, weekday: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfYear: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
+        testAdding(.init(day: -7, weekOfMonth: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12218515200.0))
 
+        testAdding(.init(weekOfMonth: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0)) // Expect: 1582-10-31 00:00:00Z
+        testAdding(.init(weekOfYear: 1), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0))
+        testAdding(.init(weekOfYear: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217305600.0)) // Expect: 1582-11-07 00:00:00
+        testAdding(.init(day: -7, weekOfMonth: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12217910400.0)) // Expect: 1582-10-31 00:00:00 +0000
+
+        testAdding(.init(day: -7, weekOfYear: 2), to: oct24_1582, wrap: true, expected: Date(timeIntervalSince1970:-12215318400.0)) // expect: 1582-11-30 00:00:00 - adding 2 weeks is 1582-11-07, adding -7 days wraps around to 1582-11-30
 
         do {
             let firstWeekday = 1
@@ -621,9 +627,10 @@ final class GregorianCalendarTests : XCTestCase {
 
         func testAdding(_ comp: DateComponents, to date: Date, wrap: Bool, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
             let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expected, file: file, line: line)
+            XCTAssertEqual(result, expected, "result = \(result.timeIntervalSince1970)" , file: file, line: line)
         }
 
+        // 1996-03-01 23:35:00 UTC, 1996-03-01T15:35:00-0800
         let march1_1996 = Date(timeIntervalSince1970: 825723300)
         testAdding(.init(day: -1, hour: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 825640500.0))
         testAdding(.init(month: -1, hour: 1), to: march1_1996, wrap: false, expected: Date(timeIntervalSince1970: 823221300.0))
@@ -641,9 +648,11 @@ final class GregorianCalendarTests : XCTestCase {
         testAdding(.init(year: 4, day: -1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 954545700.0))
         testAdding(.init(day: -1, hour: 24), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 828315300.0))
         testAdding(.init(day: -1, weekday: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 827796900.0))
-        testAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 828401700.0))
-        testAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 825982500.0))
-        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 829002900.0))
+        testAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, wrap: true, expected: march1_1996)
+        testAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, wrap: true, expected: march1_1996)
+
+        testAdding(.init(day: -7, weekOfYear: 2), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 826328100.0)) // Expect: 1996-03-08 23:35:00 +0000
+        testAdding(.init(day: -7, weekOfMonth: 2), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 826328100.0)) // Expect: 1996-03-08 23:35:00 +0000
     }
 
     func testAddDateComponents_DSTBoundaries() {
