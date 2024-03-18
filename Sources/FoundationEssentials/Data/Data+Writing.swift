@@ -147,7 +147,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             }
             let flags: CInt = _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR
 #else
-            guard mktemp(templateFileSystemRep) != nil else {
+            guard _datashims_mktemp(templateFileSystemRep) != nil else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
             }
             let flags: CInt = O_CREAT | O_EXCL | O_RDWR
