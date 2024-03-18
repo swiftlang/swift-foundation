@@ -956,6 +956,75 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(firstDayOfMonth(gregorianCalendar, for: date2), Date(timeIntervalSinceReferenceDate: 728441519.0)) // 2024-02-01T00:51:59Z
     }
 
+    func test_dateFromComponents_componentsTimeZoneConversion() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+
+        let startOfYearGMT = Date(timeIntervalSince1970: 1577836800) // January 1, 2020 00:00:00 GMT
+        var components = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: startOfYearGMT)
+        let roundtrip = calendar.date(from: components)
+        XCTAssertEqual(roundtrip, startOfYearGMT)
+
+        components.timeZone = TimeZone(abbreviation: "EST")!
+        let startOfYearEST = calendar.date(from: components)
+
+        let expected = startOfYearGMT + 3600 * 5 // January 1, 2020 05:00:00 GMT, Jan 1, 2020 00:00:00 EST
+        XCTAssertEqual(startOfYearEST, expected)
+    }
+
+    func test_dateComponentsFromDate_componentsTimeZoneConversion2() {
+        let gmtDate = Date(timeIntervalSinceReferenceDate: 441907261) // "2015-01-03T01:01:01+0900"
+        let localDate = Date(timeIntervalSinceReferenceDate: 441939661) // "2015-01-03T01:01:01+0000"
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+
+        let timeZoneOffset = localDate.timeIntervalSince(gmtDate)
+        let nearestTimeZone = TimeZone(secondsFromGMT: Int(timeZoneOffset))!
+        let dateComponents = calendar.dateComponents(in: nearestTimeZone, from: gmtDate)
+
+        XCTAssertEqual(dateComponents.month, 1)
+        XCTAssertEqual(dateComponents.day, 3)
+        XCTAssertEqual(dateComponents.year, 2015)
+
+        let date = calendar.date(from: dateComponents)!
+        let regeneratedDateComponents = calendar.dateComponents(in: nearestTimeZone, from: date)
+        XCTAssertEqual(dateComponents.month, regeneratedDateComponents.month)
+        XCTAssertEqual(dateComponents.day, regeneratedDateComponents.day)
+        XCTAssertEqual(dateComponents.year, regeneratedDateComponents.year)
+    }
+
+    func test_dateFromComponents() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        calendar.minimumDaysInFirstWeek = 1
+        calendar.firstWeekday = 1
+
+        func test(_ dc: DateComponents, _ expectation: Date, file: StaticString = #file, line: UInt = #line) {
+            let date = calendar.date(from: dc)!
+            XCTAssertEqual(date, expectation, "expect: \(date.timeIntervalSinceReferenceDate)", file: file, line: line)
+        }
+        // Tuesday in the first week of 2000
+        let components_woy = DateComponents(weekday: 3, weekOfYear: 1, yearForWeekOfYear: 2000)
+
+        // The first week of year 2000 is Dec 26, 1999...Jan 1, 2000
+        test(.init(weekday: 3, weekOfYear: 1, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -31968000.0)) // 1999-12-28
+        test(.init(weekday: 3, weekOfYear: 2, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -31363200.0)) // 2000-01-04
+
+        test(.init(day: 3, weekOfYear: 1, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -31449600.0)) // 2000-01-03
+        // day takes precedence over weekOfYear
+        test(.init(day: 3, weekOfYear: 2, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -31449600.0)) // 2000-01-03
+
+        // Week 53 of 1998 is Dec 28, 1998... Jan 3, 1999
+        // Monday in the last week of 1998
+        test(.init(weekday: 2, weekOfYear: 53, yearForWeekOfYear: 1998), Date(timeIntervalSinceReferenceDate: -63504000.0)) // 1998-12-28
+
+        // Unreasonable configuration
+        // Month is ignored
+        test(.init(month: 3, weekOfYear: 1, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -32140800.0))  // 1999-12-26
+        test(.init(month: 1, weekOfYear: 53, yearForWeekOfYear: 1998), Date(timeIntervalSinceReferenceDate: -63590400.0)) // 1998-12-27
+    }
+
     func test_firstWeekday() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = Locale(identifier: "en_US")

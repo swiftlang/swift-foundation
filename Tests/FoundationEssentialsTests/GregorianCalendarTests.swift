@@ -204,6 +204,22 @@ final class GregorianCalendarTests : XCTestCase {
         XCTAssertEqual(gregorianCalendar.date(from: dc_customCalendarNoTimeZone_customTimeZone)!, Date(timeIntervalSinceReferenceDate: 679024975.891)) // 2022-07-09T02:02:55Z
     }
 
+    func testDateFromComponents_componentsTimeZoneConversion() {
+        let timeZone = TimeZone.gmt
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+
+        // January 1, 2020 12:00:00 AM (GMT)
+        let startOfYearGMT = Date(timeIntervalSince1970: 1577836800)
+        let est = TimeZone(abbreviation: "EST")!
+
+        var components = gregorianCalendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], from: startOfYearGMT)
+        components.timeZone = est
+        let startOfYearEST_greg = gregorianCalendar.date(from: components)
+
+        let expected = startOfYearGMT + 3600*5 // January 1, 2020 12:00:00 AM (GMT)
+        XCTAssertEqual(startOfYearEST_greg, expected)
+    }
+
     // MARK: - DateComponents from date
     func testDateComponentsFromDate() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 0)!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
