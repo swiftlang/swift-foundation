@@ -38,6 +38,4 @@ INTERNAL double _stringshims_strtod_l(const char * _Nullable restrict nptr, char
 
 INTERNAL float _stringshims_strtof_l(const char * _Nullable restrict nptr, char * _Nullable * _Nullable restrict endptr, locale_t _Nullable loc);
 
-INTERNAL int _stringshims_get_formatted_str_length(double value);
-
 #endif /* CSHIMS_STRING_H */

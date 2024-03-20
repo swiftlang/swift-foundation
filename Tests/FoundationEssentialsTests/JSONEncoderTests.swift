@@ -28,10 +28,6 @@ import TestSupport
 @testable import Foundation
 #endif
 
-#if !FOUNDATION_FRAMEWORK
-import _CShims
-#endif
-
 // MARK: - Test Suite
 
 final class JSONEncoderTests : XCTestCase {
@@ -161,65 +157,6 @@ final class JSONEncoderTests : XCTestCase {
 #endif
 
     // MARK: - Date Strategy Tests
-
-    // Disabled for now till we resolve rdar://52618414
-    func x_testEncodingDate() {
-
-        func formattedLength(of value: Double) -> Int {
-        #if !FOUNDATION_FRAMEWORK
-            return Int(_stringshims_get_formatted_str_length(value))
-        #else
-            let empty = UnsafeMutablePointer<Int8>.allocate(capacity: 0)
-            defer { empty.deallocate() }
-            let length = snprintf(ptr: empty, 0, "%0.*g", DBL_DECIMAL_DIG, value)
-            return Int(length)
-        #endif
-        }
-
-        // Duplicated to handle a special case
-        func localTestRoundTrip<T: Codable & Equatable>(of value: T) {
-            var payload: Data! = nil
-            do {
-                let encoder = JSONEncoder()
-                payload = try encoder.encode(value)
-            } catch {
-                XCTFail("Failed to encode \(T.self) to JSON: \(error)")
-            }
-
-            do {
-                let decoder = JSONDecoder()
-                let decoded = try decoder.decode(T.self, from: payload)
-
-                /// `snprintf`'s `%g`, which `JSONSerialization` uses internally for double values, does not respect
-                /// our precision requests in every case. This bug effects Darwin, FreeBSD, and Linux currently
-                /// causing this test (which uses the current time) to fail occasionally.
-                if formattedLength(of: (decoded as! Date).timeIntervalSinceReferenceDate) > DBL_DECIMAL_DIG + 2 {
-                    let adjustedTimeIntervalSinceReferenceDate: (Date) -> Double = { date in
-                        let adjustment = pow(10, Double(DBL_DECIMAL_DIG))
-                        return Double(floor(adjustment * date.timeIntervalSinceReferenceDate).rounded() / adjustment)
-                    }
-
-                    let decodedAprox = adjustedTimeIntervalSinceReferenceDate(decoded as! Date)
-                    let valueAprox = adjustedTimeIntervalSinceReferenceDate(value as! Date)
-                    XCTAssertEqual(decodedAprox, valueAprox, "\(T.self) did not round-trip to an equal value after DBL_DECIMAL_DIG adjustment \(decodedAprox) != \(valueAprox).")
-                    return
-                }
-
-                XCTAssertEqual(decoded, value, "\(T.self) did not round-trip to an equal value. \((decoded as! Date).timeIntervalSinceReferenceDate) != \((value as! Date).timeIntervalSinceReferenceDate)")
-            } catch {
-                XCTFail("Failed to decode \(T.self) from JSON: \(error)")
-            }
-        }
-
-        // Test the above `snprintf` edge case evaluation with a known triggering case
-        let knownBadDate = Date(timeIntervalSinceReferenceDate: 0.0021413276231263384)
-        localTestRoundTrip(of: knownBadDate)
-
-        localTestRoundTrip(of: Date())
-
-        // Optional dates should encode the same way.
-        localTestRoundTrip(of: Optional(Date()))
-    }
 
     func testEncodingDateSecondsSince1970() {
         // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
