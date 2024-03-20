@@ -80,6 +80,14 @@ final class CalendarTests : XCTestCase {
         Calendar(identifier: .islamicUmmAlQura)
     ]
 
+    func test_localeIsCached() {
+        let c = Calendar(identifier: .gregorian)
+
+        let defaultLocale = Locale(identifier: "")
+        XCTAssertEqual(c.locale, defaultLocale)
+        XCTAssertIdentical(c.locale?._locale, defaultLocale._locale)
+    }
+
     func test_copyOnWrite() {
         var c = Calendar(identifier: .gregorian)
         let c2 = c

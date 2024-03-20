@@ -420,8 +420,12 @@ struct LocaleCache : Sendable {
     }
 
     func localeWithPreferences(identifier: String, prefs: LocalePreferences?) -> Locale {
-        let inner = LocaleCache.localeICUClass.init(identifier: identifier, prefs: prefs)
-        return Locale(inner: inner)
+        if let prefs {
+            let inner = LocaleCache.localeICUClass.init(identifier: identifier, prefs: prefs)
+            return Locale(inner: inner)
+        } else {
+            return Locale(inner: LocaleCache.cache.fixed(identifier))
+        }
     }
 
     func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
