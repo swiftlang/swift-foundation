@@ -62,9 +62,9 @@ private func preferredChunkSizeForFileDescriptor(_ fd: Int32) -> Int? {
 #endif
 }
 
-private func writeToFileDescriptorWithProgress(_ fd: Int32, data: Data, reportProgress: Bool) throws -> Int {
+private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBufferPointer, reportProgress: Bool) throws -> Int {
     // Fetch this once
-    let length = data.count
+    let length = buffer.count
     var preferredChunkSize = length
     let localProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(preferredChunkSize)) : nil
     
@@ -75,7 +75,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, data: Data, reportPr
         }
     }
 
-    var nextRange = data.startIndex..<data.startIndex.advanced(by: length)
+    var nextRange = buffer.startIndex..<buffer.startIndex.advanced(by: length)
     var numBytesRemaining = length
     while numBytesRemaining > 0 {
         if let localProgress, localProgress.isCancelled {
@@ -92,7 +92,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, data: Data, reportPr
             if let localProgress, localProgress.isCancelled {
                 throw CocoaError(.userCancelled)
             }
-            numBytesWritten = data[nextRange].withUnsafeBytes { buf in
+            numBytesWritten = buffer[nextRange].withUnsafeBytes { buf in
                 write(fd, buf.baseAddress!, buf.count)
             }
             
@@ -115,7 +115,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, data: Data, reportPr
                     break
                 }
                 
-                nextRange = nextRange.startIndex.advanced(by: numBytesWritten)..<data.endIndex
+                nextRange = nextRange.startIndex.advanced(by: numBytesWritten)..<buffer.endIndex
             }
         } while numBytesWritten < 0 && errno == EINTR
     }
@@ -220,23 +220,21 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
     return (fd, auxFile, nil)
 }
 
-private func write(data: Data, toFileDescriptor fd: Int32, path: PathOrURL, parentProgress: Progress?) throws {
-    for region in data.regions {
-        let count = region.count
-        parentProgress?.becomeCurrent(withPendingUnitCount: Int64(count))
-        defer {
-            parentProgress?.resignCurrent()
-        }
-        
-        if count > 0 {
-            let result = try writeToFileDescriptorWithProgress(fd, data: region, reportProgress: parentProgress != nil)
-            if result != count {
-                throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
-            }
+private func write(buffer: UnsafeRawBufferPointer, toFileDescriptor fd: Int32, path: PathOrURL, parentProgress: Progress?) throws {
+    let count = buffer.count
+    parentProgress?.becomeCurrent(withPendingUnitCount: Int64(count))
+    defer {
+        parentProgress?.resignCurrent()
+    }
+    
+    if count > 0 {
+        let result = try writeToFileDescriptorWithProgress(fd, buffer: buffer, reportProgress: parentProgress != nil)
+        if result != count {
+            throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
         }
     }
     
-    if !data.isEmpty {
+    if !buffer.isEmpty {
         if fsync(fd) < 0 {
             throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
         }
@@ -249,27 +247,35 @@ private func write(data: Data, toFileDescriptor fd: Int32, path: PathOrURL, pare
 extension NSData {
     /// Objective-C entry point to Swift `Data` writing.
     @objc(_writeDataToPath:data:options:reportProgress:error:)
-    internal static func _writeData(toPath path: String, data: Data, options: Data.WritingOptions, reportProgress: Bool) throws {
-        try writeDataToFile(path: .path(path), data: data, options: options, attributes: [:], reportProgress: reportProgress)
+    internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, reportProgress: Bool) throws {
+        let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
+        try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [:], reportProgress: reportProgress)
     }
     
     @objc(_writeDataToPath:data:options:stringEncodingAttributeData:reportProgress:error:)
-    internal static func _writeData(toPath path: String, data: Data, options: Data.WritingOptions, stringEncodingAttributeData: Data, reportProgress: Bool) throws {
-        try writeDataToFile(path: .path(path), data: data, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
+    internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, stringEncodingAttributeData: Data, reportProgress: Bool) throws {
+        let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
+        try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
     }
 }
 #endif
 
-internal func writeDataToFile(path inPath: PathOrURL, data: Data, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
+internal func writeToFile(path inPath: PathOrURL, data: Data, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
+    try data.withUnsafeBytes { buffer in
+        try writeToFile(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
+    }
+}
+
+internal func writeToFile(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
     if options.contains(.atomic) {
-        try writeDataToFileAux(path: inPath, data: data, options: options, attributes: attributes, reportProgress: reportProgress)
+        try writeToFileAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
     } else {
-        try writeDataToFileNoAux(path: inPath, data: data, options: options, attributes: attributes, reportProgress: reportProgress)
+        try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
     }
 }
 
 /// Create a new file out of `Data` at a path, using atomic writing.
-private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
     assert(options.contains(.atomic))
     
     // TODO: Somehow avoid copying back and forth to a String to hold the path
@@ -286,18 +292,18 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
         
 #if FOUNDATION_FRAMEWORK
         var newPath = inPath.path
-        var buffer = PreRenameAttributes()
+        var preRenameAttributes = PreRenameAttributes()
         var attrs = attrlist(bitmapcount: u_short(ATTR_BIT_MAP_COUNT), reserved: 0, commonattr: attrgroup_t(ATTR_CMN_OBJTYPE | ATTR_CMN_ACCESSMASK | ATTR_CMN_FULLPATH), volattr: .init(), dirattr: .init(), fileattr: .init(ATTR_FILE_LINKCOUNT), forkattr: .init())
-        let result = getattrlist(inPathFileSystemRep, &attrs, &buffer, MemoryLayout<PreRenameAttributes>.size, .init(FSOPT_NOFOLLOW))
+        let result = getattrlist(inPathFileSystemRep, &attrs, &preRenameAttributes, MemoryLayout<PreRenameAttributes>.size, .init(FSOPT_NOFOLLOW))
         if result == 0 {
             // Use the path from the buffer
-            mode = mode_t(buffer.mode)
-            if buffer.fileType == VREG.rawValue && !(buffer.nlink > 1) {
+            mode = mode_t(preRenameAttributes.mode)
+            if preRenameAttributes.fileType == VREG.rawValue && !(preRenameAttributes.nlink > 1) {
                 // Copy the contents of the getattrlist buffer for the string into a Swift String
-                withUnsafePointer(to: buffer.fullPathBuf) { ptrToTuple in
+                withUnsafePointer(to: preRenameAttributes.fullPathBuf) { ptrToTuple in
                     // The length of the string is passed back to us in the same struct as the C string itself
                     // n.b. Length includes the null-termination byte. Use this size for the buffer.
-                    let length = Int(buffer.fullPathAttr.attr_length)
+                    let length = Int(preRenameAttributes.fullPathAttr.attr_length)
                     ptrToTuple.withMemoryRebound(to: CChar.self, capacity: length) { pointer in
                         newPath = String(cString: pointer)
                     }
@@ -335,10 +341,10 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
         
         defer { close(fd) }
         
-        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(data.count)) : nil
+        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
         
         do {
-            try write(data: data, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
+            try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
         } catch {
             let savedError = errno
             
@@ -411,7 +417,7 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
                         cleanupTemporaryDirectory(at: temporaryDirectoryPath)
                         
                         // We also throw away any other options, and do not report progress. This may or may not be a bug.
-                        return try writeDataToFile(path: inPath, data: data, options: [], attributes: attributes, reportProgress: false)
+                        return try writeToFile(path: inPath, buffer: buffer, options: [], attributes: attributes, reportProgress: false)
                     } else {
                         unlink(auxPathFileSystemRep)
                         cleanupTemporaryDirectory(at: temporaryDirectoryPath)
@@ -450,7 +456,7 @@ private func writeDataToFileAux(path inPath: PathOrURL, data: Data, options: Dat
 }
 
 /// Create a new file out of `Data` at a path, not using atomic writing.
-private func writeDataToFileNoAux(path inPath: PathOrURL, data: Data, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
     assert(!options.contains(.atomic))
     
     try inPath.withFileSystemRepresentation { pathFileSystemRep in
@@ -472,10 +478,10 @@ private func writeDataToFileNoAux(path inPath: PathOrURL, data: Data, options: D
         
         defer { close(fd) }
         
-        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(data.count)) : nil
+        let parentProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
         
         do {
-            try write(data: data, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
+            try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: parentProgress)
         } catch {
             let savedError = errno
 

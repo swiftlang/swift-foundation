@@ -2419,7 +2419,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
         
 #if !NO_FILESYSTEM
-        try writeDataToFile(path: .url(url), data: self, options: options, reportProgress: true)
+        try writeToFile(path: .url(url), data: self, options: options, reportProgress: true)
 #else
         throw CocoaError(.featureUnsupported)
 #endif
@@ -2432,7 +2432,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             fatalError("withoutOverwriting is not supported with atomic")
         }
         
-        try writeDataToFile(path: .path(path), data: self, options: options, reportProgress: true)
+        try writeToFile(path: .path(path), data: self, options: options, reportProgress: true)
     }
 #endif
 
