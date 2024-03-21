@@ -12,6 +12,10 @@
 
 internal import FoundationICU
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 extension ICU {
     final class CaseMap : @unchecked Sendable {
         let casemap: OpaquePointer
