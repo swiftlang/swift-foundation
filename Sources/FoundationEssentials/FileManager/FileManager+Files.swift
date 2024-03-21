@@ -43,7 +43,7 @@ private func _nameFor(gid: gid_t) -> String? {
 }
 
 extension mode_t {
-    fileprivate var fileType: FileAttributeType {
+    private var _fileType: FileAttributeType {
         switch self & S_IFMT {
         case S_IFCHR: .typeCharacterSpecial
         case S_IFDIR: .typeDirectory
@@ -54,6 +54,15 @@ extension mode_t {
         default: .typeUnknown
         }
     }
+    
+    #if FOUNDATION_FRAMEWORK
+    // Since FileAttributeType is an NS_TYPED_ENUM, clients rely on being able to cast values to both String and FileAttributeType
+    // Store NSString values in attribute dictionaries to support both of these casting behaviors
+    fileprivate var fileType: NSString { _fileType as NSString }
+    #else
+    // In swift-foundation, use FileAttributeType values instead since NSString doesn't exist
+    fileprivate var fileType: FileAttributeType { _fileType }
+    #endif
 }
 
 func _readFileAttributePrimitive<T: BinaryInteger>(_ value: Any?, as type: T.Type) -> T? {
@@ -147,8 +156,12 @@ extension stat {
         if let groupName = _nameFor(gid: st_gid) {
             result[.groupOwnerAccountName] = groupName
         }
-        if fileType == .typeBlockSpecial || fileType == .typeCharacterSpecial {
+        switch fileType as FileAttributeType {
+        case .typeBlockSpecial, .typeCharacterSpecial:
             result[.deviceIdentifier] = _writeFileAttributePrimitive(st_rdev, as: UInt.self)
+        default:
+            // Do nothing
+            break
         }
         #if canImport(Darwin)
         let immutable = (st_flags & UInt32(UF_IMMUTABLE)) != 0 || (st_flags & UInt32(SF_IMMUTABLE)) != 0
@@ -479,7 +492,8 @@ extension _FileManagerImpl {
             #if !targetEnvironment(simulator) && FOUNDATION_FRAMEWORK
             if statAtPath.isRegular || statAtPath.isDirectory {
                 if let protectionClass = Self._fileProtectionValueForPath(fsRep), let pType = FileProtectionType(intValue: protectionClass) {
-                    attributes[.protectionKey] = pType
+                    // Cast to NSString here so that clients can cast this value to both String and FileProtectionType
+                    attributes[.protectionKey] = pType as NSString
                 } else {
                     attributes[.protectionKey] = nil
                 }
