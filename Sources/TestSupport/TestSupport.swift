@@ -108,7 +108,8 @@ public typealias StandardPredicateExpression = Foundation.StandardPredicateExpre
 public typealias PredicateError = Foundation.PredicateError
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateCodableConfiguration = Foundation.PredicateCodableConfiguration
-
+@available(FoundationPredicate 0.4, *)
+public typealias Expression = Foundation.Expression
 #else
 
 #if DEBUG
@@ -208,6 +209,8 @@ public typealias PredicateExpressions = FoundationEssentials.PredicateExpression
 public typealias StandardPredicateExpression = FoundationEssentials.StandardPredicateExpression
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateError = FoundationEssentials.PredicateError
+@available(FoundationPredicate 0.4, *)
+public typealias Expression = FoundationEssentials.Expression
 
 public typealias SortDescriptor = FoundationInternationalization.SortDescriptor
 public typealias SortComparator = FoundationEssentials.SortComparator

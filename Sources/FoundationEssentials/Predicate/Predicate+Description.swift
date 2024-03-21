@@ -388,6 +388,15 @@ extension PredicateExpressions.StringContainsRegex : DebugStringConvertiblePredi
 }
 #endif
 
+@available(FoundationPredicate 0.4, *)
+extension PredicateExpressions.ExpressionEvaluate : DebugStringConvertiblePredicateExpression where Transformation : DebugStringConvertiblePredicateExpression, repeat each Input : DebugStringConvertiblePredicateExpression {
+    package func debugString(state: inout DebugStringConversionState) -> String {
+        var inputStrings: [String] = []
+        repeat inputStrings.append((each input).debugString(state: &state))
+        return "\(expression.debugString(state: &state)).evaluate(\(inputStrings.joined(separator: ", ")))"
+    }
+}
+
 #if FOUNDATION_FRAMEWORK
 
 @available(FoundationPredicate 0.3, *)
@@ -408,36 +417,62 @@ extension PredicateExpressions.StringCaseInsensitiveCompare : DebugStringConvert
 
 #endif
 
+@available(FoundationPredicate 0.4, *)
+private func createDescription<each Input, Output>(variable: repeat PredicateExpressions.Variable<each Input>, expression: some StandardPredicateExpression, typeName: String, outputType: Output.Type = Void.self) -> String {
+    var variableIDs: [PredicateExpressions.VariableID] = []
+    repeat variableIDs.append((each variable).key)
+    guard let debugConvertible = expression as? any DebugStringConvertiblePredicateExpression else {
+        fatalError("Internal inconsistency: StandardPredicateExpression does not conform to DebugStringConvertiblePredicateExpression")
+    }
+    var inputTypes: [Any.Type] = []
+    repeat inputTypes.append((each Input).self)
+    let inputTypeNames = inputTypes.map {
+        _typeName($0)
+    }.joined(separator: ", ")
+    var state = DebugStringConversionState(variableIDs)
+    let variableNames = variableIDs.map {
+        state[$0]
+    }.joined(separator: ", ")
+    let converted = debugConvertible.debugString(state: &state)
+    var result = state.captureDecl.isEmpty ? "" : "\(state.captureDecl)\n"
+    var outputTypeName = ""
+    if outputType != Void.self {
+        outputTypeName = ", \(_typeName(outputType))"
+    }
+    result.append("""
+                    \(typeName)<\(inputTypeNames)\(outputTypeName)> { \(variableNames) in
+                        \(converted.indentedWithinClosure())
+                    }
+                    """)
+    return result
+}
+
 @available(FoundationPredicate 0.3, *)
 extension Predicate : CustomStringConvertible {
+    @_optimize(none) // Work around swift optimizer crash
     public var description: String {
-        var variableIDs: [PredicateExpressions.VariableID] = []
-        repeat variableIDs.append((each variable).key)
-        guard let debugConvertible = self.expression as? any DebugStringConvertiblePredicateExpression else {
-            fatalError("Internal inconsistency: StandardPredicateExpression does not conform to DebugStringConvertiblePredicateExpression")
-        }
-        var types: [Any.Type] = []
-        repeat types.append((each Input).self)
-        let typeNames = types.map {
-            _typeName($0)
-        }.joined(separator: ", ")
-        var state = DebugStringConversionState(variableIDs)
-        let variableNames = variableIDs.map {
-            state[$0]
-        }.joined(separator: ", ")
-        let converted = debugConvertible.debugString(state: &state)
-        var result = state.captureDecl.isEmpty ? "" : "\(state.captureDecl)\n"
-        result.append("""
-                        Predicate<\(typeNames)> { \(variableNames) in
-                            \(converted.indentedWithinClosure())
-                        }
-                        """)
-        return result
+        createDescription(variable: repeat each variable, expression: expression, typeName: "Predicate")
+    }
+}
+
+@available(FoundationPredicate 0.4, *)
+extension Expression : CustomStringConvertible {
+    public var description: String {
+        createDescription(variable: repeat each variable, expression: expression, typeName: "Expression", outputType: Output.self)
     }
 }
 
 @available(FoundationPredicate 0.3, *)
 extension Predicate : CustomDebugStringConvertible {
+    public var debugDescription: String {
+        var variableDesc: [String] = []
+        repeat variableDesc.append((each variable).description)
+        return "\(_typeName(Self.self))(variable: (\(variableDesc.joined(separator: ", "))), expression: \(expression))"
+    }
+}
+
+@available(FoundationPredicate 0.4, *)
+extension Expression : CustomDebugStringConvertible {
     public var debugDescription: String {
         var variableDesc: [String] = []
         repeat variableDesc.append((each variable).description)

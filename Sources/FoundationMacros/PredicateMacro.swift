@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2022-2023 Apple Inc. and the Swift project authors
+// Copyright (c) 2022-2024 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -15,10 +15,10 @@ import SwiftSyntaxMacros
 internal import SwiftDiagnostics
 internal import SwiftSyntaxBuilder
 
-// A list of all functions supported by Predicate itself, any other functions called will be diagnosed as an error
+// A list of all functions supported by Predicate/Expression itself, any other functions called will be diagnosed as an error
 // This allows for checking the function name, the number of arguments, and the argument labels, but the types of the arguments will need to be validated by the post-expansion type checking pass
-// The trailingClosure parameter indicates whether the final argument is a closure and therefore supports dropping the final argument label in favor of a trailing closure
-private var _knownSupportedFunctions: Set<FunctionStructure> = [
+// The closure specification is used to determine whether keypaths should be transformed/expanded into closures and whether dropping the final argument in favor of a trailing closure is allowed
+private let _knownSupportedFunctions: Set<FunctionStructure> = [
     FunctionStructure("contains", arguments: [.unlabeled]),
     FunctionStructure("contains", arguments: [.closure(labeled: "where")]),
     FunctionStructure("allSatisfy", arguments: [.closure(labeled: nil)]),
@@ -91,12 +91,6 @@ extension Array where Element == FunctionStructure.Argument {
         return copy
     }
 }
-
-#if FOUNDATION_FRAMEWORK
-private let moduleName = "Foundation"
-#else
-private let moduleName = "FoundationEssentials"
-#endif
 
 private struct FunctionStructure: Hashable {
     struct Argument : Hashable, ExpressibleByStringLiteral {
@@ -407,6 +401,11 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     var validOptionalChainingTree = true
     var diagnostics: [Diagnostic] = []
     var success: Bool { diagnostics.isEmpty }
+    let kind: ExpansionKind
+    
+    init(kind: ExpansionKind) {
+        self.kind = kind
+    }
     
     private func diagnose(node: SyntaxProtocol, message: PredicateExpansionDiagnostic, fixIts: [FixIt] = []) {
         diagnostics.append(.init(node: Syntax(node), message: message, fixIts: fixIts))
@@ -464,7 +463,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             
             return syntax
         default:
-            diagnose(node: node.operator, message: "The '\(node.operator.text)' operator is not supported in this predicate")
+            diagnose(node: node.operator, message: "The '\(node.operator.text)' operator is not supported in this \(kind.keyword)")
             return ExprSyntax(node)
         }
     }
@@ -475,7 +474,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         let opExpr = node.operator
         
         guard let opSyntax = opExpr.as(BinaryOperatorExprSyntax.self) else {
-            diagnose(node: opExpr, message: "The '\(opExpr.description)' operator is not supported in this predicate")
+            diagnose(node: opExpr, message: "The '\(opExpr.description)' operator is not supported in this \(kind.keyword)")
             return ExprSyntax(node)
         }
         
@@ -658,14 +657,14 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             
             return syntax
         default:
-            diagnose(node: opSyntax, message: "The '\(opSyntax.operator.text)' operator is not supported in this predicate")
+            diagnose(node: opSyntax, message: "The '\(opSyntax.operator.text)' operator is not supported in this \(kind.keyword)")
             return ExprSyntax(node)
         }
     }
     
     // We only hit this if our OptionalChainingRewriter was unable to rewrite them out of the expression tree
     override func visit(_ node: OptionalChainingExprSyntax) -> ExprSyntax {
-        diagnose(node: node.questionMark, message: "Optional chaining is not supported here in this predicate. Use the flatMap(_:) function explicitly instead.")
+        diagnose(node: node.questionMark, message: "Optional chaining is not supported here in this \(kind.keyword). Use the flatMap(_:) function explicitly instead.")
         return .init(node)
     }
     
@@ -683,7 +682,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     
     override func visit(_ node: MemberAccessExprSyntax) -> ExprSyntax {
         guard let base = node.base else {
-            diagnose(node: node, message: "Member access without an explicit base is not allowed in this predicate")
+            diagnose(node: node, message: "Member access without an explicit base is not supported in this \(kind.keyword)")
             return .init(node)
         }
         
@@ -724,7 +723,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     private func _processFunction(base: ExprSyntax?, functionName: String, argumentList: LabeledExprListSyntax, trailingClosure: ClosureExprSyntax?, diagnosticPoint: Syntax, functionCallExpr: FunctionCallExprSyntax? = nil) -> ExprSyntax? {
         // The provided base is nil when calling global functions functions
         guard let base else {
-            diagnose(node: diagnosticPoint, message: "Global functions are not supported in this predicate")
+            diagnose(node: diagnosticPoint, message: "Global functions are not supported in this \(kind.keyword)")
             return nil
         }
         
@@ -736,7 +735,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         }
         let structure = FunctionStructure(name.text, arguments: args, trailingClosure: trailingClosure != nil)
         guard let knownFunc = _knownMatchingFunction(structure) else {
-            let diagnostic = PredicateExpansionDiagnostic("The \(structure.signature) function is not supported in this predicate")
+            let diagnostic = PredicateExpansionDiagnostic("The \(structure.signature) function is not supported in this \(kind.keyword)")
             var fixIts = [FixIt]()
             if let functionCallExpr,
                let suggestion = _suggestionForUnknownFunction(structure),
@@ -769,7 +768,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
                 guard !kpExpr.containsShorthandArgumentIdentifiers,
                       let memberAccess = kpExpr.asDirectExpression(on: DeclReferenceExprSyntax(baseName: .dollarIdentifier("$0"))),
                       let preparedMemberAccess = try? memberAccess.rewrite(with: OptionalChainRewriter()) else {
-                    diagnose(node: kpExpr, message: "This key path is not supported here in this predicate. Use an explicit closure instead.")
+                    diagnose(node: kpExpr, message: "This key path is not supported here in this \(kind.keyword). Use an explicit closure instead.")
                     return nil
                 }
                 expression = ExprSyntax(ClosureExprSyntax(statements: [CodeBlockItemSyntax(item: .expr(preparedMemberAccess.as(ExprSyntax.self)!))]))
@@ -796,7 +795,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     
     override func visit(_ node: TupleExprSyntax) -> ExprSyntax {
         guard node.elements.count == 1, let element = node.elements.first else {
-            diagnose(node: node, message: "Tuples are not supported in this predicate")
+            diagnose(node: node, message: "Tuples are not supported in this \(kind.keyword)")
             return ExprSyntax(node)
         }
         
@@ -807,7 +806,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     // Processes a code block and guarantees that the returned code block only contains one item
     func _processCodeBlock(_ statements: CodeBlockItemListSyntax, in node: Syntax, removeReturn: Bool = false) -> CodeBlockItemListSyntax? {
         guard statements.count == 1 else {
-            diagnose(node: statements.isEmpty ? node : statements[statements.index(after: statements.startIndex)], message: "Predicate body may only contain one expression")
+            diagnose(node: statements.isEmpty ? node : statements[statements.index(after: statements.startIndex)], message: "\(kind.capitalizedKeyword) body may only contain one expression")
             return nil
         }
         
@@ -926,13 +925,13 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     }
     
     override func visit(_ node: SwitchExprSyntax) -> ExprSyntax {
-        self.diagnose(node: node, message: "Switch expressions are not supported in this predicate")
+        self.diagnose(node: node, message: "Switch expressions are not supported in this \(kind.keyword)")
         return .init(node)
     }
     
     private func _rewriteConditionsAsExpression<C: BidirectionalCollection<ConditionElementListSyntax.Element>>(_ collection: C, in expr: IfExprSyntax) -> ExprSyntax? {
         guard let last = collection.last else {
-            self.diagnose(node: expr, message: "This list of conditionals is unsupported in this predicate")
+            self.diagnose(node: expr, message: "This list of conditionals is unsupported in this \(kind.keyword)")
             return nil
         }
         guard case .expression(let lastExpr) = last.condition else {
@@ -943,12 +942,12 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             case .matchingPattern(_):
                 type = "Matching pattern conditions"
             case .optionalBinding(_):
-                self.diagnose(node: last, message: "Mixing optional bindings with other conditions is not supported in this predicate")
+                self.diagnose(node: last, message: "Mixing optional bindings with other conditions is not supported in this \(kind.keyword)")
                 return nil
             default:
                 type = "These types of conditions"
             }
-            self.diagnose(node: last, message: "\(type) are not supported in this predicate")
+            self.diagnose(node: last, message: "\(type) are not supported in this \(kind.keyword)")
             return nil
         }
         let rest = collection.dropLast()
@@ -968,7 +967,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         var prior: ExprSyntax = body
         for binding in bindings.reversed() {
             guard let identifier = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier else {
-                self.diagnose(node: binding.pattern, message: "This optional binding condition is not supported in this predicate")
+                self.diagnose(node: binding.pattern, message: "This optional binding condition is not supported in this \(kind.keyword)")
                 return nil
             }
             let initializer = binding.initializer?.value ?? ExprSyntax(DeclReferenceExprSyntax(baseName: identifier))
@@ -997,7 +996,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         }
         
         guard let bodyExpression = visitedBody.first?.item._expression else {
-            self.diagnose(node: node.body, message: "This if expression body is not supported in this predicate")
+            self.diagnose(node: node.body, message: "This if expression body is not supported in this \(kind.keyword)")
             return nil
         }
         
@@ -1006,7 +1005,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     
     private func _processElseBody(_ node: IfExprSyntax) -> ExprSyntax? {
         guard let elseBody = node.elseBody else {
-            self.diagnose(node: node, message: "If expressions without an else expression are not supported in this predicate")
+            self.diagnose(node: node, message: "If expressions without an else expression are not supported in this \(kind.keyword)")
             return nil
         }
 
@@ -1017,7 +1016,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
                 return nil
             }
             guard let expr = visitedElseBody.first?.item._expression else {
-                self.diagnose(node: node.body, message: "This if expression else body is not supported in this predicate")
+                self.diagnose(node: node.body, message: "This if expression else body is not supported in this \(kind.keyword)")
                 return nil
             }
             elseExpression = expr
@@ -1025,7 +1024,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             elseExpression = visit(ifExpr)
 #if FOUNDATION_FRAMEWORK
         @unknown default:
-            self.diagnose(node: elseBody, message: "This if expression else body is not supported in this predicate")
+            self.diagnose(node: elseBody, message: "This if expression else body is not supported in this \(kind.keyword)")
             return nil
 #endif
         }
@@ -1062,27 +1061,27 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     }
     
     override func visit(_ node: WhileStmtSyntax) -> StmtSyntax {
-        self.diagnose(node: node, message: "While loops are not supported in this predicate")
+        self.diagnose(node: node, message: "While loops are not supported in this \(kind.keyword)")
         return .init(node)
     }
     
     override func visit(_ node: ForStmtSyntax) -> StmtSyntax {
-        self.diagnose(node: node, message: "For-in loops are not supported in this predicate")
+        self.diagnose(node: node, message: "For-in loops are not supported in this \(kind.keyword)")
         return .init(node)
     }
     
     override func visit(_ node: DoStmtSyntax) -> StmtSyntax {
-        self.diagnose(node: node, message: "Do statements are not supported in this predicate")
+        self.diagnose(node: node, message: "Do statements are not supported in this \(kind.keyword)")
         return .init(node)
     }
     
     override func visit(_ node: CatchClauseSyntax) -> CatchClauseSyntax {
-        self.diagnose(node: node, message: "Catch clauses are not supported in this predicate")
+        self.diagnose(node: node, message: "Catch clauses are not supported in this \(kind.keyword)")
         return node
     }
     
     override func visit(_ node: RepeatStmtSyntax) -> StmtSyntax {
-        self.diagnose(node: node, message: "Repeat-while loops are not supported in this predicate")
+        self.diagnose(node: node, message: "Repeat-while loops are not supported in this \(kind.keyword)")
         return .init(node)
     }
     
@@ -1091,7 +1090,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         
         // Diagnose any declarations
         if case .decl(_) = node.item {
-            diagnose(node: node.item, message: "Declarations are not supported in this predicate")
+            diagnose(node: node.item, message: "Declarations are not supported in this \(kind.keyword)")
             return node
         }
         
@@ -1099,7 +1098,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             // Unwrap a do statement with valid expression bodies
             if let doStatement = statement.as(DoStmtSyntax.self) {
                 if let catchClause = doStatement.catchClauses.first {
-                    diagnose(node: catchClause, message: "Catch clauses are not supported in this predicate")
+                    diagnose(node: catchClause, message: "Catch clauses are not supported in this \(kind.keyword)")
                     return node
                 }
                 indentLevel -= 1
@@ -1109,7 +1108,7 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
                     return node
                 }
                 guard let innerExpr = visitedBody.statements.first else {
-                    diagnose(node: doStatement, message: "Do statement is not supported here in this predicate")
+                    diagnose(node: doStatement, message: "Do statement is not supported here in this \(kind.keyword)")
                     return node
                 }
                 return innerExpr
@@ -1136,38 +1135,90 @@ private struct PredicateExpansionDiagnostic: DiagnosticMessage, FixItMessage, Ex
     }
 }
 
-public struct PredicateMacro: ExpressionMacro, Sendable {
+private enum ExpansionKind {
+    case predicate
+    case expression
+    
+    var keyword: String {
+        switch self {
+        case .predicate:
+            "predicate"
+        case .expression:
+            "expression"
+        }
+    }
+    
+    var capitalizedKeyword: String {
+        let keyword = self.keyword
+        let first = keyword.first!.uppercased()
+        return "\(first)\(keyword.dropFirst())"
+    }
+    
+    var macroKeyword: String {
+        "#\(capitalizedKeyword)"
+    }
+    
+    var qualifiedExpansionType: String {
+        #if FOUNDATION_FRAMEWORK
+        "Foundation.\(capitalizedKeyword)"
+        #else
+        "FoundationEssentials.\(capitalizedKeyword)"
+        #endif
+    }
+}
+
+private func predicateExpansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext, kind: ExpansionKind) throws -> ExprSyntax {
+    guard let closure = node.trailingClosure else {
+        let fixIts: [FixIt]
+        if let argument = node.argumentList.first?.expression.as(ClosureExprSyntax.self) {
+            var newNode = node.with(\.leftParen, nil)
+                .with(\.rightParen, nil)
+                .with(\.trailingClosure, argument.with(\.leadingTrivia, [.spaces(1)]).with(\.trailingTrivia, []))
+            newNode.argumentList = []
+            fixIts = [
+                FixIt(message: PredicateExpansionDiagnostic("Use a trailing closure instead of a function parameter", severity: .note), changes: [
+                    .replace(oldNode: Syntax(node), newNode: Syntax(newNode))
+                ])
+            ]
+        } else {
+            fixIts = []
+        }
+        throw DiagnosticsError(diagnostics: [.init(
+            node: Syntax(node),
+            message: PredicateExpansionDiagnostic("\(kind.macroKeyword) macro expansion requires a trailing closure"),
+            fixIts: fixIts
+        )])
+    }
+    
+    let translatedClosure = try closure
+        .rewrite(with: OptionalChainRewriter())
+        .rewrite(with: PredicateQueryRewriter(kind: kind))
+        .with(\.leadingTrivia, [])
+        .with(\.trailingTrivia, [])
+    
+    if let genericArgs = node.genericArgumentClause {
+        let strippedGenericArgs = genericArgs
+            .with(\.leadingTrivia, [])
+            .with(\.trailingTrivia, [])
+        return "\(raw: kind.qualifiedExpansionType)\(strippedGenericArgs)(\(translatedClosure))"
+    } else {
+        // When the macro is specified without generic args (ex. "#Predicate { ... }") initialize a Predicate without generic args so they can be inferred from context
+        return "\(raw: kind.qualifiedExpansionType)(\(translatedClosure))"
+    }
+}
+
+public struct PredicateMacro: SwiftSyntaxMacros.ExpressionMacro, Sendable {
     public static var formatMode: FormatMode { .disabled }
     
     public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> ExprSyntax {
-        guard let closure = node.trailingClosure else {
-            let fixIts: [FixIt]
-            if let argument = node.argumentList.first?.expression.as(ClosureExprSyntax.self) {
-                var newNode = node.with(\.leftParen, nil)
-                    .with(\.rightParen, nil)
-                    .with(\.trailingClosure, argument.with(\.leadingTrivia, [.spaces(1)]).with(\.trailingTrivia, []))
-                newNode.argumentList = []
-                fixIts = [
-                    FixIt(message: PredicateExpansionDiagnostic("Use a trailing closure instead of a function parameter", severity: .note), changes: [
-                        .replace(oldNode: Syntax(node), newNode: Syntax(newNode))
-                    ])
-                ]
-            } else {
-                fixIts = []
-            }
-            throw DiagnosticsError(diagnostics: [.init(
-                node: Syntax(node),
-                message: PredicateExpansionDiagnostic("#Predicate macro expansion requires a trailing closure"),
-                fixIts: fixIts
-            )])
-        }
-        
-        let translatedClosure = try closure.rewrite(with: OptionalChainRewriter()).rewrite(with: PredicateQueryRewriter()).with(\.leadingTrivia, []).with(\.trailingTrivia, [])
-        if let genericArgs = node.genericArgumentClause {
-            return "\(raw: moduleName).Predicate\(genericArgs.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(\(translatedClosure))"
-        } else {
-            // When the macro is specified without generic args (ex. "#Predicate { ... }") initialize a Predicate without generic args so they can be inferred from context
-            return "\(raw: moduleName).Predicate(\(translatedClosure))"
-        }
+        try predicateExpansion(of: node, in: context, kind: .predicate)
+    }
+}
+
+public struct ExpressionMacro: SwiftSyntaxMacros.ExpressionMacro, Sendable {
+    public static var formatMode: FormatMode { .disabled }
+    
+    public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> ExprSyntax {
+        try predicateExpansion(of: node, in: context, kind: .expression)
     }
 }

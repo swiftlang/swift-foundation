@@ -17,6 +17,10 @@ final class NSPredicateConversionTests: XCTestCase {
         NSPredicate(predicate)
     }
     
+    private func convert<T: NSObject, U>(_ expression: Expression<T, U>) -> NSExpression? {
+        NSExpression(expression)
+    }
+    
     @objc class ObjCObject: NSObject {
         @objc var a: Int
         @objc var b: String
@@ -441,6 +445,20 @@ final class NSPredicateConversionTests: XCTestCase {
         let converted = convert(predicate)
         XCTAssertEqual(converted, NSPredicate(format: "b MATCHES '.*[e-f][l-m].*'"))
         XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+    }
+    
+    func testExpression() {
+        let expression = Expression<ObjCObject, Int>() {
+            PredicateExpressions.build_KeyPath(
+                root: PredicateExpressions.build_Arg($0),
+                keyPath: \.a
+            )
+        }
+        let converted = convert(expression)
+        XCTAssertEqual(converted, NSExpression(format: "a"))
+        let obj = ObjCObject()
+        let value = converted!.expressionValue(with: obj, context: nil)
+        XCTAssertEqual(value as? Int, obj.a, "Expression produced \(String(describing: value)) instead of \(obj.a)")
     }
 }
 

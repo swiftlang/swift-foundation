@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2023 Apple Inc. and the Swift project authors
+// Copyright (c) 2023-2024 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -94,7 +94,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
         _allowType(type, identifier: identifier, preferNewIdentifier: true)
     }
     
-    private mutating func _allowType(_ type: Any.Type, identifier: String? = nil, preferNewIdentifier: Bool) {
+    mutating func _allowType(_ type: Any.Type, identifier: String? = nil, preferNewIdentifier: Bool) {
         let identifier = identifier ?? _typeName(type, qualified: true)
         for (id, value) in allowedTypes {
             if id == identifier {
@@ -349,6 +349,7 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(Optional<Int>.self, identifier: "Swift.Optional")
         configuration.allowPartialType(Slice<String>.self, identifier: "Swift.Slice")
         configuration.allowPartialType(Predicate<Int>.self, identifier: "Foundation.Predicate")
+        configuration.allowPartialType(Expression<Int, Int>.self, identifier: "Foundation.Expression")
         
         // Foundation-defined operator helper types
         configuration.allowType(PredicateExpressions.PredicateRegex.self)
