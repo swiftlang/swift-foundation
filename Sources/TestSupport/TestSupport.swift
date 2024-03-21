@@ -216,6 +216,7 @@ public typealias ComparisonResult = FoundationEssentials.ComparisonResult
 
 public typealias FileManager = FoundationEssentials.FileManager
 public typealias FileAttributeKey = FoundationEssentials.FileAttributeKey
+public typealias FileAttributeType = FoundationEssentials.FileAttributeType
 public typealias CocoaError = FoundationEssentials.CocoaError
 public typealias POSIXError = FoundationEssentials.POSIXError
 public typealias FileManagerDelegate = FoundationEssentials.FileManagerDelegate

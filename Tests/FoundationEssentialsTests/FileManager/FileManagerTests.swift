@@ -643,7 +643,12 @@ final class FileManagerTests : XCTestCase {
             #if FOUNDATION_FRAMEWORK
             // Where we have NSNumber, ensure that we can get the value back as an unconventional Double value
             XCTAssertEqual(attributes[.posixPermissions] as? Double, Double(0o644))
+            // Ensure that the file type can be converted to a String when it is an ObjC enum
+            XCTAssertEqual(attributes[.type] as? String, FileAttributeType.typeRegular.rawValue)
             #endif
+            // Ensure that the file type can be converted to a FileAttributeType when it is an ObjC enum and in swift-foundation
+            XCTAssertEqual(attributes[.type] as? FileAttributeType, .typeRegular)
+            
         }
     }
     
