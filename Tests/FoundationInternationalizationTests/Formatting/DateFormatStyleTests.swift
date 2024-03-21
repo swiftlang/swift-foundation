@@ -699,11 +699,14 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             XCTAssertEqual(attributedResult, expected.attributedString, file: file, line: line)
         }
 
-        test(date.formatted(.dateTime.weekday().locale(enUSLocale).attributed), [("Mon", .weekday)])
-        test(date.formatted(.dateTime.weekday().locale(zhTW).attributed), [("週一", .weekday)])
+        var format = Date.FormatStyle.dateTime
+        format.timeZone = .gmt
 
-        test(date.formatted(.dateTime.weekday().attributed.locale(enUSLocale)), [("Mon", .weekday)])
-        test(date.formatted(.dateTime.weekday().attributed.locale(zhTW)),  [("週一", .weekday)])
+        test(date.formatted(format.weekday().locale(enUSLocale).attributed), [("Mon", .weekday)])
+        test(date.formatted(format.weekday().locale(zhTW).attributed), [("週一", .weekday)])
+
+        test(date.formatted(format.weekday().attributed.locale(enUSLocale)), [("Mon", .weekday)])
+        test(date.formatted(format.weekday().attributed.locale(zhTW)),  [("週一", .weekday)])
     }
 
 #if FOUNDATION_FRAMEWORK

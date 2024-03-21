@@ -43,11 +43,28 @@ extension CocoaError.Code {
     }
 }
 
-extension Dictionary {
-    func setting(_ key: Key, to value: Value) -> Self {
-        var copy = self
-        copy[key] = value
-        return copy
+extension Dictionary<String, AnyHashable> {
+    fileprivate func addingUserInfo(forPath path: String) -> Self {
+        var dict = self
+        dict[NSFilePathErrorKey] = path
+        dict[NSURLErrorKey] = URL(fileURLWithPath: path)
+        return dict
+    }
+    
+    fileprivate static func userInfo(forPath path: String) -> Self {
+        Self().addingUserInfo(forPath: path)
+    }
+    
+    fileprivate func addingUserInfo(forURL url: URL) -> Self {
+        assert(url.isFileURL)
+        var dict = self
+        dict[NSURLErrorKey] = url
+        dict[NSFilePathErrorKey] = url.path(percentEncoded: false)
+        return dict
+    }
+    
+    fileprivate static func userInfo(forURL url: URL) -> Self {
+        Self().addingUserInfo(forURL: url)
     }
 }
 
@@ -55,11 +72,11 @@ extension CocoaError {
     // MARK: Error Creation with CocoaError.Code
     
     static func errorWithFilePath(_ code: CocoaError.Code, _ path: String) -> CocoaError {
-        CocoaError(code, userInfo: [NSFilePathErrorKey : path])
+        CocoaError(code, userInfo: .userInfo(forPath: path))
     }
     
     static func errorWithFilePath(_ code: CocoaError.Code, _ url: URL) -> CocoaError {
-        CocoaError(code, userInfo: [NSURLErrorKey : url])
+        CocoaError(code, userInfo: .userInfo(forURL: url))
     }
     
     // MARK: Error Creation with errno
@@ -69,7 +86,8 @@ extension CocoaError {
             fatalError("Invalid posix errno \(errno)")
         }
         
-        var userInfo = userInfo.setting(NSUnderlyingErrorKey, to: POSIXError(code))
+        var userInfo = userInfo
+        userInfo[NSUnderlyingErrorKey] = POSIXError(code)
         if let variant {
             userInfo[NSUserStringVariantErrorKey] = [variant]
         }
@@ -91,7 +109,7 @@ extension CocoaError {
             errno,
             reading: reading,
             variant: variant,
-            userInfo: additionalUserInfo.setting(NSFilePathErrorKey, to: path)
+            userInfo: additionalUserInfo.addingUserInfo(forPath: path)
         )
     }
     
@@ -100,7 +118,7 @@ extension CocoaError {
             errno,
             reading: reading,
             variant: variant,
-            userInfo: additionalUserInfo.setting(NSURLErrorKey, to: url)
+            userInfo: additionalUserInfo.addingUserInfo(forURL: url)
         )
     }
     

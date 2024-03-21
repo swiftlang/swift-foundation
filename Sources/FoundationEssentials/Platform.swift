@@ -109,16 +109,24 @@ private var _cachedUGIDs: (uid_t, gid_t) = {
 #endif
 
 extension Platform {
-    static func getUGIDs() -> (uid: UInt32, gid: UInt32) {
+    private static var ROOT_USER: UInt32 { 0 }
+    static func getUGIDs(allowEffectiveRootUID: Bool = true) -> (uid: UInt32, gid: UInt32) {
+        var result: (uid: UInt32, gid: UInt32)
         #if canImport(Darwin)
         if _canChangeUIDs {
-            _lookupUGIDs()
+            result = _lookupUGIDs()
         } else {
-            _cachedUGIDs
+            result = _cachedUGIDs
         }
         #else
-        return (uid: geteuid(), gid: getegid())
+        result = (uid: geteuid(), gid: getegid())
         #endif
+        // Some callers need to use the real UID in cases where a process has called seteuid(0)
+        // If that is the case for this caller, and the eUID is the root user, return the real UID instead
+        if !allowEffectiveRootUID && result.uid == Self.ROOT_USER {
+            result.uid = getuid()
+        }
+        return result
     }
 }
 

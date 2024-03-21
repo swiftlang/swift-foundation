@@ -100,9 +100,3 @@ float _stringshims_strtof_l(const char * _Nullable restrict nptr,
     return result;
 #endif
 }
-
-int _stringshims_get_formatted_str_length(double value)
-{
-    char empty[1];
-    return snprintf(empty, 0, "%0.*g", DBL_DECIMAL_DIG, value);
-}

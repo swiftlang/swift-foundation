@@ -3,7 +3,7 @@
 * Proposal: [SF-0008](0008-notation-formatting-for-currencies.md)
 * Authors: [Jacob Lukas](https://github.com/jacoblukas)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Active review: Mar 04, 2024...Mar 11, 2024**
+* Status: **Accepted**
 * Bug: [apple/swift-foundation#379](https://github.com/apple/swift-foundation/issues/379)
 * Implementation: [apple/swift-foundation#449](https://github.com/apple/swift-foundation/pull/449)
 * Review: ([pitch](https://forums.swift.org/t/pitch-support-notation-when-formatting-currencies/70223))
