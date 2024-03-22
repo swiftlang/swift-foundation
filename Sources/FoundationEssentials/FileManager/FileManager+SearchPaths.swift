@@ -40,11 +40,27 @@ extension FileManager.SearchPathDomainMask {
     static var _partitionedSystemDomainMask: Self {
         Self(rawValue: NSSearchPathDomainMask_Private.partitionedSystemDomainMask.rawValue)
     }
+    
+    static var _appCryptexDomainMask: Self {
+        Self(rawValue: NSSearchPathDomainMask_Private.appCryptexDomainMask.rawValue)
+    }
+    
+    static var _osCryptexDomainMask: Self {
+        Self(rawValue: NSSearchPathDomainMask_Private.osCryptexDomainMask.rawValue)
+    }
     #endif
     
     fileprivate var firstMask: Self? {
         guard !self.isEmpty else { return nil }
         return Self(rawValue: 1 << self.rawValue.trailingZeroBitCount)
+    }
+    
+    fileprivate static var valid: Self {
+        #if FOUNDATION_FRAMEWORK
+        [.userDomainMask, .localDomainMask, .networkDomainMask, .systemDomainMask, ._appCryptexDomainMask, ._osCryptexDomainMask]
+        #else
+        [.userDomainMask, .localDomainMask, .networkDomainMask, .systemDomainMask]
+        #endif
     }
 }
 
@@ -207,7 +223,7 @@ extension String {
 #endif
 
 func _SearchPaths(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, expandTilde: Bool) -> some Sequence<String> {
-    let basic = _SearchPathsSequence(directory: directory, domainMask: domain).lazy.map {
+    let basic = _SearchPathsSequence(directory: directory, domainMask: domain.intersection(.valid)).lazy.map {
         if expandTilde {
             return $0.expandingTildeInPath
         } else {
