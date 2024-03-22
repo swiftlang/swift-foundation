@@ -292,8 +292,10 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// Returns the calendar for the locale, or the Gregorian calendar as a fallback.
     public var calendar: Calendar {
         var cal = _locale.calendar
-        // TODO: This is a fairly expensive operation, because it recreates the Calendar's backing ICU object. However, we can't cache the value or we risk creating a retain cycle between _Calendar/_Locale. We'll need to sort out some way around this.
-        // TODO: Calendar doesn't store a Locale anymore!
+        // This is a fairly expensive operation, because it recreates the Calendar's backing ICU object.
+        // However, we can't cache `struct Calendar` because it would create a retain cycle between _Calendar/_Locale:
+        // struct Calendar -> inner _Calendar: any _CalendarProtocol -> struct Locale -> inner _Locale: any _LocaleProtocol -> struct Calendar...
+        // _Calendar holds a Locale for performance reasons
         cal.locale = self
         return cal
     }

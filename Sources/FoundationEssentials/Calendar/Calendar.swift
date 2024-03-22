@@ -360,7 +360,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// The locale of the calendar.
     public var locale : Locale? {
         get {
-            _calendar.locale
+            _calendar.locale ?? Locale(identifier: "")
         }
         set {
             guard newValue != _calendar.locale else {

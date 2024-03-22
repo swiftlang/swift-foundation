@@ -36,12 +36,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     private var customFirstWeekday: Int?
     private var customMinimumFirstDaysInWeek: Int?
 
-    // Identifier of any locale used
-    var localeIdentifier: String
-    
-    // Custom user preferences of any locale used (current locale or current locale imitation only). We need to store this to correctly rebuild a Locale that has been stored inside Calendar as an identifier.
-    private var localePrefs: LocalePreferences?
-    
     let customGregorianStartDate: Date?
 
     init(identifier: Calendar.Identifier,
@@ -55,31 +49,24 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         lock = LockedState<Void>()
 
-        // We do not store the Locale here, as Locale stores a Calendar. We only keep the values we need that affect Calendar's operation.
-        if let locale {
-            localeIdentifier = locale.identifier
-            localePrefs = locale.prefs
-        } else {
-            localeIdentifier = ""
-            localePrefs = nil
-        }
+        self.locale = locale
         _timeZone = timeZone ?? TimeZone.default
 
         customFirstWeekday = firstWeekday
         customMinimumFirstDaysInWeek = minimumDaysInFirstWeek
         customGregorianStartDate = gregorianStartDate
         
-        ucalendar = Self.icuCalendar(identifier: identifier, timeZone: _timeZone, localeIdentifier: localeIdentifier, localePrefs: localePrefs, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: customGregorianStartDate)
+        ucalendar = Self.icuCalendar(identifier: identifier, timeZone: _timeZone, locale: locale ?? Locale(identifier: "", preferences: nil), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: customGregorianStartDate)
     }
 
     static func icuCalendar(identifier: Calendar.Identifier,
                             timeZone: TimeZone,
-                            localeIdentifier: String,
-                            localePrefs: LocalePreferences?,
+                            locale: Locale,
                             firstWeekday: Int?,
                             minimumDaysInFirstWeek: Int?,
                             gregorianStartDate: Date?) -> UnsafeMutablePointer<UCalendar?> {
         // TODO: I think this may be a waste; we always override the calendar, the rest is ignored
+        let localeIdentifier = locale.identifier
         var localeComponents = Locale.Components(identifier: localeIdentifier)
         localeComponents.calendar = identifier
         let calendarLocale = localeComponents.icuIdentifier
@@ -108,14 +95,14 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         if let firstWeekday {
             ucal_setAttribute(calendar, UCAL_FIRST_DAY_OF_WEEK, Int32(firstWeekday))
-        } else if let forcedNumber = localePrefs?.firstWeekday?[identifier], let forced = Locale.Weekday(Int32(forcedNumber)) {
+        } else if let forcedNumber = locale.prefs?.firstWeekday?[identifier], let forced = Locale.Weekday(Int32(forcedNumber)) {
             // Make sure we don't have an off-by-one error here by using the ICU function. This could probably be simplified.
             ucal_setAttribute(calendar, UCAL_FIRST_DAY_OF_WEEK, Int32(forced.icuIndex))
         }
 
         if let minimumDaysInFirstWeek {
             ucal_setAttribute(calendar, UCAL_MINIMAL_DAYS_IN_FIRST_WEEK, Int32(truncatingIfNeeded: minimumDaysInFirstWeek))
-        } else if let forced = localePrefs?.minDaysInFirstWeek?[identifier] {
+        } else if let forced = locale.prefs?.minDaysInFirstWeek?[identifier] {
             ucal_setAttribute(calendar, UCAL_MINIMAL_DAYS_IN_FIRST_WEEK, Int32(truncatingIfNeeded: forced))
         }
 
@@ -133,21 +120,15 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         ucalendar = Self.icuCalendar(
             identifier: identifier,
             timeZone: _timeZone,
-            localeIdentifier: localeIdentifier,
-            localePrefs: localePrefs,
+            locale: locale ?? Locale(identifier: "", preferences: nil),
             firstWeekday: customFirstWeekday,
             minimumDaysInFirstWeek: customMinimumFirstDaysInWeek,
             gregorianStartDate: customGregorianStartDate)
     }
 
     var locale: Locale? {
-        get {
-            Locale(identifier: localeIdentifier, preferences: localePrefs)
-        }
-        set {
+        didSet {
             lock.withLock {
-                localeIdentifier = newValue?.identifier ?? ""
-                localePrefs = newValue?.prefs
                 _locked_regenerate()
             }
         }
@@ -184,7 +165,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
     
     var preferredFirstWeekday: Int? {
-        localePrefs?.firstWeekday?[identifier]
+        locale?.prefs?.firstWeekday?[identifier]
     }
     
     var gregorianStartDate: Date? {
@@ -206,7 +187,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
     
     var preferredMinimumDaysInFirstweek: Int? {
-        localePrefs?.minDaysInFirstWeek?[identifier]
+        locale?.prefs?.minDaysInFirstWeek?[identifier]
     }
 
     private var _locked_minimumDaysInFirstWeek: Int {

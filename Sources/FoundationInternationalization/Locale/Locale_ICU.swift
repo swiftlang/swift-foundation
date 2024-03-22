@@ -442,9 +442,11 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 components.collation = .init(id)
             }
 
-            let calendarID = _lockedCalendarIdentifier(&state)
-            if let weekdayNumber = prefs.firstWeekday?[calendarID], let weekday = Locale.Weekday(Int32(weekdayNumber)) {
-                components.firstDayOfWeek = weekday
+            if let firstWeekdayPrefs = prefs.firstWeekday {
+                let calendarID = _lockedCalendarIdentifier(&state)
+                if let weekdayNumber = firstWeekdayPrefs[calendarID], let weekday = Locale.Weekday(Int32(weekdayNumber)) {
+                    components.firstDayOfWeek = weekday
+                }
             }
 
             if let measurementSystem = prefs.measurementSystem {
@@ -1219,9 +1221,13 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 }
 
                 // Check prefs
-                if let first = forceFirstWeekday(_lockedCalendarIdentifier(&state)) {
-                    state.firstDayOfWeek = first
-                    return first
+                if let firstWeekdayPref = prefs?.firstWeekday {
+                    // `_lockedCalendarIdentifier` isn't cheap. Only call it when we already know there is `prefs` to read from
+                    let calendarId = _lockedCalendarIdentifier(&state)
+                    if let first = forceFirstWeekday(calendarId) {
+                        state.firstDayOfWeek = first
+                        return first
+                    }
                 }
 
                 // Fall back to the calendar's default value
@@ -1363,9 +1369,13 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             }
 
             // Check prefs
-            if let minDays = forceMinDaysInFirstWeek(_lockedCalendarIdentifier(&state)) {
-                state.minimalDaysInFirstWeek = minDays
-                return minDays
+            if prefs != nil {
+                // `_lockedCalendarIdentifier` isn't cheap. Only call it when we already know there is `prefs` to read from
+                let calendarId = _lockedCalendarIdentifier(&state)
+                if let minDays = forceMinDaysInFirstWeek(calendarId) {
+                    state.minimalDaysInFirstWeek = minDays
+                    return minDays
+                }
             }
 
             // Use locale's value

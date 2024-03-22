@@ -64,4 +64,10 @@ extension _CalendarProtocol {
     
     package var gregorianStartDate: Date? { nil }
     package var debugDescription: String { "\(identifier)" }
+    
+    package var localeIdentifier: String {
+        // We use this to provide a consistent answer for hashing and equality -- null is equal to an empty string
+        locale?.identifier ?? ""
+    }
 }
+
