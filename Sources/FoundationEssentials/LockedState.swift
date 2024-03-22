@@ -21,7 +21,7 @@ import Glibc
 import WinSDK
 #endif
 
-internal struct LockedState<State> {
+package struct LockedState<State> {
 
     // Internal implementation for a cheap lock to aid sharing code across platforms
     private struct _Lock {
@@ -84,7 +84,7 @@ internal struct LockedState<State> {
 
     private let _buffer: ManagedBuffer<State, _Lock.Primitive>
 
-    init(initialState: State) {
+    package init(initialState: State) {
         _buffer = _Buffer.create(minimumCapacity: 1, makingHeaderWith: { buf in
             buf.withUnsafeMutablePointerToElements {
                 _Lock.initialize($0)
@@ -93,11 +93,11 @@ internal struct LockedState<State> {
         })
     }
 
-    func withLock<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
+    package func withLock<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
         try withLockUnchecked(body)
     }
     
-    func withLockUnchecked<T>(_ body: (inout State) throws -> T) rethrows -> T {
+    package func withLockUnchecked<T>(_ body: (inout State) throws -> T) rethrows -> T {
         try _buffer.withUnsafeMutablePointers { state, lock in
             _Lock.lock(lock)
             defer { _Lock.unlock(lock) }
@@ -106,7 +106,7 @@ internal struct LockedState<State> {
     }
 
     // Ensures the managed state outlives the locked scope.
-    func withLockExtendingLifetimeOfState<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
+    package func withLockExtendingLifetimeOfState<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
         try _buffer.withUnsafeMutablePointers { state, lock in
             _Lock.lock(lock)
             return try withExtendedLifetime(state.pointee) {
@@ -118,23 +118,23 @@ internal struct LockedState<State> {
 }
 
 extension LockedState where State == Void {
-    init() {
+    package init() {
         self.init(initialState: ())
     }
 
-    func withLock<R: Sendable>(_ body: @Sendable () throws -> R) rethrows -> R {
+    package func withLock<R: Sendable>(_ body: @Sendable () throws -> R) rethrows -> R {
         return try withLock { _ in
             try body()
         }
     }
 
-    func lock() {
+    package func lock() {
         _buffer.withUnsafeMutablePointerToElements { lock in
             _Lock.lock(lock)
         }
     }
 
-    func unlock() {
+    package func unlock() {
         _buffer.withUnsafeMutablePointerToElements { lock in
             _Lock.unlock(lock)
         }
