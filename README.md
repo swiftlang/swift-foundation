@@ -47,15 +47,11 @@ Quality and performance are our two most important goals for the project. Theref
 Later this year, the porting effort will continue. It will bring high quality Swift implementations of additional important Foundation API such as `URL`, `Bundle`, `FileManager`, `FileHandle`, `Process`, `SortDescriptor`, `SortComparator` and more. 
 
 ## Building and Testing
-
-Building the Foundation package requires the under-development [Swift 5.9 toolchain](https://www.swift.org/download/#swift-59-development) on or later than September 1st, 2023 (46a3b41), on macOS and Linux. 
 ### macOS
 
 macOS Ventura 13.3.1 is the minimum supported version.
 
 - Download the latest Xcode from the App Store
-- Download and install the Swift 5.9 toolchain for Xcode from [swift.org](https://www.swift.org/download)
-- Launch Xcode and select the downloaded 5.9 toolchains via *Xcode > Toolchains*
 - Open `Package.swift` and select *Product > Test*
 
 ### Linux
