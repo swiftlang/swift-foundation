@@ -242,7 +242,11 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     var language: Locale.Language {
         LocaleCache.cache.fixed(identifier).language
     }
-    
+
+    var minimumDaysInFirstWeek: Int {
+        LocaleCache.cache.fixed(identifier).minimumDaysInFirstWeek
+    }
+
     func identifier(_ type: Locale.IdentifierType) -> String {
         LocaleCache.cache.fixed(identifier).identifier(type)
     }
