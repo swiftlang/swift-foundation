@@ -40,8 +40,8 @@ extension Subprocess {
             return .init(method: .noInput)
         }
 
-        public static func readFrom(_ fd: FileDescriptor, closeWhenDone: Bool) -> Self {
-            return .init(method: .fileDescriptor(fd, closeWhenDone))
+        public static func readFrom(_ fd: FileDescriptor, closeAfterProcessSpawned: Bool) -> Self {
+            return .init(method: .fileDescriptor(fd, closeAfterProcessSpawned))
         }
     }
 }
@@ -68,8 +68,8 @@ extension Subprocess {
             return .init(method: .collected(128 * 1024))
         }
 
-        public static func writeTo(_ fd: FileDescriptor, closeWhenDone: Bool) -> Self {
-            return .init(method: .fileDescriptor(fd, closeWhenDone))
+        public static func writeTo(_ fd: FileDescriptor, closeAfterProcessSpawned: Bool) -> Self {
+            return .init(method: .fileDescriptor(fd, closeAfterProcessSpawned))
         }
 
         public static func collect(limit: Int) -> Self {
@@ -104,12 +104,12 @@ extension Subprocess {
             return .init(method: .discarded)
         }
 
-        public static var redirect: Self {
+        public static var redirectToSequence: Self {
             return .init(method: .collected(128 * 1024))
         }
 
-        public static func writeTo(_ fd: FileDescriptor, closeWhenDone: Bool) -> Self {
-            return .init(method: .fileDescriptor(fd, closeWhenDone))
+        public static func writeTo(_ fd: FileDescriptor, closeAfterProcessSpawned: Bool) -> Self {
+            return .init(method: .fileDescriptor(fd, closeAfterProcessSpawned))
         }
 
         internal func createExecutionOutput() throws -> ExecutionOutput {

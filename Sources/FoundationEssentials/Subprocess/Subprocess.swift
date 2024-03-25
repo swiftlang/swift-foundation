@@ -38,7 +38,12 @@ public struct Subprocess: Sendable {
         self.executionError = executionError
     }
 
-    public var standardOutput: AsyncBytes {
+    /// The standard output of the subprocess.
+    /// Accessing this property will **fatalError** if
+    /// - `.output` wasn't set to `.redirectToSequence` when the subprocess was spawned;
+    /// - This property was accessed multiple times. Subprocess communicates with
+    ///   parent process via pipe under the hood and each pipe can only be consumed ones.
+    public var standardOutput: some _AsyncSequence<UInt8, any Error> {
         guard let (_, fd) = self.executionOutput
             .consumeCollectedFileDescriptor() else {
             fatalError("The standard output was not redirected")
@@ -49,7 +54,12 @@ public struct Subprocess: Sendable {
         return AsyncBytes(fileDescriptor: fd)
     }
 
-    public var standardError: AsyncBytes {
+    /// The standard error of the subprocess.
+    /// Accessing this property will **fatalError** if
+    /// - `.error` wasn't set to `.redirectToSequence` when the subprocess was spawned;
+    /// - This property was accessed multiple times. Subprocess communicates with
+    ///   parent process via pipe under the hood and each pipe can only be consumed ones.
+    public var standardError: some _AsyncSequence<UInt8, any Error> {
         guard let (_, fd) = self.executionError
             .consumeCollectedFileDescriptor() else {
             fatalError("The standard error was not redirected")
@@ -101,7 +111,7 @@ extension Subprocess {
 
 // MARK: - Result
 extension Subprocess {
-    public struct Result<T: Sendable>: Sendable {
+    public struct ExecutionResult<T: Sendable>: Sendable {
         public let terminationStatus: TerminationStatus
         public let value: T
 
@@ -142,9 +152,11 @@ extension Subprocess {
     }
 }
 
-extension Subprocess.Result: Equatable where T : Equatable {}
+extension Subprocess.ExecutionResult: Equatable where T : Equatable {}
 
-extension Subprocess.Result: Hashable where T : Hashable {}
+extension Subprocess.ExecutionResult: Hashable where T : Hashable {}
+
+extension Subprocess.ExecutionResult: Codable where T : Codable {}
 
 // MARK: Internal
 extension Subprocess {

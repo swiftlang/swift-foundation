@@ -263,13 +263,22 @@ int _subprocess_fork_exec(
     }
 
     // Bind stdin, stdout, and stderr
-    int rc = dup2(file_descriptors[0], STDIN_FILENO);
-    if (rc != 0) { return rc; }
-    rc = dup2(file_descriptors[2], STDOUT_FILENO);
-    if (rc != 0) { return rc; }
-    rc = dup2(file_descriptors[4], STDERR_FILENO);
-    if (rc != 0) { return rc; }
+    int rc = 0;
+    if (file_descriptors[0] != 0) {
+        rc = dup2(file_descriptors[0], STDIN_FILENO);
+        if (rc != 0) { return rc; }
+    }
+    if (file_descriptors[2] != 0) {
+        rc = dup2(file_descriptors[2], STDOUT_FILENO);
+        if (rc != 0) { return rc; }
+    }
 
+    if (file_descriptors[4] != 0) {
+        rc = dup2(file_descriptors[4], STDERR_FILENO);
+        if (rc != 0) { return rc; }
+    }
+
+#warning Shold close all and then return error no early return
     // Close parent side
     if (file_descriptors[1] != 0) {
         rc = close(file_descriptors[1]);

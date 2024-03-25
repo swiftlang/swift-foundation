@@ -129,10 +129,10 @@ extension Subprocess {
         workingDirectory: FilePath? = nil,
         platformOptions: PlatformOptions = .default,
         input: InputMethod = .noInput,
-        output: RedirectedOutputMethod = .redirect,
-        error: RedirectedOutputMethod = .discard,
+        output: RedirectedOutputMethod = .redirectToSequence,
+        error: RedirectedOutputMethod = .redirectToSequence,
         _ body: (@Sendable @escaping (Subprocess) async throws -> R)
-    ) async throws -> Result<R> {
+    ) async throws -> ExecutionResult<R> {
         return try await Configuration(
             executable: executable,
             arguments: arguments,
@@ -150,10 +150,10 @@ extension Subprocess {
         workingDirectory: FilePath? = nil,
         platformOptions: PlatformOptions,
         input: some Sequence<UInt8>,
-        output: RedirectedOutputMethod = .redirect,
-        error: RedirectedOutputMethod = .discard,
+        output: RedirectedOutputMethod = .redirectToSequence,
+        error: RedirectedOutputMethod = .redirectToSequence,
         _ body: (@Sendable @escaping (Subprocess) async throws -> R)
-    ) async throws -> Result<R> {
+    ) async throws -> ExecutionResult<R> {
         return try await Configuration(
             executable: executable,
             arguments: arguments,
@@ -175,10 +175,10 @@ extension Subprocess {
         workingDirectory: FilePath? = nil,
         platformOptions: PlatformOptions = .default,
         input: S,
-        output: RedirectedOutputMethod = .redirect,
-        error: RedirectedOutputMethod = .discard,
+        output: RedirectedOutputMethod = .redirectToSequence,
+        error: RedirectedOutputMethod = .redirectToSequence,
         _ body: (@Sendable @escaping (Subprocess) async throws -> R)
-    ) async throws -> Result<R> where S.Element == UInt8 {
+    ) async throws -> ExecutionResult<R> where S.Element == UInt8 {
         return try await Configuration(
             executable: executable,
             arguments: arguments,
@@ -199,10 +199,10 @@ extension Subprocess {
         environment: Environment = .inherit,
         workingDirectory: FilePath? = nil,
         platformOptions: PlatformOptions = .default,
-        output: RedirectedOutputMethod = .redirect,
-        error: RedirectedOutputMethod = .discard,
+        output: RedirectedOutputMethod = .redirectToSequence,
+        error: RedirectedOutputMethod = .redirectToSequence,
         _ body: (@Sendable @escaping (Subprocess, StandardInputWriter) async throws -> R)
-    ) async throws -> Result<R> {
+    ) async throws -> ExecutionResult<R> {
         return try await Configuration(
             executable: executable,
             arguments: arguments,
@@ -217,11 +217,11 @@ extension Subprocess {
 // MARK: - Configuration Based
 extension Subprocess {
     public static func run<R>(
-        withConfiguration configuration: Configuration,
-        output: RedirectedOutputMethod = .redirect,
-        error: RedirectedOutputMethod = .redirect,
+        using configuration: Configuration,
+        output: RedirectedOutputMethod = .redirectToSequence,
+        error: RedirectedOutputMethod = .redirectToSequence,
         _ body: (@Sendable @escaping (Subprocess, StandardInputWriter) async throws -> R)
-    ) async throws -> Result<R> {
+    ) async throws -> ExecutionResult<R> {
         return try await configuration.run(output: output, error: error, body)
     }
 }

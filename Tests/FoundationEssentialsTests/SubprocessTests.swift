@@ -23,53 +23,10 @@ import SystemPackage
 
 final class SubprocessTests: XCTestCase {
     func testSimple() async throws {
-        let ls = try await Subprocess.run(.named("ls"))
-        let result = String(data: ls.standardOutput, encoding: .utf8)!
-        XCTAssert(ls.terminationStatus.isSuccess)
+        let pwd = try await Subprocess.run(.named("pwd"))
+        let result = String(data: pwd.standardOutput, encoding: .utf8)!
+        XCTAssert(pwd.terminationStatus.isSuccess)
         XCTAssert(!result.isEmpty)
-        print(result)
-    }
-
-    func testInteractive() async throws {
-        let su = try await Subprocess.run(.at("/Users/icharleshu/Developer/super.sh"), input: .readFrom(.standardInput, closeWhenDone: false))
-        XCTAssert(!su.terminationStatus.isSuccess)
-    }
-
-    func testChained() async throws {
-        let (readFd, writeFd) = try FileDescriptor.pipe()
-        try await Subprocess.run(
-            .named("ls"), output: .writeTo(writeFd, closeWhenDone: true), error: .discard)
-        let grep = try await Subprocess.run(.named("grep"), arguments: ["com"], input: .readFrom(readFd, closeWhenDone: true))
-        var output = String(data: grep.standardOutput, encoding: .utf8) ?? "Failed to decode"
-        print("Output: \(output)")
-    }
-
-    func testLongText() async throws {
-        let cat = try await Subprocess.run(
-            .named("cat"),
-            arguments: ["/Users/icharleshu/Downloads/PaP.txt"],
-            output: .collect(limit: 1024 * 1024),
-            error: .discard
-        )
-        print("after")
-        print("Result: \(cat.standardOutput.count)")
-    }
-
-    func testComplex() async throws {
-        struct Address: Codable {
-            let ip: String
-        }
-
-        let result = try await Subprocess.run(
-            .named("curl"),
-            arguments: ["http://ip.jsontest.com/"]
-        ) { execution in
-            let output: [UInt8] = try await Array(execution.standardOutput)
-            print("Output2: \(output)")
-            let decoder = FoundationEssentials.JSONDecoder()
-            return try decoder.decode(Address.self, from: Data(output))
-        }
-        XCTAssert(result.terminationStatus.isSuccess)
     }
 
     func testShell() async throws {
@@ -89,5 +46,14 @@ final class SubprocessTests: XCTestCase {
             }
         }
         XCTAssert(result.terminationStatus.isSuccess)
+    }
+
+    func testLongText() async throws {
+        let textURL = testResourcePath(for: "PrideAndPrejudice", withExtension: "txt")!
+        let cat = try await Subprocess.run(.named("cat"), arguments: [textURL], output: .collect(limit: 1024 * 1024))
+        XCTAssertTrue(cat.terminationStatus.isSuccess)
+        let fileLength = try Data(contentsOfFile: textURL).count
+        // Make sure we actually read all bytes
+        XCTAssertEqual(cat.standardOutput.count, fileLength)
     }
 }

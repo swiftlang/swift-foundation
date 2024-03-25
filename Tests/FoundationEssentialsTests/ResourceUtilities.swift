@@ -30,12 +30,12 @@ import Glibc
 final internal class Canary { }
 #endif
 
-func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) -> Data? {
+func testResourcePath(for resource: String, withExtension ext: String, subdirectory: String? = nil) -> String? {
 #if FOUNDATION_FRAMEWORK
     guard let url = Bundle(for: Canary.self).url(forResource: resource, withExtension: ext, subdirectory: subdirectory) else {
         return nil
     }
-    return try? Data(contentsOf: url)
+    return url.path(percentEncoded: false)
 #else
 #if os(macOS)
     let subdir: String
@@ -49,9 +49,8 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
         return nil
     }
     
-    let essentialsURL = FoundationEssentials.URL(filePath: url.path)
 
-    return try? Data(contentsOf: essentialsURL)
+    return url.path(percentEncoded: false)
 #else
     // swiftpm drops the resources next to the executable, at:
     // ./FoundationPreview_FoundationEssentialsTests.resources/Resources/
@@ -64,7 +63,14 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
         path.append(path: subdirectory, directoryHint: .isDirectory)
     }
     path.append(component: resource + "." + ext, directoryHint: .notDirectory)
-    return try? Data(contentsOf: path)
+    return path.path(percentEncoded: false)
 #endif
 #endif
+}
+
+func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) -> Data? {
+    guard let path = testResourcePath(for: resource, withExtension: ext, subdirectory: subdirectory) else {
+        return nil
+    }
+    return try? Data(contentsOfFile: path)
 }

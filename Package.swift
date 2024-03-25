@@ -64,7 +64,10 @@ var dependencies: [Package.Dependency] {
                 exact: "0.0.8"),
             .package(
                 url: "https://github.com/swiftlang/swift-syntax",
-                from: "600.0.0-latest")
+                from: "600.0.0-latest"),
+            .package(
+                url: "https://github.com/apple/swift-system",
+                from: "1.0.0")
         ]
     }
 }

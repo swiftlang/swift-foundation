@@ -12,9 +12,9 @@
 @preconcurrency import SystemPackage
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims
+@_implementationOnly import _FoundationCShims
 #else
-package import _CShims
+package import _FoundationCShims
 #endif
 
 #if canImport(Darwin)
@@ -182,7 +182,7 @@ extension Subprocess {
             output: RedirectedOutputMethod,
             error: RedirectedOutputMethod,
             _ body: @Sendable @escaping (Subprocess, StandardInputWriter) async throws -> R
-        ) async throws -> Result<R> {
+        ) async throws -> ExecutionResult<R> {
             let (readFd, writeFd) = try FileDescriptor.pipe()
             let executionInput: ExecutionInput = .init(storage: .customWrite(readFd, writeFd))
             let executionOutput: ExecutionOutput = try output.createExecutionOutput()
@@ -238,7 +238,7 @@ extension Subprocess {
                             result = workResult
                         }
                     }
-                    return Result(terminationStatus: terminationStatus, value: result)
+                    return ExecutionResult(terminationStatus: terminationStatus, value: result)
                 }
             } onCancel: {
                 // Attempt to terminate the child process
@@ -258,7 +258,7 @@ extension Subprocess {
             output: RedirectedOutputMethod,
             error: RedirectedOutputMethod,
             _ body: (@Sendable @escaping (Subprocess) async throws -> R)
-        ) async throws -> Result<R> {
+        ) async throws -> ExecutionResult<R> {
             let executionInput = try input.createExecutionInput()
             let executionOutput = try output.createExecutionOutput()
             let executionError = try error.createExecutionOutput()
@@ -311,7 +311,7 @@ extension Subprocess {
                             result = workResult
                         }
                     }
-                    return Result(terminationStatus: terminationStatus, value: result)
+                    return ExecutionResult(terminationStatus: terminationStatus, value: result)
                 }
             } onCancel: {
                 // Attempt to terminate the child process
@@ -484,7 +484,7 @@ extension Subprocess {
 
 // MARK: - TerminationStatus
 extension Subprocess {
-    public enum TerminationStatus: Sendable, Hashable {
+    public enum TerminationStatus: Sendable, Hashable, Codable {
         #if canImport(WinSDK)
         public typealias Code = DWORD
         #else
@@ -495,12 +495,12 @@ extension Subprocess {
         case stillActive
         #endif
 
-        case exit(Code)
+        case exited(Code)
         case unhandledException(Code)
 
         public var isSuccess: Bool {
             switch self {
-            case .exit(let exitCode):
+            case .exited(let exitCode):
                 return exitCode == 0
             case .unhandledException(_):
                 return false
@@ -509,7 +509,7 @@ extension Subprocess {
 
         public var isUnhandledException: Bool {
             switch self {
-            case .exit(_):
+            case .exited(_):
                 return false
             case .unhandledException(_):
                 return true

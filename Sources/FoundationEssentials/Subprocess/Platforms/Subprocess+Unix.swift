@@ -21,9 +21,9 @@ import Glibc
 import SystemPackage
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims
+@_implementationOnly import _FoundationCShims
 #else
-package import _CShims
+package import _FoundationCShims
 #endif
 
 import Dispatch
@@ -283,7 +283,7 @@ internal func monitorProcessTermination(
             var status: Int32 = -1
             waitpid(pid.value, &status, 0)
             if _was_process_exited(status) != 0 {
-                continuation.resume(returning: .exit(_get_exit_code(status)))
+                continuation.resume(returning: .exited(_get_exit_code(status)))
                 return
             }
             if _was_process_signaled(status) != 0 {

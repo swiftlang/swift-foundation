@@ -13,7 +13,9 @@ import SystemPackage
 import Dispatch
 
 extension Subprocess {
-    public struct AsyncBytes: AsyncSequence, Sendable {
+    public struct AsyncBytes: AsyncSequence, Sendable, _AsyncSequence {
+        public typealias Error = any Swift.Error
+
         public typealias Element = UInt8
 
         @_nonSendable
@@ -103,4 +105,8 @@ extension RangeReplaceableCollection {
             append(item)
         }
     }
+}
+
+public protocol _AsyncSequence<Element, Error>: AsyncSequence {
+    associatedtype Error
 }

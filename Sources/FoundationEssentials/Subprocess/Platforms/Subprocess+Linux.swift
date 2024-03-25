@@ -14,7 +14,7 @@
 import Glibc
 import SystemPackage
 import FoundationEssentials
-package import _CShims
+package import _FoundationCShims
 
 // Linux specific implementations
 extension Subprocess.Configuration {
