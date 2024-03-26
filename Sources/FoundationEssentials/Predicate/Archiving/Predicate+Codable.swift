@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2023 Apple Inc. and the Swift project authors
+// Copyright (c) 2023-2024 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -37,6 +37,17 @@ extension Predicate : Codable {
     }
 }
 
+@available(FoundationPredicate 0.4, *)
+extension Expression : Codable {
+    public func encode(to encoder: Encoder) throws {
+        try self.encode(to: encoder, configuration: .default)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        try self.init(from: decoder, configuration: .default)
+    }
+}
+
 @available(FoundationPredicate 0.1, *)
 extension Predicate : CodableWithConfiguration {
     public typealias EncodingConfiguration = PredicateCodableConfiguration
@@ -52,6 +63,27 @@ extension Predicate : CodableWithConfiguration {
         let result = try container.decodePredicateExpression(input: repeat (each Input).self, predicateConfiguration: configuration)
         guard let trueExpression = result.expression as? any StandardPredicateExpression<Bool> else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "This expression is unsupported by this predicate")
+        }
+        self.expression = trueExpression
+        self.variable = result.variable
+    }
+}
+
+@available(FoundationPredicate 0.4, *)
+extension Expression : CodableWithConfiguration {
+    public typealias EncodingConfiguration = PredicateCodableConfiguration
+    public typealias DecodingConfiguration = PredicateCodableConfiguration
+    
+    public func encode(to encoder: Encoder, configuration: EncodingConfiguration) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encodePredicateExpression(expression, variable: repeat each variable, predicateConfiguration: configuration)
+    }
+    
+    public init(from decoder: Decoder, configuration: DecodingConfiguration) throws {
+        var container = try decoder.unkeyedContainer()
+        let result = try container.decodePredicateExpression(input: repeat (each Input).self, output: Output.self, predicateConfiguration: configuration)
+        guard let trueExpression = result.expression as? any StandardPredicateExpression<Output> else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "This archived expression is not supported by this Expression type")
         }
         self.expression = trueExpression
         self.variable = result.variable

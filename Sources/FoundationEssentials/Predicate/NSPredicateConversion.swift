@@ -205,6 +205,18 @@ extension PredicateExpressions.PredicateEvaluate : ConvertibleExpression {
     }
 }
 
+extension PredicateExpressions.ExpressionEvaluate : ConvertibleExpression {
+    fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
+        // Evaluate the subtree that provides the Predicate. We can only nest a predicate if the predicate is provided as a constant value
+        guard let predicateValue = try? expression.evaluate(.init()) else {
+            throw NSPredicateConversionError.unsupportedType
+        }
+        
+        repeat state[(each predicateValue.variable).key] = try (each input).convertToExpression(state: &state)
+        return try predicateValue.expression.convertToExpressionOrPredicate(state: &state)
+    }
+}
+
 extension PredicateExpressions.Conjunction : ConvertibleExpression {
     fileprivate func convert(state: inout NSPredicateConversionState) throws -> ExpressionOrPredicate {
         .predicate(NSCompoundPredicate(andPredicateWithSubpredicates: [try lhs.convertToPredicate(state: &state), try rhs.convertToPredicate(state: &state)]))
@@ -548,6 +560,7 @@ extension OverwritingInitializable {
 }
 
 extension NSPredicate : OverwritingInitializable {}
+extension NSExpression : OverwritingInitializable {}
 
 @available(FoundationPredicate 0.1, *)
 extension NSPredicate {
@@ -555,6 +568,18 @@ extension NSPredicate {
         let variable = predicate.variable
         var state = NSPredicateConversionState(object: variable.key)
         guard let converted = try? predicate.expression.convertToPredicate(state: &state) else {
+            return nil
+        }
+        self.init(existing: converted as! Self)
+    }
+}
+
+@available(FoundationPredicate 0.4, *)
+extension NSExpression {
+    public convenience init?<Input, Output>(_ expression: Expression<Input, Output>) where Input : NSObject {
+        let variable = expression.variable
+        var state = NSPredicateConversionState(object: variable.key)
+        guard let converted = try? expression.expression.convertToExpression(state: &state) else {
             return nil
         }
         self.init(existing: converted as! Self)

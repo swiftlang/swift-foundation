@@ -204,7 +204,7 @@ private func _withPredicateArchivingState<R>(_ configuration: PredicateCodableCo
 
 @available(FoundationPredicate 0.1, *)
 extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
-    mutating func _encode<T: PredicateExpression & Encodable, each Input>(_ expression: T, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
+    mutating func _encode<T: PredicateExpression & Encodable, each Input>(_ expression: T, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws {
         var predicateConfiguration = predicateConfiguration
         predicateConfiguration.allowInputs(repeat (each Input).self)
         let structure = try ExpressionStructure(Type(expression), with: predicateConfiguration)
@@ -219,17 +219,17 @@ extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
 
 @available(FoundationPredicate 0.1, *)
 extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
-    mutating func _decode<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
+    mutating func _decode<each Input, Output>(input: repeat (each Input).Type, output: Output.Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Output>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var predicateConfiguration = predicateConfiguration
         predicateConfiguration.allowInputs(repeat (each Input).self)
         let structure = try self.decode(ExpressionStructure.self, forKey: .structure)
 
-        func decode<E: Decodable & PredicateExpression>(_: E.Type) throws -> any PredicateExpression<Bool> where E.Output == Bool {
+        func decode<E: Decodable & PredicateExpression>(_: E.Type) throws -> any PredicateExpression<Output> where E.Output == Output {
             try self.decode(E.self, forKey: .expression)
         }
 
-        guard let exprType = try structure.reconstruct(with: predicateConfiguration).swiftType as? any (Decodable & PredicateExpression<Bool>).Type else {
-            throw DecodingError.dataCorruptedError(forKey: .structure, in: self, debugDescription: "This expression is unsupported by this predicate")
+        guard let exprType = try structure.reconstruct(with: predicateConfiguration).swiftType as? any (Decodable & PredicateExpression<Output>).Type else {
+            throw DecodingError.dataCorruptedError(forKey: .structure, in: self, debugDescription: "This type of this expression is unsupported")
         }
         var container = try self.nestedUnkeyedContainer(forKey: .variable)
         return try _withPredicateArchivingState(predicateConfiguration) {

@@ -452,4 +452,21 @@ final class PredicateTests: XCTestCase {
         XCTAssertFalse(try predicateB.evaluate(Object(a: 4, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
     }
     #endif
+    
+    func testExpression() throws {
+        guard #available(FoundationPredicate 0.4, *) else {
+            throw XCTSkip("This test is not available on this OS version")
+        }
+        
+        let expression = Expression<Int, Int>() {
+            PredicateExpressions.build_Arithmetic(
+                lhs: PredicateExpressions.build_Arg($0),
+                rhs: PredicateExpressions.build_Arg(1),
+                op: .add
+            )
+        }
+        for i in 0 ..< 10 {
+            XCTAssertEqual(try expression.evaluate(i), i + 1)
+        }
+    }
 }

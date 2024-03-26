@@ -44,6 +44,15 @@ struct DiagnosticTest : ExpressibleByStringLiteral, Hashable, CustomStringConver
     let fixIts: [FixItTest]
     var description: String { message }
     
+    var mappedToExpression: Self {
+        DiagnosticTest(
+            message._replacing("Predicate", with: "Expression")._replacing("predicate", with: "expression"),
+            fixIts: fixIts.map {
+                FixItTest($0.message, result: $0.result._replacing("#Predicate", with: "#Expression"))
+            }
+        )
+    }
+    
     init(stringLiteral value: StringLiteralType) {
         message = value
         fixIts = []
@@ -138,5 +147,32 @@ func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String 
 }
 
 func AssertPredicateExpansion(_ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], file: StaticString = #file, line: UInt = #line) {
-    AssertMacroExpansion(macros: ["Predicate": PredicateMacro.self], source, result, diagnostics: diagnostics, file: file, line: line)
+    AssertMacroExpansion(
+        macros: ["Predicate": PredicateMacro.self],
+        source,
+        result,
+        diagnostics: diagnostics,
+        file: file,
+        line: line
+    )
+    AssertMacroExpansion(
+        macros: ["Expression" : FoundationMacros.ExpressionMacro.self],
+        source._replacing("#Predicate", with: "#Expression"),
+        result._replacing(".Predicate", with: ".Expression"),
+        diagnostics: Set(diagnostics.map(\.mappedToExpression)),
+        file: file,
+        line: line
+    )
+}
+
+extension String {
+    func _replacing(_ text: String, with other: String) -> Self {
+        if #available(macOS 13.0, *) {
+            // Use the stdlib API if available
+            self.replacing(text, with: other)
+        } else {
+            // Use the Foundation API on older OSes
+            self.replacingOccurrences(of: text, with: other, options: [.literal])
+        }
+    }
 }
