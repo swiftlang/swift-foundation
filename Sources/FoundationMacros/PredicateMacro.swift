@@ -1170,11 +1170,11 @@ private enum ExpansionKind {
 private func predicateExpansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext, kind: ExpansionKind) throws -> ExprSyntax {
     guard let closure = node.trailingClosure else {
         let fixIts: [FixIt]
-        if let argument = node.argumentList.first?.expression.as(ClosureExprSyntax.self) {
+        if let argument = node.arguments.first?.expression.as(ClosureExprSyntax.self) {
             var newNode = node.with(\.leftParen, nil)
                 .with(\.rightParen, nil)
                 .with(\.trailingClosure, argument.with(\.leadingTrivia, [.spaces(1)]).with(\.trailingTrivia, []))
-            newNode.argumentList = []
+            newNode.arguments = []
             fixIts = [
                 FixIt(message: PredicateExpansionDiagnostic("Use a trailing closure instead of a function parameter", severity: .note), changes: [
                     .replace(oldNode: Syntax(node), newNode: Syntax(newNode))
