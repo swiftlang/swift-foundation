@@ -51,7 +51,7 @@ let package = Package(
             from: "1.1.0"),
         .package(
             url: "https://github.com/apple/swift-foundation-icu",
-            exact: "0.0.5"),
+            revision: "40b9706c92a690e94424a711e6bb45b3dc8e9628"),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
             from: "509.0.2")
