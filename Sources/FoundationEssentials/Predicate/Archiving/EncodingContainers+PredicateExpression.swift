@@ -35,7 +35,7 @@ extension PredicateExpression {
 
 @available(FoundationPredicate 0.1, *)
 extension KeyedDecodingContainer {
-    @_optimize(none) // Work around swift optimizer crash
+    @_optimize(none) // Work around swift optimizer crash (rdar://124533887)
     public mutating func decodePredicateExpression<each Input>(forKey key: Self.Key, input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self, forKey: key)
         let (expr, variable) = try container._decode(input: repeat each input, output: Bool.self, predicateConfiguration: predicateConfiguration)
@@ -66,7 +66,7 @@ extension UnkeyedEncodingContainer {
 
 @available(FoundationPredicate 0.1, *)
 extension UnkeyedDecodingContainer {
-    @_optimize(none) // Work around swift optimizer crash
+    @_optimize(none) // Work around swift optimizer crash (rdar://124533887)
     public mutating func decodePredicateExpression<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self)
         let (expr, variable) = try container._decode(input: repeat each input, output: Bool.self, predicateConfiguration: predicateConfiguration)

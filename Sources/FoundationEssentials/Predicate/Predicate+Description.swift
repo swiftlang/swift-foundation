@@ -449,7 +449,7 @@ private func createDescription<each Input, Output>(variable: repeat PredicateExp
 
 @available(FoundationPredicate 0.3, *)
 extension Predicate : CustomStringConvertible {
-    @_optimize(none) // Work around swift optimizer crash
+    @_optimize(none) // Work around swift optimizer crash (rdar://124533887)
     public var description: String {
         createDescription(variable: repeat each variable, expression: expression, typeName: "Predicate")
     }
