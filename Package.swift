@@ -54,7 +54,7 @@ let package = Package(
             revision: "40b9706c92a690e94424a711e6bb45b3dc8e9628"),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
-            from: "509.0.2")
+            from: "510.0.0")
     ],
     targets: [
         // Foundation (umbrella)
