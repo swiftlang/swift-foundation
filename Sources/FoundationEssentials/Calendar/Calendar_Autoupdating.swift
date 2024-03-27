@@ -22,10 +22,6 @@ internal final class _CalendarAutoupdating: _CalendarProtocol, @unchecked Sendab
         CalendarCache.cache.current.identifier
     }
     
-    var localeIdentifier: String {
-        CalendarCache.cache.current.localeIdentifier
-    }
-    
     var debugDescription: String {
         "autoupdating \(identifier)"
     }

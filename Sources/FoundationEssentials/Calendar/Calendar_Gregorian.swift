@@ -198,14 +198,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             self.gregorianStartDate = Date(timeIntervalSince1970: -12219292800) // 1582-10-15T00:00:00Z
         }
 
-        // We do not store the Locale here, as Locale stores a Calendar. We only keep the values we need that affect Calendar's operation.
-        if let locale {
-            localeIdentifier = locale.identifier
-            localePrefs = locale.prefs
-        } else {
-            localeIdentifier = ""
-            localePrefs = nil
-        }
+        self.locale = locale
 
         if let firstWeekday, (firstWeekday >= 1 && firstWeekday <= 7) {
             _firstWeekday = firstWeekday
@@ -224,20 +217,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     var identifier: Calendar.Identifier {
         .gregorian
     }
-    // Custom user preferences of any locale used (current locale or current locale imitation only). We need to store this to correctly rebuild a Locale that has been stored inside Calendar as an identifier.
-    private var localePrefs: LocalePreferences?
 
-    var locale: Locale? {
-        get {
-            Locale(identifier: localeIdentifier, preferences: localePrefs)
-        }
-        set {
-            localeIdentifier = newValue?.identifier ?? ""
-            localePrefs = newValue?.prefs
-        }
-    }
-
-    var localeIdentifier: String
+    var locale: Locale?
 
     var timeZone: TimeZone
 
@@ -275,6 +256,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             if let _minimumDaysInFirstWeek {
                 return _minimumDaysInFirstWeek
             } else if let locale {
+                // Do not call into `locale` if the value is straightforward
                 return locale.minimumDaysInFirstWeek
             } else {
                 return 1
@@ -920,7 +902,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         } catch {
             preconditionFailure("Unrecognized calendar error")
         }
-        
+
         return result
     }
 

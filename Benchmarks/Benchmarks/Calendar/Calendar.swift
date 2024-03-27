@@ -28,6 +28,7 @@ let benchmarks = {
     
     let thanksgivingComponents = DateComponents(month: 11, weekday: 5, weekOfMonth: 4)
     let cal = Calendar(identifier: .gregorian)
+    let currentCalendar = Calendar.current
     let thanksgivingStart = Date(timeIntervalSinceReferenceDate: 496359355.795410) //2016-09-23T14:35:55-0700
     
     Benchmark("nextThousandThanksgivings") { benchmark in
@@ -39,7 +40,18 @@ let benchmarks = {
             }
         }
     }
-    
+
+    Benchmark("CurrentDateComponentsFromThanksgivings") { benchmark in
+        var count = 1000
+        currentCalendar.enumerateDates(startingAfter: thanksgivingStart, matching: thanksgivingComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            _ = currentCalendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: result!)
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
     let reference = Date(timeIntervalSinceReferenceDate: 496359355.795410) //2016-09-23T14:35:55-0700
     
     Benchmark("allocationsForFixedCalendars", configuration: .init(scalingFactor: .mega)) { benchmark in
