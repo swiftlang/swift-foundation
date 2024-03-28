@@ -237,15 +237,10 @@ private func write(buffer: UnsafeRawBufferPointer, toFileDescriptor fd: Int32, p
     if !buffer.isEmpty {
         if fsync(fd) < 0 {
             let savedErrno = errno
-            let error = CocoaError.errorWithFilePath(path, errno: savedErrno, reading: false)
-            #if os(Linux)
-            // Linux returns -1 and errno == EINVAL if trying to sync a special file, eg a fifo, character device etc which can be ignored.
             if savedErrno != EINVAL {
-                throw error
+                // Linux and some versions of macOS returns -1 and errno == EINVAL if trying to sync a special file, eg a fifo, character device etc which can be ignored.
+                throw CocoaError.errorWithFilePath(path, errno: savedErrno, reading: false)
             }
-            #else
-            throw error
-            #endif
         }
     }
 }
