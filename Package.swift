@@ -149,7 +149,7 @@ let package = Package(
 package.targets.append(contentsOf: [
     .testTarget(name: "FoundationInternationalizationTests", dependencies: [
         "TestSupport",
-        "FoundationInternationalization"
+        "FoundationInternationalization",
     ], swiftSettings: availabilityMacros),
 ])
 #endif

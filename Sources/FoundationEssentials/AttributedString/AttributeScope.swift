@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Developers can also add the attributes to pre-defined scopes of attributes, which are used to provide type information to the encoding and decoding of AttributedString values, as well as allow for dynamic member lookup in Runss of AttributedStrings.
+// Developers can also add the attributes to pre-defined scopes of attributes, which are used to provide type information to the encoding and decoding of AttributedString values, as well as allow for dynamic member lookup in Runs of AttributedStrings.
 // Example, where ForegroundColor is an existing AttributedStringKey:
 // struct MyAttributes : AttributeScope {
 //     var foregroundColor : ForegroundColor

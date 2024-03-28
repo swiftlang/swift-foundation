@@ -23,7 +23,7 @@ import TestSupport
 @available(FoundationPreview 0.1, *)
 class SortComparatorTests: XCTestCase {
     func test_comparable_descriptors() {
-        let intDesc : ComparableComparator<Int> = ComparableComparator<Int>()
+        let intDesc: ComparableComparator<Int> = ComparableComparator<Int>()
         XCTAssertEqual(intDesc.compare(0, 1), .orderedAscending)
         let result = intDesc.compare(1000, -10)
         XCTAssertEqual(result, .orderedDescending)
@@ -31,7 +31,7 @@ class SortComparatorTests: XCTestCase {
     
     
     func test_order() {
-        var intDesc : ComparableComparator<Int> = ComparableComparator<Int>(order: .reverse)
+        var intDesc: ComparableComparator<Int> = ComparableComparator<Int>(order: .reverse)
         XCTAssertEqual(intDesc.compare(0, 1), .orderedDescending)
         XCTAssertEqual(intDesc.compare(1000, -10), .orderedAscending)
         XCTAssertEqual(intDesc.compare(100, 100), .orderedSame)

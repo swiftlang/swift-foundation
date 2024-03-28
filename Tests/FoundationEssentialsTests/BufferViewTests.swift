@@ -18,6 +18,10 @@ import TestSupport
 @testable import FoundationEssentials
 #endif
 
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#endif
+
 final class BufferViewTests: XCTestCase {
 
     func testOptionalStorage() {

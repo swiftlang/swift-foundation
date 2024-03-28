@@ -342,7 +342,7 @@ final class PredicateTests: XCTestCase {
             $0.a == $0.c && $0.b == now
         }
     }
-    
+
     #if compiler(>=5.11)
     func testRegex() throws {
         guard #available(FoundationPredicateRegex 0.4, *) else {
@@ -436,15 +436,15 @@ final class PredicateTests: XCTestCase {
         guard #available(FoundationPredicate 0.3, *) else {
             throw XCTSkip("This test is not available on this OS version")
         }
-        
+
         let predicateA = #Predicate<Object> {
             $0.a == 3
         }
-        
+
         let predicateB = #Predicate<Object> {
             predicateA.evaluate($0) && $0.a > 2
         }
-        
+
         XCTAssertTrue(try predicateA.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         XCTAssertFalse(try predicateA.evaluate(Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         XCTAssertTrue(try predicateB.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))

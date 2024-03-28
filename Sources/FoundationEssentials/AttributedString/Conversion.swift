@@ -27,7 +27,7 @@ extension String {
 
     #if false // FIXME: Make this public.
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    @_alwaysEmitIntoClient
+    @backDeployed(before: macOS 14, iOS 17, tvOS 17, watchOS 10)
     public init(_ characters: AttributedString.CharacterView) {
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             self.init(_characters: characters)
