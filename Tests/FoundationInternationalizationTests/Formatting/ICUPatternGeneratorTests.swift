@@ -171,8 +171,10 @@ final class ICUPatternGeneratorTests: XCTestCase {
                  expectedPattern: "H時")
             test(symbols: .init(hour: .defaultDigitsWithNarrowAMPM, minute: .defaultDigits),
                  expectedPattern: "HH:mm")
+#if FIXED_ICU_74_DAYPERIOD
             test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
                  expectedPattern: "HH:mm")
+#endif
             test(symbols: .init(hour: .twoDigitsWithAbbreviatedAMPM, minute: .defaultDigits, second: .defaultDigits),
                  expectedPattern: "HH:mm:ss")
             test(symbols: .init(hour: .twoDigitsWithNarrowAMPM),

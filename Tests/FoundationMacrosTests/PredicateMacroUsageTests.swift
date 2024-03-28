@@ -17,16 +17,16 @@ import XCTest
 // MARK: - Stubs
 
 @inline(never)
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
 fileprivate func _blackHole<T>(_ t: T) {}
 
 @inline(never)
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
 fileprivate func _blackHoleExplicitInput(_ predicate: Predicate<Int>) {}
 
 // MARK: - Tests
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+@available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
 final class PredicateMacroUsageTests: XCTestCase {
     func testUsage() {
         _blackHole(#Predicate<Bool> {

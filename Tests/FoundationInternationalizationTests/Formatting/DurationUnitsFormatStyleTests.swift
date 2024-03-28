@@ -18,6 +18,10 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif
 
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#endif
+
 let week = 604800
 let day = 86400
 let hour = 3600

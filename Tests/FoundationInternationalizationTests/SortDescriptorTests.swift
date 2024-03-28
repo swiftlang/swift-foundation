@@ -22,7 +22,7 @@ import TestSupport
 #endif // FOUNDATION_FRAMEWORK
 
 @available(FoundationPreview 0.1, *)
-class SortDescriptorTests: XCTestCase {
+final class SortDescriptorTests: XCTestCase {
     struct NonNSObjectRoot {
         enum Gadget: Int, Comparable {
             case foo = 0
