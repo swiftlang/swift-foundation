@@ -238,6 +238,15 @@ class DataIOTests : XCTestCase {
         cleanup(at: url)
 #endif
     }
+    
+    func test_writeToSpecialFile() {
+#if os(Windows)
+        let path = "CON"
+#else
+        let path = "/dev/stdout"
+#endif
+        XCTAssertNoThrow(try Data("Output to STDOUT\n".utf8).write(to: path))
+    }
 
     // MARK: - String Path Tests
     func testStringDeletingLastPathComponent() {
