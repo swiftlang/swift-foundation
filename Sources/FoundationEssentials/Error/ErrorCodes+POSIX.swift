@@ -35,10 +35,15 @@ public struct POSIXError : _BridgedStoredNSError {
 
     public typealias Code = POSIXErrorCode
 }
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension POSIXErrorCode : _ErrorCodeProtocol {
+    public typealias _ErrorType = POSIXError
+}
 #else
 
 /// Describes an error in the POSIX error domain.
-public struct POSIXError : Error, _StoredError, Hashable {
+public struct POSIXError : Error, Hashable {
     public let code: Code
 
     public static var errorDomain: String { return "NSPOSIXErrorDomain" }
@@ -54,11 +59,6 @@ public struct POSIXError : Error, _StoredError, Hashable {
     public typealias Code = POSIXErrorCode
 }
 #endif
-
-@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension POSIXErrorCode : _ErrorCodeProtocol {
-    public typealias _ErrorType = POSIXError
-}
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension POSIXError {
@@ -132,7 +132,7 @@ extension POSIXError {
         return .EFAULT
     }
 
-    #if !os(Windows)
+    #if !os(Windows) && !os(WASI)
     /// Block device required.
     public static var ENOTBLK: POSIXErrorCode {
         return .ENOTBLK
@@ -295,10 +295,12 @@ extension POSIXError {
         return .EPROTONOSUPPORT
     }
 
+    #if !os(WASI)
     /// Socket type not supported.
     public static var ESOCKTNOSUPPORT: POSIXErrorCode {
         return .ESOCKTNOSUPPORT
     }
+    #endif
     #endif
 
     #if canImport(Darwin)
@@ -309,10 +311,12 @@ extension POSIXError {
     #endif
 
     #if !os(Windows)
+    #if !os(WASI)
     /// Protocol family not supported.
     public static var EPFNOSUPPORT: POSIXErrorCode {
         return .EPFNOSUPPORT
     }
+    #endif
 
     /// Address family not supported by protocol family.
     public static var EAFNOSUPPORT: POSIXErrorCode {
@@ -373,6 +377,7 @@ extension POSIXError {
         return .ENOTCONN
     }
 
+    #if !os(WASI)
     /// Can't send after socket shutdown.
     public static var ESHUTDOWN: POSIXErrorCode {
         return .ESHUTDOWN
@@ -382,7 +387,8 @@ extension POSIXError {
     public static var ETOOMANYREFS: POSIXErrorCode {
         return .ETOOMANYREFS
     }
-
+    #endif
+    
     /// Operation timed out.
     public static var ETIMEDOUT: POSIXErrorCode {
         return .ETIMEDOUT
@@ -405,10 +411,12 @@ extension POSIXError {
     }
 
     #if !os(Windows)
+    #if !os(WASI)
     /// Host is down.
     public static var EHOSTDOWN: POSIXErrorCode {
         return .EHOSTDOWN
     }
+    #endif
 
     /// No route to host.
     public static var EHOSTUNREACH: POSIXErrorCode {
@@ -431,10 +439,12 @@ extension POSIXError {
     #endif
     
     #if !os(Windows)
+    #if !os(WASI)
     /// Too many users.
     public static var EUSERS: POSIXErrorCode {
         return .EUSERS
     }
+    #endif
 
     /// Disk quota exceeded.
     public static var EDQUOT: POSIXErrorCode {
@@ -602,16 +612,19 @@ extension POSIXError {
         return .EMULTIHOP
     }
 
+    #if !os(WASI)
     /// No message available on STREAM.
     public static var ENODATA: POSIXErrorCode {
         return .ENODATA
     }
+    #endif
 
     /// Reserved.
     public static var ENOLINK: POSIXErrorCode {
         return .ENOLINK
     }
 
+    #if !os(WASI)
     /// No STREAM resources.
     public static var ENOSR: POSIXErrorCode {
         return .ENOSR
@@ -622,13 +635,14 @@ extension POSIXError {
         return .ENOSTR
     }
     #endif
+    #endif
 
     /// Protocol error.
     public static var EPROTO: POSIXErrorCode {
         return .EPROTO
     }
 
-    #if !os(OpenBSD)
+    #if !os(OpenBSD) && !os(WASI)
     /// STREAM ioctl timeout.
     public static var ETIME: POSIXErrorCode {
         return .ETIME

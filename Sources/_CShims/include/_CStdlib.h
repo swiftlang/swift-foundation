@@ -13,6 +13,8 @@
 #ifndef FOUNDATION_CSTDLIB
 #define FOUNDATION_CSTDLIB
 
+#include "_CShimsTargetConditionals.h"
+
 #if __has_include(<assert.h>)
 #include <assert.h>
 #endif
@@ -134,6 +136,22 @@
 
 #if __has_include(<stdint.h>)
 #include <stdint.h>
+#endif
+
+#if TARGET_OS_MAC
+
+#include <tzfile.h>
+
+#elif TARGET_OS_LINUX || TARGET_OS_BSD || TARGET_OS_WASI
+
+#ifndef TZDIR
+#define TZDIR    "/usr/share/zoneinfo/" /* Time zone object file directory */
+#endif /* !defined TZDIR */
+
+#ifndef TZDEFAULT
+#define TZDEFAULT    "/etc/localtime"
+#endif /* !defined TZDEFAULT */
+
 #endif
 
 #endif // FOUNDATION_CSTDLIB

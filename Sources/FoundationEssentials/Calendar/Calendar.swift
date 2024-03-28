@@ -131,6 +131,12 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .ethiopicAmeteAlem: return "ethiopic-amete-alem"
             }
         }
+        
+#if !FOUNDATION_FRAMEWORK        
+        @_spi(SwiftCorelibsFoundation) public var _cfCalendarIdentifier: String {
+            cfCalendarIdentifier
+        }
+#endif
     }
 
     /// Bitwise set of which components in a `DateComponents` are interesting to use. More efficient than`Set<Component>`.
@@ -327,7 +333,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
-    internal init(identifier: Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
+    internal init(identifier: Calendar.Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
         _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 

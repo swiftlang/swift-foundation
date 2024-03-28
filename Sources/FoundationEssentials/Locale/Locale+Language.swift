@@ -45,9 +45,19 @@ extension Locale {
 
                 return result
             }
+            
+#if !FOUNDATION_FRAMEWORK
+            @_spi(SwiftCorelibsFoundation) public var _identifier: String { identifier }
+#endif
         }
 
         package var components: Language.Components
+        
+#if !FOUNDATION_FRAMEWORK
+        @_spi(SwiftCorelibsFoundation) public var _components: Language.Components {
+            components
+        }
+#endif
         
         public init(components: Language.Components) {
             self.components = components

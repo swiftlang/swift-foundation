@@ -10,6 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
+
+internal import _CShims
+
 /**
  `TimeZone` defines the behavior of a time zone. Time zone values represent geopolitical regions. Consequently, these values have names for these regions. Time zone values also represent a temporal offset, either plus or minus, from Greenwich Mean Time (GMT) and an abbreviation (such as PST for Pacific Standard Time).
 
@@ -131,6 +139,17 @@ public struct TimeZone : Hashable, Equatable, Sendable {
             TimeZoneCache.cache.setDefault(newValue)
         }
     }
+    
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation) public static var _default : TimeZone! {
+        get {
+            TimeZone.default
+        }
+        set {
+            TimeZone.default = newValue
+        }
+    }
+#endif
 
     // MARK: -
     //
@@ -360,21 +379,6 @@ extension NSTimeZone : _HasCustomAnyHashableRepresentation {
 #endif
 
 extension TimeZone {
-    // Defines from tzfile.h
-#if targetEnvironment(simulator)
-    internal static let TZDIR = "/usr/share/zoneinfo"
-#else
-    internal static let TZDIR = "/var/db/timezone/zoneinfo"
-#endif // targetEnvironment(simulator)
-
-#if os(macOS) || targetEnvironment(simulator)
-    internal static let TZDEFAULT = "/etc/localtime"
-#else
-    internal static let TZDEFAULT = "/var/db/timezone/localtime"
-#endif // os(macOS) || targetEnvironment(simulator)
-}
-
-extension TimeZone {
     // Specifies which occurrence of time to use when it falls into the repeated hour or the skipped hour during DST transition day
     // For the skipped time frame when transitioning into DST (e.g. 1:00 - 3:00 AM for PDT), use `.former`  if asking for the occurrence when DST hasn't happened yet
     // For the repeated time frame when DST ends (e.g. 1:00 - 2:00 AM for PDT), use .former if asking for the instance before turning back the clock
@@ -382,4 +386,81 @@ extension TimeZone {
         case former
         case latter
     }
+}
+
+extension TimeZone {
+    private static func dataFromTZFile(_ name: String) -> Data {
+#if NO_TZFILE
+        return Data()
+#else
+        let path = TZDIR + "/" + name
+        guard !path.contains("..") else {
+            // No good reason for .. to be present anywhere in the path
+            return Data()
+        }
+
+#if os(Windows)
+        let fd: CInt = path.withCString(encodedAs: UTF16.self) {
+            var fd: CInt = -1
+            let errno: errno_t =
+                _wsopen_s(&fd, $0, _O_RDONLY | _O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE)
+            guard errno == 0 else { return -1 }
+            return fd
+        }
+#else
+        let fd = open(path, O_RDONLY, 0666)
+#endif
+
+        guard fd >= 0 else { return Data() }
+        defer { close(fd) }
+
+#if os(Windows)
+        var stat: _stat64 = _stat64()
+        let res = _fstat64(fd, &stat)
+#else
+        var stat: stat = stat()
+        let res = fstat(fd, &stat)
+#endif
+        guard res >= 0 else { return Data() }
+
+#if os(Windows)
+        guard (CInt(stat.st_mode) & _S_IFMT) == S_IFREG else { return Data() }
+        guard stat.st_size < Int64.max else { return Data() }
+#else
+        guard (stat.st_mode & S_IFMT) == S_IFREG else { return Data() }
+        guard stat.st_size < Int.max else { return Data() }
+#endif
+
+        let sz = Int(stat.st_size)
+
+        let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: sz, alignment: 0)
+        defer { bytes.deallocate() }
+
+#if os(Windows)
+        let ret = _read(fd, bytes.baseAddress!, CUnsignedInt(sz))
+#else
+        let ret = read(fd, bytes.baseAddress!, sz)
+#endif
+        guard ret >= sz else { return Data() }
+
+        return Data(bytes: bytes.baseAddress!, count: sz)
+#endif
+    }
+
+    internal static func resetSystemTimeZone() -> TimeZone? {
+        let oldTimeZone = TimeZoneCache.cache.reset()
+        // Also reset the calendar cache, since the current calendar uses the current time zone
+        CalendarCache.cache.reset()
+        return oldTimeZone
+    }
+    
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation) public static func _dataFromTZFile(_ name: String) -> Data {
+        TimeZone.dataFromTZFile(name)
+    }
+    
+    @_spi(SwiftCorelibsFoundation) public static func _resetSystemTimeZone() -> TimeZone? {
+        TimeZone.resetSystemTimeZone()
+    }
+#endif
 }
