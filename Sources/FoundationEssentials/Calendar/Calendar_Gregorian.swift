@@ -67,7 +67,7 @@ enum ResolvedDateComponents {
     case weekOfMonth(year: Int, month: Int, weekOfMonth: Int, weekday: Int?)
 
     // Pick the year field between yearForWeekOfYear and year and resovles era
-    static func yearMonth(forDateComponent components: DateComponents) -> (year: Int, month: Int) {
+    static func yearOrYearForWOYAdjustingEra(from components: DateComponents) -> (year: Int, month: Int) {
         var rawYear: Int
         // Don't adjust for era if week is also specified
         var adjustEra = true
@@ -115,19 +115,25 @@ enum ResolvedDateComponents {
     }
 
     init(dateComponents components: DateComponents) {
-        var (year, month) = Self.yearMonth(forDateComponent: components)
+        let (year, month) = Self.yearOrYearForWOYAdjustingEra(from: components)
         let minWeekdayOrdinal = 1
 
-        // TODO: Check day of year value here
         if let d = components.day {
-            if components.yearForWeekOfYear != nil, let weekOfYear = components.weekOfYear {
-                if components.month == nil && weekOfYear >= 52 {
-                    year += 1
-                } else if weekOfYear == 1 {
-                    year -= 1
+            let adjustedYear: Int
+            if components.yearForWeekOfYear != nil, let weekOfYear = components.weekOfYear, let componentsMonth = components.month {
+                if componentsMonth == 1 && weekOfYear >= 52 {
+                    // We're in the last week of the year, so the actual year is the next one
+                    adjustedYear = year + 1
+                } else if componentsMonth > 1 && weekOfYear == 1 {
+                    adjustedYear = year - 1
+                } else {
+                    adjustedYear = year
                 }
+
+            } else {
+                adjustedYear = year
             }
-            self = .day(year: year, month: month, day: d, weekOfYear: components.weekOfYear)
+            self = .day(year: adjustedYear, month: month, day: d, weekOfYear: components.weekOfYear)
         } else if let woy = components.weekOfYear, let weekday = components.weekday {
             self = .weekOfYear(year: year, weekOfYear: woy, weekday: weekday)
         } else if let wom = components.weekOfMonth, let weekday = components.weekday {
