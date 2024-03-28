@@ -320,7 +320,7 @@ extension Duration {
             let numberFormatStyleWithFraction = _createNumberFormatStyle(useFractionalLimitsIfAvailable: true)
             let numberFormatStyleNoFraction = _createNumberFormatStyle(useFractionalLimitsIfAvailable: false)
 
-            if units.count == 0, let smallest = allowedUnits.sorted(by: { $0.unit.rawValue < $1.unit.rawValue }).last {
+            if units.count == 0, let smallest = allowedUnits.min(by: { $0.unit.rawValue > $1.unit.rawValue }) {
                 // Fallback to the smallest allowed unit when there is no units to show, such as when the duration is 0 and client wants to hide zero fields
 
                 let skeleton = ICUMeasurementNumberFormatter.skeleton(smallest.icuSkeleton, width: .init(unitWidth), usage: nil, numberFormatStyle: numberFormatStyleWithFraction)
