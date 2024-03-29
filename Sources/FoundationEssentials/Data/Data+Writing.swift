@@ -248,14 +248,18 @@ extension NSData {
     /// Objective-C entry point to Swift `Data` writing.
     @objc(_writeDataToPath:data:options:reportProgress:error:)
     internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, reportProgress: Bool) throws {
-        let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
-        try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [:], reportProgress: reportProgress)
+        try autoreleasepool {
+            let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
+            try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [:], reportProgress: reportProgress)
+        }
     }
     
     @objc(_writeDataToPath:data:options:stringEncodingAttributeData:reportProgress:error:)
     internal static func _writeData(toPath path: String, data: NSData, options: Data.WritingOptions, stringEncodingAttributeData: Data, reportProgress: Bool) throws {
-        let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
-        try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
+        try autoreleasepool {
+            let buffer = UnsafeRawBufferPointer(start: data.bytes, count: data.count)
+            try writeToFile(path: .path(path), buffer: buffer, options: options, attributes: [NSFileAttributeStringEncoding : stringEncodingAttributeData], reportProgress: reportProgress)
+        }
     }
 }
 #endif
