@@ -556,7 +556,7 @@ enum _FileOperations {
         defer { close(dstfd) }
 
         // Set the file permissions using fchmod() instead of when open()ing to avoid umask() issues
-        let permissions = fileInfo.st_mode & ~S_IFMT
+        let permissions = mode_t(fileInfo.st_mode) & ~mode_t(S_IFMT)
         guard fchmod(dstfd, permissions) == 0 else {
             try delegate.throwIfNecessary(errno, srcPtr, dstPtr)
             return

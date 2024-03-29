@@ -209,7 +209,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     }
     
     let fileSize = min(Int(clamping: filestat.st_size), maxLength ?? Int.max)
-    let fileType = filestat.st_mode & S_IFMT
+    let fileType = mode_t(filestat.st_mode) & mode_t(S_IFMT)
     let preferredChunkSize = filestat.st_blksize
 #if !NO_FILESYSTEM
     let shouldMap = shouldMapFileDescriptor(fd, path: inPath, options: options)
@@ -217,9 +217,9 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     let shouldMap = false
 #endif
         
-    if fileType != S_IFREG {
+    if fileType != mode_t(S_IFREG) {
         // EACCES is still an odd choice, but at least we have a better error for directories.
-        let code = (fileType == S_IFDIR) ? EISDIR : EACCES
+        let code = (fileType == mode_t(S_IFDIR)) ? EISDIR : EACCES
         throw CocoaError.errorWithFilePath(inPath, errno: code, reading: true)
     }
     

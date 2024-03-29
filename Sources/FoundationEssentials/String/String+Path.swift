@@ -406,7 +406,7 @@ extension String {
                         if lstat(buffer.baseAddress!, &statBuf) < 0 {
                             return nil
                         }
-                        if statBuf.st_mode & S_IFMT == S_IFLNK {
+                        if st_mode(statBuf.st_mode) & st_mode(S_IFMT) == st_mode(S_IFLNK) {
                             /* Examples:
                              *   fspath == /foo/bar0baz/quux/froboz
                              *   linkx == /tic/tac/toe

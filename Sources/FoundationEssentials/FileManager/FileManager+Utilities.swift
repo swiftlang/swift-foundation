@@ -27,25 +27,28 @@ import Darwin
 import Glibc
 internal import _CShims
 #elseif os(Windows)
-import CRT
+import ucrt
+internal import _CShims
 #endif
 
 extension stat {
     var isDirectory: Bool {
-        (self.st_mode & S_IFMT) == S_IFDIR
+        (mode_t(self.st_mode) & mode_t(S_IFMT)) == mode_t(S_IFDIR)
     }
     
     var isRegular: Bool {
-        (self.st_mode & S_IFMT) == S_IFREG
+        (mode_t(self.st_mode) & mode_t(S_IFMT)) == mode_t(S_IFREG)
     }
-    
+
+#if !os(Windows)
     var isSymbolicLink: Bool {
-        (self.st_mode & S_IFMT) == S_IFLNK
+        (mode_t(self.st_mode) & mode_t(S_IFMT)) == mode_t(S_IFLNK)
     }
-    
+#endif
+
     var isSpecial: Bool {
-        let type = self.st_mode & S_IFMT
-        return type == S_IFBLK || type == S_IFCHR
+        let type = mode_t(self.st_mode) & mode_t(S_IFMT)
+        return type == mode_t(S_IFBLK) || type == mode_t(S_IFCHR)
     }
 }
 

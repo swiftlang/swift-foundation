@@ -17,6 +17,7 @@ import Glibc
 internal import _CShims
 #elseif os(Windows)
 import CRT
+internal import _CShims
 #endif
 
 // MARK: Directory Iteration
@@ -266,7 +267,7 @@ struct _POSIXDirectoryContentsSequence: Sequence {
                         let statDir = directoryPath + "/" + fileName
                         if stat(statDir, &statBuf) == 0 {
                             // #define S_ISDIR(m)      (((m) & S_IFMT) == S_IFDIR)
-                            if (statBuf.st_mode & S_IFMT) == S_IFDIR {
+                            if (mode_t(statBuf.st_mode) & mode_t(S_IFMT)) == mode_t(S_IFDIR) {
                                 isDirectory = true
                             }
                         }

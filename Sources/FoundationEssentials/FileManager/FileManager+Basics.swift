@@ -15,7 +15,8 @@ import Darwin
 #elseif canImport(Glibc)
 import Glibc
 #elseif os(Windows)
-import CRT
+import ucrt
+internal import _CShims
 #endif
 
 internal struct _FileManagerImpl {
@@ -64,7 +65,7 @@ internal struct _FileManagerImpl {
             var statBuf = stat()
             let fd = open(path, 0, 0)
             guard fd >= 0 else { return nil }
-            if fstat(fd, &statBuf) < 0 || statBuf.st_mode & S_IFMT == S_IFDIR {
+            if fstat(fd, &statBuf) < 0 || mode_t(statBuf.st_mode) & mode_t(S_IFMT) == mode_t(S_IFDIR) {
                 close(fd)
                 return nil
             }
@@ -83,7 +84,7 @@ internal struct _FileManagerImpl {
         }
         
         /* check for being same type */
-        if myInfo.st_mode & S_IFMT != otherInfo.st_mode & S_IFMT {
+        if myInfo.st_mode & mode_t(S_IFMT) != otherInfo.st_mode & mode_t(S_IFMT) {
             return false
         }
         

@@ -24,6 +24,10 @@
 #include <libkern/OSThermalNotification.h>
 #endif
 
+#if defined(_WIN32)
+typedef int mode_t;
+#endif
+
 INTERNAL char * _Nullable * _Nullable _platform_shims_get_environ();
 
 INTERNAL void _platform_shims_lock_environ();

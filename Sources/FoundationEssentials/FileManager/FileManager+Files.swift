@@ -22,6 +22,7 @@ import Glibc
 internal import _CShims
 #elseif os(Windows)
 import CRT
+internal import _CShims
 #endif
 
 extension Date {
@@ -46,13 +47,13 @@ private func _nameFor(gid: gid_t) -> String? {
 
 extension mode_t {
     private var _fileType: FileAttributeType {
-        switch self & S_IFMT {
-        case S_IFCHR: .typeCharacterSpecial
-        case S_IFDIR: .typeDirectory
-        case S_IFBLK: .typeBlockSpecial
-        case S_IFREG: .typeRegular
-        case S_IFLNK: .typeSymbolicLink
-        case S_IFSOCK: .typeSocket
+        switch self & mode_t(S_IFMT) {
+        case mode_t(S_IFCHR): .typeCharacterSpecial
+        case mode_t(S_IFDIR): .typeDirectory
+        case mode_t(S_IFBLK): .typeBlockSpecial
+        case mode_t(S_IFREG): .typeRegular
+        case mode_t(S_IFLNK): .typeSymbolicLink
+        case mode_t(S_IFSOCK): .typeSocket
         default: .typeUnknown
         }
     }
@@ -344,7 +345,7 @@ extension _FileManagerImpl {
             guard stat(rep, &fileInfo) == 0 else {
                 return (false, false)
             }
-            let isDir = (fileInfo.st_mode & S_IFMT) == S_IFDIR
+            let isDir = (mode_t(fileInfo.st_mode) & mode_t(S_IFMT)) == mode_t(S_IFDIR)
             return (true, isDir)
         }
     }
@@ -644,7 +645,7 @@ extension _FileManagerImpl {
                     }
                 }
                 
-                if mode_t(mode) & S_IWUSR != 0 {
+                if mode_t(mode) & mode_t(S_IWUSR) != 0 {
                     try setMode?()
                     setMode = nil
                 }
