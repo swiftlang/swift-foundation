@@ -14,7 +14,9 @@
 
 #if __has_include(<crt_externs.h>)
 #include <crt_externs.h>
-#else
+#elif defined(_WIN32)
+#include <stdlib.h>
+#elif defined(__unix__)
 #include <unistd.h>
 extern char **environ;
 #endif
@@ -38,7 +40,9 @@ _platform_shims_get_environ()
 {
 #if __has_include(<crt_externs.h>)
     return *_NSGetEnviron();
-#else
+#elif defined(_WIN32)
+    return _environ;
+#elif defined(__unix__)
     return environ;
 #endif
 }
