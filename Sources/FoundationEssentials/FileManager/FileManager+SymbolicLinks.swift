@@ -14,6 +14,8 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(Windows)
+import CRT
 #endif
 
 extension _FileManagerImpl {

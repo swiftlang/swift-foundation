@@ -14,9 +14,7 @@
 internal import os
 #elseif canImport(Glibc)
 import Glibc
-#endif
-
-#if canImport(CRT)
+#elseif canImport(CRT)
 import CRT
 #endif
 

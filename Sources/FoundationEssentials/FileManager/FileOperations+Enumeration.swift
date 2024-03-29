@@ -15,6 +15,8 @@ import Darwin
 #elseif canImport(Glibc)
 import Glibc
 internal import _CShims
+#elseif os(Windows)
+import CRT
 #endif
 
 // MARK: Directory Iteration
