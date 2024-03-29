@@ -14,6 +14,8 @@
 internal import os
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(Windows)
+import WinSDK
 #endif
 
 internal import _CShims

@@ -21,6 +21,8 @@ internal import _CShims
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(Windows)
+import CRT
 #endif
 
 #if !NO_FILESYSTEM

@@ -20,6 +20,8 @@ internal import _CShims
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(Windows)
+import CRT
 #endif
 
 private func readExtendedAttributesFromFileDescriptor(_ fd: Int32, attrsToRead: [String]) -> [String : Data] {

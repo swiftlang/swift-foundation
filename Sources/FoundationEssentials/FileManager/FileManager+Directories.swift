@@ -20,6 +20,9 @@ internal import os
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(Windows)
+import CRT
+import WinSDK
 #endif
 
 internal import _CShims
