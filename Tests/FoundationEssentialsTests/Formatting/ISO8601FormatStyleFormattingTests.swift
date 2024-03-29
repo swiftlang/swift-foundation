@@ -22,9 +22,7 @@ import TestSupport
 @testable import Foundation
 #endif
 
-/// The majority of the tests for this are in the FoundationInternationalizationTests suite, but we have a small number here to verify that ISO8601 formatting is functional without ICU present. No parsing is present in the essentials library (yet?).
-@available(OSX 12.0, *)
-final class DateISO8601FormatStyleEssentialsTests: XCTestCase {
+final class ISO8601FormatStyleFormattingTests: XCTestCase {
 
     func test_ISO8601Format() throws {
         let date = Date(timeIntervalSinceReferenceDate: 665076946.0)
@@ -48,7 +46,7 @@ final class DateISO8601FormatStyleEssentialsTests: XCTestCase {
         // Time-only results: we use the default date of the format style, 1970-01-01, to supplement the parsed date without year, month or day
         // Date is: "1970-01-23 00:00:00"
         XCTAssertEqual(iso8601.weekOfYear().day().dateSeparator(.dash).format(date), "W04-05")
-        
+
         // Date is: "1970-01-28 15:35:46"
         XCTAssertEqual(iso8601.day().time(includingFractionalSeconds: false).timeSeparator(.colon).format(date), "028T15:35:46")
         // Date is: "1970-01-01 15:35:46"

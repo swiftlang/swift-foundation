@@ -10,17 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-func parseError(_ value: String, exampleFormattedString: String?) -> CocoaError {
+package func parseError(_ value: String, exampleFormattedString: String?) -> CocoaError {
     let errorStr: String
     if let exampleFormattedString = exampleFormattedString {
         errorStr = "Cannot parse \(value). String should adhere to the preferred format of the locale, such as \(exampleFormattedString)."
     } else {
         errorStr = "Cannot parse \(value)."
     }
-#if FOUNDATION_FRAMEWORK
     return CocoaError(CocoaError.formatting, userInfo: [ NSDebugDescriptionErrorKey: errorStr ])
-#else
-    return CocoaError(.formatting, description: errorStr)
-#endif // FOUNDATION_FRAMEWORK
 }
 
