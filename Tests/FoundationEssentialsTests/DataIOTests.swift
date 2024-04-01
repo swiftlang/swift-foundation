@@ -239,21 +239,17 @@ class DataIOTests : XCTestCase {
 #endif
     }
     
-    func test_writeToSpecialFile() {
-#if os(Windows)
+    func test_writeToSpecialFile() throws {
+        #if !os(Linux) && !os(Windows)
+        throw XCTSkip("This test is only supported on Linux and Windows")
+        #else
+        #if os(Windows)
         let path = "CON"
-#else
+        #else
         let path = "/dev/stdout"
-#endif
-        do {
-            try Data("Output to STDOUT\n".utf8).write(to: path)
-        } catch {
-            print("Caught unexpected errror: \(error)")
-            let underlying = (error as? CocoaError)?.underlying
-            print("Underlying error: \(underlying)")
-            print("Underlying POSIX errno: \((underlying as? POSIXError)?.code.rawValue)")
-            XCTFail("Underlying POSIX errno: \((underlying as? POSIXError)?.code.rawValue)")
-        }
+        #endif
+        XCTAssertNoThrow(try Data("Output to STDOUT\n".utf8).write(to: path))
+        #endif
     }
 
     // MARK: - String Path Tests
