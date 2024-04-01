@@ -245,7 +245,15 @@ class DataIOTests : XCTestCase {
 #else
         let path = "/dev/stdout"
 #endif
-        XCTAssertNoThrow(try Data("Output to STDOUT\n".utf8).write(to: path))
+        do {
+            try Data("Output to STDOUT\n".utf8).write(to: path)
+        } catch {
+            print("Caught unexpected errror: \(error)")
+            let underlying = (error as? CocoaError)?.underlying
+            print("Underlying error: \(underlying)")
+            print("Underlying POSIX errno: \((underlying as? POSIXError)?.code.rawValue)")
+            XCTFail("Underlying POSIX errno: \((underlying as? POSIXError)?.code.rawValue)")
+        }
     }
 
     // MARK: - String Path Tests
