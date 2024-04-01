@@ -39,7 +39,9 @@ let benchmarks = {
         iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon),
     ]
     
-    Benchmark("iso8601", configuration: .init(scalingFactor: .kilo)) { benchmark in
+    let preformatted = formats.map { ($0, $0.format(date)) }
+
+    Benchmark("iso860-format", configuration: .init(scalingFactor: .kilo)) { benchmark in
         for _ in benchmark.scaledIterations {
             for fmt in formats {
                 blackHole(fmt.format(date))
@@ -47,4 +49,12 @@ let benchmarks = {
         }
     }
 
+    Benchmark("iso860-parse", configuration: .init(scalingFactor: .kilo)) { benchmark in
+        for _ in benchmark.scaledIterations {
+            for fmt in preformatted {
+                let result = try? fmt.0.parse(fmt.1)
+                blackHole(result)
+            }
+        }
+    }
 }

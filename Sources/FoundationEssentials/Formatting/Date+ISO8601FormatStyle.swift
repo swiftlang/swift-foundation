@@ -500,11 +500,457 @@ extension Date.ISO8601FormatStyle : FormatStyle {
     }
 }
 
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle {
+    private struct ComponentsParseResult {
+        var consumed: Int
+        var components: DateComponents
+    }
+    
+    private func components(from inputString: String, in view: borrowing BufferView<UInt8>) throws -> ComponentsParseResult {
+        let fields = formatFields
+        
+        let asciiDash : UInt8 = 45 // -
+        let asciiW : UInt8 = 87 // W
+        let asciiT : UInt8 = 84 // T
+        let asciiZero : UInt8 = 48 // 0
+        let asciiNine : UInt8 = 57 // 9
+        let asciiSpace : UInt8 = 32 // space
+        let asciiColon : UInt8 = 58 // :
+        let asciiPeriod : UInt8 = 46 // .
+        let asciiMinus : UInt8 = 45 // same as -
+        let asciiPlus : UInt8 = 43 // +
+        
+        func isDigit(_ x: UInt8) -> Bool {
+            x >= asciiZero && x <= asciiNine
+        }
+                    
+        func expectCharacter(_ expected: UInt8, _ i: inout BufferView<UInt8>.Iterator) throws {
+            guard let parsed = i.next(), parsed == expected else {
+                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+            }
+        }
+        
+        func expectOneOrMoreCharacters(_ expected: UInt8, _ i: inout BufferView<UInt8>.Iterator) throws {
+            guard let parsed = i.next(), parsed == expected else {
+                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+            }
+            
+            while let parsed = i.peek(), parsed == expected {
+                i.advance()
+            }
+        }
+        
+        func expectZeroOrMoreCharacters(_ expected: UInt8, _ i: inout BufferView<UInt8>.Iterator) {
+            while let parsed = i.peek(), parsed == expected {
+                i.advance()
+            }
+        }
+                
+        func digits(maxDigits: Int? = nil, nanoseconds: Bool = false, _ i: inout BufferView<UInt8>.Iterator) throws -> Int {
+            // Consume all leading zeros, parse until we no longer see a digit
+            var result = 0
+            var count = 0
+            // Cap at 10 digits max to avoid overflow
+            let max = min(maxDigits ?? 10, 10)
+            while let next = i.peek(), isDigit(next) {
+                let digit = Int(next - asciiZero)
+                result *= 10
+                result += digit
+                i.advance()
+                count += 1
+                if count >= max { break }
+            }
+            
+            guard count > 0 else {
+                // No digits actually found
+                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+            }
+            
+            if nanoseconds {
+                // Keeps us in the land of integers
+                if count == 1 { return result * 100_000_000 }
+                if count == 2 { return result * 10_000_000 }
+                if count == 3 { return result * 1_000_000 }
+                if count == 4 { return result * 100_000 }
+                if count == 5 { return result * 10_000 }
+                if count == 6 { return result * 1_000 }
+                if count == 7 { return result * 100 }
+                if count == 8 { return result * 10 }
+                if count == 9 { return result }
+                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+            }
+
+            return result
+        }
+        
+        var it = view.makeIterator()
+        var needsSeparator = false
+        var dc = DateComponents()
+        if fields.contains(.year) {
+            let max = dateSeparator == .omitted ? 4 : nil
+            let value = try digits(maxDigits: max, &it)
+            if fields.contains(.weekOfYear) {
+                dc.yearForWeekOfYear = value
+            } else {
+                dc.year = value
+            }
+            
+            needsSeparator = true
+        } else {
+            // Support for deprecated formats with missing values
+            dc.year = 1970
+        }
+        
+        if fields.contains(.month) {
+            if needsSeparator && dateSeparator == .dash {
+                try expectCharacter(asciiDash, &it)
+            }
+            
+            // parse month digits
+            let max = dateSeparator == .omitted ? 2 : nil
+            let value = try digits(maxDigits: max, &it)
+            guard _calendar.maximumRange(of: .month)!.contains(value) else {
+                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+            }
+            dc.month = value
+
+            needsSeparator = true
+        } else if fields.contains(.weekOfYear) {
+            if needsSeparator && dateSeparator == .dash {
+                try expectCharacter(asciiDash, &it)
+            }
+            // parse W
+            try expectCharacter(asciiW, &it)
+
+            // parse week of year digits
+            let max = dateSeparator == .omitted ? 2 : nil
+            let value = try digits(maxDigits: max, &it)
+            guard _calendar.maximumRange(of: .weekOfYear)!.contains(value) else {
+                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+            }
+            dc.weekOfYear = value
+            
+            needsSeparator = true
+        } else {
+            // Support for deprecated formats with missing values
+            dc.month = 1
+        }
+        
+        if fields.contains(.day) {
+            if needsSeparator && dateSeparator == .dash {
+                try expectCharacter(asciiDash, &it)
+            }
+            
+            if fields.contains(.weekOfYear) {
+                // parse day of week ('ee')
+                // ISO8601 "1" is Monday. For our date components, 2 is Monday. Add 1 to account for difference.
+                let max = dateSeparator == .omitted ? 2 : nil
+                let value = (try digits(maxDigits: max, &it) % 7) + 1
+                
+                guard _calendar.maximumRange(of: .weekday)!.contains(value) else {
+                    throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+                }
+                dc.weekday = value
+                
+            } else if fields.contains(.month) {
+                // parse day of month ('dd')
+                let max = dateSeparator == .omitted ? 2 : nil
+                let value = try digits(maxDigits: max, &it)
+                guard _calendar.maximumRange(of: .day)!.contains(value) else {
+                    throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+                }
+
+                dc.day = value
+                
+            } else {
+                // parse 3 digit day of year ('DDD')
+                let max = dateSeparator == .omitted ? 3 : nil
+                let value = try digits(maxDigits: max, &it)
+                guard _calendar.maximumRange(of: .dayOfYear)!.contains(value) else {
+                    throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+                }
+
+                dc.dayOfYear = value
+            }
+            
+            needsSeparator = true
+        }
+        
+        if fields.contains(.time) {
+            if needsSeparator {
+                switch dateTimeSeparator {
+                case .standard:
+                    // parse T
+                    try expectCharacter(asciiT, &it)
+                case .space:
+                    // parse any number of spaces
+                    try expectOneOrMoreCharacters(asciiSpace, &it)
+                }
+            }
+            
+            switch timeSeparator {
+            case .colon:
+                dc.hour = try digits(&it)
+                try expectCharacter(asciiColon, &it)
+                dc.minute = try digits(&it)
+                try expectCharacter(asciiColon, &it)
+                dc.second = try digits(&it)
+            case .omitted:
+                dc.hour = try digits(maxDigits: 2, &it)
+                dc.minute = try digits(maxDigits: 2, &it)
+                dc.second = try digits(maxDigits: 2, &it)
+            }
+            
+            if includingFractionalSeconds {
+                try expectCharacter(asciiPeriod, &it)
+                
+                let fractionalSeconds = try digits(nanoseconds: true, &it)
+                dc.nanosecond = fractionalSeconds
+            }
+            
+            needsSeparator = true
+        }
+        
+        if fields.contains(.timeZone) {
+            // For compatibility with ICU implementation, if the dateTimeSeparator is a space, consume any number (including zero) of spaces here.
+            if dateTimeSeparator == .space {
+                expectZeroOrMoreCharacters(asciiSpace, &it)
+            }
+            
+            guard let plusOrMinusOrZ = it.next() else {
+                // Expected time zone
+                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+            }
+
+            let tz: TimeZone
+
+            if plusOrMinusOrZ == UInt8(ascii: "Z") || plusOrMinusOrZ == UInt8(ascii: "z") {
+                tz = .gmt
+            } else {
+                var tzOffset = 0
+                let positive: Bool
+                var skipDigits = false
+                
+                // Allow GMT, or UTC
+                if (plusOrMinusOrZ == UInt8(ascii: "G") || plusOrMinusOrZ == UInt8(ascii: "g")),
+                    let m = it.next(), (m == UInt8(ascii: "M") || m == UInt8(ascii: "m")),
+                    let t = it.next(), (t == UInt8(ascii: "T") || t == UInt8(ascii: "t")) {
+                    // Allow GMT followed by + or -, or end of string, or other
+                    if let next = it.peek(), (next == asciiPlus || next == asciiMinus) {
+                        if next == asciiPlus { positive = true }
+                        else { positive = false }
+                        it.advance()
+                    } else {
+                        positive = true
+                        tzOffset = 0
+                        skipDigits = true
+                    }
+                } else if (plusOrMinusOrZ == UInt8(ascii: "U") || plusOrMinusOrZ == UInt8(ascii: "u")),
+                          let t = it.next(), (t == UInt8(ascii: "T") || t == UInt8(ascii: "t")),
+                          let c = it.next(), (c == UInt8(ascii: "C") || c == UInt8(ascii: "c")) {
+                    // Allow UTC followed by + or -, or end of string, or other
+                    if let next = it.peek(), (next == asciiPlus || next == asciiMinus) {
+                        if next == asciiPlus { positive = true }
+                        else { positive = false }
+                        it.advance()
+                    } else {
+                        positive = true
+                        tzOffset = 0
+                        skipDigits = true
+                    }
+                } else if plusOrMinusOrZ == asciiPlus {
+                    positive = true
+                } else if plusOrMinusOrZ == asciiMinus {
+                    positive = false
+                } else {
+                    // Expected time zone, found garbage
+                    throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+                }
+    
+                if !skipDigits {
+                    // Theoretically we would disallow or require the presence of a `:` here. However, the original implementation of this style with ICU accidentally allowed either the presence or absence of the `:` to be parsed regardless of the setting. We preserve that behavior now.
+
+                    // parse Time Zone: ISO8601 extended hms?, with Z
+                    // examples: -08:00, -07:52:58, Z
+                    let hours = try digits(maxDigits: 2, &it)
+                    
+                    // Expect a colon, or not
+                    if let maybeColon = it.peek(), maybeColon == asciiColon {
+                        // Throw it away
+                        it.advance()
+                    }
+                    
+                    let minutes = try digits(maxDigits: 2, &it)
+                    
+                    if let maybeColon = it.peek(), maybeColon == asciiColon {
+                        // Throw it away
+                        it.advance()
+                    }
+
+                    if let secondsTens = it.peek(), isDigit(secondsTens) {
+                        // We have seconds
+                        let seconds = try digits(maxDigits: 2, &it)
+                        tzOffset = (hours * 3600) + (minutes * 60) + seconds
+                    } else {
+                        // If the next character is missing, that's allowed - the time can be something like just -0852 and then the string can end
+                        tzOffset = (hours * 3600) + (minutes * 60)
+                    }
+                }
+                
+                if tzOffset == 0 {
+                    tz = .gmt
+                } else {
+                    guard let parsedTimeZone = TimeZone(secondsFromGMT: positive ? tzOffset : -tzOffset) else {
+                        // Out of range time zone
+                        throw parseError(inputString, exampleFormattedString: self.format(Date.now))
+                    }
+                    
+                    tz = parsedTimeZone
+                }
+            }
+            
+            dc.timeZone = tz
+        }
+        
+        // Would be nice to see this functionality on BufferView, but for now we calculate it ourselves.
+        let utf8CharactersRead = it.curPointer - view.startIndex._rawValue
+        return ComponentsParseResult(consumed: utf8CharactersRead, components: dc)
+    }
+}
+
 // MARK: `FormatStyle` protocol membership
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension FormatStyle where Self == Date.ISO8601FormatStyle {
     static var iso8601: Self {
         return Date.ISO8601FormatStyle()
+    }
+}
+
+// MARK: - Parsing
+
+// MARK: `FormatStyle` protocol membership
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public extension ParseableFormatStyle where Self == Date.ISO8601FormatStyle {
+    static var iso8601: Self { .init() }
+}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public extension ParseStrategy where Self == Date.ISO8601FormatStyle {
+    @_disfavoredOverload
+    static var iso8601: Self { .init() }
+}
+
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle : ParseStrategy {
+    public func parse(_ value: String) throws -> Date {
+        guard let (_, date) = parse(value, in: value.startIndex..<value.endIndex) else {
+            throw parseError(value, exampleFormattedString: self.format(Date.now))
+        }
+        return date
+    }
+    
+    package func parse(_ value: String, in range: Range<String.Index>) -> (String.Index, Date)? {
+        var v = value[range]
+        guard !v.isEmpty else {
+            return nil
+        }
+        
+        let result = v.withUTF8 { buffer -> (Int, Date)? in
+            let view = BufferView(unsafeBufferPointer: buffer)!
+
+            guard let comps = try? components(from: value, in: view) else {
+                return nil
+            }
+            
+            if let tz = comps.components.timeZone {
+                guard let date = _calendar.date(from: comps.components, inTimeZone: tz) else {
+                    return nil
+                }
+                                
+                return (comps.consumed, date)
+            } else {
+                // Use the default time zone of the calendar. Neither date(from:inTimeZone:) nor date(from:) honor the time zone value set in the DateComponents instance.
+                // rdar://122918762 (CalendarGregorian's date(from: components) does not honor the DateComponents time zone)
+                guard let date = _calendar.date(from: comps.components) else {
+                    return nil
+                }
+                
+                return (comps.consumed, date)
+            }
+        }
+        
+        guard let result else {
+            return nil
+        }
+        
+        let endIndex = value.utf8.index(v.startIndex, offsetBy: result.0)
+        return (endIndex, result.1)
+    }
+}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle: ParseableFormatStyle {
+    public var parseStrategy: Self {
+        return self
+    }
+}
+
+// MARK: - Regex
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension Date.ISO8601FormatStyle : CustomConsumingRegexComponent {
+    public typealias RegexOutput = Date
+    public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)? {
+        guard index < bounds.upperBound else {
+            return nil
+        }
+        // It's important to return nil from parse in case of a failure, not throw. That allows things like the firstMatch regex to work.
+        return self.parse(input, in: index..<bounds.upperBound)
+    }
+}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension RegexComponent where Self == Date.ISO8601FormatStyle {
+    /// Creates a regex component to match an ISO 8601 date and time, such as "2015-11-14'T'15:05:03'Z'", and capture the string as a `Date` using the time zone as specified in the string.
+    @_disfavoredOverload
+    public static var iso8601: Date.ISO8601FormatStyle {
+        return Date.ISO8601FormatStyle()
+    }
+
+    /// Creates a regex component to match an ISO 8601 date and time string, including time zone, and capture the string as a `Date` using the time zone as specified in the string.
+    /// - Parameters:
+    ///   - includingFractionalSeconds: Specifies if the string contains fractional seconds.
+    ///   - dateSeparator: The separator between date components.
+    ///   - dateTimeSeparator: The separator between date and time parts.
+    ///   - timeSeparator: The separator between time components.
+    ///   - timeZoneSeparator: The separator between time parts in the time zone.
+    /// - Returns: A `RegexComponent` to match an ISO 8601 string, including time zone.
+    public static func iso8601WithTimeZone(includingFractionalSeconds: Bool = false, dateSeparator: Self.DateSeparator = .dash, dateTimeSeparator: Self.DateTimeSeparator = .standard, timeSeparator: Self.TimeSeparator = .colon, timeZoneSeparator: Self.TimeZoneSeparator = .omitted) -> Self {
+        return Date.ISO8601FormatStyle(dateSeparator: dateSeparator, dateTimeSeparator: dateTimeSeparator, timeSeparator: timeSeparator, timeZoneSeparator: timeZoneSeparator, includingFractionalSeconds: includingFractionalSeconds)
+    }
+
+    /// Creates a regex component to match an ISO 8601 date and time string without time zone, and capture the string as a `Date` using the specified `timeZone`. If the string contains time zone designators, matches up until the start of time zone designators.
+    /// - Parameters:
+    ///   - timeZone: The time zone to create the captured `Date` with.
+    ///   - includingFractionalSeconds: Specifies if the string contains fractional seconds.
+    ///   - dateSeparator: The separator between date components.
+    ///   - dateTimeSeparator: The separator between date and time parts.
+    ///   - timeSeparator: The separator between time components.
+    /// - Returns: A `RegexComponent` to match an ISO 8601 string.
+    public static func iso8601(timeZone: TimeZone, includingFractionalSeconds: Bool = false, dateSeparator: Self.DateSeparator = .dash, dateTimeSeparator: Self.DateTimeSeparator = .standard, timeSeparator: Self.TimeSeparator = .colon) -> Self {
+        return Date.ISO8601FormatStyle(timeZone: timeZone).year().month().day().time(includingFractionalSeconds: includingFractionalSeconds).timeSeparator(timeSeparator).dateSeparator(dateSeparator).dateTimeSeparator(dateTimeSeparator)
+    }
+
+    /// Creates a regex component to match an ISO 8601 date string, such as "2015-11-14", and capture the string as a `Date`. The captured `Date` would be at midnight in the specified `timeZone`.
+    /// - Parameters:
+    ///   - timeZone: The time zone to create the captured `Date` with.
+    ///   - dateSeparator: The separator between date components.
+    /// - Returns:  A `RegexComponent` to match an ISO 8601 date string, including time zone.
+    public static func iso8601Date(timeZone: TimeZone, dateSeparator: Self.DateSeparator = .dash) -> Self {
+        return Date.ISO8601FormatStyle(dateSeparator: dateSeparator, timeZone: timeZone).year().month().day()
     }
 }
