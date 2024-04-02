@@ -238,6 +238,19 @@ class DataIOTests : XCTestCase {
         cleanup(at: url)
 #endif
     }
+    
+    func test_writeToSpecialFile() throws {
+        #if !os(Linux) && !os(Windows)
+        throw XCTSkip("This test is only supported on Linux and Windows")
+        #else
+        #if os(Windows)
+        let path = "CON"
+        #else
+        let path = "/dev/stdout"
+        #endif
+        XCTAssertNoThrow(try Data("Output to STDOUT\n".utf8).write(to: path))
+        #endif
+    }
 
     // MARK: - String Path Tests
     func testStringDeletingLastPathComponent() {
