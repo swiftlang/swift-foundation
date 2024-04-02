@@ -235,6 +235,17 @@ extension Decimal.FormatStyle {
             return new
         }
 
+        /// Modifies the format style to use the specified notation.
+        ///
+        /// - Parameter notation: The notation to apply to the format style.
+        /// - Returns: A decimal currency format style modified to use the specified notation.
+        @available(FoundationPreview 0.4, *)
+        public func notation(_ notation: Configuration.Notation) -> Self {
+            var new = self
+            new.collection.notation = notation
+            return new
+        }
+
         // FormatStyle
         public func format(_ value: Decimal) -> String {
             if let f = ICUCurrencyNumberFormatter.create(for: self), let res = f.format(value) {
