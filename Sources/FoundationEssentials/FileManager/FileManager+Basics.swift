@@ -158,7 +158,7 @@ internal struct _FileManagerImpl {
             
             let len = strlen(ptr) + 1
             let newPtr = UnsafeMutablePointer<CChar>.allocate(capacity: len)
-            memcpy(newPtr, ptr, len)
+            _ = memcpy(newPtr, ptr, len)
             return UnsafePointer(newPtr)
         }
     }
@@ -177,7 +177,7 @@ internal struct _FileManagerImpl {
                 return false
             }
             
-            memcpy(buffer, ptr, lengthOfData)
+            _ = memcpy(buffer, ptr, lengthOfData)
             return true
         }
     }

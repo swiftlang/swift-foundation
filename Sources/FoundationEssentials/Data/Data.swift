@@ -310,7 +310,7 @@ internal final class __DataStorage : @unchecked Sendable {
             }
 
             if origLength < newLength && clear && !allocateCleared {
-                memset(newBytes!.advanced(by: origLength), 0, newLength - origLength)
+                _ = memset(newBytes!.advanced(by: origLength), 0, newLength - origLength)
             }
 
             /* _length set by caller */
@@ -347,7 +347,7 @@ internal final class __DataStorage : @unchecked Sendable {
         if _capacity < newLength || _bytes == nil {
             ensureUniqueBufferReference(growingTo: newLength, clear: true)
         } else if origLength < newLength && _needToZero {
-            memset(_bytes! + origLength, 0, newLength - origLength)
+            _ = memset(_bytes! + origLength, 0, newLength - origLength)
         } else if newLength < origLength {
             _needToZero = true
         }
@@ -412,7 +412,7 @@ internal final class __DataStorage : @unchecked Sendable {
             if let replacementBytes = replacementBytes {
                 memmove(mutableBytes + start, replacementBytes, replacementLength)
             } else {
-                memset(mutableBytes + start, 0, replacementLength)
+                _ = memset(mutableBytes + start, 0, replacementLength)
             }
         }
 
@@ -433,7 +433,7 @@ internal final class __DataStorage : @unchecked Sendable {
         } else {
             ensureUniqueBufferReference()
         }
-        memset(_bytes!.advanced(by: range.lowerBound), 0, range.upperBound - range.lowerBound)
+        _ = memset(_bytes!.advanced(by: range.lowerBound), 0, range.upperBound - range.lowerBound)
     }
 
     @usableFromInline // This is not @inlinable as a non-trivial, non-convenience initializer.
@@ -1906,7 +1906,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     public init(repeating repeatedValue: UInt8, count: Int) {
         self.init(count: count)
         withUnsafeMutableBytes { (buffer: UnsafeMutableRawBufferPointer) -> Void in
-            memset(buffer.baseAddress!, Int32(repeatedValue), buffer.count)
+            _ = memset(buffer.baseAddress!, Int32(repeatedValue), buffer.count)
         }
     }
 
