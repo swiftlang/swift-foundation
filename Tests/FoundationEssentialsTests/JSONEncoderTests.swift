@@ -2491,19 +2491,10 @@ extension JSONEncoderTests {
 
     }
 
-}
-
-// MARK: - FoundationPreview Disabled Tests
-#if FOUNDATION_FRAMEWORK
-extension JSONEncoderTests {
-    // TODO: Reenable once .iso8601 formatter is moved
     func testEncodingDateISO8601() {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = .withInternetDateTime
-
         let timestamp = Date(timeIntervalSince1970: 1000)
-        let expectedJSON = "\"\(formatter.string(from: timestamp))\"".data(using: String._Encoding.utf8)!
-
+        let expectedJSON = "\"\(timestamp.formatted(.iso8601))\"".data(using: String._Encoding.utf8)!
+  
         _testRoundTrip(of: timestamp,
                        expectedJSON: expectedJSON,
                        dateEncodingStrategy: .iso8601,
@@ -2516,8 +2507,23 @@ extension JSONEncoderTests {
                        dateEncodingStrategy: .iso8601,
                        dateDecodingStrategy: .iso8601)
     }
+    
+    func testEncodingDataBase64() {
+        let data = Data([0xDE, 0xAD, 0xBE, 0xEF])
 
-    // TODO: Reenable once DateFormatStyle is moved
+        let expectedJSON = "\"3q2+7w==\"".data(using: String._Encoding.utf8)!
+        _testRoundTrip(of: data, expectedJSON: expectedJSON)
+
+        // Optional data should encode the same way.
+        _testRoundTrip(of: Optional(data), expectedJSON: expectedJSON)
+    }
+}
+
+// MARK: - Framework-only tests
+
+#if FOUNDATION_FRAMEWORK
+extension JSONEncoderTests {
+    // This will remain a framework-only test due to dependence on `DateFormatter`.
     func testEncodingDateFormatted() {
         let formatter = DateFormatter()
         formatter.dateStyle = .full
@@ -2536,18 +2542,6 @@ extension JSONEncoderTests {
                        expectedJSON: expectedJSON,
                        dateEncodingStrategy: .formatted(formatter),
                        dateDecodingStrategy: .formatted(formatter))
-    }
-
-
-    // TODO: Reenable once Data.base64EncodedString() is implemented
-    func testEncodingDataBase64() {
-        let data = Data([0xDE, 0xAD, 0xBE, 0xEF])
-
-        let expectedJSON = "\"3q2+7w==\"".data(using: String._Encoding.utf8)!
-        _testRoundTrip(of: data, expectedJSON: expectedJSON)
-
-        // Optional data should encode the same way.
-        _testRoundTrip(of: Optional(data), expectedJSON: expectedJSON)
     }
 }
 

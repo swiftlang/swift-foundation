@@ -58,12 +58,11 @@ open class JSONDecoder {
         /// Decode the `Date` as UNIX millisecond timestamp from a JSON number.
         case millisecondsSince1970
 
-#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
-        // TODO: Reenable once DateFormatStyle has been moved: https://github.com/apple/swift-foundation/issues/46
         /// Decode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
         @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
         case iso8601
 
+#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
         /// Decode the `Date` as a string parsed by the given formatter.
         case formatted(DateFormatter)
 #endif // FOUNDATION_FRAMEWORK
@@ -643,8 +642,6 @@ extension JSONDecoderImpl: Decoder {
         case .millisecondsSince1970:
             let double = try self.unwrapFloatingPoint(from: mapValue, as: Double.self, for: codingPathNode, additionalKey)
             return Date(timeIntervalSince1970: double / 1000.0)
-#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
-            // TODO: Reenable once DateFormatStyle has been moved
         case .iso8601:
             let string = try self.unwrapString(from: mapValue, for: codingPathNode, additionalKey)
             guard let date = try? Date.ISO8601FormatStyle().parse(string) else {
@@ -652,6 +649,7 @@ extension JSONDecoderImpl: Decoder {
             }
             return date
 
+#if FOUNDATION_FRAMEWORK && !NO_FORMATTERS
         case .formatted(let formatter):
             let string = try self.unwrapString(from: mapValue, for: codingPathNode, additionalKey)
             guard let date = formatter.date(from: string) else {
