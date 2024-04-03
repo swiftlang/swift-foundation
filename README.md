@@ -47,6 +47,9 @@ Quality and performance are our two most important goals for the project. Theref
 Later this year, the porting effort will continue. It will bring high quality Swift implementations of additional important Foundation API such as `URL`, `Bundle`, `FileManager`, `FileHandle`, `Process`, `SortDescriptor`, `SortComparator` and more. 
 
 ## Building and Testing
+
+Building this package requires the Swift 5.9 toolchain or later.
+
 ### macOS
 
 macOS Ventura 13.3.1 is the minimum supported version.
