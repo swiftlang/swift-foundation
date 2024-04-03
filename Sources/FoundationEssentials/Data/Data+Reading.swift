@@ -22,6 +22,7 @@ import Darwin
 import Glibc
 #elseif os(Windows)
 import CRT
+import WinSDK
 #endif
 
 private func readExtendedAttributesFromFileDescriptor(_ fd: Int32, attrsToRead: [String]) -> [String : Data] {
@@ -167,12 +168,122 @@ struct ReadBytesResult {
     var deallocator: Data.Deallocator?
 }
 
+#if os(Windows)
+private func read(from hFile: HANDLE, at path: PathOrURL,
+                  into pBuffer: UnsafeMutableRawPointer, length dwLength: Int,
+                  chunkSize dwChunk: Int = 4096, progress bProgress: Bool)
+        throws -> Int {
+    var pBuffer = pBuffer
+    let progress = bProgress && Progress.current() != nil ? Progress(totalUnitCount: Int64(dwLength)) : nil
+
+    var dwBytesRemaining: DWORD = DWORD(dwLength)
+    while dwBytesRemaining > 0 {
+        if let progress, progress.isCancelled {
+            throw CocoaError(.userCancelled)
+        }
+
+        let dwBytesToRead: DWORD =
+            DWORD(clamping: DWORD(min(DWORD(dwChunk), dwBytesRemaining)))
+        var dwBytesRead: DWORD = 0
+        if !ReadFile(hFile, pBuffer, dwBytesToRead, &dwBytesRead, nil) {
+            throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+        }
+        dwBytesRemaining -= DWORD(clamping: dwBytesRead)
+        progress?.completedUnitCount = Int64(dwLength - Int(dwBytesRemaining))
+        if dwBytesRead < dwBytesToRead {
+            break
+        }
+        pBuffer = pBuffer.advanced(by: Int(dwBytesRead))
+    }
+    return dwLength - Int(dwBytesRemaining)
+}
+#endif
+
 internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, maxLength: Int?, options: Data.ReadingOptions, attributesToRead: [String], attributes: inout [String: Data]) throws -> ReadBytesResult {
     if inPath.isEmpty {
         // For compatibility, throw a different error than the perhaps-expected 'file not found' here (41646641)
         throw CocoaError(.fileReadInvalidFileName)
     }
-    
+
+#if os(Windows)
+    let hFile: HANDLE = try inPath.path.withNTPathRepresentation {
+        CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nil)
+    }
+    if hFile == INVALID_HANDLE_VALUE {
+        throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: true)
+    }
+
+    defer {
+        CloseHandle(hFile)
+    }
+
+    var fiFileInfo: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
+    guard GetFileInformationByHandle(hFile, &fiFileInfo) else {
+        throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: true)
+    }
+
+    let ftFileType: DWORD = GetFileType(hFile)
+    let bIsDirectory = fiFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
+    guard ftFileType == FILE_TYPE_DISK, !bIsDirectory else {
+        throw CocoaError.errorWithFilePath(inPath, errno: bIsDirectory ? EISDIR : EACCES, reading: true)
+    }
+
+    let szFileSize: UInt64 =
+        UInt64(fiFileInfo.nFileSizeHigh) << 32 | UInt64(fiFileInfo.nFileSizeLow << 0)
+    if szFileSize > Int.max {
+        throw CocoaError.errorWithFilePath(inPath, errno: EFBIG, reading: true)
+    }
+
+    guard let hMapping: HANDLE = CreateFileMappingW(hFile, nil, PAGE_READONLY, 0, 0, nil) else {
+        throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: true)
+    }
+
+    let szMapSize: SIZE_T = min(UInt64(maxLength ?? Int.max), szFileSize)
+    guard let pData: UnsafeMutableRawPointer = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, szMapSize) else {
+        throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: true)
+    }
+
+    let localProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(szFileSize)) : nil
+    guard szFileSize > 0 else {
+        localProgress?.totalUnitCount = 1
+        localProgress?.completedUnitCount = 1
+        return ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
+    }
+
+    if options.contains(.alwaysMapped) {
+        let hMapping: HANDLE = CreateFileMappingW(hFile, nil, PAGE_READONLY, 0, 0, nil)
+        if hMapping == INVALID_HANDLE_VALUE {
+            throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: true)
+        }
+
+        let szMapSize: UInt64 = min(UInt64(maxLength ?? Int.max), szFileSize)
+        let pData: UnsafeMutableRawPointer =
+            MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, SIZE_T(szMapSize))
+        return ReadBytesResult(bytes: pData, length: Int(szMapSize), deallocator: .custom({ hMapping, _ in
+            guard UnmapViewOfFile(hMapping) else {
+                fatalError("UnmapViewOfFile")
+            }
+            guard CloseHandle(hMapping) else {
+                fatalError("CloseHandle")
+            }
+        }))
+    } else {
+        guard let pBuffer: UnsafeMutableRawPointer = malloc(Int(szFileSize)) else {
+            throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
+        }
+
+        localProgress?.becomeCurrent(withPendingUnitCount: Int64(szFileSize))
+        do {
+            let dwLength = try read(from: hFile, at: inPath, into: pBuffer, length: Int(szFileSize), progress: reportProgress)
+            localProgress?.resignCurrent()
+            return ReadBytesResult(bytes: pData, length: dwLength, deallocator: .free)
+        } catch {
+            localProgress?.resignCurrent()
+            free(pBuffer)
+            throw error
+        }
+    }
+#else
     let fd = try inPath.withFileSystemRepresentation { inPathFileSystemRep in
         guard let inPathFileSystemRep else {
             throw CocoaError(.fileReadInvalidFileName)
@@ -194,7 +305,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         _ = fcntl(fd, F_NOCACHE, 1)
     }
 #endif
-    
+
     var filestat: stat = stat()
     let err = fstat(fd, &filestat)
     
@@ -284,6 +395,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     }
 
     return result
+#endif
 }
 
 // Takes an `Int` size and returns an `Int` to match `Data`'s count. If we are going to read more than Int.max, throws - because we won't be able to store it in `Data`.
