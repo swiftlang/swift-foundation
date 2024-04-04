@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+@_spi(Expression)
 @available(FoundationPredicate 0.1, *)
 extension PredicateExpressions {
     @available(FoundationPredicate 0.4, *)
@@ -41,6 +42,7 @@ extension PredicateExpressions {
     }
 }
 
+@_spi(Expression)
 @available(FoundationPredicate 0.4, *)
 extension PredicateExpressions.ExpressionEvaluate : CustomStringConvertible {
     public var description: String {
@@ -48,9 +50,11 @@ extension PredicateExpressions.ExpressionEvaluate : CustomStringConvertible {
     }
 }
 
+@_spi(Expression)
 @available(FoundationPredicate 0.4, *)
 extension PredicateExpressions.ExpressionEvaluate : StandardPredicateExpression where Transformation : StandardPredicateExpression, repeat each Input : StandardPredicateExpression {}
 
+@_spi(Expression)
 @available(FoundationPredicate 0.4, *)
 extension PredicateExpressions.ExpressionEvaluate : Codable where Transformation : Codable, repeat each Input : Codable {
     public func encode(to encoder: Encoder) throws {
@@ -66,5 +70,6 @@ extension PredicateExpressions.ExpressionEvaluate : Codable where Transformation
     }
 }
 
+@_spi(Expression)
 @available(FoundationPredicate 0.4, *)
 extension PredicateExpressions.ExpressionEvaluate : Sendable where Transformation : Sendable, repeat each Input : Sendable {}
