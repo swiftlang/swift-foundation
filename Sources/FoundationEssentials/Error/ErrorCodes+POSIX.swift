@@ -16,6 +16,7 @@ import Glibc
 import Darwin
 #elseif os(Windows)
 import CRT
+import WinSDK
 #endif
 
 #if FOUNDATION_FRAMEWORK

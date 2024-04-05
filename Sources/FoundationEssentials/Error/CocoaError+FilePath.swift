@@ -17,6 +17,9 @@ internal import _ForSwiftFoundation
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(Windows)
+import CRT
+import WinSDK
 #endif
 
 extension CocoaError.Code {
@@ -34,7 +37,10 @@ extension CocoaError.Code {
             case ENOENT: .fileNoSuchFile
             case EPERM, EACCES: .fileWriteNoPermission
             case ENAMETOOLONG: .fileWriteInvalidFileName
-            case EDQUOT, ENOSPC: .fileWriteOutOfSpace
+#if !os(Windows)
+            case EDQUOT: .fileWriteOutOfSpace
+#endif
+            case ENOSPC: .fileWriteOutOfSpace
             case EROFS: .fileWriteVolumeReadOnly
             case EEXIST: .fileWriteFileExists
             default: .fileWriteUnknown
@@ -121,7 +127,68 @@ extension CocoaError {
             userInfo: additionalUserInfo.addingUserInfo(forURL: url)
         )
     }
-    
+
+#if os(Windows)
+    static func errorWithFilePath(_ path: PathOrURL, win32 dwError: DWORD, reading: Bool, variant: String? = nil, userInfo: [String : AnyHashable] = [:]) -> CocoaError {
+        switch path {
+        case let .path(path):
+            return Self.errorWithFilePath(path, win32: dwError, reading: reading, variant: variant, userInfo: userInfo.addingUserInfo(forPath: path))
+        case let .url(url):
+            return Self.errorWithFilePath(url.withUnsafeFileSystemRepresentation { String(cString: $0!) }, win32: dwError, reading: reading, variant: variant, userInfo: userInfo.addingUserInfo(forURL: url))
+        }
+    }
+
+    static func errorWithFilePath(_ path: String? = nil, win32 dwError: DWORD, reading: Bool, variant: String? = nil, userInfo: [String : AnyHashable] = [:]) -> CocoaError {
+        let code: CocoaError.Code = switch (reading, dwError) {
+            case (true, DWORD(ERROR_FILE_NOT_FOUND)), (true, DWORD(ERROR_PATH_NOT_FOUND)):
+                // Windows will return ERROR_FILE_NOT_FOUND or ERROR_PATH_NOT_FOUND
+                // for empty paths.
+                (path?.isEmpty ?? false) ? .fileReadInvalidFileName : .fileReadNoSuchFile
+            case (true, DWORD(ERROR_ACCESS_DENIED)): .fileReadNoPermission
+            case (true, DWORD(ERROR_INVALID_ACCESS)): .fileReadNoPermission
+            case (true, DWORD(ERROR_INVALID_DRIVE)): .fileReadNoSuchFile
+            case (true, DWORD(ERROR_SHARING_VIOLATION)): .fileReadNoPermission
+            case (true, DWORD(ERROR_INVALID_NAME)): .fileReadInvalidFileName
+            case (true, DWORD(ERROR_LABEL_TOO_LONG)): .fileReadInvalidFileName
+            case (true, DWORD(ERROR_BAD_PATHNAME)): .fileReadInvalidFileName
+            case (true, DWORD(ERROR_FILENAME_EXCED_RANGE)): .fileReadInvalidFileName
+            case (true, DWORD(ERROR_DIRECTORY)): .fileReadInvalidFileName
+            case (true, _): .fileReadUnknown
+
+            case (false, DWORD(ERROR_FILE_NOT_FOUND)), (false, DWORD(ERROR_PATH_NOT_FOUND)):
+                // Windows will return ERROR_FILE_NOT_FOUND or ERROR_PATH_NOT_FOUND
+                // for empty paths.
+                (path?.isEmpty ?? false) ? .fileWriteInvalidFileName : .fileNoSuchFile
+            case (false, DWORD(ERROR_ACCESS_DENIED)): .fileWriteNoPermission
+            case (false, DWORD(ERROR_INVALID_ACCESS)): .fileWriteNoPermission
+            case (false, DWORD(ERROR_INVALID_DRIVE)): .fileNoSuchFile
+            case (false, DWORD(ERROR_WRITE_FAULT)): .fileWriteVolumeReadOnly
+            case (false, DWORD(ERROR_SHARING_VIOLATION)): .fileWriteNoPermission
+            case (false, DWORD(ERROR_FILE_EXISTS)): .fileWriteFileExists
+            case (false, DWORD(ERROR_DISK_FULL)): .fileWriteOutOfSpace
+            case (false, DWORD(ERROR_INVALID_NAME)): .fileWriteInvalidFileName
+            case (false, DWORD(ERROR_LABEL_TOO_LONG)): .fileWriteInvalidFileName
+            case (false, DWORD(ERROR_BAD_PATHNAME)): .fileWriteInvalidFileName
+            case (false, DWORD(ERROR_ALREADY_EXISTS)): .fileWriteFileExists
+            case (false, DWORD(ERROR_FILENAME_EXCED_RANGE)): .fileWriteInvalidFileName
+            case (false, DWORD(ERROR_DIRECTORY)): .fileWriteInvalidFileName
+            case (false, DWORD(ERROR_DISK_RESOURCES_EXHAUSTED)): .fileWriteOutOfSpace
+            case (false, _): .fileWriteUnknown
+        }
+
+        var info: [String : AnyHashable] = userInfo
+        info[NSUnderlyingErrorKey] = Win32Error(dwError)
+        if let path, info[NSFilePathErrorKey] == nil {
+            info[NSFilePathErrorKey] = path
+        }
+        if let variant {
+            info[NSUserStringVariantErrorKey] = [variant]
+        }
+
+        return CocoaError(code, userInfo: info)
+    }
+#endif
+
     static func errorWithFilePath(_ path: String? = nil, osStatus: Int, reading: Bool, variant: String? = nil) -> CocoaError {
         // Do more or less what _NSErrorWithFilePathAndErrno() does, except for OSStatus values
         let errorCode: CocoaError.Code = switch (reading, osStatus) {
