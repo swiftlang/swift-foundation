@@ -11,8 +11,6 @@
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
-#else
-internal func _foundation_essentials_feature_enabled() -> Bool { return true }
 #endif
 
 // These provides concrete implementations for String and Substring, enhancing performance over generic StringProtocol.
