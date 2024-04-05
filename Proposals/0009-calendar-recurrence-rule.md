@@ -3,7 +3,7 @@
 * Proposal: SF-0009
 * Author: Hristo Staykov <https://github.com/hristost>
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Active review: Mar 08, 2024...Mar 15, 2024**
+* Status: **Accepted**
 * Implementation: [apple/swift-foundation#464](https://github.com/apple/swift-foundation/pull/464)
 * Bugs: <rdar://120559017>
 
