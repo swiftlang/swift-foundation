@@ -33,7 +33,7 @@ extension String {
         var path = self
 
         // Strip the leading `/` on a RFC8089 path (`/[drive-letter]:/...` ).  A
-        // leading slash indicates a rooted path on the drive for teh current
+        // leading slash indicates a rooted path on the drive for the current
         // working directory.
         var iter = path.makeIterator()
         if iter.next() == "/", iter.next()?.isLetter ?? false, iter.next() == ":" {
@@ -46,7 +46,7 @@ extension String {
         path = path.replacing("/", with: "\\")
 
         // Droop trailing slashes unless it follows a drive specification.  The
-        // trailing arc separator after a drive specifier iindicates the root as
+        // trailing arc separator after a drive specifier indicates the root as
         // opposed to a drive relative path.
         while path.count > 1, path[path.index(before: path.endIndex)] == "\\",
                 !(path.count == 3 &&
