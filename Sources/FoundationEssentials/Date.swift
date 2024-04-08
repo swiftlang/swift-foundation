@@ -35,6 +35,9 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     /// The number of seconds from 1 January 1970 to the reference date, 1 January 2001.
     public static let timeIntervalBetween1970AndReferenceDate : TimeInterval = 978307200.0
 
+    /// The number of seconds from 1 January 1601 to the reference date, 1 January 2001.
+    internal static let timeIntervalBetween1601AndReferenceDate: TimeInterval = 12622780800.0
+
     /// The interval between 00:00:00 UTC on 1 January 2001 and the current date and time.
     public static var timeIntervalSinceReferenceDate : TimeInterval {
         return Self.getCurrentAbsoluteTime()
@@ -118,6 +121,10 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     */
     public var timeIntervalSince1970: TimeInterval {
         return self.timeIntervalSinceReferenceDate + Date.timeIntervalBetween1970AndReferenceDate
+    }
+
+    internal var timeIntervalSince1601: TimeInterval {
+        return self.timeIntervalSinceReferenceDate + Date.timeIntervalBetween1601AndReferenceDate
     }
 
     /// Return a new `Date` by adding a `TimeInterval` to this `Date`.

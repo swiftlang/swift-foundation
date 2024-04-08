@@ -22,6 +22,7 @@ import Glibc
 internal import _CShims
 #elseif os(Windows)
 import CRT
+import WinSDK
 #endif
 
 extension Date {
@@ -30,6 +31,7 @@ extension Date {
     }
 }
 
+#if !os(Windows)
 private func _nameFor(uid: uid_t) -> String? {
     guard let pwd = getpwuid(uid), let name = pwd.pointee.pw_name else {
         return nil
@@ -66,6 +68,7 @@ extension mode_t {
     fileprivate var fileType: FileAttributeType { _fileType }
     #endif
 }
+#endif
 
 func _readFileAttributePrimitive<T: BinaryInteger>(_ value: Any?, as type: T.Type) -> T? {
     guard let value else { return nil }
@@ -121,6 +124,7 @@ func _writeFileAttributePrimitive(_ value: Bool) -> Any {
     #endif
 }
 
+#if !os(Windows)
 extension stat {
     var modificationDate: Date {
         #if canImport(Darwin)
@@ -203,6 +207,7 @@ extension FileProtectionType {
         }
     }
 }
+#endif
 #endif
 
 extension FileAttributeKey {
@@ -335,11 +340,21 @@ extension _FileManagerImpl {
     }
     
     private func _fileExists(_ path: String) -> (exists: Bool, isDirectory: Bool) {
+#if os(Windows)
+        guard !path.isEmpty else { return (false, false) }
+        return try! path.withNTPathRepresentation {
+            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+            guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
+                return (false, false)
+            }
+            return (true, faAttributes.dwFileAttributes & DWORD(FILE_ATTRIBUTE_DIRECTORY) == DWORD(FILE_ATTRIBUTE_DIRECTORY))
+        }
+#else
         path.withFileSystemRepresentation { rep -> (Bool, Bool) in
             guard let rep else {
                 return (false, false)
             }
-            
+
             var fileInfo = stat()
             guard stat(rep, &fileInfo) == 0 else {
                 return (false, false)
@@ -347,6 +362,7 @@ extension _FileManagerImpl {
             let isDir = (fileInfo.st_mode & S_IFMT) == S_IFDIR
             return (true, isDir)
         }
+#endif
     }
     
     func fileExists(atPath path: String) -> Bool {
@@ -362,24 +378,50 @@ extension _FileManagerImpl {
         isDirectory = result.isDirectory
         return true
     }
-    
+
+#if !os(Windows)
     private func _fileAccessibleForMode(_ path: String, _ mode: Int32) -> Bool {
         path.withFileSystemRepresentation { ptr in
             guard let ptr else { return false }
             return access(ptr, mode) == 0
         }
     }
-    
+#endif
+
     func isReadableFile(atPath path: String) -> Bool {
+#if os(Windows)
+        return (try? path.withNTPathRepresentation {
+            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+            return GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes)
+        }) ?? false
+#else
         _fileAccessibleForMode(path, R_OK)
+#endif
     }
     
     func isWritableFile(atPath path: String) -> Bool {
+#if os(Windows)
+        return (try? path.withNTPathRepresentation {
+            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+            guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
+                return false
+            }
+            return faAttributes.dwFileAttributes & DWORD(FILE_ATTRIBUTE_READONLY) != DWORD(FILE_ATTRIBUTE_READONLY)
+        }) ?? false
+#else
         _fileAccessibleForMode(path, W_OK)
+#endif
     }
     
     func isExecutableFile(atPath path: String) -> Bool {
+#if os(Windows)
+        return (try? path.withNTPathRepresentation {
+            var dwBinaryType: DWORD = 0
+            return GetBinaryTypeW($0, &dwBinaryType)
+        }) ?? false
+#else
         _fileAccessibleForMode(path, X_OK)
+#endif
     }
     
     func isDeletableFile(atPath path: String) -> Bool {
@@ -387,7 +429,10 @@ extension _FileManagerImpl {
         if parent.isEmpty {
             parent = fileManager.currentDirectoryPath
         }
-        
+
+#if os(Windows)
+        return fileManager.isWritableFile(atPath: parent) && fileManager.isWritableFile(atPath: path)
+#else
         guard fileManager.isWritableFile(atPath: parent),
               let dirInfo = fileManager._fileStat(parent) else {
             return false
@@ -405,8 +450,10 @@ extension _FileManagerImpl {
         } else {
             return true
         }
+#endif
     }
-    
+
+#if !os(Windows)
     private func _extendedAttribute(_ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data? {
         #if canImport(Darwin)
         var size = getxattr(path, key, nil, 0, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
@@ -472,8 +519,38 @@ extension _FileManagerImpl {
         }
         return extendedAttrs
     }
-    
+#endif
+
     func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
+#if os(Windows)
+        return try path.withNTPathRepresentation { pwszPath in
+            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+            guard GetFileAttributesExW(pwszPath, GetFileExInfoStandard, &faAttributes) else {
+                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+            }
+
+            let size: UInt64 = (UInt64(faAttributes.nFileSizeHigh) << 32) | UInt64(faAttributes.nFileSizeLow)
+            let creation: Date = Date(timeIntervalSince1970: faAttributes.ftCreationTime.interval)
+            let modification: Date = Date(timeIntervalSince1970: faAttributes.ftLastWriteTime.interval)
+            return [
+                .size: size,
+                .modificationDate: modification,
+                .creationDate: creation,
+
+                // TODO(compnerd) support these attributes, remapping the Windows semantics...
+                // .posixPermissions: ...,
+                // .referenceCount: ...,
+                // .systemNumber: ...,
+                // .systemFileNumber: ...,
+                // .type: ...,
+                // .ownerAccountID: ...,
+                // .groupownerAccountID: ...,
+                // .ownerAccountName: ...,
+                // .groupOwnerAccountName: ...,
+                // .deviceIdentifier: ...,
+            ]
+        }
+#else
         try fileManager.withFileSystemRepresentation(for: path) { fsRep in
             guard let fsRep else {
                 throw CocoaError.errorWithFilePath(.fileReadUnknown, path)
@@ -503,9 +580,50 @@ extension _FileManagerImpl {
             #endif
             return attributes
         }
+#endif
     }
     
     func attributesOfFileSystem(forPath path: String) throws -> [FileAttributeKey : Any] {
+#if os(Windows)
+        return try path.withNTPathRepresentation { pwszPath in
+            let dwLength: DWORD = GetFullPathNameW(pwszPath, 0, nil, nil)
+            guard dwLength > 0 else {
+                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+            }
+
+            return try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) { szVolumeName in
+                guard GetVolumePathNameW(pwszPath, szVolumeName.baseAddress, dwLength) else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                }
+
+                var liTotal: ULARGE_INTEGER = .init()
+                var liFree: ULARGE_INTEGER = .init()
+                guard GetDiskFreeSpaceExW(szVolumeName.baseAddress, nil, &liTotal, &liFree) else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                }
+
+                let hr: HRESULT = PathCchStripToRoot(szVolumeName.baseAddress, szVolumeName.count)
+                guard hr == S_OK || hr == S_FALSE else {
+                    throw CocoaError.errorWithFilePath(path, win32: DWORD(hr & 0xffff), reading: true)
+                }
+
+                var dwVolumeSerialNumber: DWORD = 0
+                guard GetVolumeInformationW(szVolumeName.baseAddress, nil, 0, &dwVolumeSerialNumber, nil, nil, nil, 0) else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                }
+
+                return [
+                    .systemSize: UInt64(liTotal.QuadPart),
+                    .systemFreeSize: UInt64(liFree.QuadPart),
+                    .systemNumber: UInt(dwVolumeSerialNumber),
+
+                    // TODO(compnerd) support these attributes, remapping the Windows semantics...
+                    // .systemNodes: ...,
+                    // .systemFreeNodes: ...,
+                ]
+            }
+        }
+#else
         try fileManager.withFileSystemRepresentation(for: path) { rep in
             guard let rep else {
                 throw CocoaError.errorWithFilePath(.fileReadUnknown, path)
@@ -576,20 +694,51 @@ extension _FileManagerImpl {
                 .systemNumber : _writeFileAttributePrimitive(fsNumber, as: UInt.self)
             ]
         }
+#endif
     }
     
     func setAttributes(
         _ attributes: [FileAttributeKey : Any],
         ofItemAtPath path: String
     ) throws {
+        let mode = _readFileAttributePrimitive(attributes[.posixPermissions], as: UInt.self)
+        let immutable = _readFileAttributePrimitive(attributes[.immutable], as: Bool.self)
+        let appendOnly = _readFileAttributePrimitive(attributes[.appendOnly], as: Bool.self)
+
+#if os(Windows)
+        try path.withNTPathRepresentation {
+            if immutable != nil || appendOnly != nil {
+                // Setting these flags is not supported on this platform
+                throw CocoaError.errorWithFilePath(.featureUnsupported, path)
+            }
+
+            if let modification = attributes[.modificationDate] as? Date {
+                let seconds = modification.timeIntervalSince1601
+
+                var uiTime: ULARGE_INTEGER = .init()
+                uiTime.QuadPart = UInt64(seconds * 10000000)
+
+                var ftTime: FILETIME = .init()
+                ftTime.dwLowDateTime = uiTime.LowPart
+                ftTime.dwHighDateTime = uiTime.HighPart
+
+                let hFile: HANDLE = CreateFileW($0, DWORD(GENERIC_WRITE), DWORD(FILE_SHARE_WRITE), nil, DWORD(OPEN_EXISTING), 0, nil)
+                if hFile == INVALID_HANDLE_VALUE {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                }
+                defer { CloseHandle(hFile) }
+
+                guard SetFileTime(hFile, nil, nil, &ftTime) else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+                }
+            }
+        }
+#else
         try fileManager.withFileSystemRepresentation(for: path) { fileSystemRepresentation in
             guard let fileSystemRepresentation else {
                 throw CocoaError.errorWithFilePath(.fileWriteUnknown, path)
             }
             
-            let mode = _readFileAttributePrimitive(attributes[.posixPermissions], as: UInt.self)
-            let immutable = _readFileAttributePrimitive(attributes[.immutable], as: Bool.self)
-            let appendOnly = _readFileAttributePrimitive(attributes[.appendOnly], as: Bool.self)
             // Use Result instead of throwing var to avoid compiler hang (rdar://119035093)
             lazy var statAtPath: Result<stat, CocoaError> = {
                 var result = stat()
@@ -707,5 +856,6 @@ extension _FileManagerImpl {
             }
             #endif
         }
+#endif
     }
 }
