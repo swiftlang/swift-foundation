@@ -45,10 +45,10 @@ extension String {
         // the path.
         path = path.replacing("/", with: "\\")
 
-        // Droop trailing slashes unless it follows a drive specification.  The
+        // Drop trailing slashes unless it follows a drive specification.  The
         // trailing arc separator after a drive specifier indicates the root as
         // opposed to a drive relative path.
-        while path.count > 1, path[path.index(before: path.endIndex)] == "\\",
+        while path.count > 1, path.last == "\\",
                 !(path.count == 3 &&
                     path[path.index(path.endIndex, offsetBy: -2)] == ":" &&
                     path[path.index(path.endIndex, offsetBy: -3)].isLetter) {
