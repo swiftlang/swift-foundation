@@ -493,6 +493,7 @@ final class NumberFormatStyleTests: XCTestCase {
     }
 #endif // FOUNDATION_PREVIEW
 
+#if !os(watchOS) // These tests require Int to be Int64, which is not always true on watch OSs yet
     func testCurrency_compactName() throws {
         let baseStyle = Decimal.FormatStyle.Currency(code: "USD", locale: Locale(identifier: "en_US")).notation(.compactName)
 
@@ -700,6 +701,7 @@ final class NumberFormatStyleTests: XCTestCase {
         XCTAssertEqual( (-92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E14")
         XCTAssertEqual((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E15")
     }
+#endif // !os(watchOS)
 }
 
 extension NumberFormatStyleConfiguration.Collection {
