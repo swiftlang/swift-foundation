@@ -25,7 +25,7 @@ import WinSDK
 extension String {
     package func withNTPathRepresentation<Result>(_ body: (UnsafePointer<WCHAR>) throws -> Result) throws -> Result {
         guard !isEmpty else {
-            throw CocoaError.error(.fileReadInvalidFileName, userInfo: [NSFilePathErrorKey:""])
+            throw CocoaError.errorWithFilePath(.fileReadInvalidFileName, "")
         }
 
         // 1. Normalize the path first.
@@ -43,7 +43,7 @@ extension String {
         // Win32 APIs can support `/` for the arc separator. However,
         // symlinks created with `/` do not resolve properly, so normalize
         // the path.
-        path = path.replacing("/", with: "\\")
+        path.replace("/", with: "\\")
 
         // Drop trailing slashes unless it follows a drive specification.  The
         // trailing arc separator after a drive specifier indicates the root as
@@ -62,7 +62,9 @@ extension String {
 
             let dwLength = GetFullPathNameW(pwszPath, 0, nil, nil)
             let path = withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
-                _ = GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil)
+                guard GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil) == dwLength else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                }
                 return String(decodingCString: $0.baseAddress!, as: UTF16.self)
             }
             guard !path.hasPrefix(#"\\"#) else {
