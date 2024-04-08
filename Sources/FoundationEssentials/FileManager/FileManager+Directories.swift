@@ -384,18 +384,21 @@ extension _FileManagerImpl {
     }
     
     var currentDirectoryPath: String? {
+#if os(Windows)
+        let dwLength: DWORD = GetCurrentDirectoryW(0, nil)
+        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
+            if GetCurrentDirectoryW(dwLength, $0.baseAddress) == dwLength - 1 {
+                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+            }
+            return nil
+        }
+#else
         withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
-#if !os(Windows)
             guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
                 return nil
             }
-#else
-            guard GetCurrentDirectoryW(FileManager.MAX_PATH_SIZE, buffer.baseAddress!) >= 0 else {
-                return nil
-            }
-#endif
-            
             return fileManager.string(withFileSystemRepresentation: buffer.baseAddress!, length: strlen(buffer.baseAddress!))
         }
+#endif
     }
 }
