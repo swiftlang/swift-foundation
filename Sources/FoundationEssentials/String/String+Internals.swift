@@ -165,13 +165,12 @@ extension UnsafeBufferPointer {
         var decoder = T()
         var iterator = self.makeIterator()
         
-        func appendOutput(_ values: some Sequence<UInt8>) throws {
+        func appendOutput(_ values: some Collection<UInt8>) throws {
             let bufferPortion = UnsafeMutableBufferPointer(start: buffer.baseAddress!.advanced(by: bufferIdx), count: bufferLength - bufferIdx)
-            var (leftOver, idx) = bufferPortion.initialize(from: values)
-            bufferIdx += idx
-            if bufferIdx == bufferLength && leftOver.next() != nil {
+            guard bufferPortion.count >= values.count else {
                 throw DecompositionError.insufficientSpace
             }
+            bufferIdx += bufferPortion.initialize(fromContentsOf: values)
         }
         
         func appendOutput(_ value: UInt8) throws {
