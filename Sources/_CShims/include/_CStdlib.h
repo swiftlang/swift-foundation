@@ -138,11 +138,11 @@
 #include <stdint.h>
 #endif
 
-#if TARGET_OS_MAC
+#if __has_include(<tzfile.h>)
 
 #include <tzfile.h>
 
-#elif TARGET_OS_LINUX || TARGET_OS_BSD || TARGET_OS_WASI
+#else
 
 #ifndef TZDIR
 #define TZDIR    "/usr/share/zoneinfo/" /* Time zone object file directory */

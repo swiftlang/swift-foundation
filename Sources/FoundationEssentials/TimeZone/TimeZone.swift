@@ -389,7 +389,7 @@ extension TimeZone {
 }
 
 extension TimeZone {
-    private static func dataFromTZFile(_ name: String) -> Data {
+    internal static func dataFromTZFile(_ name: String) -> Data {
 #if NO_TZFILE
         return Data()
 #else
