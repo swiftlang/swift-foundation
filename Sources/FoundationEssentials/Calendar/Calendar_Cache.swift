@@ -77,9 +77,8 @@ struct CalendarCache : Sendable {
                 return currentCalendar
             } else {
                 let id = Locale.current._calendarIdentifier
-                let useCalendarGregorianForGregorianCalendar = _foundation_essentials_feature_enabled()
                 // If we cannot create the right kind of class, we fail immediately here
-                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: useCalendarGregorianForGregorianCalendar)!
+                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: true)!
                 let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 currentCalendar = calendar
                 return calendar
@@ -101,9 +100,8 @@ struct CalendarCache : Sendable {
             if let cached = fixedCalendars[id] {
                 return cached
             } else {
-                let useCalendarGregorianForGregorianCalendar = _foundation_essentials_feature_enabled()
                 // If we cannot create the right kind of class, we fail immediately here
-                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: useCalendarGregorianForGregorianCalendar)!
+                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: true)!
                 let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 fixedCalendars[id] = new
                 return new
@@ -142,8 +140,7 @@ struct CalendarCache : Sendable {
     func fixed(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
         // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
         // If we cannot create the right kind of class, we fail immediately here
-        let useCalendarGregorianForGregorianCalendar = _foundation_essentials_feature_enabled()
-        let calendarClass = CalendarCache.calendarICUClass(identifier: identifier, useGregorian: useCalendarGregorianForGregorianCalendar)!
+        let calendarClass = CalendarCache.calendarICUClass(identifier: identifier, useGregorian: true)!
         return calendarClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 
