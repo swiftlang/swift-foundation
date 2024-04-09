@@ -48,8 +48,10 @@ extension String {
         // Drop trailing slashes unless it follows a drive specification.  The
         // trailing arc separator after a drive specifier indicates the root as
         // opposed to a drive relative path.
+        let first = path.startIndex
+        let second = path.index(after: path.startIndex)
         while path.count > 1, path.last == "\\" {
-            if path.count == 3, path[0].isLetter, path[1] == ":" {
+            if path.count == 3, path[first].isLetter, path[second] == ":" {
                 break;
             }
             path.removeLast()
@@ -61,7 +63,7 @@ extension String {
             guard !path.hasPrefix(#"\\"#) else { return try body(pwszPath) }
 
             let dwLength = GetFullPathNameW(pwszPath, 0, nil, nil)
-            let path = withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
+            let path = try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
                 guard GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil) == dwLength else {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
                 }
