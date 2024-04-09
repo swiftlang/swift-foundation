@@ -19,6 +19,65 @@ internal import Foundation_Private.NSString
 import Darwin
 #endif
 
+#if os(Windows)
+import WinSDK
+
+extension String {
+    package func withNTPathRepresentation<Result>(_ body: (UnsafePointer<WCHAR>) throws -> Result) throws -> Result {
+        guard !isEmpty else {
+            throw CocoaError.errorWithFilePath(.fileReadInvalidFileName, "")
+        }
+
+        // 1. Normalize the path first.
+
+        var path = self
+
+        // Strip the leading `/` on a RFC8089 path (`/[drive-letter]:/...` ).  A
+        // leading slash indicates a rooted path on the drive for the current
+        // working directory.
+        var iter = path.makeIterator()
+        if iter.next() == "/", iter.next()?.isLetter ?? false, iter.next() == ":" {
+            path.removeFirst()
+        }
+
+        // Win32 APIs can support `/` for the arc separator. However,
+        // symlinks created with `/` do not resolve properly, so normalize
+        // the path.
+        path.replace("/", with: "\\")
+
+        // Drop trailing slashes unless it follows a drive specification.  The
+        // trailing arc separator after a drive specifier indicates the root as
+        // opposed to a drive relative path.
+        while path.count > 1, path.last == "\\" {
+            let first = path.startIndex
+            let second = path.index(after: path.startIndex)
+            if path.count == 3, path[first].isLetter, path[second] == ":" {
+                break;
+            }
+            path.removeLast()
+        }
+
+        // 2. Perform the operation on the normalized path.
+
+        return try path.withCString(encodedAs: UTF16.self) { pwszPath in
+            guard !path.hasPrefix(#"\\"#) else { return try body(pwszPath) }
+
+            let dwLength = GetFullPathNameW(pwszPath, 0, nil, nil)
+            let path = try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
+                guard GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil) == dwLength else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                }
+                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+            }
+            guard !path.hasPrefix(#"\\"#) else {
+                return try path.withCString(encodedAs: UTF16.self, body)
+            }
+            return try #"\\?\\#(path)"#.withCString(encodedAs: UTF16.self, body)
+        }
+    }
+}
+#endif
+
 extension String {
     package func _trimmingWhitespace() -> String {
         String(unicodeScalars._trimmingCharacters {
