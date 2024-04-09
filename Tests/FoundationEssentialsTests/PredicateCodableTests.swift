@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(TestSupport)
-import TestSupport
+@_spi(Expression) import TestSupport
 #endif
 
 #if FOUNDATION_FRAMEWORK
+
+@_spi(Expression) import Foundation
 
 fileprivate protocol PredicateCodingConfigurationProviding : EncodingConfigurationProviding, DecodingConfigurationProviding where EncodingConfiguration == PredicateCodableConfiguration, DecodingConfiguration == PredicateCodableConfiguration {
     static var config: PredicateCodableConfiguration { get }
