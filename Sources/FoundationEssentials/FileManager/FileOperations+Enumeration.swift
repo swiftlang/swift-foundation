@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(Windows)
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
 internal import _CShims
-#elseif os(Windows)
-import CRT
 #endif
 
 // MARK: Directory Iteration
@@ -353,3 +353,5 @@ struct _POSIXDirectoryContentsSequence: Sequence {
         Iterator(path: path, appendSlashForDirectory: appendSlashForDirectory, prefix: prefix)
     }
 }
+
+#endif

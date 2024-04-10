@@ -28,8 +28,20 @@ import Glibc
 internal import _CShims
 #elseif os(Windows)
 import CRT
+import WinSDK
 #endif
 
+#if os(Windows)
+extension FILETIME {
+    package var timeIntervalSince1970: TimeInterval {
+        var count: Double = Double((UInt64(self.dwHighDateTime) << 32) | UInt64(self.dwLowDateTime))
+        count /= 1e7 // 100 nanoseconds to seconds
+        return count - Date.timeIntervalBetween1601AndReferenceDate + Date.timeIntervalBetween1970AndReferenceDate
+    }
+}
+#endif
+
+#if !os(Windows)
 extension stat {
     var isDirectory: Bool {
         (self.st_mode & S_IFMT) == S_IFDIR
@@ -48,6 +60,7 @@ extension stat {
         return type == S_IFBLK || type == S_IFCHR
     }
 }
+#endif
 
 #if FOUNDATION_FRAMEWORK && os(macOS)
 extension URLResourceKey {
@@ -148,7 +161,8 @@ extension _FileManagerImpl {
         try url.setResourceValues(URLResourceValues(values: urlAttributes))
         #endif
     }
-    
+
+#if !os(Windows)
     static func _setAttribute(_ key: UnsafePointer<CChar>, value: Data, at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
         try value.withUnsafeBytes { buffer in
             #if canImport(Darwin)
@@ -173,7 +187,7 @@ extension _FileManagerImpl {
             }
         }
     }
-    
+
     static func _setAttributes(_ attributes: [String : Data], at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
         for (key, value) in attributes {
             try key.withCString {
@@ -181,7 +195,8 @@ extension _FileManagerImpl {
             }
         }
     }
-    
+#endif
+
     #if FOUNDATION_FRAMEWORK
     static func _fileProtectionValueForPath(_ fileSystemRepresentation: UnsafePointer<CChar>) -> Int32? {
         var attrList = attrlist()
@@ -244,7 +259,8 @@ extension _FileManagerImpl {
         }
     }
     #endif
-    
+
+#if !os(Windows)
     static func _userAccountNameToNumber(_ name: String) -> uid_t? {
         name.withCString { ptr in
             getpwnam(ptr)?.pointee.pw_uid
@@ -256,6 +272,7 @@ extension _FileManagerImpl {
             getgrnam(ptr)?.pointee.gr_gid
         }
     }
+#endif
 }
 
 extension FileManager {
