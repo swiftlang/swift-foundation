@@ -347,7 +347,7 @@ extension _FileManagerImpl {
             guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
                 return (false, false)
             }
-            return (true, faAttributes.dwFileAttributes & DWORD(FILE_ATTRIBUTE_DIRECTORY) == DWORD(FILE_ATTRIBUTE_DIRECTORY))
+            return (true, faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY)
         }) ?? (false, false)
 #else
         path.withFileSystemRepresentation { rep -> (Bool, Bool) in
@@ -406,7 +406,7 @@ extension _FileManagerImpl {
             guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
                 return false
             }
-            return faAttributes.dwFileAttributes & DWORD(FILE_ATTRIBUTE_READONLY) != DWORD(FILE_ATTRIBUTE_READONLY)
+            return faAttributes.dwFileAttributes & FILE_ATTRIBUTE_READONLY != FILE_ATTRIBUTE_READONLY
         }) ?? false
 #else
         _fileAccessibleForMode(path, W_OK)
@@ -722,7 +722,7 @@ extension _FileManagerImpl {
                 ftTime.dwLowDateTime = uiTime.LowPart
                 ftTime.dwHighDateTime = uiTime.HighPart
 
-                let hFile: HANDLE = CreateFileW($0, DWORD(GENERIC_WRITE), DWORD(FILE_SHARE_WRITE), nil, DWORD(OPEN_EXISTING), 0, nil)
+                let hFile: HANDLE = CreateFileW($0, GENERIC_WRITE, FILE_SHARE_WRITE, nil, OPEN_EXISTING, 0, nil)
                 if hFile == INVALID_HANDLE_VALUE {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
                 }
