@@ -33,8 +33,10 @@ import WinSDK
 
 #if os(Windows)
 extension FILETIME {
-    package var interval: TimeInterval {
-        Double((self.dwHighDateTime << 32) | self.dwLowDateTime) - Date.timeIntervalBetween1970AndReferenceDate
+    package var timeIntervalSince1970: TimeInterval {
+        var count: Double = Double((UInt64(self.dwHighDateTime) << 32) | UInt64(self.dwLowDateTime))
+        count /= 1e7 // 100 nanoseconds to seconds
+        return count - Date.timeIntervalBetween1601AndReferenceDate + Date.timeIntervalBetween1970AndReferenceDate
     }
 }
 #endif

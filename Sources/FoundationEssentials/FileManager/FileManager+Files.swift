@@ -342,13 +342,13 @@ extension _FileManagerImpl {
     private func _fileExists(_ path: String) -> (exists: Bool, isDirectory: Bool) {
 #if os(Windows)
         guard !path.isEmpty else { return (false, false) }
-        return try! path.withNTPathRepresentation {
+        return (try? path.withNTPathRepresentation {
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
             guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
                 return (false, false)
             }
             return (true, faAttributes.dwFileAttributes & DWORD(FILE_ATTRIBUTE_DIRECTORY) == DWORD(FILE_ATTRIBUTE_DIRECTORY))
-        }
+        }) ?? (false, false)
 #else
         path.withFileSystemRepresentation { rep -> (Bool, Bool) in
             guard let rep else {
@@ -530,10 +530,10 @@ extension _FileManagerImpl {
             }
 
             let size: UInt64 = (UInt64(faAttributes.nFileSizeHigh) << 32) | UInt64(faAttributes.nFileSizeLow)
-            let creation: Date = Date(timeIntervalSince1970: faAttributes.ftCreationTime.interval)
-            let modification: Date = Date(timeIntervalSince1970: faAttributes.ftLastWriteTime.interval)
+            let creation: Date = Date(timeIntervalSince1970: faAttributes.ftCreationTime.timeIntervalSince1970)
+            let modification: Date = Date(timeIntervalSince1970: faAttributes.ftLastWriteTime.timeIntervalSince1970)
             return [
-                .size: size,
+                .size: _writeFileAttributePrimitive(size, as: UInt.self),
                 .modificationDate: modification,
                 .creationDate: creation,
 
@@ -613,9 +613,9 @@ extension _FileManagerImpl {
                 }
 
                 return [
-                    .systemSize: UInt64(liTotal.QuadPart),
-                    .systemFreeSize: UInt64(liFree.QuadPart),
-                    .systemNumber: UInt(dwVolumeSerialNumber),
+                    .systemSize: _writeFileAttributePrimitive(liTotal.QuadPart, as: UInt64.self),
+                    .systemFreeSize: _writeFileAttributePrimitive(liFree.QuadPart, as: UInt64.self),
+                    .systemNumber: _writeFileAttributePrimitive(dwVolumeSerialNumber, as: UInt.self),
 
                     // TODO(compnerd) support these attributes, remapping the Windows semantics...
                     // .systemNodes: ...,
