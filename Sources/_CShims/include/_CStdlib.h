@@ -139,9 +139,7 @@
 #endif
 
 #if __has_include(<tzfile.h>)
-
 #include <tzfile.h>
-
 #else
 
 #ifndef TZDIR
