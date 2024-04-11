@@ -164,6 +164,9 @@ extension UInt8 {
     internal static var _exclamation: UInt8 { UInt8(ascii: "!") }
     internal static var _ampersand: UInt8 { UInt8(ascii: "&") }
     internal static var _pipe: UInt8 { UInt8(ascii: "|") }
+    internal static var _period: UInt8 { UInt8(ascii: ".") }
+    internal static var _e: UInt8 { UInt8(ascii: "e") }
+    internal static var _E: UInt8 { UInt8(ascii: "E") }
 
     internal var digitValue: Int? {
         guard _asciiNumbers.contains(self) else { return nil }
