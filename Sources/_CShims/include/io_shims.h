@@ -43,4 +43,37 @@ typedef struct FullPathAttributes {
 #pragma pack(pop)
 
 #endif // TARGET_OS_EXCLAVEKIT
+
+#if TARGET_OS_WINDOWS
+
+// Replicated from ntifs.h
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer
+
+typedef struct _REPARSE_DATA_BUFFER {
+    unsigned long  ReparseTag;
+    unsigned short ReparseDataLength;
+    unsigned short Reserved;
+    union {
+        struct {
+            unsigned short SubstituteNameOffset;
+            unsigned short SubstituteNameLength;
+            unsigned short PrintNameOffset;
+            unsigned short PrintNameLength;
+            unsigned long  Flags;
+            short          PathBuffer[1];
+        } SymbolicLinkReparseBuffer;
+        struct {
+            unsigned short SubstituteNameOffset;
+            unsigned short SubstituteNameLength;
+            unsigned short PrintNameOffset;
+            unsigned short PrintNameLength;
+            short          PathBuffer[1];
+        } MountPointReparseBuffer;
+        struct {
+            unsigned char DataBuffer[1];
+        } GenericReparseBuffer;
+    };
+} REPARSE_DATA_BUFFER;
+
+#endif
 #endif /* IOShims_h */
