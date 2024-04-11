@@ -108,6 +108,7 @@ private var _cachedUGIDs: (uid_t, gid_t) = {
 }()
 #endif
 
+#if !os(Windows)
 extension Platform {
     private static var ROOT_USER: UInt32 { 0 }
     static func getUGIDs(allowEffectiveRootUID: Bool = true) -> (uid: UInt32, gid: UInt32) {
@@ -129,6 +130,7 @@ extension Platform {
         return result
     }
 }
+#endif
 
 // MARK: - Environment Variables
 extension Platform {
@@ -138,6 +140,30 @@ extension Platform {
             return String(cString: value)
         } else {
             return nil
+        }
+        #elseif os(Windows)
+        var hToken: HANDLE? = nil
+        guard OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) else {
+            return nil
+        }
+        defer { CloseHandle(hToken) }
+
+        var dwLength: DWORD = 0
+        var elevation: TOKEN_ELEVATION = .init()
+        guard GetTokenInformation(hToken, TokenElevation, &elevation, DWORD(MemoryLayout<TOKEN_ELEVATION>.size), &dwLength) else {
+            return nil
+        }
+
+        if elevation.TokenIsElevated == 0 { return nil }
+
+        return name.withCString(encodedAs: UTF16.self) { pwszName in
+            let dwLength = GetEnvironmentVariableW(pwszName, nil, 0)
+            return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) { lpBuffer in
+                guard GetEnvironmentVariableW(pwszName, lpBuffer.baseAddress, dwLength) == dwLength - 1 else {
+                    return nil
+                }
+                return String(decodingCString: lpBuffer.baseAddress!, as: UTF16.self)
+            }
         }
         #else
         guard issetugid() == 0 else { return nil }
@@ -177,7 +203,7 @@ extension Platform {
 #if !FOUNDATION_FRAMEWORK
     static func getHostname() -> String {
         return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Platform.MAX_HOSTNAME_LENGTH + 1) {
-            guard gethostname($0.baseAddress!, Platform.MAX_HOSTNAME_LENGTH) == 0 else {
+            guard gethostname($0.baseAddress!, numericCast(Platform.MAX_HOSTNAME_LENGTH)) == 0 else {
                 return ""
             }
             return String(cString: $0.baseAddress!)
@@ -220,6 +246,19 @@ extension Platform {
         // For Linux, read /proc/self/exe
         return try? FileManager.default.destinationOfSymbolicLink(
             atPath: "/proc/self/exe").standardizingPath
+#elseif os(Windows)
+        let hFile = GetModuleHandleW(nil)
+        let dwLength: DWORD = GetFinalPathNameByHandleW(hFile, nil, 0, FILE_NAME_NORMALIZED)
+        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) { lpBuffer in
+            guard GetFinalPathNameByHandleW(hFile, lpBuffer.baseAddress, dwLength, FILE_NAME_NORMALIZED) == dwLength - 1 else {
+                return nil
+            }
+
+            // The `GetFinalPathNameByHandleW` function will normalise the path
+            // for us as part of the query. This allows us to avoid having to
+            // standardize the path ourselves.
+            return String(decodingCString: lpBuffer.baseAddress!, as: UTF16.self)
+        }
 #else
         // TODO: Implement for other platforms
         return nil
