@@ -148,12 +148,12 @@ struct TimeZoneCache : Sendable {
 
 #if os(Windows)
             let hFile = TimeZone.TZDEFAULT.withCString(encodedAs: UTF16.self) {
-                CreateFileW($0, GENERIC_READ, DWORD(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE), nil, DWORD(OPEN_EXISTING), 0, nil)
+                CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
             }
             defer { CloseHandle(hFile) }
-            let dwSize = GetFinalPathNameByHandleW(hFile, nil, 0, DWORD(VOLUME_NAME_DOS))
+            let dwSize = GetFinalPathNameByHandleW(hFile, nil, 0, VOLUME_NAME_DOS)
             let path = withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwSize)) {
-                _ = GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwSize, DWORD(VOLUME_NAME_DOS))
+                _ = GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwSize, VOLUME_NAME_DOS)
                 return String(decodingCString: $0.baseAddress!, as: UTF16.self)
             }
             if let rangeOfZoneInfo = path._range(of: "\(TimeZone.TZDIR)\\", anchored: false, backwards: false) {
