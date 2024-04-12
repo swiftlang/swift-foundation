@@ -16,6 +16,8 @@ import Darwin
 import Glibc
 #elseif os(Windows)
 import CRT
+import WinSDK
+internal import _CShims
 #endif
 
 extension _FileManagerImpl {
@@ -40,7 +42,7 @@ extension _FileManagerImpl {
         guard !destPath.isEmpty else {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, destURL)
         }
-        
+
         try createSymbolicLink(atPath: path, withDestinationPath: destPath)
     }
     
@@ -48,6 +50,18 @@ extension _FileManagerImpl {
         atPath path: String,
         withDestinationPath destPath: String
     ) throws {
+#if os(Windows)
+        var bIsDirectory = false
+        _ = fileManager.fileExists(atPath: destPath, isDirectory: &bIsDirectory)
+
+        try path.withNTPathRepresentation { lpSymlinkFileName in
+            try destPath.withNTPathRepresentation { lpTargetFileName in
+                if CreateSymbolicLinkW(lpSymlinkFileName, lpTargetFileName, bIsDirectory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0) == 0 {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+                }
+            }
+        }
+#else
         try fileManager.withFileSystemRepresentation(for: path) { srcRep in
             guard let srcRep else {
                 throw CocoaError.errorWithFilePath(.fileReadUnknown, path)
@@ -63,6 +77,7 @@ extension _FileManagerImpl {
                 }
             }
         }
+#endif
     }
     
     func linkItem(
@@ -97,6 +112,79 @@ extension _FileManagerImpl {
     }
     
     func destinationOfSymbolicLink(atPath path: String) throws -> String {
+#if os(Windows)
+        return try path.withNTPathRepresentation {
+            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+            guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
+                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+            }
+
+            guard faAttributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT else {
+                throw CocoaError.errorWithFilePath(path, win32: ERROR_BAD_ARGUMENTS, reading: true)
+            }
+
+            let hFile: HANDLE = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nil)
+            if hFile == INVALID_HANDLE_VALUE {
+                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+            }
+            defer { CloseHandle(hFile) }
+
+            return try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: Int(MAXIMUM_REPARSE_DATA_BUFFER_SIZE)) { buffer in
+                guard let pBuffer = buffer.baseAddress else {
+                    throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
+                }
+
+                var dwBytesWritten: DWORD = 0
+                guard DeviceIoControl(hFile, FSCTL_GET_REPARSE_POINT, nil, 0, pBuffer, DWORD(buffer.count), &dwBytesWritten, nil) else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                }
+                // Ensure that we have enough data.
+                guard dwBytesWritten == MAXIMUM_REPARSE_DATA_BUFFER_SIZE else {
+                    throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
+                }
+
+                return try pBuffer.withMemoryRebound(to: REPARSE_DATA_BUFFER.self, capacity: 1) { pRDB in
+                    let destination: String
+                    switch pRDB.pointee.ReparseTag {
+                    case CUnsignedLong(IO_REPARSE_TAG_SYMLINK):
+                        let SubstituteNameOffset = pRDB.pointee.SymbolicLinkReparseBuffer.SubstituteNameOffset
+                        let SubstituteNameLength = pRDB.pointee.SymbolicLinkReparseBuffer.SubstituteNameLength
+                        destination = try withUnsafePointer(to: &pRDB.pointee.SymbolicLinkReparseBuffer.PathBuffer) {
+                            let pBuffer = UnsafeRawPointer($0).assumingMemoryBound(to: CChar.self)
+                            let data: Data = Data(bytes: pBuffer.advanced(by: Int(SubstituteNameOffset)), count: Int(SubstituteNameLength))
+                            guard let destination = String(data: data, encoding: .utf16LittleEndian) else {
+                                throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
+                            }
+                            return destination
+                        }
+                        break
+                    case CUnsignedLong(IO_REPARSE_TAG_MOUNT_POINT):
+                        let SubstituteNameOffset = pRDB.pointee.MountPointReparseBuffer.SubstituteNameOffset
+                        let SubstituteNameLength = pRDB.pointee.MountPointReparseBuffer.SubstituteNameLength
+                        destination = try withUnsafePointer(to: &pRDB.pointee.MountPointReparseBuffer.PathBuffer) {
+                            let pBuffer = UnsafeRawPointer($0).assumingMemoryBound(to: CChar.self)
+                            let data: Data = Data(bytes: pBuffer.advanced(by: Int(SubstituteNameOffset)), count: Int(SubstituteNameLength))
+                            guard let destination = String(data: data, encoding: .utf16LittleEndian) else {
+                                throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
+                            }
+                            return destination
+                        }
+                        break
+                    default:
+                        throw CocoaError.errorWithFilePath(path, win32: ERROR_BAD_ARGUMENTS, reading: true)
+                    }
+
+                    // Canonicalize the NT object manager path to the DOS style
+                    // path. Unfortunately, there is no nice API which can allow us
+                    // to do this in a guaranteed way.
+                    if destination.hasPrefix("\\??\\") {
+                        return String(destination.dropFirst(4))
+                    }
+                    return destination
+                }
+            }
+        }
+#else
         try fileManager.withFileSystemRepresentation(for: path) { rep in
             guard let rep else {
                 throw CocoaError.errorWithFilePath(.fileReadUnknown, path)
@@ -111,5 +199,6 @@ extension _FileManagerImpl {
                 return fileManager.string(withFileSystemRepresentation: buffer.baseAddress!, length: charsReturned)
             }
         }
+#endif
     }
 }
