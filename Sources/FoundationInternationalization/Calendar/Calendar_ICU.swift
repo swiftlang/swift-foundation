@@ -1821,7 +1821,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
 
     private func _locked_add(_ field: UCalendarDateFields, amount: Int, wrap: Bool, status: inout UErrorCode) -> UDate {
-        let original = ucal_getMillis(ucalendar, &status)
         // we rely on ICU to add and roll units which are larger than or equal to DAYs
         // we have an assumption which is we assume that there is no time zone with a backward repeated day
         // at the time of writing this code, there is only one instance of DST that forwards a day

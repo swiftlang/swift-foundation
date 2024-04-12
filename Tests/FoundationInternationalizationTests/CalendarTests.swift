@@ -1119,13 +1119,10 @@ final class CalendarTests : XCTestCase {
             (Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476)),
         ]
 
-        for test in tests {
-            let a = test.0
-            let b = test.1
-
-            let components = try XCTUnwrap(c.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond, .weekOfMonth], from: a, to: b))
-            let added = try XCTUnwrap(c.date(byAdding: components, to: a))
-            XCTAssertEqual(added, b, "actual: \(s.format(added)), expected: \(s.format(b))")
+        for (start, end) in tests {
+            let components = try XCTUnwrap(c.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond, .weekOfMonth], from: start, to: end))
+            let added = try XCTUnwrap(c.date(byAdding: components, to: start))
+            XCTAssertEqual(added, end, "actual: \(s.format(added)), expected: \(s.format(end))")
         }
     }
 }
