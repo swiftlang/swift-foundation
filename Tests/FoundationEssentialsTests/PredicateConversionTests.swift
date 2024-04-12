@@ -12,9 +12,10 @@
 
 #if FOUNDATION_FRAMEWORK
 
+import Testing
 @_spi(Expression) import Foundation
 
-final class NSPredicateConversionTests: XCTestCase {
+struct NSPredicateConversionTests {
     private func convert<T: NSObject>(_ predicate: Predicate<T>) -> NSPredicate? {
         NSPredicate(predicate)
     }
@@ -61,64 +62,64 @@ final class NSPredicateConversionTests: XCTestCase {
         var b: [Int]
     }
     
-    func testBasics() {
+    @Test func testBasics() {
         let obj = ObjCObject()
         let compareTo = 2
         var predicate = #Predicate<ObjCObject> {
             $0.a == compareTo
         }
         var converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "a == 2"))
-        XCTAssertFalse(converted!.evaluate(with: obj))
-        
+        #expect(converted == NSPredicate(format: "a == 2"))
+        #expect(converted!.evaluate(with: obj) == false)
+
         predicate = #Predicate<ObjCObject> {
             $0.a + 2 == 4
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "a + 2 == 4"))
-        XCTAssertFalse(converted!.evaluate(with: obj))
-        
+        #expect(converted == NSPredicate(format: "a + 2 == 4"))
+        #expect(converted!.evaluate(with: obj) == false)
+
         predicate = #Predicate<ObjCObject> {
             $0.b.count == 5
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "b.length == 5"))
-        XCTAssertTrue(converted!.evaluate(with: obj))
-        
+        #expect(converted == NSPredicate(format: "b.length == 5"))
+        #expect(converted!.evaluate(with: obj))
+
         predicate = #Predicate<ObjCObject> {
             $0.g.count == 5
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "g.@count == 5"))
-        XCTAssertTrue(converted!.evaluate(with: obj))
-        
+        #expect(converted == NSPredicate(format: "g.@count == 5"))
+        #expect(converted!.evaluate(with: obj))
+
         predicate = #Predicate<ObjCObject> { object in
             object.g.filter {
                 $0 == object.d
             }.count > 0
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "SUBQUERY(g, $_local_1, $_local_1 == d).@count > 0"))
-        XCTAssertFalse(converted!.evaluate(with: obj))
+        #expect(converted == NSPredicate(format: "SUBQUERY(g, $_local_1, $_local_1 == d).@count > 0"))
+        #expect(converted!.evaluate(with: obj) == false)
     }
     
-    func testEquality() {
+    @Test func testEquality() {
         var predicate = #Predicate<ObjCObject> {
             $0.a == 0
         }
         var converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "a == 0"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
-        
+        #expect(converted == NSPredicate(format: "a == 0"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
+
         predicate = #Predicate<ObjCObject> {
             $0.a != 0
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "a != 0"))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "a != 0"))
+        #expect(converted!.evaluate(with: ObjCObject()))
     }
     
-    func testRanges() {
+    @Test func testRanges() {
         let now = Date.now
         let range = now ..< now
         let closedRange = now ... now
@@ -131,181 +132,181 @@ final class NSPredicateConversionTests: XCTestCase {
             ($0.i ... $0.i).contains($0.i)
         }
         var converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "i BETWEEN {i, i}"))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
-        
+        #expect(converted == NSPredicate(format: "i BETWEEN {i, i}"))
+        #expect(converted!.evaluate(with: ObjCObject()))
+
         // Non-closed Range Operator
         predicate = #Predicate<ObjCObject> {
             ($0.i ..< $0.i).contains($0.i)
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "i >= i AND i < i"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
-        
+        #expect(converted == NSPredicate(format: "i >= i AND i < i"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
+
         // Various values
         predicate = #Predicate<ObjCObject> {
             range.contains($0.i)
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "i >= %@ AND i < %@", now as NSDate, now as NSDate))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "i >= %@ AND i < %@", now as NSDate, now as NSDate))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
         predicate = #Predicate<ObjCObject> {
             closedRange.contains($0.i)
         }
         converted = convert(predicate)
         let other = NSPredicate(format: "i BETWEEN %@", [now, now])
-        XCTAssertEqual(converted, other)
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == other)
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
         predicate = #Predicate<ObjCObject> {
             from.contains($0.i)
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "i >= %@", now as NSDate))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "i >= %@", now as NSDate))
+        #expect(converted!.evaluate(with: ObjCObject()))
         predicate = #Predicate<ObjCObject> {
             through.contains($0.i)
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "i <= %@", now as NSDate))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "i <= %@", now as NSDate))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
         predicate = #Predicate<ObjCObject> {
             upTo.contains($0.i)
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "i < %@", now as NSDate))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "i < %@", now as NSDate))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
     }
     
-    func testNonObjC() {
+    @Test func testNonObjC() {
         let predicate = #Predicate<ObjCObject> {
             $0.nonObjCKeypath == 2
         }
-        XCTAssertNil(convert(predicate))
+        #expect(convert(predicate) == nil)
     }
     
-    func testNonObjCConstantKeyPath() {
+    @Test func testNonObjCConstantKeyPath() {
         let nonObjC = NonObjCStruct(a: 1, b: [1, 2, 3])
         var predicate = #Predicate<ObjCObject> {
             $0.a == nonObjC.a
         }
         var converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "a == 1"))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
-        
+        #expect(converted == NSPredicate(format: "a == 1"))
+        #expect(converted!.evaluate(with: ObjCObject()))
+
         
         predicate = #Predicate<ObjCObject> {
             $0.f == nonObjC.b.contains([1, 2])
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "f == YES"))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "f == YES"))
+        #expect(converted!.evaluate(with: ObjCObject()))
     }
     
-    func testSubscripts() {
+    @Test func testSubscripts() {
         let obj = ObjCObject()
         var predicate = #Predicate<ObjCObject> {
             $0.g[0] == 2
         }
         var converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "(SELF.g)[0] == 2"))
-        XCTAssertFalse(converted!.evaluate(with: obj))
-        
+        #expect(converted == NSPredicate(format: "(SELF.g)[0] == 2"))
+        #expect(converted!.evaluate(with: obj) == false)
+
         predicate = #Predicate<ObjCObject> {
             $0.h["A"] == 1
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "(SELF.h)['A'] == 1"))
-        XCTAssertTrue(converted!.evaluate(with: obj))
+        #expect(converted == NSPredicate(format: "(SELF.h)['A'] == 1"))
+        #expect(converted!.evaluate(with: obj))
     }
     
-    func testStringSearching() {
+    @Test func testStringSearching() {
         let obj = ObjCObject()
         var predicate = #Predicate<ObjCObject> {
             $0.b.contains("foo")
         }
         var converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "b CONTAINS 'foo'"))
-        XCTAssertFalse(converted!.evaluate(with: obj))
-        
+        #expect(converted == NSPredicate(format: "b CONTAINS 'foo'"))
+        #expect(converted!.evaluate(with: obj) == false)
+
         
         predicate = #Predicate<ObjCObject> {
             $0.b.starts(with: "foo")
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "b BEGINSWITH 'foo'"))
-        XCTAssertFalse(converted!.evaluate(with: obj))
+        #expect(converted == NSPredicate(format: "b BEGINSWITH 'foo'"))
+        #expect(converted!.evaluate(with: obj) == false)
     }
     
-    func testExpressionEnforcement() {
+    @Test func testExpressionEnforcement() {
         var predicate = #Predicate<ObjCObject> { _ in
             true
         }
         var converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "YES == YES"))
-        XCTAssertTrue(converted!.evaluate(with: "Hello"))
-        
+        #expect(converted == NSPredicate(format: "YES == YES"))
+        #expect(converted!.evaluate(with: "Hello"))
+
         predicate = #Predicate<ObjCObject> { _ in
             false
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "NO == YES"))
-        XCTAssertFalse(converted!.evaluate(with: "Hello"))
-        
+        #expect(converted == NSPredicate(format: "NO == YES"))
+        #expect(converted!.evaluate(with: "Hello") == false)
+
         predicate = #Predicate<ObjCObject> { _ in
             true && false
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "(YES == YES) && (NO == YES)"))
-        XCTAssertFalse(converted!.evaluate(with: "Hello"))
-        
+        #expect(converted == NSPredicate(format: "(YES == YES) && (NO == YES)"))
+        #expect(converted!.evaluate(with: "Hello") == false)
+
         predicate = #Predicate<ObjCObject> {
             $0.f
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "f == YES"))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
-        
+        #expect(converted == NSPredicate(format: "f == YES"))
+        #expect(converted!.evaluate(with: ObjCObject()))
+
         predicate = #Predicate<ObjCObject> {
             ($0.f && true) == false
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(f == YES AND YES == YES, YES, NO) == NO"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "TERNARY(f == YES AND YES == YES, YES, NO) == NO"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
     }
     
-    func testConditional() {
+    @Test func testConditional() {
         let predicate = #Predicate<ObjCObject> {
             $0.f ? true : false
         }
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(f == YES, YES, NO) == YES"))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "TERNARY(f == YES, YES, NO) == YES"))
+        #expect(converted!.evaluate(with: ObjCObject()))
     }
     
-    func testOptionals() {
+    @Test func testOptionals() {
         var predicate = #Predicate<ObjCObject> {
             ($0.j ?? "").isEmpty
         }
         var converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(j != NULL, j, '').length == 0"))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
-        
+        #expect(converted == NSPredicate(format: "TERNARY(j != NULL, j, '').length == 0"))
+        #expect(converted!.evaluate(with: ObjCObject()))
+
         predicate = #Predicate<ObjCObject> {
             ($0.j?.count ?? -1) > 1
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(TERNARY(j != nil, j.length, nil) != nil, TERNARY(j != nil, j.length, nil), 1 * -1) > 1"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
-        
+        #expect(converted == NSPredicate(format: "TERNARY(TERNARY(j != nil, j.length, nil) != nil, TERNARY(j != nil, j.length, nil), 1 * -1) > 1"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
+
         predicate = #Predicate<ObjCObject> {
             $0.j == nil
         }
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "j == nil"))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "j == nil"))
+        #expect(converted!.evaluate(with: ObjCObject()))
     }
     
-    func testUUID() {
+    @Test func testUUID() {
         let obj = ObjCObject()
         let uuid = obj.k
         let predicate = #Predicate<ObjCObject> {
@@ -313,100 +314,100 @@ final class NSPredicateConversionTests: XCTestCase {
         }
         
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "k == %@", uuid as NSUUID))
-        XCTAssertTrue(converted!.evaluate(with: obj))
+        #expect(converted == NSPredicate(format: "k == %@", uuid as NSUUID))
+        #expect(converted!.evaluate(with: obj))
         let obj2 = ObjCObject()
-        XCTAssertNotEqual(obj2.k, uuid)
-        XCTAssertFalse(converted!.evaluate(with: obj2))
+        #expect(obj2.k != uuid)
+        #expect(converted!.evaluate(with: obj2) == false)
     }
     
-    func testDate() {
+    @Test func testDate() {
         let now = Date.now
         let predicate = #Predicate<ObjCObject> {
             $0.i > now
         }
         
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "i > %@", now as NSDate))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "i > %@", now as NSDate))
+        #expect(converted!.evaluate(with: ObjCObject()))
     }
     
-    func testData() {
+    @Test func testData() {
         let data = Data([1, 2, 3])
         let predicate = #Predicate<ObjCObject> {
             $0.l == data
         }
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "l == %@", data as NSData))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "l == %@", data as NSData))
+        #expect(converted!.evaluate(with: ObjCObject()))
     }
     
-    func testURL() {
+    @Test func testURL() {
         let url = URL(string: "http://apple.com")!
         let predicate = #Predicate<ObjCObject> {
             $0.m == url
         }
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "m == %@", url as NSURL))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "m == %@", url as NSURL))
+        #expect(converted!.evaluate(with: ObjCObject()))
     }
     
-    func testSequenceContainsWhere() {
+    @Test func testSequenceContainsWhere() {
         let predicate = #Predicate<ObjCObject> {
             $0.g.contains { $0 == 2 }
         }
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "SUBQUERY(g, $_local_1, $_local_1 == 2).@count != 0"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "SUBQUERY(g, $_local_1, $_local_1 == 2).@count != 0"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
     }
     
-    func testSequenceAllSatisfy() {
+    @Test func testSequenceAllSatisfy() {
         let predicate = #Predicate<ObjCObject> {
             $0.g.allSatisfy { $0 == 2 }
         }
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "SUBQUERY(g, $_local_1, NOT ($_local_1 == 2)).@count == 0"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "SUBQUERY(g, $_local_1, NOT ($_local_1 == 2)).@count == 0"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
     }
     
-    func testMaxMin() {
+    @Test func testMaxMin() {
         let predicate = #Predicate<ObjCObject> {
             $0.g.max() == $0.g.min()
         }
         
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "g.@max.#self == g.@min.#self"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "g.@max.#self == g.@min.#self"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
     }
     
-    func testStringComparison() {
+    @Test func testStringComparison() {
         let equal = ComparisonResult.orderedSame
         var predicate = #Predicate<ObjCObject> {
             $0.b.caseInsensitiveCompare("ABC") == equal
         }
         
         var converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(b ==[c] 'ABC', 0, TERNARY(b <[c] 'ABC', -1, 1)) == 0"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
-        
+        #expect(converted == NSPredicate(format: "TERNARY(b ==[c] 'ABC', 0, TERNARY(b <[c] 'ABC', -1, 1)) == 0"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
+
         predicate = #Predicate<ObjCObject> {
             $0.b.localizedCompare("ABC") == equal
         }
         
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "TERNARY(b ==[l] 'ABC', 0, TERNARY(b <[l] 'ABC', -1, 1)) == 0"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
-        
+        #expect(converted == NSPredicate(format: "TERNARY(b ==[l] 'ABC', 0, TERNARY(b <[l] 'ABC', -1, 1)) == 0"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
+
         predicate = #Predicate<ObjCObject> {
             $0.b.localizedStandardContains("ABC")
         }
         
         converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "b CONTAINS[cdl] 'ABC'"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "b CONTAINS[cdl] 'ABC'"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
     }
     
-    func testNested() {
+    @Test func testNested() {
         let predicateA = Predicate<ObjCObject> {
             PredicateExpressions.build_Equal(
                 lhs: PredicateExpressions.build_KeyPath(
@@ -435,21 +436,21 @@ final class NSPredicateConversionTests: XCTestCase {
         }
         
         let converted = convert(predicateB)
-        XCTAssertEqual(converted, NSPredicate(format: "a == 3 AND a > 2"))
-        XCTAssertFalse(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "a == 3 AND a > 2"))
+        #expect(converted!.evaluate(with: ObjCObject()) == false)
     }
     
-    func testRegex() {
+    @Test func testRegex() {
         let regex = #/[e-f][l-m]/#
         let predicate = #Predicate<ObjCObject> {
             $0.b.contains(regex)
         }
         let converted = convert(predicate)
-        XCTAssertEqual(converted, NSPredicate(format: "b MATCHES '.*[e-f][l-m].*'"))
-        XCTAssertTrue(converted!.evaluate(with: ObjCObject()))
+        #expect(converted == NSPredicate(format: "b MATCHES '.*[e-f][l-m].*'"))
+        #expect(converted!.evaluate(with: ObjCObject()))
     }
     
-    func testExpression() {
+    @Test func testExpression() {
         let expression = Expression<ObjCObject, Int>() {
             PredicateExpressions.build_KeyPath(
                 root: PredicateExpressions.build_Arg($0),
@@ -457,10 +458,13 @@ final class NSPredicateConversionTests: XCTestCase {
             )
         }
         let converted = convert(expression)
-        XCTAssertEqual(converted, NSExpression(format: "a"))
+        #expect(converted == NSExpression(format: "a"))
         let obj = ObjCObject()
         let value = converted!.expressionValue(with: obj, context: nil)
-        XCTAssertEqual(value as? Int, obj.a, "Expression produced \(String(describing: value)) instead of \(obj.a)")
+        #expect(
+            value as? Int == obj.a,
+            "Expression produced \(String(describing: value)) instead of \(obj.a)"
+        )
     }
 }
 

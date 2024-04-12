@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -19,16 +17,16 @@ import TestSupport
 
 // MARK: - Test Suite
 
-class TestPropertyListEncoder : XCTestCase {
+struct PropertyListEncoderTests {
     // MARK: - Encoding Top-Level Empty Types
 #if FIXED_64141381
-    func testEncodingTopLevelEmptyStruct() {
+    @Test func testEncodingTopLevelEmptyStruct() {
         let empty = EmptyStruct()
         _testRoundTrip(of: empty, in: .binary, expectedPlist: _plistEmptyDictionaryBinary)
         _testRoundTrip(of: empty, in: .xml, expectedPlist: _plistEmptyDictionaryXML)
     }
 
-    func testEncodingTopLevelEmptyClass() {
+    @Test func testEncodingTopLevelEmptyClass() {
         let empty = EmptyClass()
         _testRoundTrip(of: empty, in: .binary, expectedPlist: _plistEmptyDictionaryBinary)
         _testRoundTrip(of: empty, in: .xml, expectedPlist: _plistEmptyDictionaryXML)
@@ -36,7 +34,7 @@ class TestPropertyListEncoder : XCTestCase {
 #endif
 
     // MARK: - Encoding Top-Level Single-Value Types
-    func testEncodingTopLevelSingleValueEnum() {
+    @Test func testEncodingTopLevelSingleValueEnum() {
         let s1 = Switch.off
         _testEncodeFailure(of: s1, in: .binary)
         _testEncodeFailure(of: s1, in: .xml)
@@ -50,7 +48,7 @@ class TestPropertyListEncoder : XCTestCase {
         _testRoundTrip(of: TopLevelWrapper(s2), in: .xml)
     }
 
-    func testEncodingTopLevelSingleValueStruct() {
+    @Test func testEncodingTopLevelSingleValueStruct() {
         let t = Timestamp(3141592653)
         _testEncodeFailure(of: t, in: .binary)
         _testEncodeFailure(of: t, in: .xml)
@@ -58,7 +56,7 @@ class TestPropertyListEncoder : XCTestCase {
         _testRoundTrip(of: TopLevelWrapper(t), in: .xml)
     }
 
-    func testEncodingTopLevelSingleValueClass() {
+    @Test func testEncodingTopLevelSingleValueClass() {
         let c = Counter()
         _testEncodeFailure(of: c, in: .binary)
         _testEncodeFailure(of: c, in: .xml)
@@ -67,49 +65,49 @@ class TestPropertyListEncoder : XCTestCase {
     }
 
     // MARK: - Encoding Top-Level Structured Types
-    func testEncodingTopLevelStructuredStruct() {
+    @Test func testEncodingTopLevelStructuredStruct() {
         // Address is a struct type with multiple fields.
         let address = Address.testValue
         _testRoundTrip(of: address, in: .binary)
         _testRoundTrip(of: address, in: .xml)
     }
 
-    func testEncodingTopLevelStructuredClass() {
+    @Test func testEncodingTopLevelStructuredClass() {
         // Person is a class with multiple fields.
         let person = Person.testValue
         _testRoundTrip(of: person, in: .binary)
         _testRoundTrip(of: person, in: .xml)
     }
 
-    func testEncodingTopLevelStructuredSingleStruct() {
+    @Test func testEncodingTopLevelStructuredSingleStruct() {
         // Numbers is a struct which encodes as an array through a single value container.
         let numbers = Numbers.testValue
         _testRoundTrip(of: numbers, in: .binary)
         _testRoundTrip(of: numbers, in: .xml)
     }
 
-    func testEncodingTopLevelStructuredSingleClass() {
+    @Test func testEncodingTopLevelStructuredSingleClass() {
         // Mapping is a class which encodes as a dictionary through a single value container.
         let mapping = Mapping.testValue
         _testRoundTrip(of: mapping, in: .binary)
         _testRoundTrip(of: mapping, in: .xml)
     }
 
-    func testEncodingTopLevelDeepStructuredType() {
+    @Test func testEncodingTopLevelDeepStructuredType() {
         // Company is a type with fields which are Codable themselves.
         let company = Company.testValue
         _testRoundTrip(of: company, in: .binary)
         _testRoundTrip(of: company, in: .xml)
     }
 
-    func testEncodingClassWhichSharesEncoderWithSuper() {
+    @Test func testEncodingClassWhichSharesEncoderWithSuper() {
         // Employee is a type which shares its encoder & decoder with its superclass, Person.
         let employee = Employee.testValue
         _testRoundTrip(of: employee, in: .binary)
         _testRoundTrip(of: employee, in: .xml)
     }
 
-    func testEncodingTopLevelNullableType() {
+    @Test func testEncodingTopLevelNullableType() {
         // EnhancedBool is a type which encodes either as a Bool or as nil.
         _testEncodeFailure(of: EnhancedBool.true, in: .binary)
         _testEncodeFailure(of: EnhancedBool.true, in: .xml)
@@ -126,20 +124,20 @@ class TestPropertyListEncoder : XCTestCase {
         _testRoundTrip(of: TopLevelWrapper(EnhancedBool.fileNotFound), in: .xml)
     }
 
-    func testEncodingTopLevelWithConfiguration() throws {
+    @Test func testEncodingTopLevelWithConfiguration() throws {
         // CodableTypeWithConfiguration is a struct that conforms to CodableWithConfiguration
         let value = CodableTypeWithConfiguration.testValue
         let encoder = PropertyListEncoder()
         let decoder = PropertyListDecoder()
 
         var decoded = try decoder.decode(CodableTypeWithConfiguration.self, from: try encoder.encode(value, configuration: .init(1)), configuration: .init(1))
-        XCTAssertEqual(decoded, value)
+        #expect(decoded == value)
         decoded = try decoder.decode(CodableTypeWithConfiguration.self, from: try encoder.encode(value, configuration: CodableTypeWithConfiguration.ConfigProviding.self), configuration: CodableTypeWithConfiguration.ConfigProviding.self)
-        XCTAssertEqual(decoded, value)
+        #expect(decoded == value)
     }
 
 #if FIXED_64141381
-    func testEncodingMultipleNestedContainersWithTheSameTopLevelKey() {
+    @Test func testEncodingMultipleNestedContainersWithTheSameTopLevelKey() {
         struct Model : Codable, Equatable {
             let first: String
             let second: String
@@ -191,8 +189,8 @@ class TestPropertyListEncoder : XCTestCase {
     }
 #endif
 
-#if false // FIXME: XCTest doesn't support crash tests yet rdar://20195010&22387653
-    func testEncodingConflictedTypeNestedContainersWithTheSameTopLevelKey() {
+#if false // FIXME: Swift Testing doesn't support crash tests yet rdar://20195010&22387653
+    @Test func testEncodingConflictedTypeNestedContainersWithTheSameTopLevelKey() {
         struct Model : Encodable, Equatable {
             let first: String
 
@@ -231,34 +229,34 @@ class TestPropertyListEncoder : XCTestCase {
 #endif
 
     // MARK: - Encoder Features
-    func testNestedContainerCodingPaths() {
+    @Test func testNestedContainerCodingPaths() throws {
         let encoder = PropertyListEncoder()
         do {
             let _ = try encoder.encode(NestedContainersTestType())
-        } catch let error as NSError {
-            XCTFail("Caught error during encoding nested container types: \(error)")
+        } catch {
+            Issue.record(error, "Caught error during encoding nested container types: \(error)")
         }
     }
 
-    func testSuperEncoderCodingPaths() {
+    @Test func testSuperEncoderCodingPaths() throws {
         let encoder = PropertyListEncoder()
         do {
             let _ = try encoder.encode(NestedContainersTestType(testSuperEncoder: true))
-        } catch let error as NSError {
-            XCTFail("Caught error during encoding nested container types: \(error)")
+        } catch {
+            Issue.record(error, "Caught error during encoding nested container types: \(error)")
         }
     }
 
 #if FOUNDATION_FRAMEWORK
     // requires PropertyListSerialization, JSONSerialization
     
-    func testEncodingTopLevelData() {
+    @Test func testEncodingTopLevelData() {
         let data = try! JSONSerialization.data(withJSONObject: [String](), options: [])
         _testRoundTrip(of: data, in: .binary, expectedPlist: try! PropertyListSerialization.data(fromPropertyList: data, format: .binary, options: 0))
         _testRoundTrip(of: data, in: .xml, expectedPlist: try! PropertyListSerialization.data(fromPropertyList: data, format: .xml, options: 0))
     }
 
-    func testInterceptData() {
+    @Test func testInterceptData() {
         let data = try! JSONSerialization.data(withJSONObject: [String](), options: [])
         let topLevel = TopLevelWrapper(data)
         let plist = ["value": data]
@@ -266,7 +264,7 @@ class TestPropertyListEncoder : XCTestCase {
         _testRoundTrip(of: topLevel, in: .xml, expectedPlist: try! PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0))
     }
 
-    func testInterceptDate() {
+    @Test func testInterceptDate() {
         let date = Date(timeIntervalSinceReferenceDate: 0)
         let topLevel = TopLevelWrapper(date)
         let plist = ["value": date]
@@ -276,17 +274,21 @@ class TestPropertyListEncoder : XCTestCase {
 #endif // FOUNDATION_FRaMEWORK
 
     // MARK: - Type coercion
-    func testTypeCoercion() {
+    @Test func testTypeCoercion() {
         func _testRoundTripTypeCoercionFailure<T,U>(of value: T, as type: U.Type) where T : Codable, U : Codable {
             let encoder = PropertyListEncoder()
 
             encoder.outputFormat = .xml
             let xmlData = try! encoder.encode(value)
-            XCTAssertThrowsError(try PropertyListDecoder().decode(U.self, from: xmlData), "Coercion from \(T.self) to \(U.self) was expected to fail.")
+            #expect(throws: (any Error).self, "Coercion from \(T.self) to \(U.self) was expected to fail.") {
+                try PropertyListDecoder().decode(U.self, from: xmlData)
+            }
 
             encoder.outputFormat = .binary
             let binaryData = try! encoder.encode(value)
-            XCTAssertThrowsError(try PropertyListDecoder().decode(U.self, from: binaryData), "Coercion from \(T.self) to \(U.self) was expected to fail.")
+            #expect(throws: (any Error).self, "Coercion from \(T.self) to \(U.self) was expected to fail.") {
+                try PropertyListDecoder().decode(U.self, from: binaryData)
+            }
         }
 
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int].self)
@@ -327,7 +329,7 @@ class TestPropertyListEncoder : XCTestCase {
         _testRoundTripTypeCoercionFailure(of: [UInt64.max], as: [Int64].self)
     }
 
-    func testIntegerRealCoercion() throws {
+    @Test func testIntegerRealCoercion() throws {
         func _testRoundTripTypeCoercion<T: Codable, U: Codable & Equatable>(of value: T, expectedCoercedValue: U) throws {
             let encoder = PropertyListEncoder()
 
@@ -335,13 +337,13 @@ class TestPropertyListEncoder : XCTestCase {
 
             let xmlData = try encoder.encode([value])
             var decoded = try PropertyListDecoder().decode([U].self, from: xmlData)
-            XCTAssertEqual(decoded.first!, expectedCoercedValue)
+            #expect(decoded.first! == expectedCoercedValue)
 
             encoder.outputFormat = .binary
             let binaryData = try encoder.encode([value])
 
             decoded = try PropertyListDecoder().decode([U].self, from: binaryData)
-            XCTAssertEqual(decoded.first!, expectedCoercedValue)
+            #expect(decoded.first! == expectedCoercedValue)
         }
 
         try _testRoundTripTypeCoercion(of: 1 as UInt64, expectedCoercedValue: 1.0 as Double)
@@ -358,25 +360,25 @@ class TestPropertyListEncoder : XCTestCase {
         try _testRoundTripTypeCoercion(of: 2.99792458e8 as Double, expectedCoercedValue: 299792458)
     }
 
-    func testDecodingConcreteTypeParameter() {
+    @Test func testDecodingConcreteTypeParameter() {
         let encoder = PropertyListEncoder()
         guard let plist = try? encoder.encode(Employee.testValue) else {
-            XCTFail("Unable to encode Employee.")
+            Issue.record("Unable to encode Employee.")
             return
         }
 
         let decoder = PropertyListDecoder()
         guard let decoded = try? decoder.decode(Employee.self as Person.Type, from: plist) else {
-            XCTFail("Failed to decode Employee as Person from plist.")
+            Issue.record("Failed to decode Employee as Person from plist.")
             return
         }
 
-        expectEqual(type(of: decoded), Employee.self, "Expected decoded value to be of type Employee; got \(type(of: decoded)) instead.")
+        #expect(type(of: decoded) == Employee.self, "Expected decoded value to be of type Employee; got \(type(of: decoded)) instead.")
     }
 
     // MARK: - Encoder State
     // SR-6078
-    func testEncoderStateThrowOnEncode() {
+    @Test func testEncoderStateThrowOnEncode() {
         struct Wrapper<T : Encodable> : Encodable {
             let value: T
             init(_ value: T) { self.value = value }
@@ -420,14 +422,14 @@ class TestPropertyListEncoder : XCTestCase {
 
     // MARK: - Decoder State
     // SR-6048
-    func testDecoderStateThrowOnDecode() {
+    @Test func testDecoderStateThrowOnDecode() {
         let plist = try! PropertyListEncoder().encode([1,2,3])
         let _ = try! PropertyListDecoder().decode(EitherDecodable<[String], [Int]>.self, from: plist)
     }
 
 #if FOUNDATION_FRAMEWORK
     // MARK: - NSKeyedArchiver / NSKeyedUnarchiver integration
-    func testArchiving() {
+    @Test func testArchiving() {
         struct CodableType: Codable, Equatable {
             let willBeNil: String?
             let arrayOfOptionals: [String?]
@@ -450,9 +452,9 @@ class TestPropertyListEncoder : XCTestCase {
             let keyedUnarchiver = try NSKeyedUnarchiver(forReadingFrom: data)
             let unarchived = try keyedUnarchiver.decodeTopLevelDecodable(CodableType.self, forKey: "strings")
 
-            XCTAssertEqual(unarchived, value)
+            #expect(unarchived == value)
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            Issue.record(error, "Unexpected error: \(error)")
         }
     }
 #endif
@@ -471,7 +473,7 @@ class TestPropertyListEncoder : XCTestCase {
             let encoder = PropertyListEncoder()
             encoder.outputFormat = format
             let _ = try encoder.encode(value)
-            XCTFail("Encode of top-level \(T.self) was expected to fail.")
+            Issue.record("Encode of top-level \(T.self) was expected to fail.")
         } catch {}
     }
 
@@ -482,25 +484,25 @@ class TestPropertyListEncoder : XCTestCase {
             encoder.outputFormat = format
             payload = try encoder.encode(value)
         } catch {
-            XCTFail("Failed to encode \(T.self) to plist: \(error)")
+            Issue.record(error, "Failed to encode \(T.self) to plist: \(error)")
         }
 
         if let expectedPlist = plist {
-            XCTAssertEqual(expectedPlist, payload, "Produced plist not identical to expected plist.")
+            #expect(expectedPlist == payload, "Produced plist not identical to expected plist.")
         }
 
         do {
             var decodedFormat: PropertyListDecoder.PropertyListFormat = format
             let decoded = try PropertyListDecoder().decode(T.self, from: payload, format: &decodedFormat)
-            XCTAssertEqual(format, decodedFormat, "Encountered plist format differed from requested format.")
-            XCTAssertEqual(decoded, value, "\(T.self) did not round-trip to an equal value.")
+            #expect(format == decodedFormat, "Encountered plist format differed from requested format.")
+            #expect(decoded == value, "\(T.self) did not round-trip to an equal value.")
         } catch {
-            XCTFail("Failed to decode \(T.self) from plist: \(error)")
+            Issue.record(error, "Failed to decode \(T.self) from plist: \(error)")
         }
     }
 
     // MARK: - Other tests
-    func testUnkeyedContainerContainingNulls() throws {
+    @Test func testUnkeyedContainerContainingNulls() throws {
         struct UnkeyedContainerContainingNullTestType : Codable, Equatable {
             var array = [String?]()
             
@@ -535,20 +537,24 @@ class TestPropertyListEncoder : XCTestCase {
         _testRoundTrip(of: UnkeyedContainerContainingNullTestType(array: array), in: .binary)
     }
     
-    func test_invalidNSDataKey_82142612() {
+    @Test func test_invalidNSDataKey_82142612() {
         let data = testData(forResource: "Test_82142612", withExtension: "bad")!
 
         let decoder = PropertyListDecoder()
-        XCTAssertThrowsError(try decoder.decode([String:String].self, from: data))
+        #expect(throws: (any Error).self) {
+            try decoder.decode([String:String].self, from: data)
+        }
 
         // Repeat something similar with XML.
         let xmlData = "<plist><dict><data>abcd</data><string>xyz</string></dict></plist>".data(using: String._Encoding.utf8)!
-        XCTAssertThrowsError(try decoder.decode([String:String].self, from: xmlData))
+        #expect(throws: (any Error).self) {
+            try decoder.decode([String:String].self, from: xmlData)
+        }
     }
 
 #if FOUNDATION_FRAMEWORK
     // TODO: Depends on data's range(of:) implementation
-    func test_nonStringDictionaryKey() {
+    @Test func test_nonStringDictionaryKey() {
         let decoder = PropertyListDecoder()
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
@@ -557,10 +563,14 @@ class TestPropertyListEncoder : XCTestCase {
         // Replace the tag for the ASCII string (0101) that is length 4 ("abcd" => length: 0100) with a boolean "true" tag (0000_1001)
         let range = data.range(of: Data([0b0101_0100]))!
         data.replaceSubrange(range, with: Data([0b000_1001]))
-        XCTAssertThrowsError(try decoder.decode([String:String].self, from: data))
+        #expect(throws: (any Error).self) {
+            try decoder.decode([String:String].self, from: data)
+        }
 
         let xmlData = "<plist><dict><string>abcd</string><string>xyz</string></dict></plist>".data(using: String._Encoding.utf8)!
-        XCTAssertThrowsError(try decoder.decode([String:String].self, from: xmlData))
+        #expect(throws: (any Error).self) {
+            try decoder.decode([String:String].self, from: xmlData)
+        }
     }
 #endif
 
@@ -597,31 +607,37 @@ class TestPropertyListEncoder : XCTestCase {
         }
     }
 
-    func test_5616259() throws {
+    @Test func test_5616259() throws {
         let plistData = testData(forResource: "Test_5616259", withExtension: "bad")!
-        XCTAssertThrowsError(try PropertyListDecoder().decode([String].self, from: plistData))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([String].self, from: plistData)
+        }
     }
 
-    func test_genericProperties_XML() throws {
+    @Test func test_genericProperties_XML() throws {
         defer { GenericProperties.assertionFailure = nil }
 
         let data = testData(forResource: "Generic_XML_Properties", withExtension: "plist")!
 
-        XCTAssertNoThrow(try PropertyListDecoder().decode(GenericProperties.self, from: data))
-        XCTAssertNil(GenericProperties.assertionFailure)
+        #expect(throws: Never.self) {
+            try PropertyListDecoder().decode(GenericProperties.self, from: data)
+        }
+        #expect(GenericProperties.assertionFailure == nil)
     }
 
-    func test_genericProperties_binary() throws {
+    @Test func test_genericProperties_binary() throws {
         let data = testData(forResource: "Generic_XML_Properties_Binary", withExtension: "plist")!
 
         defer { GenericProperties.assertionFailure = nil }
 
-        XCTAssertNoThrow(try PropertyListDecoder().decode(GenericProperties.self, from: data))
-        XCTAssertNil(GenericProperties.assertionFailure)
+        #expect(throws: Never.self) {
+            try PropertyListDecoder().decode(GenericProperties.self, from: data)
+        }
+        #expect(GenericProperties.assertionFailure == nil)
     }
 
     // <rdar://problem/5877417> Binary plist parser should parse any version 'bplist0?'
-    func test_5877417() {
+    @Test func test_5877417() {
         var data = testData(forResource: "Generic_XML_Properties_Binary", withExtension: "plist")!
 
         // Modify the data so the header starts with bplist0x
@@ -629,19 +645,23 @@ class TestPropertyListEncoder : XCTestCase {
 
         defer { GenericProperties.assertionFailure = nil }
 
-        XCTAssertNoThrow(try PropertyListDecoder().decode(GenericProperties.self, from: data))
-        XCTAssertNil(GenericProperties.assertionFailure)
+        #expect(throws: Never.self) {
+            try PropertyListDecoder().decode(GenericProperties.self, from: data)
+        }
+        #expect(GenericProperties.assertionFailure == nil)
     }
 
-    func test_xmlErrors() {
+    @Test func test_xmlErrors() {
         let data = testData(forResource: "Generic_XML_Properties", withExtension: "plist")!
         let originalXML = String(data: data, encoding: .utf8)!
 
         defer { GenericProperties.assertionFailure = nil }
 
         // Try an empty plist
-        XCTAssertThrowsError(try PropertyListDecoder().decode(GenericProperties.self, from: Data()))
-        XCTAssertNil(GenericProperties.assertionFailure)
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode(GenericProperties.self, from: Data())
+        }
+        #expect(GenericProperties.assertionFailure == nil)
         // We'll modify this string in all kinds of nasty ways to introduce errors
         // ---
         /*
@@ -693,21 +713,23 @@ class TestPropertyListEncoder : XCTestCase {
         errorPlists["Fake inline DTD"] = originalXML.replacingOccurrences(of: "PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"", with: "[<!ELEMENT foo (#PCDATA)>]")
         for (name, badPlist) in errorPlists {
             let data = badPlist.data(using: String._Encoding.utf8)!
-            XCTAssertThrowsError(try PropertyListDecoder().decode(GenericProperties.self, from: data), "Case \(name) did not fail as expected")
+            #expect(throws: (any Error).self, "Case \(name) did not fail as expected") {
+                try PropertyListDecoder().decode(GenericProperties.self, from: data)
+            }
         }
 
     }
 
-    func test_6164184() throws {
+    @Test func test_6164184() throws {
         let xml = "<plist><array><integer>0x721B</integer><integer>0x1111</integer><integer>-0xFFFF</integer></array></plist>"
         let array = try PropertyListDecoder().decode([Int].self, from: xml.data(using: String._Encoding.utf8)!)
-        XCTAssertEqual([0x721B, 0x1111, -0xFFFF], array)
+        #expect([0x721B, 0x1111, -0xFFFF] == array)
     }
 
-    func test_xmlIntegerEdgeCases() throws {
+    @Test func test_xmlIntegerEdgeCases() throws {
         func checkValidEdgeCase<T: Decodable & Equatable>(_ xml: String, type: T.Type, expected: T) throws {
             let value = try PropertyListDecoder().decode(type, from: xml.data(using: String._Encoding.utf8)!)
-            XCTAssertEqual(value, expected)
+            #expect(value == expected)
         }
 
         try checkValidEdgeCase("<integer>127</integer>", type: Int8.self, expected: .max)
@@ -734,7 +756,9 @@ class TestPropertyListEncoder : XCTestCase {
         try checkValidEdgeCase("<integer>18446744073709551615</integer>", type: UInt64.self, expected: .max)
 
         func checkInvalidEdgeCase<T: Decodable>(_ xml: String, type: T.Type) {
-            XCTAssertThrowsError(try PropertyListDecoder().decode(type, from: xml.data(using: String._Encoding.utf8)!))
+            #expect(throws: (any Error).self) {
+                try PropertyListDecoder().decode(type, from: xml.data(using: String._Encoding.utf8)!)
+            }
         }
 
         checkInvalidEdgeCase("<integer>128</integer>", type: Int8.self)
@@ -761,14 +785,14 @@ class TestPropertyListEncoder : XCTestCase {
         checkInvalidEdgeCase("<integer>18446744073709551616</integer>", type: UInt64.self)
     }
     
-    func test_xmlIntegerWhitespace() throws {
+    @Test func test_xmlIntegerWhitespace() throws {
         let xml = "<array><integer> +\t42</integer><integer>\t-   99</integer><integer> -\t0xFACE</integer></array>"
         
         let value = try PropertyListDecoder().decode([Int].self, from: xml.data(using: String._Encoding.utf8)!)
-        XCTAssertEqual(value, [42, -99, -0xFACE])
+        #expect(value == [42, -99, -0xFACE])
     }
 
-    func test_binaryNumberEdgeCases() throws {
+    @Test func test_binaryNumberEdgeCases() throws {
         _testRoundTrip(of: [Int8.max], in: .binary)
         _testRoundTrip(of: [Int8.min], in: .binary)
         _testRoundTrip(of: [Int16.max], in: .binary)
@@ -796,7 +820,7 @@ class TestPropertyListEncoder : XCTestCase {
         _testRoundTrip(of: [-Double.infinity], in: .binary)
     }
     
-    func test_binaryReals() throws {
+    @Test func test_binaryReals() throws {
         func encode<T: BinaryFloatingPoint & Encodable>(_: T.Type) -> (data: Data, expected: [T]) {
             let expected: [T] = [
                 1.5,
@@ -817,9 +841,9 @@ class TestPropertyListEncoder : XCTestCase {
             let (data, expected) = encode(type)
             do {
                 let result = try PropertyListDecoder().decode([T].self, from: data)
-                XCTAssertEqual(result, expected, "Type: \(type)")
+                #expect(result == expected, "Type: \(type)")
             } catch {
-                XCTFail("Expected error \(error) for type: \(type)")
+                Issue.record(error, "Expected error \(error) for type: \(type)")
             }
         }
         
@@ -827,7 +851,7 @@ class TestPropertyListEncoder : XCTestCase {
         test(Double.self)
     }
 
-    func test_XMLReals() throws {
+    @Test func test_XMLReals() throws {
         let xml = "<plist><array><real>1.5</real><real>2</real><real>  -3.14</real><real>1.000000000000000000000001</real><real>31415.9e-4</real><real>-iNf</real><real>infInItY</real></array></plist>"
         let array = try PropertyListDecoder().decode([Float].self, from: xml.data(using: String._Encoding.utf8)!)
         let expected: [Float] = [
@@ -839,17 +863,17 @@ class TestPropertyListEncoder : XCTestCase {
             -.infinity,
             .infinity
         ]
-        XCTAssertEqual(array, expected)
+        #expect(array == expected)
 
         // nan doesn't work with equality.
         let xmlNAN = "<array><real>nAn</real><real>NAN</real><real>nan</real></array>"
         let arrayNAN = try PropertyListDecoder().decode([Float].self, from: xmlNAN.data(using: String._Encoding.utf8)!)
         for val in arrayNAN {
-            XCTAssertTrue(val.isNaN)
+            #expect(val.isNaN)
         }
     }
 
-    func test_bad_XMLReals() {
+    @Test func test_bad_XMLReals() {
         let badRealXMLs = [
             "<real>0x10</real>",
             "<real>notanumber</real>",
@@ -860,7 +884,9 @@ class TestPropertyListEncoder : XCTestCase {
             "<real></real>",
         ]
         for xml in badRealXMLs {
-            XCTAssertThrowsError(try PropertyListDecoder().decode(Float.self, from: xml.data(using: String._Encoding.utf8)!), "Input: \(xml)")
+            #expect(throws: (any Error).self, "Input: \(xml)") {
+                try PropertyListDecoder().decode(Float.self, from: xml.data(using: String._Encoding.utf8)!)
+            }
         }
     }
 
@@ -868,14 +894,16 @@ class TestPropertyListEncoder : XCTestCase {
     // Requires old style plist support
     // Requires "NEXTStep" decoding in String(bytes:encoding:) for decoding the octal characters
 
-    func test_oldStylePlist_invalid() {
+    @Test func test_oldStylePlist_invalid() {
         let data = "goodbye cruel world".data(using: String._Encoding.utf16)!
-        XCTAssertThrowsError(try PropertyListDecoder().decode(String.self, from: data))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode(String.self, from: data)
+        }
     }
 
     // <rdar://problem/34321354> Microsoft: Microsoft vso 1857102 : High Sierra regression that caused data loss : CFBundleCopyLocalizedString returns incorrect string
     // Escaped octal chars can be shorter than 3 chars long; i.e. \5 ≡ \05 ≡ \005.
-    func test_oldStylePlist_getSlashedChars_octal() {
+    @Test func test_oldStylePlist_getSlashedChars_octal() {
         // ('\0', '\00', '\000', '\1', '\01', '\001', ..., '\777')
         let data = testData(forResource: "test_oldStylePlist_getSlashedChars_octal", withExtension: "plist")!
         let actualStrings = try! PropertyListDecoder().decode([String].self, from: data)
@@ -883,11 +911,11 @@ class TestPropertyListEncoder : XCTestCase {
         let expectedData = testData(forResource: "test_oldStylePlist_getSlashedChars_octal_expected", withExtension: "plist")!
         let expectedStrings = try! PropertyListDecoder().decode([String].self, from: expectedData)
 
-        XCTAssertEqual(actualStrings, expectedStrings)
+        #expect(actualStrings == expectedStrings)
     }
 
     // Old-style plists support Unicode literals via \U syntax. They can be 1–4 characters wide.
-    func test_oldStylePlist_getSlashedChars_unicode() {
+    @Test func test_oldStylePlist_getSlashedChars_unicode() {
         // ('\U0', '\U00', '\U000', '\U0000', '\U1', ..., '\UFFFF')
         let data = testData(forResource: "test_oldStylePlist_getSlashedChars_unicode", withExtension: "plist")!
         let actualStrings = try! PropertyListDecoder().decode([String].self, from: data)
@@ -895,18 +923,18 @@ class TestPropertyListEncoder : XCTestCase {
         let expectedData = testData(forResource: "test_oldStylePlist_getSlashedChars_unicode_expected", withExtension: "plist")!
         let expectedStrings = try! PropertyListDecoder().decode([String].self, from: expectedData)
 
-        XCTAssertEqual(actualStrings, expectedStrings)
+        #expect(actualStrings == expectedStrings)
     }
 
-    func test_oldStylePlist_getSlashedChars_literals() {
+    @Test func test_oldStylePlist_getSlashedChars_literals() {
         let literals = ["\u{7}", "\u{8}", "\u{12}", "\n", "\r", "\t", "\u{11}", "\"", "\\n"]
         let data = "('\\a', '\\b', '\\f', '\\n', '\\r', '\\t', '\\v', '\\\"', '\\\\n')".data(using: String._Encoding.utf8)!
 
         let strings = try! PropertyListDecoder().decode([String].self, from: data)
-        XCTAssertEqual(strings, literals)
+        #expect(strings == literals)
     }
     
-    func test_oldStylePlist_dictionary() {
+    @Test func test_oldStylePlist_dictionary() {
         let data = """
 { "test key" = value;
   testData = <feed face>;
@@ -926,15 +954,15 @@ class TestPropertyListEncoder : XCTestCase {
         }
         do {
             let decoded = try PropertyListDecoder().decode(Values.self, from: data)
-            XCTAssertEqual(decoded.testKey, "value")
-            XCTAssertEqual(decoded.testData, Data([0xfe, 0xed, 0xfa, 0xce]))
-            XCTAssertEqual(decoded.nestedArray, ["a", "b", "c"])
+            #expect(decoded.testKey == "value")
+            #expect(decoded.testData == Data([0xfe, 0xed, 0xfa, 0xce]))
+            #expect(decoded.nestedArray == ["a", "b", "c"])
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            Issue.record(error, "Unexpected error: \(error)")
         }
     }
 
-    func test_oldStylePlist_stringsFileFormat() {
+    @Test func test_oldStylePlist_stringsFileFormat() {
         let data = """
 string1 = "Good morning";
 string2 = "Good afternoon";
@@ -948,13 +976,13 @@ string3 = "Good evening";
                 "string2": "Good afternoon",
                 "string3": "Good evening"
             ]
-            XCTAssertEqual(decoded, expected)
+            #expect(decoded == expected)
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            Issue.record(error, "Unexpected error: \(error)")
         }
     }
         
-    func test_oldStylePlist_comments() {
+    @Test func test_oldStylePlist_comments() {
         let data = """
 // Initial comment */
 string1 = /*Test*/ "Good morning";  // Test
@@ -969,9 +997,9 @@ string3 = "Good evening"; // Test
                 "string2": "Good afternoon",
                 "string3": "Good evening"
             ]
-            XCTAssertEqual(decoded, expected)
+            #expect(decoded == expected)
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            Issue.record(error, "Unexpected error: \(error)")
         }
     }
 #endif
@@ -979,7 +1007,7 @@ string3 = "Good evening"; // Test
 #if FOUNDATION_FRAMEWORK
     // Requires __PlistDictionaryDecoder
     
-    func test_oldStylePlist_data() {
+    @Test func test_oldStylePlist_data() {
         let data = """
 data1 = <7465
 73 74
@@ -991,9 +1019,9 @@ data1 = <7465
         do {
             let decoded = try PropertyListDecoder().decode([String:Data].self, from: data)
             let expected = ["data1" : "testing1234".data(using: String._Encoding.utf8)!]
-            XCTAssertEqual(decoded, expected)
+            #expect(decoded == expected)
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            Issue.record(error, "Unexpected error: \(error)")
         }
     }
 #endif
@@ -1001,7 +1029,7 @@ data1 = <7465
 #if FOUNDATION_FRAMEWORK
     // Requires PropertyListSerialization
     
-    func test_BPlistCollectionReferences() {
+    @Test func test_BPlistCollectionReferences() {
         // Use NSArray/NSDictionary and PropertyListSerialization so that we get a bplist with internal references.
         let c: NSArray = [ "a", "a", "a" ]
         let b: NSArray = [ c, c, c ]
@@ -1017,24 +1045,26 @@ data1 = <7465
             }
 
             let decoded = try PropertyListDecoder().decode(DecodedReferences.self, from: data)
-            XCTAssertEqual(decoded.a, a as! [[[String]]])
-            XCTAssertEqual(decoded.b, b as! [[String]])
-            XCTAssertEqual(decoded.c, c as! [String])
+            #expect(decoded.a == a as! [[[String]]])
+            #expect(decoded.b == b as! [[String]])
+            #expect(decoded.c == c as! [String])
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            Issue.record(error, "Unexpected error: \(error)")
         }
     }
 #endif
 
 
-    func test_reallyOldDates_5842198() throws {
+    @Test func test_reallyOldDates_5842198() throws {
         let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<date>0009-09-15T23:16:13Z</date>\n</plist>"
         let data = plist.data(using: String._Encoding.utf8)!
 
-        XCTAssertNoThrow(try PropertyListDecoder().decode(Date.self, from: data))
+        #expect(throws: Never.self) {
+            try PropertyListDecoder().decode(Date.self, from: data)
+        }
     }
 
-    func test_badDates() throws {
+    @Test func test_badDates() throws {
         let timeInterval = TimeInterval(-63145612800) // This is the equivalent of an all-zero gregorian date.
         let date = Date(timeIntervalSinceReferenceDate: timeInterval)
         
@@ -1042,164 +1072,176 @@ data1 = <7465
         _testRoundTrip(of: [date], in: .binary)
     }
 
-    func test_badDate_encode() throws {
+    @Test func test_badDate_encode() throws {
         let date = Date(timeIntervalSinceReferenceDate: -63145612800) // 0000-01-02 AD
 
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .xml
         let data = try encoder.encode([date])
         let str = String(data: data, encoding: String.Encoding.utf8)
-        XCTAssertEqual(str, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>0000-01-02T00:00:00Z</date>\n</array>\n</plist>\n")
+        #expect(str == "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>0000-01-02T00:00:00Z</date>\n</array>\n</plist>\n")
     }
 
-    func test_badDate_decode() throws {
+    @Test func test_badDate_decode() throws {
         // Test that we can correctly decode a distant date in the past
         let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<date>0000-01-02T00:00:00Z</date>\n</plist>"
         let data = plist.data(using: String._Encoding.utf8)!
 
         let d = try PropertyListDecoder().decode(Date.self, from: data)
-        XCTAssertEqual(d.timeIntervalSinceReferenceDate, -63145612800)
+        #expect(d.timeIntervalSinceReferenceDate == -63145612800)
     }
 
-    func test_farFutureDates() throws {
+    @Test func test_farFutureDates() throws {
         let date = Date(timeIntervalSince1970: 999999999999.0)
 
         _testRoundTrip(of: [date], in: .xml)
     }
 
-    func test_122065123_encode() throws {
+    @Test func test_122065123_encode() throws {
         let date = Date(timeIntervalSinceReferenceDate: 728512994) // 2024-02-01 20:43:14 UTC
 
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .xml
         let data = try encoder.encode([date])
         let str = String(data: data, encoding: String.Encoding.utf8)
-        XCTAssertEqual(str, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>2024-02-01T20:43:14Z</date>\n</array>\n</plist>\n") // Previously encoded as "2024-01-32T20:43:14Z"
+        #expect(str == "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>2024-02-01T20:43:14Z</date>\n</array>\n</plist>\n") // Previously encoded as "2024-01-32T20:43:14Z"
     }
 
-    func test_122065123_decodingCompatibility() throws {
+    @Test func test_122065123_decodingCompatibility() throws {
         // Test that we can correctly decode an invalid date
         let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<date>2024-01-32T20:43:14Z</date>\n</plist>"
         let data = plist.data(using: String._Encoding.utf8)!
 
         let d = try PropertyListDecoder().decode(Date.self, from: data)
-        XCTAssertEqual(d.timeIntervalSinceReferenceDate, 728512994) // 2024-02-01T20:43:14Z
+        #expect(d.timeIntervalSinceReferenceDate == 728512994) // 2024-02-01T20:43:14Z
     }
 
-    func test_multibyteCharacters_escaped_noencoding() throws {
+    @Test func test_multibyteCharacters_escaped_noencoding() throws {
         let plistData = "<plist><string>These are copyright signs &#169; &#xA9; blah blah blah.</string></plist>".data(using: String._Encoding.utf8)!
         let result = try PropertyListDecoder().decode(String.self, from: plistData)
-        XCTAssertEqual("These are copyright signs © © blah blah blah.", result)
+        #expect("These are copyright signs © © blah blah blah." == result)
     }
 
-    func test_escapedCharacters() throws {
+    @Test func test_escapedCharacters() throws {
         let plistData = "<plist><string>&amp;&apos;&lt;&gt;&quot;</string></plist>".data(using: String._Encoding.utf8)!
         let result = try PropertyListDecoder().decode(String.self, from: plistData)
-        XCTAssertEqual("&'<>\"", result)
+        #expect("&'<>\"" == result)
     }
 
-    func test_dataWithBOM_utf8() throws {
+    @Test func test_dataWithBOM_utf8() throws {
         let bom = Data([0xef, 0xbb, 0xbf])
         let plist = bom + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<string>hello</string>\n</plist>".data(using: String._Encoding.utf8)!
 
         let result = try PropertyListDecoder().decode(String.self, from: plist)
-        XCTAssertEqual(result, "hello")
+        #expect(result == "hello")
     }
 
 #if FOUNDATION_FRAMEWORK
     // TODO: Depends on UTF32 encoding on non-Darwin platforms
     
-    func test_dataWithBOM_utf32be() throws {
+    @Test func test_dataWithBOM_utf32be() throws {
         let bom = Data([0x00, 0x00, 0xfe, 0xff])
         let plist = bom + "<?xml version=\"1.0\" encoding=\"UTF-32BE\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<string>hello</string>\n</plist>".data(using: String._Encoding.utf32BigEndian)!
 
         let result = try PropertyListDecoder().decode(String.self, from: plist)
-        XCTAssertEqual(result, "hello")
+        #expect(result == "hello")
     }
 
-    func test_dataWithBOM_utf32le() throws {
+    @Test func test_dataWithBOM_utf32le() throws {
         let bom = Data([0xff, 0xfe])
         let plist = bom + "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<string>hello</string>\n</plist>".data(using: String._Encoding.utf16LittleEndian)!
 
         let result = try PropertyListDecoder().decode(String.self, from: plist)
-        XCTAssertEqual(result, "hello")
+        #expect(result == "hello")
     }
 #endif
 
-    func test_plistWithBadUTF8() throws {
+    @Test func test_plistWithBadUTF8() throws {
         let data = testData(forResource: "bad_plist", withExtension: "bad")!
 
-        XCTAssertThrowsError(try PropertyListDecoder().decode([String].self, from: data))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([String].self, from: data)
+        }
     }
 
-    func test_plistWithEscapedCharacters() throws {
+    @Test func test_plistWithEscapedCharacters() throws {
         let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>com.apple.security.temporary-exception.sbpl</key><string>(allow mach-lookup (global-name-regex #&quot;^[0-9]+$&quot;))</string></dict></plist>".data(using: String._Encoding.utf8)!
         let result = try PropertyListDecoder().decode([String:String].self, from: plist)
-        XCTAssertEqual(result, ["com.apple.security.temporary-exception.sbpl" : "(allow mach-lookup (global-name-regex #\"^[0-9]+$\"))"])
+        #expect(result == ["com.apple.security.temporary-exception.sbpl" : "(allow mach-lookup (global-name-regex #\"^[0-9]+$\"))"])
     }
 
 #if FOUNDATION_FRAMEWORK
     // OpenStep format is not supported in Essentials
-    func test_returnRightFormatFromParse() throws {
+    @Test func test_returnRightFormatFromParse() throws {
         let plist = "{ CFBundleDevelopmentRegion = en; }".data(using: String._Encoding.utf8)!
 
         var format : PropertyListDecoder.PropertyListFormat = .binary
         let _ = try PropertyListDecoder().decode([String:String].self, from: plist, format: &format)
-        XCTAssertEqual(format, .openStep)
+        #expect(format == .openStep)
     }
 #endif
 
-    func test_decodingEmoji() throws {
+    @Test func test_decodingEmoji() throws {
         let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#128664;</string></dict></plist>".data(using: String._Encoding.utf8)!
 
         let result = try PropertyListDecoder().decode([String:String].self, from: plist)
         let expected = "\u{0001F698}"
-        XCTAssertEqual(expected, result["emoji"])
+        #expect(expected == result["emoji"])
     }
 
-    func test_decodingTooManyCharactersError() throws {
+    @Test func test_decodingTooManyCharactersError() throws {
         // Try a plist with too many characters to be a unicode escape sequence
         let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#12341234128664;</string></dict></plist>".data(using: String._Encoding.utf8)!
 
-        XCTAssertThrowsError(try PropertyListDecoder().decode([String:String].self, from: plist))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([String:String].self, from: plist)
+        }
 
         // Try a plist with an invalid unicode escape sequence
         let plist2 = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#12866411;</string></dict></plist>".data(using: String._Encoding.utf8)!
 
-        XCTAssertThrowsError(try PropertyListDecoder().decode([String:String].self, from: plist2))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([String:String].self, from: plist2)
+        }
     }
     
-    func test_roundTripEmoji() throws {
+    @Test func test_roundTripEmoji() throws {
         let strings = ["🚘", "👩🏻‍❤️‍👨🏿", "🏋🏽‍♂️🕺🏼🥌"]
         
         _testRoundTrip(of: strings, in: .xml)
         _testRoundTrip(of: strings, in: .binary)
     }
     
-    func test_roundTripEscapedStrings() {
+    @Test func test_roundTripEscapedStrings() {
         let strings = ["&", "<", ">"]
         _testRoundTrip(of: strings, in: .xml)
     }
 
-    func test_unterminatedComment() {
+    @Test func test_unterminatedComment() {
         let plist = "<array><!-- comment -->".data(using: String._Encoding.utf8)!
-        XCTAssertThrowsError(try PropertyListDecoder().decode([String].self, from: plist))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([String].self, from: plist)
+        }
     }
 
-    func test_incompleteOpenTag() {
+    @Test func test_incompleteOpenTag() {
         let plist = "<array".data(using: String._Encoding.utf8)!
-        XCTAssertThrowsError(try PropertyListDecoder().decode([String].self, from: plist))
-        XCTAssertThrowsError(try PropertyListDecoder().decode([String].self, from: plist))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([String].self, from: plist)
+        }
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([String].self, from: plist)
+        }
     }
 
-    func test_CDATA_section() throws {
+    @Test func test_CDATA_section() throws {
         let plist = "<string><![CDATA[Test &amp; &33; <![CDATA[]]]> outside</string>".data(using: String._Encoding.utf8)!
         let result = try PropertyListDecoder().decode(String.self, from: plist)
         let expected = "Test &amp; &33; <![CDATA[] outside"
-        XCTAssertEqual(result, expected)
+        #expect(result == expected)
     }
     
-    func test_supers() {
+    @Test func test_supers() {
         struct UsesSupers : Codable, Equatable {
             static var assertionFailure: String?
             
@@ -1273,12 +1315,12 @@ data1 = <7465
         }
         
         _testRoundTrip(of: UsesSupers(), in: .xml)
-        XCTAssertNil(UsesSupers.assertionFailure)
+        #expect(UsesSupers.assertionFailure == nil)
         _testRoundTrip(of: UsesSupers(), in: .binary)
-        XCTAssertNil(UsesSupers.assertionFailure)
+        #expect(UsesSupers.assertionFailure == nil)
     }
     
-    func test_badReferenceIndex() {
+    @Test func test_badReferenceIndex() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [
             0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
@@ -1293,11 +1335,13 @@ data1 = <7465
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer
         ] as [UInt8]
         let data = Data(bplist)
-        
-        XCTAssertThrowsError(try PropertyListDecoder().decode([Int].self, from: data))
+
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([Int].self, from: data)
+        }
     }
     
-    func test_badTopObjectIndex() {
+    @Test func test_badTopObjectIndex() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [
             0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
@@ -1313,10 +1357,12 @@ data1 = <7465
         ] as [UInt8]
         let data = Data(bplist)
         
-        XCTAssertThrowsError(try PropertyListDecoder().decode([Int].self, from: data))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([Int].self, from: data)
+        }
     }
     
-    func test_outOfBoundsObjectOffset() {
+    @Test func test_outOfBoundsObjectOffset() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [
             0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
@@ -1331,11 +1377,13 @@ data1 = <7465
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer
         ] as [UInt8]
         let data = Data(bplist)
-        
-        XCTAssertThrowsError(try PropertyListDecoder().decode([Int].self, from: data))
+
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([Int].self, from: data)
+        }
     }
     
-    func test_outOfBoundsOffsetTableStart() {
+    @Test func test_outOfBoundsOffsetTableStart() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [
             0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
@@ -1350,11 +1398,13 @@ data1 = <7465
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF // trailer -- CORRUPTED with out of bounds offset table start offset
         ] as [UInt8]
         let data = Data(bplist)
-        
-        XCTAssertThrowsError(try PropertyListDecoder().decode([Int].self, from: data))
+
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([Int].self, from: data)
+        }
     }
     
-    func test_tooLargeObjectCount() {
+    @Test func test_tooLargeObjectCount() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [
             0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
@@ -1369,11 +1419,13 @@ data1 = <7465
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer
         ] as [UInt8]
         let data = Data(bplist)
-        
-        XCTAssertThrowsError(try PropertyListDecoder().decode([Int].self, from: data))
+
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([Int].self, from: data)
+        }
     }
     
-    func test_tooLargeOffset() {
+    @Test func test_tooLargeOffset() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [
             0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
@@ -1392,10 +1444,12 @@ data1 = <7465
         ] as [UInt8]
         let data = Data(bplist)
         
-        XCTAssertThrowsError(try PropertyListDecoder().decode([Int].self, from: data))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([Int].self, from: data)
+        }
     }
     
-    func test_tooLargeIndex() {
+    @Test func test_tooLargeIndex() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [
             0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
@@ -1414,16 +1468,20 @@ data1 = <7465
         ] as [UInt8]
         let data = Data(bplist)
         
-        XCTAssertThrowsError(try PropertyListDecoder().decode([Int].self, from: data))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([Int].self, from: data)
+        }
     }
     
-    func test_uid() throws {
+    @Test func test_uid() throws {
         // There's no public interface where an NSKeyedArchiver UID value will correctly decode through PropertyListDecoder. This test ensures that it isn't mistaken for some other type.
         
         let xml = "<plist><dict><key>CF$UID</key><integer>1</integer></dict></plist>"
         let xmlData = xml.data(using: String._Encoding.utf8)!
 
-        XCTAssertThrowsError(try PropertyListDecoder().decode([String:Int32].self, from: xmlData))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([String:Int32].self, from: xmlData)
+        }
 
         let bplist = [
             0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // bplist00
@@ -1437,10 +1495,12 @@ data1 = <7465
         ] as [UInt8]
         let bplistData = Data(bplist)
 
-        XCTAssertThrowsError(try PropertyListDecoder().decode([Int32].self, from: bplistData))
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode([Int32].self, from: bplistData)
+        }
     }
     
-    func test_fauxStability_struct() throws {
+    @Test func test_fauxStability_struct() throws {
         struct FauxStable: Encodable {
             let a = "a"
             let z = "z"
@@ -1453,22 +1513,22 @@ data1 = <7465
         let encoding = try encoder.encode(FauxStable())
         for _ in 0..<1000 {
             let reencoding = try encoder.encode(FauxStable())
-            XCTAssertEqual(encoding, reencoding)
+            #expect(encoding == reencoding)
         }
     }
     
-    func test_fauxStability_dict() throws {
+    @Test func test_fauxStability_dict() throws {
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
         
         let encoding = try encoder.encode(["a":"a", "z":"z", "n":"n"])
         for _ in 0..<1000 {
             let reencoding = try encoder.encode(["a":"a", "z":"z", "n":"n"])
-            XCTAssertEqual(encoding, reencoding)
+            #expect(encoding == reencoding)
         }
     }
     
-    func testMultipleDecodeOptions() throws {
+    @Test func testMultipleDecodeOptions() throws {
         let cases = [
             MultipleDecodeOptionsTestType("1", .int),
             MultipleDecodeOptionsTestType("1.2", .float),
@@ -1483,9 +1543,9 @@ data1 = <7465
             
 
 // MARK: - Helper Global Functions
-func XCTAssertEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String) {
+func assertEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String) {
     if lhs.count != rhs.count {
-        XCTFail("\(prefix) [CodingKey].count mismatch: \(lhs.count) != \(rhs.count)")
+        Issue.record("\(prefix) [CodingKey].count mismatch: \(lhs.count) != \(rhs.count)")
         return
     }
 
@@ -1493,21 +1553,21 @@ func XCTAssertEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: Strin
         switch (key1.intValue, key2.intValue) {
         case (.none, .none): break
         case (.some(let i1), .none):
-            XCTFail("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != nil")
+            Issue.record("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != nil")
             return
         case (.none, .some(let i2)):
-            XCTFail("\(prefix) CodingKey.intValue mismatch: nil != \(type(of: key2))(\(i2))")
+            Issue.record("\(prefix) CodingKey.intValue mismatch: nil != \(type(of: key2))(\(i2))")
             return
         case (.some(let i1), .some(let i2)):
             guard i1 == i2 else {
-                XCTFail("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != \(type(of: key2))(\(i2))")
+                Issue.record("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != \(type(of: key2))(\(i2))")
                 return
             }
 
             break
         }
 
-        XCTAssertEqual(key1.stringValue, key2.stringValue, "\(prefix) CodingKey.stringValue mismatch: \(type(of: key1))('\(key1.stringValue)') != \(type(of: key2))('\(key2.stringValue)')")
+        #expect(key1.stringValue == key2.stringValue, "\(prefix) CodingKey.stringValue mismatch: \(type(of: key1))('\(key1.stringValue)') != \(type(of: key2))('\(key2.stringValue)')")
     }
 }
 
@@ -1850,13 +1910,13 @@ private struct NestedContainersTestType : Encodable {
     func encode(to encoder: Encoder) throws {
         if self.testSuperEncoder {
             var topLevelContainer = encoder.container(keyedBy: TopLevelCodingKeys.self)
-            XCTAssertEqualPaths(encoder.codingPath, [], "Top-level Encoder's codingPath changed.")
-            XCTAssertEqualPaths(topLevelContainer.codingPath, [], "New first-level keyed container has non-empty codingPath.")
+            assertEqualPaths(encoder.codingPath, [], "Top-level Encoder's codingPath changed.")
+            assertEqualPaths(topLevelContainer.codingPath, [], "New first-level keyed container has non-empty codingPath.")
 
             let superEncoder = topLevelContainer.superEncoder(forKey: .a)
-            XCTAssertEqualPaths(encoder.codingPath, [], "Top-level Encoder's codingPath changed.")
-            XCTAssertEqualPaths(topLevelContainer.codingPath, [], "First-level keyed container's codingPath changed.")
-            XCTAssertEqualPaths(superEncoder.codingPath, [TopLevelCodingKeys.a], "New superEncoder had unexpected codingPath.")
+            assertEqualPaths(encoder.codingPath, [], "Top-level Encoder's codingPath changed.")
+            assertEqualPaths(topLevelContainer.codingPath, [], "First-level keyed container's codingPath changed.")
+            assertEqualPaths(superEncoder.codingPath, [TopLevelCodingKeys.a], "New superEncoder had unexpected codingPath.")
             _testNestedContainers(in: superEncoder, baseCodingPath: [TopLevelCodingKeys.a])
         } else {
             _testNestedContainers(in: encoder, baseCodingPath: [])
@@ -1864,57 +1924,57 @@ private struct NestedContainersTestType : Encodable {
     }
 
     func _testNestedContainers(in encoder: Encoder, baseCodingPath: [CodingKey]) {
-        XCTAssertEqualPaths(encoder.codingPath, baseCodingPath, "New encoder has non-empty codingPath.")
+        assertEqualPaths(encoder.codingPath, baseCodingPath, "New encoder has non-empty codingPath.")
 
         // codingPath should not change upon fetching a non-nested container.
         var firstLevelContainer = encoder.container(keyedBy: TopLevelCodingKeys.self)
-        XCTAssertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-        XCTAssertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "New first-level keyed container has non-empty codingPath.")
+        assertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
+        assertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "New first-level keyed container has non-empty codingPath.")
 
         // Nested Keyed Container
         do {
             // Nested container for key should have a new key pushed on.
             var secondLevelContainer = firstLevelContainer.nestedContainer(keyedBy: IntermediateCodingKeys.self, forKey: .a)
-            XCTAssertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-            XCTAssertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-            XCTAssertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.a], "New second-level keyed container had unexpected codingPath.")
+            assertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
+            assertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
+            assertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.a], "New second-level keyed container had unexpected codingPath.")
 
             // Inserting a keyed container should not change existing coding paths.
             let thirdLevelContainerKeyed = secondLevelContainer.nestedContainer(keyedBy: IntermediateCodingKeys.self, forKey: .one)
-            XCTAssertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-            XCTAssertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-            XCTAssertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.a], "Second-level keyed container's codingPath changed.")
-            XCTAssertEqualPaths(thirdLevelContainerKeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.a, IntermediateCodingKeys.one], "New third-level keyed container had unexpected codingPath.")
+            assertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
+            assertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
+            assertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.a], "Second-level keyed container's codingPath changed.")
+            assertEqualPaths(thirdLevelContainerKeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.a, IntermediateCodingKeys.one], "New third-level keyed container had unexpected codingPath.")
 
             // Inserting an unkeyed container should not change existing coding paths.
             let thirdLevelContainerUnkeyed = secondLevelContainer.nestedUnkeyedContainer(forKey: .two)
-            XCTAssertEqualPaths(encoder.codingPath, baseCodingPath + [], "Top-level Encoder's codingPath changed.")
-            XCTAssertEqualPaths(firstLevelContainer.codingPath, baseCodingPath + [], "First-level keyed container's codingPath changed.")
-            XCTAssertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.a], "Second-level keyed container's codingPath changed.")
-            XCTAssertEqualPaths(thirdLevelContainerUnkeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.a, IntermediateCodingKeys.two], "New third-level unkeyed container had unexpected codingPath.")
+            assertEqualPaths(encoder.codingPath, baseCodingPath + [], "Top-level Encoder's codingPath changed.")
+            assertEqualPaths(firstLevelContainer.codingPath, baseCodingPath + [], "First-level keyed container's codingPath changed.")
+            assertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.a], "Second-level keyed container's codingPath changed.")
+            assertEqualPaths(thirdLevelContainerUnkeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.a, IntermediateCodingKeys.two], "New third-level unkeyed container had unexpected codingPath.")
         }
 
         // Nested Unkeyed Container
         do {
             // Nested container for key should have a new key pushed on.
             var secondLevelContainer = firstLevelContainer.nestedUnkeyedContainer(forKey: .b)
-            XCTAssertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-            XCTAssertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-            XCTAssertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "New second-level keyed container had unexpected codingPath.")
+            assertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
+            assertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
+            assertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "New second-level keyed container had unexpected codingPath.")
 
             // Appending a keyed container should not change existing coding paths.
             let thirdLevelContainerKeyed = secondLevelContainer.nestedContainer(keyedBy: IntermediateCodingKeys.self)
-            XCTAssertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-            XCTAssertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-            XCTAssertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "Second-level unkeyed container's codingPath changed.")
-            XCTAssertEqualPaths(thirdLevelContainerKeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 0)], "New third-level keyed container had unexpected codingPath.")
+            assertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
+            assertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
+            assertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "Second-level unkeyed container's codingPath changed.")
+            assertEqualPaths(thirdLevelContainerKeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 0)], "New third-level keyed container had unexpected codingPath.")
 
             // Appending an unkeyed container should not change existing coding paths.
             let thirdLevelContainerUnkeyed = secondLevelContainer.nestedUnkeyedContainer()
-            XCTAssertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-            XCTAssertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-            XCTAssertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "Second-level unkeyed container's codingPath changed.")
-            XCTAssertEqualPaths(thirdLevelContainerUnkeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 1)], "New third-level unkeyed container had unexpected codingPath.")
+            assertEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
+            assertEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
+            assertEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "Second-level unkeyed container's codingPath changed.")
+            assertEqualPaths(thirdLevelContainerUnkeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 1)], "New third-level unkeyed container had unexpected codingPath.")
         }
     }
 }

@@ -11,10 +11,6 @@
 //===----------------------------------------------------------------------===//
 //
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
-
 #if canImport(Glibc)
 import Glibc
 #endif
@@ -37,29 +33,28 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     }
     return try? Data(contentsOf: url)
 #else
-#if os(macOS)
-    let subdir: String
-    if let subdirectory {
-        subdir = "Resources/" + subdirectory
-    } else {
-        subdir = "Resources"
-    }
+    // SwiftPM generates a `resource_bundle_accessor.swift` file which defines `Bundle.module`
+    // specifically from `Foundation.Bundle`. This means we can't use `Bundle.module` in
+    // SwiftFoundation because `Bundle` is(will be) defined under `FoundationEssentials`.
+    // rdar://125972133 (SwiftPM should support a Bundle independent mode when generating resource_bundle_accessor.swift)
 
-    guard let url = Bundle.module.url(forResource: resource, withExtension: ext, subdirectory: subdir) else {
-        return nil
-    }
-
-    return try? Data(contentsOf: url.path(percentEncoded: false))
-#else
     // swiftpm drops the resources next to the executable, at:
-    // ./FoundationPreview_FoundationEssentialsTests.resources/Resources/
-    // Hard-coding the path is unfortunate, but a temporary need until we have a better way to handle this
-    var path = ProcessInfo.processInfo.arguments[0].deletingLastPathComponent() + "/FoundationPreview_FoundationEssentialsTests.resources/Resources/"
+    // - macOS: ./FoundationPreview_FoundationEssentialsTests.bundle/Resources/
+    // - Linux: ./FoundationPreview_FoundationEssentialsTests.resources/Resources/
+    // (these hardcoded path will be generated after rdar://125972133)
+#if os(Linux)
+    let bundleSuffix = "resources"
+#else
+    let bundleSuffix = "bundle"
+#endif
+
+    var path = Platform.getFullExecutablePath()!
+        .deletingLastPathComponent() +
+        "/FoundationPreview_FoundationEssentialsTests.\(bundleSuffix)/Resources/"
     if let subdirectory {
         path += subdirectory + "/"
     }
     path += resource + "." + ext
     return try? Data(contentsOf: path)
-#endif
 #endif
 }

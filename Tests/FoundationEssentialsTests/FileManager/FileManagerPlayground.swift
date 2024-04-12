@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -112,9 +110,23 @@ struct FileManagerPlayground {
                 fileManager.delegate = capturingDelegate
             }
             let createdDir = tempDir.appendingPathComponent(directory.name)
-            XCTAssertTrue(fileManager.changeCurrentDirectoryPath(createdDir), "Failed to change CWD to the newly created playground directory", file: file, line: line)
+            #expect(
+                fileManager.changeCurrentDirectoryPath(createdDir),
+                "Failed to change CWD to the newly created playground directory",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
             try tester(fileManager)
-            XCTAssertTrue(fileManager.changeCurrentDirectoryPath(previousCWD), "Failed to change CWD back to the original directory", file: file, line: line)
+            #expect(
+                fileManager.changeCurrentDirectoryPath(previousCWD),
+                "Failed to change CWD back to the original directory",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
             try fileManager.removeItem(atPath: createdDir)
         }
     }

@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
@@ -23,61 +21,67 @@ import TestSupport
 #endif
 
 // Tests for _GregorianCalendar
-final class GregorianCalendarTests : XCTestCase {
+struct GregorianCalendarTests {
 
-    func testCopy() {
+    @Test func testCopy() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: nil, locale: nil, firstWeekday: 5, minimumDaysInFirstWeek: 3, gregorianStartDate: nil)
 
         let newLocale = Locale(identifier: "new locale")
         let tz = TimeZone(identifier: "America/Los_Angeles")!
         let copied = gregorianCalendar.copy(changingLocale: newLocale, changingTimeZone: tz, changingFirstWeekday: nil, changingMinimumDaysInFirstWeek: nil)
         // newly set values
-        XCTAssertEqual(copied.locale, newLocale)
-        XCTAssertEqual(copied.timeZone, tz)
+        #expect(copied.locale == newLocale)
+        #expect(copied.timeZone == tz)
         // unset values stay the same
-        XCTAssertEqual(copied.firstWeekday, 5)
-        XCTAssertEqual(copied.minimumDaysInFirstWeek, 3)
+        #expect(copied.firstWeekday == 5)
+        #expect(copied.minimumDaysInFirstWeek == 3)
 
         let copied2 = gregorianCalendar.copy(changingLocale: nil, changingTimeZone: nil, changingFirstWeekday: 1, changingMinimumDaysInFirstWeek: 1)
 
         // unset values stay the same
-        XCTAssertEqual(copied2.locale, gregorianCalendar.locale)
-        XCTAssertEqual(copied2.timeZone, gregorianCalendar.timeZone)
+        #expect(copied2.locale == gregorianCalendar.locale)
+        #expect(copied2.timeZone == gregorianCalendar.timeZone)
 
         // overriding existing values
-        XCTAssertEqual(copied2.firstWeekday, 1)
-        XCTAssertEqual(copied2.minimumDaysInFirstWeek, 1)
+        #expect(copied2.firstWeekday == 1)
+        #expect(copied2.minimumDaysInFirstWeek == 1)
     }
 
     // MARK: Basic
-    func testNumberOfDaysInMonth() {
+    @Test func testNumberOfDaysInMonth() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        XCTAssertEqual(gregorianCalendar.numberOfDaysInMonth(2, year: 2023), 28) // not leap year
-        XCTAssertEqual(gregorianCalendar.numberOfDaysInMonth(0, year: 2023), 31) // equivalent to month: 12, year: 2022
-        XCTAssertEqual(gregorianCalendar.numberOfDaysInMonth(14, year: 2023), 29) // equivalent to month: 2, year: 2024
+        #expect(gregorianCalendar.numberOfDaysInMonth(2, year: 2023) == 28) // not leap year
+        #expect(gregorianCalendar.numberOfDaysInMonth(0, year: 2023) == 31) // equivalent to month: 12, year: 2022
+        #expect(gregorianCalendar.numberOfDaysInMonth(14, year: 2023) == 29) // equivalent to month: 2, year: 2024
 
-        XCTAssertEqual(gregorianCalendar.numberOfDaysInMonth(2, year: 2024), 29) // leap year
-        XCTAssertEqual(gregorianCalendar.numberOfDaysInMonth(-10, year: 2024), 28) //  equivalent to month: 2, year: 2023, not leap
-        XCTAssertEqual(gregorianCalendar.numberOfDaysInMonth(14, year: 2024), 28) //  equivalent to month: 2, year: 2025, not leap
+        #expect(gregorianCalendar.numberOfDaysInMonth(2, year: 2024) == 29) // leap year
+        #expect(gregorianCalendar.numberOfDaysInMonth(-10, year: 2024) == 28) //  equivalent to month: 2, year: 2023, not leap
+        #expect(gregorianCalendar.numberOfDaysInMonth(14, year: 2024) == 28) //  equivalent to month: 2, year: 2025, not leap
 
-        XCTAssertEqual(gregorianCalendar.numberOfDaysInMonth(50, year: 2024), 29) //  equivalent to month: 2, year: 2028, leap
+        #expect(gregorianCalendar.numberOfDaysInMonth(50, year: 2024) == 29) //  equivalent to month: 2, year: 2028, leap
     }
 
-    func testRemoteJulianDayCrash() {
+    @Test func testRemoteJulianDayCrash() {
         // Accessing the integer julianDay of a remote date should not crash
         let d = Date(julianDate: 9223372036854775808) // Int64.max + 1
         _ = d.julianDay
     }
 
     // MARK: Date from components
-    func testDateFromComponents_DST() {
+    @Test func testDateFromComponents_DST() {
         // The expected dates were generated using ICU Calendar
 
         let tz = TimeZone(identifier: "America/Los_Angeles")!
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         func test(_ dateComponents: DateComponents, expected: Date, file: StaticString = #file, line: UInt = #line) {
             let date = gregorianCalendar.date(from: dateComponents)!
-            XCTAssertEqual(date, expected, "DateComponents: \(dateComponents)", file: file, line: line)
+            #expect(
+                date == expected,
+                "DateComponents: \(dateComponents)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         test(.init(year: 2023, month: 10, day: 16), expected: Date(timeIntervalSince1970: 1697439600.0))
@@ -94,13 +98,19 @@ final class GregorianCalendarTests : XCTestCase {
         test(.init(year: 2023, month: 11, day: 5, hour: 3, minute: 34, second: 52), expected: Date(timeIntervalSince1970: 1699184092.0))
     }
 
-    func testDateFromComponents() {
+    @Test func testDateFromComponents() {
         // The expected dates were generated using ICU Calendar
         let tz = TimeZone.gmt
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
         func test(_ dateComponents: DateComponents, expected: Date, file: StaticString = #file, line: UInt = #line) {
             let date = cal.date(from: dateComponents)
-            XCTAssertEqual(date, expected, "date components: \(dateComponents)", file: file, line: line)
+            #expect(
+                date == expected,
+                "DateComponents: \(dateComponents)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         test(.init(year: 1582, month: -7, weekday: 5, weekdayOrdinal: 0), expected: Date(timeIntervalSince1970: -12264739200.0))
@@ -168,7 +178,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(.init(weekOfYear: 43, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30477945600.0))
     }
 
-    func testDateFromComponents_componentsTimeZone() {
+    @Test func testDateFromComponents_componentsTimeZone() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
         let dcCalendar = Calendar(identifier: .japanese, locale: Locale(identifier: ""), timeZone: .init(secondsFromGMT: -25200), firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
@@ -179,21 +189,30 @@ final class GregorianCalendarTests : XCTestCase {
         dc_customCalendarAndTimeZone.timeZone = .init(secondsFromGMT: 28800)
         // calendar.timeZone = UTC+0, dc.calendar.timeZone = UTC-7, dc.timeZone = UTC+8
         // expect local time in dc.timeZone (UTC+8)
-        XCTAssertEqual(gregorianCalendar.date(from: dc_customCalendarAndTimeZone)!, Date(timeIntervalSinceReferenceDate: 679024975.891)) // 2022-07-09T02:02:55Z
+        #expect(
+            gregorianCalendar.date(from: dc_customCalendarAndTimeZone)! ==
+            Date(timeIntervalSinceReferenceDate: 679024975.891)
+        ) // 2022-07-09T02:02:55Z
 
         var dc_customCalendar = dc
         dc_customCalendar.calendar = dcCalendar
         dc_customCalendar.timeZone = nil
         // calendar.timeZone = UTC+0, dc.calendar.timeZone = UTC-7, dc.timeZone = nil
         // expect local time in calendar.timeZone (UTC+0)
-        XCTAssertEqual(gregorianCalendar.date(from: dc_customCalendar)!, Date(timeIntervalSinceReferenceDate: 679053775.891)) // 2022-07-09T10:02:55Z
+        #expect(
+            gregorianCalendar.date(from: dc_customCalendar)! ==
+            Date(timeIntervalSinceReferenceDate: 679053775.891)
+        ) // 2022-07-09T10:02:55Z
 
         var dc_customTimeZone = dc_customCalendarAndTimeZone
         dc_customTimeZone.calendar = nil
         dc_customTimeZone.timeZone = .init(secondsFromGMT: 28800)
         // calendar.timeZone = UTC+0, dc.calendar = nil, dc.timeZone = UTC+8
         // expect local time in dc.timeZone (UTC+8)
-        XCTAssertEqual(gregorianCalendar.date(from: dc_customTimeZone)!, Date(timeIntervalSinceReferenceDate: 679024975.891)) // 2022-07-09T02:02:55Z
+        #expect(
+            gregorianCalendar.date(from: dc_customTimeZone)! ==
+            Date(timeIntervalSinceReferenceDate: 679024975.891)
+        ) // 2022-07-09T02:02:55Z
 
         let dcCalendar_noTimeZone = Calendar(identifier: .japanese, locale: Locale(identifier: ""), timeZone: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         var dc_customCalendarNoTimeZone_customTimeZone = dc
@@ -201,10 +220,13 @@ final class GregorianCalendarTests : XCTestCase {
         dc_customCalendarNoTimeZone_customTimeZone.timeZone = .init(secondsFromGMT: 28800)
         // calendar.timeZone = UTC+0, dc.calendar.timeZone = nil, dc.timeZone = UTC+8
         // expect local time in dc.timeZone (UTC+8)
-        XCTAssertEqual(gregorianCalendar.date(from: dc_customCalendarNoTimeZone_customTimeZone)!, Date(timeIntervalSinceReferenceDate: 679024975.891)) // 2022-07-09T02:02:55Z
+        #expect(
+            gregorianCalendar.date(from: dc_customCalendarNoTimeZone_customTimeZone)! ==
+            Date(timeIntervalSinceReferenceDate: 679024975.891)
+        ) // 2022-07-09T02:02:55Z
     }
 
-    func testDateFromComponents_componentsTimeZoneConversion() {
+    @Test func testDateFromComponents_componentsTimeZoneConversion() {
         let timeZone = TimeZone.gmt
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
@@ -217,30 +239,31 @@ final class GregorianCalendarTests : XCTestCase {
         let startOfYearEST_greg = gregorianCalendar.date(from: components)
 
         let expected = startOfYearGMT + 3600*5 // January 1, 2020 12:00:00 AM (GMT)
-        XCTAssertEqual(startOfYearEST_greg, expected)
+        #expect(startOfYearEST_greg == expected)
     }
 
     // MARK: - DateComponents from date
-    func testDateComponentsFromDate() {
+    @Test func testDateComponentsFromDate() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 0)!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
         func test(_ date: Date, _ timeZone: TimeZone, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int, yearForWeekOfYear: Int, isLeapMonth: Bool, file: StaticString = #file, line: UInt = #line) {
             let dc = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date)
-            XCTAssertEqual(dc.era, era, file: file, line: line)
-            XCTAssertEqual(dc.year, year, file: file, line: line)
-            XCTAssertEqual(dc.month, month, file: file, line: line)
-            XCTAssertEqual(dc.day, day, file: file, line: line)
-            XCTAssertEqual(dc.hour, hour, file: file, line: line)
-            XCTAssertEqual(dc.minute, minute, file: file, line: line)
-            XCTAssertEqual(dc.second, second, file: file, line: line)
-            XCTAssertEqual(dc.weekday, weekday, file: file, line: line)
-            XCTAssertEqual(dc.weekdayOrdinal, weekdayOrdinal, file: file, line: line)
-            XCTAssertEqual(dc.weekOfMonth, weekOfMonth, file: file, line: line)
-            XCTAssertEqual(dc.weekOfYear, weekOfYear, file: file, line: line)
-            XCTAssertEqual(dc.yearForWeekOfYear, yearForWeekOfYear, file: file, line: line)
-            XCTAssertEqual(dc.quarter, quarter, file: file, line: line)
-            XCTAssertEqual(dc.nanosecond, nanosecond, file: file, line: line)
-            XCTAssertEqual(dc.isLeapMonth, isLeapMonth, file: file, line: line)
-            XCTAssertEqual(dc.timeZone, timeZone, file: file, line: line)
+            let location = SourceLocation(filePath: String(describing: file), line: Int(line))
+            #expect(dc.era == era, sourceLocation: location)
+            #expect(dc.year == year, sourceLocation: location)
+            #expect(dc.month == month, sourceLocation: location)
+            #expect(dc.day == day, sourceLocation: location)
+            #expect(dc.hour == hour, sourceLocation: location)
+            #expect(dc.minute == minute, sourceLocation: location)
+            #expect(dc.second == second, sourceLocation: location)
+            #expect(dc.weekday == weekday, sourceLocation: location)
+            #expect(dc.weekdayOrdinal == weekdayOrdinal, sourceLocation: location)
+            #expect(dc.weekOfMonth == weekOfMonth, sourceLocation: location)
+            #expect(dc.weekOfYear == weekOfYear, sourceLocation: location)
+            #expect(dc.yearForWeekOfYear == yearForWeekOfYear, sourceLocation: location)
+            #expect(dc.quarter == quarter, sourceLocation: location)
+            #expect(dc.nanosecond == nanosecond, sourceLocation: location)
+            #expect(dc.isLeapMonth == isLeapMonth, sourceLocation: location)
+            #expect(dc.timeZone == timeZone, sourceLocation: location)
         }
         test(Date(timeIntervalSince1970: 852045787.0), .gmt, expectedEra: 1, year: 1996, month: 12, day: 31, hour: 15, minute: 23, second: 7, nanosecond: 0, weekday: 3, weekdayOrdinal: 5, quarter: 4, weekOfMonth: 5, weekOfYear: 53, yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-12-31T15:23:07Z
         test(Date(timeIntervalSince1970: 825607387.0), .gmt, expectedEra: 1, year: 1996, month: 2, day: 29, hour: 15, minute: 23, second: 7, nanosecond: 0, weekday: 5, weekdayOrdinal: 5, quarter: 1, weekOfMonth: 4, weekOfYear: 9, yearForWeekOfYear: 1996, isLeapMonth: false) // 1996-02-29T15:23:07Z
@@ -249,26 +272,27 @@ final class GregorianCalendarTests : XCTestCase {
         test(Date(timeIntervalSince1970: -62135852213.0), .gmt, expectedEra: 0, year: 1, month: 12, day: 31, hour: 1, minute: 3, second: 7, nanosecond: 0, weekday: 6, weekdayOrdinal: 5, quarter: 4, weekOfMonth: 4, weekOfYear: 52, yearForWeekOfYear: 0, isLeapMonth: false) // 0000-12-31T01:03:07Z
     }
 
-    func testDateComponentsFromDate_DST() {
+    @Test func testDateComponentsFromDate_DST() {
 
         func test(_ date: Date, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int, yearForWeekOfYear: Int, isLeapMonth: Bool, file: StaticString = #file, line: UInt = #line) {
             let dc = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar, .timeZone], from: date)
-            XCTAssertEqual(dc.era, era, "era should be equal", file: file, line: line)
-            XCTAssertEqual(dc.year, year, "era should be equal", file: file, line: line)
-            XCTAssertEqual(dc.month, month, "month should be equal", file: file, line: line)
-            XCTAssertEqual(dc.day, day, "day should be equal", file: file, line: line)
-            XCTAssertEqual(dc.hour, hour, "hour should be equal", file: file, line: line)
-            XCTAssertEqual(dc.minute, minute, "minute should be equal", file: file, line: line)
-            XCTAssertEqual(dc.second, second, "second should be equal", file: file, line: line)
-            XCTAssertEqual(dc.weekday, weekday, "weekday should be equal", file: file, line: line)
-            XCTAssertEqual(dc.weekdayOrdinal, weekdayOrdinal, "weekdayOrdinal should be equal", file: file, line: line)
-            XCTAssertEqual(dc.weekOfMonth, weekOfMonth, "weekOfMonth should be equal",  file: file, line: line)
-            XCTAssertEqual(dc.weekOfYear, weekOfYear, "weekOfYear should be equal",  file: file, line: line)
-            XCTAssertEqual(dc.yearForWeekOfYear, yearForWeekOfYear, "yearForWeekOfYear should be equal",  file: file, line: line)
-            XCTAssertEqual(dc.quarter, quarter, "quarter should be equal",  file: file, line: line)
-            XCTAssertEqual(dc.nanosecond, nanosecond, "nanosecond should be equal",  file: file, line: line)
-            XCTAssertEqual(dc.isLeapMonth, isLeapMonth, "isLeapMonth should be equal",  file: file, line: line)
-            XCTAssertEqual(dc.timeZone, calendar.timeZone, "timeZone should be equal",  file: file, line: line)
+            let location = SourceLocation(filePath: String(describing: file), line: Int(line))
+            #expect(dc.era == era, "era should be equal", sourceLocation: location)
+            #expect(dc.year == year, "era should be equal", sourceLocation: location)
+            #expect(dc.month == month, "month should be equal", sourceLocation: location)
+            #expect(dc.day == day, "day should be equal", sourceLocation: location)
+            #expect(dc.hour == hour, "hour should be equal", sourceLocation: location)
+            #expect(dc.minute == minute, "minute should be equal", sourceLocation: location)
+            #expect(dc.second == second, "second should be equal", sourceLocation: location)
+            #expect(dc.weekday == weekday, "weekday should be equal", sourceLocation: location)
+            #expect(dc.weekdayOrdinal == weekdayOrdinal, "weekdayOrdinal should be equal", sourceLocation: location)
+            #expect(dc.weekOfMonth == weekOfMonth, "weekOfMonth should be equal",  sourceLocation: location)
+            #expect(dc.weekOfYear == weekOfYear, "weekOfYear should be equal",  sourceLocation: location)
+            #expect(dc.yearForWeekOfYear == yearForWeekOfYear, "yearForWeekOfYear should be equal",  sourceLocation: location)
+            #expect(dc.quarter == quarter, "quarter should be equal",  sourceLocation: location)
+            #expect(dc.nanosecond == nanosecond, "nanosecond should be equal",  sourceLocation: location)
+            #expect(dc.isLeapMonth == isLeapMonth, "isLeapMonth should be equal",  sourceLocation: location)
+            #expect(dc.timeZone == calendar.timeZone, "timeZone should be equal", sourceLocation: location)
         }
 
         var calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
@@ -286,13 +310,18 @@ final class GregorianCalendarTests : XCTestCase {
 
     // MARK: - Add
 
-    func testAdd() {
+    @Test func testAdd() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
         var date: Date
         func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, wrap: Bool, expectedDate: Date, _ file: StaticString = #file, _ line: UInt = #line) {
             let components = DateComponents(component: field, value: value)!
             let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expectedDate, file: file, line: line)
+            #expect(
+                result == expectedDate,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         date = Date(timeIntervalSince1970: 825723300.0)
@@ -408,13 +437,18 @@ final class GregorianCalendarTests : XCTestCase {
         test(addField: .second, value: -1, to: date, wrap: false, expectedDate: Date(timeIntervalSince1970: -210866774823))
     }
 
-    func testAdd_boundaries() {
+    @Test func testAdd_boundaries() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
         var date: Date
         func test(addField field: Calendar.Component, value: Int, to addingToDate: Date, wrap: Bool, expectedDate: Date, _ file: StaticString = #file, _ line: UInt = #line) {
             let components = DateComponents(component: field, value: value)!
             let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expectedDate, file: file, line: line)
+            #expect(
+                result == expectedDate,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         date = Date(timeIntervalSince1970: 62135596800.0) // 3939-01-01
@@ -528,11 +562,16 @@ final class GregorianCalendarTests : XCTestCase {
         test(addField: .nanosecond, value: -1, to: date, wrap: false, expectedDate: Date(timeIntervalSince1970: -62135769600.0))
     }
 
-    func testAddDateComponents() {
+    @Test func testAddDateComponents() {
 
         func testAdding(_ comp: DateComponents, to date: Date, wrap: Bool, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
             let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expected, file: file, line: line)
+            #expect(
+                result == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var gregorianCalendar: _CalendarGregorian
@@ -616,12 +655,17 @@ final class GregorianCalendarTests : XCTestCase {
         }
     }
 
-    func testAddDateComponents_DST() {
+    @Test func testAddDateComponents_DST() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 2, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
 
         func testAdding(_ comp: DateComponents, to date: Date, wrap: Bool, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
             let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: wrap)!
-            XCTAssertEqual(result, expected, file: file, line: line)
+            #expect(
+                result == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         let march1_1996 = Date(timeIntervalSince1970: 825723300)
@@ -646,13 +690,18 @@ final class GregorianCalendarTests : XCTestCase {
         testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970: 829002900.0))
     }
 
-    func testAddDateComponents_DSTBoundaries() {
+    @Test func testAddDateComponents_DSTBoundaries() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
 
         let fmt = Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)
         func testAdding(_ comp: DateComponents, to date: Date, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
             let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: false)!
-            XCTAssertEqual(result, expected, "result: \(fmt.format(result)); expected: \(fmt.format(expected))", file: file, line: line)
+            #expect(
+                result == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -1337,13 +1386,19 @@ final class GregorianCalendarTests : XCTestCase {
         testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
     }
 
-    func testAddDateComponents_Wrapping_DSTBoundaries() {
+    @Test func testAddDateComponents_Wrapping_DSTBoundaries() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
 
         let fmt = Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)
         func testAdding(_ comp: DateComponents, to date: Date, expected: Date, _ file: StaticString = #file, _ line: UInt = #line) {
             let result = gregorianCalendar.date(byAdding: comp, to: date, wrappingComponents: true)!
-            XCTAssertEqual(result, expected, "result: \(fmt.format(result)); expected: \(fmt.format(expected))", file: file, line: line)
+            #expect(
+                result == expected,
+                "result: \(fmt.format(result)); expected: \(fmt.format(expected))",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -1901,7 +1956,7 @@ final class GregorianCalendarTests : XCTestCase {
         testAdding(.init(weekOfYear: 1), to: date, expected: Date(timeIntervalSince1970: 814968187.0))
     }
 
-    func testAdd_DST() {
+    @Test func testAdd_DST() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
 
         let fmt = Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)
@@ -1912,7 +1967,13 @@ final class GregorianCalendarTests : XCTestCase {
             let expectedDiff = expectedDate.timeIntervalSince(addingToDate)
 
             let msg = "actual diff: \(actualDiff), expected: \(expectedDiff), actual ti = \(result.timeIntervalSince1970), expected ti = \(expectedDate.timeIntervalSince1970), actual = \(fmt.format(result)), expected = \(fmt.format(expectedDate))"
-            XCTAssertEqual(result, expectedDate, msg, file: file, line: line)
+            #expect(
+                result == expectedDate,
+                .init(rawValue: msg),
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -2233,7 +2294,7 @@ final class GregorianCalendarTests : XCTestCase {
         test(addField: .nanosecond, value: -1, to: date, expectedDate: Date(timeIntervalSince1970: 814964587.0))
     }
 
-    func testAdd_Wrap_DST() {
+    @Test func testAdd_Wrap_DST() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
 
         let fmt = Date.ISO8601FormatStyle(timeZone: gregorianCalendar.timeZone)
@@ -2241,7 +2302,13 @@ final class GregorianCalendarTests : XCTestCase {
             let components = DateComponents(component: field, value: value)!
             let result = gregorianCalendar.date(byAdding: components, to: addingToDate, wrappingComponents: true)!
             let msg = "actual = \(fmt.format(result)), expected = \(fmt.format(expectedDate))"
-            XCTAssertEqual(result, expectedDate, msg, file: file, line: line)
+            #expect(
+                result == expectedDate,
+                .init(rawValue: msg),
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -2418,12 +2485,18 @@ final class GregorianCalendarTests : XCTestCase {
 
     // This test requires 64-bit integers
     #if arch(x86_64) || arch(arm64)
-    func testOrdinality() {
+    @Test func testOrdinality() {
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 3600)!, locale: nil, firstWeekday: 5, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
 
         func test(_ small: Calendar.Component, in large: Calendar.Component, for date: Date, expected: Int?, file: StaticString = #file, line: UInt = #line) {
             let result = cal.ordinality(of: small, in: large, for: date)
-            XCTAssertEqual(result, expected,  "small: \(small), large: \(large)", file: file, line: line)
+            #expect(
+                result == expected,
+                "small: \(small), large: \(large)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -2534,12 +2607,18 @@ final class GregorianCalendarTests : XCTestCase {
     }
     #endif
 
-    func testOrdinality_DST() {
+    @Test func testOrdinality_DST() {
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 5, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
 
         func test(_ small: Calendar.Component, in large: Calendar.Component, for date: Date, expected: Int?, file: StaticString = #file, line: UInt = #line) {
             let result = cal.ordinality(of: small, in: large, for: date)
-            XCTAssertEqual(result, expected,  "small: \(small), large: \(large)", file: file, line: line)
+            #expect(
+                result == expected,
+                "small: \(small), large: \(large)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -2597,233 +2676,238 @@ final class GregorianCalendarTests : XCTestCase {
 
     // This test requires 64-bit integers
     #if arch(x86_64) || arch(arm64)
-    func testOrdinality_DST2() {
+    @Test func testOrdinality_DST2() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let date = Date(timeIntervalSinceReferenceDate: 682898558.712307)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .era, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .year, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .month, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .quarter, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .weekOfMonth, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .weekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .yearForWeekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .era, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .era, in: .era, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .year, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .month, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .quarter, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .weekOfMonth, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .weekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .yearForWeekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .era, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .era, for: date), 2022)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .year, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .month, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .quarter, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .weekOfMonth, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .weekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .yearForWeekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .year, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .year, in: .era, for: date) == 2022)
+        #expect(calendar.ordinality(of: .year, in: .year, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .month, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .quarter, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .weekOfMonth, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .weekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .yearForWeekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .year, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .era, for: date), 24260)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .year, for: date), 8)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .month, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .quarter, for: date), 2)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .weekOfMonth, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .weekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .yearForWeekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .month, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .month, in: .era, for: date) == 24260)
+        #expect(calendar.ordinality(of: .month, in: .year, for: date) == 8)
+        #expect(calendar.ordinality(of: .month, in: .month, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .quarter, for: date) == 2)
+        #expect(calendar.ordinality(of: .month, in: .weekOfMonth, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .weekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .yearForWeekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .month, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .era, for: date), 738389)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .year, for: date), 234)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .month, for: date), 22)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .quarter, for: date), 53)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .weekOfMonth, for: date), 2)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .weekOfYear, for: date), 2)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .yearForWeekOfYear, for: date), 240)
-        XCTAssertEqual(calendar.ordinality(of: .day, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .day, in: .era, for: date) == 738389)
+        #expect(calendar.ordinality(of: .day, in: .year, for: date) == 234)
+        #expect(calendar.ordinality(of: .day, in: .month, for: date) == 22)
+        #expect(calendar.ordinality(of: .day, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .day, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .day, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .day, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .day, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .day, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .day, in: .quarter, for: date) == 53)
+        #expect(calendar.ordinality(of: .day, in: .weekOfMonth, for: date) == 2)
+        #expect(calendar.ordinality(of: .day, in: .weekOfYear, for: date) == 2)
+        #expect(calendar.ordinality(of: .day, in: .yearForWeekOfYear, for: date) == 240)
+        #expect(calendar.ordinality(of: .day, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .era, for: date), 17721328)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .year, for: date), 5608)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .month, for: date), 520)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .day, for: date), 16)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .weekday, for: date), 16)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .quarter, for: date), 1264)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .weekOfMonth, for: date), 40)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .weekOfYear, for: date), 40)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .yearForWeekOfYear, for: date), 5737)
-        XCTAssertEqual(calendar.ordinality(of: .hour, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .hour, in: .era, for: date) == 17721328)
+        #expect(calendar.ordinality(of: .hour, in: .year, for: date) == 5608)
+        #expect(calendar.ordinality(of: .hour, in: .month, for: date) == 520)
+        #expect(calendar.ordinality(of: .hour, in: .day, for: date) == 16)
+        #expect(calendar.ordinality(of: .hour, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .hour, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .hour, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .hour, in: .weekday, for: date) == 16)
+        #expect(calendar.ordinality(of: .hour, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .hour, in: .quarter, for: date) == 1264)
+        #expect(calendar.ordinality(of: .hour, in: .weekOfMonth, for: date) == 40)
+        #expect(calendar.ordinality(of: .hour, in: .weekOfYear, for: date) == 40)
+        #expect(calendar.ordinality(of: .hour, in: .yearForWeekOfYear, for: date) == 5737)
+        #expect(calendar.ordinality(of: .hour, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .era, for: date), 1063279623)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .year, for: date), 336423)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .month, for: date), 31143)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .day, for: date), 903)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .hour, for: date), 3)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .weekday, for: date), 903)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .quarter, for: date), 75783)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .weekOfMonth, for: date), 2343)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .weekOfYear, for: date), 2343)
+        #expect(calendar.ordinality(of: .minute, in: .era, for: date) == 1063279623)
+        #expect(calendar.ordinality(of: .minute, in: .year, for: date) == 336423)
+        #expect(calendar.ordinality(of: .minute, in: .month, for: date) == 31143)
+        #expect(calendar.ordinality(of: .minute, in: .day, for: date) == 903)
+        #expect(calendar.ordinality(of: .minute, in: .hour, for: date) == 3)
+        #expect(calendar.ordinality(of: .minute, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .minute, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .minute, in: .weekday, for: date) == 903)
+        #expect(calendar.ordinality(of: .minute, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .minute, in: .quarter, for: date) == 75783)
+        #expect(calendar.ordinality(of: .minute, in: .weekOfMonth, for: date) == 2343)
+        #expect(calendar.ordinality(of: .minute, in: .weekOfYear, for: date) == 2343)
 
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .yearForWeekOfYear, for: date), 344161)
-        XCTAssertEqual(calendar.ordinality(of: .minute, in: .nanosecond, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .era, for: date), 63796777359)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .year, for: date), 20185359)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .month, for: date), 1868559)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .day, for: date), 54159)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .hour, for: date), 159)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .minute, for: date), 39)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .weekday, for: date), 54159)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .weekdayOrdinal, for: date), nil)
+        #expect(calendar.ordinality(of: .minute, in: .yearForWeekOfYear, for: date) == 344161)
+        #expect(calendar.ordinality(of: .minute, in: .nanosecond, for: date) == nil)
+        #expect(calendar.ordinality(of: .second, in: .era, for: date) == 63796777359)
+        #expect(calendar.ordinality(of: .second, in: .year, for: date) == 20185359)
+        #expect(calendar.ordinality(of: .second, in: .month, for: date) == 1868559)
+        #expect(calendar.ordinality(of: .second, in: .day, for: date) == 54159)
+        #expect(calendar.ordinality(of: .second, in: .hour, for: date) == 159)
+        #expect(calendar.ordinality(of: .second, in: .minute, for: date) == 39)
+        #expect(calendar.ordinality(of: .second, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .second, in: .weekday, for: date) == 54159)
+        #expect(calendar.ordinality(of: .second, in: .weekdayOrdinal, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .quarter, for: date), 4546959)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .weekOfMonth, for: date), 140559)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .weekOfYear, for: date), 140559)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .yearForWeekOfYear, for: date), 20649601)
-        XCTAssertEqual(calendar.ordinality(of: .second, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .second, in: .quarter, for: date) == 4546959)
+        #expect(calendar.ordinality(of: .second, in: .weekOfMonth, for: date) == 140559)
+        #expect(calendar.ordinality(of: .second, in: .weekOfYear, for: date) == 140559)
+        #expect(calendar.ordinality(of: .second, in: .yearForWeekOfYear, for: date) == 20649601)
+        #expect(calendar.ordinality(of: .second, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .era, for: date), 105484)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .year, for: date), 34)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .month, for: date), 4)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .quarter, for: date), 8)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .weekOfMonth, for: date), 2)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .weekOfYear, for: date), 2)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .yearForWeekOfYear, for: date), 35)
-        XCTAssertEqual(calendar.ordinality(of: .weekday, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .weekday, in: .era, for: date) == 105484)
+        #expect(calendar.ordinality(of: .weekday, in: .year, for: date) == 34)
+        #expect(calendar.ordinality(of: .weekday, in: .month, for: date) == 4)
+        #expect(calendar.ordinality(of: .weekday, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekday, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekday, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekday, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekday, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekday, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekday, in: .quarter, for: date) == 8)
+        #expect(calendar.ordinality(of: .weekday, in: .weekOfMonth, for: date) == 2)
+        #expect(calendar.ordinality(of: .weekday, in: .weekOfYear, for: date) == 2)
+        #expect(calendar.ordinality(of: .weekday, in: .yearForWeekOfYear, for: date) == 35)
+        #expect(calendar.ordinality(of: .weekday, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .era, for: date), 105484)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .year, for: date), 34)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .month, for: date), 4)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .quarter, for: date), 8)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .weekOfMonth, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .weekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .yearForWeekOfYear, for: date), 35)
-        XCTAssertEqual(calendar.ordinality(of: .weekdayOrdinal, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .era, for: date) == 105484)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .year, for: date) == 34)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .month, for: date) == 4)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .quarter, for: date) == 8)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .weekOfMonth, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .weekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .yearForWeekOfYear, for: date) == 35)
+        #expect(calendar.ordinality(of: .weekdayOrdinal, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .era, for: date), 8087)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .year, for: date), 3)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .month, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .quarter, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .weekOfMonth, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .weekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .yearForWeekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .quarter, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .quarter, in: .era, for: date) == 8087)
+        #expect(calendar.ordinality(of: .quarter, in: .year, for: date) == 3)
+        #expect(calendar.ordinality(of: .quarter, in: .month, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .quarter, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .weekOfMonth, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .weekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .yearForWeekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .quarter, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .era, for: date), 105485)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .year, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .month, for: date), 4)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .quarter, for: date), 9)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .weekOfMonth, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .weekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .yearForWeekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfMonth, in: .nanosecond, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .era, for: date), 105485)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .year, for: date), 35)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .month, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .weekdayOrdinal, for: date), nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .era, for: date) == 105485)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .year, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .month, for: date) == 4)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .quarter, for: date) == 9)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .weekOfMonth, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .weekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .yearForWeekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfMonth, in: .nanosecond, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .era, for: date) == 105485)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .year, for: date) == 35)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .month, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .weekdayOrdinal, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .quarter, for: date), 9)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .weekOfMonth, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .weekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .yearForWeekOfYear, for: date), 35)
-        XCTAssertEqual(calendar.ordinality(of: .weekOfYear, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .quarter, for: date) == 9)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .weekOfMonth, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .weekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .yearForWeekOfYear, for: date) == 35)
+        #expect(calendar.ordinality(of: .weekOfYear, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .era, for: date), 2022)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .year, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .month, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .day, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .hour, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .minute, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .second, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .weekday, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .weekdayOrdinal, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .quarter, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .weekOfMonth, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .weekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .yearForWeekOfYear, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .yearForWeekOfYear, in: .nanosecond, for: date), nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .era, for: date) == 2022)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .year, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .month, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .day, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .hour, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .minute, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .second, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .weekday, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .weekdayOrdinal, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .quarter, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .weekOfMonth, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .weekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .yearForWeekOfYear, for: date) == nil)
+        #expect(calendar.ordinality(of: .yearForWeekOfYear, in: .nanosecond, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .era, for: date), nil)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .year, for: date), 20185358712306977)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .month, for: date), 1868558712306977)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .day, for: date), 54158712306977)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .hour, for: date), 158712306977)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .minute, for: date), 38712306977)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .second, for: date), 712306977)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .weekday, for: date), 54158712306977)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .weekdayOrdinal, for: date), nil)
+        #expect(calendar.ordinality(of: .nanosecond, in: .era, for: date) == nil)
+        #expect(calendar.ordinality(of: .nanosecond, in: .year, for: date) == 20185358712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .month, for: date) == 1868558712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .day, for: date) == 54158712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .hour, for: date) == 158712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .minute, for: date) == 38712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .second, for: date) == 712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .weekday, for: date) == 54158712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .weekdayOrdinal, for: date) == nil)
 
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .quarter, for: date), 4546958712306977)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .weekOfMonth, for: date), 140558712306977)
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .weekOfYear, for: date), 140558712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .quarter, for: date) == 4546958712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .weekOfMonth, for: date) == 140558712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .weekOfYear, for: date) == 140558712306977)
 
         let actual = calendar.ordinality(of: .nanosecond, in: .yearForWeekOfYear, for: date)
-        XCTAssertEqual(actual, 20649600712306977) 
-        XCTAssertEqual(calendar.ordinality(of: .nanosecond, in: .nanosecond, for: date), nil)
+        #expect(actual == 20649600712306977)
+        #expect(calendar.ordinality(of: .nanosecond, in: .nanosecond, for: date) == nil)
     }
     #endif
 
-    func testStartOf() {
+    @Test func testStartOf() {
         let firstWeekday = 2
         let minimumDaysInFirstWeek = 4
         let timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
         func test(_ unit: Calendar.Component, at date: Date, expected: Date, file: StaticString = #file, line: UInt = #line) {
             let new = gregorianCalendar.start(of: unit, at: date)!
-            XCTAssertEqual(new, expected, file: file, line: line)
+            #expect(
+                new == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -2849,14 +2933,19 @@ final class GregorianCalendarTests : XCTestCase {
         test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844156800.0)) // expect: 1996-10-01 08:00:00 +0000
     }
 
-    func testStartOf_DST() {
+    @Test func testStartOf_DST() {
         let firstWeekday = 2
         let minimumDaysInFirstWeek = 4
         let timeZone = TimeZone(identifier: "America/Los_Angeles")!
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
         func test(_ unit: Calendar.Component, at date: Date, expected: Date, file: StaticString = #file, line: UInt = #line) {
             let new = gregorianCalendar.start(of: unit, at: date)!
-            XCTAssertEqual(new, expected, file: file, line: line)
+            #expect(
+                new == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -2949,7 +3038,7 @@ final class GregorianCalendarTests : XCTestCase {
 
     // MARK: - Weekend
 
-    func testIsDateInWeekend() {
+    @Test func testIsDateInWeekend() {
         let c = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
 
         let sat0000_mon0000 = WeekendRange(onsetTime: 0, ceaseTime: 0, start: 7, end: 2) // Sat 00:00:00 ..< Mon 00:00:00
@@ -2960,36 +3049,36 @@ final class GregorianCalendarTests : XCTestCase {
         let mon_tue = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 2, end: 3) // Mon 00:00:00 ... Tue 23:59:59
 
         var date = Date(timeIntervalSince1970: 846320587) // 1996-10-26, Sat 09:03:07
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        #expect(c.isDateInWeekend(date, weekendRange: sat1200_sun1200) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
 
         date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27, Sun 09:03:07
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sunPM))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon_tue))
+        #expect(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        #expect(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sunPM) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: mon) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: mon_tue) == false)
 
         date = Date(timeIntervalSince1970: 846450187) // 1996-10-27, Sun 19:03:07
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sunPM))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon_tue))
+        #expect(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
+        #expect(c.isDateInWeekend(date, weekendRange: sat1200_sun1200) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sunPM))
+        #expect(c.isDateInWeekend(date, weekendRange: mon) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: mon_tue) == false)
 
         date = Date(timeIntervalSince1970: 846536587) // 1996-10-28, Mon 19:03:07
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat0000_mon0000))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat1200_sun1200))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat_sun))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sunPM))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: mon))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: mon_tue))
+        #expect(c.isDateInWeekend(date, weekendRange: sat0000_mon0000) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: sat1200_sun1200) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: sunPM) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: mon))
+        #expect(c.isDateInWeekend(date, weekendRange: mon_tue))
     }
 
-    func testIsDateInWeekend_wholeDays() {
+    @Test func testIsDateInWeekend_wholeDays() {
         let c = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
 
         let sat_mon = WeekendRange(start: 7, end: 2)
@@ -2999,35 +3088,35 @@ final class GregorianCalendarTests : XCTestCase {
         let mon_tue = WeekendRange(start: 2, end: 3)
 
         var date = Date(timeIntervalSince1970: 846320587) // 1996-10-26, Sat 09:03:07
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_mon))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_mon))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sun) == false)
 
         date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27, Sun 09:03:07
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_mon))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sun))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon_tue))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_mon))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sun))
+        #expect(c.isDateInWeekend(date, weekendRange: mon) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: mon_tue) == false)
 
         date = Date(timeIntervalSince1970: 846450187) // 1996-10-27, Sun 19:03:07
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_mon))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_sun))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sun))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: mon_tue))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_mon))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun))
+        #expect(c.isDateInWeekend(date, weekendRange: sun))
+        #expect(c.isDateInWeekend(date, weekendRange: mon) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: mon_tue) == false)
 
         date = Date(timeIntervalSince1970: 846536587) // 1996-10-28, Mon 19:03:07
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: sat_mon))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sat_sun))
-        XCTAssertFalse(c.isDateInWeekend(date, weekendRange: sun))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: mon))
-        XCTAssertTrue(c.isDateInWeekend(date, weekendRange: mon_tue))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_mon))
+        #expect(c.isDateInWeekend(date, weekendRange: sat_sun) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: sun) == false)
+        #expect(c.isDateInWeekend(date, weekendRange: mon))
+        #expect(c.isDateInWeekend(date, weekendRange: mon_tue))
     }
 
     // MARK: - DateInterval
 
-    func testDateInterval() {
+    @Test func testDateInterval() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -28800)!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
 
         func test(_ c: Calendar.Component, _ date: Date, expectedStart start: Date?, end: Date?, file: StaticString = #file, line: UInt = #line) {
@@ -3035,8 +3124,20 @@ final class GregorianCalendarTests : XCTestCase {
             let new_start = new?.start
             let new_end = new?.end
 
-            XCTAssertEqual(new_start, start, "interval start did not match", file: file, line: line)
-            XCTAssertEqual(new_end, end, "interval end did not match", file: file, line: line)
+            #expect(
+                new_start == start,
+                "interval start did not match",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
+            #expect(
+                new_end == end,
+                "interval end did not match",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -3088,15 +3189,26 @@ final class GregorianCalendarTests : XCTestCase {
         test(.yearForWeekOfYear, date, expectedStart: nil, end: nil)
     }
 
-    func testDateInterval_DST() {
+    @Test func testDateInterval_DST() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
         func test(_ c: Calendar.Component, _ date: Date, expectedStart start: Date, end: Date, file: StaticString = #file, line: UInt = #line) {
             let new = calendar.dateInterval(of: c, for: date)!
             let new_start = new.start
             let new_end = new.end
             let delta = 0.005
-            XCTAssertEqual(Double(new_start.timeIntervalSinceReferenceDate), Double(start.timeIntervalSinceReferenceDate), accuracy: delta, file: file, line: line)
-            XCTAssertEqual(Double(new_end.timeIntervalSinceReferenceDate), Double(end.timeIntervalSinceReferenceDate), accuracy: delta, file: file, line: line)
+            #expect(
+                abs(Double(new_start.timeIntervalSinceReferenceDate) - Double(start.timeIntervalSinceReferenceDate)) <= delta,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
+            #expect(
+                abs(Double(new_end.timeIntervalSinceReferenceDate) -
+                    Double(end.timeIntervalSinceReferenceDate)) <= delta,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
         var date: Date
         date = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800 (1996-04-07T09:03:07Z)
@@ -3213,72 +3325,77 @@ final class GregorianCalendarTests : XCTestCase {
     }
 
     // MARK: - Day Of Year
-    func test_dayOfYear() {
+    @Test func test_dayOfYear() {
         // An arbitrary date, for which we know the answers
         let date = Date(timeIntervalSinceReferenceDate: 682898558) // 2022-08-22 22:02:38 UTC, day 234
         let leapYearDate = Date(timeIntervalSinceReferenceDate: 745891200) // 2024-08-21 00:00:00 UTC, day 234
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
         // Ordinality
-        XCTAssertEqual(cal.ordinality(of: .dayOfYear, in: .year, for: date), 234)
-        XCTAssertEqual(cal.ordinality(of: .hour, in: .dayOfYear, for: date), 23)
-        XCTAssertEqual(cal.ordinality(of: .minute, in: .dayOfYear, for: date), 1323)
-        XCTAssertEqual(cal.ordinality(of: .second, in: .dayOfYear, for: date), 79359)
+        #expect(cal.ordinality(of: .dayOfYear, in: .year, for: date) == 234)
+        #expect(cal.ordinality(of: .hour, in: .dayOfYear, for: date) == 23)
+        #expect(cal.ordinality(of: .minute, in: .dayOfYear, for: date) == 1323)
+        #expect(cal.ordinality(of: .second, in: .dayOfYear, for: date) == 79359)
 
         // Nonsense ordinalities. Since day of year is already relative, we don't count the Nth day of year in an era.
-        XCTAssertEqual(cal.ordinality(of: .dayOfYear, in: .era, for: date), nil)
-        XCTAssertEqual(cal.ordinality(of: .year, in: .dayOfYear, for: date), nil)
+        #expect(cal.ordinality(of: .dayOfYear, in: .era, for: date) == nil)
+        #expect(cal.ordinality(of: .year, in: .dayOfYear, for: date) == nil)
 
         // Interval
         let interval = cal.dateInterval(of: .dayOfYear, for: date)
-        XCTAssertEqual(interval, DateInterval(start: Date(timeIntervalSinceReferenceDate: 682819200), duration: 86400))
+        #expect(interval == DateInterval(start: Date(timeIntervalSinceReferenceDate: 682819200), duration: 86400))
 
         // Specific component values
-        XCTAssertEqual(cal.dateComponent(.dayOfYear, from: date), 234)
+        #expect(cal.dateComponent(.dayOfYear, from: date) == 234)
 
 
         // Ranges
         let min = cal.minimumRange(of: .dayOfYear)
         let max = cal.maximumRange(of: .dayOfYear)
-        XCTAssertEqual(min, 1..<366) // hard coded for gregorian
-        XCTAssertEqual(max, 1..<367)
+        #expect(min == 1..<366) // hard coded for gregorian
+        #expect(max == 1..<367)
 
-        XCTAssertEqual(cal.range(of: .dayOfYear, in: .year, for: date), 1..<366)
-        XCTAssertEqual(cal.range(of: .dayOfYear, in: .year, for: leapYearDate), 1..<367)
+        #expect(cal.range(of: .dayOfYear, in: .year, for: date) == 1..<366)
+        #expect(cal.range(of: .dayOfYear, in: .year, for: leapYearDate) == 1..<367)
 
         // Addition
         let d1 = cal.add(.dayOfYear, to: date, amount: 1, inTimeZone: .gmt)
-        XCTAssertEqual(d1, date + 86400)
+        #expect(d1 == date + 86400)
 
         let d2 = cal.addAndWrap(.dayOfYear, to: date, amount: 365, inTimeZone: .gmt)
-        XCTAssertEqual(d2, date)
+        #expect(d2 == date)
 
         // Conversion from DateComponents
         var dc = DateComponents(year: 2022, hour: 22, minute: 2, second: 38)
         dc.dayOfYear = 234
         let d = cal.date(from: dc)
-        XCTAssertEqual(d, date)
+        #expect(d == date)
 
         var subtractMe = DateComponents()
         subtractMe.dayOfYear = -1
         let firstDay = Date(timeIntervalSinceReferenceDate: 662688000)
         let previousDay = cal.date(byAdding: subtractMe, to:firstDay, wrappingComponents: false)
-        XCTAssertNotNil(previousDay)
+        #expect(previousDay != nil)
         let previousDayComps = cal.dateComponents([.year, .dayOfYear], from: previousDay!)
         var previousDayExpectationComps = DateComponents()
         previousDayExpectationComps.year = 2021
         previousDayExpectationComps.dayOfYear = 365
-        XCTAssertEqual(previousDayComps, previousDayExpectationComps)
+        #expect(previousDayComps == previousDayExpectationComps)
     }
 
     // MARK: - Range of
 
-    func testRangeOf() {
+    @Test func testRangeOf() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -28800)!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
 
         func test(_ small: Calendar.Component, in large: Calendar.Component, for date: Date, expected: Range<Int>?, file: StaticString = #file, line: UInt = #line) {
             let new = calendar.range(of: small, in: large, for: date)
-            XCTAssertEqual(new, expected, file: file, line: line)
+            #expect(
+                new == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         var date: Date
@@ -3441,13 +3558,18 @@ final class GregorianCalendarTests : XCTestCase {
 
     // MARK: - Difference
 
-    func testDateComponentsFromStartToEnd() {
+    @Test func testDateComponentsFromStartToEnd() {
         var calendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
         var start: Date!
         var end: Date!
         func test(_ components: Calendar.ComponentSet, expected: DateComponents, file: StaticString = #file, line: UInt = #line) {
             let actual = calendar.dateComponents(components, from: start, to: end)
-            XCTAssertEqual(actual, expected, file: file, line: line)
+            #expect(
+                actual == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         // non leap to leap
@@ -3562,13 +3684,18 @@ final class GregorianCalendarTests : XCTestCase {
         test([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .calendar, .timeZone], expected: expected)
     }
 
-    func testDifference() {
+    @Test func testDifference() {
         var calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: -28800)!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
         var start: Date!
         var end: Date!
         func test(_ component: Calendar.Component, expected: Int, file: StaticString = #file, line: UInt = #line) {
             let (actualDiff, _) = try! calendar.difference(inComponent: component, from: start, to: end)
-            XCTAssertEqual(actualDiff, expected, file: file, line: line)
+            #expect(
+                actualDiff == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         // non leap to leap
@@ -3806,14 +3933,19 @@ final class GregorianCalendarTests : XCTestCase {
         test(.dayOfYear, expected: 63)
     }
 
-    func testDifference_DST() {
+    @Test func testDifference_DST() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
 
         var start: Date!
         var end: Date!
         func test(_ component: Calendar.Component, expected: Int, file: StaticString = #file, line: UInt = #line) {
             let (actualDiff, _) = try! calendar.difference(inComponent: component, from: start, to: end)
-            XCTAssertEqual(actualDiff, expected, file: file, line: line)
+            #expect(
+                actualDiff == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line))
+            )
         }
 
         start = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800

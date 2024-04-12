@@ -161,7 +161,7 @@ final class CalendarTests : XCTestCase {
             Calendar(identifier: .islamic),
             Calendar(identifier: .iso8601),
         ]
-        checkHashable(calendars, equalityOracle: { $0 == $1 })
+        checkHashableXCTest(calendars, equalityOracle: { $0 == $1 })
 
         // autoupdating calendar isn't equal to the current, even though it's
         // likely to be the same.
@@ -169,7 +169,7 @@ final class CalendarTests : XCTestCase {
             Calendar.autoupdatingCurrent,
             Calendar.current,
         ]
-        checkHashable(calendars2, equalityOracle: { $0 == $1 })
+        checkHashableXCTest(calendars2, equalityOracle: { $0 == $1 })
     }
 
     func test_AnyHashableContainingCalendar() {

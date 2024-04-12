@@ -43,14 +43,6 @@ func expectDoesNotThrow(_ test: () throws -> Void, _ message: @autoclosure () ->
     XCTAssertNoThrow(try test(), message(), file: file, line: line)
 }
 
-func expectTrue(_ actual: Bool, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
-    XCTAssertTrue(actual, message(), file: file, line: line)
-}
-
-func expectFalse(_ actual: Bool, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
-    XCTAssertFalse(actual, message(), file: file, line: line)
-}
-
 public func expectEqual<T: Equatable>(_ expected: T, _ actual: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
     XCTAssertEqual(expected, actual, message(), file: file, line: line)
 }
@@ -78,28 +70,6 @@ public func expectEqual(
     line: UInt = #line
 ) {
     XCTAssertTrue(expected == actual, message(), file: file, line: line)
-}
-
-public func expectEqualSequence< Expected: Sequence, Actual: Sequence>(
-    _ expected: Expected, _ actual: Actual,
-    _ message: @autoclosure () -> String = "",
-    file: String = #file, line: UInt = #line,
-    sameValue: (Expected.Element, Expected.Element) -> Bool
-) where Expected.Element == Actual.Element {
-    if !expected.elementsEqual(actual, by: sameValue) {
-      XCTFail("expected elements: \"\(expected)\"\n"
-              + "actual: \"\(actual)\" (of type \(String(reflecting: type(of: actual)))), \(message())")
-    }
-}
-
-public func expectEqualSequence< Expected: Sequence, Actual: Sequence>(
-    _ expected: Expected, _ actual: Actual,
-    _ message: @autoclosure () -> String = "",
-    file: String = #file, line: UInt = #line
-) where Expected.Element == Actual.Element, Expected.Element: Equatable {
-    expectEqualSequence(expected, actual, message()) {
-        $0 == $1
-    }
 }
 
 func expectEqual(_ actual: Date, _ expected: Date , within: Double = 0.001, file: StaticString = #file, line: UInt = #line) {
@@ -170,7 +140,7 @@ func expectNoChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by differe
 ///
 /// - Note: `oracle` is also checked for conformance to the
 ///   laws.
-public func checkEquatable<Instances: Collection>(
+public func checkEquatableXCTest<Instances: Collection>(
     _ instances: Instances,
     oracle: (Instances.Index, Instances.Index) -> Bool,
     allowBrokenTransitivity: Bool = false,
@@ -196,7 +166,7 @@ private class Box<T> {
     }
 }
 
-internal func _checkEquatableImpl<Instance : Equatable>(
+fileprivate func _checkEquatableImpl<Instance : Equatable>(
     _ instances: [Instance],
     oracle: (Int, Int) -> Bool,
     allowBrokenTransitivity: Bool = false,
@@ -211,7 +181,7 @@ internal func _checkEquatableImpl<Instance : Equatable>(
 
     for i in instances.indices {
         let x = instances[i]
-        expectTrue(oracle(i, i), "bad oracle: broken reflexivity at index \(i)")
+        XCTAssertTrue(oracle(i, i), "bad oracle: broken reflexivity at index \(i)")
 
         for j in instances.indices {
             let y = instances[j]
@@ -255,7 +225,7 @@ internal func _checkEquatableImpl<Instance : Equatable>(
                         transitivityScoreboard[i].value.insert(i)
                     }
                     for k in transitivityScoreboard[i].value {
-                        expectTrue(
+                        XCTAssertTrue(
                             oracle(j, k),
                             "bad oracle: broken transitivity at indices \(i), \(j), \(k)",
                             file: file,
@@ -280,14 +250,14 @@ func hash<H: Hashable>(_ value: H, salt: Int? = nil) -> Int {
     return hasher.finalize()
 }
 
-public func checkHashable<Instances: Collection>(
+public func checkHashableXCTest<Instances: Collection>(
     _ instances: Instances,
     equalityOracle: (Instances.Index, Instances.Index) -> Bool,
     allowIncompleteHashing: Bool = false,
     _ message: @autoclosure () -> String = "",
     file: StaticString = #file, line: UInt = #line
 ) where Instances.Element: Hashable {
-    checkHashable(
+    checkHashableXCTest(
         instances,
         equalityOracle: equalityOracle,
         hashEqualityOracle: equalityOracle,
@@ -298,7 +268,7 @@ public func checkHashable<Instances: Collection>(
 }
 
 
-public func checkHashable<Instances: Collection>(
+public func checkHashableXCTest<Instances: Collection>(
     _ instances: Instances,
     equalityOracle: (Instances.Index, Instances.Index) -> Bool,
     hashEqualityOracle: (Instances.Index, Instances.Index) -> Bool,
@@ -307,7 +277,7 @@ public func checkHashable<Instances: Collection>(
     file: StaticString = #file, line: UInt = #line
 ) where Instances.Element: Hashable {
 
-    checkEquatable(
+    checkEquatableXCTest(
         instances,
         oracle: equalityOracle,
         message(),
@@ -405,7 +375,7 @@ public func checkHashableGroups<Groups: Collection>(
     func equalityOracle(_ lhs: Int, _ rhs: Int) -> Bool {
         return groupIndices[lhs] == groupIndices[rhs]
     }
-    checkHashable(
+    checkHashableXCTest(
         instances,
         equalityOracle: equalityOracle,
         hashEqualityOracle: equalityOracle,

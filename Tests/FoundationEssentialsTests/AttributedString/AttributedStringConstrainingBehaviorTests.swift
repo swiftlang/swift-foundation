@@ -10,12 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+import Testing
+
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#else
+@testable import FoundationEssentials
 #endif
 
-class TestAttributedStringConstrainingBehavior: XCTestCase {
-    
+struct AttributedStringConstrainingBehaviorTests {
+
     func verify<K: AttributedStringKey>(
         string: AttributedString,
         matches expected: [(String, K.Value?)],
@@ -23,54 +27,201 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         file: StaticString = #file, line: UInt = #line
     ) {
         let runs = string.runs[key]
-        XCTAssertEqual(runs.count, expected.count, "Unexpected number of runs", file: file, line: line)
+        #expect(
+            runs.count == expected.count,
+            "Unexpected number of runs",
+            sourceLocation: .init(
+                filePath: String(describing: file),
+                line: Int(line)
+            )
+        )
         for ((val, range), expectation) in zip(runs, expected) {
             let slice = String.UnicodeScalarView(string.unicodeScalars[range])
-            XCTAssertTrue(slice.elementsEqual(expectation.0.unicodeScalars), "Unexpected range of run: \(slice.debugDescription) vs \(expectation.0.debugDescription)", file: file, line: line)
-            XCTAssertEqual(val, expectation.1, "Unexpected value of attribute \(K.self) for range \(expectation.0)", file: file, line: line)
+            #expect(
+                slice.elementsEqual(expectation.0.unicodeScalars),
+                "Unexpected range of run: \(slice.debugDescription) vs \(expectation.0.debugDescription)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val == expectation.1,
+                "Unexpected value of attribute \(K.self) for range \(expectation.0)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
         for ((val, range), expectation) in zip(runs.reversed(), expected.reversed()) {
             let slice = String.UnicodeScalarView(string.unicodeScalars[range])
-            XCTAssertTrue(slice.elementsEqual(expectation.0.unicodeScalars), "Unexpected range of run while reverse iterating: \(slice.debugDescription) vs \(expectation.0.debugDescription)", file: file, line: line)
-            XCTAssertEqual(val, expectation.1, "Unexpected value of attribute \(K.self) for range \(expectation.0) while reverse iterating", file: file, line: line)
+            #expect(
+                slice.elementsEqual(expectation.0.unicodeScalars),
+                "Unexpected range of run while reverse iterating: \(slice.debugDescription) vs \(expectation.0.debugDescription)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val == expectation.1,
+                "Unexpected value of attribute \(K.self) for range \(expectation.0) while reverse iterating",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
     }
     
     func verify<K: AttributedStringKey, K2: AttributedStringKey>(string: AttributedString, matches expected: [(String, K.Value?, K2.Value?)], for key: KeyPath<AttributeDynamicLookup, K>, _ key2: KeyPath<AttributeDynamicLookup, K2>, file: StaticString = #file, line: UInt = #line) {
         let runs = string.runs[key, key2]
-        XCTAssertEqual(runs.count, expected.count, "Unexpected number of runs", file: file, line: line)
+        #expect(
+            runs.count == expected.count,
+            "Unexpected number of runs",
+            sourceLocation: .init(
+                filePath: String(describing: file),
+                line: Int(line)
+            )
+        )
         for ((val1, val2, range), expectation) in zip(runs, expected) {
-            XCTAssertEqual(String(string.characters[range]),expectation.0, "Unexpected range of run",  file: file, line: line)
-            XCTAssertEqual(val1, expectation.1, "Unexpected value of attribute \(K.self) for range \(expectation.0)", file: file, line: line)
-            XCTAssertEqual(val2, expectation.2, "Unexpected value of attribute \(K2.self) for range \(expectation.0)", file: file, line: line)
+            #expect(
+                String(string.characters[range]) == expectation.0,
+                "Unexpected range of run",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val1 == expectation.1,
+                "Unexpected value of attribute \(K.self) for range \(expectation.0)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val2 == expectation.2,
+                "Unexpected value of attribute \(K2.self) for range \(expectation.0)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
         for ((val1, val2, range), expectation) in zip(runs.reversed(), expected.reversed()) {
-            XCTAssertEqual(String(string.characters[range]), expectation.0, "Unexpected range of run while reverse iterating", file: file, line: line)
-            XCTAssertEqual(val1, expectation.1, "Unexpected value of attribute \(K.self) for range \(expectation.0) while reverse iterating", file: file, line: line)
-            XCTAssertEqual(val2, expectation.2, "Unexpected value of attribute \(K2.self) for range \(expectation.0) while reverse iterating", file: file, line: line)
+            #expect(
+                String(string.characters[range]) == expectation.0,
+                "Unexpected range of run while reverse iterating",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val1 == expectation.1,
+                "Unexpected value of attribute \(K.self) for range \(expectation.0) while reverse iterating",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val2 == expectation.2,
+                "Unexpected value of attribute \(K2.self) for range \(expectation.0) while reverse iterating",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
     }
     
     func verify<K: AttributedStringKey, K2: AttributedStringKey, K3: AttributedStringKey>(string: AttributedString, matches expected: [(String, K.Value?, K2.Value?, K3.Value?)], for key: KeyPath<AttributeDynamicLookup, K>, _ key2: KeyPath<AttributeDynamicLookup, K2>, _ key3: KeyPath<AttributeDynamicLookup, K3>, file: StaticString = #file, line: UInt = #line) {
         let runs = string.runs[key, key2, key3]
-        XCTAssertEqual(runs.count, expected.count, "Unexpected number of runs", file: file, line: line)
+        #expect(
+            runs.count == expected.count,
+            "Unexpected number of runs",
+            sourceLocation: .init(
+                filePath: String(describing: file),
+                line: Int(line)
+            )
+        )
         for ((val1, val2, val3, range), expectation) in zip(runs, expected) {
-            XCTAssertEqual(String(string.characters[range]),expectation.0, "Unexpected range of run",  file: file, line: line)
-            XCTAssertEqual(val1, expectation.1, "Unexpected value of attribute \(K.self) for range \(expectation.0)", file: file, line: line)
-            XCTAssertEqual(val2, expectation.2, "Unexpected value of attribute \(K2.self) for range \(expectation.0)", file: file, line: line)
-            XCTAssertEqual(val3, expectation.3, "Unexpected value of attribute \(K3.self) for range \(expectation.0)", file: file, line: line)
+            #expect(
+                String(string.characters[range]) == expectation.0,
+                "Unexpected range of run",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val1 == expectation.1,
+                "Unexpected value of attribute \(K.self) for range \(expectation.0)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val2 == expectation.2,
+                "Unexpected value of attribute \(K2.self) for range \(expectation.0)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val3 == expectation.3,
+                "Unexpected value of attribute \(K3.self) for range \(expectation.0)",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
         for ((val1, val2, val3, range), expectation) in zip(runs.reversed(), expected.reversed()) {
-            XCTAssertEqual(String(string.characters[range]), expectation.0, "Unexpected range of run while reverse iterating", file: file, line: line)
-            XCTAssertEqual(val1, expectation.1, "Unexpected value of attribute \(K.self) for range \(expectation.0) while reverse iterating", file: file, line: line)
-            XCTAssertEqual(val2, expectation.2, "Unexpected value of attribute \(K2.self) for range \(expectation.0) while reverse iterating", file: file, line: line)
-            XCTAssertEqual(val3, expectation.3, "Unexpected value of attribute \(K3.self) for range \(expectation.0) while reverse iterating", file: file, line: line)
+            #expect(
+                String(string.characters[range]) == expectation.0,
+                "Unexpected range of run while reverse iterating",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val1 == expectation.1,
+                "Unexpected value of attribute \(K.self) for range \(String(describing: expectation.1)) while reverse iterating",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val2 == expectation.2,
+                "Unexpected value of attribute \(K2.self) for range \(String(describing: expectation.2)) while reverse iterating",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                val3 == expectation.3,
+                "Unexpected value of attribute \(K3.self) for range \(String(describing: expectation.3)) while reverse iterating",
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
     }
     
     // MARK: Extending Run Tests
     
-    func testExtendingRunAddCharacters() {
+    @Test func testExtendingRunAddCharacters() {
         let str = AttributedString("Hello, world", attributes: .init().testInt(2).testNonExtended(1))
         
         var result = str
@@ -97,7 +248,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("He", 2, 1), ("Hi!", 2, nil), ("rld", 2, 1)], for: \.testInt, \.testNonExtended)
     }
     
-    func testExtendingRunAddUnicodeScalars() {
+    @Test func testExtendingRunAddUnicodeScalars() {
         let str = AttributedString("Hello, world", attributes: .init().testInt(2).testNonExtended(1))
         let scalarsStr = "A\u{0301}B"
         
@@ -121,7 +272,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
     
     // MARK: - Paragraph Constrained Tests
     
-    func testParagraphAttributeExpanding() {
+    @Test func testParagraphAttributeExpanding() {
         var str = AttributedString("Hello, world\nNext Paragraph")
         var range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 3)
         str[range].testParagraphConstrained = 2
@@ -142,7 +293,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: str, matches: [("Hello, world\n", 4), ("Next Paragraph", 4)], for: \.testParagraphConstrained)
     }
     
-    func testParagraphAttributeRemoval() {
+    @Test func testParagraphAttributeRemoval() {
         var str = AttributedString("Hello, world\nNext Paragraph", attributes: .init().testParagraphConstrained(2))
         var range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 3)
         str[range].testParagraphConstrained = nil
@@ -161,7 +312,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: str, matches: [("Hello, world\n", nil), ("Next Paragraph", nil)], for: \.testParagraphConstrained)
     }
     
-    func testParagraphAttributeContainerApplying() {
+    @Test func testParagraphAttributeContainerApplying() {
         var container = AttributeContainer.testParagraphConstrained(2).testString("Hello")
         var str = AttributedString("Hello, world\nNext Paragraph")
         var range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -189,7 +340,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: str, matches: [("H", 4, nil, 1), ("el", 4, "Hello", 1), ("lo, w", 4, nil, 1), ("orld\n", 4, nil, 2), ("N", 4, nil, 2), ("ext Paragrap", 4, nil, 1), ("h", 4, "Hello", 2)], for: \.testParagraphConstrained, \.testString, \.testInt)
     }
     
-    func testParagraphAttributeContainerReplacing() {
+    @Test func testParagraphAttributeContainerReplacing() {
         var str = AttributedString("Hello, world\nNext Paragraph")
         let range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 3)
         str[range].testInt = 2
@@ -210,7 +361,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("H", 3, 2, nil), ("el", 3, nil, true), ("lo, world\n", 3, 2, nil), ("Next Paragraph", nil, 2, nil)], for: \.testParagraphConstrained, \.testInt, \.testBool)
     }
     
-    func testParagraphTextMutation() {
+    @Test func testParagraphTextMutation() {
         let str = AttributedString("Hello, world\n", attributes: .init().testParagraphConstrained(1)) + AttributedString("Next Paragraph", attributes: .init().testParagraphConstrained(2))
         
         var result = str
@@ -254,7 +405,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("Hello, wTest\n", 1), ("Replacementxt Paragraph", 1)], for: \.testParagraphConstrained)
     }
     
-    func testParagraphAttributedTextMutation() {
+    @Test func testParagraphAttributedTextMutation() {
         let str = AttributedString("Hello, world\n", attributes: .init().testParagraphConstrained(1)) + AttributedString("Next Paragraph", attributes: .init().testParagraphConstrained(2))
         let singleReplacement = AttributedString("Test", attributes: .init().testParagraphConstrained(5).testSecondParagraphConstrained(6).testBool(true))
         let multiReplacement = AttributedString("Test\nInserted", attributes: .init().testParagraphConstrained(5).testSecondParagraphConstrained(6).testBool(true))
@@ -305,7 +456,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
     }
     
 #if FOUNDATION_FRAMEWORK
-    func testParagraphFromUntrustedRuns() throws {
+    @Test func testParagraphFromUntrustedRuns() throws {
         let str = NSMutableAttributedString(string: "Hello ", attributes: [.testParagraphConstrained : NSNumber(2)])
         str.append(NSAttributedString(string: "World", attributes: [.testParagraphConstrained : NSNumber(3), .testSecondParagraphConstrained : NSNumber(4)]))
         
@@ -314,7 +465,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
     }
 #endif // FOUNDATION_FRAMEWORK
     
-    func testParagraphFromReplacedSubrange() {
+    @Test func testParagraphFromReplacedSubrange() {
         let str = AttributedString("Before\nHello, world\nNext Paragraph\nAfter", attributes: .init().testParagraphConstrained(1))
         
         // Range of "world\nNext"
@@ -338,7 +489,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
     
     // MARK: - Character Constrained Tests
     
-    func testCharacterAttributeApply() {
+    @Test func testCharacterAttributeApply() {
         let str = AttributedString("*__*__**__*")
         
         var result = str
@@ -356,7 +507,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("*", nil, 1), ("__", nil, 1), ("*", nil, 1), ("__", nil, 1), ("*", nil, 1), ("*", nil, 1), ("__", nil, 1), ("*", 3, 1)], for: \.testCharacterConstrained, \.testInt)
     }
     
-    func testCharacterAttributeSubCharacterApply() {
+    @Test func testCharacterAttributeSubCharacterApply() {
         let str = AttributedString("ABC \u{FFFD} DEF")
 
         var result = str
@@ -388,7 +539,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
 
     }
 
-    func testCharacterAttributeContainerReplacing() {
+    @Test func testCharacterAttributeContainerReplacing() {
         var str = AttributedString("*__*__**__*")
         let range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 4)
         str[range].testInt = 2
@@ -409,7 +560,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("*", nil, 2, nil), ("__", nil, nil, true), ("*", 3, nil, true), ("__", nil, 2, nil), ("*", nil, 2, nil), ("*", nil, 2, nil), ("__", nil, 2, nil), ("*", nil, 2, nil)], for: \.testCharacterConstrained, \.testInt, \.testBool)
     }
     
-    func testCharacterTextMutation() {
+    @Test func testCharacterTextMutation() {
         let str = AttributedString("*__*__**__*", attributes: .init().testCharacterConstrained(2))
         
         var result = str
@@ -438,7 +589,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
     }
     
 #if FOUNDATION_FRAMEWORK
-    func testCharacterFromUntrustedRuns() throws {
+    @Test func testCharacterFromUntrustedRuns() throws {
         let str = NSMutableAttributedString(string: "*__*__**__*", attributes: [.testCharacterConstrained : NSNumber(2)])
         str.append(NSAttributedString(string: "_*"))
         
@@ -449,7 +600,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
     
     // MARK: Invalidation Tests
     
-    func testInvalidationAttributeChange() {
+    @Test func testInvalidationAttributeChange() {
         let str = AttributedString("Hello, world", attributes: .init().testInt(1).testAttributeDependent(2))
         
         var result = str
@@ -483,7 +634,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("Hello, world", 2, nil)], for: \.testInt, \.testAttributeDependent)
     }
     
-    func testInvalidationCharacterChange() {
+    @Test func testInvalidationCharacterChange() {
         let str = AttributedString("Hello, world", attributes: .init().testInt(1).testCharacterDependent(2))
         
         var result = str

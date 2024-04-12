@@ -10,13 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-@_spi(Expression) import TestSupport
-#endif
-
 #if FOUNDATION_FRAMEWORK
 
 @_spi(Expression) import Foundation
+import Testing
 
 fileprivate protocol PredicateCodingConfigurationProviding : EncodingConfigurationProviding, DecodingConfigurationProviding where EncodingConfiguration == PredicateCodableConfiguration, DecodingConfiguration == PredicateCodableConfiguration {
     static var config: PredicateCodableConfiguration { get }
@@ -60,8 +57,8 @@ extension PredicateExpressions {
 }
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-final class PredicateCodableTests: XCTestCase {
-    
+struct PredicateCodableTests {
+
     struct Object : Equatable, PredicateCodableKeyPathProviding {
         var a: Int
         var b: String
@@ -195,163 +192,235 @@ final class PredicateCodableTests: XCTestCase {
         return try decoder.decode(T.self, from: data)
     }
     
-    func testBasicEncodeDecode() throws {
+    @Test func testBasicEncodeDecode() throws {
         let predicate = #Predicate<Object> {
             $0.a == 2
         }
         
         let decoded = try _encodeDecode(predicate, for: StandardConfig.self)
         var object = Object.example
-        XCTAssertEqual(try predicate.evaluate(object), try decoded.evaluate(object))
+        var predicateResult = try predicate.evaluate(object)
+        var decodedResult = try decoded.evaluate(object)
+        #expect(predicateResult == decodedResult)
         object.a = 2
-        XCTAssertEqual(try predicate.evaluate(object), try decoded.evaluate(object))
+        predicateResult = try predicate.evaluate(object)
+        decodedResult = try decoded.evaluate(object)
+        #expect(predicateResult == decodedResult)
         object.a = 3
-        XCTAssertEqual(try predicate.evaluate(object), try decoded.evaluate(object))
-        
-        XCTAssertThrowsError(try _encodeDecode(predicate, for: EmptyConfig.self))
-        XCTAssertThrowsError(try _encodeDecode(predicate))
+        predicateResult = try predicate.evaluate(object)
+        decodedResult = try decoded.evaluate(object)
+        #expect(predicateResult == decodedResult)
+
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate, for: EmptyConfig.self)
+        }
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate)
+        }
     }
     
-    func testDisallowedKeyPath() throws {
+    @Test func testDisallowedKeyPath() throws {
         var predicate = #Predicate<Object> {
             $0.f
         }
-        
-        XCTAssertThrowsError(try _encodeDecode(predicate))
-        XCTAssertThrowsError(try _encodeDecode(predicate, for: StandardConfig.self))
-        
+
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate)
+        }
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate, for: StandardConfig.self)
+        }
+
         predicate = #Predicate<Object> {
             $0.a == 1
         }
-        XCTAssertThrowsError(try _encodeDecode(predicate, encoding: StandardConfig.self, decoding: MinimalConfig.self)) {
-            guard let decodingError = $0 as? DecodingError else {
-                XCTFail("Incorrect error thrown: \($0)")
-                return
+        #expect {
+            try _encodeDecode(predicate, encoding: StandardConfig.self, decoding: MinimalConfig.self)
+        } throws: { error in
+            guard let decodingError = error as? DecodingError else {
+                Issue.record("Incorrect error thrown: \(error)")
+                return false
             }
-            XCTAssertEqual(decodingError.debugDescription, "A keypath for the 'Object.a' identifier is not in the provided allowlist")
+            #expect(
+                decodingError.debugDescription ==
+                "A keypath for the 'Object.a' identifier is not in the provided allowlist"
+            )
+            return true
         }
     }
     
-    func testKeyPathTypeMismatch() throws {
+    @Test func testKeyPathTypeMismatch() throws {
         let predicate = #Predicate<Object> {
             $0.a == 2
         }
         
         try _encodeDecode(predicate, for: StandardConfig.self)
-        XCTAssertThrowsError(try _encodeDecode(predicate, encoding: StandardConfig.self, decoding: MismatchedKeyPathConfig.self)) {
-            guard let decodingError = $0 as? DecodingError else {
-                XCTFail("Incorrect error thrown: \($0)")
-                return
+        #expect {
+            try _encodeDecode(
+                predicate,
+                encoding: StandardConfig.self,
+                decoding: MismatchedKeyPathConfig.self)
+        } throws: { error in
+            guard let decodingError = error as? DecodingError else {
+                Issue.record("Incorrect error thrown: \(error)")
+                return false
             }
-            XCTAssertEqual(decodingError.debugDescription, "Key path '\\Object.b' (KeyPath<\(_typeName(Object.self)), Swift.String>) for identifier 'Object.a' did not match the expression's requirement for KeyPath<\(_typeName(Object.self)), Swift.Int>")
+            #expect(decodingError.debugDescription == "Key path '\\Object.b' (KeyPath<\(_typeName(Object.self)), Swift.String>) for identifier 'Object.a' did not match the expression's requirement for KeyPath<\(_typeName(Object.self)), Swift.Int>")
+            return true
         }
     }
     
-    func testDisallowedType() throws {
+    @Test func testDisallowedType() throws {
         let uuid = UUID()
         let predicate = #Predicate<Object> { obj in
             uuid == uuid
         }
-        
-        XCTAssertThrowsError(try _encodeDecode(predicate))
-        XCTAssertThrowsError(try _encodeDecode(predicate, for: StandardConfig.self))
-        XCTAssertThrowsError(try _encodeDecode(predicate, encoding: UUIDConfig.self, decoding: MinimalConfig.self)) {
-            XCTAssertEqual(String(describing: $0), "The 'Foundation.UUID' identifier is not in the provided allowlist (required by /PredicateExpressions.Equal/PredicateExpressions.Value)")
+
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate)
         }
-        
-        let decoded = try _encodeDecode(predicate, for: UUIDConfig.self)
-        XCTAssertEqual(try decoded.evaluate(.example), try predicate.evaluate(.example))
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate, for: StandardConfig.self)
+        }
+        #expect {
+            try _encodeDecode(predicate, encoding: UUIDConfig.self, decoding: MinimalConfig.self)
+        } throws: { error in
+            #expect(
+                String(describing: error) ==
+                "The 'Foundation.UUID' identifier is not in the provided allowlist (required by /PredicateExpressions.Equal/PredicateExpressions.Value)"
+            )
+            return true
+        }
+
+        let decoded = try _encodeDecode(predicate, for: UUIDConfig.self).evaluate(.example)
+        let predicateResult = try predicate.evaluate(.example)
+        #expect(decoded == predicateResult)
     }
     
-    func testProvidedProperties() throws {
+    @Test func testProvidedProperties() throws {
         var predicate = #Predicate<Object> {
             $0.a == 2
         }
         
-        XCTAssertThrowsError(try _encodeDecode(predicate, for: ProvidedKeyPathConfig.self))
-        XCTAssertThrowsError(try _encodeDecode(predicate, for: RecursiveProvidedKeyPathConfig.self))
-        
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate, for: ProvidedKeyPathConfig.self)
+        }
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate, for: RecursiveProvidedKeyPathConfig.self)
+        }
+
         predicate = #Predicate<Object> {
             $0.f == false
         }
         
         var decoded = try _encodeDecode(predicate, for: ProvidedKeyPathConfig.self)
-        XCTAssertEqual(try decoded.evaluate(.example), try predicate.evaluate(.example))
+        var decodedResult = try decoded.evaluate(.example)
+        var predicateResult = try predicate.evaluate(.example)
+        #expect(decodedResult == predicateResult)
         decoded = try _encodeDecode(predicate, for: RecursiveProvidedKeyPathConfig.self)
-        XCTAssertEqual(try decoded.evaluate(.example), try predicate.evaluate(.example))
-        
+        decodedResult = try decoded.evaluate(.example)
+        predicateResult = try predicate.evaluate(.example)
+        #expect(decodedResult == predicateResult)
+
         predicate = #Predicate<Object> {
             $0.h.a == 1
         }
-        
-        XCTAssertThrowsError(try _encodeDecode(predicate, for: ProvidedKeyPathConfig.self))
+
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate, for: ProvidedKeyPathConfig.self)
+        }
         decoded = try _encodeDecode(predicate, for: RecursiveProvidedKeyPathConfig.self)
-        XCTAssertEqual(try decoded.evaluate(.example), try predicate.evaluate(.example))
+        decodedResult = try decoded.evaluate(.example)
+        predicateResult = try predicate.evaluate(.example)
+        #expect(decodedResult == predicateResult)
     }
     
-    func testDefaultAllowlist() throws {
+    @Test func testDefaultAllowlist() throws {
         var predicate = #Predicate<String> {
             $0.isEmpty
         }
         var decoded = try _encodeDecode(predicate)
-        XCTAssertEqual(try decoded.evaluate("Hello world"), try predicate.evaluate("Hello world"))
-        
+        var decodedResult = try decoded.evaluate("Hello world")
+        var predicateResult = try predicate.evaluate("Hello world")
+        #expect(decodedResult == predicateResult)
+
         predicate = #Predicate<String> {
             $0.count > 2
         }
         decoded = try _encodeDecode(predicate)
-        XCTAssertEqual(try decoded.evaluate("Hello world"), try predicate.evaluate("Hello world"))
-        
+        decodedResult = try decoded.evaluate("Hello world")
+        predicateResult = try predicate.evaluate("Hello world")
+        #expect(decodedResult == predicateResult)
+
         predicate = #Predicate<String> {
             $0.contains(/[a-z]/)
         }
         decoded = try _encodeDecode(predicate)
-        XCTAssertEqual(try decoded.evaluate("Hello world"), try predicate.evaluate("Hello world"))
-        
+        decodedResult = try decoded.evaluate("Hello world")
+        predicateResult = try predicate.evaluate("Hello world")
+        #expect(decodedResult == predicateResult)
+
         let predicate2 = #Predicate<Object> {
             $0 == $0
         }
         let decoded2 = try _encodeDecode(predicate2)
-        XCTAssertEqual(try decoded2.evaluate(.example), try predicate2.evaluate(.example))
-        
-        
+        decodedResult = try decoded2.evaluate(.example)
+        predicateResult = try predicate2.evaluate(.example)
+        #expect(decodedResult == predicateResult)
+
         var predicate3 = #Predicate<Array<String>> {
             $0.isEmpty
         }
         var decoded3 = try _encodeDecode(predicate3)
-        XCTAssertEqual(try decoded3.evaluate(["A", "B", "C"]), try predicate3.evaluate(["A", "B", "C"]))
-        
+        decodedResult = try decoded3.evaluate(["A", "B", "C"])
+        predicateResult = try predicate3.evaluate(["A", "B", "C"])
+        #expect(decodedResult == predicateResult)
+
         predicate3 = #Predicate<Array<String>> {
             $0.count == 2
         }
         decoded3 = try _encodeDecode(predicate3)
-        XCTAssertEqual(try decoded3.evaluate(["A", "B", "C"]), try predicate3.evaluate(["A", "B", "C"]))
-        
+        decodedResult = try decoded3.evaluate(["A", "B", "C"])
+        predicateResult = try predicate3.evaluate(["A", "B", "C"])
+        #expect(decodedResult == predicateResult)
+
         var predicate4 = #Predicate<Dictionary<String, Int>> {
             $0.isEmpty
         }
         var decoded4 = try _encodeDecode(predicate4)
-        XCTAssertEqual(try decoded4.evaluate(["A": 1, "B": 2, "C": 3]), try predicate4.evaluate(["A": 1, "B": 2, "C": 3]))
-        
+        decodedResult = try decoded4.evaluate(["A": 1, "B": 2, "C": 3])
+        predicateResult = try predicate4.evaluate(["A": 1, "B": 2, "C": 3])
+        #expect(decodedResult == predicateResult)
+
         predicate4 = #Predicate<Dictionary<String, Int>> {
             $0.count == 2
         }
         decoded4 = try _encodeDecode(predicate4)
-        XCTAssertEqual(try decoded4.evaluate(["A": 1, "B": 2, "C": 3]), try predicate4.evaluate(["A": 1, "B": 2, "C": 3]))
-        
+        decodedResult = try decoded4.evaluate(["A": 1, "B": 2, "C": 3])
+        predicateResult = try predicate4.evaluate(["A": 1, "B": 2, "C": 3])
+        #expect(decodedResult == predicateResult)
+
         let predicate5 = #Predicate<Int> {
             (0 ..< 4).contains($0)
         }
         let decoded5 = try _encodeDecode(predicate5)
-        XCTAssertEqual(try decoded5.evaluate(2), try predicate5.evaluate(2))
+        decodedResult = try decoded5.evaluate(2)
+        predicateResult = try predicate5.evaluate(2)
+        #expect(decodedResult == predicateResult)
     }
     
-    func testMalformedData() {
+    @Test func testMalformedData() {
         func _malformedDecode<T: PredicateCodingConfigurationProviding>(_ json: String, config: T.Type = StandardConfig.self, reason: String, file: StaticString = #file, line: UInt = #line) {
             let data = Data(json.utf8)
             let decoder = JSONDecoder()
-            XCTAssertThrowsError(try decoder.decode(CodableConfiguration<Predicate<Object>, T>.self, from: data), file: file, line: line) {
-                XCTAssertTrue(String(describing: $0).contains(reason), "Error '\($0)' did not contain reason '\(reason)'", file: file, line: line)
+            #expect {
+                try decoder.decode(CodableConfiguration<Predicate<Object>, T>.self, from: data)
+            } throws: { error in
+                #expect(
+                    String(describing: error).contains(reason),
+                    .init(rawValue: "Error '\(error)' did not contain reason '\(reason)'")
+                )
+                return true
             }
         }
         
@@ -427,7 +496,7 @@ final class PredicateCodableTests: XCTestCase {
         )
     }
     
-    func testBasicVariadic() throws {
+    @Test func testBasicVariadic() throws {
         let predicate = #Predicate<Object, Object> {
             $0.a == 2 && $1.a == 3
         }
@@ -435,17 +504,27 @@ final class PredicateCodableTests: XCTestCase {
         let decoded = try _encodeDecode(predicate, for: StandardConfig.self)
         var object = Object.example
         let object2 = Object.example
-        XCTAssertEqual(try predicate.evaluate(object, object2), try decoded.evaluate(object, object2))
+        var predicateResult = try predicate.evaluate(object, object2)
+        var decodedResult = try decoded.evaluate(object, object2)
+        #expect(predicateResult == decodedResult)
         object.a = 2
-        XCTAssertEqual(try predicate.evaluate(object, object2), try decoded.evaluate(object, object2))
+        predicateResult = try predicate.evaluate(object, object2)
+        decodedResult = try decoded.evaluate(object, object2)
+        #expect(predicateResult == decodedResult)
         object.a = 3
-        XCTAssertEqual(try predicate.evaluate(object, object2), try decoded.evaluate(object, object2))
-        
-        XCTAssertThrowsError(try _encodeDecode(predicate, for: EmptyConfig.self))
-        XCTAssertThrowsError(try _encodeDecode(predicate))
+        predicateResult = try predicate.evaluate(object, object2)
+        decodedResult = try decoded.evaluate(object, object2)
+        #expect(predicateResult == decodedResult)
+
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate, for: EmptyConfig.self)
+        }
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicate)
+        }
     }
     
-    func testCapturedVariadicTypes() throws {
+    @Test func testCapturedVariadicTypes() throws {
         struct A<each T> : Equatable, Codable {
             init(_: repeat (each T).Type) {}
             
@@ -478,10 +557,12 @@ final class PredicateCodableTests: XCTestCase {
         }
         
         let decoded = try _encodeDecode(predicate, for: CustomConfig.self)
-        XCTAssertEqual(try decoded.evaluate(2), try predicate.evaluate(2))
+        var predicateResult = try predicate.evaluate(2)
+        var decodedResult = try decoded.evaluate(2)
+        #expect(predicateResult == decodedResult)
     }
     
-    func testNestedPredicates() throws {
+    @Test func testNestedPredicates() throws {
         let predicateA = #Predicate<Object> {
             $0.a == 3
         }
@@ -501,11 +582,14 @@ final class PredicateCodableTests: XCTestCase {
         ]
         
         for object in objects {
-            XCTAssertEqual(try decoded.evaluate(object), try predicateB.evaluate(object), "Evaluation failed to produce equal results for \(object)")
+            #expect(
+                try decoded.evaluate(object) == (try predicateB.evaluate(object)),
+                "Evaluation failed to produce equal results for \(object)"
+            )
         }
     }
     
-    func testNestedPredicateRestrictedConfiguration() throws {
+    @Test func testNestedPredicateRestrictedConfiguration() throws {
         struct RestrictedBox<each T> : Codable {
             let predicate: Predicate<repeat each T>
             
@@ -544,10 +628,12 @@ final class PredicateCodableTests: XCTestCase {
         }
         
         // Throws an error because the sub-predicate's configuration won't contain anything in the allowlist
-        XCTAssertThrowsError(try _encodeDecode(predicateB, for: CustomConfig.self))
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(predicateB, for: CustomConfig.self)
+        }
     }
     
-    func testExpression() throws {
+    @Test func testExpression() throws {
         let expression = Expression<Object, Int>() {
             PredicateExpressions.build_KeyPath(
                 root: PredicateExpressions.build_Arg($0),
@@ -556,14 +642,24 @@ final class PredicateCodableTests: XCTestCase {
         }
         let decoded = try _encodeDecode(expression, for: StandardConfig.self)
         var object = Object.example
-        XCTAssertEqual(try expression.evaluate(object), try decoded.evaluate(object))
+        var expressionResult = try expression.evaluate(object)
+        var decodedResult = try decoded.evaluate(object)
+        #expect(expressionResult == decodedResult)
         object.a = 2
-        XCTAssertEqual(try expression.evaluate(object), try decoded.evaluate(object))
+        expressionResult = try expression.evaluate(object)
+        decodedResult = try decoded.evaluate(object)
+        #expect(expressionResult == decodedResult)
         object.a = 3
-        XCTAssertEqual(try expression.evaluate(object), try decoded.evaluate(object))
-        
-        XCTAssertThrowsError(try _encodeDecode(expression, for: EmptyConfig.self))
-        XCTAssertThrowsError(try _encodeDecode(expression))
+        expressionResult = try expression.evaluate(object)
+        decodedResult = try decoded.evaluate(object)
+        #expect(expressionResult == decodedResult)
+
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(expression, for: EmptyConfig.self)
+        }
+        #expect(throws: (any Error).self) {
+            try _encodeDecode(expression)
+        }
     }
 }
 

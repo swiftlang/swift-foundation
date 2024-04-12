@@ -9,7 +9,7 @@
 // RUN: %target-run-simple-swift
 // REQUIRES: executable_test
 
-import XCTest
+import Testing
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
@@ -27,13 +27,16 @@ import Numberick
 import BigInt
 #endif
 
-final class BinaryIntegerFormatStyleTests: XCTestCase {
+struct BinaryIntegerFormatStyleTests {
     // NSR == numericStringRepresentation
     func checkNSR(value: some BinaryInteger, expected: String) {
-        XCTAssertEqual(String(decoding: value.numericStringRepresentation.utf8, as: Unicode.ASCII.self), expected)
+        #expect(
+            String(decoding: value.numericStringRepresentation.utf8, as: Unicode.ASCII.self) ==
+            expected
+        )
     }
 
-    func testNumericStringRepresentation_builtinIntegersLimits() throws {
+    @Test func testNumericStringRepresentation_builtinIntegersLimits() throws {
         func check<I: FixedWidthInteger>(type: I.Type = I.self, min: String, max: String) {
             checkNSR(value: I.min, expected: min)
             checkNSR(value: I.max, expected: max)
@@ -50,7 +53,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt64.self, min: "0", max: "18446744073709551615")
     }
 
-    func testNumericStringRepresentation_builtinIntegersAroundDecimalMagnitude() throws {
+    @Test func testNumericStringRepresentation_builtinIntegersAroundDecimalMagnitude() throws {
         func check<I: FixedWidthInteger>(type: I.Type = I.self, magnitude: String, oneLess: String, oneMore: String) {
             var mag = I(1); while !mag.multipliedReportingOverflow(by: 10).overflow { mag *= 10 }
             
@@ -103,14 +106,14 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
                               String(repeating: "1234567890", count: 10),
                               String(repeating: "1234567890", count: 100)] {
             if let value = initialiser(valueAsString) { // The test cases cover a wide range of values, that don't all fit into every type tested (i.e. the fixed-width types from Numberick).
-                XCTAssertEqual(value.description, valueAsString) // Sanity check that it initialised from the string correctly.
+                #expect(value.description == valueAsString) // Sanity check that it initialised from the string correctly.
                 checkNSR(value: value, expected: valueAsString)
 
                 if I.isSigned {
                     let negativeValueAsString = "-" + valueAsString
                     let negativeValue = initialiser(negativeValueAsString)!
 
-                    XCTAssertEqual(negativeValue.description, negativeValueAsString) // Sanity check that it initialised from the string correctly.
+                    #expect(negativeValue.description == negativeValueAsString) // Sanity check that it initialised from the string correctly.
                     checkNSR(value: negativeValue, expected: negativeValueAsString)
                 }
             }
@@ -118,7 +121,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
     }
 
 #if canImport(Numberick)
-    func testNumericStringRepresentation_largeIntegers() throws {
+    @Test func testNumericStringRepresentation_largeIntegers() throws {
         check(type: Int128.self, initialiser: { Int128($0) })
         check(type: UInt128.self, initialiser: { UInt128($0) })
 
@@ -128,7 +131,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
 #endif
 
 #if canImport(BigInt)
-    func testNumericStringRepresentation_arbitraryPrecisionIntegers() throws {
+    @Test func testNumericStringRepresentation_arbitraryPrecisionIntegers() throws {
         check(type: BigInt.self, initialiser: { BigInt($0)! })
         check(type: BigUInt.self, initialiser: { BigUInt($0)! })
     }
@@ -136,11 +139,11 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
 #endif // canImport(Numberick) || canImport(BigInt)
 }
 
-final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
-    
+struct BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords {
+
     // MARK: Tests
     
-    func testInt32() {
+    @Test func testInt32() {
         check( Int32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0")
         check( Int32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
         check( Int32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647") //  Int32.max
@@ -150,7 +153,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
         check( Int32(truncatingIfNeeded: 0xffffffff as UInt32), expectation:          "-1")
     }
     
-    func testUInt32() {
+    @Test func testUInt32() {
         check(UInt32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0") // UInt32.min
         check(UInt32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
         check(UInt32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647")
@@ -160,7 +163,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
         check(UInt32(truncatingIfNeeded: 0xffffffff as UInt32), expectation:  "4294967295") // UInt32.max
     }
     
-    func testInt64() {
+    @Test func testInt64() {
         check( Int64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0")
         check( Int64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
         check( Int64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807") //  Int64.max
@@ -170,7 +173,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
         check( Int64(truncatingIfNeeded: 0xffffffffffffffff as UInt64), expectation:                   "-1")
     }
     
-    func testUInt64() {
+    @Test func testUInt64() {
         check(UInt64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0") // UInt64.min
         check(UInt64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
         check(UInt64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807")
@@ -182,7 +185,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     
     // MARK: Tests + Big Integer
     
-    func testInt128() {
+    @Test func testInt128() {
         check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: true,  expectation:                                        "0")
         check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: true,  expectation:   "20011376718272490338853433276725592320")
         check(x64:[0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: true,  expectation:  "170141183460469231731687303715884105727") //  Int128.max
@@ -191,7 +194,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
         check(x64:[0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: true,  expectation:                                       "-1")
     }
     
-    func testUInt128() {
+    @Test func testUInt128() {
         check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: false, expectation:                                        "0") // UInt128.min
         check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: false, expectation:   "20011376718272490338853433276725592320")
         check(x64:[0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105728")
@@ -202,12 +205,12 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     
     // MARK: Tests + Big Integer + Miscellaneous
     
-    func testWordsIsEmptyResultsInZero() {
+    @Test func testWordsIsEmptyResultsInZero() {
         check(words:[              ] as [UInt], isSigned: true,  expectation:  "0")
         check(words:[              ] as [UInt], isSigned: false, expectation:  "0")
     }
     
-    func testSignExtendingDoesNotChangeTheResult() {
+    @Test func testSignExtendingDoesNotChangeTheResult() {
         check(words:[ 0            ] as [UInt], isSigned: true,  expectation:  "0")
         check(words:[ 0,  0        ] as [UInt], isSigned: true,  expectation:  "0")
         check(words:[ 0,  0,  0    ] as [UInt], isSigned: true,  expectation:  "0")
@@ -227,7 +230,14 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     // MARK: Assertions
     
     func check(_ integer: some BinaryInteger, expectation: String, file: StaticString = #file, line: UInt = #line) {
-        XCTAssertEqual(integer.description, expectation, "integer description does not match expectation", file: file, line: line)
+        #expect(
+            integer.description == expectation,
+            "integer description does not match expectation",
+            sourceLocation: .init(
+                filePath: String(describing: file),
+                line: Int(line)
+            )
+        )
         check(ascii: integer.numericStringRepresentation.utf8, expectation: expectation, file: file, line: line)
         check(words: Array(integer.words), isSigned: type(of: integer).isSigned, expectation: expectation, file: file, line: line)
     }
@@ -242,6 +252,12 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     }
     
     func check(ascii: some Collection<UInt8>, expectation: String, file: StaticString = #file, line: UInt = #line) {
-        XCTAssertEqual(String(decoding: ascii, as: Unicode.ASCII.self), expectation, file: file, line: line)
+        #expect(
+            String(decoding: ascii, as: Unicode.ASCII.self) == expectation,
+            sourceLocation: .init(
+                filePath: String(describing: file),
+                line: Int(line)
+            )
+        )
     }
 }

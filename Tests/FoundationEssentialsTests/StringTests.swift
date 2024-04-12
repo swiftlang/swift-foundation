@@ -10,22 +10,33 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Testing
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-#if canImport(TestSupport)
-import TestSupport
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
 #endif
 
-final class StringTests : XCTestCase {
+struct StringTests {
     // MARK: - Case mapping
 
-    func testCapitalize() {
+    @Test func testCapitalize() {
         func test(_ string: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
-            XCTAssertEqual(string._capitalized(), expected, file: file, line: line)
+            #expect(string._capitalized() == expected,
+                    sourceLocation: .init(
+                        fileID: #fileID,
+                        filePath: String(describing: file),
+                        line: Int(line),
+                        column: #column
+                    )
+            )
         }
 
         test("iı", "Iı")
@@ -63,9 +74,15 @@ final class StringTests : XCTestCase {
         test("ぁぃぅぇぉ ど ゕゖくけこ", "ぁぃぅぇぉ ど ゕゖくけこ")
     }
 
-    func testTrimmingWhitespace() {
+    @Test func testTrimmingWhitespace() {
         func test(_ str: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
-            XCTAssertEqual(str._trimmingWhitespace(), expected, file: file, line: line)
+            #expect(
+                str._trimmingWhitespace() == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
         test(" \tABCDEFGAbc \t \t  ", "ABCDEFGAbc")
         test("ABCDEFGAbc \t \t  ", "ABCDEFGAbc")
@@ -79,9 +96,15 @@ final class StringTests : XCTestCase {
         test(" \u{202F}\u{00A0} X \u{202F}\u{00A0}", "X") // NBSP and narrow NBSP
     }
 
-    func testTrimmingCharactersWithPredicate() {
+    @Test func testTrimmingCharactersWithPredicate() {
         func test(_ str: String, while predicate: (Character) -> Bool, _ expected: Substring, file: StaticString = #file, line: UInt = #line) {
-            XCTAssertEqual(str._trimmingCharacters(while: predicate), expected, file: file, line: line)
+            #expect(
+                str._trimmingCharacters(while: predicate) == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
 
         typealias TrimmingPredicate = (Character) -> Bool
@@ -152,10 +175,16 @@ final class StringTests : XCTestCase {
         } else {
             message = "Actual: nil"
         }
-        XCTAssertEqual(result, exp, message, file: file, line: line)
+        #expect(result == exp,
+                Comment(rawValue: message),
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+        )
     }
 
-    func testRangeOfString() {
+    @Test func testRangeOfString() {
         var tested: String
         func testASCII(_ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #file, line: UInt = #line) {
             return _testRangeOfString(tested, string: string, anchored: anchored, backwards: backwards, expectation, file: file, line: line)
@@ -205,7 +234,7 @@ final class StringTests : XCTestCase {
         testASCII("ABCDER", anchored: false, backwards: false, nil)
     }
 
-    func testRangeOfString_graphemeCluster() {
+    @Test func testRangeOfString_graphemeCluster() {
         var tested: String
         func test(_ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #file, line: UInt = #line) {
             return _testRangeOfString(tested, string: string, anchored: anchored, backwards: backwards, expectation, file: file, line: line)
@@ -240,7 +269,7 @@ final class StringTests : XCTestCase {
         }
     }
 
-    func testRangeOfString_lineSeparator() {
+    @Test func testRangeOfString_lineSeparator() {
         func test(_ tested: String, _ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #file, line: UInt = #line) {
             return _testRangeOfString(tested, string: string, anchored: anchored, backwards: backwards, expectation, file: file, line: line)
         }
@@ -255,13 +284,19 @@ final class StringTests : XCTestCase {
         test("\r \r\n \r", "\r", anchored: true, backwards: true, 4..<5)
     }
 
-    func testTryFromUTF16() {
+    @Test func testTryFromUTF16() {
         func test(_ utf16Buffer: [UInt16], expected: String?, file: StaticString = #file, line: UInt = #line) {
             let result = utf16Buffer.withUnsafeBufferPointer {
                 String(_utf16: $0)
             }
 
-            XCTAssertEqual(result, expected, file: file, line: line)
+            #expect(
+                result == expected,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
 
         test([], expected: "")
@@ -283,15 +318,27 @@ final class StringTests : XCTestCase {
         test([ 0xD800, 0x42 ], expected: nil)
     }
 
-    func testTryFromUTF16_roundtrip() {
+    @Test func testTryFromUTF16_roundtrip() {
 
         func test(_ string: String, file: StaticString = #file, line: UInt = #line) {
             let utf16Array = Array(string.utf16)
             let res = utf16Array.withUnsafeBufferPointer {
                 String(_utf16: $0)
             }
-            XCTAssertNotNil(res, file: file, line: line)
-            XCTAssertEqual(res, string, file: file, line: line)
+            #expect(
+                res != nil,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
+            #expect(
+                res == string,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
 
         // BMP: consists code points up to U+FFFF
@@ -308,105 +355,111 @@ final class StringTests : XCTestCase {
         test("🏳️‍🌈AB👩‍👩‍👧‍👦ab🕵️‍♀️")
     }
     
-    func testParagraphLineRangeOfSeparator() {
+    @Test func testParagraphLineRangeOfSeparator() {
         for separator in ["\n", "\r", "\r\n", "\u{2029}", "\u{2028}", "\u{85}"] {
             let range = separator.startIndex ..< separator.endIndex
             let paragraphResult = separator._paragraphBounds(around: range)
             let lineResult = separator._lineBounds(around: range)
-            XCTAssertEqual(paragraphResult.start ..< paragraphResult.end, range)
-            XCTAssertEqual(lineResult.start ..< lineResult.end, range)
+            #expect(paragraphResult.start ..< paragraphResult.end == range)
+            #expect(lineResult.start ..< lineResult.end == range)
         }
     }
     
-    func testAlmostMatchingSeparator() {
+    @Test func testAlmostMatchingSeparator() {
         let string = "A\u{200D}B" // U+200D Zero Width Joiner (ZWJ) matches U+2028 Line Separator except for the final UTF-8 scalar
         let lineResult = string._lineBounds(around: string.startIndex ..< string.startIndex)
-        XCTAssertEqual(lineResult.start, string.startIndex)
-        XCTAssertEqual(lineResult.end, string.endIndex)
-        XCTAssertEqual(lineResult.contentsEnd, string.endIndex)
+        #expect(lineResult.start == string.startIndex)
+        #expect(lineResult.end == string.endIndex)
+        #expect(lineResult.contentsEnd == string.endIndex)
     }
     
-    func testFileSystemRepresentation() {
+    @Test func testFileSystemRepresentation() {
         func assertCString(_ ptr: UnsafePointer<CChar>, equals other: String, file: StaticString = #file, line: UInt = #line) {
-            XCTAssertEqual(String(cString: ptr), other, file: file, line: line)
+            #expect(
+                String(cString: ptr) == other,
+                sourceLocation: .init(
+                    filePath: String(describing: file),
+                    line: Int(line)
+                )
+            )
         }
         
         let original = "/Path1/Path Two/Path Three/Some Really Long File Name Section.txt"
         original.withFileSystemRepresentation {
-            XCTAssertNotNil($0)
+            #expect($0 != nil)
             assertCString($0!, equals: original)
         }
         
         let withWhitespace = original + "\u{2000}\u{2001}"
         withWhitespace.withFileSystemRepresentation {
-            XCTAssertNotNil($0)
+            #expect($0 != nil)
             assertCString($0!, equals: withWhitespace)
         }
         
         let withHangul = original + "\u{AC00}\u{AC01}"
         withHangul.withFileSystemRepresentation { buf1 in
-            XCTAssertNotNil(buf1)
+            #expect(buf1 != nil)
             buf1!.withMemoryRebound(to: UInt8.self, capacity: strlen(buf1!)) { buf1Rebound in
                 let fsr = String(decodingCString: buf1Rebound, as: UTF8.self)
                 fsr.withFileSystemRepresentation { buf2 in
-                    XCTAssertNotNil(buf2)
-                    XCTAssertEqual(strcmp(buf1!, buf2!), 0)
+                    #expect(buf2 != nil)
+                    #expect(strcmp(buf1!, buf2!) == 0)
                 }
             }
         }
         
         let withNullSuffix = original + "\u{0000}\u{0000}"
         withNullSuffix.withFileSystemRepresentation {
-            XCTAssertNotNil($0)
+            #expect($0 != nil)
             assertCString($0!, equals: original)
         }
         
 #if canImport(Darwin) || FOUNDATION_FRAMEWORK
         // The buffer should dynamically grow and not be limited to a size of PATH_MAX
         Array(repeating: "A", count: Int(PATH_MAX) - 1).joined().withFileSystemRepresentation { ptr in
-            XCTAssertNotNil(ptr)
+            #expect(ptr != nil)
         }
         
         Array(repeating: "A", count: Int(PATH_MAX)).joined().withFileSystemRepresentation { ptr in
-            XCTAssertNotNil(ptr)
+            #expect(ptr != nil)
         }
         
         // The buffer should fit the scalars that expand the most during decomposition
         for string in ["\u{1D160}", "\u{0CCB}", "\u{0390}"] {
             string.withFileSystemRepresentation { ptr in
-                XCTAssertNotNil(ptr, "Could not create file system representation for \(string.debugDescription)")
+                #expect(ptr != nil, "Could not create file system representation for \(string.debugDescription)")
             }
         }
 #endif
     }
 
-    func testLastPathComponent() {
-        XCTAssertEqual("".lastPathComponent, "")
-        XCTAssertEqual("a".lastPathComponent, "a")
-        XCTAssertEqual("/a".lastPathComponent, "a")
-        XCTAssertEqual("a/".lastPathComponent, "a")
-        XCTAssertEqual("/a/".lastPathComponent, "a")
+    @Test func testLastPathComponent() {
+        #expect("".lastPathComponent == "")
+        #expect("a".lastPathComponent == "a")
+        #expect("/a".lastPathComponent == "a")
+        #expect("a/".lastPathComponent == "a")
+        #expect("/a/".lastPathComponent == "a")
 
-        XCTAssertEqual("a/b".lastPathComponent, "b")
-        XCTAssertEqual("/a/b".lastPathComponent, "b")
-        XCTAssertEqual("a/b/".lastPathComponent, "b")
-        XCTAssertEqual("/a/b/".lastPathComponent, "b")
+        #expect("a/b".lastPathComponent == "b")
+        #expect("/a/b".lastPathComponent == "b")
+        #expect("a/b/".lastPathComponent == "b")
+        #expect("/a/b/".lastPathComponent == "b")
 
-        XCTAssertEqual("a//".lastPathComponent, "a")
-        XCTAssertEqual("a////".lastPathComponent, "a")
-        XCTAssertEqual("/a//".lastPathComponent, "a")
-        XCTAssertEqual("/a////".lastPathComponent, "a")
-        XCTAssertEqual("//a//".lastPathComponent, "a")
-        XCTAssertEqual("/a/b//".lastPathComponent, "b")
-        XCTAssertEqual("//a//b////".lastPathComponent, "b")
+        #expect("a//".lastPathComponent == "a")
+        #expect("a////".lastPathComponent == "a")
+        #expect("/a//".lastPathComponent == "a")
+        #expect("/a////".lastPathComponent == "a")
+        #expect("//a//".lastPathComponent == "a")
+        #expect("/a/b//".lastPathComponent == "b")
+        #expect("//a//b////".lastPathComponent == "b")
 
-        XCTAssertEqual("/".lastPathComponent, "/")
-        XCTAssertEqual("//".lastPathComponent, "/")
-        XCTAssertEqual("/////".lastPathComponent, "/")
-        XCTAssertEqual("/./..//./..//".lastPathComponent, "..")
+        #expect("/".lastPathComponent == "/")
+        #expect("//".lastPathComponent == "/")
+        #expect("/////".lastPathComponent == "/")
+        #expect("/./..//./..//".lastPathComponent == "..")
     }
-    
-    func test_dataUsingEncoding() {
+
+    @Test func test_dataUsingEncoding() {
         let s = "hello 🧮"
         
         // Verify things work on substrings too
@@ -417,28 +470,28 @@ final class StringTests : XCTestCase {
         
         let utf16BEExpected = Data([0, 104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 216, 62, 221, 238])
         let utf16BEOutput = s.data(using: String._Encoding.utf16BigEndian)
-        XCTAssertEqual(utf16BEOutput, utf16BEExpected)
-        
+        #expect(utf16BEOutput == utf16BEExpected)
+
         let utf16BEOutputSubstring = subString.data(using: String._Encoding.utf16BigEndian)
-        XCTAssertEqual(utf16BEOutputSubstring, utf16BEExpected)
-        
+        #expect(utf16BEOutputSubstring == utf16BEExpected)
+
         let utf16LEExpected = Data([104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 0, 62, 216, 238, 221])
         let utf16LEOutput = s.data(using: String._Encoding.utf16LittleEndian)
-        XCTAssertEqual(utf16LEOutput, utf16LEExpected)
+        #expect(utf16LEOutput == utf16LEExpected)
 
         let utf16LEOutputSubstring = subString.data(using: String._Encoding.utf16LittleEndian)
-        XCTAssertEqual(utf16LEOutputSubstring, utf16LEExpected)
+        #expect(utf16LEOutputSubstring == utf16LEExpected)
 
         // UTF32 - specific endianness
         
         let utf32BEExpected = Data([0, 0, 0, 104, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 32, 0, 1, 249, 238])
         let utf32BEOutput = s.data(using: String._Encoding.utf32BigEndian)
-        XCTAssertEqual(utf32BEOutput, utf32BEExpected)
+        #expect(utf32BEOutput == utf32BEExpected)
 
         let utf32LEExpected = Data([104, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 32, 0, 0, 0, 238, 249, 1, 0])
         let utf32LEOutput = s.data(using: String._Encoding.utf32LittleEndian)
-        XCTAssertEqual(utf32LEOutput, utf32LEExpected)
-        
+        #expect(utf32LEOutput == utf32LEExpected)
+
         
         // UTF16 and 32, platform endianness
         let utf16LEWithBOM = Data([0xFF, 0xFE]) + utf16LEExpected
@@ -453,12 +506,12 @@ final class StringTests : XCTestCase {
         
         if bom.littleEndian == bom {
             // We are on a little endian system. Expect a LE BOM
-            XCTAssertEqual(utf16Output, utf16LEWithBOM)
-            XCTAssertEqual(utf32Output, utf32LEWithBOM)
+            #expect(utf16Output == utf16LEWithBOM)
+            #expect(utf32Output == utf32LEWithBOM)
         } else if bom.bigEndian == bom {
             // We are on a big endian system. Expect a BE BOM
-            XCTAssertEqual(utf16Output, utf16BEWithBOM)
-            XCTAssertEqual(utf32Output, utf32BEWithBOM)
+            #expect(utf16Output == utf16BEWithBOM)
+            #expect(utf32Output == utf32BEWithBOM)
         } else {
             fatalError("Unknown endianness")
         }
@@ -466,63 +519,63 @@ final class StringTests : XCTestCase {
         // UTF16
         
         let utf16BEString = String(bytes: utf16BEExpected, encoding: String._Encoding.utf16BigEndian)
-        XCTAssertEqual(s, utf16BEString)
-        
+        #expect(s == utf16BEString)
+
         let utf16LEString = String(bytes: utf16LEExpected, encoding: String._Encoding.utf16LittleEndian)
-        XCTAssertEqual(s, utf16LEString)
-        
+        #expect(s == utf16LEString)
+
         let utf16LEBOMString = String(bytes: utf16LEWithBOM, encoding: String._Encoding.utf16)
-        XCTAssertEqual(s, utf16LEBOMString)
-        
+        #expect(s == utf16LEBOMString)
+
         let utf16BEBOMString = String(bytes: utf16BEWithBOM, encoding: String._Encoding.utf16)
-        XCTAssertEqual(s, utf16BEBOMString)
-        
+        #expect(s == utf16BEBOMString)
+
         // No BOM, no encoding specified. We assume the data is big endian, which leads to garbage (but not nil).
         let utf16LENoBOMString = String(bytes: utf16LEExpected, encoding: String._Encoding.utf16)
-        XCTAssertNotNil(utf16LENoBOMString)
+        #expect(utf16LENoBOMString != nil)
 
         // No BOM, no encoding specified. We assume the data is big endian, which leads to an expected value.
         let utf16BENoBOMString = String(bytes: utf16BEExpected, encoding: String._Encoding.utf16)
-        XCTAssertEqual(s, utf16BENoBOMString)
+        #expect(s == utf16BENoBOMString)
 
         // UTF32
         
         let utf32BEString = String(bytes: utf32BEExpected, encoding: String._Encoding.utf32BigEndian)
-        XCTAssertEqual(s, utf32BEString)
-        
+        #expect(s == utf32BEString)
+
         let utf32LEString = String(bytes: utf32LEExpected, encoding: String._Encoding.utf32LittleEndian)
-        XCTAssertEqual(s, utf32LEString)
-        
+        #expect(s == utf32LEString)
+
         
         let utf32BEBOMString = String(bytes: utf32BEWithBOM, encoding: String._Encoding.utf32)
-        XCTAssertEqual(s, utf32BEBOMString)
-        
+        #expect(s == utf32BEBOMString)
+
         let utf32LEBOMString = String(bytes: utf32LEWithBOM, encoding: String._Encoding.utf32)
-        XCTAssertEqual(s, utf32LEBOMString)
-        
+        #expect(s == utf32LEBOMString)
+
         // No BOM, no encoding specified. We assume the data is big endian, which leads to a nil.
         let utf32LENoBOMString = String(bytes: utf32LEExpected, encoding: String._Encoding.utf32)
-        XCTAssertNil(utf32LENoBOMString)
-        
+        #expect(utf32LENoBOMString == nil)
+
         // No BOM, no encoding specified. We assume the data is big endian, which leads to an expected value.
         let utf32BENoBOMString = String(bytes: utf32BEExpected, encoding: String._Encoding.utf32)
-        XCTAssertEqual(s, utf32BENoBOMString)
+        #expect(s == utf32BENoBOMString)
 
         // Check what happens when we mismatch a string with a BOM and the encoding. The bytes are interpreted according to the specified encoding regardless of the BOM, the BOM is preserved, and the String will look garbled. However the bytes are preserved as-is. This is the expected behavior for UTF16.
         let utf16LEBOMStringMismatch = String(bytes: utf16LEWithBOM, encoding: String._Encoding.utf16BigEndian)
         let utf16LEBOMStringMismatchBytes = utf16LEBOMStringMismatch?.data(using: String._Encoding.utf16BigEndian)
-        XCTAssertEqual(utf16LEWithBOM, utf16LEBOMStringMismatchBytes)
-        
+        #expect(utf16LEWithBOM == utf16LEBOMStringMismatchBytes)
+
         let utf16BEBOMStringMismatch = String(bytes: utf16BEWithBOM, encoding: String._Encoding.utf16LittleEndian)
         let utf16BEBomStringMismatchBytes = utf16BEBOMStringMismatch?.data(using: String._Encoding.utf16LittleEndian)
-        XCTAssertEqual(utf16BEWithBOM, utf16BEBomStringMismatchBytes)
+        #expect(utf16BEWithBOM == utf16BEBomStringMismatchBytes)
 
         // For a UTF32 mismatch, the string creation simply returns nil.
         let utf32LEBOMStringMismatch = String(bytes: utf32LEWithBOM, encoding: String._Encoding.utf32BigEndian)
-        XCTAssertNil(utf32LEBOMStringMismatch)
-        
+        #expect(utf32LEBOMStringMismatch == nil)
+
         let utf32BEBOMStringMismatch = String(bytes: utf32BEWithBOM, encoding: String._Encoding.utf32LittleEndian)
-        XCTAssertNil(utf32BEBOMStringMismatch)
+        #expect(utf32BEBOMStringMismatch == nil)
     }
 
 }
@@ -536,7 +589,7 @@ extension String {
     }
 }
 
-final class StringTestsStdlib: XCTestCase {
+struct StringTestsStdlib {
 
     // The most simple subclass of NSString that CoreFoundation does not know
     // about.
@@ -595,7 +648,7 @@ final class StringTestsStdlib: XCTestCase {
             do {
                 try FileManager.default.removeItem(at: rootURL)
             } catch {
-                XCTFail()
+                Issue.record(error)
             }
         }
 
@@ -605,17 +658,17 @@ final class StringTestsStdlib: XCTestCase {
         block(fileURL, nonExisting)
     }
 
-    func test_Encodings() {
+    @Test func test_Encodings() {
         let availableEncodings: [String.Encoding] = String.availableStringEncodings
-        expectNotEqual(0, availableEncodings.count)
+        #expect(0 != availableEncodings.count)
 
         let defaultCStringEncoding = String.defaultCStringEncoding
-        expectTrue(availableEncodings.contains(defaultCStringEncoding))
+        #expect(availableEncodings.contains(defaultCStringEncoding))
 
-        expectNotEqual("", String.localizedName(of: .utf8))
+        #expect("" != String.localizedName(of: .utf8))
     }
 
-    func test_NSStringEncoding() {
+    @Test func test_NSStringEncoding() {
         // Make sure NSStringEncoding and its values are type-compatible.
         var enc: String.Encoding
         enc = .windowsCP1250
@@ -623,10 +676,10 @@ final class StringTestsStdlib: XCTestCase {
         enc = .utf32BigEndian
         enc = .ascii
         enc = .utf8
-        expectEqual(.utf8, enc)
+        #expect(.utf8 == enc)
     }
 
-    func test_NSStringEncoding_Hashable() {
+    @Test func test_NSStringEncoding_Hashable() {
         let instances: [String.Encoding] = [
             .windowsCP1250,
             .utf32LittleEndian,
@@ -637,117 +690,123 @@ final class StringTestsStdlib: XCTestCase {
         checkHashable(instances, equalityOracle: { $0 == $1 })
     }
 
-    func test_localizedStringWithFormat() {
+    @Test func test_localizedStringWithFormat() {
         let world: NSString = "world"
-        expectEqual("Hello, world!%42", String.localizedStringWithFormat(
+        #expect("Hello, world!%42" == String.localizedStringWithFormat(
             "Hello, %@!%%%ld", world, 42))
 
-        expectEqual("0.5", String.init(format: "%g", locale: Locale(identifier: "en_US"), 0.5))
-        expectEqual("0,5", String.init(format: "%g", locale: Locale(identifier: "uk"), 0.5))
+        #expect("0.5" == String.init(format: "%g", locale: Locale(identifier: "en_US"), 0.5))
+        #expect("0,5" == String.init(format: "%g", locale: Locale(identifier: "uk"), 0.5))
     }
 
-    func test_init_contentsOfFile_encoding() {
+    @Test func test_init_contentsOfFile_encoding() {
         withTemporaryStringFile { existingURL, nonExistentURL in
             do {
                 let content = try String(
                     contentsOfFile: existingURL.path, encoding: .ascii)
-                expectEqual(
-                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,",
-                    content.lines[0])
+                #expect(
+                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit," ==
+                    content.lines[0]
+                )
             } catch {
-                XCTFail(error.localizedDescription)
+                Issue.record(error)
             }
 
             do {
                 let _ = try String(
                     contentsOfFile: nonExistentURL.path, encoding: .ascii)
-                XCTFail()
+                Issue.record()
             } catch {
             }
         }
     }
 
-    func test_init_contentsOfFile_usedEncoding() {
+    @Test func test_init_contentsOfFile_usedEncoding() {
         withTemporaryStringFile { existingURL, nonExistentURL in
             do {
                 var usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
                 let content = try String(
                     contentsOfFile: existingURL.path(), usedEncoding: &usedEncoding)
-                expectNotEqual(0, usedEncoding.rawValue)
-                expectEqual(
-                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,",
-                    content.lines[0])
+                #expect(0 != usedEncoding.rawValue)
+                #expect(
+                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit," ==
+                    content.lines[0]
+                )
             } catch {
-                XCTFail(error.localizedDescription)
+                Issue.record(error)
             }
 
             let usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
             do {
                 _ = try String(contentsOfFile: nonExistentURL.path())
-                XCTFail()
+                Issue.record()
             } catch {
-                expectEqual(0, usedEncoding.rawValue)
+                #expect(0 == usedEncoding.rawValue)
             }
         }
 
     }
 
 
-    func test_init_contentsOf_encoding() {
+    @Test func test_init_contentsOf_encoding() {
         withTemporaryStringFile { existingURL, nonExistentURL in
             do {
                 let content = try String(
                     contentsOf: existingURL, encoding: .ascii)
-                expectEqual(
-                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,",
-                    content.lines[0])
+                #expect(
+                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit," ==
+                    content.lines[0]
+                )
             } catch {
-                XCTFail(error.localizedDescription)
+                Issue.record(error)
             }
 
             do {
                 _ = try String(contentsOf: nonExistentURL, encoding: .ascii)
-                XCTFail()
+                Issue.record()
             } catch {
             }
         }
 
     }
 
-    func test_init_contentsOf_usedEncoding() {
+    @Test func test_init_contentsOf_usedEncoding() {
         withTemporaryStringFile { existingURL, nonExistentURL in
             do {
                 var usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
                 let content = try String(
                     contentsOf: existingURL, usedEncoding: &usedEncoding)
 
-                expectNotEqual(0, usedEncoding.rawValue)
-                expectEqual(
-                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,",
-                    content.lines[0])
+                #expect(0 != usedEncoding.rawValue)
+                #expect(
+                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit," ==
+                    content.lines[0]
+                )
             } catch {
-                XCTFail(error.localizedDescription)
+                Issue.record(error)
             }
 
             var usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
             do {
                 _ = try String(contentsOf: nonExistentURL, usedEncoding: &usedEncoding)
-                XCTFail()
+                Issue.record()
             } catch {
-                expectEqual(0, usedEncoding.rawValue)
+                #expect(0 == usedEncoding.rawValue)
             }
         }
 
     }
 
-    func test_init_cString_encoding() {
+    @Test func test_init_cString_encoding() {
         "foo, a basmati bar!".withCString {
-            expectEqual("foo, a basmati bar!",
-                        String(cString: $0, encoding: String.defaultCStringEncoding))
+            #expect(
+                "foo, a basmati bar!" ==
+                String(cString: $0, encoding: String.defaultCStringEncoding)
+            )
         }
     }
 
-    func test_init_utf8String() {
+    @Test func test_init_utf8String() {
         let s = "foo あいう"
         let up = UnsafeMutablePointer<UInt8>.allocate(capacity: 100)
         var i = 0
@@ -758,25 +817,26 @@ final class StringTestsStdlib: XCTestCase {
         up[i] = 0
         let cstr = UnsafeMutableRawPointer(up)
             .bindMemory(to: CChar.self, capacity: 100)
-        expectEqual(s, String(utf8String: cstr))
+        #expect(s == String(utf8String: cstr))
         up.deallocate()
     }
 
-    func test_canBeConvertedToEncoding() {
-        expectTrue("foo".canBeConverted(to: .ascii))
-        expectFalse("あいう".canBeConverted(to: .ascii))
+    @Test func test_canBeConvertedToEncoding() {
+        #expect("foo".canBeConverted(to: .ascii))
+        #expect("あいう".canBeConverted(to: .ascii) == false)
     }
 
-    func test_capitalized() {
-        expectEqual("Foo Foo Foo Foo", "foo Foo fOO FOO".capitalized)
-        expectEqual("Жжж", "жжж".capitalized)
+    @Test func test_capitalized() {
+        #expect("Foo Foo Foo Foo" == "foo Foo fOO FOO".capitalized)
+        #expect("Жжж" == "жжж".capitalized)
     }
 
-    func test_localizedCapitalized() {
-        expectEqual(
-            "Foo Foo Foo Foo",
-            "foo Foo fOO FOO".capitalized(with: Locale(identifier: "en")))
-        expectEqual("Жжж", "жжж".capitalized(with: Locale(identifier: "en")))
+    @Test func test_localizedCapitalized() {
+        #expect(
+            "Foo Foo Foo Foo" ==
+            "foo Foo fOO FOO".capitalized(with: Locale(identifier: "en"))
+        )
+        #expect("Жжж" == "жжж".capitalized(with: Locale(identifier: "en")))
 
         //
         // Special casing.
@@ -785,12 +845,12 @@ final class StringTestsStdlib: XCTestCase {
         // U+0069 LATIN SMALL LETTER I
         // to upper case:
         // U+0049 LATIN CAPITAL LETTER I
-        expectEqual("Iii Iii", "iii III".capitalized(with: Locale(identifier: "en")))
+        #expect("Iii Iii" == "iii III".capitalized(with: Locale(identifier: "en")))
 
         // U+0069 LATIN SMALL LETTER I
         // to upper case in Turkish locale:
         // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
-        expectEqual("\u{0130}ii Iıı", "iii III".capitalized(with: Locale(identifier: "tr")))
+        #expect("\u{0130}ii Iıı" == "iii III".capitalized(with: Locale(identifier: "tr")))
     }
 
     /// Checks that executing the operation in the locale with the given
@@ -814,22 +874,24 @@ final class StringTestsStdlib: XCTestCase {
             Locale(identifier: $0)
         } ?? nil
 
-        expectEqual(
-            expected, op(locale),
-            message())
+        #expect(
+            expected == op(locale),
+            Comment(rawValue: message())
+        )
     }
 
-    func test_capitalizedString() {
+    @Test func test_capitalizedString() {
         expectLocalizedEquality(
             "Foo Foo Foo Foo",
             { loc in "foo Foo fOO FOO".capitalized(with: loc) })
 
         expectLocalizedEquality("Жжж", { loc in "жжж".capitalized(with: loc) })
 
-        expectEqual(
-            "Foo Foo Foo Foo",
-            "foo Foo fOO FOO".capitalized(with: nil))
-        expectEqual("Жжж", "жжж".capitalized(with: nil))
+        #expect(
+            "Foo Foo Foo Foo" ==
+            "foo Foo fOO FOO".capitalized(with: nil)
+        )
+        #expect("Жжж" == "жжж".capitalized(with: nil))
 
         //
         // Special casing.
@@ -850,67 +912,63 @@ final class StringTestsStdlib: XCTestCase {
             { loc in "iii III".capitalized(with: loc) }, "tr")
     }
 
-    func test_caseInsensitiveCompare() {
-        expectEqual(ComparisonResult.orderedSame,
-                    "abCD".caseInsensitiveCompare("AbCd"))
-        expectEqual(ComparisonResult.orderedAscending,
-                    "abCD".caseInsensitiveCompare("AbCdE"))
+    @Test func test_caseInsensitiveCompare() {
+        #expect(
+            ComparisonResult.orderedSame ==
+            "abCD".caseInsensitiveCompare("AbCd")
+        )
+        #expect(
+            ComparisonResult.orderedAscending ==
+            "abCD".caseInsensitiveCompare("AbCdE")
+        )
 
-        expectEqual(ComparisonResult.orderedSame,
-                    "абвг".caseInsensitiveCompare("АбВг"))
-        expectEqual(ComparisonResult.orderedAscending,
-                    "абВГ".caseInsensitiveCompare("АбВгД"))
+        #expect(
+            ComparisonResult.orderedSame ==
+            "абвг".caseInsensitiveCompare("АбВг")
+        )
+        #expect(
+            ComparisonResult.orderedAscending ==
+            "абВГ".caseInsensitiveCompare("АбВгД")
+        )
     }
 
-    func test_commonPrefix() {
-        expectEqual("ab",
-                    "abcd".commonPrefix(with: "abdc", options: []))
-        expectEqual("abC",
-                    "abCd".commonPrefix(with: "abce", options: .caseInsensitive))
+    @Test func test_commonPrefix() {
+        #expect("ab" == "abcd".commonPrefix(with: "abdc", options: []))
+        #expect("abC" == "abCd".commonPrefix(with: "abce", options: .caseInsensitive))
 
-        expectEqual("аб",
-                    "абвг".commonPrefix(with: "абгв", options: []))
-        expectEqual("абВ",
-                    "абВг".commonPrefix(with: "абвд", options: .caseInsensitive))
+        #expect("аб" == "абвг".commonPrefix(with: "абгв", options: []))
+        #expect("абВ" == "абВг".commonPrefix(with: "абвд", options: .caseInsensitive))
     }
 
-    func test_compare() {
-        expectEqual(ComparisonResult.orderedSame,
-                    "abc".compare("abc"))
-        expectEqual(ComparisonResult.orderedAscending,
-                    "абв".compare("где"))
+    @Test func test_compare() {
+        #expect(.orderedSame == "abc".compare("abc"))
+        #expect(.orderedAscending == "абв".compare("где"))
 
-        expectEqual(ComparisonResult.orderedSame,
-                    "abc".compare("abC", options: .caseInsensitive))
-        expectEqual(ComparisonResult.orderedSame,
-                    "абв".compare("абВ", options: .caseInsensitive))
+        #expect(.orderedSame == "abc".compare("abC", options: .caseInsensitive))
+        #expect(.orderedSame == "абв".compare("абВ", options: .caseInsensitive))
 
         do {
             let s = "abcd"
             let r = s.index(after: s.startIndex)..<s.endIndex
-            expectEqual(ComparisonResult.orderedSame,
-                        s.compare("bcd", range: r))
+            #expect(.orderedSame == s.compare("bcd", range: r))
         }
         do {
             let s = "абвг"
             let r = s.index(after: s.startIndex)..<s.endIndex
-            expectEqual(ComparisonResult.orderedSame,
-                        s.compare("бвг", range: r))
+            #expect(.orderedSame == s.compare("бвг", range: r))
         }
 
-        expectEqual(ComparisonResult.orderedSame,
-                    "abc".compare("abc", locale: nil))
-        expectEqual(ComparisonResult.orderedSame,
-                    "абв".compare("абв", locale: nil))
+        #expect(.orderedSame == "abc".compare("abc", locale: nil))
+        #expect(.orderedSame == "абв".compare("абв", locale: nil))
     }
 
-    func test_completePath() {
+    @Test func test_completePath() {
         withTemporaryStringFile { existingURL, nonExistentURL in
             let existingPath = existingURL.path()
             let nonExistentPath = nonExistentURL.path()
             do {
                 let count = nonExistentPath.completePath(caseSensitive: false)
-                expectEqual(0, count)
+                #expect(0 == count)
             }
 
             do {
@@ -918,8 +976,8 @@ final class StringTestsStdlib: XCTestCase {
                 let count = nonExistentPath.completePath(
                     into: &outputName, caseSensitive: false)
 
-                expectEqual(0, count)
-                expectEqual("None Found", outputName)
+                #expect(0 == count)
+                #expect("None Found" == outputName)
             }
 
             do {
@@ -928,14 +986,14 @@ final class StringTestsStdlib: XCTestCase {
                 let count = nonExistentPath.completePath(
                     into: &outputName, caseSensitive: false, matchesInto: &outputArray)
 
-                expectEqual(0, count)
-                expectEqual("None Found", outputName)
-                expectEqual(["foo", "bar"], outputArray)
+                #expect(0 == count)
+                #expect("None Found" == outputName)
+                #expect(["foo", "bar"] == outputArray)
             }
 
             do {
                 let count = existingPath.completePath(caseSensitive: false)
-                expectEqual(1, count)
+                #expect(1 == count)
             }
 
             do {
@@ -943,8 +1001,8 @@ final class StringTestsStdlib: XCTestCase {
                 let count = existingPath.completePath(
                     into: &outputName, caseSensitive: false)
 
-                expectEqual(1, count)
-                expectEqual(existingPath, outputName)
+                #expect(1 == count)
+                #expect(existingPath == outputName)
             }
 
             do {
@@ -953,9 +1011,9 @@ final class StringTestsStdlib: XCTestCase {
                 let count = existingPath.completePath(
                     into: &outputName, caseSensitive: false, matchesInto: &outputArray)
 
-                expectEqual(1, count)
-                expectEqual(existingPath, outputName)
-                expectEqual([existingPath], outputArray)
+                #expect(1 == count)
+                #expect(existingPath == outputName)
+                #expect([existingPath] == outputArray)
             }
 
             do {
@@ -963,59 +1021,66 @@ final class StringTestsStdlib: XCTestCase {
                 let count = existingPath.completePath(
                     into: &outputName, caseSensitive: false, filterTypes: ["txt"])
 
-                expectEqual(1, count)
-                expectEqual(existingPath, outputName)
+                #expect(1 == count)
+                #expect(existingPath == outputName)
             }
         }
 
     }
 
-    func test_components_separatedBy_characterSet() {
-        expectEqual([""], "".components(
+    @Test func test_components_separatedBy_characterSet() {
+        #expect([""] == "".components(
             separatedBy: CharacterSet.decimalDigits))
 
-        expectEqual(
-            ["абв", "", "あいう", "abc"],
+        #expect(
+            ["абв", "", "あいう", "abc"] ==
             "абв12あいう3abc".components(
-                separatedBy: CharacterSet.decimalDigits))
+                separatedBy: CharacterSet.decimalDigits)
+        )
 
-        expectEqual(
-            ["абв", "", "あいう", "abc"],
+        #expect(
+            ["абв", "", "あいう", "abc"] ==
             "абв\u{1F601}\u{1F602}あいう\u{1F603}abc"
                 .components(
-                    separatedBy: CharacterSet(charactersIn: "\u{1F601}\u{1F602}\u{1F603}")))
+                    separatedBy: CharacterSet(
+                        charactersIn: "\u{1F601}\u{1F602}\u{1F603}")
+                )
+        )
 
         // Performs Unicode scalar comparison.
-        expectEqual(
-            ["abcし\u{3099}def"],
+        #expect(
+            ["abcし\u{3099}def"] ==
             "abcし\u{3099}def".components(
-                separatedBy: CharacterSet(charactersIn: "\u{3058}")))
+                separatedBy: CharacterSet(charactersIn: "\u{3058}")
+            )
+        )
     }
 
-    func test_components_separatedBy_string() {
-        expectEqual([""], "".components(separatedBy: "//"))
+    @Test func test_components_separatedBy_string() {
+        #expect([""] == "".components(separatedBy: "//"))
 
-        expectEqual(
-            ["абв", "あいう", "abc"],
-            "абв//あいう//abc".components(separatedBy: "//"))
+        #expect(
+            ["абв", "あいう", "abc"] ==
+            "абв//あいう//abc".components(separatedBy: "//")
+        )
 
         // Performs normalization.
-        expectEqual(
-            ["abc", "def"],
-            "abcし\u{3099}def".components(separatedBy: "\u{3058}"))
+        #expect(
+            ["abc", "def"] ==
+            "abcし\u{3099}def".components(separatedBy: "\u{3058}")
+        )
     }
 
-    func test_cString() {
-        XCTAssertNil("абв".cString(using: .ascii))
+    @Test func test_cString() {
+        #expect("абв".cString(using: .ascii) == nil)
 
         let expectedBytes: [UInt8] = [ 0xd0, 0xb0, 0xd0, 0xb1, 0xd0, 0xb2, 0 ]
         let expectedStr: [CChar] = expectedBytes.map { CChar(bitPattern: $0) }
-        expectEqual(expectedStr,
-                    "абв".cString(using: .utf8)!)
+        #expect(expectedStr == "абв".cString(using: .utf8)!)
     }
 
-     func test_data() {
-         XCTAssertNil("あいう".data(using: .ascii, allowLossyConversion: false))
+     @Test func test_data() {
+         #expect("あいう".data(using: .ascii, allowLossyConversion: false) == nil)
 
          do {
              let data = "あいう".data(using: .utf8)!
@@ -1023,33 +1088,36 @@ final class StringTestsStdlib: XCTestCase {
                 0xe3, 0x81, 0x82, 0xe3, 0x81, 0x84, 0xe3, 0x81, 0x86
              ]
 
-             expectEqualSequence(expectedBytes, data)
+             #expect(
+                expectedBytes.elementsEqual(data)
+             )
          }
      }
 
-    func test_init() {
+    @Test func test_init() {
         let bytes: [UInt8] = [0xe3, 0x81, 0x82, 0xe3, 0x81, 0x84, 0xe3, 0x81, 0x86]
         let data = Data(bytes)
 
-        XCTAssertNil(String(data: data, encoding: .nonLossyASCII))
+        #expect(String(data: data, encoding: .nonLossyASCII) == nil)
 
-        XCTAssertEqual(
-            "あいう",
-            String(data: data, encoding: .utf8)!)
+        #expect(
+            "あいう" ==
+            String(data: data, encoding: .utf8)!
+        )
     }
 
-    func test_decomposedStringWithCanonicalMapping() {
-        expectEqual("abc", "abc".decomposedStringWithCanonicalMapping)
-        expectEqual("\u{305f}\u{3099}くてん", "だくてん".decomposedStringWithCanonicalMapping)
-        expectEqual("\u{ff80}\u{ff9e}ｸﾃﾝ", "ﾀﾞｸﾃﾝ".decomposedStringWithCanonicalMapping)
+    @Test func test_decomposedStringWithCanonicalMapping() {
+        #expect("abc" == "abc".decomposedStringWithCanonicalMapping)
+        #expect("\u{305f}\u{3099}くてん" == "だくてん".decomposedStringWithCanonicalMapping)
+        #expect("\u{ff80}\u{ff9e}ｸﾃﾝ" == "ﾀﾞｸﾃﾝ".decomposedStringWithCanonicalMapping)
     }
 
-    func test_decomposedStringWithCompatibilityMapping() {
-        expectEqual("abc", "abc".decomposedStringWithCompatibilityMapping)
-        expectEqual("\u{30bf}\u{3099}クテン", "ﾀﾞｸﾃﾝ".decomposedStringWithCompatibilityMapping)
+    @Test func test_decomposedStringWithCompatibilityMapping() {
+        #expect("abc" == "abc".decomposedStringWithCompatibilityMapping)
+        #expect("\u{30bf}\u{3099}クテン" == "ﾀﾞｸﾃﾝ".decomposedStringWithCompatibilityMapping)
     }
 
-    func test_enumerateLines() {
+    @Test func test_enumerateLines() {
         var lines: [String] = []
         "abc\n\ndefghi\njklm".enumerateLines {
             (line: String, stop: inout Bool)
@@ -1059,10 +1127,10 @@ final class StringTestsStdlib: XCTestCase {
                 stop = true
             }
         }
-        expectEqual(["abc", "", "defghi"], lines)
+        #expect(["abc", "", "defghi"] == lines)
     }
 
-    func test_enumerateLinguisticTagsIn() {
+    @Test func test_enumerateLinguisticTagsIn() {
         let s: String = "Абв. Глокая куздра штеко будланула бокра и кудрячит бокрёнка. Абв."
         let startIndex = s.index(s.startIndex, offsetBy: 5)
         let endIndex = s.index(s.startIndex, offsetBy: 62)
@@ -1084,17 +1152,17 @@ final class StringTestsStdlib: XCTestCase {
                 stop = true
             }
         }
-        expectEqual([
+        #expect([
             NSLinguisticTag.word.rawValue,
             NSLinguisticTag.whitespace.rawValue,
             NSLinguisticTag.word.rawValue
-        ], tags)
-        expectEqual(["Глокая", " ", "куздра"], tokens)
+        ] == tags)
+        #expect(["Глокая", " ", "куздра"] == tokens)
         let sentence = String(s[startIndex..<endIndex])
-        expectEqual([sentence, sentence, sentence], sentences)
+        #expect([sentence, sentence, sentence] == sentences)
     }
 
-    func test_enumerateSubstringsIn() {
+    @Test func test_enumerateSubstringsIn() {
         let s = "え\u{304b}\u{3099}お\u{263a}\u{fe0f}😀😊"
         let startIndex = s.index(s.startIndex, offsetBy: 1)
         let endIndex = s.index(s.startIndex, offsetBy: 5)
@@ -1108,10 +1176,10 @@ final class StringTestsStdlib: XCTestCase {
                  enclosingRange: Range<String.Index>, stop: inout Bool)
                 in
                 substrings.append(substring!)
-                expectEqual(substring, String(s[substringRange]))
-                expectEqual(substring, String(s[enclosingRange]))
+                #expect(substring == String(s[substringRange]))
+                #expect(substring == String(s[enclosingRange]))
             }
-            expectEqual(["\u{304b}\u{3099}", "お", "☺️", "😀"], substrings)
+            #expect(["\u{304b}\u{3099}", "お", "☺️", "😀"] == substrings)
         }
         do {
             var substrings: [String] = []
@@ -1120,21 +1188,21 @@ final class StringTestsStdlib: XCTestCase {
                 (substring_: String?, substringRange: Range<String.Index>,
                  enclosingRange: Range<String.Index>, stop: inout Bool)
                 in
-                XCTAssertNil(substring_)
+                #expect(substring_ == nil)
                 let substring = s[substringRange]
                 substrings.append(String(substring))
                 expectEqual(substring, s[enclosingRange])
             }
-            expectEqual(["\u{304b}\u{3099}", "お", "☺️", "😀"], substrings)
+            #expect(["\u{304b}\u{3099}", "お", "☺️", "😀"] == substrings)
         }
     }
 
-    func test_fastestEncoding() {
+    @Test func test_fastestEncoding() {
         let availableEncodings: [String.Encoding] = String.availableStringEncodings
-        expectTrue(availableEncodings.contains("abc".fastestEncoding))
+        #expect(availableEncodings.contains("abc".fastestEncoding))
     }
 
-    func test_getBytes() {
+    @Test func test_getBytes() {
         let s = "abc абв def где gh жз zzz"
         let startIndex = s.index(s.startIndex, offsetBy: 8)
         let endIndex = s.index(s.startIndex, offsetBy: 22)
@@ -1152,11 +1220,11 @@ final class StringTestsStdlib: XCTestCase {
                                     encoding: .utf8,
                                     options: [],
                                     range: startIndex..<endIndex, remaining: &remainingRange)
-            expectTrue(result)
-            XCTAssertEqual(expectedStr, buffer)
-            expectEqual(11, usedLength)
-            expectEqual(remainingRange.lowerBound, s.index(startIndex, offsetBy: 8))
-            expectEqual(remainingRange.upperBound, endIndex)
+            #expect(result)
+            #expect(expectedStr == buffer)
+            #expect(11 == usedLength)
+            #expect(remainingRange.lowerBound == s.index(startIndex, offsetBy: 8))
+            #expect(remainingRange.upperBound == endIndex)
         }
         do {
             // 'bufferLength' is limiting.  Note that the buffer is not filled
@@ -1173,11 +1241,11 @@ final class StringTestsStdlib: XCTestCase {
                                     encoding: .utf8,
                                     options: [],
                                     range: startIndex..<endIndex, remaining: &remainingRange)
-            expectTrue(result)
-            XCTAssertEqual(expectedStr, buffer)
-            expectEqual(4, usedLength)
-            expectEqual(remainingRange.lowerBound, s.index(startIndex, offsetBy: 4))
-            expectEqual(remainingRange.upperBound, endIndex)
+            #expect(result)
+            #expect(expectedStr == buffer)
+            #expect(4 == usedLength)
+            #expect(remainingRange.lowerBound == s.index(startIndex, offsetBy: 4))
+            #expect(remainingRange.upperBound == endIndex)
         }
         do {
             // 'range' is converted completely.
@@ -1193,11 +1261,11 @@ final class StringTestsStdlib: XCTestCase {
                                     usedLength: &usedLength, encoding: .utf8,
                                     options: [],
                                     range: startIndex..<endIndex, remaining: &remainingRange)
-            expectTrue(result)
-            XCTAssertEqual(expectedStr, buffer)
-            expectEqual(19, usedLength)
-            expectEqual(remainingRange.lowerBound, endIndex)
-            expectEqual(remainingRange.upperBound, endIndex)
+            #expect(result)
+            #expect(expectedStr == buffer)
+            #expect(19 == usedLength)
+            #expect(remainingRange.lowerBound == endIndex)
+            #expect(remainingRange.upperBound == endIndex)
         }
         do {
             // Inappropriate encoding.
@@ -1213,15 +1281,15 @@ final class StringTestsStdlib: XCTestCase {
                                     usedLength: &usedLength, encoding: .ascii,
                                     options: [],
                                     range: startIndex..<endIndex, remaining: &remainingRange)
-            expectTrue(result)
-            XCTAssertEqual(expectedStr, buffer)
-            expectEqual(4, usedLength)
-            expectEqual(remainingRange.lowerBound, s.index(startIndex, offsetBy: 4))
-            expectEqual(remainingRange.upperBound, endIndex)
+            #expect(result)
+            #expect(expectedStr == buffer)
+            #expect(4 == usedLength)
+            #expect(remainingRange.lowerBound == s.index(startIndex, offsetBy: 4))
+            #expect(remainingRange.upperBound == endIndex)
         }
     }
 
-    func test_getCString() {
+    @Test func test_getCString() {
         let s = "abc あかさた"
         do {
             // A significantly too small buffer
@@ -1230,10 +1298,10 @@ final class StringTestsStdlib: XCTestCase {
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
             let result = s.getCString(&buffer, maxLength: 100,
                                       encoding: .utf8)
-            expectFalse(result)
+            #expect(result == false)
             let result2 = s.getCString(&buffer, maxLength: 1,
                                        encoding: .utf8)
-            expectFalse(result2)
+            #expect(result2 == false)
         }
         do {
             // The largest buffer that cannot accommodate the string plus null terminator.
@@ -1242,10 +1310,10 @@ final class StringTestsStdlib: XCTestCase {
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
             let result = s.getCString(&buffer, maxLength: 100,
                                       encoding: .utf8)
-            expectFalse(result)
+            #expect(result == false)
             let result2 = s.getCString(&buffer, maxLength: 16,
                                        encoding: .utf8)
-            expectFalse(result2)
+            #expect(result2 == false)
         }
         do {
             // The smallest buffer where the result can fit.
@@ -1258,12 +1326,12 @@ final class StringTestsStdlib: XCTestCase {
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
             let result = s.getCString(&buffer, maxLength: 100,
                                       encoding: .utf8)
-            expectTrue(result)
-            XCTAssertEqual(expectedStr, buffer)
+            #expect(result)
+            #expect(expectedStr == buffer)
             let result2 = s.getCString(&buffer, maxLength: 17,
                                        encoding: .utf8)
-            expectTrue(result2)
-            XCTAssertEqual(expectedStr, buffer)
+            #expect(result2)
+            #expect(expectedStr == buffer)
         }
         do {
             // Limit buffer size with 'maxLength'.
@@ -1272,7 +1340,7 @@ final class StringTestsStdlib: XCTestCase {
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
             let result = s.getCString(&buffer, maxLength: 8,
                                       encoding: .utf8)
-            expectFalse(result)
+            #expect(result == false)
         }
         do {
             // String with unpaired surrogates.
@@ -1282,11 +1350,11 @@ final class StringTestsStdlib: XCTestCase {
                 repeating: CChar(bitPattern: 0xff), count: bufferLength)
             let result = illFormedUTF16.getCString(&buffer, maxLength: 100,
                                                    encoding: .utf8)
-            expectFalse(result)
+            #expect(result == false)
         }
     }
 
-    func test_getLineStart() {
+    @Test func test_getLineStart() {
         let s = "Глокая куздра\nштеко будланула\nбокра и кудрячит\nбокрёнка."
         let r = s.index(s.startIndex, offsetBy: 16)..<s.index(s.startIndex, offsetBy: 35)
         do {
@@ -1295,14 +1363,18 @@ final class StringTestsStdlib: XCTestCase {
             var outContentsEndIndex = s.startIndex
             s.getLineStart(&outStartIndex, end: &outLineEndIndex,
                            contentsEnd: &outContentsEndIndex, for: r)
-            expectEqual("штеко будланула\nбокра и кудрячит\n",
-                        s[outStartIndex..<outLineEndIndex])
-            expectEqual("штеко будланула\nбокра и кудрячит",
-                        s[outStartIndex..<outContentsEndIndex])
+            #expect(
+                "штеко будланула\nбокра и кудрячит\n" ==
+                s[outStartIndex..<outLineEndIndex]
+            )
+            #expect(
+                "штеко будланула\nбокра и кудрячит" ==
+                s[outStartIndex..<outContentsEndIndex]
+            )
         }
     }
 
-    func test_getParagraphStart() {
+    @Test func test_getParagraphStart() {
         let s = "Глокая куздра\nштеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка.\n Абв."
         let r = s.index(s.startIndex, offsetBy: 16)..<s.index(s.startIndex, offsetBy: 35)
         do {
@@ -1311,40 +1383,43 @@ final class StringTestsStdlib: XCTestCase {
             var outContentsEndIndex = s.startIndex
             s.getParagraphStart(&outStartIndex, end: &outEndIndex,
                                 contentsEnd: &outContentsEndIndex, for: r)
-            expectEqual("штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка.\n",
-                        s[outStartIndex..<outEndIndex])
-            expectEqual("штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка.",
-                        s[outStartIndex..<outContentsEndIndex])
+            #expect(
+                "штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка.\n" ==
+                s[outStartIndex..<outEndIndex]
+            )
+            #expect(
+                "штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка." ==
+                s[outStartIndex..<outContentsEndIndex]
+            )
         }
     }
 
-    func test_hash() {
+    @Test func test_hash() {
         let s: String = "abc"
         let nsstr: NSString = "abc"
-        expectEqual(nsstr.hash, s.hash)
+        #expect(nsstr.hash == s.hash)
     }
 
-    func test_init_bytes_encoding() {
+    @Test func test_init_bytes_encoding() {
         var s: String = "abc あかさた"
-        expectEqual(
-            s, String(bytes: s.utf8, encoding: .utf8))
+        #expect(s == String(bytes: s.utf8, encoding: .utf8))
 
         /*
          FIXME: Test disabled because the NSString documentation is unclear about
          what should actually happen in this case.
 
-         XCTAssertNil(String(bytes: bytes, length: bytes.count,
-         encoding: .ascii))
+         #expect(String(bytes: bytes, length: bytes.count,
+         encoding: .ascii) == nil)
          */
 
         // FIXME: add a test where this function actually returns nil.
     }
 
     @available(*, deprecated)
-    func test_init_bytesNoCopy_length_encoding_freeWhenDone() {
+    @Test func test_init_bytesNoCopy_length_encoding_freeWhenDone() {
         var s: String = "abc あかさた"
         var bytes: [UInt8] = Array(s.utf8)
-        expectEqual(s, String(bytesNoCopy: &bytes,
+        #expect(s == String(bytesNoCopy: &bytes,
                               length: bytes.count, encoding: .utf8,
                               freeWhenDone: false))
 
@@ -1352,88 +1427,93 @@ final class StringTestsStdlib: XCTestCase {
          FIXME: Test disabled because the NSString documentation is unclear about
          what should actually happen in this case.
 
-         XCTAssertNil(String(bytesNoCopy: &bytes, length: bytes.count,
-         encoding: .ascii, freeWhenDone: false))
+         #expect(String(bytesNoCopy: &bytes, length: bytes.count,
+         encoding: .ascii, freeWhenDone: false) == nil)
          */
 
         // FIXME: add a test where this function actually returns nil.
     }
 
-    func test_init_utf16CodeUnits_count() {
+    @Test func test_init_utf16CodeUnits_count() {
         let expected = "abc абв \u{0001F60A}"
         let chars: [unichar] = Array(expected.utf16)
 
-        expectEqual(expected, String(utf16CodeUnits: chars, count: chars.count))
+        #expect(expected == String(utf16CodeUnits: chars, count: chars.count))
     }
 
     @available(*, deprecated)
-    func test_init_utf16CodeUnitsNoCopy() {
+    @Test func test_init_utf16CodeUnitsNoCopy() {
         let expected = "abc абв \u{0001F60A}"
         let chars: [unichar] = Array(expected.utf16)
 
-        expectEqual(expected, String(utf16CodeUnitsNoCopy: chars,
+        #expect(expected == String(utf16CodeUnitsNoCopy: chars,
                                      count: chars.count, freeWhenDone: false))
     }
 
-    func test_init_format() {
-        expectEqual("", String(format: ""))
-        expectEqual(
-            "abc абв \u{0001F60A}", String(format: "abc абв \u{0001F60A}"))
+    @Test func test_init_format() {
+        #expect("" == String(format: ""))
+        #expect("abc абв \u{0001F60A}" == String(format: "abc абв \u{0001F60A}"))
 
         let world: NSString = "world"
-        expectEqual("Hello, world!%42",
-                    String(format: "Hello, %@!%%%ld", world, 42))
+        #expect("Hello, world!%42" == String(format: "Hello, %@!%%%ld", world, 42))
 
         // test for rdar://problem/18317906
-        expectEqual("3.12", String(format: "%.2f", 3.123456789))
-        expectEqual("3.12", NSString(format: "%.2f", 3.123456789))
+        #expect("3.12" == String(format: "%.2f", 3.123456789))
+        #expect("3.12" == NSString(format: "%.2f", 3.123456789))
     }
 
-    func test_init_format_arguments() {
-        expectEqual("", String(format: "", arguments: []))
-        expectEqual(
-            "abc абв \u{0001F60A}",
-            String(format: "abc абв \u{0001F60A}", arguments: []))
+    @Test func test_init_format_arguments() {
+        #expect("" == String(format: "", arguments: []))
+        #expect(
+            "abc абв \u{0001F60A}" ==
+            String(format: "abc абв \u{0001F60A}", arguments: [])
+        )
 
         let world: NSString = "world"
         let args: [CVarArg] = [ world, 42 ]
-        expectEqual("Hello, world!%42",
-                    String(format: "Hello, %@!%%%ld", arguments: args))
+        #expect(
+            "Hello, world!%42" ==
+            String(format: "Hello, %@!%%%ld", arguments: args)
+        )
     }
 
-    func test_init_format_locale() {
+    @Test func test_init_format_locale() {
         let world: NSString = "world"
-        expectEqual("Hello, world!%42", String(format: "Hello, %@!%%%ld",
-                                               locale: nil, world, 42))
+        #expect(
+            "Hello, world!%42" ==
+            String(format: "Hello, %@!%%%ld", locale: nil, world, 42)
+        )
     }
 
-    func test_init_format_locale_arguments() {
+    @Test func test_init_format_locale_arguments() {
         let world: NSString = "world"
         let args: [CVarArg] = [ world, 42 ]
-        expectEqual("Hello, world!%42", String(format: "Hello, %@!%%%ld",
-                                               locale: nil, arguments: args))
+        #expect(
+            "Hello, world!%42" ==
+            String(format: "Hello, %@!%%%ld", locale: nil, arguments: args)
+        )
     }
 
-    func test_utf16Count() {
-        expectEqual(1, "a".utf16.count)
-        expectEqual(2, "\u{0001F60A}".utf16.count)
+    @Test func test_utf16Count() {
+        #expect(1 == "a".utf16.count)
+        #expect(2 == "\u{0001F60A}".utf16.count)
     }
 
-    func test_lengthOfBytesUsingEncoding() {
-        expectEqual(1, "a".lengthOfBytes(using: .utf8))
-        expectEqual(2, "あ".lengthOfBytes(using: .shiftJIS))
+    @Test func test_lengthOfBytesUsingEncoding() {
+        #expect(1 == "a".lengthOfBytes(using: .utf8))
+        #expect(2 == "あ".lengthOfBytes(using: .shiftJIS))
     }
 
-    func test_lineRangeFor() {
+    @Test func test_lineRangeFor() {
         let s = "Глокая куздра\nштеко будланула\nбокра и кудрячит\nбокрёнка."
         let r = s.index(s.startIndex, offsetBy: 16)..<s.index(s.startIndex, offsetBy: 35)
         do {
             let result = s.lineRange(for: r)
-            expectEqual("штеко будланула\nбокра и кудрячит\n", s[result])
+            #expect("штеко будланула\nбокра и кудрячит\n" == s[result])
         }
     }
 
-    func test_linguisticTagsIn() {
+    @Test func test_linguisticTagsIn() {
         let s: String = "Абв. Глокая куздра штеко будланула бокра и кудрячит бокрёнка. Абв."
         let startIndex = s.index(s.startIndex, offsetBy: 5)
         let endIndex = s.index(s.startIndex, offsetBy: 17)
@@ -1443,50 +1523,41 @@ final class StringTestsStdlib: XCTestCase {
                                     scheme: scheme.rawValue,
                                     options: [],
                                     orthography: nil, tokenRanges: &tokenRanges)
-        expectEqual([
+        #expect([
             NSLinguisticTag.word.rawValue,
             NSLinguisticTag.whitespace.rawValue,
             NSLinguisticTag.word.rawValue
-        ], tags)
-        expectEqual(["Глокая", " ", "куздра"],
-                    tokenRanges.map { String(s[$0]) } )
+        ] == tags)
+        #expect(["Глокая", " ", "куздра"] == tokenRanges.map { String(s[$0]) } )
     }
 
-    func test_localizedCaseInsensitiveCompare() {
-        expectEqual(ComparisonResult.orderedSame,
-                    "abCD".localizedCaseInsensitiveCompare("AbCd"))
-        expectEqual(ComparisonResult.orderedAscending,
-                    "abCD".localizedCaseInsensitiveCompare("AbCdE"))
+    @Test func test_localizedCaseInsensitiveCompare() {
+        #expect(.orderedSame == "abCD".localizedCaseInsensitiveCompare("AbCd"))
+        #expect(.orderedAscending == "abCD".localizedCaseInsensitiveCompare("AbCdE"))
 
-        expectEqual(ComparisonResult.orderedSame,
-                    "абвг".localizedCaseInsensitiveCompare("АбВг"))
-        expectEqual(ComparisonResult.orderedAscending,
-                    "абВГ".localizedCaseInsensitiveCompare("АбВгД"))
+        #expect(.orderedSame == "абвг".localizedCaseInsensitiveCompare("АбВг"))
+        #expect(.orderedAscending == "абВГ".localizedCaseInsensitiveCompare("АбВгД"))
     }
 
-    func test_localizedCompare() {
-        expectEqual(ComparisonResult.orderedAscending,
-                    "abCD".localizedCompare("AbCd"))
+    @Test func test_localizedCompare() {
+        #expect(.orderedAscending == "abCD".localizedCompare("AbCd"))
 
-        expectEqual(ComparisonResult.orderedAscending,
-                    "абвг".localizedCompare("АбВг"))
+        #expect(.orderedAscending == "абвг".localizedCompare("АбВг"))
     }
 
-    func test_localizedStandardCompare() {
-        expectEqual(ComparisonResult.orderedAscending,
-                    "abCD".localizedStandardCompare("AbCd"))
+    @Test func test_localizedStandardCompare() {
+        #expect(.orderedAscending == "abCD".localizedStandardCompare("AbCd"))
 
-        expectEqual(ComparisonResult.orderedAscending,
-                    "абвг".localizedStandardCompare("АбВг"))
+        #expect(.orderedAscending == "абвг".localizedStandardCompare("АбВг"))
     }
 
-    func test_localizedLowercase() {
+    @Test func test_localizedLowercase() {
         let en = Locale(identifier: "en")
         let ru = Locale(identifier: "ru")
-        expectEqual("abcd", "abCD".lowercased(with: en))
-        expectEqual("абвг", "абВГ".lowercased(with: en))
-        expectEqual("абвг", "абВГ".lowercased(with: ru))
-        expectEqual("たちつてと", "たちつてと".lowercased(with: ru))
+        #expect("abcd" == "abCD".lowercased(with: en))
+        #expect("абвг" == "абВГ".lowercased(with: en))
+        #expect("абвг" == "абВГ".lowercased(with: ru))
+        #expect("たちつてと" == "たちつてと".lowercased(with: ru))
 
         //
         // Special casing.
@@ -1496,28 +1567,28 @@ final class StringTestsStdlib: XCTestCase {
         // to lower case:
         // U+0069 LATIN SMALL LETTER I
         // U+0307 COMBINING DOT ABOVE
-        expectEqual("\u{0069}\u{0307}", "\u{0130}".lowercased(with: Locale(identifier: "en")))
+        #expect("\u{0069}\u{0307}" == "\u{0130}".lowercased(with: Locale(identifier: "en")))
 
         // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
         // to lower case in Turkish locale:
         // U+0069 LATIN SMALL LETTER I
-        expectEqual("\u{0069}", "\u{0130}".lowercased(with: Locale(identifier: "tr")))
+        #expect("\u{0069}" == "\u{0130}".lowercased(with: Locale(identifier: "tr")))
 
         // U+0049 LATIN CAPITAL LETTER I
         // U+0307 COMBINING DOT ABOVE
         // to lower case:
         // U+0069 LATIN SMALL LETTER I
         // U+0307 COMBINING DOT ABOVE
-        expectEqual("\u{0069}\u{0307}", "\u{0049}\u{0307}".lowercased(with: Locale(identifier: "en")))
+        #expect("\u{0069}\u{0307}" == "\u{0049}\u{0307}".lowercased(with: Locale(identifier: "en")))
 
         // U+0049 LATIN CAPITAL LETTER I
         // U+0307 COMBINING DOT ABOVE
         // to lower case in Turkish locale:
         // U+0069 LATIN SMALL LETTER I
-        expectEqual("\u{0069}", "\u{0049}\u{0307}".lowercased(with: Locale(identifier: "tr")))
+        #expect("\u{0069}" == "\u{0049}\u{0307}".lowercased(with: Locale(identifier: "tr")))
     }
 
-    func test_lowercased() {
+    @Test func test_lowercased() {
         expectLocalizedEquality("abcd", { loc in "abCD".lowercased(with: loc) }, "en")
 
         expectLocalizedEquality("абвг", { loc in "абВГ".lowercased(with: loc) }, "en")
@@ -1554,49 +1625,50 @@ final class StringTestsStdlib: XCTestCase {
         expectLocalizedEquality("\u{0069}", { loc in "\u{0049}\u{0307}".lowercased(with: loc) }, "tr")
     }
 
-    func test_maximumLengthOfBytesUsingEncoding() {
+    @Test func test_maximumLengthOfBytesUsingEncoding() {
         do {
             let s = "abc"
-            XCTAssertLessThanOrEqual(s.utf8.count,
-                                     s.maximumLengthOfBytes(using: .utf8))
+            #expect(s.utf8.count <= s.maximumLengthOfBytes(using: .utf8))
         }
         do {
             let s = "abc абв"
-            XCTAssertLessThanOrEqual(s.utf8.count,
-                                     s.maximumLengthOfBytes(using: .utf8))
+            #expect(s.utf8.count <= s.maximumLengthOfBytes(using: .utf8))
         }
         do {
             let s = "\u{1F60A}"
-            XCTAssertLessThanOrEqual(s.utf8.count,
-                                     s.maximumLengthOfBytes(using: .utf8))
+            #expect(s.utf8.count <= s.maximumLengthOfBytes(using: .utf8))
         }
     }
 
-    func test_paragraphRangeFor() {
+    @Test func test_paragraphRangeFor() {
         let s = "Глокая куздра\nштеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка.\n Абв."
         let r = s.index(s.startIndex, offsetBy: 16)..<s.index(s.startIndex, offsetBy: 35)
         do {
             let result = s.paragraphRange(for: r)
-            expectEqual("штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка.\n", s[result])
+            #expect("штеко будланула\u{2028}бокра и кудрячит\u{2028}бокрёнка.\n" == s[result])
         }
     }
 
-    func test_pathComponents() {
-        expectEqual([ "/", "foo", "bar" ] as [NSString], ("/foo/bar" as NSString).pathComponents as [NSString])
-        expectEqual([ "/", "абв", "где" ] as [NSString], ("/абв/где" as NSString).pathComponents as [NSString])
+    @Test func test_pathComponents() {
+        #expect(
+            [ "/", "foo", "bar" ] as [NSString] ==
+            ("/foo/bar" as NSString).pathComponents as [NSString]
+        )
+        #expect(
+            [ "/", "абв", "где" ] as [NSString] ==
+            ("/абв/где" as NSString).pathComponents as [NSString]
+        )
     }
 
-    func test_precomposedStringWithCanonicalMapping() {
-        expectEqual("abc", "abc".precomposedStringWithCanonicalMapping)
-        expectEqual("だくてん",
-                    "\u{305f}\u{3099}くてん".precomposedStringWithCanonicalMapping)
-        expectEqual("ﾀﾞｸﾃﾝ",
-                    "\u{ff80}\u{ff9e}ｸﾃﾝ".precomposedStringWithCanonicalMapping)
-        expectEqual("\u{fb03}", "\u{fb03}".precomposedStringWithCanonicalMapping)
+    @Test func test_precomposedStringWithCanonicalMapping() {
+        #expect("abc" == "abc".precomposedStringWithCanonicalMapping)
+        #expect("だくてん" == "\u{305f}\u{3099}くてん".precomposedStringWithCanonicalMapping)
+        #expect("ﾀﾞｸﾃﾝ" == "\u{ff80}\u{ff9e}ｸﾃﾝ".precomposedStringWithCanonicalMapping)
+        #expect("\u{fb03}" == "\u{fb03}".precomposedStringWithCanonicalMapping)
     }
 
-    func test_precomposedStringWithCompatibilityMapping() {
-        expectEqual("abc", "abc".precomposedStringWithCompatibilityMapping)
+    @Test func test_precomposedStringWithCompatibilityMapping() {
+        #expect("abc" == "abc".precomposedStringWithCompatibilityMapping)
         /*
          Test disabled because of:
          <rdar://problem/17041347> NFKD normalization as implemented by
@@ -1605,55 +1677,56 @@ final class StringTestsStdlib: XCTestCase {
          expectEqual("\u{30c0}クテン",
          "\u{ff80}\u{ff9e}ｸﾃﾝ".precomposedStringWithCompatibilityMapping)
          */
-        expectEqual("ffi", "\u{fb03}".precomposedStringWithCompatibilityMapping)
+        #expect("ffi" == "\u{fb03}".precomposedStringWithCompatibilityMapping)
     }
 
-    func test_propertyList() {
-        expectEqual(["foo", "bar"],
-                    "(\"foo\", \"bar\")".propertyList() as! [String])
+    @Test func test_propertyList() {
+        #expect(["foo", "bar"] == "(\"foo\", \"bar\")".propertyList() as! [String])
     }
 
-    func test_propertyListFromStringsFileFormat() {
-        expectEqual(["foo": "bar", "baz": "baz"],
-                    "/* comment */\n\"foo\" = \"bar\";\n\"baz\";"
-            .propertyListFromStringsFileFormat() as Dictionary<String, String>)
+    @Test func test_propertyListFromStringsFileFormat() {
+        #expect(
+            ["foo": "bar", "baz": "baz"] ==
+            "/* comment */\n\"foo\" = \"bar\";\n\"baz\";"
+                .propertyListFromStringsFileFormat() as Dictionary<String, String>
+        )
     }
 
-    func test_rangeOfCharacterFrom() {
+    @Test func test_rangeOfCharacterFrom() {
         do {
             let charset = CharacterSet(charactersIn: "абв")
             do {
                 let s = "Глокая куздра"
                 let r = s.rangeOfCharacter(from: charset)!
-                expectEqual(s.index(s.startIndex, offsetBy: 4), r.lowerBound)
-                expectEqual(s.index(s.startIndex, offsetBy: 5), r.upperBound)
+                #expect(s.index(s.startIndex, offsetBy: 4) == r.lowerBound)
+                #expect(s.index(s.startIndex, offsetBy: 5) == r.upperBound)
             }
             do {
-                XCTAssertNil("клмн".rangeOfCharacter(from: charset))
+                #expect("клмн".rangeOfCharacter(from: charset) == nil)
             }
             do {
                 let s = "абвклмнабвклмн"
                 let r = s.rangeOfCharacter(from: charset,
                                            options: .backwards)!
-                expectEqual(s.index(s.startIndex, offsetBy: 9), r.lowerBound)
-                expectEqual(s.index(s.startIndex, offsetBy: 10), r.upperBound)
+                #expect(s.index(s.startIndex, offsetBy: 9) == r.lowerBound)
+                #expect(s.index(s.startIndex, offsetBy: 10) == r.upperBound)
             }
             do {
                 let s = "абвклмнабв"
                 let r = s.rangeOfCharacter(from: charset,
                                            range: s.index(s.startIndex, offsetBy: 3)..<s.endIndex)!
-                expectEqual(s.index(s.startIndex, offsetBy: 7), r.lowerBound)
-                expectEqual(s.index(s.startIndex, offsetBy: 8), r.upperBound)
+                #expect(s.index(s.startIndex, offsetBy: 7) == r.lowerBound)
+                #expect(s.index(s.startIndex, offsetBy: 8) == r.upperBound)
             }
         }
 
         do {
             let charset = CharacterSet(charactersIn: "\u{305f}\u{3099}")
-            XCTAssertNil("\u{3060}".rangeOfCharacter(from: charset))
+            #expect("\u{3060}".rangeOfCharacter(from: charset) == nil)
         }
         do {
             let charset = CharacterSet(charactersIn: "\u{3060}")
-            XCTAssertNil("\u{305f}\u{3099}".rangeOfCharacter(from: charset))
+            #expect("\u{305f}\u{3099}".rangeOfCharacter(from: charset) == nil)
         }
 
         do {
@@ -1664,30 +1737,46 @@ final class StringTestsStdlib: XCTestCase {
                             s[s.rangeOfCharacter(from: charset)!])
             }
             do {
-                XCTAssertNil("abc\u{1F601}".rangeOfCharacter(from: charset))
+                #expect("abc\u{1F601}".rangeOfCharacter(from: charset) == nil)
             }
         }
     }
 
-    func test_rangeOfComposedCharacterSequence() {
+    @Test func test_rangeOfComposedCharacterSequence() {
         let s = "\u{1F601}abc \u{305f}\u{3099} def"
-        expectEqual("\u{1F601}", s[s.rangeOfComposedCharacterSequence(
-            at: s.startIndex)])
-        expectEqual("a", s[s.rangeOfComposedCharacterSequence(
-            at: s.index(s.startIndex, offsetBy: 1))])
-        expectEqual("\u{305f}\u{3099}", s[s.rangeOfComposedCharacterSequence(
-            at: s.index(s.startIndex, offsetBy: 5))])
-        expectEqual(" ", s[s.rangeOfComposedCharacterSequence(
-            at: s.index(s.startIndex, offsetBy: 6))])
+        #expect(
+            "\u{1F601}" ==
+            s[s.rangeOfComposedCharacterSequence(at: s.startIndex)]
+        )
+        #expect(
+            "a" ==
+            s[s.rangeOfComposedCharacterSequence(at: s.index(s.startIndex, offsetBy: 1))]
+        )
+        #expect(
+            "\u{305f}\u{3099}" ==
+            s[s.rangeOfComposedCharacterSequence(at: s.index(s.startIndex, offsetBy: 5))])
+
+        #expect(
+            " " ==
+            s[s.rangeOfComposedCharacterSequence(at: s.index(s.startIndex, offsetBy: 6))]
+        )
     }
 
-    func test_rangeOfComposedCharacterSequences() {
+    @Test func test_rangeOfComposedCharacterSequences() {
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
-        expectEqual("\u{1F601}a", s[s.rangeOfComposedCharacterSequences(
-            for: s.startIndex..<s.index(s.startIndex, offsetBy: 2))])
-        expectEqual("せ\u{3099}そ\u{3099}", s[s.rangeOfComposedCharacterSequences(
-            for: s.index(s.startIndex, offsetBy: 8)..<s.index(s.startIndex, offsetBy: 10))])
+        #expect(
+            "\u{1F601}a" ==
+            s[s.rangeOfComposedCharacterSequences(
+                for: s.startIndex..<s.index(s.startIndex, offsetBy: 2))]
+        )
+        #expect(
+            "せ\u{3099}そ\u{3099}" ==
+            s[s.rangeOfComposedCharacterSequences(
+                for: s.index(s.startIndex, offsetBy: 8) ..<
+                    s.index(s.startIndex, offsetBy: 10))
+            ]
+        )
     }
 
     func toIntRange<S : StringProtocol>(
@@ -1698,110 +1787,110 @@ final class StringTestsStdlib: XCTestCase {
         return string.distance(from: string.startIndex, to: range.lowerBound) ..< string.distance(from: string.startIndex, to: range.upperBound)
     }
 
-    func test_range() {
+    @Test func test_range() {
         do {
             let s = ""
-            XCTAssertNil(s.range(of: ""))
-            XCTAssertNil(s.range(of: "abc"))
+            #expect(s.range(of: "") == nil)
+            #expect(s.range(of: "abc") == nil)
         }
         do {
             let s = "abc"
-            XCTAssertNil(s.range(of: ""))
-            XCTAssertNil(s.range(of: "def"))
-            expectEqual(0..<3, toIntRange(s, s.range(of: "abc")))
+            #expect(s.range(of: "") == nil)
+            #expect(s.range(of: "def") == nil)
+            #expect(0..<3 == toIntRange(s, s.range(of: "abc")))
         }
         do {
             let s = "さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
-            expectEqual(2..<3, toIntRange(s, s.range(of: "す\u{3099}")))
-            expectEqual(2..<3, toIntRange(s, s.range(of: "\u{305a}")))
+            #expect(2..<3 == toIntRange(s, s.range(of: "す\u{3099}")))
+            #expect(2..<3 == toIntRange(s, s.range(of: "\u{305a}")))
 
-            XCTAssertNil(s.range(of: "\u{3099}す"))
-            XCTAssertNil(s.range(of: "す"))
+            #expect(s.range(of: "\u{3099}す") == nil)
+            #expect(s.range(of: "す") == nil)
 
-            XCTAssertNil(s.range(of: "\u{3099}"))
-            expectEqual("\u{3099}", s[s.range(of: "\u{3099}", options: .literal)!])
+            #expect(s.range(of: "\u{3099}") == nil)
+            #expect("\u{3099}" == s[s.range(of: "\u{3099}", options: .literal)!])
         }
         do {
             let s = "а\u{0301}б\u{0301}в\u{0301}г\u{0301}"
-            expectEqual(0..<1, toIntRange(s, s.range(of: "а\u{0301}")))
-            expectEqual(1..<2, toIntRange(s, s.range(of: "б\u{0301}")))
+            #expect(0..<1 == toIntRange(s, s.range(of: "а\u{0301}")))
+            #expect(1..<2 == toIntRange(s, s.range(of: "б\u{0301}")))
 
-            XCTAssertNil(s.range(of: "б"))
-            XCTAssertNil(s.range(of: "\u{0301}б"))
+            #expect(s.range(of: "б") == nil)
+            #expect(s.range(of: "\u{0301}б") == nil)
 
-            XCTAssertNil(s.range(of: "\u{0301}"))
-            expectEqual("\u{0301}", s[s.range(of: "\u{0301}", options: .literal)!])
+            #expect(s.range(of: "\u{0301}") == nil)
+            #expect("\u{0301}" == s[s.range(of: "\u{0301}", options: .literal)!])
         }
     }
 
-    func test_contains() {
-            expectFalse("".contains(""))
-            expectFalse("".contains("a"))
-            expectFalse("a".contains(""))
-            expectFalse("a".contains("b"))
-            expectTrue("a".contains("a"))
-            expectFalse("a".contains("A"))
-            expectFalse("A".contains("a"))
-            expectFalse("a".contains("a\u{0301}"))
-            expectTrue("a\u{0301}".contains("a\u{0301}"))
-            expectFalse("a\u{0301}".contains("a"))
-            expectFalse("a\u{0301}".contains("\u{0301}")) // Update to match stdlib's `firstRange` and `contains` result
-            expectFalse("a".contains("\u{0301}"))
+    @Test func test_contains() {
+        #expect("".contains("") == false)
+        #expect("".contains("a") == false)
+        #expect("a".contains("") == false)
+        #expect("a".contains("b") == false)
+        #expect("a".contains("a"))
+        #expect("a".contains("A") == false)
+        #expect("A".contains("a") == false)
+        #expect("a".contains("a\u{0301}") == false)
+        #expect("a\u{0301}".contains("a\u{0301}"))
+        #expect("a\u{0301}".contains("a") == false)
+        #expect("a\u{0301}".contains("\u{0301}") == false) // Update to match stdlib's `firstRange` an == falsed `contains` result
+        #expect("a".contains("\u{0301}") == false)
 
-            expectFalse("i".contains("I"))
-            expectFalse("I".contains("i"))
-            expectFalse("\u{0130}".contains("i"))
-            expectFalse("i".contains("\u{0130}"))
-            expectFalse("\u{0130}".contains("ı"))
+        #expect("i".contains("I") == false)
+        #expect("I".contains("i") == false)
+        #expect("\u{0130}".contains("i") == false)
+        #expect("i".contains("\u{0130}") == false)
+        #expect("\u{0130}".contains("ı") == false)
     }
 
-    func test_localizedCaseInsensitiveContains() {
+    @Test func test_localizedCaseInsensitiveContains() {
         let en = Locale(identifier: "en")
-        expectFalse("".localizedCaseInsensitiveContains("", locale: en))
-        expectFalse("".localizedCaseInsensitiveContains("a", locale: en))
-        expectFalse("a".localizedCaseInsensitiveContains("", locale: en))
-        expectFalse("a".localizedCaseInsensitiveContains("b", locale: en))
-        expectTrue("a".localizedCaseInsensitiveContains("a", locale: en))
-        expectTrue("a".localizedCaseInsensitiveContains("A", locale: en))
-        expectTrue("A".localizedCaseInsensitiveContains("a", locale: en))
-        expectFalse("a".localizedCaseInsensitiveContains("a\u{0301}", locale: en))
-        expectTrue("a\u{0301}".localizedCaseInsensitiveContains("a\u{0301}", locale: en))
-        expectFalse("a\u{0301}".localizedCaseInsensitiveContains("a", locale: en))
-        expectTrue("a\u{0301}".localizedCaseInsensitiveContains("\u{0301}", locale: en))
-        expectFalse("a".localizedCaseInsensitiveContains("\u{0301}", locale: en))
+        #expect("".localizedCaseInsensitiveContains("", locale: en) == false)
+        #expect("".localizedCaseInsensitiveContains("a", locale: en) == false)
+        #expect("a".localizedCaseInsensitiveContains("", locale: en) == false)
+        #expect("a".localizedCaseInsensitiveContains("b", locale: en) == false)
+        #expect("a".localizedCaseInsensitiveContains("a", locale: en))
+        #expect("a".localizedCaseInsensitiveContains("A", locale: en))
+        #expect("A".localizedCaseInsensitiveContains("a", locale: en))
+        #expect("a".localizedCaseInsensitiveContains("a\u{0301}", locale: en) == false)
+        #expect("a\u{0301}".localizedCaseInsensitiveContains("a\u{0301}", locale: en))
+        #expect("a\u{0301}".localizedCaseInsensitiveContains("a", locale: en) == false)
+        #expect("a\u{0301}".localizedCaseInsensitiveContains("\u{0301}", locale: en))
+        #expect("a".localizedCaseInsensitiveContains("\u{0301}", locale: en) == false)
 
-        expectTrue("i".localizedCaseInsensitiveContains("I", locale: en))
-        expectTrue("I".localizedCaseInsensitiveContains("i", locale: en))
-        expectFalse("\u{0130}".localizedCaseInsensitiveContains("i", locale: en))
-        expectFalse("i".localizedCaseInsensitiveContains("\u{0130}", locale: en))
+        #expect("i".localizedCaseInsensitiveContains("I", locale: en))
+        #expect("I".localizedCaseInsensitiveContains("i", locale: en))
+        #expect("\u{0130}".localizedCaseInsensitiveContains("i", locale: en) == false)
+        #expect("i".localizedCaseInsensitiveContains("\u{0130}", locale: en) == false)
 
-        expectFalse("\u{0130}".localizedCaseInsensitiveContains("ı", locale: Locale(identifier: "tr")))
+        #expect("\u{0130}".localizedCaseInsensitiveContains("ı", locale: Locale(identifier: "tr")) == false)
     }
 
-    func test_localizedStandardContains() {
+    @Test func test_localizedStandardContains() {
         let en = Locale(identifier: "en")
-        expectFalse("".localizedStandardContains("", locale: en))
-        expectFalse("".localizedStandardContains("a", locale: en))
-        expectFalse("a".localizedStandardContains("", locale: en))
-        expectFalse("a".localizedStandardContains("b", locale: en))
-        expectTrue("a".localizedStandardContains("a", locale: en))
-        expectTrue("a".localizedStandardContains("A", locale: en))
-        expectTrue("A".localizedStandardContains("a", locale: en))
-        expectTrue("a".localizedStandardContains("a\u{0301}", locale: en))
-        expectTrue("a\u{0301}".localizedStandardContains("a\u{0301}", locale: en))
-        expectTrue("a\u{0301}".localizedStandardContains("a", locale: en))
-        expectTrue("a\u{0301}".localizedStandardContains("\u{0301}", locale: en))
-        expectFalse("a".localizedStandardContains("\u{0301}", locale: en))
+        #expect("".localizedStandardContains("", locale: en) == false)
+        #expect("".localizedStandardContains("a", locale: en) == false)
+        #expect("a".localizedStandardContains("", locale: en) == false)
+        #expect("a".localizedStandardContains("b", locale: en) == false)
+        #expect("a".localizedStandardContains("a", locale: en))
+        #expect("a".localizedStandardContains("A", locale: en))
+        #expect("A".localizedStandardContains("a", locale: en))
+        #expect("a".localizedStandardContains("a\u{0301}", locale: en))
+        #expect("a\u{0301}".localizedStandardContains("a\u{0301}", locale: en))
+        #expect("a\u{0301}".localizedStandardContains("a", locale: en))
+        #expect("a\u{0301}".localizedStandardContains("\u{0301}", locale: en))
+        #expect("a".localizedStandardContains("\u{0301}", locale: en) == false)
 
-        expectTrue("i".localizedStandardContains("I", locale: en))
-        expectTrue("I".localizedStandardContains("i", locale: en))
-        expectTrue("\u{0130}".localizedStandardContains("i", locale: en))
-        expectTrue("i".localizedStandardContains("\u{0130}", locale: en))
+        #expect("i".localizedStandardContains("I", locale: en))
+        #expect("I".localizedStandardContains("i", locale: en))
+        #expect("\u{0130}".localizedStandardContains("i", locale: en))
+        #expect("i".localizedStandardContains("\u{0130}", locale: en))
 
-        expectTrue("\u{0130}".localizedStandardContains("ı", locale: Locale(identifier: "tr")))
+        #expect("\u{0130}".localizedStandardContains("ı", locale: Locale(identifier: "tr")))
     }
 
-    func test_localizedStandardRange() {
+    @Test func test_localizedStandardRange() {
         func rangeOf(_ string: String, _ substring: String, locale: Locale) -> Range<Int>? {
             return toIntRange(
                 string, string.localizedStandardRange(of: substring, locale: locale))
@@ -1809,37 +1898,38 @@ final class StringTestsStdlib: XCTestCase {
 
         let en = Locale(identifier: "en")
 
-        XCTAssertNil(rangeOf("", "", locale: en))
-        XCTAssertNil(rangeOf("", "a", locale: en))
-        XCTAssertNil(rangeOf("a", "", locale: en))
-        XCTAssertNil(rangeOf("a", "b", locale: en))
-        expectEqual(0..<1, rangeOf("a", "a", locale: en))
-        expectEqual(0..<1, rangeOf("a", "A", locale: en))
-        expectEqual(0..<1, rangeOf("A", "a", locale: en))
-        expectEqual(0..<1, rangeOf("a", "a\u{0301}", locale: en))
-        expectEqual(0..<1, rangeOf("a\u{0301}", "a\u{0301}", locale: en))
-        expectEqual(0..<1, rangeOf("a\u{0301}", "a", locale: en))
+        #expect(rangeOf("", "", locale: en) == nil)
+        #expect(rangeOf("", "a", locale: en) == nil)
+        #expect(rangeOf("a", "", locale: en) == nil)
+        #expect(rangeOf("a", "b", locale: en) == nil)
+        #expect(0..<1 == rangeOf("a", "a", locale: en))
+        #expect(0..<1 == rangeOf("a", "A", locale: en))
+        #expect(0..<1 == rangeOf("A", "a", locale: en))
+        #expect(0..<1 == rangeOf("a", "a\u{0301}", locale: en))
+        #expect(0..<1 == rangeOf("a\u{0301}", "a\u{0301}", locale: en))
+        #expect(0..<1 == rangeOf("a\u{0301}", "a", locale: en))
         do {
         // FIXME: Indices that don't correspond to grapheme cluster boundaries.
         let s = "a\u{0301}"
-        expectEqual(
-            "\u{0301}", s[s.localizedStandardRange(of: "\u{0301}", locale: en)!])
+        #expect(
+            "\u{0301}" == s[s.localizedStandardRange(of: "\u{0301}", locale: en)!]
+        )
         }
-        XCTAssertNil(rangeOf("a", "\u{0301}", locale: en))
+        #expect(rangeOf("a", "\u{0301}", locale: en) == nil)
 
-        expectEqual(0..<1, rangeOf("i", "I", locale: en))
-        expectEqual(0..<1, rangeOf("I", "i", locale: en))
-        expectEqual(0..<1, rangeOf("\u{0130}", "i", locale: en))
-        expectEqual(0..<1, rangeOf("i", "\u{0130}", locale: en))
+        #expect(0..<1 == rangeOf("i", "I", locale: en))
+        #expect(0..<1 == rangeOf("I", "i", locale: en))
+        #expect(0..<1 == rangeOf("\u{0130}", "i", locale: en))
+        #expect(0..<1 == rangeOf("i", "\u{0130}", locale: en))
 
 
         let tr = Locale(identifier: "tr")
-        expectEqual(0..<1, rangeOf("\u{0130}", "ı", locale: tr))
+        #expect(0..<1 == rangeOf("\u{0130}", "ı", locale: tr))
     }
 
-    func test_smallestEncoding() {
+    @Test func test_smallestEncoding() {
         let availableEncodings: [String.Encoding] = String.availableStringEncodings
-        expectTrue(availableEncodings.contains("abc".smallestEncoding))
+        #expect(availableEncodings.contains("abc".smallestEncoding))
     }
 
     func getHomeDir() -> String {
@@ -1853,37 +1943,41 @@ final class StringTestsStdlib: XCTestCase {
 #endif
     }
 
-    func test_addingPercentEncoding() {
-        expectEqual(
-            "abcd1234",
-            "abcd1234".addingPercentEncoding(withAllowedCharacters: .alphanumerics))
-        expectEqual(
-            "abcd%20%D0%B0%D0%B1%D0%B2%D0%B3",
-            "abcd абвг".addingPercentEncoding(withAllowedCharacters: .alphanumerics))
+    @Test func test_addingPercentEncoding() {
+        #expect(
+            "abcd1234" ==
+            "abcd1234".addingPercentEncoding(withAllowedCharacters: .alphanumerics)
+        )
+        #expect(
+            "abcd%20%D0%B0%D0%B1%D0%B2%D0%B3" ==
+            "abcd абвг".addingPercentEncoding(withAllowedCharacters: .alphanumerics)
+        )
     }
 
-    func test_appendingFormat() {
-        expectEqual("", "".appendingFormat(""))
-        expectEqual("a", "a".appendingFormat(""))
-        expectEqual(
-            "abc абв \u{0001F60A}",
-            "abc абв \u{0001F60A}".appendingFormat(""))
+    @Test func test_appendingFormat() {
+        #expect("" == "".appendingFormat(""))
+        #expect("a" == "a".appendingFormat(""))
+        #expect(
+            "abc абв \u{0001F60A}" ==
+            "abc абв \u{0001F60A}".appendingFormat("")
+        )
 
         let formatArg: NSString = "привет мир \u{0001F60A}"
-        expectEqual(
-            "abc абв \u{0001F60A}def привет мир \u{0001F60A} 42",
+        #expect(
+            "abc абв \u{0001F60A}def привет мир \u{0001F60A} 42" ==
             "abc абв \u{0001F60A}"
-                .appendingFormat("def %@ %ld", formatArg, 42))
+                .appendingFormat("def %@ %ld", formatArg, 42)
+        )
     }
 
-    func test_appending() {
-        expectEqual("", "".appending(""))
-        expectEqual("a", "a".appending(""))
-        expectEqual("a", "".appending("a"))
-        expectEqual("さ\u{3099}", "さ".appending("\u{3099}"))
+    @Test func test_appending() {
+        #expect("" == "".appending(""))
+        #expect("a" == "a".appending(""))
+        #expect("a" == "".appending("a"))
+        #expect("さ\u{3099}" == "さ".appending("\u{3099}"))
     }
 
-    func test_folding() {
+    @Test func test_folding() {
 
         func fwo(
             _ s: String, _ options: String.CompareOptions
@@ -1910,22 +2004,25 @@ final class StringTestsStdlib: XCTestCase {
             "example123", fwo("ｅｘａｍｐｌｅ１２３", .widthInsensitive), "en")
     }
 
-    func test_padding() {
-        expectEqual(
-            "abc абв \u{0001F60A}",
+    @Test func test_padding() {
+        #expect(
+            "abc абв \u{0001F60A}" ==
             "abc абв \u{0001F60A}".padding(
-                toLength: 10, withPad: "XYZ", startingAt: 0))
-        expectEqual(
-            "abc абв \u{0001F60A}XYZXY",
+                toLength: 10, withPad: "XYZ", startingAt: 0)
+        )
+        #expect(
+            "abc абв \u{0001F60A}XYZXY" ==
             "abc абв \u{0001F60A}".padding(
-                toLength: 15, withPad: "XYZ", startingAt: 0))
-        expectEqual(
-            "abc абв \u{0001F60A}YZXYZ",
+                toLength: 15, withPad: "XYZ", startingAt: 0)
+        )
+        #expect(
+            "abc абв \u{0001F60A}YZXYZ" ==
             "abc абв \u{0001F60A}".padding(
-                toLength: 15, withPad: "XYZ", startingAt: 1))
+                toLength: 15, withPad: "XYZ", startingAt: 1)
+        )
     }
 
-    func test_replacingCharacters() {
+    @Test func test_replacingCharacters() {
         do {
             let empty = ""
             expectEqual("", empty.replacingCharacters(
@@ -1934,223 +2031,280 @@ final class StringTestsStdlib: XCTestCase {
 
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
-        expectEqual(s, s.replacingCharacters(
+        #expect(s == s.replacingCharacters(
             in: s.startIndex..<s.startIndex, with: ""))
-        expectEqual(s, s.replacingCharacters(
+        #expect(s == s.replacingCharacters(
             in: s.endIndex..<s.endIndex, with: ""))
-        expectEqual("zzz" + s, s.replacingCharacters(
+        #expect("zzz" + s == s.replacingCharacters(
             in: s.startIndex..<s.startIndex, with: "zzz"))
-        expectEqual(s + "zzz", s.replacingCharacters(
+        #expect(s + "zzz" == s.replacingCharacters(
             in: s.endIndex..<s.endIndex, with: "zzz"))
 
-        expectEqual(
-            "す\u{3099}せ\u{3099}そ\u{3099}",
+        #expect(
+            "す\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingCharacters(
-                in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: ""))
-        expectEqual(
-            "zzzす\u{3099}せ\u{3099}そ\u{3099}",
+                in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: "")
+        )
+        #expect(
+            "zzzす\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingCharacters(
-                in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: "zzz"))
-        expectEqual(
-            "\u{1F602}す\u{3099}せ\u{3099}そ\u{3099}",
+                in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: "zzz")
+        )
+        #expect(
+            "\u{1F602}す\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingCharacters(
-                in: s.startIndex..<s.index(s.startIndex, offsetBy: 7), with: "\u{1F602}"))
+                in: s.startIndex..<s.index(s.startIndex, offsetBy: 7),
+                with: "\u{1F602}")
+        )
 
-        expectEqual("\u{1F601}", s.replacingCharacters(
-            in: s.index(after: s.startIndex)..<s.endIndex, with: ""))
-        expectEqual("\u{1F601}zzz", s.replacingCharacters(
-            in: s.index(after: s.startIndex)..<s.endIndex, with: "zzz"))
-        expectEqual("\u{1F601}\u{1F602}", s.replacingCharacters(
+        #expect(
+            "\u{1F601}" ==
+            s.replacingCharacters(
+                in: s.index(after: s.startIndex)..<s.endIndex,
+                with: ""
+            )
+        )
+        #expect(
+            "\u{1F601}zzz" ==
+            s.replacingCharacters(
+                in: s.index(after: s.startIndex)..<s.endIndex,
+                with: "zzz")
+        )
+        #expect("\u{1F601}\u{1F602}" == s.replacingCharacters(
             in: s.index(after: s.startIndex)..<s.endIndex, with: "\u{1F602}"))
 
-        expectEqual(
-            "\u{1F601}aす\u{3099}せ\u{3099}そ\u{3099}",
+        #expect(
+            "\u{1F601}aす\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingCharacters(
-                in: s.index(s.startIndex, offsetBy: 2)..<s.index(s.startIndex, offsetBy: 7), with: ""))
-        expectEqual(
-            "\u{1F601}azzzす\u{3099}せ\u{3099}そ\u{3099}",
+                in: s.index(s.startIndex, offsetBy: 2) ..<
+                    s.index(s.startIndex, offsetBy: 7),
+                with: "")
+        )
+        #expect(
+            "\u{1F601}azzzす\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingCharacters(
-                in: s.index(s.startIndex, offsetBy: 2)..<s.index(s.startIndex, offsetBy: 7), with: "zzz"))
-        expectEqual(
-            "\u{1F601}a\u{1F602}す\u{3099}せ\u{3099}そ\u{3099}",
+                in: s.index(s.startIndex, offsetBy: 2) ..<
+                    s.index(s.startIndex, offsetBy: 7),
+                with: "zzz")
+        )
+        #expect(
+            "\u{1F601}a\u{1F602}す\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingCharacters(
-                in: s.index(s.startIndex, offsetBy: 2)..<s.index(s.startIndex, offsetBy: 7),
-                with: "\u{1F602}"))
+                in: s.index(s.startIndex, offsetBy: 2) ..<
+                    s.index(s.startIndex, offsetBy: 7),
+                with: "\u{1F602}")
+        )
     }
 
-    func test_replacingOccurrences() {
+    @Test func test_replacingOccurrences() {
         do {
             let empty = ""
-            expectEqual("", empty.replacingOccurrences(
+            #expect("" == empty.replacingOccurrences(
                 of: "", with: ""))
-            expectEqual("", empty.replacingOccurrences(
+            #expect("" == empty.replacingOccurrences(
                 of: "", with: "xyz"))
-            expectEqual("", empty.replacingOccurrences(
+            #expect("" == empty.replacingOccurrences(
                 of: "abc", with: "xyz"))
         }
 
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
-        expectEqual(s, s.replacingOccurrences(of: "", with: "xyz"))
-        expectEqual(s, s.replacingOccurrences(of: "xyz", with: ""))
+        #expect(s == s.replacingOccurrences(of: "", with: "xyz"))
+        #expect(s == s.replacingOccurrences(of: "xyz", with: ""))
 
-        expectEqual("", s.replacingOccurrences(of: s, with: ""))
+        #expect("" == s.replacingOccurrences(of: s, with: ""))
 
-        expectEqual(
-            "\u{1F601}xyzbc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}",
-            s.replacingOccurrences(of: "a", with: "xyz"))
+        #expect(
+            "\u{1F601}xyzbc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}" ==
+            s.replacingOccurrences(of: "a", with: "xyz")
+        )
 
-        expectEqual(
-            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}",
+        #expect(
+            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingOccurrences(
-                of: "\u{1F601}", with: "\u{1F602}\u{1F603}"))
+                of: "\u{1F601}",
+                with: "\u{1F602}\u{1F603}"
+            )
+        )
 
-        expectEqual(
-            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}",
+        #expect(
+            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingOccurrences(
-                of: "し\u{3099}", with: "xyz"))
+                of: "し\u{3099}",
+                with: "xyz"
+            )
+        )
 
-        expectEqual(
-            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}",
+        #expect(
+            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingOccurrences(
-                of: "し\u{3099}", with: "xyz"))
+                of: "し\u{3099}",
+                with: "xyz"
+            )
+        )
 
-        expectEqual(
-            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}",
+        #expect(
+            "\u{1F601}abc さ\u{3099}xyzす\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingOccurrences(
-                of: "\u{3058}", with: "xyz"))
+                of: "\u{3058}", with: "xyz"
+            )
+        )
 
         //
         // Use non-default 'options:'
         //
 
-        expectEqual(
-            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}",
+        #expect(
+            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingOccurrences(
                 of: "\u{1F601}", with: "\u{1F602}\u{1F603}",
-                options: String.CompareOptions.literal))
+                options: String.CompareOptions.literal)
+        )
 
-        expectEqual(s, s.replacingOccurrences(
+        #expect(s == s.replacingOccurrences(
             of: "\u{3058}", with: "xyz",
-            options: String.CompareOptions.literal))
+            options: String.CompareOptions.literal)
+        )
 
         //
         // Use non-default 'range:'
         //
 
-        expectEqual(
-            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}",
+        #expect(
+            "\u{1F602}\u{1F603}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}" ==
             s.replacingOccurrences(
                 of: "\u{1F601}", with: "\u{1F602}\u{1F603}",
                 options: String.CompareOptions.literal,
-                range: s.startIndex..<s.index(s.startIndex, offsetBy: 1)))
+                range: s.startIndex..<s.index(s.startIndex, offsetBy: 1)
+            )
+        )
 
-        expectEqual(s, s.replacingOccurrences(
+        #expect(s == s.replacingOccurrences(
             of: "\u{1F601}", with: "\u{1F602}\u{1F603}",
             options: String.CompareOptions.literal,
-            range: s.index(s.startIndex, offsetBy: 1)..<s.index(s.startIndex, offsetBy: 3)))
+            range: s.index(s.startIndex, offsetBy: 1)..<s.index(s.startIndex, offsetBy: 3))
+        )
     }
 
-    func test_removingPercentEncoding() {
-        expectEqual(
-            "abcd абвг",
-            "abcd абвг".removingPercentEncoding)
+    @Test func test_removingPercentEncoding() {
+        #expect(
+            "abcd абвг" ==
+            "abcd абвг".removingPercentEncoding
+        )
 
-        expectEqual(
-            "abcd абвг\u{0000}\u{0001}",
-            "abcd абвг%00%01".removingPercentEncoding)
+        #expect(
+            "abcd абвг\u{0000}\u{0001}" ==
+            "abcd абвг%00%01".removingPercentEncoding
+        )
 
-        expectEqual(
-            "abcd абвг",
-            "%61%62%63%64%20%D0%B0%D0%B1%D0%B2%D0%B3".removingPercentEncoding)
+        #expect(
+            "abcd абвг" ==
+            "%61%62%63%64%20%D0%B0%D0%B1%D0%B2%D0%B3".removingPercentEncoding
+        )
 
-        expectEqual(
-            "abcd абвг",
-            "ab%63d %D0%B0%D0%B1%D0%B2%D0%B3".removingPercentEncoding)
+        #expect(
+            "abcd абвг" ==
+            "ab%63d %D0%B0%D0%B1%D0%B2%D0%B3".removingPercentEncoding
+        )
 
-        XCTAssertNil("%ED%B0".removingPercentEncoding)
+        #expect("%ED%B0".removingPercentEncoding == nil)
 
-        XCTAssertNil("%zz".removingPercentEncoding)
+        #expect("%zz".removingPercentEncoding == nil)
 
-        XCTAssertNil("abcd%FF".removingPercentEncoding)
+        #expect("abcd%FF".removingPercentEncoding == nil)
 
-        XCTAssertNil("%".removingPercentEncoding)
+        #expect("%".removingPercentEncoding == nil)
     }
 
-    func test_removingPercentEncoding_() {
+    @Test func test_removingPercentEncoding_() {
         expectEqual("", "".removingPercentEncoding)
     }
 
-    func test_trimmingCharacters() {
-        expectEqual("", "".trimmingCharacters(
+    @Test func test_trimmingCharacters() {
+        #expect("" == "".trimmingCharacters(
             in: CharacterSet.decimalDigits))
 
-        expectEqual("abc", "abc".trimmingCharacters(
+        #expect("abc" == "abc".trimmingCharacters(
             in: CharacterSet.decimalDigits))
 
-        expectEqual("", "123".trimmingCharacters(
+        #expect("" == "123".trimmingCharacters(
             in: CharacterSet.decimalDigits))
 
-        expectEqual("abc", "123abc789".trimmingCharacters(
+        #expect("abc" == "123abc789".trimmingCharacters(
             in: CharacterSet.decimalDigits))
 
         // Performs Unicode scalar comparison.
-        expectEqual(
-            "し\u{3099}abc",
+        #expect(
+            "し\u{3099}abc" ==
             "し\u{3099}abc".trimmingCharacters(
-                in: CharacterSet(charactersIn: "\u{3058}")))
+                in: CharacterSet(charactersIn: "\u{3058}")
+            )
+        )
     }
 
-    func test_NSString_stringsByAppendingPaths() {
-        expectEqual([] as [NSString], ("" as NSString).strings(byAppendingPaths: []) as [NSString])
-        expectEqual(
-            [ "/tmp/foo", "/tmp/bar" ] as [NSString],
-            ("/tmp" as NSString).strings(byAppendingPaths: [ "foo", "bar" ]) as [NSString])
-    }
-
-    @available(*, deprecated)
-    func test_substring_from() {
-        let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
-
-        expectEqual(s, s.substring(from: s.startIndex))
-        expectEqual("せ\u{3099}そ\u{3099}",
-                    s.substring(from: s.index(s.startIndex, offsetBy: 8)))
-        expectEqual("", s.substring(from: s.index(s.startIndex, offsetBy: 10)))
+    @Test func test_NSString_stringsByAppendingPaths() {
+        #expect([] as [NSString] == ("" as NSString).strings(byAppendingPaths: []) as [NSString])
+        #expect(
+            [ "/tmp/foo", "/tmp/bar" ] as [NSString] ==
+            ("/tmp" as NSString).strings(byAppendingPaths: [ "foo", "bar" ]) as [NSString]
+        )
     }
 
     @available(*, deprecated)
-    func test_substring_to() {
+    @Test func test_substring_from() {
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
-        expectEqual("", s.substring(to: s.startIndex))
-        expectEqual("\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}",
-                    s.substring(to: s.index(s.startIndex, offsetBy: 8)))
-        expectEqual(s, s.substring(to: s.index(s.startIndex, offsetBy: 10)))
+        #expect(s == s.substring(from: s.startIndex))
+        #expect(
+            "せ\u{3099}そ\u{3099}" ==
+            s.substring(from: s.index(s.startIndex, offsetBy: 8))
+        )
+        #expect("" == s.substring(from: s.index(s.startIndex, offsetBy: 10)))
     }
 
     @available(*, deprecated)
-    func test_substring_with() {
+    @Test func test_substring_to() {
         let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
-        expectEqual("", s.substring(with: s.startIndex..<s.startIndex))
-        expectEqual(
-            "",
-            s.substring(with: s.index(s.startIndex, offsetBy: 1)..<s.index(s.startIndex, offsetBy: 1)))
-        expectEqual("", s.substring(with: s.endIndex..<s.endIndex))
-        expectEqual(s, s.substring(with: s.startIndex..<s.endIndex))
-        expectEqual(
-            "さ\u{3099}し\u{3099}す\u{3099}",
-            s.substring(with: s.index(s.startIndex, offsetBy: 5)..<s.index(s.startIndex, offsetBy: 8)))
+        #expect("" == s.substring(to: s.startIndex))
+        #expect(
+            "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}" ==
+            s.substring(to: s.index(s.startIndex, offsetBy: 8))
+        )
+        #expect(s == s.substring(to: s.index(s.startIndex, offsetBy: 10)))
     }
 
-    func test_localizedUppercase() {
-        expectEqual("ABCD", "abCD".uppercased(with: Locale(identifier: "en")))
+    @available(*, deprecated)
+    @Test func test_substring_with() {
+        let s = "\u{1F601}abc さ\u{3099}し\u{3099}す\u{3099}せ\u{3099}そ\u{3099}"
 
-        expectEqual("АБВГ", "абВГ".uppercased(with: Locale(identifier: "en")))
+        #expect("" == s.substring(with: s.startIndex..<s.startIndex))
+        #expect(
+            "" ==
+            s.substring(
+                with: s.index(s.startIndex, offsetBy: 1) ..<
+                    s.index(s.startIndex, offsetBy: 1)
+            )
+        )
+        #expect("" == s.substring(with: s.endIndex..<s.endIndex))
+        #expect(s == s.substring(with: s.startIndex..<s.endIndex))
+        #expect(
+            "さ\u{3099}し\u{3099}す\u{3099}" ==
+            s.substring(
+                with: s.index(s.startIndex, offsetBy: 5) ..<
+                    s.index(s.startIndex, offsetBy: 8)
+            )
+        )
+    }
 
-        expectEqual("АБВГ", "абВГ".uppercased(with: Locale(identifier: "ru")))
+    @Test func test_localizedUppercase() {
+        #expect("ABCD" == "abCD".uppercased(with: Locale(identifier: "en")))
 
-        expectEqual("たちつてと", "たちつてと".uppercased(with: Locale(identifier: "ru")))
+        #expect("АБВГ" == "абВГ".uppercased(with: Locale(identifier: "en")))
+
+        #expect("АБВГ" == "абВГ".uppercased(with: Locale(identifier: "ru")))
+
+        #expect("たちつてと" == "たちつてと".uppercased(with: Locale(identifier: "ru")))
 
         //
         // Special casing.
@@ -2159,12 +2313,12 @@ final class StringTestsStdlib: XCTestCase {
         // U+0069 LATIN SMALL LETTER I
         // to upper case:
         // U+0049 LATIN CAPITAL LETTER I
-        expectEqual("\u{0049}", "\u{0069}".uppercased(with: Locale(identifier: "en")))
+        #expect("\u{0049}" == "\u{0069}".uppercased(with: Locale(identifier: "en")))
 
         // U+0069 LATIN SMALL LETTER I
         // to upper case in Turkish locale:
         // U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE
-        expectEqual("\u{0130}", "\u{0069}".uppercased(with: Locale(identifier: "tr")))
+        #expect("\u{0130}" == "\u{0069}".uppercased(with: Locale(identifier: "tr")))
 
         // U+00DF LATIN SMALL LETTER SHARP S
         // to upper case:
@@ -2172,7 +2326,7 @@ final class StringTestsStdlib: XCTestCase {
         // U+0073 LATIN SMALL LETTER S
         // But because the whole string is converted to uppercase, we just get two
         // U+0053.
-        expectEqual("\u{0053}\u{0053}", "\u{00df}".uppercased(with: Locale(identifier: "en")))
+        #expect("\u{0053}\u{0053}" == "\u{00df}".uppercased(with: Locale(identifier: "en")))
 
         // U+FB01 LATIN SMALL LIGATURE FI
         // to upper case:
@@ -2180,10 +2334,10 @@ final class StringTestsStdlib: XCTestCase {
         // U+0069 LATIN SMALL LETTER I
         // But because the whole string is converted to uppercase, we get U+0049
         // LATIN CAPITAL LETTER I.
-        expectEqual("\u{0046}\u{0049}", "\u{fb01}".uppercased(with: Locale(identifier: "ru")))
+        #expect("\u{0046}\u{0049}" == "\u{fb01}".uppercased(with: Locale(identifier: "ru")))
     }
 
-    func test_uppercased() {
+    @Test func test_uppercased() {
         expectLocalizedEquality("ABCD", { loc in "abCD".uppercased(with: loc) }, "en")
 
         expectLocalizedEquality("АБВГ", { loc in "абВГ".uppercased(with: loc) }, "en")
@@ -2222,7 +2376,7 @@ final class StringTestsStdlib: XCTestCase {
         expectLocalizedEquality("\u{0046}\u{0049}", { loc in "\u{fb01}".uppercased(with: loc) }, "ru")
     }
 
-    func test_write_toFile() {
+    @Test func test_write_toFile() {
         withTemporaryStringFile { existingURL, nonExistentURL in
             let nonExistentPath = nonExistentURL.path()
             do {
@@ -2233,16 +2387,15 @@ final class StringTestsStdlib: XCTestCase {
                 let content = try String(
                     contentsOfFile: nonExistentPath, encoding: .ascii)
 
-                expectEqual(s, content)
+                #expect(s == content)
             } catch {
-
-                XCTFail(error.localizedDescription)
+                Issue.record(error)
             }
         }
 
     }
 
-    func test_write_to() {
+    @Test func test_write_to() {
         withTemporaryStringFile { existingURL, nonExistentURL in
             let nonExistentPath = nonExistentURL.path()
             do {
@@ -2253,51 +2406,54 @@ final class StringTestsStdlib: XCTestCase {
                 let content = try String(
                     contentsOfFile: nonExistentPath, encoding: .ascii)
 
-                expectEqual(s, content)
+                #expect(s == content)
             } catch {
-                XCTFail(error.localizedDescription)
+                Issue.record(error)
             }
         }
 
     }
 
-    func test_applyingTransform() {
+    @Test func test_applyingTransform() {
         do {
             let source = "tre\u{300}s k\u{fc}hl"
-            expectEqual(
-                "tres kuhl",
-                source.applyingTransform(.stripDiacritics, reverse: false))
+            #expect(
+                "tres kuhl" ==
+                source.applyingTransform(.stripDiacritics, reverse: false)
+            )
         }
         do {
             let source = "hiragana"
-            expectEqual(
-                "ひらがな",
-                source.applyingTransform(.latinToHiragana, reverse: false))
+            #expect(
+                "ひらがな" ==
+                source.applyingTransform(.latinToHiragana, reverse: false)
+            )
         }
         do {
             let source = "ひらがな"
-            expectEqual(
-                "hiragana",
-                source.applyingTransform(.latinToHiragana, reverse: true))
+            #expect(
+                "hiragana" ==
+                source.applyingTransform(.latinToHiragana, reverse: true)
+            )
         }
     }
 
-    func test_SameTypeComparisons() {
+    @Test func test_SameTypeComparisons() {
         // U+0323 COMBINING DOT BELOW
         // U+0307 COMBINING DOT ABOVE
         // U+1E63 LATIN SMALL LETTER S WITH DOT BELOW
         let xs = "\u{1e69}"
-        expectTrue(xs == "s\u{323}\u{307}")
-        expectFalse(xs != "s\u{323}\u{307}")
-        expectTrue("s\u{323}\u{307}" == xs)
-        expectFalse("s\u{323}\u{307}" != xs)
-        expectTrue("\u{1e69}" == "s\u{323}\u{307}")
-        expectFalse("\u{1e69}" != "s\u{323}\u{307}")
-        expectTrue(xs == xs)
-        expectFalse(xs != xs)
+        #expect(xs == "s\u{323}\u{307}")
+        #expect((xs != "s\u{323}\u{307}") == false)
+        #expect("s\u{323}\u{307}" == xs)
+        #expect(("s\u{323}\u{307}" != xs) == false)
+        #expect("\u{1e69}" == "s\u{323}\u{307}")
+        #expect(("\u{1e69}" != "s\u{323}\u{307}") == false)
+        #expect(xs == xs)
+        #expect((xs != xs) == false)
     }
 
-    func test_MixedTypeComparisons() {
+    @Test func test_MixedTypeComparisons() {
         // U+0323 COMBINING DOT BELOW
         // U+0307 COMBINING DOT ABOVE
         // U+1E63 LATIN SMALL LETTER S WITH DOT BELOW
@@ -2305,22 +2461,22 @@ final class StringTestsStdlib: XCTestCase {
         // swift but not in Foundation.
         let xs = "\u{1e69}"
         let ys: NSString = "s\u{323}\u{307}"
-        expectFalse(ys == "\u{1e69}")
-        expectTrue(ys != "\u{1e69}")
-        expectFalse("\u{1e69}" == ys)
-        expectTrue("\u{1e69}" != ys)
-        expectFalse(xs as NSString == ys)
-        expectTrue(xs as NSString != ys)
-        expectTrue(ys == ys)
-        expectFalse(ys != ys)
+        #expect((ys == "\u{1e69}") == false)
+        #expect(ys != "\u{1e69}")
+        #expect(("\u{1e69}" == ys) == false)
+        #expect("\u{1e69}" != ys)
+        #expect((xs as NSString == ys) == false)
+        #expect(xs as NSString != ys)
+        #expect(ys == ys)
+        #expect((ys != ys) == false)
     }
 
-    func test_copy_construction() {
+    @Test func test_copy_construction() {
         let expected = "abcd"
         let x = NSString(string: expected as NSString)
-        expectEqual(expected, x as String)
+        #expect(expected == x as String)
         let y = NSMutableString(string: expected as NSString)
-        expectEqual(expected, y as String)
+        #expect(expected == y as String)
     }
 }
 
@@ -2334,117 +2490,96 @@ extension String {
     }
 }
 
-final class StdlibSubstringTests: XCTestCase {
+struct StdlibSubstringTests {
 
-    func test_range_of_NilRange() {
+    @Test func test_range_of_NilRange() {
         let ss = "aabcdd"[1, -1]
         let range = ss.range(of: "bc")
-        expectEqual("bc", range.map { ss[$0] })
+        #expect("bc" == range.map { ss[$0] })
     }
 
-    func test_range_of_NonNilRange() {
+    @Test func test_range_of_NonNilRange() {
         let s = "aabcdd"
         let ss = s[1, -1]
         let searchRange = s.range(fromStart: 2, fromEnd: -2)
         let range = ss.range(of: "bc", range: searchRange)
-        expectEqual("bc", range.map { ss[$0] })
+        #expect("bc" == range.map { ss[$0] })
     }
 
-    func test_rangeOfCharacter() {
+    @Test func test_rangeOfCharacter() {
         let ss = "__hello__"[2, -2]
         let range = ss.rangeOfCharacter(from: CharacterSet.alphanumerics)
-        expectEqual("h", range.map { ss[$0] })
+        #expect("h" == range.map { ss[$0] })
     }
 
-    func test_compare_optionsNilRange() {
+    @Test func test_compare_optionsNilRange() {
         let needle = "hello"
         let haystack = "__hello__"[2, -2]
-        expectEqual(.orderedSame, haystack.compare(needle))
+        #expect(.orderedSame == haystack.compare(needle))
     }
 
-    func test_compare_optionsNonNilRange() {
+    @Test func test_compare_optionsNonNilRange() {
         let needle = "hello"
         let haystack = "__hello__"
         let range = haystack.range(fromStart: 2, fromEnd: -2)
-        expectEqual(.orderedSame, haystack[range].compare(needle, range: range))
+        #expect(.orderedSame == haystack[range].compare(needle, range: range))
     }
 
-    func test_replacingCharacters() {
+    @Test func test_replacingCharacters() {
         let s = "__hello, world"
         let range = s.range(fromStart: 2, fromEnd: -7)
         let expected = "__goodbye, world"
         let replacement = "goodbye"
-        expectEqual(expected,
-                    s.replacingCharacters(in: range, with: replacement))
-        expectEqual(expected[2, 0],
-                    s[2, 0].replacingCharacters(in: range, with: replacement))
+        #expect(expected == s.replacingCharacters(in: range, with: replacement))
+        #expect(expected[2, 0] == s[2, 0].replacingCharacters(in: range, with: replacement))
 
-        expectEqual(replacement,
-                    s.replacingCharacters(in: s.startIndex..., with: replacement))
-        expectEqual(replacement,
-                    s.replacingCharacters(in: ..<s.endIndex, with: replacement))
-        expectEqual(expected[2, 0],
-                    s[2, 0].replacingCharacters(in: range, with: replacement[...]))
+        #expect(replacement == s.replacingCharacters(in: s.startIndex..., with: replacement))
+        #expect(replacement == s.replacingCharacters(in: ..<s.endIndex, with: replacement))
+        #expect(expected[2, 0] == s[2, 0].replacingCharacters(in: range, with: replacement[...]))
     }
 
-    func test_replacingOccurrences_NilRange() {
+    @Test func test_replacingOccurrences_NilRange() {
         let s = "hello"
 
-        expectEqual("he11o", s.replacingOccurrences(of: "l", with: "1"))
-        expectEqual("he11o", s.replacingOccurrences(of: "l"[...], with: "1"))
-        expectEqual("he11o", s.replacingOccurrences(of: "l", with: "1"[...]))
-        expectEqual("he11o", s.replacingOccurrences(of: "l"[...], with: "1"[...]))
+        #expect("he11o" == s.replacingOccurrences(of: "l", with: "1"))
+        #expect("he11o" == s.replacingOccurrences(of: "l"[...], with: "1"))
+        #expect("he11o" == s.replacingOccurrences(of: "l", with: "1"[...]))
+        #expect("he11o" == s.replacingOccurrences(of: "l"[...], with: "1"[...]))
 
-        expectEqual("he11o",
-                    s[...].replacingOccurrences(of: "l", with: "1"))
-        expectEqual("he11o",
-                    s[...].replacingOccurrences(of: "l"[...], with: "1"))
-        expectEqual("he11o",
-                    s[...].replacingOccurrences(of: "l", with: "1"[...]))
-        expectEqual("he11o",
-                    s[...].replacingOccurrences(of: "l"[...], with: "1"[...]))
+        #expect("he11o" == s[...].replacingOccurrences(of: "l", with: "1"))
+        #expect("he11o" == s[...].replacingOccurrences(of: "l"[...], with: "1"))
+        #expect("he11o" == s[...].replacingOccurrences(of: "l", with: "1"[...]))
+        #expect("he11o" == s[...].replacingOccurrences(of: "l"[...], with: "1"[...]))
     }
 
-    func test_replacingOccurrences_NonNilRange() {
+    @Test func test_replacingOccurrences_NonNilRange() {
         let s = "hello"
         let r = s.range(fromStart: 1, fromEnd: -2)
 
-        expectEqual("he1lo",
-                    s.replacingOccurrences(of: "l", with: "1", range: r))
-        expectEqual("he1lo",
-                    s.replacingOccurrences(of: "l"[...], with: "1", range: r))
-        expectEqual("he1lo",
-                    s.replacingOccurrences(of: "l", with: "1"[...], range: r))
-        expectEqual("he1lo",
-                    s.replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
+        #expect("he1lo" == s.replacingOccurrences(of: "l", with: "1", range: r))
+        #expect("he1lo" == s.replacingOccurrences(of: "l"[...], with: "1", range: r))
+        #expect("he1lo" == s.replacingOccurrences(of: "l", with: "1"[...], range: r))
+        #expect("he1lo" == s.replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
 
-        expectEqual("he1lo",
-                    s[...].replacingOccurrences(of: "l", with: "1", range: r))
-        expectEqual("he1lo",
-                    s[...].replacingOccurrences(of: "l"[...], with: "1", range: r))
-        expectEqual("he1lo",
-                    s[...].replacingOccurrences(of: "l", with: "1"[...], range: r))
-        expectEqual("he1lo",
-                    s[...].replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
+        #expect("he1lo" == s[...].replacingOccurrences(of: "l", with: "1", range: r))
+        #expect("he1lo" == s[...].replacingOccurrences(of: "l"[...], with: "1", range: r))
+        #expect("he1lo" == s[...].replacingOccurrences(of: "l", with: "1"[...], range: r))
+        #expect("he1lo" == s[...].replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
 
         let ss = s[1, -1]
-        expectEqual("e1l",
-                    ss.replacingOccurrences(of: "l", with: "1", range: r))
-        expectEqual("e1l",
-                    ss.replacingOccurrences(of: "l"[...], with: "1", range: r))
-        expectEqual("e1l",
-                    ss.replacingOccurrences(of: "l", with: "1"[...], range: r))
-        expectEqual("e1l",
-                    ss.replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
+        #expect("e1l" == ss.replacingOccurrences(of: "l", with: "1", range: r))
+        #expect("e1l" == ss.replacingOccurrences(of: "l"[...], with: "1", range: r))
+        #expect("e1l" == ss.replacingOccurrences(of: "l", with: "1"[...], range: r))
+        #expect("e1l" == ss.replacingOccurrences(of: "l"[...], with: "1"[...], range: r))
     }
 
     @available(*, deprecated)
-    func test_substring() {
+    @Test func test_substring() {
         let s = "hello, world"
         let r = s.range(fromStart: 7, fromEnd: 0)
-        expectEqual("world", s.substring(with: r))
-        expectEqual("world", s[...].substring(with: r))
-        expectEqual("world", s[1, 0].substring(with: r))
+        #expect("world" == s.substring(with: r))
+        #expect("world" == s[...].substring(with: r))
+        #expect("world" == s[1, 0].substring(with: r))
     }
 }
 #endif // FOUNDATION_FRAMEWORK

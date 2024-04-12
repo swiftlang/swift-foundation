@@ -10,10 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+@_spi(Experimental) import Testing
 
-#if canImport(TestSupport)
-import TestSupport
-#endif // canImport(TestSupport)
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
@@ -169,21 +172,24 @@ class CapturingFileManagerDelegate : FileManagerDelegate {
 }
 #endif
 
-final class FileManagerTests : XCTestCase {
+// `FileManagerTests` has global states (directories created etc)
+// therefore they must run in serial.
+@Suite(.serial)
+struct FileManagerTests {
     private func randomData(count: Int = 10000) -> Data {
         Data((0 ..< count).map { _ in UInt8.random(in: .min ..< .max) })
     }
     
-    func testContentsAtPath() throws {
+    @Test func testContentsAtPath() throws {
         let data = randomData()
         try FileManagerPlayground {
             File("test", contents: data)
         }.test {
-            XCTAssertEqual($0.contents(atPath: "test"), data)
+            #expect($0.contents(atPath: "test") == data)
         }
     }
     
-    func testContentsEqualAtPaths() throws {
+    @Test func testContentsEqualAtPaths() throws {
         try FileManagerPlayground {
             Directory("dir1") {
                 Directory("dir2") {
@@ -213,13 +219,13 @@ final class FileManagerTests : XCTestCase {
                 }
             }
         }.test {
-            XCTAssertTrue($0.contentsEqual(atPath: "dir1", andPath: "dir1_copy"))
-            XCTAssertFalse($0.contentsEqual(atPath: "dir1/dir2", andPath: "dir1/dir3"))
-            XCTAssertFalse($0.contentsEqual(atPath: "dir1", andPath: "dir1_diffdata"))
+            #expect($0.contentsEqual(atPath: "dir1", andPath: "dir1_copy"))
+            #expect($0.contentsEqual(atPath: "dir1/dir2", andPath: "dir1/dir3") == false)
+            #expect($0.contentsEqual(atPath: "dir1", andPath: "dir1_diffdata") == false)
         }
     }
     
-    func testDirectoryContentsAtPath() throws {
+    @Test func testDirectoryContentsAtPath() throws {
         try FileManagerPlayground {
             Directory("dir1") {
                 Directory("dir2") {
@@ -230,17 +236,26 @@ final class FileManagerTests : XCTestCase {
                     "Baz"
                 }
             }
-        }.test {
-            XCTAssertEqual(try $0.contentsOfDirectory(atPath: "dir1").sorted(), ["dir2", "dir3"])
-            XCTAssertEqual(try $0.contentsOfDirectory(atPath: "dir1/dir2").sorted(), ["Bar", "Foo"])
-            XCTAssertEqual(try $0.contentsOfDirectory(atPath: "dir1/dir3").sorted(), ["Baz"])
-            XCTAssertThrowsError(try $0.contentsOfDirectory(atPath: "does_not_exist")) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
+        }.test { (fileManager) throws in
+            var results = try fileManager.contentsOfDirectory(atPath: "dir1").sorted()
+            #expect(results == ["dir2", "dir3"])
+            results = try fileManager.contentsOfDirectory(atPath: "dir1/dir2").sorted()
+            #expect(results == ["Bar", "Foo"])
+            results = try fileManager.contentsOfDirectory(atPath: "dir1/dir3").sorted()
+            #expect(results == ["Baz"])
+            #expect {
+                try fileManager.contentsOfDirectory(atPath: "does_not_exist")
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileReadNoSuchFile)
+                return true
             }
         }
     }
     
-    func testSubpathsOfDirectoryAtPath() throws {
+    @Test func testSubpathsOfDirectoryAtPath() throws {
         try FileManagerPlayground {
             Directory("dir1") {
                 Directory("dir2") {
@@ -251,114 +266,171 @@ final class FileManagerTests : XCTestCase {
                     "Baz"
                 }
             }
-        }.test {
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: "dir1").sorted(), ["dir2", "dir2/Bar", "dir2/Foo", "dir3", "dir3/Baz"])
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: "dir1/dir2").sorted(), ["Bar", "Foo"])
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: "dir1/dir3").sorted(), ["Baz"])
-            XCTAssertThrowsError(try $0.subpathsOfDirectory(atPath: "does_not_exist")) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
+        }.test { (fileManager) throws in
+            var results = try fileManager.subpathsOfDirectory(atPath: "dir1").sorted()
+            #expect(results == ["dir2", "dir2/Bar", "dir2/Foo", "dir3", "dir3/Baz"])
+            results = try fileManager.subpathsOfDirectory(atPath: "dir1/dir2").sorted()
+            #expect(results == ["Bar", "Foo"])
+            results = try fileManager.subpathsOfDirectory(atPath: "dir1/dir3").sorted()
+            #expect(results == ["Baz"])
+            #expect {
+                try fileManager.subpathsOfDirectory(atPath: "does_not_exist")
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileReadNoSuchFile)
+                return true
             }
             
             let fullContents = ["dir1", "dir1/dir2", "dir1/dir2/Bar", "dir1/dir2/Foo", "dir1/dir3", "dir1/dir3/Baz"]
-            let cwd = $0.currentDirectoryPath
-            XCTAssertNotEqual(cwd.last, "/")
+            let cwd = fileManager.currentDirectoryPath
+            #expect(cwd.last != "/")
             let paths = [cwd, "\(cwd)/", "\(cwd)//", ".", "./", ".//"]
             for path in paths {
-                XCTAssertEqual(try $0.subpathsOfDirectory(atPath: path).sorted(), fullContents)
+                let results = try fileManager.subpathsOfDirectory(atPath: path).sorted()
+                #expect(results == fullContents)
             }
         }
     }
     
-    func testCreateDirectoryAtPath() throws {
+    @Test func testCreateDirectoryAtPath() throws {
         try FileManagerPlayground {
             "preexisting_file"
-        }.test {
-            try $0.createDirectory(atPath: "create_dir_test", withIntermediateDirectories: false)
-            XCTAssertEqual(try $0.contentsOfDirectory(atPath: ".").sorted(), ["create_dir_test", "preexisting_file"])
-            try $0.createDirectory(atPath: "create_dir_test2/nested", withIntermediateDirectories: true)
-            XCTAssertEqual(try $0.contentsOfDirectory(atPath: "create_dir_test2"), ["nested"])
-            try $0.createDirectory(atPath: "create_dir_test2/nested2", withIntermediateDirectories: true)
-            XCTAssertEqual(try $0.contentsOfDirectory(atPath: "create_dir_test2").sorted(), ["nested", "nested2"])
-            XCTAssertNoThrow(try $0.createDirectory(atPath: "create_dir_test2/nested2", withIntermediateDirectories: true))
-            XCTAssertThrowsError(try $0.createDirectory(atPath: "create_dir_test", withIntermediateDirectories: false)) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileWriteFileExists)
+        }.test { fileManager in
+            try fileManager.createDirectory(atPath: "create_dir_test", withIntermediateDirectories: false)
+            var result = try fileManager.contentsOfDirectory(atPath: ".").sorted()
+            #expect(result == ["create_dir_test", "preexisting_file"])
+            try fileManager.createDirectory(atPath: "create_dir_test2/nested", withIntermediateDirectories: true)
+            result = try fileManager.contentsOfDirectory(atPath: "create_dir_test2")
+            #expect(result == ["nested"])
+            try fileManager.createDirectory(atPath: "create_dir_test2/nested2", withIntermediateDirectories: true)
+            result = try fileManager.contentsOfDirectory(atPath: "create_dir_test2").sorted()
+            #expect(result == ["nested", "nested2"])
+            #expect(throws: Never.self) {
+                try fileManager.createDirectory(atPath: "create_dir_test2/nested2", withIntermediateDirectories: true)
             }
-            XCTAssertThrowsError(try $0.createDirectory(atPath: "create_dir_test3/nested", withIntermediateDirectories: false)) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileNoSuchFile)
+            #expect {
+                try fileManager.createDirectory(atPath: "create_dir_test", withIntermediateDirectories: false)
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileWriteFileExists)
+                return true
             }
-            XCTAssertThrowsError(try $0.createDirectory(atPath: "preexisting_file", withIntermediateDirectories: false)) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileWriteFileExists)
+            #expect {
+                try fileManager.createDirectory(atPath: "create_dir_test3/nested", withIntermediateDirectories: false)
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileNoSuchFile)
+                return true
             }
-            XCTAssertThrowsError(try $0.createDirectory(atPath: "preexisting_file", withIntermediateDirectories: true)) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileWriteFileExists)
+            #expect {
+                try fileManager.createDirectory(atPath: "preexisting_file", withIntermediateDirectories: false)
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileWriteFileExists)
+                return true
+            }
+            #expect {
+                try fileManager.createDirectory(atPath: "preexisting_file", withIntermediateDirectories: true)
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileWriteFileExists)
+                return true
             }
         }
     }
     
-    func testLinkFileAtPathToPath() throws {
+    @Test func testLinkFileAtPathToPath() throws {
         try FileManagerPlayground {
             "foo"
         }.test(captureDelegateCalls: true) {
-            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            #expect($0.delegateCaptures.isEmpty)
             try $0.linkItem(atPath: "foo", toPath: "bar")
-            XCTAssertEqual($0.delegateCaptures.shouldLink, [.init("foo", "bar")])
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterLinkError, [])
-            XCTAssertTrue($0.fileExists(atPath: "bar"))
+            #expect($0.delegateCaptures.shouldLink == [.init("foo", "bar")])
+            #expect($0.delegateCaptures.shouldProceedAfterLinkError == [])
+            #expect($0.fileExists(atPath: "bar"))
         }
         
         try FileManagerPlayground {
             "foo"
             "bar"
         }.test(captureDelegateCalls: true) {
-            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            #expect($0.delegateCaptures.isEmpty)
             try $0.linkItem(atPath: "foo", toPath: "bar")
-            XCTAssertEqual($0.delegateCaptures.shouldLink, [.init("foo", "bar")])
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterLinkError, [.init("foo", "bar", code: .fileWriteFileExists)])
+            #expect($0.delegateCaptures.shouldLink == [.init("foo", "bar")])
+            #expect($0.delegateCaptures.shouldProceedAfterLinkError == [.init("foo", "bar", code: .fileWriteFileExists)])
         }
     }
     
-    func testCopyFileAtPathToPath() throws {
+    @Test func testCopyFileAtPathToPath() throws {
         try FileManagerPlayground {
             "foo"
         }.test(captureDelegateCalls: true) {
-            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            #expect($0.delegateCaptures.isEmpty)
             try $0.copyItem(atPath: "foo", toPath: "bar")
-            XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("foo", "bar")])
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError, [])
-            XCTAssertTrue($0.fileExists(atPath: "bar"))
+            #expect($0.delegateCaptures.shouldCopy == [.init("foo", "bar")])
+            #expect($0.delegateCaptures.shouldProceedAfterCopyError == [])
+            #expect($0.fileExists(atPath: "bar"))
         }
         
         try FileManagerPlayground {
             "foo"
             "bar"
         }.test(captureDelegateCalls: true) {
-            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            #expect($0.delegateCaptures.isEmpty)
             try $0.copyItem(atPath: "foo", toPath: "bar")
-            XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("foo", "bar")])
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError, [.init("foo", "bar", code: .fileWriteFileExists)])
+            #expect($0.delegateCaptures.shouldCopy == [.init("foo", "bar")])
+            #expect($0.delegateCaptures.shouldProceedAfterCopyError == [.init("foo", "bar", code: .fileWriteFileExists)])
         }
     }
     
-    func testCreateSymbolicLinkAtPath() throws {
+    @Test func testCreateSymbolicLinkAtPath() throws {
         try FileManagerPlayground {
             "foo"
-        }.test {
-            try $0.createSymbolicLink(atPath: "bar", withDestinationPath: "foo")
-            XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: "bar"), "foo")
-            
-            XCTAssertThrowsError(try $0.createSymbolicLink(atPath: "bar", withDestinationPath: "foo")) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileWriteFileExists)
+        }.test { fileManager in
+            try fileManager.createSymbolicLink(atPath: "bar", withDestinationPath: "foo")
+            let results = try fileManager.destinationOfSymbolicLink(atPath: "bar")
+            #expect(results == "foo")
+            #expect {
+                try fileManager.createSymbolicLink(atPath: "bar", withDestinationPath: "foo")
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileWriteFileExists)
+                return true
             }
-            XCTAssertThrowsError(try $0.createSymbolicLink(atPath: "foo", withDestinationPath: "baz")) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileWriteFileExists)
+            #expect {
+                try fileManager.createSymbolicLink(atPath: "foo", withDestinationPath: "baz")
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileWriteFileExists)
+                return true
             }
-            XCTAssertThrowsError(try $0.destinationOfSymbolicLink(atPath: "foo")) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadUnknown)
+            #expect {
+                try fileManager.destinationOfSymbolicLink(atPath: "foo")
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileReadUnknown)
+                return true
             }
         }
     }
     
-    func testMoveItemAtPathToPath() throws {
+    @Test func testMoveItemAtPathToPath() throws {
         let data = randomData()
         try FileManagerPlayground {
             Directory("dir") {
@@ -367,31 +439,32 @@ final class FileManagerTests : XCTestCase {
             }
             "other_file"
         }.test(captureDelegateCalls: true) {
-            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            #expect($0.delegateCaptures.isEmpty)
             try $0.moveItem(atPath: "dir", toPath: "dir2")
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["dir2", "dir2/bar", "dir2/foo", "other_file"])
-            XCTAssertEqual($0.contents(atPath: "dir2/foo"), data)
+            let results = try $0.subpathsOfDirectory(atPath: ".").sorted()
+            #expect(results == ["dir2", "dir2/bar", "dir2/foo", "other_file"])
+            #expect($0.contents(atPath: "dir2/foo") == data)
             #if FOUNDATION_FRAMEWORK
             // Behavior differs here due to usage of URL(filePath:)
             let rootDir = $0.currentDirectoryPath
-            XCTAssertEqual($0.delegateCaptures.shouldMove, [.init("\(rootDir)/dir", "\(rootDir)/dir2")])
+            #expect($0.delegateCaptures.shouldMove == [.init("\(rootDir)/dir", "\(rootDir)/dir2")])
             #else
-            XCTAssertEqual($0.delegateCaptures.shouldMove, [.init("dir", "dir2")])
+            #expect($0.delegateCaptures.shouldMove == [.init("dir", "dir2")])
             #endif
             
             try $0.moveItem(atPath: "does_not_exist", toPath: "dir3")
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError, [])
+            #expect($0.delegateCaptures.shouldProceedAfterCopyError == [])
 
             try $0.moveItem(atPath: "dir2", toPath: "other_file")
             #if FOUNDATION_FRAMEWORK
-            XCTAssertTrue($0.delegateCaptures.shouldProceedAfterMoveError.contains(.init("\(rootDir)/dir2", "\(rootDir)/other_file", code: .fileWriteFileExists)))
+            #expect($0.delegateCaptures.shouldProceedAfterMoveError.contains(.init("\(rootDir)/dir2", "\(rootDir)/other_file", code: .fileWriteFileExists)))
             #else
-            XCTAssertTrue($0.delegateCaptures.shouldProceedAfterMoveError.contains(.init("dir2", "other_file", code: .fileWriteFileExists)))
+            #expect($0.delegateCaptures.shouldProceedAfterMoveError.contains(.init("dir2", "other_file", code: .fileWriteFileExists)))
             #endif
         }
     }
     
-    func testCopyItemAtPathToPath() throws {
+    @Test func testCopyItemAtPathToPath() throws {
         let data = randomData()
         try FileManagerPlayground {
             Directory("dir") {
@@ -400,25 +473,26 @@ final class FileManagerTests : XCTestCase {
             }
             "other_file"
         }.test(captureDelegateCalls: true) {
-            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            #expect($0.delegateCaptures.isEmpty)
             try $0.copyItem(atPath: "dir", toPath: "dir2")
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["dir", "dir/bar", "dir/foo", "dir2", "dir2/bar", "dir2/foo", "other_file"])
-            XCTAssertEqual($0.contents(atPath: "dir/foo"), data)
-            XCTAssertEqual($0.contents(atPath: "dir2/foo"), data)
-            XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")])
-            
+            let results = try $0.subpathsOfDirectory(atPath: ".").sorted()
+            #expect(results == ["dir", "dir/bar", "dir/foo", "dir2", "dir2/bar", "dir2/foo", "other_file"])
+            #expect($0.contents(atPath: "dir/foo") == data)
+            #expect($0.contents(atPath: "dir2/foo") == data)
+            #expect($0.delegateCaptures.shouldCopy == [.init("dir", "dir2"), .init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")])
+
             try $0.copyItem(atPath: "does_not_exist", toPath: "dir3")
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError.last, .init("does_not_exist", "dir3", code: .fileNoSuchFile))
-            
+            #expect($0.delegateCaptures.shouldProceedAfterCopyError.last == .init("does_not_exist", "dir3", code: .fileNoSuchFile))
+
             #if canImport(Darwin)
             // Not supported on linux because it ends up trying to set attributes that are currently unimplemented
             try $0.copyItem(atPath: "dir", toPath: "other_file")
-            XCTAssertTrue($0.delegateCaptures.shouldProceedAfterCopyError.contains(.init("dir", "other_file", code: .fileWriteFileExists)))
+            #expect($0.delegateCaptures.shouldProceedAfterCopyError.contains(.init("dir", "other_file", code: .fileWriteFileExists)))
             #endif
         }
     }
     
-    func testRemoveItemAtPath() throws {
+    @Test func testRemoveItemAtPath() throws {
         try FileManagerPlayground {
             Directory("dir") {
                 "foo"
@@ -426,26 +500,29 @@ final class FileManagerTests : XCTestCase {
             }
             "other"
         }.test(captureDelegateCalls: true) {
-            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            #expect($0.delegateCaptures.isEmpty)
             try $0.removeItem(atPath: "dir/bar")
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["dir", "dir/foo", "other"])
-            XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar")])
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [])
-            
+            var results = try $0.subpathsOfDirectory(atPath: ".").sorted()
+            #expect(results == ["dir", "dir/foo", "other"])
+            #expect($0.delegateCaptures.shouldRemove == [.init("dir/bar")])
+            #expect($0.delegateCaptures.shouldProceedAfterRemoveError == [])
+
             let rootDir = $0.currentDirectoryPath
             try $0.removeItem(atPath: "dir")
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["other"])
-            XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo")])
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [])
-            
+            results = try $0.subpathsOfDirectory(atPath: ".").sorted()
+            #expect(results == ["other"])
+            #expect($0.delegateCaptures.shouldRemove == [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo")])
+            #expect($0.delegateCaptures.shouldProceedAfterRemoveError == [])
+
             try $0.removeItem(atPath: "other")
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), [])
-            XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo"), .init("other")])
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [])
-            
+            results = try $0.subpathsOfDirectory(atPath: ".").sorted()
+            #expect(results == [])
+            #expect($0.delegateCaptures.shouldRemove == [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo"), .init("other")])
+            #expect($0.delegateCaptures.shouldProceedAfterRemoveError == [])
+
             try $0.removeItem(atPath: "does_not_exist")
-            XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo"), .init("other"), .init("does_not_exist")])
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [.init("does_not_exist", code: .fileNoSuchFile)])
+            #expect($0.delegateCaptures.shouldRemove == [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo"), .init("other"), .init("does_not_exist")])
+            #expect($0.delegateCaptures.shouldProceedAfterRemoveError == [.init("does_not_exist", code: .fileNoSuchFile)])
         }
 
         #if canImport(Darwin)
@@ -453,9 +530,9 @@ final class FileManagerTests : XCTestCase {
         // not supported on older versions of Darwin where removefile would return ENOENT instead of ENAMETOOLONG
         if #available(macOS 14.4, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
             try FileManagerPlayground {
-            }.test {
+            }.test { fileManager in
                 // Create hierarchy in which the leaf is a long path (length > PATH_MAX)
-                let rootDir = $0.currentDirectoryPath
+                let rootDir = fileManager.currentDirectoryPath
                 let aas = Array(repeating: "a", count: Int(NAME_MAX) - 3).joined()
                 let bbs = Array(repeating: "b", count: Int(NAME_MAX) - 3).joined()
                 let ccs = Array(repeating: "c", count: Int(NAME_MAX) - 3).joined()
@@ -463,45 +540,51 @@ final class FileManagerTests : XCTestCase {
                 let ees = Array(repeating: "e", count: Int(NAME_MAX) - 3).joined()
                 let leaf = "longpath"
                 
-                try $0.createDirectory(atPath: aas, withIntermediateDirectories: true)
-                XCTAssertTrue($0.changeCurrentDirectoryPath(aas))
-                try $0.createDirectory(atPath: bbs, withIntermediateDirectories: true)
-                XCTAssertTrue($0.changeCurrentDirectoryPath(bbs))
-                try $0.createDirectory(atPath: ccs, withIntermediateDirectories: true)
-                XCTAssertTrue($0.changeCurrentDirectoryPath(ccs))
-                try $0.createDirectory(atPath: dds, withIntermediateDirectories: true)
-                XCTAssertTrue($0.changeCurrentDirectoryPath(dds))
-                try $0.createDirectory(atPath: ees, withIntermediateDirectories: true)
-                XCTAssertTrue($0.changeCurrentDirectoryPath(ees))
-                try $0.createDirectory(atPath: leaf, withIntermediateDirectories: true)
-                
-                XCTAssertTrue($0.changeCurrentDirectoryPath(rootDir))
+                try fileManager.createDirectory(atPath: aas, withIntermediateDirectories: true)
+                #expect(fileManager.changeCurrentDirectoryPath(aas))
+                try fileManager.createDirectory(atPath: bbs, withIntermediateDirectories: true)
+                #expect(fileManager.changeCurrentDirectoryPath(bbs))
+                try fileManager.createDirectory(atPath: ccs, withIntermediateDirectories: true)
+                #expect(fileManager.changeCurrentDirectoryPath(ccs))
+                try fileManager.createDirectory(atPath: dds, withIntermediateDirectories: true)
+                #expect(fileManager.changeCurrentDirectoryPath(dds))
+                try fileManager.createDirectory(atPath: ees, withIntermediateDirectories: true)
+                #expect(fileManager.changeCurrentDirectoryPath(ees))
+                try fileManager.createDirectory(atPath: leaf, withIntermediateDirectories: true)
+
+                #expect(fileManager.changeCurrentDirectoryPath(rootDir))
                 let fullPath = "\(aas)/\(bbs)/\(ccs)/\(dds)/\(ees)/\(leaf)"
-                XCTAssertThrowsError(try $0.removeItem(atPath: fullPath)) {
-                    let underlyingPosixError = ($0 as? CocoaError)?.underlying as? POSIXError
-                    XCTAssertEqual(underlyingPosixError?.code, .ENAMETOOLONG, "removeItem didn't fail with ENAMETOOLONG; produced error: \($0)")
+                #expect {
+                    try fileManager.removeItem(atPath: fullPath)
+                } throws: { error in
+                    guard let cocoaError = error as? CocoaError,
+                          let posixError = cocoaError.underlying as? POSIXError else {
+                        return false
+                    }
+                    #expect(posixError.code == .ENAMETOOLONG, "removeItem didn't fail with ENAMETOOLONG; produced error: \(error)")
+                    return true
                 }
                 
                 // Clean up
-                XCTAssertTrue($0.changeCurrentDirectoryPath(aas))
-                XCTAssertTrue($0.changeCurrentDirectoryPath(bbs))
-                XCTAssertTrue($0.changeCurrentDirectoryPath(ccs))
-                XCTAssertTrue($0.changeCurrentDirectoryPath(dds))
-                try $0.removeItem(atPath: ees)
-                XCTAssertTrue($0.changeCurrentDirectoryPath(".."))
-                try $0.removeItem(atPath: dds)
-                XCTAssertTrue($0.changeCurrentDirectoryPath(".."))
-                try $0.removeItem(atPath: ccs)
-                XCTAssertTrue($0.changeCurrentDirectoryPath(".."))
-                try $0.removeItem(atPath: bbs)
-                XCTAssertTrue($0.changeCurrentDirectoryPath(".."))
-                try $0.removeItem(atPath: aas)
+                #expect(fileManager.changeCurrentDirectoryPath(aas))
+                #expect(fileManager.changeCurrentDirectoryPath(bbs))
+                #expect(fileManager.changeCurrentDirectoryPath(ccs))
+                #expect(fileManager.changeCurrentDirectoryPath(dds))
+                try fileManager.removeItem(atPath: ees)
+                #expect(fileManager.changeCurrentDirectoryPath(".."))
+                try fileManager.removeItem(atPath: dds)
+                #expect(fileManager.changeCurrentDirectoryPath(".."))
+                try fileManager.removeItem(atPath: ccs)
+                #expect(fileManager.changeCurrentDirectoryPath(".."))
+                try fileManager.removeItem(atPath: bbs)
+                #expect(fileManager.changeCurrentDirectoryPath(".."))
+                try fileManager.removeItem(atPath: aas)
             }
         }
         #endif
     }
     
-    func testFileExistsAtPath() throws {
+    @Test func testFileExistsAtPath() throws {
         try FileManagerPlayground {
             Directory("dir") {
                 "foo"
@@ -520,24 +603,23 @@ final class FileManagerTests : XCTestCase {
                 isDir
             }
             #endif
-            XCTAssertTrue($0.fileExists(atPath: "dir/foo", isDirectory: &isDir))
-            XCTAssertFalse(isDirBool())
-            XCTAssertTrue($0.fileExists(atPath: "dir/bar", isDirectory: &isDir))
-            XCTAssertFalse(isDirBool())
-            XCTAssertTrue($0.fileExists(atPath: "dir", isDirectory: &isDir))
-            XCTAssertTrue(isDirBool())
-            XCTAssertTrue($0.fileExists(atPath: "other", isDirectory: &isDir))
-            XCTAssertFalse(isDirBool())
-            XCTAssertFalse($0.fileExists(atPath: "does_not_exist"))
+            #expect($0.fileExists(atPath: "dir/foo", isDirectory: &isDir))
+            #expect(isDirBool() == false)
+            #expect($0.fileExists(atPath: "dir/bar", isDirectory: &isDir))
+            #expect(isDirBool() == false)
+            #expect($0.fileExists(atPath: "dir", isDirectory: &isDir))
+            #expect(isDirBool())
+            #expect($0.fileExists(atPath: "other", isDirectory: &isDir))
+            #expect(isDirBool() == false)
+            #expect($0.fileExists(atPath: "does_not_exist") == false)
         }
     }
-    
+
+    @Test(.enabled(
+        if: getuid() != 0,
+        "Root users can always access anything, so this test will not function when run as root")
+    )
     func testFileAccessAtPath() throws {
-        guard getuid() != 0 else {
-            // Root users can always access anything, so this test will not function when run as root
-            throw XCTSkip("This test is not available when running as the root user")
-        }
-        
         try FileManagerPlayground {
             File("000", attributes: [.posixPermissions: 0o000])
             File("111", attributes: [.posixPermissions: 0o111])
@@ -553,45 +635,54 @@ final class FileManagerTests : XCTestCase {
             let executable = ["111", "333", "555", "777"]
             for number in 0...7 {
                 let file = "\(number)\(number)\(number)"
-                XCTAssertEqual($0.isReadableFile(atPath: file), readable.contains(file), "'\(file)' failed readable check")
-                XCTAssertEqual($0.isWritableFile(atPath: file), writable.contains(file), "'\(file)' failed writable check")
-                XCTAssertEqual($0.isExecutableFile(atPath: file), executable.contains(file), "'\(file)' failed executable check")
-                XCTAssertTrue($0.isDeletableFile(atPath: file), "'\(file)' failed deletable check")
+                #expect($0.isReadableFile(atPath: file) == readable.contains(file), "'\(file)' failed readable check")
+                #expect($0.isWritableFile(atPath: file) == writable.contains(file), "'\(file)' failed writable check")
+                #expect($0.isExecutableFile(atPath: file) == executable.contains(file), "'\(file)' failed executable check")
+                #expect($0.isDeletableFile(atPath: file), "'\(file)' failed deletable check")
             }
         }
     }
     
-    func testFileSystemAttributesAtPath() throws {
+    @Test func testFileSystemAttributesAtPath() throws {
         try FileManagerPlayground {
             "Foo"
-        }.test {
-            let dict = try $0.attributesOfFileSystem(forPath: "Foo")
-            XCTAssertNotNil(dict[.systemSize])
-            XCTAssertThrowsError(try $0.attributesOfFileSystem(forPath: "does_not_exist")) {
-                XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
+        }.test { fileManager in
+            let dict = try fileManager.attributesOfFileSystem(forPath: "Foo")
+            #expect(dict[.systemSize] != nil)
+            #expect {
+                try fileManager.attributesOfFileSystem(forPath: "does_not_exist")
+            } throws: { error in
+                guard let cocoaError = error as? CocoaError else {
+                    return false
+                }
+                #expect(cocoaError.code == .fileReadNoSuchFile)
+                return true
             }
         }
     }
     
-    func testCurrentWorkingDirectory() throws {
+    @Test func testCurrentWorkingDirectory() throws {
         try FileManagerPlayground {
             Directory("dir") {
                 "foo"
             }
             "bar"
-        }.test {
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["bar", "dir", "dir/foo"])
-            XCTAssertTrue($0.changeCurrentDirectoryPath("dir"))
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: "."), ["foo"])
-            XCTAssertFalse($0.changeCurrentDirectoryPath("foo"))
-            XCTAssertTrue($0.changeCurrentDirectoryPath(".."))
-            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["bar", "dir", "dir/foo"])
-            XCTAssertFalse($0.changeCurrentDirectoryPath("does_not_exist"))
+        }.test { (fileManager) throws in
+            var results = try fileManager.subpathsOfDirectory(atPath: ".").sorted()
+            #expect(results == ["bar", "dir", "dir/foo"])
+            #expect(fileManager.changeCurrentDirectoryPath("dir"))
+            results = try fileManager.subpathsOfDirectory(atPath: ".")
+            #expect(results == ["foo"])
+            #expect(fileManager.changeCurrentDirectoryPath("foo") == false)
+            #expect(fileManager.changeCurrentDirectoryPath(".."))
+            results = try fileManager.subpathsOfDirectory(atPath: ".").sorted()
+            #expect(results == ["bar", "dir", "dir/foo"])
+            #expect(fileManager.changeCurrentDirectoryPath("does_not_exist") == false)
         }
     }
     
-    func testBooleanFileAttributes() throws {
-        #if canImport(Darwin)
+#if canImport(Darwin)
+    @Test func testBooleanFileAttributes() throws {
         try FileManagerPlayground {
             "none"
             File("immutable", attributes: [.immutable: true])
@@ -607,82 +698,80 @@ final class FileManagerTests : XCTestCase {
             
             for test in tests {
                 let result = try $0.attributesOfItem(atPath: test.path)
-                XCTAssertEqual(result[.immutable] as? Bool, test.immutable, "Item at path '\(test.path)' did not provide expected result for immutable key")
-                XCTAssertEqual(result[.appendOnly] as? Bool, test.appendOnly, "Item at path '\(test.path)' did not provide expected result for appendOnly key")
-                
+                #expect(result[.immutable] as? Bool == test.immutable, "Item at path '\(test.path)' did not provide expected result for immutable key")
+                #expect(result[.appendOnly] as? Bool == test.appendOnly, "Item at path '\(test.path)' did not provide expected result for appendOnly key")
+
                 // Manually clean up attributes so removal does not fail
                 try $0.setAttributes([.immutable: false, .appendOnly: false], ofItemAtPath: test.path)
             }
         }
-        #else
-        throw XCTSkip("This test is not applicable on this platform")
-        #endif
     }
-    
-    func testMalformedModificationDateAttribute() throws {
+#endif
+
+    @Test func testMalformedModificationDateAttribute() throws {
         let sentinelDate = Date(timeIntervalSince1970: 100)
         try FileManagerPlayground {
             File("foo", attributes: [.modificationDate: sentinelDate])
         }.test {
-            XCTAssertEqual(try $0.attributesOfItem(atPath: "foo")[.modificationDate] as? Date, sentinelDate)
+            var results = try $0.attributesOfItem(atPath: "foo")[.modificationDate] as? Date
+            #expect(results == sentinelDate)
             for value in [Double.infinity, -Double.infinity, Double.nan] {
                 // Malformed modification dates should be dropped instead of throwing or crashing
                 try $0.setAttributes([.modificationDate : Date(timeIntervalSince1970: value)], ofItemAtPath: "foo")
             }
-            XCTAssertEqual(try $0.attributesOfItem(atPath: "foo")[.modificationDate] as? Date, sentinelDate)
+            results = try $0.attributesOfItem(atPath: "foo")[.modificationDate] as? Date
+            #expect(results == sentinelDate)
         }
     }
     
-    func testImplicitlyConvertibleFileAttributes() throws {
+    @Test func testImplicitlyConvertibleFileAttributes() throws {
         try FileManagerPlayground {
             File("foo", attributes: [.posixPermissions : UInt16(0o644)])
         }.test {
             let attributes = try $0.attributesOfItem(atPath: "foo")
             // Ensure the unconventional UInt16 was accepted as input
-            XCTAssertEqual(attributes[.posixPermissions] as? UInt, 0o644)
+            #expect(attributes[.posixPermissions] as? UInt == 0o644)
             #if FOUNDATION_FRAMEWORK
             // Where we have NSNumber, ensure that we can get the value back as an unconventional Double value
-            XCTAssertEqual(attributes[.posixPermissions] as? Double, Double(0o644))
+            #expect(attributes[.posixPermissions] as? Double == Double(0o644))
             // Ensure that the file type can be converted to a String when it is an ObjC enum
-            XCTAssertEqual(attributes[.type] as? String, FileAttributeType.typeRegular.rawValue)
+            #expect(attributes[.type] as? String == FileAttributeType.typeRegular.rawValue)
             #endif
             // Ensure that the file type can be converted to a FileAttributeType when it is an ObjC enum and in swift-foundation
-            XCTAssertEqual(attributes[.type] as? FileAttributeType, .typeRegular)
-            
+            #expect(attributes[.type] as? FileAttributeType == .typeRegular)
+
         }
     }
     
-    func testStandardizingPathAutomount() throws {
-        #if canImport(Darwin)
+#if canImport(Darwin)
+    @Test func testStandardizingPathAutomount() throws {
         let tests = [
             "/private/System" : "/private/System",
             "/private/tmp" : "/tmp",
             "/private/System/foo" : "/private/System/foo"
         ]
         for (input, expected) in tests {
-            XCTAssertEqual(input.standardizingPath, expected, "Standardizing the path '\(input)' did not produce the expected result")
+            #expect(input.standardizingPath == expected, "Standardizing the path '\(input)' did not produce the expected result")
         }
-        #else
-        throw XCTSkip("This test is not applicable to this platform")
-        #endif
     }
-    
-    func testResolveSymlinksViaGetAttrList() throws {
+#endif
+
+    @Test func testResolveSymlinksViaGetAttrList() throws {
         try FileManagerPlayground {
             "destination"
         }.test {
             try $0.createSymbolicLink(atPath: "link", withDestinationPath: "destination")
             let absolutePath = $0.currentDirectoryPath.appendingPathComponent("link")
             let resolved = absolutePath._resolvingSymlinksInPath() // Call internal function to avoid path standardization
-            XCTAssertEqual(resolved, $0.currentDirectoryPath.appendingPathComponent("destination"))
+            #expect(resolved == $0.currentDirectoryPath.appendingPathComponent("destination"))
         }
     }
     
     #if os(macOS) && FOUNDATION_FRAMEWORK
-    func testSpecialTrashDirectoryTruncation() throws {
+    @Test func testSpecialTrashDirectoryTruncation() throws {
         try FileManagerPlayground {}.test {
             if let trashURL = try? $0.url(for: .trashDirectory, in: .allDomainsMask, appropriateFor: nil, create: false) {
-                XCTAssertEqual(trashURL.pathComponents.last, ".Trash")
+                #expect(trashURL.pathComponents.last == ".Trash")
             }
         }
     }
