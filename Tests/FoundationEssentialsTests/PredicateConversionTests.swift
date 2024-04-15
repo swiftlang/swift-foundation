@@ -12,8 +12,6 @@
 
 #if FOUNDATION_FRAMEWORK
 
-@_spi(Expression) import Foundation
-
 final class NSPredicateConversionTests: XCTestCase {
     private func convert<T: NSObject>(_ predicate: Predicate<T>) -> NSPredicate? {
         NSPredicate(predicate)

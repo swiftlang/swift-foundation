@@ -11,15 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(TestSupport)
-@_spi(Expression) import TestSupport
+import TestSupport
 #endif
 
 #if canImport(RegexBuilder)
 import RegexBuilder
-#endif
-
-#if FOUNDATION_FRAMEWORK
-@_spi(Expression) import Foundation
 #endif
 
 #if !FOUNDATION_FRAMEWORK
@@ -455,6 +451,7 @@ final class PredicateTests: XCTestCase {
         XCTAssertFalse(try predicateB.evaluate(Object(a: 2, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
         XCTAssertFalse(try predicateB.evaluate(Object(a: 4, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
     }
+    #endif
     
     func testExpression() throws {
         guard #available(FoundationPredicate 0.4, *) else {
@@ -472,5 +469,4 @@ final class PredicateTests: XCTestCase {
             XCTAssertEqual(try expression.evaluate(i), i + 1)
         }
     }
-    #endif
 }

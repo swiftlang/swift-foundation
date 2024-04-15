@@ -455,7 +455,6 @@ extension Predicate : CustomStringConvertible {
     }
 }
 
-@_spi(Expression)
 @available(FoundationPredicate 0.4, *)
 extension Expression : CustomStringConvertible {
     public var description: String {
@@ -472,7 +471,6 @@ extension Predicate : CustomDebugStringConvertible {
     }
 }
 
-@_spi(Expression)
 @available(FoundationPredicate 0.4, *)
 extension Expression : CustomDebugStringConvertible {
     public var debugDescription: String {
