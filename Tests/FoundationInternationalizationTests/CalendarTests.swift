@@ -1103,25 +1103,23 @@ final class CalendarTests : XCTestCase {
         c.timeZone = timeZone
 
         let s = Date.ISO8601FormatStyle(timeZone: timeZone)
-        let tests = [
-            // 2024-03-09T02:34:36-0800, 2024-03-17T03:34:36-0700, 10:34:36 UTC
-            (Date(timeIntervalSinceReferenceDate: 731673276), Date(timeIntervalSinceReferenceDate: 732364476)),
-
-            // 2063-03-10T02:27:06-0800, 2063-03-18T03:27:06-0700
-            (Date(timeIntervalSinceReferenceDate: 1962440826), Date(timeIntervalSinceReferenceDate: 1963132026)),
-
-            // 2024-03-08T02:34:36-0800, 2063-03-18T11:27:06-0700
-            (Date(timeIntervalSinceReferenceDate: 731586876.690495), Date(timeIntervalSinceReferenceDate: 1963160826.550588)),
-            
-            // 2024-03-03T02:34:36-0800, 2024-03-11T02:34:36-0700
-            (Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476)),
-        ]
-
-        for (start, end) in tests {
+        func test(_ start: Date, _ end: Date) throws {
             let components = try XCTUnwrap(c.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond, .weekOfMonth], from: start, to: end))
             let added = try XCTUnwrap(c.date(byAdding: components, to: start))
             XCTAssertEqual(added, end, "actual: \(s.format(added)), expected: \(s.format(end))")
         }
+
+        // 2024-03-09T02:34:36-0800, 2024-03-17T03:34:36-0700, 10:34:36 UTC
+        try test(Date(timeIntervalSinceReferenceDate: 731673276), Date(timeIntervalSinceReferenceDate: 732364476))
+
+        // 2063-03-10T02:27:06-0800, 2063-03-18T03:27:06-0700
+        try test(Date(timeIntervalSinceReferenceDate: 1962440826), Date(timeIntervalSinceReferenceDate: 1963132026))
+
+        // 2024-03-08T02:34:36-0800, 2063-03-18T11:27:06-0700
+        try test(Date(timeIntervalSinceReferenceDate: 731586876.690495), Date(timeIntervalSinceReferenceDate: 1963160826.550588))
+
+        // 2024-03-03T02:34:36-0800, 2024-03-11T02:34:36-0700
+        try test(Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476))
     }
 }
 

@@ -1892,7 +1892,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 hour = ucal_get(ucalendar, UCAL_HOUR_OF_DAY, &status)
             }
 
-
             var result = ucal_getMillis(ucalendar, &status)
             result += Double(newAmount) * unitLength
             result += leftoverTime * 1000.0

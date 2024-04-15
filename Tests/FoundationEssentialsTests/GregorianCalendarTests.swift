@@ -558,6 +558,7 @@ final class GregorianCalendarTests : XCTestCase {
         testAdding(.init(day: -1, weekday: 1), to: march1_1996, wrap: true, expected: march1_1996)
         testAdding(.init(day: -7, weekOfYear: 1), to: march1_1996, wrap: true, expected: march1_1996)
         testAdding(.init(day: -7, weekOfMonth: 1), to: march1_1996, wrap: true, expected: march1_1996)
+        testAdding(.init(day: -7, weekOfMonth: 1, weekOfYear: 1 ), to: march1_1996, wrap: true, expected: Date(timeIntervalSince1970:826328100.0))
 
         let oct24_1582 = Date(timeIntervalSince1970: -12218515200.0) // Expect: 1582-10-24T00:00:00Z
         testAdding(.init(day: -1, hour: 1), to: oct24_1582, wrap: false, expected: Date(timeIntervalSince1970:-12218598000.0))
