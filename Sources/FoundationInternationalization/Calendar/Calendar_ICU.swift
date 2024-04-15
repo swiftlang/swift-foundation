@@ -1263,7 +1263,9 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
             // No leap month support needed here, since these are quantities, not values
 
-            // Add from the largest component to the smallest
+            // Add from the largest component to the smallest to match the order used in `dateComponents(_:from:to:)` to allow round tripping
+            // The results are the same for most cases regardless of the order except for when the addition moves the date across DST transition.
+            // We aim to maintain the clock time when adding larger-than-day units, so that the time in the day remains unchanged even after time zone changes. However, we cannot hold this promise if the result lands in the "skipped hour" on the DST start date as that time does not actually exist. In this case we adjust the time of the day to the correct timezone. There is always some ambiguity, but matching the order used in `dateComponents(_:from:to:)` at least allows round tripping.
             if let amount = components.era { _ = _locked_add(UCAL_ERA, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.year { _ = _locked_add(UCAL_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.yearForWeekOfYear { _ = _locked_add(UCAL_YEAR_WOY, amount: amount, wrap: wrappingComponents, status: &status) }

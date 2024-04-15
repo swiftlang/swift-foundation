@@ -1004,8 +1004,6 @@ final class CalendarTests : XCTestCase {
             let date = calendar.date(from: dc)!
             XCTAssertEqual(date, expectation, "expect: \(date.timeIntervalSinceReferenceDate)", file: file, line: line)
         }
-        // Tuesday in the first week of 2000
-        let components_woy = DateComponents(weekday: 3, weekOfYear: 1, yearForWeekOfYear: 2000)
 
         // The first week of year 2000 is Dec 26, 1999...Jan 1, 2000
         test(.init(weekday: 3, weekOfYear: 1, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -31968000.0)) // 1999-12-28
