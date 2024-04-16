@@ -54,7 +54,7 @@ let benchmarks = {
     }
 
     // Only available in Swift 6 for non-Darwin platforms, macOS 15 for Darwin
-    #if swift(>=6.0)
+    #if compiler(>=6.0)
     if #available(macOS 15, *) {
         Benchmark("nextThousandThanksgivingsSequence") { benchmark in
             var count = 1000
