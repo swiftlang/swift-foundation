@@ -307,7 +307,7 @@ extension _FileManagerImpl {
         }
     }
     
-    #if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK
     func getRelationship(
         _ outRelationship: UnsafeMutablePointer<FileManager.URLRelationship>,
         ofDirectoryAt directoryURL: URL,
@@ -373,14 +373,16 @@ extension _FileManagerImpl {
 #endif
     
     func changeCurrentDirectoryPath(_ path: String) -> Bool {
+#if os(Windows)
+        return (try? path.withNTPathRepresentation {
+            SetCurrentDirectoryW($0)
+        }) ?? false
+#else
         fileManager.withFileSystemRepresentation(for: path) { rep in
             guard let rep else { return false }
-#if os(Windows)
-            return SetCurrentDirectoryW(rep)
-#else
             return chdir(rep) == 0
-#endif
         }
+#endif
     }
     
     var currentDirectoryPath: String? {
