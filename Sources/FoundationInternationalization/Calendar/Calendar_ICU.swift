@@ -1262,20 +1262,29 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             var nanosecond = 0
 
             // No leap month support needed here, since these are quantities, not values
+
+            // Add from the largest component to the smallest to match the order used in `dateComponents(_:from:to:)` to allow round tripping
+            // The results are the same for most cases regardless of the order except for when the addition moves the date across DST transition.
+            // We aim to maintain the clock time when adding larger-than-day units, so that the time in the day remains unchanged even after time zone changes. However, we cannot hold this promise if the result lands in the "skipped hour" on the DST start date as that time does not actually exist. In this case we adjust the time of the day to the correct timezone. There is always some ambiguity, but matching the order used in `dateComponents(_:from:to:)` at least allows round tripping.
             if let amount = components.era { _ = _locked_add(UCAL_ERA, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.year { _ = _locked_add(UCAL_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.yearForWeekOfYear { _ = _locked_add(UCAL_YEAR_WOY, amount: amount, wrap: wrappingComponents, status: &status) }
             // TODO: Support quarter
             // if let _ = components.quarter {  }
             if let amount = components.month { _ = _locked_add(UCAL_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
-            if let amount = components.day { _ = _locked_add(UCAL_DAY_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
-            if let amount = components.dayOfYear { _ = _locked_add(UCAL_DAY_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
+
+            // Weeks
             if let amount = components.weekOfYear { _ = _locked_add(UCAL_WEEK_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
+            if let amount = components.weekOfMonth { _ = _locked_add(UCAL_WEEK_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
+            if let amount = components.weekdayOrdinal { _ = _locked_add(UCAL_DAY_OF_WEEK_IN_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
             // `week` is for backward compatibility only, and is only used if weekOfYear is missing
             if let amount = components.week, components.weekOfYear == nil { _ = _locked_add(UCAL_WEEK_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
-            if let amount = components.weekOfMonth { _ = _locked_add(UCAL_WEEK_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
+
+            // Days
+            if let amount = components.day { _ = _locked_add(UCAL_DAY_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
+            if let amount = components.dayOfYear { _ = _locked_add(UCAL_DAY_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.weekday { _ = _locked_add(UCAL_DAY_OF_WEEK, amount: amount, wrap: wrappingComponents, status: &status) }
-            if let amount = components.weekdayOrdinal { _ = _locked_add(UCAL_DAY_OF_WEEK_IN_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
+
             if let amount = components.hour { _ = _locked_add(UCAL_HOUR_OF_DAY, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.minute { _ = _locked_add(UCAL_MINUTE, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.second { _ = _locked_add(UCAL_SECOND, amount: amount, wrap: wrappingComponents, status: &status) }

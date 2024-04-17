@@ -1004,8 +1004,6 @@ final class CalendarTests : XCTestCase {
             let date = calendar.date(from: dc)!
             XCTAssertEqual(date, expectation, "expect: \(date.timeIntervalSinceReferenceDate)", file: file, line: line)
         }
-        // Tuesday in the first week of 2000
-        let components_woy = DateComponents(weekday: 3, weekOfYear: 1, yearForWeekOfYear: 2000)
 
         // The first week of year 2000 is Dec 26, 1999...Jan 1, 2000
         test(.init(weekday: 3, weekOfYear: 1, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -31968000.0)) // 1999-12-28
@@ -1083,6 +1081,46 @@ final class CalendarTests : XCTestCase {
         }
     }
     
+
+    func test_addingDaysAndWeeks() throws {
+        let timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = timeZone
+
+        let s = Date.ISO8601FormatStyle(timeZone: timeZone)
+        let a = Date(timeIntervalSinceReferenceDate: 731673276) // "2024-03-09T02:34:36-0800", 10:34:36 UTC
+        let d1_w1 = c.date(byAdding: .init(day: 1, weekOfMonth: 1), to: a)!
+        let exp = try Date("2024-03-17T02:34:36-0700", strategy: s)
+        XCTAssertEqual(d1_w1, exp)
+
+        let d8 = c.date(byAdding: .init(day: 8), to: a)!
+        XCTAssertEqual(d8, exp)
+    }
+
+    func test_addingDifferencesRoundtrip() throws {
+        let timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = timeZone
+
+        let s = Date.ISO8601FormatStyle(timeZone: timeZone)
+        func test(_ start: Date, _ end: Date) throws {
+            let components = try XCTUnwrap(c.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond, .weekOfMonth], from: start, to: end))
+            let added = try XCTUnwrap(c.date(byAdding: components, to: start))
+            XCTAssertEqual(added, end, "actual: \(s.format(added)), expected: \(s.format(end))")
+        }
+
+        // 2024-03-09T02:34:36-0800, 2024-03-17T03:34:36-0700, 10:34:36 UTC
+        try test(Date(timeIntervalSinceReferenceDate: 731673276), Date(timeIntervalSinceReferenceDate: 732364476))
+
+        // 2063-03-10T02:27:06-0800, 2063-03-18T03:27:06-0700
+        try test(Date(timeIntervalSinceReferenceDate: 1962440826), Date(timeIntervalSinceReferenceDate: 1963132026))
+
+        // 2024-03-08T02:34:36-0800, 2063-03-18T11:27:06-0700
+        try test(Date(timeIntervalSinceReferenceDate: 731586876.690495), Date(timeIntervalSinceReferenceDate: 1963160826.550588))
+
+        // 2024-03-03T02:34:36-0800, 2024-03-11T02:34:36-0700
+        try test(Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476))
+    }
 }
 
 // MARK: - Bridging Tests
