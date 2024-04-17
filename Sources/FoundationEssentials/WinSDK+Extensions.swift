@@ -81,6 +81,10 @@ package var ERROR_SHARING_VIOLATION: DWORD {
     DWORD(WinSDK.ERROR_SHARING_VIOLATION)
 }
 
+package var ERROR_SUCCESS: DWORD {
+    DWORD(WinSDK.ERROR_SUCCESS)
+}
+
 package var ERROR_WRITE_FAULT: DWORD {
     DWORD(WinSDK.ERROR_WRITE_FAULT)
 }
@@ -129,6 +133,14 @@ package var FILE_SHARE_WRITE: DWORD {
     DWORD(WinSDK.FILE_SHARE_WRITE)
 }
 
+package var FIND_FIRST_EX_LARGE_FETCH: DWORD {
+    DWORD(WinSDK.FIND_FIRST_EX_LARGE_FETCH)
+}
+
+package var FIND_FIRST_EX_ON_DISK_ENTRIES_ONLY: DWORD {
+    DWORD(WinSDK.FIND_FIRST_EX_ON_DISK_ENTRIES_ONLY)
+}
+
 package var GENERIC_READ: DWORD {
     DWORD(WinSDK.GENERIC_READ)
 }
@@ -155,6 +167,40 @@ package var TOKEN_QUERY: DWORD {
 
 package var VOLUME_NAME_DOS: DWORD {
     DWORD(WinSDK.VOLUME_NAME_DOS)
+}
+
+package func PathAllocCombine(_ pszPathIn: String, _ pszMore: String, _ dwFlags: ULONG, _ ppszPathOut: UnsafeMutablePointer<PWSTR?>?) -> HRESULT {
+    pszPathIn.withCString(encodedAs: UTF16.self) { pszPathIn in
+        pszMore.withCString(encodedAs: UTF16.self) { pszMore in
+            WinSDK.PathAllocCombine(pszPathIn, pszMore, dwFlags, ppszPathOut)
+        }
+    }
+}
+
+@inline(__always)
+package func HRESULT_CODE(_ hr: HRESULT) -> DWORD {
+    DWORD(hr) & 0xffff
+}
+
+@inline(__always)
+package func HRESULT_FACILITY(_ hr: HRESULT) -> DWORD {
+    DWORD(hr << 16) & 0x1fff
+}
+
+@inline(__always)
+package func SUCCEEDED(_ hr: HRESULT) -> Bool {
+    hr >= 0
+}
+
+// This is a non-standard extension to the Windows SDK that allows us to convert
+// an HRESULT to a Win32 error code.
+@inline(__always)
+internal func WIN32_FROM_HRESULT(_ hr: HRESULT) -> DWORD {
+    if SUCCEEDED(hr) { return ERROR_SUCCESS }
+    if HRESULT_FACILITY(hr) == FACILITY_WIN32 {
+        return HRESULT_CODE(hr)
+    }
+    return DWORD(hr)
 }
 
 #endif
