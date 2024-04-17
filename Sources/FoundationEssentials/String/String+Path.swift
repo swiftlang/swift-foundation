@@ -137,6 +137,81 @@ extension String {
     
     #if !NO_FILESYSTEM
     internal static func homeDirectoryPath(forUser user: String? = nil) -> String {
+#if os(Windows)
+        func GetUserProfile() -> String? {
+            return "USERPROFILE".withCString(encodedAs: UTF16.self) { pwszVariable in
+                let dwLength: DWORD = GetEnvironmentVariableW(pwszVariable, nil, 0)
+                // Ensure that `USERPROFILE` is defined.
+                if dwLength == 0 { return nil }
+                return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
+                    guard GetEnvironmentVariableW(pwszVariable, $0.baseAddress, dwLength) == dwLength - 1 else {
+                        return nil
+                    }
+                    return String(decoding: $0, as: UTF16.self)
+                }
+            }
+        }
+
+        if let user {
+            return user.withCString(encodedAs: UTF16.self) { pwszUserName in
+                var cbSID: DWORD = 0
+                var cchReferencedDomainName: DWORD = 0
+                var eUse: SID_NAME_USE = SidTypeUnknown
+                guard LookupAccountNameW(nil, pwszUserName, nil, &cbSID, nil, &cchReferencedDomainName, &eUse) else {
+                    fatalError("unable to lookup SID for user \(user)")
+                }
+
+                return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(cbSID)) { pSID in
+                    return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(cchReferencedDomainName)) { pwszReferencedDomainName in
+                        guard LookupAccountNameW(nil, pwszUserName, pSID.baseAddress, &cbSID, pwszReferencedDomainName.baseAddress, &cchReferencedDomainName, &eUse) else {
+                            fatalError("unable to lookup SID for user \(user)")
+                        }
+
+                        var pwszSID: LPWSTR? = nil
+                        guard ConvertSidToStringSidW(pSID.baseAddress, &pwszSID) else {
+                            fatalError("unable to convert SID to string for user \(user)")
+                        }
+
+                        return #"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\#\(String(decodingCString: pwszSID!, as: UTF16.self))"#.withCString(encodedAs: UTF16.self) { pwszKeyPath in
+                            return "ProfileImagePath".withCString(encodedAs: UTF16.self) { pwszKey in
+                                var cbData: DWORD = 0
+                                guard RegGetValueW(HKEY_LOCAL_MACHINE, pwszKeyPath, pwszKey, RRF_RT_REG_SZ, nil, nil, &cbData) == ERROR_SUCCESS else {
+                                    fatalError("unable to query ProfileImagePath for user \(user)")
+                                }
+                                return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(cbData)) { pwszData in
+                                    guard RegGetValueW(HKEY_LOCAL_MACHINE, pwszKeyPath, pwszKey, RRF_RT_REG_SZ, nil, pwszData.baseAddress, &cbData) == ERROR_SUCCESS else {
+                                        fatalError("unable to query ProfileImagePath for user \(user)")
+                                    }
+                                    return String(decodingCString: pwszData.baseAddress!, as: UTF16.self)
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+
+        var hToken: HANDLE? = nil
+        guard OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) else {
+            guard let UserProfile = GetUserProfile() else {
+                fatalError("unable to evaluate `%UserProfile%`")
+            }
+            return UserProfile
+        }
+        defer { CloseHandle(hToken) }
+
+        var dwcchSize: DWORD = 0
+        _ = GetUserProfileDirectoryW(hToken, nil, &dwcchSize)
+
+        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwcchSize)) {
+            var dwcchSize: DWORD = DWORD($0.count)
+            guard GetUserProfileDirectoryW(hToken, $0.baseAddress, &dwcchSize) else {
+                fatalError("unable to query user profile directory")
+            }
+            return String(decoding: $0, as: UTF16.self)
+        }
+#else
         #if targetEnvironment(simulator)
         if user == nil, let envValue = getenv("CFFIXED_USER_HOME") ?? getenv("HOME") {
             return String(cString: envValue).standardizingPath
@@ -169,6 +244,7 @@ extension String {
         
         // If all else fails, log and fall back to /var/empty
         return "/var/empty"
+#endif
     }
     
     // From swift-corelibs-foundation's NSTemporaryDirectory. Internal for now, pending a better public API.
@@ -373,6 +449,24 @@ extension String {
     
     func _resolvingSymlinksInPath() -> String? {
         guard !isEmpty else { return nil }
+
+#if os(Windows)
+        return try? self.withNTPathRepresentation {
+            let hFile: HANDLE = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
+            if hFile == INVALID_HANDLE_VALUE {
+                return nil
+            }
+            defer { CloseHandle(hFile) }
+
+            let dwLength: DWORD = GetFinalPathNameByHandleW(hFile, nil, 0, VOLUME_NAME_DOS)
+            return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
+                guard GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwLength, VOLUME_NAME_DOS) == dwLength - 1 else {
+                    return nil
+                }
+                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+            }
+        }
+#else
         return self.withFileSystemRepresentation { fsPtr -> String? in
             guard let fsPtr else { return nil }
             // If not using the cache (which may not require hitting the disk at all if it's warm), try getting the full path from getattrlist.
@@ -456,6 +550,7 @@ extension String {
                 }
             }
         }
+#endif
     }
     
     var resolvingSymlinksInPath: String {
