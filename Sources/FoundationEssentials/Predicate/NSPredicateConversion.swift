@@ -574,7 +574,6 @@ extension NSPredicate {
     }
 }
 
-@_spi(Expression)
 @available(FoundationPredicate 0.4, *)
 extension NSExpression {
     public convenience init?<Input, Output>(_ expression: Expression<Input, Output>) where Input : NSObject {

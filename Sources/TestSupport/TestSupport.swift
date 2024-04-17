@@ -15,7 +15,7 @@
 // See this issue for more info on this file: https://github.com/apple/swift-foundation/issues/40
 
 #if FOUNDATION_FRAMEWORK
-@_spi(Expression) @testable import Foundation
+@testable import Foundation
 
 public typealias Calendar = Foundation.Calendar
 public typealias TimeZone = Foundation.TimeZone
@@ -108,17 +108,16 @@ public typealias StandardPredicateExpression = Foundation.StandardPredicateExpre
 public typealias PredicateError = Foundation.PredicateError
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateCodableConfiguration = Foundation.PredicateCodableConfiguration
-@_spi(Expression)
 @available(FoundationPredicate 0.4, *)
 public typealias Expression = Foundation.Expression
 #else
 
 #if DEBUG
-@_exported @testable @_spi(Expression) import FoundationEssentials
+@_exported @testable import FoundationEssentials
 @_exported @testable import FoundationInternationalization
 // XCTest implicitly imports Foundation
 #else
-@_exported @_spi(Expression) import FoundationEssentials
+@_exported import FoundationEssentials
 @_exported import FoundationInternationalization
 // XCTest implicitly imports Foundation
 #endif
@@ -210,7 +209,6 @@ public typealias PredicateExpressions = FoundationEssentials.PredicateExpression
 public typealias StandardPredicateExpression = FoundationEssentials.StandardPredicateExpression
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateError = FoundationEssentials.PredicateError
-@_spi(Expression)
 @available(FoundationPredicate 0.4, *)
 public typealias Expression = FoundationEssentials.Expression
 
