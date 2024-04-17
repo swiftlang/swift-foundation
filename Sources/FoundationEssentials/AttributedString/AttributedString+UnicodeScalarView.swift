@@ -187,7 +187,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         from start: AttributedString.Index,
         to end: AttributedString.Index
     ) -> Int {
-        if #available(macOS 13, iOS 16, tvOS 16, watchOS 9, *) {
+        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _distance(from: start, to: end)
         }
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
@@ -195,7 +195,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return _defaultDistance(from: start, to: end)
     }
 
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _distance(
         from start: AttributedString.Index,
