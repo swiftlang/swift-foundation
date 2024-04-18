@@ -158,7 +158,7 @@ class DataIOTests : XCTestCase {
     }
     
 #if FOUNDATION_FRAMEWORK
-    // Progress is curently stubbed out for FoundationPreview
+    // Progress is currently stubbed out for FoundationPreview
     func test_writeWithProgress() throws {
         let url = testURL()
         

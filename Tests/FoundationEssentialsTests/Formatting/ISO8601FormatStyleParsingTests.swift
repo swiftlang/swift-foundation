@@ -20,7 +20,7 @@ import TestSupport
 
 final class ISO8601FormatStyleParsingTests: XCTestCase {
 
-    /// See also the format-only tests in DateISO8601ForamtStyleEssentialsTests
+    /// See also the format-only tests in DateISO8601FormatStyleEssentialsTests
     func test_ISO8601Parse() throws {
         let iso8601 = Date.ISO8601FormatStyle()
 
