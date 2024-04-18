@@ -64,7 +64,7 @@ enum ResolvedDateComponents {
     case weekOfYear(year: Int, weekOfYear: Int?, weekday: Int?)
     case weekOfMonth(year: Int, month: Int, weekOfMonth: Int, weekday: Int?)
 
-    // Pick the year field between yearForWeekOfYear and year and resovles era
+    // Pick the year field between yearForWeekOfYear and year and resolves era
     static func yearOrYearForWOYAdjustingEra(from components: DateComponents) -> (year: Int, month: Int) {
         var rawYear: Int
         // Don't adjust for era if week is also specified

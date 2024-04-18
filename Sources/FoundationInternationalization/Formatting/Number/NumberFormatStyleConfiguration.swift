@@ -629,7 +629,7 @@ extension NumberFormatStyleConfiguration.Precision {
 
     private func integerAndFractionalLengthSkeleton(minInt: Int?, maxInt: Int?, minFrac: Int?, maxFrac: Int?) -> String {
         var stem: String = ""
-        // Construct skeleton for fractonal part
+        // Construct skeleton for fractional part
         if minFrac != nil || maxFrac != nil {
             if maxFrac == 0 {
                 stem += "precision-integer"
