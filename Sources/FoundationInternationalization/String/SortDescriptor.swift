@@ -931,7 +931,7 @@ extension NSSortDescriptor {
         // This `init` used to unconditionally accept all `SortDescriptor`s,
         // which were guaranteed to have a valid `keyString` property because
         // the `Compared` value is an `NSObject`. This `init` was deprecated
-        // becasue we introduced ways to create `SortDescriptor` values that do
+        // because we introduced ways to create `SortDescriptor` values that do
         // not have such valid properties. At the deprecation, we introduced an
         // replacement `init` that requires `Compared: NSObject`, providing the
         // same level of always-valid-conversion to existing users.
