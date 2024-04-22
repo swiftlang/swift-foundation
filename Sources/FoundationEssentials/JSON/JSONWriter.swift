@@ -128,20 +128,14 @@ internal struct JSONWriter {
 
     private var indent = 0
     private let pretty: Bool
-#if FOUNDATION_FRAMEWORK
-    // https://github.com/apple/swift-foundation/issues/284
     private let sortedKeys: Bool
-#endif
     private let withoutEscapingSlashes: Bool
 
     var data = Data()
 
     init(options: WritingOptions) {
         pretty = options.contains(.prettyPrinted)
-#if FOUNDATION_FRAMEWORK
-        // https://github.com/apple/swift-foundation/issues/284
         sortedKeys = options.contains(.sortedKeys)
-#endif
         withoutEscapingSlashes = options.contains(.withoutEscapingSlashes)
         data = Data()
     }
@@ -352,19 +346,10 @@ internal struct JSONWriter {
             try serializeJSON(value, depth: depth)
         }
 
-#if FOUNDATION_FRAMEWORK && !NO_LOCALIZATION
         if sortedKeys {
-            // TODO: Until we have a solution for sorting like Locale.system in FoundationEssentials or with the help of FoundationLocalization, this comparison requires bridging back to NSString. To avoid the extreme overhead of bridging the strings on every comparison, we'll do it up front instead.
-            // https://github.com/apple/swift-foundation/issues/284
-            let nsKeysAndValues = dict.map {
-                (key: $0.key as NSString, value: $0.value)
+            let elems = dict.sorted { a, b in
+                a.key.utf8.lexicographicallyPrecedes(b.key.utf8)
             }
-            let elems = nsKeysAndValues.sorted(by: { a, b in
-                let options: String.CompareOptions = [.numeric, .caseInsensitive, .forcedOrdering]
-                let range = NSMakeRange(0, a.key.length)
-                let locale = Locale.system
-                return a.key.compare(b.key as String, options: options, range: range, locale: locale) == .orderedAscending
-            })
             for elem in elems {
                 try serializeObjectElement(key: elem.key as String, value: elem.value, depth: depth)
             }
@@ -373,11 +358,6 @@ internal struct JSONWriter {
                 try serializeObjectElement(key: key, value: value, depth: depth)
             }
         }
-#else
-        for (key, value) in dict {
-            try serializeObjectElement(key: key, value: value, depth: depth)
-        }
-#endif // FOUNDATION_FRAMEWORK
 
         if pretty {
             writer("\n")
