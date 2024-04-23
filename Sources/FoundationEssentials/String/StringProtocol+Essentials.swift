@@ -34,11 +34,21 @@ extension String {
                     }
                 }
             } else {
+                var earlyCheckAllASCII = self.utf8.withContiguousStorageIfAvailable {
+                    _allASCII($0)
+                }
+                if let earlyCheckAllASCII, !earlyCheckAllASCII {
+                    return nil
+                }
                 var data = Data(count: self.utf8.count)
                 let allASCII = data.withUnsafeMutableBytes {
                     $0.withMemoryRebound(to: UInt8.self) { buffer in
                         buffer.initializeAll(fromContentsOf: self.utf8)
-                        return _allASCII(UnsafeBufferPointer(buffer))
+                        if let earlyCheckAllASCII {
+                            return earlyCheckAllASCII
+                        } else {
+                            return _allASCII(UnsafeBufferPointer(buffer))
+                        }
                     }
                 }
                 return allASCII ? data : nil
