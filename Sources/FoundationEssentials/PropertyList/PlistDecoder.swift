@@ -30,9 +30,9 @@ open class PropertyListDecoder {
     public typealias PropertyListFormat = PropertyListSerialization.PropertyListFormat
 #else
     public enum PropertyListFormat : UInt, Sendable  {
-        case xml
-        case binary
-        case openStep
+        case xml = 100
+        case binary = 200
+        case openStep = 1
     }
 #endif
     // MARK: Options
