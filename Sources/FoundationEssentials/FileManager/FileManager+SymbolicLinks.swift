@@ -43,7 +43,7 @@ extension _FileManagerImpl {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, destURL)
         }
 
-        try createSymbolicLink(atPath: path, withDestinationPath: destPath)
+        try fileManager.createSymbolicLink(atPath: path, withDestinationPath: destPath)
     }
     
     func createSymbolicLink(
@@ -101,7 +101,7 @@ extension _FileManagerImpl {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, dstURL)
         }
         
-        try linkItem(atPath: srcPath, toPath: dstPath)
+        try fileManager.linkItem(atPath: srcPath, toPath: dstPath)
     }
     
     func linkItem(
