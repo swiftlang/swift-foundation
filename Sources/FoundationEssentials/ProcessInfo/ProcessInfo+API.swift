@@ -84,6 +84,16 @@ public struct OperatingSystemVersion: Hashable, Codable, Sendable {
     public let majorVersion: Int
     public let minorVersion: Int
     public let patchVersion: Int
+    
+    public init() {
+        self.init(majorVersion: 0, minorVersion: 0, patchVersion: 0)
+    }
+    
+    public init(majorVersion: Int, minorVersion: Int, patchVersion: Int) {
+        self.majorVersion = majorVersion
+        self.minorVersion = minorVersion
+        self.patchVersion = patchVersion
+    }
 }
 
 // MARK: - Getting Computer Information

@@ -202,12 +202,27 @@ extension Platform {
 extension Platform {
 #if !FOUNDATION_FRAMEWORK
     static func getHostname() -> String {
+#if os(Windows)
+        var dwLength: DWORD = 0
+        GetComputerNameExA(ComputerNameDnsHostname, nil, &dwLength)
+        guard dwLength > 0 else { return "localhost" }
+
+        return withUnsafeTemporaryAllocation(of: Int8.self, capacity: dwLength + 1) { hostname in
+            guard GetComputerNameExA(ComputerNameDnsHostname, hostname.baseAddress!, &dwLength) else {
+                return "localhost"
+            }
+            return String(cString: hostname)
+        }
+#elseif os(WASI) // WASI does not have uname
+        return "localhost"
+#else
         return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Platform.MAX_HOSTNAME_LENGTH + 1) {
             guard gethostname($0.baseAddress!, numericCast(Platform.MAX_HOSTNAME_LENGTH)) == 0 else {
-                return ""
+                return "localhost"
             }
             return String(cString: $0.baseAddress!)
         }
+#endif
     }
 #endif // !FOUNDATION_FRAMEWORK
 }
