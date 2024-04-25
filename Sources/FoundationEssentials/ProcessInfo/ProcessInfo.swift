@@ -262,23 +262,24 @@ extension _ProcessInfo {
         // do our best here to construct something consistent. Unfortunately, to provide a useful result, this requires
         // hardcoding several of the somewhat ambiguous values in the table provided here:
         //  https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_osversioninfoexw#remarks
-        switch (osVersionInfo.dwMajorVersion, osVersionInfo.dwMinorVersion) {
-            case (5, 0): versionString += " 2000"
-            case (5, 1): versionString += " XP"
-            case (5, 2) where osVersionInfo.wProductType == VER_NT_WORKSTATION: versionString += " XP Professional x64"
-            case (5, 2) where osVersionInfo.wSuiteMask == VER_SUITE_WH_SERVER: versionString += " Home Server"
-            case (5, 2): versionString += " Server 2003"
-            case (6, 0) where osVersionInfo.wProductType == VER_NT_WORKSTATION: versionString += " Vista"
-            case (6, 0): versionString += " Server 2008"
-            case (6, 1) where osVersionInfo.wProductType == VER_NT_WORKSTATION: versionString += " 7"
-            case (6, 1): versionString += " Server 2008 R2"
-            case (6, 2) where osVersionInfo.wProductType == VER_NT_WORKSTATION: versionString += " 8"
-            case (6, 2): versionString += " Server 2012"
-            case (6, 3) where osVersionInfo.wProductType == VER_NT_WORKSTATION: versionString += " 8.1"
-            case (6, 3): versionString += " Server 2012 R2" // We assume the "10,0" numbers in the table for this are a typo
-            case (10, 0) where osVersionInfo.wProductType == VER_NT_WORKSTATION: versionString += " 10"
-            case (10, 0): versionString += " Server 2019" // The table gives identical values for 2016 and 2019, so we just assume 2019 here
-            case let (maj, min): versionString += " \(maj).\(min)" // If all else fails, just give the raw version number
+        versionString += " "
+        versionString += switch (osVersionInfo.dwMajorVersion, osVersionInfo.dwMinorVersion) {
+            case (5, 0): "2000"
+            case (5, 1): "XP"
+            case (5, 2) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "XP Professional x64"
+            case (5, 2) where osVersionInfo.wSuiteMask == VER_SUITE_WH_SERVER: "Home Server"
+            case (5, 2): "Server 2003"
+            case (6, 0) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "Vista"
+            case (6, 0): "Server 2008"
+            case (6, 1) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "7"
+            case (6, 1): "Server 2008 R2"
+            case (6, 2) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "8"
+            case (6, 2): "Server 2012"
+            case (6, 3) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "8.1"
+            case (6, 3): "Server 2012 R2" // We assume the "10,0" numbers in the table for this are a typo
+            case (10, 0) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "10"
+            case (10, 0): "Server 2019" // The table gives identical values for 2016 and 2019, so we just assume 2019 here
+            case let (maj, min): "\(maj).\(min)" // If all else fails, just give the raw version number
         }
         versionString += " (build \(osVersionInfo.dwBuildNumber))"
         // For now we ignore the `szCSDVersion`, `wServicePackMajor`, and `wServicePackMinor` values.
