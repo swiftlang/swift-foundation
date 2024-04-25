@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+#if canImport(TestSupport)
+import TestSupport
+#endif
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
@@ -28,117 +30,164 @@ import Glibc
 /// these tests simply check that the values returned are not empty
 final class ProcessInfoTests : XCTestCase {
     func testArguments() {
-        let args = _ProcessInfo.processInfo.arguments
+        let args = ProcessInfo.processInfo.arguments
         XCTAssertTrue(
             !args.isEmpty,"arguments should not have been empty")
     }
 
     func testEnvironment() {
-        let env = _ProcessInfo.processInfo.environment
+#if os(Windows)
+        func setenv(_ key: String, _ value: String, _ overwrite: Int) -> Int32 {
+          assert(overwrite == 1)
+          guard !key.contains("=") else {
+              errno = EINVAL
+              return -1
+          }
+          return _putenv("\(key)=\(value)")
+        }
+#endif
+        let env = ProcessInfo.processInfo.environment
         XCTAssertTrue(
             !env.isEmpty, "environment should not have been empty")
+        
+        let preset = ProcessInfo.processInfo.environment["test"]
+        setenv("test", "worked", 1)
+        let postset = ProcessInfo.processInfo.environment["test"]
+        XCTAssertNil(preset)
+        XCTAssertEqual(postset, "worked")
     }
 
     func testProcessIdentifier() {
-        let pid = _ProcessInfo.processInfo.processIdentifier
+        let pid = ProcessInfo.processInfo.processIdentifier
         XCTAssertEqual(
             pid, getpid(), "ProcessInfo disagrees with getpid()")
     }
 
     func testGlobalUniqueString() {
-        let unique = _ProcessInfo.processInfo.globallyUniqueString
+        let unique = ProcessInfo.processInfo.globallyUniqueString
         XCTAssertNotEqual(
             unique,
-            _ProcessInfo.processInfo.globallyUniqueString,
+            ProcessInfo.processInfo.globallyUniqueString,
             "globallyUniqueString should never return the same string twice")
     }
 
     func testOperatingSystemVersionString() {
-        let version = _ProcessInfo.processInfo.operatingSystemVersionString
-        XCTAssertTrue(
-            !version.isEmpty, "ProcessInfo returned empty string for operation system version")
+        let version = ProcessInfo.processInfo.operatingSystemVersionString
+        XCTAssertFalse(version.isEmpty, "ProcessInfo returned empty string for operation system version")
+        #if os(Windows)
+        XCTAssertTrue(version.starts(with: "Windows"), "'\(version)' did not start with 'Windows'")
+        #endif
     }
 
     func testProcessorCount() {
-        let count = _ProcessInfo.processInfo.processorCount
+        let count = ProcessInfo.processInfo.processorCount
         XCTAssertTrue(count > 0, "ProcessInfo doesn't think we have any processors")
     }
 
     func testActiveProcessorCount() {
-        let count = _ProcessInfo.processInfo.activeProcessorCount
+        let count = ProcessInfo.processInfo.activeProcessorCount
         XCTAssertTrue(count > 0, "ProcessInfo doesn't think we have any active processors")
     }
 
     func testPhysicalMemory() {
-        let memory = _ProcessInfo.processInfo.physicalMemory
+        let memory = ProcessInfo.processInfo.physicalMemory
         XCTAssertTrue(memory > 0, "ProcessInfo doesn't think we have any memory")
     }
 
     func testSystemUpTime() {
-        let now = _ProcessInfo.processInfo.systemUptime
+        let now = ProcessInfo.processInfo.systemUptime
         XCTAssertTrue(
             now > 1, "ProcessInfo returned an unrealistically low system uptime")
         // Sleep for 0.1s
         var ts: timespec = timespec(tv_sec: 0, tv_nsec: 100000000)
         nanosleep(&ts, nil)
         XCTAssertTrue(
-            _ProcessInfo.processInfo.systemUptime > now,
+            ProcessInfo.processInfo.systemUptime > now,
             "ProcessInfo returned the same system uptime with 400")
 
     }
 
-#if canImport(Darwin) // Only test on Apple's OSs
-    func testOperatingSystemVersion() {
-        let version = _ProcessInfo.processInfo.operatingSystemVersion
+    func testOperatingSystemVersion() throws {
+        #if canImport(Darwin)
+        let version = ProcessInfo.processInfo.operatingSystemVersion
         #if os(visionOS)
         let expectedMinMajorVersion = 1
         #else
         let expectedMinMajorVersion = 2
         #endif
-        XCTAssertTrue(
-            version.major >= expectedMinMajorVersion,
-            "Unrealistic major system version")
+        XCTAssertGreaterThanOrEqual(version.majorVersion, expectedMinMajorVersion, "Unrealistic major system version")
+        #elseif os(Windows) || os(Linux)
+        let minVersion = OperatingSystemVersion(majorVersion: 1, minorVersion: 0, patchVersion: 0)
+        XCTAssertTrue(ProcessInfo.processInfo.isOperatingSystemAtLeast(minVersion))
+        #else
+        throw XCTSkip("This test is not supported on this platform")
+        #endif
     }
 
-    func testOperatingSystemIsAtLeastVersion() {
+    func testOperatingSystemIsAtLeastVersion() throws {
+        #if !canImport(Darwin)
+        throw XCTSkip("This test is not supported on this platform")
+        #else
         #if os(watchOS)
-        XCTAssertTrue(_ProcessInfo.processInfo
+        XCTAssertTrue(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
-                (major: 1, minor: 12, patch: 0)
+                OperatingSystemVersion(majorVersion: 1, minorVersion: 12, patchVersion: 0)
             ),
         "ProcessInfo thinks 1.12 is > than 2.something")
-        XCTAssertTrue(_ProcessInfo.processInfo
+        XCTAssertTrue(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
-                (major: 1, minor: 0, patch: 0)
+                OperatingSystemVersion(majorVersion: 1, minorVersion: 0, patchVersion: 0)
             ),
         "ProcessInfo thinks we are on watchOS 1")
         #elseif os(macOS) || os(iOS)
-        XCTAssertTrue(_ProcessInfo.processInfo
+        XCTAssertTrue(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
-                (major: 6, minor: 12, patch: 0)
+                OperatingSystemVersion(majorVersion: 6, minorVersion: 12, patchVersion: 0)
             ),
         "ProcessInfo thinks 6.12 is > than 10.something")
-        XCTAssertTrue(_ProcessInfo.processInfo
+        XCTAssertTrue(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
-                (major: 6, minor: 0, patch: 0)
+                OperatingSystemVersion(majorVersion: 6, minorVersion: 0, patchVersion: 0)
             ),
         "ProcessInfo thinks we are on System 5")
         #endif
-        XCTAssertFalse(_ProcessInfo.processInfo
+        XCTAssertFalse(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
-                (major: 70, minor: 0, patch: 0)
+                OperatingSystemVersion(majorVersion: 70, minorVersion: 0, patchVersion: 0)
             ),
         "ProcessInfo thinks we are on System 70")
+        #endif
     }
-#endif
 
 #if os(macOS)
     func testUserName() {
-        XCTAssertFalse(_ProcessInfo.processInfo.userName.isEmpty)
+        XCTAssertFalse(ProcessInfo.processInfo.userName.isEmpty)
     }
 
     func testFullUserName() {
-        XCTAssertFalse(_ProcessInfo.processInfo.fullUserName.isEmpty)
+        XCTAssertFalse(ProcessInfo.processInfo.fullUserName.isEmpty)
     }
 #endif
+    
+    func testProcessName() {
+#if os(Windows)
+        let targetName = "swift-foundationPackageTests.exe"
+#elseif os(Linux)
+        let targetName = "FoundationPreviewPackageTests.xctest"
+#else
+        let targetName = "xctest"
+#endif
+        let processInfo = ProcessInfo.processInfo
+        let originalProcessName = processInfo.processName
+        XCTAssertEqual(originalProcessName, targetName)
+        
+        // Try assigning a new process name.
+        let newProcessName = "TestProcessName"
+        processInfo.processName = newProcessName
+        XCTAssertEqual(processInfo.processName, newProcessName)
+        
+        // Assign back to the original process name.
+        processInfo.processName = originalProcessName
+        XCTAssertEqual(processInfo.processName, originalProcessName)
+    }
 }
