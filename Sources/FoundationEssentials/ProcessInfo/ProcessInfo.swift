@@ -426,6 +426,11 @@ extension _ProcessInfo {
         }
         return Int(count)
 #elseif os(Linux) || os(FreeBSD)
+        #if os(Linux)
+        if let fsCount = Self.fsCoreCount() {
+            return fsCount
+        }
+        #endif
         return Int(sysconf(Int32(_SC_NPROCESSORS_ONLN)))
 #elseif os(Windows)
         var sysInfo = SYSTEM_INFO()
@@ -435,6 +440,67 @@ extension _ProcessInfo {
         return 0
 #endif
     }
+    
+#if os(Linux)
+    // Support for CFS quotas for cpu count as used by Docker.
+    // Based on swift-nio code, https://github.com/apple/swift-nio/pull/1518
+    private static let cfsQuotaPath = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
+    private static let cfsPeriodPath = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
+    private static let cpuSetPath = "/sys/fs/cgroup/cpuset/cpuset.cpus"
+
+    private static func firstLineOfFile(path: String) throws -> Substring {
+        // TODO: Replace with URL version once that is available in FoundationEssentials
+        let data = try Data(contentsOf: path)
+        if let string = String(data: data, encoding: .utf8), let line = string.split(separator: "\n").first {
+            return line
+        } else {
+            return ""
+        }
+    }
+
+    private static func countCoreIds(cores: Substring) -> Int? {
+        let ids = cores.split(separator: "-", maxSplits: 1)
+        guard let first = ids.first.flatMap({ Int($0, radix: 10) }),
+              let last = ids.last.flatMap({ Int($0, radix: 10) }),
+              last >= first
+        else {
+            return nil
+        }
+        return 1 + last - first
+    }
+
+    private static func coreCount(cpuset cpusetPath: String) -> Int? {
+        guard let cpuset = try? firstLineOfFile(path: cpusetPath).split(separator: ","),
+              !cpuset.isEmpty
+        else { return nil }
+        if let first = cpuset.first, let count = countCoreIds(cores: first) {
+            return count
+        } else {
+            return nil
+        }
+    }
+
+    private static func coreCount(quota quotaPath: String,  period periodPath: String) -> Int? {
+        guard let quota = try? Int(firstLineOfFile(path: quotaPath)),
+              quota > 0
+        else { return nil }
+        guard let period = try? Int(firstLineOfFile(path: periodPath)),
+              period > 0
+        else { return nil }
+
+        return (quota - 1 + period) / period // always round up if fractional CPU quota requested
+    }
+
+    private static func fsCoreCount() -> Int? {
+        if let quota = coreCount(quota: cfsQuotaPath, period: cfsPeriodPath) {
+            return quota
+        } else if let cpusetCount = coreCount(cpuset: cpuSetPath) {
+            return cpusetCount
+        } else {
+            return nil
+        }
+    }
+#endif
 
     var physicalMemory: UInt64 {
 #if canImport(Darwin)
