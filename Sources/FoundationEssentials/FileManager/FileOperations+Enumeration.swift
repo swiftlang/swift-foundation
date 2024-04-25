@@ -10,7 +10,98 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !os(Windows)
+#if os(Windows)
+
+import WinSDK
+
+struct _Win32DirectoryContentsSequence: Sequence {
+    final class Iterator: IteratorProtocol {
+        struct Element {
+            var fileName: String
+            var fileNameWithPrefix: String
+            var dwFileAttributes: DWORD
+        }
+
+        private var hFind: HANDLE?
+        private var ffdData: WIN32_FIND_DATAW = .init()
+        private var prefix: String = ""
+        private var slash: Bool
+
+        var error: CocoaError?
+
+        init(path: String, appendSlashForDirectory: Bool, prefix: [String]) {
+            self.slash = appendSlashForDirectory
+
+            do {
+                hFind = try "\(path)\\*".withNTPathRepresentation {
+                    // We use `FindFirstFileExW` to avoid the lookup of the short name of the file. We never consult the field and this can speed up the file enumeration.
+                    FindFirstFileExW($0, FindExInfoBasic, &self.ffdData, FindExSearchNameMatch, nil, FIND_FIRST_EX_LARGE_FETCH | FIND_FIRST_EX_ON_DISK_ENTRIES_ONLY)
+                }
+            } catch let error {
+                self.error = error as? CocoaError
+                return
+            }
+
+            // It would be nice to propagate an error from here, but for now the best we can do is return nil from `next`.
+            guard let hFind else {
+                error = CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                return
+            }
+            if hFind == INVALID_HANDLE_VALUE {
+                error = CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                self.hFind = nil
+            } else {
+                self.prefix = prefix.compactMap {
+                    guard let last = $0.last else { return nil }
+
+                    if ["/", #"\"#].contains(last) {
+                        return $0
+                    } else {
+                        return $0 + #"\"#
+                    }
+                }.joined()
+            }
+        }
+
+        deinit {
+            _ = FindClose(hFind)
+        }
+
+        func next() -> Element? {
+            guard let hFind else { return nil }
+            repeat {
+                let name = withUnsafeBytes(of: ffdData.cFileName) {
+                    String(decodingCString: $0.baseAddress!.assumingMemoryBound(to: WCHAR.self), as: UTF16.self)
+                }
+
+                if name == "." || name == ".." {
+                    continue
+                }
+
+                let prefixed: String =
+                    prefix + name + ((slash && ffdData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY) ? #"\"# : "")
+                return Element(fileName: name, fileNameWithPrefix: prefixed, dwFileAttributes: ffdData.dwFileAttributes)
+            } while FindNextFileW(hFind, &ffdData)
+            return nil
+        }
+    }
+
+    let path: String
+    let appendSlashForDirectory: Bool
+    let prefix: [String]
+
+    init(path: String, appendSlashForDirectory: Bool, prefix: [String] = []) {
+        self.path = path
+        self.appendSlashForDirectory = appendSlashForDirectory
+        self.prefix = prefix
+    }
+
+    func makeIterator() -> Iterator {
+        Iterator(path: path, appendSlashForDirectory: appendSlashForDirectory, prefix: prefix)
+    }
+}
+
+#else
 
 #if canImport(Darwin)
 import Darwin

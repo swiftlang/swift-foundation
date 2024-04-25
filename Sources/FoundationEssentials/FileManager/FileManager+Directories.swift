@@ -51,7 +51,7 @@ extension _FileManagerImpl {
         URL(filePath: String.temporaryDirectoryPath, directoryHint: .isDirectory)
     }
     
-    #if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK
     func url(
         for directory: FileManager.SearchPathDirectory,
         in domain: FileManager.SearchPathDomainMask,
@@ -137,7 +137,11 @@ extension _FileManagerImpl {
         }
         #endif
         var result: [String] = []
+#if os(Windows)
+        let iterator = _Win32DirectoryContentsSequence(path: path, appendSlashForDirectory: false).makeIterator()
+#else
         let iterator = _POSIXDirectoryContentsSequence(path: path, appendSlashForDirectory: false).makeIterator()
+#endif
         if let error = iterator.error {
             throw error
         } else {
@@ -149,6 +153,31 @@ extension _FileManagerImpl {
     }
     
     func subpathsOfDirectory(atPath path: String) throws -> [String] {
+#if os(Windows)
+        var results: [String] = []
+        let iterator = _Win32DirectoryContentsSequence(path: path, appendSlashForDirectory: true).makeIterator()
+        while let item = iterator.next() {
+            results.append(item.fileName)
+            if item.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY &&
+                item.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
+
+                var pwszSubPath: PWSTR? = nil
+                let hr = PathAllocCombine(path, item.fileName, PATHCCH_ALLOW_LONG_PATHS, &pwszSubPath)
+                guard hr == S_OK else {
+                    throw CocoaError.errorWithFilePath(path, win32: WIN32_FROM_HRESULT(hr), reading: true)
+                }
+                defer { LocalFree(pwszSubPath) }
+
+                results.append(contentsOf: try subpathsOfDirectory(atPath: item.fileName).map {
+                    var pwszFullPath: PWSTR? = nil
+                    _ = PathAllocCombine(item.fileName, $0, PATHCCH_ALLOW_LONG_PATHS, &pwszFullPath)
+                    defer { LocalFree(pwszFullPath) }
+                    return String(decodingCString: pwszFullPath!, as: UTF16.self).standardizingPath
+                 })
+            }
+        }
+        return results
+#else
         return try path.withFileSystemRepresentation { fileSystemRep in
             guard let fileSystemRep else {
                 throw CocoaError.errorWithFilePath(.fileNoSuchFile, path)
@@ -181,6 +210,7 @@ extension _FileManagerImpl {
             }
             return results
         }
+#endif
     }
     
     #if FOUNDATION_FRAMEWORK
@@ -207,6 +237,35 @@ extension _FileManagerImpl {
         withIntermediateDirectories createIntermediates: Bool,
         attributes: [FileAttributeKey : Any]? = nil
     ) throws {
+#if os(Windows)
+        try path.withNTPathRepresentation { pwszPath in
+            if createIntermediates {
+                var isDirectory: Bool = false
+                if fileManager.fileExists(atPath: path, isDirectory: &isDirectory) {
+                    guard isDirectory else {
+                        throw CocoaError.errorWithFilePath(path, win32: ERROR_FILE_EXISTS, reading: false)
+                    }
+                    return
+                }
+
+                let parent = path.deletingLastPathComponent()
+                if !parent.isEmpty {
+                    try createDirectory(atPath: parent, withIntermediateDirectories: true, attributes: attributes)
+                }
+            }
+
+            var saAttributes: SECURITY_ATTRIBUTES =
+                SECURITY_ATTRIBUTES(nLength: DWORD(MemoryLayout<SECURITY_ATTRIBUTES>.size),
+                                    lpSecurityDescriptor: nil,
+                                    bInheritHandle: false)
+            guard CreateDirectoryW(pwszPath, &saAttributes) else {
+                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+            }
+            if let attributes {
+                try? fileManager.setAttributes(attributes, ofItemAtPath: path)
+            }
+        }
+#else
         try fileManager.withFileSystemRepresentation(for: path) { pathPtr in
             guard let pathPtr else {
                 throw CocoaError.errorWithFilePath(.fileWriteUnknown, path)
@@ -305,6 +364,7 @@ extension _FileManagerImpl {
             try _create(path: path)
             #endif
         }
+#endif
     }
     
 #if FOUNDATION_FRAMEWORK
