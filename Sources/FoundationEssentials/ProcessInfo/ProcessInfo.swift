@@ -430,13 +430,7 @@ extension _ProcessInfo {
 #elseif os(Windows)
         var sysInfo = SYSTEM_INFO()
         GetSystemInfo(&sysInfo)
-        let activeProcessorMask = sysInfo.dwActiveProcessorMask
-        // assumes sizeof(DWORD_PTR) is 64 bits or less
-        var v = activeProcessorMask
-        v = v - ((v >> 1) & 0x5555555555555555)
-        v = (v & 0x3333333333333333) + ((v >> 2) & 0x3333333333333333)
-        v = (v + (v >> 4)) & 0xf0f0f0f0f0f0f0f
-        return (v * 0x0101010101010101) >> ((sizeof(v) - 1) * 8)
+        return sysInfo.dwActiveProcessorMask.nonzeroBitCount
 #else
         return 0
 #endif
