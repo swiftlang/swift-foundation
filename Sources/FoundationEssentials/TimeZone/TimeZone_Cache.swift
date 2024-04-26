@@ -121,33 +121,23 @@ struct TimeZoneCache : Sendable {
         /// Reads from environment variables `TZFILE`, `TZ` and finally the symlink pointed at by the C macro `TZDEFAULT` to figure out what the current (aka "system") time zone is.
         mutating func findCurrentTimeZone() -> TimeZone {
 #if !NO_TZFILE
-            if let tzenv = getenv("TZFILE") {
-                if let name = String(validatingUTF8: tzenv) {
-                    if let result = fixed(name) {
-                        return TimeZone(inner: result)
-                    }
-                }
+            if let tzenv = ProcessInfo.processInfo.environment["TZFILE"], let result = fixed(tzenv) {
+                return TimeZone(inner: result)
             }
 
-            if let tz = getenv("TZ") {
-                if let name = String(validatingUTF8: tz) {
-                    // Try as an abbreviation first
-                    // Use cached function here to avoid recursive lock
-                    if let name2 = timeZoneAbbreviations()[name] {
-                        if let result = fixed(name2) {
-                            return TimeZone(inner: result)
-                        }
-                    }
-
-                    // Try with just the name
-                    if let result = fixed(name) {
-                        return TimeZone(inner: result)
-                    }
+            if let tz = ProcessInfo.processInfo.environment["TZ"] {
+                // Try as an abbreviation first
+                // Use cached function here to avoid recursive lock
+                if let name = timeZoneAbbreviations()[tz], let result = fixed(name) {
+                    return TimeZone(inner: result)
+                }
+                if let result = fixed(tz) {
+                    return TimeZone(inner: result)
                 }
             }
 
 #if os(Windows)
-            let hFile = TimeZone.TZDEFAULT.withCString(encodedAs: UTF16.self) {
+            let hFile = TZDEFAULT.withCString(encodedAs: UTF16.self) {
                 CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
             }
             defer { CloseHandle(hFile) }
@@ -156,7 +146,7 @@ struct TimeZoneCache : Sendable {
                 _ = GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwSize, VOLUME_NAME_DOS)
                 return String(decodingCString: $0.baseAddress!, as: UTF16.self)
             }
-            if let rangeOfZoneInfo = path._range(of: "\(TimeZone.TZDIR)\\", anchored: false, backwards: false) {
+            if let rangeOfZoneInfo = path._range(of: "\(TZDIR)\\", anchored: false, backwards: false) {
                 let name = path[rangeOfZoneInfo.upperBound...]
                 if let result = fixed(String(name)) {
                     return TimeZone(inner: result)
