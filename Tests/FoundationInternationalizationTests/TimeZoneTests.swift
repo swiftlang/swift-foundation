@@ -131,7 +131,7 @@ final class TimeZoneTests : XCTestCase {
         testAbbreviation("UTC", 0, "GMT")
     }
 
-    func testSeondsFromGMT_RemoteDates() {
+    func testSecondsFromGMT_RemoteDates() {
         let date = Date(timeIntervalSinceReferenceDate: -5001243627) // "1842-07-09T05:39:33+0000"
         let europeRome = TimeZone(identifier: "Europe/Rome")!
         let secondsFromGMT = europeRome.secondsFromGMT(for: date)

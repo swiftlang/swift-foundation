@@ -74,7 +74,7 @@ extension String {
         var associatedSelector: Selector {
             guard let selector = Self.validAlgorithms[self] else {
                 fatalError("""
-                Attempted to retreive selector from a \
+                Attempted to retrieve selector from a \
                 String.StandardSortComparator with an invalid configuration.
                 """)
             }

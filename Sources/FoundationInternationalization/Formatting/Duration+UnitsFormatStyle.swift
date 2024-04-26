@@ -157,8 +157,8 @@ extension Duration {
             public var roundingRule: FloatingPointRoundingRule
             public var roundingIncrement: Double?
 
-            init(mininumLength: Int, maximumLength: Int, roundingRule: FloatingPointRoundingRule, roundingIncrement: Double?) {
-                self.minimumLength = mininumLength
+            init(minimumLength: Int, maximumLength: Int, roundingRule: FloatingPointRoundingRule, roundingIncrement: Double?) {
+                self.minimumLength = minimumLength
                 self.maximumLength = maximumLength
                 self.roundingRule = roundingRule
                 self.roundingIncrement = roundingIncrement
@@ -171,7 +171,7 @@ extension Duration {
             ///   - roundingIncrement: Rounding increment for the remaining value.
             public init<Range: RangeExpression>(lengthLimits: Range, roundingRule: FloatingPointRoundingRule = .toNearestOrEven, roundingIncrement: Double? = nil) where Range.Bound == Int {
                 let (lower, upper) = lengthLimits.clampedLowerAndUpperBounds(0..<Int.max)
-                self.init(mininumLength: lower ?? 0, maximumLength: upper ?? Int.max, roundingRule: roundingRule, roundingIncrement: roundingIncrement)
+                self.init(minimumLength: lower ?? 0, maximumLength: upper ?? Int.max, roundingRule: roundingRule, roundingIncrement: roundingIncrement)
             }
 
             /// Displays the remaining part as the fractional part of the smallest unit.
@@ -180,18 +180,18 @@ extension Duration {
             ///   - rule: Rounding rule for the remaining value.
             ///   - increment: Rounding increment for the remaining value.
             public static func show(length: Int, rounded rule: FloatingPointRoundingRule = .toNearestOrEven, increment: Double? = nil) -> FractionalPartDisplayStrategy {
-                .init(mininumLength: length, maximumLength: length, roundingRule: rule, roundingIncrement: increment)
+                .init(minimumLength: length, maximumLength: length, roundingRule: rule, roundingIncrement: increment)
             }
 
             /// Excludes the remaining part.
             public static var hide: FractionalPartDisplayStrategy {
-                .init(mininumLength: 0, maximumLength: 0, roundingRule: .toNearestOrEven, roundingIncrement: nil)
+                .init(minimumLength: 0, maximumLength: 0, roundingRule: .toNearestOrEven, roundingIncrement: nil)
             }
 
             /// Excludes the remaining part with the specified rounding rule.
             /// - Parameter rounded: Rounding rule for the remaining value.
             public static func hide(rounded: FloatingPointRoundingRule = .toNearestOrEven) -> FractionalPartDisplayStrategy {
-                .init(mininumLength: 0, maximumLength: 0, roundingRule: rounded, roundingIncrement: nil)
+                .init(minimumLength: 0, maximumLength: 0, roundingRule: rounded, roundingIncrement: nil)
             }
 
         }
