@@ -120,7 +120,7 @@ final class ByteCountFormatStyleTests : XCTestCase {
     }
 
     func test_RTL() {
-        XCTAssertEqual(1024.formatted(.byteCount(style: ByteCountFormatStyle.Style.binary, includesActualByteCount: true).locale(.init(identifier: "ar"))), "١ كيلوبايت (١٬٠٢٤ بايت)")
+        XCTAssertEqual(1024.formatted(.byteCount(style: ByteCountFormatStyle.Style.binary, includesActualByteCount: true).locale(.init(identifier: "ar_SA"))), "١ كيلوبايت (١٬٠٢٤ بايت)")
     }
 
     func testAttributed() {
