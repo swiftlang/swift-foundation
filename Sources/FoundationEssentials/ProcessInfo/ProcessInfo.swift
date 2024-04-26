@@ -16,6 +16,8 @@ internal import _CShims
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(Windows)
+import WinSDK
 #endif
 
 #if !NO_PROCESS
@@ -103,9 +105,13 @@ final class _ProcessInfo: Sendable {
 
     var globallyUniqueString: String {
         let uuid = UUID().uuidString
-        let pid = UInt64(getpid())
+        let pid = processIdentifier
 #if canImport(Darwin)
         let time: UInt64 = mach_absolute_time()
+#elseif os(Windows)
+        var ullTime: ULONGLONG = 0
+        QueryUnbiasedInterruptTimePrecise(&ullTime)
+        let time: UInt64 = ullTime
 #else
         var ts: timespec = timespec()
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
@@ -117,7 +123,11 @@ final class _ProcessInfo: Sendable {
     }
 
     var processIdentifier: Int32 {
+#if os(Windows)
+        return numericCast(GetProcessId(GetCurrentProcess()))
+#else
         return getpid()
+#endif
     }
 
     var processName: String {
@@ -183,9 +193,61 @@ extension _ProcessInfo {
         }
     }
 
+#if os(Windows)
+    internal var _rawOSVersion: RTL_OSVERSIONINFOEXW? {
+        typealias RtlGetVersionTy = @convention(c) (UnsafeMutablePointer<RTL_OSVERSIONINFOEXW>) -> NTSTATUS
+
+        guard let NTDLL = "ntdll.dll".withCString(encodedAs: UTF16.self, LoadLibraryW) else {
+            return nil
+        }
+        defer { FreeLibrary(NTDLL) }
+
+        guard let pfnRtlGetVersion = unsafeBitCast(GetProcAddress(NTDLL, "RtlGetVersion"), to: RtlGetVersionTy?.self) else {
+            return nil
+        }
+
+        var version: RTL_OSVERSIONINFOEXW = .init()
+        version.dwOSVersionInfoSize = DWORD(MemoryLayout<RTL_OSVERSIONINFOEXW>.size)
+        guard pfnRtlGetVersion(&version) == 0 else {
+            return nil
+        }
+        return version
+    }
+#endif
+
     var operatingSystemVersionString: String {
         // TODO: Check for `/etc/os-release` for Linux once DataIO is ready
         // https://github.com/apple/swift-foundation/issues/221
+        #if os(Windows)
+        guard let version = _rawOSVersion else {
+            return "Windows"
+        }
+        let release = switch (version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber) {
+            case (5, 0, _): "2000"
+            case (5, 1, _): "XP"
+            case (5, 2, _) where version.wProductType == VER_NT_WORKSTATION:
+                "XP Professional x64"
+            case (5, 2, _) where version.wProductType == VER_SUITE_WH_SERVER:
+                "Home Server"
+            case (5, 2, _): "Server 2003"
+            case (6, 0, _): "Server 2008"
+            case (6, 1, _) where version.wProductType == VER_NT_WORKSTATION:
+                "7"
+            case (6, 2, _) where version.wProductType == VER_NT_WORKSTATION:
+                "8"
+            case (6, 2, _): "Server 2012"
+            case (6, 3, _) where version.wProductType == VER_NT_WORKSTATION:
+                "8.1"
+            case (6, 3, _): "Server 2012 R2"
+            case (10, 0, ..<22000) where version.wProductType == VER_NT_WORKSTATION:
+                "10"
+            case (10, 0, 22000...) where version.wProductType == VER_NT_WORKSTATION:
+                "11"
+            case (10, 0, _): "Server 2019"
+            default: "unknown"
+        }
+        return "Windows \(release) (build \(version.dwBuildNumber))"
+        #else
         #if os(macOS)
         var versionString = "macOS"
         #elseif os(Linux)
@@ -204,9 +266,18 @@ extension _ProcessInfo {
         }
 
         return versionString
+        #endif
     }
 
     var operatingSystemVersion: (major: Int, minor: Int, patch: Int) {
+#if os(Windows)
+        guard let version = _rawOSVersion else {
+            return (major: -1, minor: 0, patch: 0)
+        }
+        return (major: Int(version.dwMajorVersion),
+                minor: Int(version.dwMinorVersion),
+                patch: Int(version.dwBuildNumber))
+#else
         var uts: utsname = utsname()
         guard uname(&uts) == 0 else {
             return (major: -1, minor: 0, patch: 0)
@@ -223,6 +294,7 @@ extension _ProcessInfo {
         let minor = version.count >= 2 ? version[1] : 0
         let patch = version.count >= 3 ? version[2] : 0
         return (major: major, minor: minor, patch: patch)
+#endif
     }
 
     func isOperatingSystemAtLeast(_ version: (major: Int, minor: Int, patch: Int)) -> Bool {
@@ -261,6 +333,10 @@ extension _ProcessInfo {
             return 0
         }
         return Int(count)
+#elseif os(Windows)
+        var siInfo = SYSTEM_INFO()
+        GetSystemInfo(&siInfo)
+        return Int(siInfo.dwNumberOfProcessors)
 #else
         return Int(sysconf(Int32(_SC_NPROCESSORS_CONF)))
 #endif
@@ -276,6 +352,10 @@ extension _ProcessInfo {
             return 0
         }
         return Int(count)
+#elseif os(Windows)
+        var siInfo = SYSTEM_INFO()
+        GetSystemInfo(&siInfo)
+        return siInfo.dwActiveProcessorMask.nonzeroBitCount
 #else
         return Int(sysconf(Int32(_SC_NPROCESSORS_ONLN)))
 #endif
@@ -293,6 +373,12 @@ extension _ProcessInfo {
             }
             return 0
         }
+#elseif os(Windows)
+        var TotalMemoryKB: ULONGLONG = 0
+        guard GetPhysicallyInstalledSystemMemory(&TotalMemoryKB) else {
+            return 0
+        }
+        return TotalMemoryKB * 1024
 #else
         var memory = sysconf(Int32(_SC_PHYS_PAGES))
         memory *= sysconf(Int32(_SC_PAGESIZE))
@@ -305,6 +391,8 @@ extension _ProcessInfo {
         let (_, secondsPerTick) = _systemClockTickRate
         let time = mach_absolute_time()
         return TimeInterval(time) * secondsPerTick
+#elseif os(Windows)
+        return TimeInterval(GetTickCount64()) / 1000.0
 #else
         var ts = timespec()
         guard clock_gettime(CLOCK_MONOTONIC, &ts) == 0 else {
