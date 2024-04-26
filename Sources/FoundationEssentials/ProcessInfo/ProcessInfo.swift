@@ -327,7 +327,7 @@ extension _ProcessInfo {
         return "Unknown"
 #endif
         
-#if canImport(Darwin) || os(Linux)
+#if os(macOS) || os(Linux)
         var uts: utsname = utsname()
         if uname(&uts) == 0 {
             let versionValue = withUnsafePointer(
