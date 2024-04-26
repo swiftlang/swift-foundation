@@ -21,6 +21,38 @@ extension String {
         switch encoding {
         case .utf8:
             return Data(self.utf8)
+        case .ascii, .nonLossyASCII:
+            if allowLossyConversion {
+                let lossyReplacement = (encoding == .ascii) ? 0xFF : UInt8(ascii: "?")
+                return Data(capacity: self.utf8.count) {
+                    for scalar in self.unicodeScalars {
+                        if scalar.isASCII {
+                            $0.append(fromContentsOf: scalar.utf8)
+                        } else {
+                            $0.appendElement(lossyReplacement)
+                        }
+                    }
+                }
+            } else {
+                var earlyCheckAllASCII = self.utf8.withContiguousStorageIfAvailable {
+                    _allASCII($0)
+                }
+                if let earlyCheckAllASCII, !earlyCheckAllASCII {
+                    return nil
+                }
+                var data = Data(count: self.utf8.count)
+                let allASCII = data.withUnsafeMutableBytes {
+                    $0.withMemoryRebound(to: UInt8.self) { buffer in
+                        _ = buffer.initialize(fromContentsOf: self.utf8)
+                        if let earlyCheckAllASCII {
+                            return earlyCheckAllASCII
+                        } else {
+                            return _allASCII(UnsafeBufferPointer(buffer))
+                        }
+                    }
+                }
+                return allASCII ? data : nil
+            }
         default:
 #if FOUNDATION_FRAMEWORK
             // TODO: Implement data(using:allowLossyConversion:) in Swift

@@ -525,6 +525,17 @@ final class StringTests : XCTestCase {
         XCTAssertNil(utf32BEBOMStringMismatch)
     }
 
+    func test_dataUsingEncoding_ascii() {
+        XCTAssertEqual("abc".data(using: .ascii), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
+        XCTAssertEqual("abc".data(using: .nonLossyASCII), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
+        XCTAssertEqual("e\u{301}\u{301}f".data(using: .ascii), nil)
+        XCTAssertEqual("e\u{301}\u{301}f".data(using: .nonLossyASCII), nil)
+        
+        XCTAssertEqual("abc".data(using: .ascii, allowLossyConversion: true), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
+        XCTAssertEqual("abc".data(using: .nonLossyASCII, allowLossyConversion: true), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
+        XCTAssertEqual("e\u{301}\u{301}f".data(using: .ascii, allowLossyConversion: true), Data([UInt8(ascii: "e"), 0xFF, 0xFF, UInt8(ascii: "f")]))
+        XCTAssertEqual("e\u{301}\u{301}f".data(using: .nonLossyASCII, allowLossyConversion: true), Data([UInt8(ascii: "e"), UInt8(ascii: "?"), UInt8(ascii: "?"), UInt8(ascii: "f")]))
+    }
 }
 
 
