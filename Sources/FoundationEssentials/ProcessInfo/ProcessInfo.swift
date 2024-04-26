@@ -408,6 +408,10 @@ extension _ProcessInfo {
             return 0
         }
         return Int(count)
+#elseif os(Windows)
+        var siInfo = SYSTEM_INFO()
+        GetSystemInfo(&siInfo)
+        return Int(siInfo.dwNumberOfProcessors)
 #elseif os(Linux) || os(FreeBSD)
         return Int(sysconf(Int32(_SC_NPROCESSORS_CONF)))
 #else
@@ -514,6 +518,12 @@ extension _ProcessInfo {
             }
             return 0
         }
+#elseif os(Windows)
+        var TotalMemoryKB: ULONGLONG = 0
+        guard GetPhysicallyInstalledSystemMemory(&TotalMemoryKB) else {
+            return 0
+        }
+        return TotalMemoryKB * 1024
 #elseif os(Linux) || os(FreeBSD)
         var memory = sysconf(Int32(_SC_PHYS_PAGES))
         memory *= sysconf(Int32(_SC_PAGESIZE))
