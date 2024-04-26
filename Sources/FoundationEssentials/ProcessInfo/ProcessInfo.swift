@@ -16,6 +16,8 @@ internal import _CShims
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(Windows)
+import WinSDK
 #endif
 
 #if !NO_PROCESS
@@ -106,6 +108,10 @@ final class _ProcessInfo: Sendable {
         let pid = processIdentifier
 #if canImport(Darwin)
         let time: UInt64 = mach_absolute_time()
+#elseif os(Windows)
+        var ullTime: ULONGLONG = 0
+        QueryUnbiasedInterruptTimePrecise(&ullTime)
+        let time: UInt64 = ullTime
 #else
         var ts: timespec = timespec()
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
@@ -118,7 +124,7 @@ final class _ProcessInfo: Sendable {
 
     var processIdentifier: Int32 {
 #if os(Windows)
-        return Int32(GetProcessId(GetCurrentProcess()))
+        return Int32(bitPattern: GetProcessId(GetCurrentProcess()))
 #else
         return Int32(getpid())
 #endif
@@ -215,10 +221,8 @@ extension _ProcessInfo {
     }
     
 #if os(Windows)
-    internal var _rawOperatingSystemVersionInfo: RTL_OSVERSIONINFOEXW? {
-        guard let ntdll = ("ntdll.dll".withCString(encodedAs: UTF16.self) {
-            LoadLibraryExW($0, nil, DWORD(LOAD_LIBRARY_SEARCH_SYSTEM32))
-        }) else {
+    internal var _rawOSVersion: RTL_OSVERSIONINFOEXW? {
+        guard let ntdll = "ntdll.dll".withCString(encodedAs: UTF16.self, LoadLibraryW) else {
             return nil
         }
         defer { FreeLibrary(ntdll) }
@@ -236,8 +240,6 @@ extension _ProcessInfo {
 #endif
 
     var operatingSystemVersionString: String {
-        // TODO: Check for `/etc/os-release` for Linux once DataIO is ready
-        // https://github.com/apple/swift-foundation/issues/221
 #if os(macOS)
         var versionString = "macOS"
 #elseif os(Linux)
@@ -254,7 +256,7 @@ extension _ProcessInfo {
 #elseif os(Windows)
         var versionString = "Windows"
         
-        guard let osVersionInfo = self._rawOperatingSystemVersionInfo else {
+        guard let osVersionInfo = self._rawOSVersion else {
             return versionString
         }
 
@@ -263,23 +265,24 @@ extension _ProcessInfo {
         // hardcoding several of the somewhat ambiguous values in the table provided here:
         //  https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_osversioninfoexw#remarks
         versionString += " "
-        versionString += switch (osVersionInfo.dwMajorVersion, osVersionInfo.dwMinorVersion) {
-            case (5, 0): "2000"
-            case (5, 1): "XP"
-            case (5, 2) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "XP Professional x64"
-            case (5, 2) where osVersionInfo.wSuiteMask == VER_SUITE_WH_SERVER: "Home Server"
-            case (5, 2): "Server 2003"
-            case (6, 0) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "Vista"
-            case (6, 0): "Server 2008"
-            case (6, 1) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "7"
-            case (6, 1): "Server 2008 R2"
-            case (6, 2) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "8"
-            case (6, 2): "Server 2012"
-            case (6, 3) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "8.1"
-            case (6, 3): "Server 2012 R2" // We assume the "10,0" numbers in the table for this are a typo
-            case (10, 0) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "10"
-            case (10, 0): "Server 2019" // The table gives identical values for 2016 and 2019, so we just assume 2019 here
-            case let (maj, min): "\(maj).\(min)" // If all else fails, just give the raw version number
+        versionString += switch (osVersionInfo.dwMajorVersion, osVersionInfo.dwMinorVersion, osVersionInfo.dwBuildNumber) {
+        case (5, 0, _): "2000"
+        case (5, 1, _): "XP"
+        case (5, 2, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "XP Professional x64"
+        case (5, 2, _) where osVersionInfo.wSuiteMask == VER_SUITE_WH_SERVER: "Home Server"
+        case (5, 2, _): "Server 2003"
+        case (6, 0, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "Vista"
+        case (6, 0, _): "Server 2008"
+        case (6, 1, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "7"
+        case (6, 1, _): "Server 2008 R2"
+        case (6, 2, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "8"
+        case (6, 2, _): "Server 2012"
+        case (6, 3, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "8.1"
+        case (6, 3, _): "Server 2012 R2" // We assume the "10,0" numbers in the table for this are a typo
+        case (10, 0, ..<22000) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "10"
+        case (10, 0, 22000...) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "11"
+        case (10, 0, _): "Server 2019" // The table gives identical values for 2016 and 2019, so we just assume 2019 here
+        case let (maj, min, _): "Unknown (\(maj).\(min))" // If all else fails, just give the raw version number
         }
         versionString += " (build \(osVersionInfo.dwBuildNumber))"
         // For now we ignore the `szCSDVersion`, `wServicePackMajor`, and `wServicePackMinor` values.
@@ -358,7 +361,7 @@ extension _ProcessInfo {
         let patch = version.count >= 3 ? version[2] : 0
         return (major: major, minor: minor, patch: patch)
 #elseif os(Windows)
-        guard let osVersionInfo = self._rawOperatingSystemVersionInfo else {
+        guard let osVersionInfo = self._rawOSVersion else {
             return OperatingSystemVersion(majorVersion: -1, minorVersion: 0, patchVersion: 0)
         }
 
