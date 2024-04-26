@@ -522,11 +522,11 @@ extension _ProcessInfo {
             return 0
         }
 #elseif os(Windows)
-        var TotalMemoryKB: ULONGLONG = 0
-        guard GetPhysicallyInstalledSystemMemory(&TotalMemoryKB) else {
+        var totalMemoryKB: ULONGLONG = 0
+        guard GetPhysicallyInstalledSystemMemory(&totalMemoryKB) else {
             return 0
         }
-        return TotalMemoryKB * 1024
+        return totalMemoryKB * 1024
 #elseif os(Linux) || os(FreeBSD)
         var memory = sysconf(Int32(_SC_PHYS_PAGES))
         memory *= sysconf(Int32(_SC_PAGESIZE))
