@@ -412,7 +412,13 @@ extension TimeZone {
 #endif
 
         guard fd >= 0 else { return Data() }
-        defer { close(fd) }
+        defer {
+#if os(Windows)
+            _close(fd)
+#else
+            close(fd)
+#endif
+        }
 
 #if os(Windows)
         var stat: _stat64 = _stat64()

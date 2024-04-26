@@ -81,9 +81,21 @@ final class _ProcessInfo: Sendable {
     }
 
     private func withCopiedEnv<R>(_ body: ([UnsafeMutablePointer<CChar>]) -> R) -> R {
+        var values: [UnsafeMutablePointer<CChar>] = []
+#if os(Windows)
+        guard let pwszEnvironmentBlock = GetEnvironmentStringsW() else {
+            return body([])
+        }
+        defer { FreeEnvironmentStringsW(pwszEnvironmentBlock) }
+
+        var pwszEnvironmentEntry: LPWCH? = pwszEnvironmentBlock
+        while let value = pwszEnvironmentEntry {
+            values.append(String(decodingCString: value, as: UTF16.self).withCString { _strdup($0)! })
+            pwszEnvironmentEntry = pwszEnvironmentEntry?.advanced(by: wcslen(value) + 1)
+        }
+#else
         // This lock is taken by calls to getenv, so we want as few callouts to other code as possible here.
         _platform_shims_lock_environ()
-        var values: [UnsafeMutablePointer<CChar>] = []
         guard let environments: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> =
                 _platform_shims_get_environ() else {
             _platform_shims_unlock_environ()
@@ -95,12 +107,9 @@ final class _ProcessInfo: Sendable {
             curr = curr.advanced(by: 1)
         }
         _platform_shims_unlock_environ()
-
-        let returnValue = body(values)
-        for ptr in values {
-            free(ptr)
-        }
-        return returnValue
+#endif
+        defer { values.forEach { free($0) } }
+        return body(values)
     }
 
     var globallyUniqueString: String {

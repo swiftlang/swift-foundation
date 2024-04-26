@@ -306,21 +306,25 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
         }
         
         // We will only request a max of Int32.max bytes
-        var numBytesRequested = Int32(clamping: preferredChunkSize)
+        var numBytesRequested = CUnsignedInt(clamping: preferredChunkSize)
         
         // Furthermore, don't request more than the number of bytes remaining
         if numBytesRequested > numBytesRemaining {
-            numBytesRequested = Int32(clamping: numBytesRemaining)
+            numBytesRequested = CUnsignedInt(clamping: numBytesRemaining)
         }
-        
-        var numBytesRead: Int
+
+        var numBytesRead: CInt
         repeat {
             if let localProgress, localProgress.isCancelled {
                 throw CocoaError(.userCancelled)
             }
             
             // read takes an Int-sized argument, which will always be at least the size of Int32.
-            numBytesRead = read(fd, buffer, Int(numBytesRequested))
+#if os(Windows)
+            numBytesRead = _read(fd, buffer, numBytesRequested)
+#else
+            numBytesRead = CInt(read(fd, buffer, Int(numBytesRequested)))
+#endif
         } while numBytesRead < 0 && errno == EINTR
         
         if numBytesRead < 0 {
@@ -338,8 +342,8 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
             if numBytesRead < numBytesRequested {
                 break
             }
-            
-            buffer = buffer.advanced(by: numBytesRead)
+
+            buffer = buffer.advanced(by: numericCast(numBytesRead))
         }
     }
     
