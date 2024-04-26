@@ -43,7 +43,7 @@ extension String {
                 var data = Data(count: self.utf8.count)
                 let allASCII = data.withUnsafeMutableBytes {
                     $0.withMemoryRebound(to: UInt8.self) { buffer in
-                        buffer.initializeAll(fromContentsOf: self.utf8)
+                        _ = buffer.initialize(fromContentsOf: self.utf8)
                         if let earlyCheckAllASCII {
                             return earlyCheckAllASCII
                         } else {
