@@ -39,14 +39,9 @@ open class JSONEncoder {
         /// Produce human-readable JSON with indented output.
         public static let prettyPrinted = OutputFormatting(rawValue: 1 << 0)
 
-#if FOUNDATION_FRAMEWORK
-        // TODO: Reenable once String.compare is implemented
-        // https://github.com/apple/swift-foundation/issues/284
-
         /// Produce JSON with dictionary keys sorted in lexicographic order.
         @available(macOS 10.13, iOS 11.0, watchOS 4.0, tvOS 11.0, *)
         public static let sortedKeys    = OutputFormatting(rawValue: 1 << 1)
-#endif // FOUNDATION_FRAMEWORK
 
         /// By default slashes get escaped ("/" → "\/", "http://apple.com/" → "http:\/\/apple.com\/")
         /// for security reasons, allowing outputted JSON to be safely embedded within HTML/XML.

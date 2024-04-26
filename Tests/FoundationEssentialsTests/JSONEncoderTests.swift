@@ -2544,9 +2544,9 @@ extension JSONEncoderTests {
                        dateDecodingStrategy: .formatted(formatter))
     }
 }
+#endif
 
 // MARK: - .sortedKeys Tests
-// TODO: Reenable these tests once .sortedKeys is implemented
 extension JSONEncoderTests {
     func testEncodingTopLevelStructuredClass() {
         // Person is a class with multiple fields.
@@ -2589,7 +2589,7 @@ extension JSONEncoderTests {
             "bar" : 10
         ]
 
-        _testRoundTrip(of: dict, expectedJSON: "{\"bar\":10,\"foo\":3,\"Foo\":1,\"FOO\":2,\"føo\":9,\"foo1\":4,\"Foo2\":5,\"foo3\":6,\"Foo11\":8,\"foo12\":7}".data(using: String._Encoding.utf8)!, outputFormatting: [.sortedKeys])
+        _testRoundTrip(of: dict, expectedJSON: #"{"FOO":2,"Foo":1,"Foo11":8,"Foo2":5,"bar":10,"foo":3,"foo1":4,"foo12":7,"foo3":6,"føo":9}"#.data(using: String._Encoding.utf8)!, outputFormatting: [.sortedKeys])
     }
 
     func testEncodingSortedKeysStableOrdering() {
@@ -2615,15 +2615,15 @@ extension JSONEncoderTests {
             dict["key\(N)"] = N
         }
 
-        for i in 0 ..< testSize {
-            let insertedKeyJSON = ",\"key\(i)\":\(i)"
+        let numberKeys = (0 ..< testSize).map { "\($0)" }.sorted()
+        for key in numberKeys {
+            let insertedKeyJSON = ",\"key\(key)\":\(key)"
             expectedJSONString.insert(contentsOf: insertedKeyJSON, at: expectedJSONString.index(before: expectedJSONString.endIndex))
         }
 
         _testRoundTrip(of: dict, expectedJSON: expectedJSONString.data(using: String._Encoding.utf8)!, outputFormatting: [.sortedKeys])
     }
 
-    // TODO: Reenable once .sortedKeys is implemented
     func testEncodingMultipleNestedContainersWithTheSameTopLevelKey() {
         struct Model : Codable, Equatable {
             let first: String
@@ -2731,6 +2731,7 @@ extension JSONEncoderTests {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
 // MARK: - Decimal Tests
 // TODO: Reenable these tests once Decimal is moved
 extension JSONEncoderTests {

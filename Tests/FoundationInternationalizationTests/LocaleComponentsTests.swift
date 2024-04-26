@@ -569,11 +569,7 @@ final class LocaleCodableTests: XCTestCase {
         XCTAssertEqual(Locale.Script("Hant"), Locale.Script("hant"))
         XCTAssertEqual(Locale.LanguageCode("EN"), Locale.LanguageCode("en"))
     }
-}
-
-// MARK: - FoundationPreview Disabled Tests
-#if FOUNDATION_FRAMEWORK
-extension LocaleCodableTests {
+    
     func _encodeAsJSON<T: Codable>(_ t: T) -> String? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [ .sortedKeys ]
@@ -708,4 +704,3 @@ extension LocaleCodableTests {
         """)
     }
 }
-#endif
