@@ -16,6 +16,8 @@ internal import _CShims
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(Windows)
+import WinSDK
 #endif
 
 #if !NO_PROCESS
@@ -103,9 +105,13 @@ final class _ProcessInfo: Sendable {
 
     var globallyUniqueString: String {
         let uuid = UUID().uuidString
-        let pid = UInt64(getpid())
+        let pid = processIdentifier
 #if canImport(Darwin)
         let time: UInt64 = mach_absolute_time()
+#elseif os(Windows)
+        var ullTime: ULONGLONG = 0
+        QueryUnbiasedInterruptTimePrecise(&ullTime)
+        let time: UInt64 = ullTime
 #else
         var ts: timespec = timespec()
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
@@ -117,7 +123,11 @@ final class _ProcessInfo: Sendable {
     }
 
     var processIdentifier: Int32 {
-        return getpid()
+#if os(Windows)
+        return Int32(bitPattern: GetProcessId(GetCurrentProcess()))
+#else
+        return Int32(getpid())
+#endif
     }
 
     var processName: String {
@@ -147,9 +157,28 @@ final class _ProcessInfo: Sendable {
             return username
         }
         return ""
-#else
-        // TODO: Windows
+#elseif os(WASI)
+        // WASI does not have user concept
         return ""
+#elseif os(Windows)
+        return withUnsafeTemporaryAllocation(of: wchar_t.self, capacity: 1040) { usernameBuffer in
+            usernameBuffer[0] = 0
+            var size: DWORD = 1040
+            if GetUserNameW(usernameBuffer.baseAddress!, &size) {
+                // discount the extra NULL by decrementing the size
+                return String(decoding: usernameBuffer.prefix(size - 1), as: UTF16.self)
+            } else {
+                return "USERNAME".withCString(encodedAs: UTF16.self) { pwszName in
+                    let dwLength = GetEnvironmentVariableW(pwszName, nil, 0)
+                    return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) { lpBuffer in
+                        guard GetEnvironmentVariableW(pwszName, lpBuffer.baseAddress, dwLength) == dwLength - 1 else {
+                            return ""
+                        }
+                        return String(decodingCString: lpBuffer.baseAddress!, as: UTF16.self)
+                    }
+                }
+            }
+        }
 #endif
     }
 
@@ -161,8 +190,16 @@ final class _ProcessInfo: Sendable {
             return String(cString: fullname)
         }
         return ""
-#else
+#elseif os(WASI)
         return ""
+#elseif os(Windows)
+        var ulLength: ULONG = 0
+        GetUserNameExW(NameDisplay, NULL, &ulLength)
+
+        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: ulLength + 1) { wszBuffer in
+            GetUserNameExW(NameDisplay, wszBuffer.baseAddress!, &ulLength)
+            return String(decoding: wszBuffer.prefix(ulLength), as: UTF16.self)
+        }
 #endif
     }
 
@@ -189,17 +226,115 @@ extension _ProcessInfo {
             return $0!
         }
     }
+    
+#if os(Windows)
+    internal var _rawOSVersion: RTL_OSVERSIONINFOEXW? {
+        guard let ntdll = "ntdll.dll".withCString(encodedAs: UTF16.self, LoadLibraryW) else {
+            return nil
+        }
+        defer { FreeLibrary(ntdll) }
+        typealias RTLGetVersionTy = @convention(c) (UnsafeMutablePointer<RTL_OSVERSIONINFOEXW>) -> NTSTATUS
+        guard let pfnRTLGetVersion = unsafeBitCast(GetProcAddress(ntdll, "RtlGetVersion"), to: Optional<RTLGetVersionTy>.self) else {
+            return nil
+        }
+        var osVersionInfo = RTL_OSVERSIONINFOEXW()
+        osVersionInfo.dwOSVersionInfoSize = DWORD(MemoryLayout<RTL_OSVERSIONINFOEXW>.size)
+        guard pfnRTLGetVersion(&osVersionInfo) == 0 else {
+            return nil
+        }
+        return osVersionInfo
+    }
+#endif
 
     var operatingSystemVersionString: String {
-        // TODO: Check for `/etc/os-release` for Linux once DataIO is ready
-        // https://github.com/apple/swift-foundation/issues/221
-        #if os(macOS)
+#if os(macOS)
         var versionString = "macOS"
-        #elseif os(Linux)
+#elseif os(Linux)
+        if let osReleaseContents = try? Data(contentsOf: "/etc/os-release") {
+            let strContents = String(decoding: osReleaseContents, as: UTF8.self)
+            if let name = strContents.split(separator: "\n").first(where: { $0.hasPrefix("PRETTY_NAME=") }) {
+                // This is extremely simplistic but manages to work for all known cases.
+                return String(name.dropFirst("PRETTY_NAME=".count)._trimmingCharacters(while: { $0 == "\"" }))
+            }
+        }
+        
+        // Okay, we can't get a distro name, so try for generic info.
         var versionString = "Linux"
-        #else
-        var versionString = ""
-        #endif
+#elseif os(Windows)
+        var versionString = "Windows"
+        
+        guard let osVersionInfo = self._rawOSVersion else {
+            return versionString
+        }
+
+        // Windows has no canonical way to turn the fairly complex `RTL_OSVERSIONINFOW` version info into a string. We
+        // do our best here to construct something consistent. Unfortunately, to provide a useful result, this requires
+        // hardcoding several of the somewhat ambiguous values in the table provided here:
+        //  https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_osversioninfoexw#remarks
+        versionString += " "
+        versionString += switch (osVersionInfo.dwMajorVersion, osVersionInfo.dwMinorVersion, osVersionInfo.dwBuildNumber) {
+        case (5, 0, _): "2000"
+        case (5, 1, _): "XP"
+        case (5, 2, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "XP Professional x64"
+        case (5, 2, _) where osVersionInfo.wSuiteMask == VER_SUITE_WH_SERVER: "Home Server"
+        case (5, 2, _): "Server 2003"
+        case (6, 0, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "Vista"
+        case (6, 0, _): "Server 2008"
+        case (6, 1, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "7"
+        case (6, 1, _): "Server 2008 R2"
+        case (6, 2, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "8"
+        case (6, 2, _): "Server 2012"
+        case (6, 3, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "8.1"
+        case (6, 3, _): "Server 2012 R2" // We assume the "10,0" numbers in the table for this are a typo
+        case (10, 0, ..<22000) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "10"
+        case (10, 0, 22000...) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "11"
+        case (10, 0, _): "Server 2019" // The table gives identical values for 2016 and 2019, so we just assume 2019 here
+        case let (maj, min, _): "Unknown (\(maj).\(min))" // If all else fails, just give the raw version number
+        }
+        versionString += " (build \(osVersionInfo.dwBuildNumber))"
+        // For now we ignore the `szCSDVersion`, `wServicePackMajor`, and `wServicePackMinor` values.
+        return versionString
+#elseif os(FreeBSD)
+        // Try to get a release version from `uname -r`.
+        var versionString = "FreeBSD"
+        var utsNameBuffer = utsname()
+        if uname(&utsNameBuffer) == 0 {
+            let release = withUnsafePointer(to: &utsNameBuffer.release.0) { String(cString: $0) }
+            if !release.isEmpty {
+                versionString += " \(release)"
+            }
+        }
+        return versionString
+#elseif os(OpenBSD)
+        // TODO: `uname -r` probably works here too.
+        return "OpenBSD"
+#elseif os(Android)
+        /// In theory, we need to do something like this:
+        ///
+        ///     var versionString = "Android"
+        ///     let property = String(unsafeUninitializedCapacity: PROP_VALUE_MAX) { buf in
+        ///         __system_property_get("ro.build.description", buf.baseAddress!)
+        ///     }
+        ///     if !property.isEmpty {
+        ///         versionString += " \(property)"
+        ///     }
+        ///     return versionString
+        return "Android"
+#elseif os(PS4)
+        return "PS4"
+#elseif os(Cygwin)
+        // TODO: `uname -r` probably works here too.
+        return "Cygwin"
+#elseif os(Haiku)
+        return "Haiku"
+#elseif os(WASI)
+        return "WASI"
+#else
+        // On other systems at least return something.
+        return "Unknown"
+#endif
+        
+#if os(macOS) || os(Linux)
         var uts: utsname = utsname()
         if uname(&uts) == 0 {
             let versionValue = withUnsafePointer(
@@ -211,9 +346,11 @@ extension _ProcessInfo {
         }
 
         return versionString
+#endif
     }
 
     var operatingSystemVersion: (major: Int, minor: Int, patch: Int) {
+#if canImport(Darwin) || os(Linux) || os(FreeBSD) || os(OpenBSD) || os(Android)
         var uts: utsname = utsname()
         guard uname(&uts) == 0 else {
             return (major: -1, minor: 0, patch: 0)
@@ -230,6 +367,19 @@ extension _ProcessInfo {
         let minor = version.count >= 2 ? version[1] : 0
         let patch = version.count >= 3 ? version[2] : 0
         return (major: major, minor: minor, patch: patch)
+#elseif os(Windows)
+        guard let osVersionInfo = self._rawOSVersion else {
+            return OperatingSystemVersion(majorVersion: -1, minorVersion: 0, patchVersion: 0)
+        }
+
+        return OperatingSystemVersion(
+            majorVersion: Int(osVersionInfo.dwMajorVersion),
+            minorVersion: Int(osVersionInfo.dwMinorVersion),
+            patchVersion: Int(osVersionInfo.dwBuildNumber)
+        )
+#else
+        return OperatingSystemVersion(majorVersion: -1, minorVersion: 0, patchVersion: 0)
+#endif
     }
 
     func isOperatingSystemAtLeast(_ version: (major: Int, minor: Int, patch: Int)) -> Bool {
@@ -268,8 +418,14 @@ extension _ProcessInfo {
             return 0
         }
         return Int(count)
-#else
+#elseif os(Windows)
+        var siInfo = SYSTEM_INFO()
+        GetSystemInfo(&siInfo)
+        return Int(siInfo.dwNumberOfProcessors)
+#elseif os(Linux) || os(FreeBSD)
         return Int(sysconf(Int32(_SC_NPROCESSORS_CONF)))
+#else
+        return 1
 #endif
     }
 
@@ -283,10 +439,82 @@ extension _ProcessInfo {
             return 0
         }
         return Int(count)
-#else
+#elseif os(Linux) || os(FreeBSD)
+        #if os(Linux)
+        if let fsCount = Self.fsCoreCount() {
+            return fsCount
+        }
+        #endif
         return Int(sysconf(Int32(_SC_NPROCESSORS_ONLN)))
+#elseif os(Windows)
+        var sysInfo = SYSTEM_INFO()
+        GetSystemInfo(&sysInfo)
+        return sysInfo.dwActiveProcessorMask.nonzeroBitCount
+#else
+        return 0
 #endif
     }
+    
+#if os(Linux)
+    // Support for CFS quotas for cpu count as used by Docker.
+    // Based on swift-nio code, https://github.com/apple/swift-nio/pull/1518
+    private static let cfsQuotaPath = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
+    private static let cfsPeriodPath = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
+    private static let cpuSetPath = "/sys/fs/cgroup/cpuset/cpuset.cpus"
+
+    private static func firstLineOfFile(path: String) throws -> Substring {
+        // TODO: Replace with URL version once that is available in FoundationEssentials
+        let data = try Data(contentsOf: path)
+        if let string = String(data: data, encoding: .utf8), let line = string.split(separator: "\n").first {
+            return line
+        } else {
+            return ""
+        }
+    }
+
+    private static func countCoreIds(cores: Substring) -> Int? {
+        let ids = cores.split(separator: "-", maxSplits: 1)
+        guard let first = ids.first.flatMap({ Int($0, radix: 10) }),
+              let last = ids.last.flatMap({ Int($0, radix: 10) }),
+              last >= first
+        else {
+            return nil
+        }
+        return 1 + last - first
+    }
+
+    private static func coreCount(cpuset cpusetPath: String) -> Int? {
+        guard let cpuset = try? firstLineOfFile(path: cpusetPath).split(separator: ","),
+              !cpuset.isEmpty
+        else { return nil }
+        if let first = cpuset.first, let count = countCoreIds(cores: first) {
+            return count
+        } else {
+            return nil
+        }
+    }
+
+    private static func coreCount(quota quotaPath: String,  period periodPath: String) -> Int? {
+        guard let quota = try? Int(firstLineOfFile(path: quotaPath)),
+              quota > 0
+        else { return nil }
+        guard let period = try? Int(firstLineOfFile(path: periodPath)),
+              period > 0
+        else { return nil }
+
+        return (quota - 1 + period) / period // always round up if fractional CPU quota requested
+    }
+
+    private static func fsCoreCount() -> Int? {
+        if let quota = coreCount(quota: cfsQuotaPath, period: cfsPeriodPath) {
+            return quota
+        } else if let cpusetCount = coreCount(cpuset: cpuSetPath) {
+            return cpusetCount
+        } else {
+            return nil
+        }
+    }
+#endif
 
     var physicalMemory: UInt64 {
 #if canImport(Darwin)
@@ -300,10 +528,18 @@ extension _ProcessInfo {
             }
             return 0
         }
-#else
+#elseif os(Windows)
+        var totalMemoryKB: ULONGLONG = 0
+        guard GetPhysicallyInstalledSystemMemory(&totalMemoryKB) else {
+            return 0
+        }
+        return totalMemoryKB * 1024
+#elseif os(Linux) || os(FreeBSD)
         var memory = sysconf(Int32(_SC_PHYS_PAGES))
         memory *= sysconf(Int32(_SC_PAGESIZE))
         return UInt64(memory)
+#else
+        return 0
 #endif
     }
 
@@ -312,6 +548,8 @@ extension _ProcessInfo {
         let (_, secondsPerTick) = _systemClockTickRate
         let time = mach_absolute_time()
         return TimeInterval(time) * secondsPerTick
+#elseif os(Windows)
+        return TimeInterval(GetTickCount64()) / 1000.0
 #else
         var ts = timespec()
         guard clock_gettime(CLOCK_MONOTONIC, &ts) == 0 else {

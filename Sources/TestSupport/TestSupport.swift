@@ -224,6 +224,7 @@ public typealias CocoaError = FoundationEssentials.CocoaError
 public typealias POSIXError = FoundationEssentials.POSIXError
 public typealias FileManagerDelegate = FoundationEssentials.FileManagerDelegate
 public typealias ProcessInfo = FoundationEssentials.ProcessInfo
+public typealias OperatingSystemVersion = FoundationEssentials.OperatingSystemVersion
 public typealias IndexPath = FoundationEssentials.IndexPath
 
 #endif // FOUNDATION_FRAMEWORK

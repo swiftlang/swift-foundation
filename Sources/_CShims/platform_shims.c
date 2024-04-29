@@ -42,6 +42,8 @@ _platform_shims_get_environ()
     return *_NSGetEnviron();
 #elif defined(_WIN32)
     return _environ;
+#elif TARGET_OS_WASI
+    return __wasilibc_get_environ();
 #elif __has_include(<unistd.h>)
     return environ;
 #endif
