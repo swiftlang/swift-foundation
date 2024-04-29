@@ -30,7 +30,7 @@ final class _ProcessInfo: Sendable {
     private let _hostName: LockedState<String?>
 
     internal init() {
-        let state: State = State(processName: _ProcessInfo._getProcessName())
+        let state: State = State()
         self.state = LockedState(initialState: state)
         self._hostName = LockedState(initialState: nil)
     }
@@ -122,7 +122,14 @@ final class _ProcessInfo: Sendable {
 
     var processName: String {
         get {
-            return state.withLock { $0.processName }
+            return state.withLock {
+                if let name = $0.processName {
+                    return name
+                }
+                let processName = _ProcessInfo._getProcessName()
+                $0.processName = processName
+                return processName
+            }
         }
         set {
             state.withLock{ $0.processName = newValue }
@@ -318,7 +325,7 @@ extension _ProcessInfo {
 
 extension _ProcessInfo {
     struct State {
-        var processName: String
+        var processName: String?
         var arguments: [String]?
     }
 
