@@ -358,7 +358,7 @@ enum _FileOperations {
             try directory.withNTPathRepresentation {
                 if RemoveDirectoryW($0) { return }
                 let dwError: DWORD = GetLastError()
-                guard dwError == ERROR_DIR_NOT_EMPTY else {
+                if dwError == ERROR_DIR_NOT_EMPTY {
                     let error = CocoaError.removeFileError(dwError, directory)
                     guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: directory) ?? false) else {
                         throw error
@@ -381,14 +381,14 @@ enum _FileOperations {
                             if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
                                 if !RemoveDirectoryW($0) {
                                     let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
-                                    guard fileManager._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) else {
+                                    guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) ?? false) else {
                                         throw error
                                     }
                                 }
                             } else {
                                 if !DeleteFileW($0) {
                                     let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
-                                    guard fileManager._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) else {
+                                    guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) ?? false) else {
                                         throw error
                                     }
                                 }
