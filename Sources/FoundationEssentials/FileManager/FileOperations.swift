@@ -16,6 +16,7 @@ import Darwin
 import Glibc
 #elseif os(Windows)
 import CRT
+import WinSDK
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -30,6 +31,49 @@ internal import QuarantinePrivate
 internal import _CShims
 
 extension CocoaError {
+#if os(Windows)
+    private static func fileOperationError(_ dwError: DWORD, _ suspectedErroneousPath: String, sourcePath: String? = nil, destinationPath: String? = nil, variant: String? = nil) -> CocoaError {
+        var path = suspectedErroneousPath
+        if let sourcePath, let destinationPath, dwError == ERROR_BUFFER_OVERFLOW {
+            let lastLength = destinationPath.lastPathComponent.withFileSystemRepresentation {
+                strlen($0!)
+            }
+            let fullLength = destinationPath.withFileSystemRepresentation {
+                strlen($0!)
+            }
+            path = lastLength > MAX_PATH || fullLength > MAX_PATH ? destinationPath : sourcePath
+        }
+
+        var info: [String : AnyHashable] = [:]
+        if let sourcePath {
+            info[NSSourceFilePathErrorKey] = sourcePath
+        }
+        if let destinationPath {
+            info[NSDestinationFilePathErrorKey] = destinationPath
+        }
+        return CocoaError.errorWithFilePath(path, win32: dwError, reading: false, variant: variant, userInfo: info)
+    }
+
+    fileprivate static func removeFileError(_ dwError: DWORD, _ path: String) -> CocoaError {
+        var err = CocoaError.fileOperationError(dwError, path, variant: "Remove")
+        if dwError == ERROR_DIR_NOT_EMPTY {
+            err = CocoaError(.fileWriteNoPermission, userInfo: err.userInfo)
+        }
+        return err
+    }
+
+    fileprivate static func moveFileError(_ error: DWORD, _ src: URL, _ dst: URL) -> CocoaError {
+        CocoaError.fileOperationError(error, src.path, sourcePath: src.path, destinationPath: dst.path, variant: "Move")
+    }
+
+    fileprivate static func linkFileError(_ error: DWORD, _ srcPath: String, _ dstPath: String) -> CocoaError {
+        CocoaError.fileOperationError(error, srcPath, sourcePath: srcPath, destinationPath: dstPath, variant: "Link")
+    }
+
+    fileprivate static func copyFileError(_ error: DWORD, _ srcPath: String, _ dstPath: String) -> CocoaError {
+        CocoaError.fileOperationError(error, srcPath, sourcePath: srcPath, destinationPath: dstPath, variant: "Copy")
+    }
+#else
     private static func fileOperationError(_ errNum: Int32, _ suspectedErroneousPath: String, sourcePath: String? = nil, destinationPath: String? = nil, variant: String? = nil) -> CocoaError {
         // Try to be a little bit more intelligent about which path should be reported in the error. In the case of ENAMETOOLONG, we can more accurately guess which path is causing the error without racily checking the file system after the fact. This may not be perfect in the face of operations which span file systems, or on file systems that only support names/paths less than NAME_MAX or PATH_MAX, but it's better than nothing.
         var erroneousPath = suspectedErroneousPath
@@ -78,6 +122,7 @@ extension CocoaError {
     fileprivate static func copyFileError(_ errNum: Int32, _ srcPath: String, _ dstPath: String) -> CocoaError {
         CocoaError.fileOperationError(errNum, srcPath, sourcePath: srcPath, destinationPath: dstPath, variant: "Copy")
     }
+#endif
 }
 
 #if canImport(Darwin)
@@ -255,24 +300,106 @@ struct NSFileManagerMoveOptions: ExpressibleByArrayLiteral {
 #endif
 
 private protocol LinkOrCopyDelegate {
-    func shouldPerformOnItemAtPath(_ path: String, to dstPtr: UnsafePointer<CChar>) -> Bool
-    func throwIfNecessary(_ errno: Int32, _ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>) throws
-    func throwIfNecessary(_ error: Error, _ srcString: String, _ dstString: String) throws
+#if os(Windows)
+    typealias ErrorType = DWORD
+#else
+    typealias ErrorType = Int32
+#endif
+
+    func shouldPerformOnItemAtPath(_ path: String, to destination: String) -> Bool
+    func throwIfNecessary(_ errno: ErrorType, _ source: String, _ destination: String) throws
+    func throwIfNecessary(_ errno: any Error, _ source: String, _ destination: String) throws
     var extraCopyFileFlags: Int32 { get }
     var copyData: Bool { get }
 }
 
 private extension LinkOrCopyDelegate {
     var extraCopyFileFlags: Int32 { 0 }
-    func throwIfNecessary(_ error: Error, _ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>) throws {
-        let srcString = String(cString: srcPtr)
-        let dstString = String(cString: dstPtr)
-        try throwIfNecessary(error, srcString, dstString)
-    }
 }
 
 enum _FileOperations {
     // MARK: removefile
+
+#if os(Windows)
+    static func removeFile(_ path: String, with filemanager: FileManager?) throws {
+        try path.withNTPathRepresentation {
+            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+            guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
+                let error = CocoaError.removeFileError(GetLastError(), path)
+                guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: path) ?? false) else {
+                    throw error
+                }
+                return
+            }
+            if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_READONLY == FILE_ATTRIBUTE_READONLY {
+                guard SetFileAttributesW($0, faAttributes.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY) else {
+                    throw CocoaError.removeFileError(GetLastError(), path)
+                }
+            }
+            if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == 0 || faAttributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                guard filemanager?._shouldRemoveItemAtPath(path) ?? true else { return }
+                if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
+                    guard RemoveDirectoryW($0) else {
+                        throw CocoaError.removeFileError(GetLastError(), path)
+                    }
+                    return
+                } else {
+                    guard DeleteFileW($0) else {
+                        throw CocoaError.removeFileError(GetLastError(), path)
+                    }
+                    return
+                }
+            }
+        }
+
+        var stack = [path]
+        while let directory = stack.popLast() {
+            guard filemanager?._shouldRemoveItemAtPath(directory) ?? true else { continue }
+            try directory.withNTPathRepresentation {
+                if RemoveDirectoryW($0) { return }
+                let dwError: DWORD = GetLastError()
+                guard dwError == ERROR_DIR_NOT_EMPTY else {
+                    let error = CocoaError.removeFileError(dwError, directory)
+                    guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: directory) ?? false) else {
+                        throw error
+                    }
+                }
+                stack.append(directory)
+
+                for entry in _Win32DirectoryContentsSequence(path: directory, appendSlashForDirectory: false, prefix: [directory]) {
+                    try entry.fileName.withNTPathRepresentation {
+                        if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY,
+                                entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
+                            stack.append(entry.fileNameWithPrefix)
+                        } else {
+                            if entry.dwFileAttributes & FILE_ATTRIBUTE_READONLY == FILE_ATTRIBUTE_READONLY {
+                                guard SetFileAttributesW($0, entry.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY) else {
+                                    throw CocoaError.removeFileError(GetLastError(), path)
+                                }
+                            }
+                            guard filemanager?._shouldRemoveItemAtPath(entry.fileNameWithPrefix) ?? true else { return }
+                            if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
+                                if !RemoveDirectoryW($0) {
+                                    let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
+                                    guard fileManager._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) else {
+                                        throw error
+                                    }
+                                }
+                            } else {
+                                if !DeleteFileW($0) {
+                                    let error = CocoaError.removeFileError(GetLastError(), entry.fileName)
+                                    guard fileManager._shouldProceedAfter(error: error, removingItemAtPath: entry.fileNameWithPrefix) else {
+                                        throw error
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+#else
     static func removeFile(_ path: String, with fileManager: FileManager?) throws {
         try path.withFileSystemRepresentation { rep in
             guard let rep else {
@@ -398,10 +525,98 @@ enum _FileOperations {
         
     }
     #endif
+#endif
     
     // MARK: Move File
     
     static func moveFile(_ src: URL, to dst: URL, with fileManager: FileManager, options: NSFileManagerMoveOptions) throws {
+#if os(Windows)
+        try src.withUnsafeFileSystemRepresentation { pszSource in
+            let source = String(cString: pszSource!)
+            try dst.withUnsafeFileSystemRepresentation { pszDestination in
+                let destination = String(cString: pszDestination!)
+
+                guard fileManager._shouldMoveItemAtPath(source, to: destination) else { return }
+
+                try source.withNTPathRepresentation { pwszSource in
+                    var faSourceAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+                    guard GetFileAttributesExW(pwszSource, GetFileExInfoStandard, &faSourceAttributes) else {
+                        throw CocoaError.moveFileError(GetLastError(), src, dst)
+                    }
+
+                    try destination.withNTPathRepresentation { pwszDestination in
+                        var faDestinationAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+                        guard GetFileAttributesExW(pwszDestination, GetFileExInfoStandard, &faDestinationAttributes) else {
+                            throw CocoaError.moveFileError(GetLastError(), src, dst)
+                        }
+
+                        // `MoveFileExW` does not work if the source and
+                        // destination are on different volumes and the source
+                        // is a directory. In that case, we need to do a
+                        // recursive copy and then remove the source.
+                        if PathIsSameRootW(pwszSource, pwszDestination) ||
+                                faSourceAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != FILE_ATTRIBUTE_DIRECTORY {
+                            if !MoveFileExW(pwszSource, pwszDestination, MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH) {
+                                let error = CocoaError.moveFileError(GetLastError(), src, dst)
+                                guard fileManager._shouldProceedAfter(error: error, movingItemAtPath: source, to: destination) else {
+                                    throw error
+                                }
+                            }
+                        } else {
+                            var stack: [String] = [source]
+                            while let entry = stack.popLast() {
+                                do {
+                                    try entry.withNTPathRepresentation { pwszEntry in
+                                        var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+                                        guard GetFileAttributesExW(pwszEntry, GetFileExInfoStandard, &faAttributes) else {
+                                            throw CocoaError.moveFileError(GetLastError(), src, dst)
+                                        }
+
+                                        var pwszDestination: PWSTR? = nil
+                                        guard SUCCEEDED(PathAllocCombine(destination, entry, PATHCCH_ALLOW_LONG_PATHS, &pwszDestination)) else {
+                                            throw CocoaError.moveFileError(GetLastError(), src, dst)
+                                        }
+                                        defer { LocalFree(pwszDestination) }
+
+                                        if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                                            let aliasee = try fileManager.destinationOfSymbolicLink(atPath: entry)
+
+                                            // TODO(compnerd) - is there a way to avoid the round-trip of decoding, encoding here?
+                                            let destination = String(decodingCString: pwszDestination!, as: UTF16.self)
+
+                                            var faDestinationAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+                                            if GetFileAttributesExW(pwszDestination, GetFileExInfoStandard, &faDestinationAttributes) {
+                                                try removeFile(destination, with: fileManager)
+                                            }
+                                            try fileManager.createSymbolicLink(atPath: destination, withDestinationPath: aliasee)
+                                        } else {
+                                            if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
+                                                guard CreateDirectoryW(pwszDestination, nil) else {
+                                                    throw CocoaError.moveFileError(GetLastError(), src, dst)
+                                                }
+                                                stack.append(entry)
+                                                for entry in _Win32DirectoryContentsSequence(path: entry, appendSlashForDirectory: true) {
+                                                    stack.append(entry.fileName)
+                                                }
+                                            } else {
+                                                guard CopyFileW(pwszEntry, pwszDestination, true) else {
+                                                    throw CocoaError.moveFileError(GetLastError(), src, dst)
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch let error {
+                                    guard fileManager._shouldProceedAfter(error: error, movingItemAtPath: source, to: destination) else {
+                                        throw error
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+#else
         try src.withUnsafeFileSystemRepresentation { srcPath in
             guard let srcPath else {
                 throw CocoaError.errorWithFilePath(.fileNoSuchFile, src)
@@ -529,28 +744,57 @@ enum _FileOperations {
                 }
             }
         }
+#endif
     }
     
     // MARK: Link/Copy File
-    
+
+#if os(Windows)
+    private static func linkOrCopyFile(_ src: String, dst: String, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
+        let bCopyFile = delegate.copyData
+        try src.withNTPathRepresentation { pwszSource in
+            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+            guard GetFileAttributesExW(pwszSource, GetFileExInfoStandard, &faAttributes) else {
+                throw CocoaError.copyFileError(GetLastError(), src, dst)
+            }
+
+            try dst.withNTPathRepresentation { pwszDestination in
+                if bCopyFile || faAttributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                    var ExtendedParameters: COPYFILE2_EXTENDED_PARAMETERS = .init()
+                    ExtendedParameters.dwSize = DWORD(MemoryLayout<COPYFILE2_EXTENDED_PARAMETERS>.size)
+                    ExtendedParameters.dwCopyFlags = COPY_FILE_COPY_SYMLINK | COPY_FILE_NO_BUFFERING | COPY_FILE_OPEN_AND_COPY_REPARSE_POINT
+                    if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
+                        ExtendedParameters.dwCopyFlags |= COPY_FILE_DIRECTORY
+                    }
+
+                    guard SUCCEEDED(CopyFile2(pwszSource, pwszDestination, &ExtendedParameters)) else {
+                        throw CocoaError.copyFileError(GetLastError(), src, dst)
+                    }
+                } else {
+                    try fileManager.createSymbolicLink(atPath: dst, withDestinationPath: src)
+                }
+            }
+        }
+    }
+#else
     #if !canImport(Darwin)
     private static func _copyRegularFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, delegate: some LinkOrCopyDelegate) throws {
         var fileInfo = stat()
         guard stat(srcPtr, &fileInfo) >= 0 else {
-            try delegate.throwIfNecessary(errno, srcPtr, dstPtr)
+            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
             return
         }
 
         let srcfd = open(srcPtr, O_RDONLY)
         guard srcfd >= 0 else {
-            try delegate.throwIfNecessary(errno, srcPtr, dstPtr)
+            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
             return
         }
         defer { close(srcfd) }
 
         let dstfd = open(dstPtr, O_WRONLY | O_CREAT | O_EXCL | O_TRUNC, 0o666)
         guard dstfd >= 0 else {
-            try delegate.throwIfNecessary(errno, srcPtr, dstPtr)
+            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
             return
         }
         defer { close(dstfd) }
@@ -558,7 +802,7 @@ enum _FileOperations {
         // Set the file permissions using fchmod() instead of when open()ing to avoid umask() issues
         let permissions = fileInfo.st_mode & ~S_IFMT
         guard fchmod(dstfd, permissions) == 0 else {
-            try delegate.throwIfNecessary(errno, srcPtr, dstPtr)
+            try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
             return
         }
 
@@ -573,13 +817,13 @@ enum _FileOperations {
         
         while current < total {
             guard sendfile(dstfd, srcfd, &current, Swift.min(total - current, chunkSize)) != -1 else {
-                try delegate.throwIfNecessary(errno, srcPtr, dstPtr)
+                try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
                 return
             }
         }
     }
     #endif
-    
+
     private static func _linkOrCopyFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
         try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             let dstLen = Platform.copyCString(dst: buffer.baseAddress!, src: dstPtr, size: FileManager.MAX_PATH_SIZE)
@@ -599,7 +843,7 @@ enum _FileOperations {
                     Platform.copyCString(dst: dstAppendPtr, src: trimmedPathPtr, size: remainingBuffer)
                     
                     // we don't want to ask the delegate on the way back -up- the hierarchy if they want to copy a directory they've already seen and therefore already said "YES" to.
-                    guard entry.ftsEnt.fts_info == FTS_DP || delegate.shouldPerformOnItemAtPath(String(cString: entry.ftsEnt.fts_path), to: buffer.baseAddress!) else {
+                    guard entry.ftsEnt.fts_info == FTS_DP || delegate.shouldPerformOnItemAtPath(String(cString: entry.ftsEnt.fts_path), to: String(cString: buffer.baseAddress!)) else {
                         if entry.ftsEnt.fts_info == FTS_D {
                             iterator.skipDescendants(of: entry, skipPostProcessing: true)
                         }
@@ -613,13 +857,13 @@ enum _FileOperations {
                         // Directory being visited in pre-order - create it with whatever default perms will be on the destination.
                         #if canImport(Darwin)
                         if copyfile(entry.ftsEnt.fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_DATA | COPYFILE_EXCL | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
-                            try delegate.throwIfNecessary(errno, entry.ftsEnt.fts_path, buffer.baseAddress!)
+                            try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
                         }
                         #else
                         do {
                             try fileManager.createDirectory(atPath: String(cString: buffer.baseAddress!), withIntermediateDirectories: true)
                         } catch {
-                            try delegate.throwIfNecessary(error, entry.ftsEnt.fts_path, buffer.baseAddress!)
+                            try delegate.throwIfNecessary(error, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
                         }
                         #endif
                         
@@ -627,14 +871,14 @@ enum _FileOperations {
                         // Directory being visited in post-order - copy the permissions over.
                         #if canImport(Darwin)
                         if copyfile(entry.ftsEnt.fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_METADATA | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
-                            try delegate.throwIfNecessary(errno, entry.ftsEnt.fts_path, buffer.baseAddress!)
+                            try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
                         }
                         #else
                         do {
                             let attributes = try fileManager.attributesOfItem(atPath: String(cString: entry.ftsEnt.fts_path))
                             try fileManager.setAttributes(attributes, ofItemAtPath: String(cString: buffer.baseAddress!))
                         } catch {
-                            try delegate.throwIfNecessary(error, entry.ftsEnt.fts_path, buffer.baseAddress!)
+                            try delegate.throwIfNecessary(error, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
                         }
                         #endif
                         
@@ -649,7 +893,7 @@ enum _FileOperations {
                             flags = COPYFILE_DATA | COPYFILE_METADATA | COPYFILE_EXCL | COPYFILE_NOFOLLOW | extraFlags
                         }
                         if copyfile(entry.ftsEnt.fts_path, buffer.baseAddress!, nil, copyfile_flags_t(flags)) != 0 {
-                            try delegate.throwIfNecessary(errno, entry.ftsEnt.fts_path, buffer.baseAddress!)
+                            try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
                         }
                         #else
                         try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { tempBuff in
@@ -659,7 +903,7 @@ enum _FileOperations {
                             if len >= 0, symlink(tempBuff.baseAddress!, buffer.baseAddress!) != -1 {
                                 return
                             }
-                            try delegate.throwIfNecessary(errno, entry.ftsEnt.fts_path, buffer.baseAddress!)
+                            try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
                         }
                         #endif
                         
@@ -668,14 +912,14 @@ enum _FileOperations {
                         if delegate.copyData {
                             #if canImport(Darwin)
                             if copyfile(entry.ftsEnt.fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_CLONE | COPYFILE_ALL | COPYFILE_EXCL | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
-                                try delegate.throwIfNecessary(errno, entry.ftsEnt.fts_path, buffer.baseAddress!)
+                                try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
                             }
                             #else
                             try Self._copyRegularFile(entry.ftsEnt.fts_path, buffer.baseAddress!, delegate: delegate)
                             #endif
                         } else {
                             if link(entry.ftsEnt.fts_path, buffer.baseAddress!) != 0 {
-                                try delegate.throwIfNecessary(errno, entry.ftsEnt.fts_path, buffer.baseAddress!)
+                                try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
                             }
                         }
                         
@@ -683,7 +927,7 @@ enum _FileOperations {
                     case FTS_DNR: fallthrough   // Directory cannot be read.
                     case FTS_ERR: fallthrough   // Some error occurred, but we don't know what.
                     case FTS_NS:                // No stat(2) information is available.
-                        try delegate.throwIfNecessary(entry.ftsEnt.fts_errno, entry.ftsEnt.fts_path, buffer.baseAddress!)
+                        try delegate.throwIfNecessary(entry.ftsEnt.fts_errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
                         
                     default: break
                     }
@@ -705,12 +949,14 @@ enum _FileOperations {
             }
         }
     }
-    
+#endif
+
     static func copyFile(_ src: String, to dst: String, with fileManager: FileManager, options: NSFileManagerCopyOptions) throws {
         struct CopyFileDelegate : LinkOrCopyDelegate {
             let copyData = true
             let extraCopyFileFlags: Int32
             let fileManager: FileManager
+
             init(inPlace: Bool, fileManager: FileManager) {
                 self.fileManager = fileManager
                 #if canImport(Darwin)
@@ -720,23 +966,24 @@ enum _FileOperations {
                 #endif
             }
             
-            func shouldPerformOnItemAtPath(_ path: String, to dstPtr: UnsafePointer<CChar>) -> Bool {
-                fileManager._shouldCopyItemAtPath(path, to: String(cString: dstPtr))
+            func shouldPerformOnItemAtPath(_ path: String, to destination: String) -> Bool {
+                fileManager._shouldCopyItemAtPath(path, to: destination)
             }
-            
-            func throwIfNecessary(_ errno: Int32, _ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>) throws {
-                let srcString = String(cString: srcPtr)
-                let dstString = String(cString: dstPtr)
-                let error = CocoaError.copyFileError(errno, srcString, dstString)
-                try throwIfNecessary(error, srcString, dstString)
+
+            func throwIfNecessary(_ error: ErrorType, _ source: String, _ destination: String) throws {
+                let error = CocoaError.copyFileError(error, source, destination)
+                guard fileManager._shouldProceedAfter(error: error, copyingItemAtPath: source, to: destination) else {
+                    throw error
+                }
             }
-            
-            func throwIfNecessary(_ error: Error, _ srcString: String, _ dstString: String) throws {
-                guard fileManager._shouldProceedAfter(error: error, copyingItemAtPath: srcString, to: dstString) else {
+
+            func throwIfNecessary(_ error: any Error, _ source: String, _ destination: String) throws {
+                guard fileManager._shouldProceedAfter(error: error, copyingItemAtPath: source, to: destination) else {
                     throw error
                 }
             }
         }
+
         var inPlace = false
         #if FOUNDATION_FRAMEWORK
         if options.contains(.allowRunningResultInPlace) {
@@ -755,19 +1002,19 @@ enum _FileOperations {
                 self.fileManager = fileManager
             }
             
-            func shouldPerformOnItemAtPath(_ path: String, to dstPtr: UnsafePointer<CChar>) -> Bool {
-                fileManager._shouldLinkItemAtPath(path, to: String(cString: dstPtr))
+            func shouldPerformOnItemAtPath(_ path: String, to destination: String) -> Bool {
+                fileManager._shouldLinkItemAtPath(path, to: destination)
             }
-            
-            func throwIfNecessary(_ errno: Int32, _ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>) throws {
-                let srcString = String(cString: srcPtr)
-                let dstString = String(cString: dstPtr)
-                let error = CocoaError.linkFileError(errno, srcString, dstString)
-                try throwIfNecessary(error, srcString, dstString)
+
+            func throwIfNecessary(_ error: ErrorType, _ source: String, _ destination: String) throws {
+                let error = CocoaError.linkFileError(error, source, destination)
+                guard fileManager._shouldProceedAfter(error: error, linkingItemAtPath: source, to: destination) else {
+                    throw error
+                }
             }
-            
-            func throwIfNecessary(_ error: Error, _ srcString: String, _ dstString: String) throws {
-                guard fileManager._shouldProceedAfter(error: error, linkingItemAtPath: srcString, to: dstString) else {
+
+            func throwIfNecessary(_ error: any Error, _ source: String, _ destination: String) throws {
+                guard fileManager._shouldProceedAfter(error: error, linkingItemAtPath: source, to: destination) else {
                     throw error
                 }
             }
