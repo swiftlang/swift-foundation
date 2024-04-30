@@ -16,6 +16,25 @@ import Darwin
 import Glibc
 #elseif os(Windows)
 import CRT
+import WinSDK
+#endif
+
+#if os(Windows)
+extension _FILE_ID_128 /* : @retroactive Equatable */ {
+    internal static func _equals(_ lhs: _FILE_ID_128, _ rhs: _FILE_ID_128) -> Bool {
+        return withUnsafeBytes(of: lhs.Identifier) { pLHS in
+            return withUnsafeBytes(of: rhs.Identifier) { pRHS in
+                return memcmp(pLHS.baseAddress, pRHS.baseAddress, MemoryLayout.size(ofValue: lhs.Identifier)) == 0
+            }
+        }
+    }
+}
+
+extension LARGE_INTEGER /* : @retroactive Equatable */ {
+    internal static func _equals(_ lhs: LARGE_INTEGER, _ rhs: LARGE_INTEGER) -> Bool {
+        return lhs.QuadPart == rhs.QuadPart
+    }
+}
 #endif
 
 internal struct _FileManagerImpl {
@@ -60,6 +79,130 @@ internal struct _FileManagerImpl {
         atPath path: String,
         andPath other: String
     ) -> Bool {
+#if os(Windows)
+        return (try? path.withNTPathRepresentation {
+            let hLHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
+            if hLHS == INVALID_HANDLE_VALUE {
+                return false
+            }
+            defer { CloseHandle(hLHS) }
+
+            return (try? other.withNTPathRepresentation {
+                let hRHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
+                if hRHS == INVALID_HANDLE_VALUE {
+                    return false
+                }
+                defer { CloseHandle(hRHS) }
+
+                let dwLHSFileType: DWORD = GetFileType(hLHS)
+                let dwRHSFileType: DWORD = GetFileType(hRHS)
+
+                guard dwLHSFileType == FILE_TYPE_DISK, dwRHSFileType == FILE_TYPE_DISK else {
+                    return CompareObjectHandles(hLHS, hRHS)
+                }
+
+                var fiLHS: FILE_ID_INFO = .init()
+                guard GetFileInformationByHandleEx(hLHS, FileIdInfo, &fiLHS, DWORD(MemoryLayout.size(ofValue: fiLHS))) else {
+                    return false
+                }
+
+                var fiRHS: FILE_ID_INFO = .init()
+                guard GetFileInformationByHandleEx(hRHS, FileIdInfo, &fiRHS, DWORD(MemoryLayout.size(ofValue: fiRHS))) else {
+                    return false
+                }
+
+                if fiLHS.VolumeSerialNumber == fiRHS.VolumeSerialNumber, _FILE_ID_128._equals(fiLHS.FileId, fiRHS.FileId) {
+                    return true
+                }
+
+                var fbiLHS: FILE_BASIC_INFO = .init()
+                guard GetFileInformationByHandleEx(hLHS, FileBasicInfo, &fbiLHS, DWORD(MemoryLayout.size(ofValue: fbiLHS))) else {
+                    return false
+                }
+
+                var fbiRHS: FILE_BASIC_INFO = .init()
+                guard GetFileInformationByHandleEx(hRHS, FileBasicInfo, &fbiRHS, DWORD(MemoryLayout.size(ofValue: fbiRHS))) else {
+                    return false
+                }
+
+                if fbiLHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT,
+                   fbiRHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                    return (try? fileManager.destinationOfSymbolicLink(atPath: path) == fileManager.destinationOfSymbolicLink(atPath: other)) ?? false
+                } else if fbiLHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY,
+                          fbiRHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
+                    guard let aLHSItems = try? fileManager.contentsOfDirectory(atPath: path),
+                          let aRHSItems = try? fileManager.contentsOfDirectory(atPath: other),
+                          aLHSItems == aRHSItems else {
+                        return false
+                    }
+
+                    for item in aLHSItems {
+                        var hr: HRESULT
+
+                        var pszLHS: PWSTR? = nil
+                        hr = PathAllocCombine(path, item, PATHCCH_ALLOW_LONG_PATHS, &pszLHS)
+                        guard hr == S_OK else { return false }
+                        defer { LocalFree(pszLHS) }
+
+                        var pszRHS: PWSTR? = nil
+                        hr = PathAllocCombine(other, item, PATHCCH_ALLOW_LONG_PATHS, &pszRHS)
+                        guard hr == S_OK else { return false }
+                        defer { LocalFree(pszRHS) }
+
+                        let lhs: String = String(decodingCString: pszLHS!, as: UTF16.self)
+                        let rhs: String = String(decodingCString: pszRHS!, as: UTF16.self)
+                        guard contentsEqual(atPath: lhs, andPath: rhs) else { return false }
+                    }
+
+                    return true
+                } else if fbiLHS.FileAttributes & FILE_ATTRIBUTE_NORMAL == FILE_ATTRIBUTE_NORMAL,
+                          fbiRHS.FileAttributes & FILE_ATTRIBUTE_NORMAL == FILE_ATTRIBUTE_NORMAL {
+                    var liLHSSize: LARGE_INTEGER = .init()
+                    var liRHSSize: LARGE_INTEGER = .init()
+                    guard GetFileSizeEx(hLHS, &liLHSSize), GetFileSizeEx(hRHS, &liRHSSize), LARGE_INTEGER._equals(liLHSSize, liRHSSize) else {
+                        return false
+                    }
+
+                    let kBufferSize = 0x1000
+                    var dwBytesRemaining: UInt64 = UInt64(liLHSSize.QuadPart)
+                    return withUnsafeTemporaryAllocation(of: CChar.self, capacity: kBufferSize) { pLHSBuffer in
+                        return withUnsafeTemporaryAllocation(of: CChar.self, capacity: kBufferSize) { pRHSBuffer in
+                            repeat {
+                                let dwBytesToRead: DWORD = DWORD(min(UInt64(pLHSBuffer.count), dwBytesRemaining))
+
+                                var dwLHSRead: DWORD = 0
+                                guard ReadFile(hLHS, pLHSBuffer.baseAddress, dwBytesToRead, &dwLHSRead, nil) else {
+                                    return false
+                                }
+
+                                var dwRHSRead: DWORD = 0
+                                guard ReadFile(hRHS, pRHSBuffer.baseAddress, dwBytesToRead, &dwRHSRead, nil) else {
+                                    return false
+                                }
+
+                                guard dwLHSRead == dwRHSRead else {
+                                    return false
+                                }
+
+                                guard memcmp(pLHSBuffer.baseAddress, pRHSBuffer.baseAddress, Int(dwLHSRead)) == 0 else {
+                                    return false
+                                }
+
+                                if dwLHSRead < dwBytesToRead {
+                                    break
+                                }
+
+                                dwBytesRemaining -= UInt64(dwLHSRead)
+                            } while dwBytesRemaining > 0
+                            return dwBytesRemaining == 0
+                        }
+                    }
+                }
+
+                return false
+            }) ?? false
+        }) ?? false
+#else
         func _openFD(_ path: UnsafePointer<CChar>) -> Int32? {
             var statBuf = stat()
             let fd = open(path, 0, 0)
@@ -148,6 +291,7 @@ internal struct _FileManagerImpl {
         }
         
         fatalError("Unknown file type 0x\(String(myInfo.st_mode, radix: 16)) for file \(path)")
+#endif
     }
     
     func fileSystemRepresentation(withPath path: String) -> UnsafePointer<CChar>? {
@@ -210,7 +354,8 @@ extension FileManager {
         return try path.withFileSystemRepresentation(body)
     }
     #endif
-    
+
+#if !os(Windows)
     @nonobjc
     func _fileStat(_ path: String) -> stat? {
         let result = self.withFileSystemRepresentation(for: path) { rep -> stat? in
@@ -224,7 +369,8 @@ extension FileManager {
         guard let result else { return nil }
         return result
     }
-    
+#endif
+
     @nonobjc
     static var MAX_PATH_SIZE: Int { 1026 }
 }
