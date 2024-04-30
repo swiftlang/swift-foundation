@@ -30,8 +30,8 @@
  * %End-Header%
  */
 
-#ifndef _UUID_UUID_H
-#define _UUID_UUID_H
+#ifndef _CSHIMS_UUID_UUID_H
+#define _CSHIMS_UUID_UUID_H
 
 #include "_CShimsTargetConditionals.h"
 #include "_CShimsMacros.h"
@@ -78,4 +78,4 @@ INTERNAL void _foundation_uuid_unparse_upper(const uuid_t uu, uuid_string_t out)
 }
 #endif
 
-#endif /* _UUID_UUID_H */
+#endif /* _CSHIMS_UUID_UUID_H */
