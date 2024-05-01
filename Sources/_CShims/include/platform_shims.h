@@ -24,6 +24,13 @@
 #include <libkern/OSThermalNotification.h>
 #endif
 
+// Workaround for inability to import `security.h` as a module in WinSDK
+#if defined(_WIN32)
+#include <windows.h>
+#define SECURITY_WIN32
+#include <security.h>
+#endif
+
 INTERNAL char * _Nullable * _Nullable _platform_shims_get_environ();
 
 INTERNAL void _platform_shims_lock_environ();
