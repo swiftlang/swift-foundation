@@ -204,16 +204,13 @@ extension Platform {
     static func getHostname() -> String {
 #if os(Windows)
         var dwLength: DWORD = 0
-        guard GetComputerNameExW(ComputerNameDnsHostname, nil, &dwLength) == ERROR_MORE_DATA else {
-          // FIXME: should we log an error?
-          return "localhost"
-        }
+        _ = GetComputerNameExW(ComputerNameDnsHostname, nil, &dwLength)
         return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
           dwLength -= 1 // null-terminator reservation
           guard GetComputerNameExW(ComputerNameDnsHostname, $0.baseAddress!, &dwLength) else {
             return "localhost"
           }
-          return String(decodingCString: $0.baseAddress, as: UTF16.self)
+          return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
 #elseif os(WASI) // WASI does not have uname
         return "localhost"
