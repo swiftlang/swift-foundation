@@ -26,11 +26,22 @@ let benchmarks = {
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput]
     
-    let thanksgivingComponents = DateComponents(month: 11, weekday: 5, weekOfMonth: 4)
+    let thanksgivingComponents = DateComponents(month: 11, weekday: 5, weekdayOrdinal: 4)
     let cal = Calendar(identifier: .gregorian)
     let currentCalendar = Calendar.current
     let thanksgivingStart = Date(timeIntervalSinceReferenceDate: 496359355.795410) //2016-09-23T14:35:55-0700
     
+    Benchmark("nextThousandThursdaysInTheFourthWeekOfNovember") { benchmark in
+        // This benchmark used to be nextThousandThanksgivings, but the name was deceiving since it does not compute the next thousand thanksgivings
+        let components = DateComponents(month: 11, weekday: 5, weekOfMonth: 4)
+        var count = 1000
+        cal.enumerateDates(startingAfter: thanksgivingStart, matching: components, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
     Benchmark("nextThousandThanksgivings") { benchmark in
         var count = 1000
         cal.enumerateDates(startingAfter: thanksgivingStart, matching: thanksgivingComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
@@ -40,7 +51,26 @@ let benchmarks = {
             }
         }
     }
-
+    Benchmark("nextThousandThanksgivingsSequence") { benchmark in
+        var count = 1000
+        for _ in cal.dates(byMatching: thanksgivingComponents, startingAt: thanksgivingStart, matchingPolicy: .nextTime) {
+            count -= 1
+            if count == 0 {
+                break
+            }
+        }
+    }
+    Benchmark("nextThousandThanksgivingsUsingRecurrenceRule") { benchmark in
+        var rule = Calendar.RecurrenceRule(calendar: cal, frequency: .yearly, end: .afterOccurrences(1000))
+        rule.months = [11]
+        rule.weekdays = [.nth(4, .thursday)]
+        rule.matchingPolicy = .nextTime
+        var count = 0
+        for _ in rule.recurrences(of: thanksgivingStart) {
+            count += 1
+        }
+        assert(count == 1000)
+    }
     Benchmark("CurrentDateComponentsFromThanksgivings") { benchmark in
         var count = 1000
         currentCalendar.enumerateDates(startingAfter: thanksgivingStart, matching: thanksgivingComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
