@@ -318,32 +318,34 @@ extension UnsafeBufferPointer {
 extension NSString {
     @objc
     func __swiftFillFileSystemRepresentation(pointer: UnsafeMutablePointer<CChar>, maxLength: Int) -> Bool {
-        let buffer = UnsafeMutableBufferPointer(start: pointer, count: maxLength)
-        // See if we have a quick-access buffer we can just convert directly
-        if let fastCharacters = self._fastCharacterContents() {
-            // If we have quick access to UTF-16 contents, decompose from UTF-16
-            let charsBuffer = UnsafeBufferPointer(start: fastCharacters, count: self.length)
-            return (try? charsBuffer._decomposedRebinding(.hfsPlus, as: Unicode.UTF16.self, into: buffer, nullTerminated: true)) != nil
-        } else if self.fastestEncoding == NSASCIIStringEncoding, let fastUTF8 = self._fastCStringContents(false) {
-            // If we have quick access to ASCII contents, no need to decompose
-            let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
-
-            // We only allow embedded nulls if there are no non-null characters following the first null character
-            if let embeddedNullIdx = utf8Buffer.firstIndex(of: 0) {
-                if !utf8Buffer[embeddedNullIdx...].allSatisfy({ $0 == 0 }) {
+        autoreleasepool {
+            let buffer = UnsafeMutableBufferPointer(start: pointer, count: maxLength)
+            // See if we have a quick-access buffer we can just convert directly
+            if let fastCharacters = self._fastCharacterContents() {
+                // If we have quick access to UTF-16 contents, decompose from UTF-16
+                let charsBuffer = UnsafeBufferPointer(start: fastCharacters, count: self.length)
+                return (try? charsBuffer._decomposedRebinding(.hfsPlus, as: Unicode.UTF16.self, into: buffer, nullTerminated: true)) != nil
+            } else if self.fastestEncoding == NSASCIIStringEncoding, let fastUTF8 = self._fastCStringContents(false) {
+                // If we have quick access to ASCII contents, no need to decompose
+                let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
+                
+                // We only allow embedded nulls if there are no non-null characters following the first null character
+                if let embeddedNullIdx = utf8Buffer.firstIndex(of: 0) {
+                    if !utf8Buffer[embeddedNullIdx...].allSatisfy({ $0 == 0 }) {
+                        return false
+                    }
+                }
+                
+                var (leftoverIterator, next) = buffer.initialize(from: utf8Buffer)
+                guard leftoverIterator.next() == nil && next < buffer.endIndex else {
                     return false
                 }
+                buffer[next] = 0
+                return true
+            } else {
+                // Otherwise, bridge to a String which will create a UTF-8 buffer
+                return String(self)._fileSystemRepresentation(into: buffer)
             }
-            
-            var (leftoverIterator, next) = buffer.initialize(from: utf8Buffer)
-            guard leftoverIterator.next() == nil && next < buffer.endIndex else {
-                return false
-            }
-            buffer[next] = 0
-            return true
-        } else {
-            // Otherwise, bridge to a String which will create a UTF-8 buffer
-            return String(self)._fileSystemRepresentation(into: buffer)
         }
     }
 }
