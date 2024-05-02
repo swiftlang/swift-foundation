@@ -170,13 +170,11 @@ final class _ProcessInfo: Sendable {
         // WASI does not have user concept
         return ""
 #elseif os(Windows)
-        return withUnsafeTemporaryAllocation(of: wchar_t.self, capacity: 1040) { usernameBuffer in
-            usernameBuffer[0] = 0
-            var size: DWORD = 1040
-            if GetUserNameW(usernameBuffer.baseAddress!, &size) {
-                // discount the extra NULL by decrementing the size
-                return String(decoding: usernameBuffer.prefix(size - 1), as: UTF16.self)
-            } else {
+        var dwSize: DWORD = 0
+        _ = GetUserNameW(nil, &dwSize)
+
+        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwSize)) {
+            guard GetUserNameW($0.baseAddress!, &dwSize) else {
                 return "USERNAME".withCString(encodedAs: UTF16.self) { pwszName in
                     let dwLength = GetEnvironmentVariableW(pwszName, nil, 0)
                     return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) { lpBuffer in
@@ -187,6 +185,7 @@ final class _ProcessInfo: Sendable {
                     }
                 }
             }
+            return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
 #endif
     }
@@ -203,11 +202,13 @@ final class _ProcessInfo: Sendable {
         return ""
 #elseif os(Windows)
         var ulLength: ULONG = 0
-        GetUserNameExW(NameDisplay, NULL, &ulLength)
+        _ = GetUserNameExW(NameDisplay, nil, &ulLength)
 
-        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: ulLength + 1) { wszBuffer in
-            GetUserNameExW(NameDisplay, wszBuffer.baseAddress!, &ulLength)
-            return String(decoding: wszBuffer.prefix(ulLength), as: UTF16.self)
+        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(ulLength)) { wszBuffer in
+            guard GetUserNameExW(NameDisplay, wszBuffer.baseAddress!, &ulLength) == 0 else {
+                return ""
+            }
+            return String(decoding: wszBuffer.prefix(Int(ulLength)), as: UTF16.self)
         }
 #endif
     }
@@ -270,18 +271,15 @@ extension _ProcessInfo {
         // Okay, we can't get a distro name, so try for generic info.
         var versionString = "Linux"
 #elseif os(Windows)
-        var versionString = "Windows"
-        
         guard let osVersionInfo = self._rawOSVersion else {
-            return versionString
+            return "Windows"
         }
 
         // Windows has no canonical way to turn the fairly complex `RTL_OSVERSIONINFOW` version info into a string. We
         // do our best here to construct something consistent. Unfortunately, to provide a useful result, this requires
         // hardcoding several of the somewhat ambiguous values in the table provided here:
         //  https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_osversioninfoexw#remarks
-        versionString += " "
-        versionString += switch (osVersionInfo.dwMajorVersion, osVersionInfo.dwMinorVersion, osVersionInfo.dwBuildNumber) {
+        let release = switch (osVersionInfo.dwMajorVersion, osVersionInfo.dwMinorVersion, osVersionInfo.dwBuildNumber) {
         case (5, 0, _): "2000"
         case (5, 1, _): "XP"
         case (5, 2, _) where osVersionInfo.wProductType == VER_NT_WORKSTATION: "XP Professional x64"
@@ -300,9 +298,8 @@ extension _ProcessInfo {
         case (10, 0, _): "Server 2019" // The table gives identical values for 2016 and 2019, so we just assume 2019 here
         case let (maj, min, _): "Unknown (\(maj).\(min))" // If all else fails, just give the raw version number
         }
-        versionString += " (build \(osVersionInfo.dwBuildNumber))"
         // For now we ignore the `szCSDVersion`, `wServicePackMajor`, and `wServicePackMinor` values.
-        return versionString
+        return "Windows \(release) (build \(osVersionInfo.dwBuildNumber))"
 #elseif os(FreeBSD)
         // Try to get a release version from `uname -r`.
         var versionString = "FreeBSD"
@@ -378,13 +375,13 @@ extension _ProcessInfo {
         return (major: major, minor: minor, patch: patch)
 #elseif os(Windows)
         guard let osVersionInfo = self._rawOSVersion else {
-            return OperatingSystemVersion(majorVersion: -1, minorVersion: 0, patchVersion: 0)
+            return (major: -1, minor: 0, patch: 0)
         }
 
-        return OperatingSystemVersion(
-            majorVersion: Int(osVersionInfo.dwMajorVersion),
-            minorVersion: Int(osVersionInfo.dwMinorVersion),
-            patchVersion: Int(osVersionInfo.dwBuildNumber)
+        return(
+            major: Int(osVersionInfo.dwMajorVersion),
+            minor: Int(osVersionInfo.dwMinorVersion),
+            patch: Int(osVersionInfo.dwBuildNumber)
         )
 #else
         return OperatingSystemVersion(majorVersion: -1, minorVersion: 0, patchVersion: 0)
