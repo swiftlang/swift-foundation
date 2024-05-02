@@ -23,6 +23,7 @@ import Darwin
 import Glibc
 #elseif os(Windows)
 import CRT
+import WinSDK
 #endif
 
 #if !NO_FILESYSTEM
@@ -85,17 +86,21 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBuf
         }
         
         // Don't ever attempt to write more than (2GB - 1 byte). Some platforms will return an error over that amount.
-        let numBytesRequested = min(preferredChunkSize, Int(Int32.max))
-        let smallestAmountToRead = min(numBytesRequested, numBytesRemaining)
+        let numBytesRequested = CInt(clamping: min(preferredChunkSize, Int(CInt.max)))
+        let smallestAmountToRead = min(Int(numBytesRequested), numBytesRemaining)
         let upperBound = nextRange.startIndex + smallestAmountToRead
         nextRange = nextRange.startIndex..<upperBound
-        var numBytesWritten: Int
+        var numBytesWritten: CInt
         repeat {
             if let localProgress, localProgress.isCancelled {
                 throw CocoaError(.userCancelled)
             }
             numBytesWritten = buffer[nextRange].withUnsafeBytes { buf in
-                write(fd, buf.baseAddress!, buf.count)
+#if os(Windows)
+                _write(fd, buf.baseAddress, CUnsignedInt(buf.count))
+#else
+                CInt(clamping: write(fd, buf.baseAddress!, buf.count))
+#endif
             }
             
             if numBytesWritten < 0 {
@@ -108,7 +113,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBuf
                 // Return the number of bytes written so far (which is compatible with the way write() would work with just one call)
                 break
             } else {
-                numBytesRemaining -= numBytesWritten
+                numBytesRemaining -= Int(numBytesWritten)
                 if let localProgress {
                     localProgress.completedUnitCount = Int64(length - numBytesRemaining)
                 }
@@ -117,7 +122,7 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBuf
                     break
                 }
                 
-                nextRange = nextRange.startIndex.advanced(by: numBytesWritten)..<buffer.endIndex
+                nextRange = nextRange.startIndex.advanced(by: Int(numBytesWritten))..<buffer.endIndex
             }
         } while numBytesWritten < 0 && errno == EINTR
     }
@@ -148,7 +153,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
         directoryPath.append("/")
     }
     
-    let pidString = String(getpid(), radix: 16, uppercase: true)
+    let pidString = String(ProcessInfo.processInfo.processIdentifier, radix: 16, uppercase: true)
     let template = directoryPath + prefix + pidString + ".XXXXXX"
     var count = 0
     let maxCount = 7
@@ -160,9 +165,15 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             
             // The warning diligently tells us we shouldn't be using mktemp() because blindly opening the returned path opens us up to a TOCTOU race. However, in this case, we're being careful by doing O_CREAT|O_EXCL and repeating, just like the implementation of mkstemp.
             // Furthermore, we can't compatibly switch to mkstemp() until we have the ability to set fchmod correctly, which requires the ability to query the current umask, which we don't have. (22033100)
+#if os(Windows)
+            guard _mktemp_s(templateFileSystemRep, template.count + 1) == 0 else {
+                throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
+            }
+#else
             guard mktemp(templateFileSystemRep) != nil else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
             }
+#endif
             
             let flags: Int32 = O_CREAT | O_EXCL | O_RDWR
             let fd = openFileDescriptorProtected(path: templateFileSystemRep, flags: flags, options: options)
@@ -237,7 +248,12 @@ private func write(buffer: UnsafeRawBufferPointer, toFileDescriptor fd: Int32, p
     }
     
     if !buffer.isEmpty {
-        if fsync(fd) < 0 {
+#if os(Windows)
+        let res = _commit(fd)
+#else
+        let res = fsync(fd)
+#endif
+        if res < 0 {
             let savedErrno = errno
             let error = CocoaError.errorWithFilePath(path, errno: savedErrno, reading: false)
             #if os(Linux)
