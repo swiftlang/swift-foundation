@@ -371,23 +371,15 @@ final class FileManagerTests : XCTestCase {
             try $0.moveItem(atPath: "dir", toPath: "dir2")
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["dir2", "dir2/bar", "dir2/foo", "other_file"])
             XCTAssertEqual($0.contents(atPath: "dir2/foo"), data)
-            #if FOUNDATION_FRAMEWORK
-            // Behavior differs here due to usage of URL(filePath:)
+
             let rootDir = $0.currentDirectoryPath
             XCTAssertEqual($0.delegateCaptures.shouldMove, [.init("\(rootDir)/dir", "\(rootDir)/dir2")])
-            #else
-            XCTAssertEqual($0.delegateCaptures.shouldMove, [.init("dir", "dir2")])
-            #endif
             
             try $0.moveItem(atPath: "does_not_exist", toPath: "dir3")
             XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError, [])
 
             try $0.moveItem(atPath: "dir2", toPath: "other_file")
-            #if FOUNDATION_FRAMEWORK
             XCTAssertTrue($0.delegateCaptures.shouldProceedAfterMoveError.contains(.init("\(rootDir)/dir2", "\(rootDir)/other_file", code: .fileWriteFileExists)))
-            #else
-            XCTAssertTrue($0.delegateCaptures.shouldProceedAfterMoveError.contains(.init("dir2", "other_file", code: .fileWriteFileExists)))
-            #endif
         }
     }
     

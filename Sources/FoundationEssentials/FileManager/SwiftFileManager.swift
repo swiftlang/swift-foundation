@@ -194,6 +194,10 @@ open class FileManager {
         try _impl.setAttributes(attributes, ofItemAtPath: path)
     }
 
+    open func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
+        try _impl.createDirectory(at: url, withIntermediateDirectories: createIntermediates, attributes: attributes)
+    }
+
     open func createDirectory(atPath path: String, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
         try _impl.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }

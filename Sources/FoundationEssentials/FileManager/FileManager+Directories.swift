@@ -212,8 +212,7 @@ extension _FileManagerImpl {
         }
 #endif
     }
-    
-    #if FOUNDATION_FRAMEWORK
+
     func createDirectory(
         at url: URL,
         withIntermediateDirectories createIntermediates: Bool,
@@ -230,7 +229,6 @@ extension _FileManagerImpl {
         
         try fileManager.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
-    #endif
     
     func createDirectory(
         atPath path: String,
