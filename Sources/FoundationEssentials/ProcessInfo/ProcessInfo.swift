@@ -90,7 +90,9 @@ final class _ProcessInfo: Sendable {
 
         var pwszEnvironmentEntry: LPWCH? = pwszEnvironmentBlock
         while let value = pwszEnvironmentEntry {
-            values.append(String(decodingCString: value, as: UTF16.self).withCString { _strdup($0)! })
+            let entry = String(decodingCString: value, as: UTF16.self)
+            if entry.isEmpty { break }
+            values.append(entry.withCString { _strdup($0)! })
             pwszEnvironmentEntry = pwszEnvironmentEntry?.advanced(by: wcslen(value) + 1)
         }
 #else
