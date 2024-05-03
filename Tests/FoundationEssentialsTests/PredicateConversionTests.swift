@@ -448,11 +448,8 @@ final class NSPredicateConversionTests: XCTestCase {
     }
     
     func testExpression() {
-        let expression = Expression<ObjCObject, Int>() {
-            PredicateExpressions.build_KeyPath(
-                root: PredicateExpressions.build_Arg($0),
-                keyPath: \.a
-            )
+        let expression = #Expression<ObjCObject, Int> {
+            $0.a
         }
         let converted = convert(expression)
         XCTAssertEqual(converted, NSExpression(format: "a"))
