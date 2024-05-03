@@ -1269,8 +1269,13 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
             var weekdayTypes : [UCalendarWeekdayType] = [UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY, UCAL_WEEKDAY]
 
-            var onset: UInt32?
-            var cease: UInt32?
+#if os(Windows)
+            var onset: CInt?
+            var cease: CInt?
+#else
+            var onset: CUnsignedInt?
+            var cease: CUnsignedInt?
+#endif
 
             var status = U_ZERO_ERROR
             let cal = ucal_open(nil, 0, identifier, UCAL_DEFAULT, &status)
@@ -1280,9 +1285,9 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 var status = U_ZERO_ERROR
                 weekdayTypes[i] = ucal_getDayOfWeekType(cal, UCalendarDaysOfWeek(CInt(weekdaysIndex[i])), &status)
                 if weekdayTypes[i] == UCAL_WEEKEND_ONSET {
-                    onset = weekdaysIndex[i]
+                    onset = numericCast(weekdaysIndex[i])
                 } else if weekdayTypes[i] == UCAL_WEEKEND_CEASE {
-                    cease = weekdaysIndex[i]
+                    cease = numericCast(weekdaysIndex[i])
                 }
             }
 
@@ -1306,8 +1311,13 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 result.ceaseTime = Double(ucal_getWeekendTransition(cal, UCalendarDaysOfWeek(rawValue: cease), &status)) / 1000.0
             }
 
-            var weekendStart: UInt32?
-            var weekendEnd: UInt32?
+#if os(Windows)
+            var weekendStart: CInt?
+            var weekendEnd: CInt?
+#else
+            var weekendStart: CUnsignedInt?
+            var weekendEnd: CUnsignedInt?
+#endif
 
             if let onset {
                 weekendStart = onset
@@ -1315,14 +1325,14 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 if weekdayTypes[0] == UCAL_WEEKEND && weekdayTypes[6] == UCAL_WEEKEND {
                     for i in (0...5).reversed() {
                         if weekdayTypes[i] != UCAL_WEEKEND {
-                            weekendStart = weekdaysIndex[i + 1]
+                            weekendStart = numericCast(weekdaysIndex[i + 1])
                             break
                         }
                     }
                 } else {
                     for i in 0..<7 {
                         if weekdayTypes[i] == UCAL_WEEKEND {
-                            weekendStart = weekdaysIndex[i]
+                            weekendStart = numericCast(weekdaysIndex[i])
                             break
                         }
                     }
@@ -1335,14 +1345,14 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 if weekdayTypes[0] == UCAL_WEEKEND && weekdayTypes[6] == UCAL_WEEKEND {
                     for i in 1..<7 {
                         if weekdayTypes[i] != UCAL_WEEKEND {
-                            weekendEnd = weekdaysIndex[i - 1]
+                            weekendEnd = numericCast(weekdaysIndex[i - 1])
                             break
                         }
                     }
                 } else {
                     for i in (0...6).reversed() {
                         if weekdayTypes[i] == UCAL_WEEKEND {
-                            weekendEnd = weekdaysIndex[i]
+                            weekendEnd = numericCast(weekdaysIndex[i])
                             break
                         }
                     }
