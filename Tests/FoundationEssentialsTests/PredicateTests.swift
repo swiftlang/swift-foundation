@@ -458,12 +458,8 @@ final class PredicateTests: XCTestCase {
             throw XCTSkip("This test is not available on this OS version")
         }
         
-        let expression = Expression<Int, Int>() {
-            PredicateExpressions.build_Arithmetic(
-                lhs: PredicateExpressions.build_Arg($0),
-                rhs: PredicateExpressions.build_Arg(1),
-                op: .add
-            )
+        let expression = #Expression<Int, Int> {
+            $0 + 1
         }
         for i in 0 ..< 10 {
             XCTAssertEqual(try expression.evaluate(i), i + 1)

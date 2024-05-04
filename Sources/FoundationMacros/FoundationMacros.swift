@@ -17,7 +17,7 @@ import SwiftCompilerPlugin
 
 @main
 struct FoundationMacros: CompilerPlugin {
-  var providingMacros: [Macro.Type] = [PredicateMacro.self]
+    var providingMacros: [Macro.Type] = [PredicateMacro.self, ExpressionMacro.self]
 }
 
 #endif

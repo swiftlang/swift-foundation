@@ -547,11 +547,8 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testExpression() throws {
-        let expression = Expression<Object, Int>() {
-            PredicateExpressions.build_KeyPath(
-                root: PredicateExpressions.build_Arg($0),
-                keyPath: \.a
-            )
+        let expression = #Expression<Object, Int> {
+            $0.a
         }
         let decoded = try _encodeDecode(expression, for: StandardConfig.self)
         var object = Object.example
