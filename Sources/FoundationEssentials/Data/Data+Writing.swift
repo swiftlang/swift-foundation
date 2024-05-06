@@ -133,17 +133,8 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBuf
 
 private func cleanupTemporaryDirectory(at inPath: String?) {
     guard let inPath else { return }
-    inPath.withFileSystemRepresentation { pathFileSystemRep in
-        guard let pathFileSystemRep else { return }
-#if FOUNDATION_FRAMEWORK
-        if rmdir(pathFileSystemRep) != 0 {
-            // Attempt to use FileManager, ignore error
-            try? FileManager.default.removeItem(atPath: inPath)
-        }
-#else
-        _ = rmdir(pathFileSystemRep)
-#endif
-    }
+    // Attempt to use FileManager, ignore error
+    try? FileManager.default.removeItem(atPath: inPath)
 }
 
 /// Caller is responsible for calling `close` on the `Int32` file descriptor.
@@ -311,6 +302,69 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
     
     // TODO: Somehow avoid copying back and forth to a String to hold the path
 
+#if os(Windows)
+    try inPath.path.withNTPathRepresentation { pwszPath in
+        var fd: CInt
+        var auxPath: String?
+        var temporaryDirectoryPath: String?
+
+        do {
+            (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: inPath.path, inPath: inPath, options: options)
+        } catch {
+            if let cocoaError = error as? CocoaError {
+                // Extract code and userInfo, then re-create it with an additional userInfo key.
+                let code = cocoaError.code
+                var userInfo = cocoaError.userInfo
+                userInfo[NSUserStringVariantErrorKey] = "Folder"
+
+                throw CocoaError(code, userInfo: userInfo)
+            } else {
+                // These should all be CocoaErrors, but just in case we re-throw the original one here.
+                throw error
+            }
+        }
+
+        // Cleanup temporary directory
+        defer { cleanupTemporaryDirectory(at: temporaryDirectoryPath) }
+
+        guard fd >= 0 else {
+            throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+        }
+
+        defer { _close(fd) }
+
+        let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
+
+        do {
+            try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
+        } catch {
+            if let auxPath {
+                try auxPath.withNTPathRepresentation { pwszAuxPath in
+                    _ = DeleteFileW(pwszAuxPath)
+                }
+            }
+
+            if callback?.isCancelled ?? false {
+                throw CocoaError(.userCancelled)
+            } else {
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+            }
+        }
+
+        writeExtendedAttributes(fd: fd, attributes: attributes)
+
+        // We're done now
+        guard let auxPath else { return }
+
+        try auxPath.withNTPathRepresentation { pwszAuxiliaryPath in
+            guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) else {
+                let dwError = GetLastError()
+                _ = DeleteFileW(pwszAuxiliaryPath)
+                throw CocoaError.errorWithFilePath(inPath, win32: dwError, reading: false)
+            }
+        }
+    }
+#else
     try inPath.withFileSystemRepresentation { inPathFileSystemRep in
         guard let inPathFileSystemRep else {
             throw CocoaError(.fileWriteInvalidFileName)
@@ -484,12 +538,41 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
             }
         }
     }
+#endif
 }
 
 /// Create a new file out of `Data` at a path, not using atomic writing.
 private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
     assert(!options.contains(.atomic))
-    
+
+#if os(Windows)
+    try inPath.path.withCString(encodedAs: UTF16.self) { pwszPath in
+        let hFile = CreateFileW(pwszPath, GENERIC_WRITE, FILE_SHARE_READ, nil, CREATE_ALWAYS | (options.contains(.withoutOverwriting) ? CREATE_NEW : 0), FILE_ATTRIBUTE_NORMAL, nil)
+        if hFile == INVALID_HANDLE_VALUE {
+            throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
+        }
+        let fd = _open_osfhandle(Int(bitPattern: hFile), _O_RDWR | _O_APPEND)
+        if fd == -1 {
+            throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+        }
+        defer { _close(fd) }
+
+        let callback: Progress? = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
+
+        do {
+            try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
+        } catch {
+            let savedError = errno
+            if callback?.isCancelled ?? false {
+                throw CocoaError(.userCancelled)
+            } else {
+                throw CocoaError.errorWithFilePath(inPath, errno: savedError, reading: false)
+            }
+        }
+
+        writeExtendedAttributes(fd: fd, attributes: attributes)
+    }
+#else
     try inPath.withFileSystemRepresentation { pathFileSystemRep in
         guard let pathFileSystemRep else { 
             throw CocoaError(.fileWriteInvalidFileName)
@@ -528,6 +611,7 @@ private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoi
         
         writeExtendedAttributes(fd: fd, attributes: attributes)
     }
+#endif
 }
 
 private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
