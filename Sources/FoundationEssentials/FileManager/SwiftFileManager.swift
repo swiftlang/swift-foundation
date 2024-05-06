@@ -210,6 +210,7 @@ open class FileManager {
         try _impl.subpathsOfDirectory(atPath: path)
     }
     
+    #if canImport(Darwin)
     open func urls(for directory: FileManager.SearchPathDirectory, in domainMask: FileManager.SearchPathDomainMask) -> [URL] {
         _impl.urls(for: directory, in: domainMask)
     }
@@ -217,6 +218,7 @@ open class FileManager {
     open func url(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
         try _impl.url(for: directory, in: domain, appropriateFor: url, create: shouldCreate)
     }
+    #endif
 
     open func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
         try _impl.attributesOfItem(atPath: path)

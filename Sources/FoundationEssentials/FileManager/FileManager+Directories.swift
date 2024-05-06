@@ -51,6 +51,7 @@ extension _FileManagerImpl {
         URL(filePath: String.temporaryDirectoryPath, directoryHint: .isDirectory)
     }
     
+    #if canImport(Darwin)
     func url(
         for directory: FileManager.SearchPathDirectory,
         in domain: FileManager.SearchPathDomainMask,
@@ -114,6 +115,7 @@ extension _FileManagerImpl {
             URL(fileURLWithPath: $0, isDirectory: true)
         }
     }
+    #endif
     
     #if FOUNDATION_FRAMEWORK
     func containerURL(forSecurityApplicationGroupIdentifier groupIdentifier: String) -> URL? {
