@@ -28,18 +28,10 @@ class DataIOTests : XCTestCase {
     
     // MARK: - Helpers
     
-#if FOUNDATION_FRAMEWORK
     func testURL() -> URL {
         // Generate a random file name
         URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent("testfile-\(UUID().uuidString)")
     }
-#else
-    /// Temporary helper until we port `URL` to swift-foundation.
-    func testURL() -> String {
-        // Generate a random file name
-        String.temporaryDirectoryPath.appendingPathComponent("testfile-\(UUID().uuidString)")
-    }
-#endif
     
     func generateTestData() -> Data {
         // 16 MB file, big enough to trigger things like chunking
@@ -59,7 +51,6 @@ class DataIOTests : XCTestCase {
         return Data(bytesNoCopy: ptr, count: count, deallocator: .free)
     }
             
-#if FOUNDATION_FRAMEWORK
     func writeAndVerifyTestData(to url: URL, writeOptions: Data.WritingOptions = [], readOptions: Data.ReadingOptions = []) throws {
         let data = generateTestData()
         try data.write(to: url, options: writeOptions)
@@ -74,19 +65,6 @@ class DataIOTests : XCTestCase {
             // Ignore
         }
     }
-#else
-    func writeAndVerifyTestData(to path: String, writeOptions: Data.WritingOptions = [], readOptions: Data.ReadingOptions = []) throws {
-        let data = generateTestData()
-        try data.write(to: path, options: writeOptions)
-        let readData = try Data(contentsOf: path, options: readOptions)
-        XCTAssertEqual(data, readData)
-    }
-
-    func cleanup(at path: String) {
-        _ = unlink(path)
-        // Ignore any errors
-    }
-#endif
     
     
     // MARK: - Tests
@@ -244,9 +222,9 @@ class DataIOTests : XCTestCase {
         throw XCTSkip("This test is only supported on Linux and Windows")
         #else
         #if os(Windows)
-        let path = "CON"
+        let path = URL(filePath: "CON", directoryHint: .notDirectory)
         #else
-        let path = "/dev/stdout"
+        let path = URL(filePath: "/dev/stdout", directoryHint: .notDirectory)
         #endif
         XCTAssertNoThrow(try Data("Output to STDOUT\n".utf8).write(to: path))
         #endif

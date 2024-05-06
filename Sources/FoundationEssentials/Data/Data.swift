@@ -2069,7 +2069,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     }
 #endif
 
-#if FOUNDATION_FRAMEWORK
     /// Initialize a `Data` with the contents of a `URL`.
     ///
     /// - parameter url: The `URL` to read.
@@ -2083,20 +2082,17 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         if url.isFileURL {
             self = try readDataFromFile(path: .url(url), reportProgress: true, options: options)
         } else {
+            #if FOUNDATION_FRAMEWORK
             // Fallback to NSData, to read via NSURLSession
             let d = try NSData(contentsOf: url, options: NSData.ReadingOptions(rawValue: options.rawValue))
             self.init(referencing: d)
+            #else
+            throw CocoaError(.fileReadUnsupportedScheme)
+            #endif
         }
 #endif
     }
-#else
-    /// Temporary usage, until `URL` is ported. Non-framework only. Same as of `contentsOfFile:options:`.
-    public init(contentsOf path: String, options: ReadingOptions = []) throws {
-        self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
-    }
-#endif
     
-#if FOUNDATION_FRAMEWORK
     internal init(contentsOfFile path: String, options: ReadingOptions = []) throws {
 #if NO_FILESYSTEM
         let d = try NSData(contentsOfFile: path, options: NSData.ReadingOptions(rawValue: options.rawValue))
@@ -2105,12 +2101,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
 #endif
     }
-#else
-    /// Temporary usage, until `URL` is ported. Non-framework only.
-    public init(contentsOfFile path: String, options: ReadingOptions = []) throws {
-        self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
-    }
-#endif
     
     // -----------------------------------
     // MARK: - Properties and Functions
@@ -2448,17 +2438,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         throw CocoaError(.featureUnsupported)
 #endif
     }
-    
-#if !FOUNDATION_FRAMEWORK
-    // We don't intend for this to be long-term API, preferring URL. But for now, this allows us to provide the functionality until URL is fully ported.
-    public func write(to path: String, options: Data.WritingOptions = []) throws {
-        if options.contains(.withoutOverwriting) && options.contains(.atomic) {
-            fatalError("withoutOverwriting is not supported with atomic")
-        }
-        
-        try writeToFile(path: .path(path), data: self, options: options, reportProgress: true)
-    }
-#endif
 
     // MARK: -
     //

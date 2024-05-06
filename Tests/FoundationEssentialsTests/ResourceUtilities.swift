@@ -48,17 +48,22 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     guard let url = Bundle.module.url(forResource: resource, withExtension: ext, subdirectory: subdir) else {
         return nil
     }
+    
+    let essentialsURL = FoundationEssentials.URL(filePath: url.path(percentEncoded: false))
 
-    return try? Data(contentsOf: url.path(percentEncoded: false))
+    return try? Data(contentsOf: essentialsURL)
 #else
     // swiftpm drops the resources next to the executable, at:
     // ./FoundationPreview_FoundationEssentialsTests.resources/Resources/
     // Hard-coding the path is unfortunate, but a temporary need until we have a better way to handle this
-    var path = ProcessInfo.processInfo.arguments[0].deletingLastPathComponent() + "/FoundationPreview_FoundationEssentialsTests.resources/Resources/"
+    var path = URL(filePath: ProcessInfo.processInfo.arguments[0])
+        .deletingLastPathComponent()
+        .appending(component: "FoundationPreview_FoundationEssentialsTests.resources", directoryHint: .isDirectory)
+        .appending(component: "Resources", directoryHint: .isDirectory)
     if let subdirectory {
-        path += subdirectory + "/"
+        path.append(component: subdirectory, directoryHint: .isDirectory)
     }
-    path += resource + "." + ext
+    path.append(component: resource + "." + ext, directoryHint: .notDirectory)
     return try? Data(contentsOf: path)
 #endif
 #endif

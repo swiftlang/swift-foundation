@@ -1111,11 +1111,11 @@ private extension __JSONEncoder {
         case is Data.Type:
             // Respect Data encoding strategy
             return try self.wrap(value as! Data, for: node, additionalKey)
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once URL and Decimal are moved
         case is URL.Type:
             // Encode URLs as single strings.
             let url = value as! URL
             return self.wrap(url.absoluteString)
+#if FOUNDATION_FRAMEWORK // TODO: Reenable once Decimal is moved
         case is Decimal.Type:
             let decimal = value as! Decimal
             return .number(decimal.description)
