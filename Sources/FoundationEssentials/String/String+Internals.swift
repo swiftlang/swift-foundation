@@ -64,7 +64,7 @@ extension String {
 
             let dwLength = GetFullPathNameW(pwszPath, 0, nil, nil)
             let path = try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
-                guard GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil) == dwLength else {
+                guard GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil) == dwLength - 1 else {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
                 }
                 return String(decodingCString: $0.baseAddress!, as: UTF16.self)
