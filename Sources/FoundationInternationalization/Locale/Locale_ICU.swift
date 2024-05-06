@@ -1221,7 +1221,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 }
 
                 // Check prefs
-                if let firstWeekdayPref = prefs?.firstWeekday {
+                if prefs?.firstWeekday != nil {
                     // `_lockedCalendarIdentifier` isn't cheap. Only call it when we already know there is `prefs` to read from
                     let calendarId = _lockedCalendarIdentifier(&state)
                     if let first = forceFirstWeekday(calendarId) {
