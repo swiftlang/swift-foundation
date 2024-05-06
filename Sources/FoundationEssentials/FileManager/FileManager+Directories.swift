@@ -51,13 +51,14 @@ extension _FileManagerImpl {
         URL(filePath: String.temporaryDirectoryPath, directoryHint: .isDirectory)
     }
     
-#if FOUNDATION_FRAMEWORK
     func url(
         for directory: FileManager.SearchPathDirectory,
         in domain: FileManager.SearchPathDomainMask,
         appropriateFor url: URL?,
         create shouldCreate: Bool
     ) throws -> URL {
+        #if FOUNDATION_FRAMEWORK
+        // TODO: Support correct trash/replacement locations in swift-foundation
         #if os(macOS) || os(iOS)
         if let url, directory == .trashDirectory {
             return try fileManager._URLForTrashingItem(at: url, create: shouldCreate)
@@ -71,8 +72,12 @@ extension _FileManagerImpl {
         if domain == .systemDomainMask {
             domain = ._partitionedSystemDomainMask
         }
+        let lastElement = domain == ._partitionedSystemDomainMask
+        #else
+        let lastElement = false
+        #endif
         let paths = Array(_SearchPaths(for: directory, in: domain, expandTilde: true))
-        guard let path = domain == ._partitionedSystemDomainMask ? paths.last : paths.first else {
+        guard let path = lastElement ? paths.last : paths.first else {
             throw CocoaError(.fileReadUnknown)
         }
         
@@ -81,16 +86,20 @@ extension _FileManagerImpl {
             _LogSpecialFolderRecreation(fileManager, path)
             #endif
             var isUserDomain = domain == .userDomainMask
-            #if os(macOS)
+            #if os(macOS) && FOUNDATION_FRAMEWORK
             isUserDomain = isUserDomain || domain == ._sharedUserDomainMask
             #endif
             var attrDictionary: [FileAttributeKey : Any] = [:]
             if isUserDomain {
                 attrDictionary[.posixPermissions] = 0o700
-            } else if domain == ._partitionedSystemDomainMask {
-                attrDictionary[.posixPermissions] = 0o755
-                attrDictionary[.ownerAccountID] = 0 // root
-                attrDictionary[.groupOwnerAccountID] = 80 // admin
+            } else {
+                #if FOUNDATION_FRAMEWORK
+                if domain == ._partitionedSystemDomainMask {
+                    attrDictionary[.posixPermissions] = 0o755
+                    attrDictionary[.ownerAccountID] = 0 // root
+                    attrDictionary[.groupOwnerAccountID] = 80 // admin
+                }
+                #endif
             }
             try fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: attrDictionary)
         }
@@ -106,6 +115,7 @@ extension _FileManagerImpl {
         }
     }
     
+    #if FOUNDATION_FRAMEWORK
     func containerURL(forSecurityApplicationGroupIdentifier groupIdentifier: String) -> URL? {
         groupIdentifier.withCString {
             guard let path = container_create_or_lookup_app_group_path_by_app_group_identifier($0, nil)  else {
