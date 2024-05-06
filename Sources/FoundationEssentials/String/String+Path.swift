@@ -134,7 +134,186 @@ extension String {
             return String(self[index(after: lastSlash)..<endIndex])
         }
     }
-    
+
+    internal static let invalidExtensionScalars = Set<Unicode.Scalar>([
+        " ",
+        "/",
+        "\u{061c}", // ARABIC LETTER MARK
+        "\u{200e}", // LEFT-TO-RIGHT MARK
+        "\u{200f}", // RIGHT-TO-LEFT MARK
+        "\u{202a}", // LEFT-TO-RIGHT EMBEDDING
+        "\u{202b}", // RIGHT-TO-LEFT EMBEDDING
+        "\u{202c}", // POP DIRECTIONAL FORMATTING
+        "\u{202d}", // LEFT-TO-RIGHT OVERRIDE
+        "\u{202e}", // RIGHT-TO-LEFT OVERRIDE
+        "\u{2066}", // LEFT-TO-RIGHT ISOLATE
+        "\u{2067}", // RIGHT-TO-LEFT ISOLATE
+        "\u{2068}", // FIRST STRONG ISOLATE
+        "\u{2069}", // POP DIRECTIONAL ISOLATE
+    ])
+
+    internal func deletingPathExtension() -> String {
+        guard !pathExtension.isEmpty else {
+            return self
+        }
+        let dot = UInt8(ascii: ".")
+        guard let lastDot = self.utf8.lastIndex(of: dot) else {
+            return self
+        }
+        return String(self[..<lastDot])
+    }
+
+    private func validatePathExtension(_ pathExtension: String) -> Bool {
+        guard pathExtension.utf8.last != UInt8(ascii: ".") else {
+            return false
+        }
+        if let lastDot = pathExtension.utf8.lastIndex(of: UInt8(ascii: ".")) {
+            let beforeDot = pathExtension[..<lastDot].unicodeScalars
+            let afterDot = pathExtension[pathExtension.index(after: lastDot)...].unicodeScalars
+            return beforeDot.allSatisfy { $0 != "/" } && afterDot.allSatisfy { !String.invalidExtensionScalars.contains($0) }
+        } else {
+            return pathExtension.unicodeScalars.allSatisfy { !String.invalidExtensionScalars.contains($0) }
+        }
+    }
+
+    internal func appendingPathExtension(_ pathExtension: String) -> String {
+        guard validatePathExtension(pathExtension) else {
+            return self
+        }
+        return self + ".\(pathExtension)"
+    }
+
+    internal var pathExtension: String {
+        let dot = UInt8(ascii: ".")
+        let lastComponent = lastPathComponent.utf8
+        guard lastComponent.last != dot,
+              !lastComponent.starts(with: [dot, dot]),
+              let lastDot = lastComponent.lastIndex(of: dot),
+              lastDot != lastComponent.startIndex else {
+            return ""
+        }
+        let result = String(lastPathComponent[lastComponent.index(after: lastDot)...])
+        guard validatePathExtension(result) else {
+            return ""
+        }
+        return result
+    }
+
+    internal var removingDotSegments: String {
+        let input = self.utf8
+        guard !input.isEmpty else {
+            return ""
+        }
+        var output = [UInt8]()
+
+        enum DotState {
+            case initial
+            case dot
+            case dotDot
+            case slash
+            case slashDot
+            case slashDotDot
+            case appendUntilSlash
+        }
+        let dot = UInt8(ascii: ".")
+        let slash = UInt8(ascii: "/")
+
+        var state = DotState.initial
+        for v in input {
+            switch state {
+            case .initial:
+                if v == dot {
+                    state = .dot
+                } else if v == slash {
+                    state = .slash
+                } else {
+                    output.append(v)
+                    state = .appendUntilSlash
+                }
+                break
+            case .dot:
+                if v == dot {
+                    state = .dotDot
+                } else if v == slash {
+                    state = .initial
+                } else {
+                    output.append(contentsOf: [dot, v])
+                    state = .appendUntilSlash
+                }
+                break
+            case .dotDot:
+                if v == slash {
+                    state = .initial
+                } else {
+                    output.append(contentsOf: [dot, dot, v])
+                    state = .appendUntilSlash
+                }
+                break
+            case .slash:
+                if v == dot {
+                    state = .slashDot
+                } else if v == slash {
+                    output.append(slash)
+                } else {
+                    output.append(contentsOf: [slash, v])
+                    state = .appendUntilSlash
+                }
+                break
+            case .slashDot:
+                if v == dot {
+                    state = .slashDotDot
+                } else if v == slash {
+                    state = .slash
+                } else {
+                    output.append(contentsOf: [slash, dot, v])
+                    state = .appendUntilSlash
+                }
+                break
+            case .slashDotDot:
+                if v == slash {
+                    while let last = output.popLast(), last != slash { }
+                    state = .slash
+                } else {
+                    output.append(contentsOf: [slash, dot, dot, v])
+                    state = .appendUntilSlash
+                }
+                break
+            case .appendUntilSlash:
+                if v == slash {
+                    state = .slash
+                } else {
+                    output.append(v)
+                }
+                break
+            }
+        }
+
+        switch state {
+        case .initial:
+            break
+        case .dot:
+            break
+        case .dotDot:
+            break
+        case .slash:
+            output.append(slash)
+            break
+        case .slashDot:
+            output.append(slash)
+            break
+        case .slashDotDot:
+            while let last = output.popLast(), last != slash { }
+            output.append(slash)
+            break
+        case .appendUntilSlash:
+            break
+        }
+
+        output.append(0) // NULL-terminated
+
+        return String(cString: output)
+    }
+
     #if !NO_FILESYSTEM
     internal static func homeDirectoryPath(forUser user: String? = nil) -> String {
 #if os(Windows)
@@ -318,12 +497,15 @@ extension String {
 #endif
 #endif
     }
-    
+
     private func _transmutingCompressingSlashes(replacement: String = "/") -> String {
         self.replacing(#//+/#, with: { _ in replacement })
     }
     
     private var _droppingTrailingSlashes: String {
+        guard !self.isEmpty else {
+            return self
+        }
         guard let lastNonSlash = self.lastIndex(where: { $0 != "/"}) else {
             // It's all /'s so just return a single slash
             return "/"
@@ -345,27 +527,9 @@ extension String {
         if hasDotDot, let resolved = result._resolvingSymlinksInPath() {
             result = resolved
         }
-        
-        var components = result.split(separator: "/", omittingEmptySubsequences: false)
-        guard !components.isEmpty else { return "/" }
-        
-        // Remove all "." components
-        components.removeAll { $0 == "." }
-        
-        // Since result must be absolute, remove all leading ".." components
-        var toSearchFrom = 0
-        while let dotDotIdx = components[toSearchFrom...].firstIndex(of: "..") {
-            components.remove(at: dotDotIdx)
-            toSearchFrom = dotDotIdx
-            if dotDotIdx > 0 {
-                components.remove(at: dotDotIdx - 1)
-                toSearchFrom -= 1
-            }
-        }
-        
-        // Retain any leading slashes but drop any otherwise empty components
-        result = components.enumerated().filter { $0 == 0 || !$1.isEmpty }.map(\.1).joined(separator: "/")
-        
+
+        result = result.removingDotSegments
+
         // Automounted paths need to be stripped for various flavors of paths
         let exclusionList = ["/Applications", "/Library", "/System", "/Users", "/Volumes", "/bin", "/cores", "/dev", "/opt", "/private", "/sbin", "/usr"]
         for path in ["/private/var/automount", "/var/automount", "/private"] {

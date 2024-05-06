@@ -226,6 +226,9 @@ public typealias FileManagerDelegate = FoundationEssentials.FileManagerDelegate
 public typealias ProcessInfo = FoundationEssentials.ProcessInfo
 public typealias OperatingSystemVersion = FoundationEssentials.OperatingSystemVersion
 public typealias IndexPath = FoundationEssentials.IndexPath
+public typealias URL = FoundationEssentials.URL
+public typealias URLComponents = FoundationEssentials.URLComponents
+public typealias URLQueryItem = FoundationEssentials.URLQueryItem
 
 #endif // FOUNDATION_FRAMEWORK
 
