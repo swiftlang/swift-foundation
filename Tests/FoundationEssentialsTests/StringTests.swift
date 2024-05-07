@@ -307,6 +307,14 @@ final class StringTests : XCTestCase {
         test("\u{1F425}")
         test("🏳️‍🌈AB👩‍👩‍👧‍👦ab🕵️‍♀️")
     }
+
+    func testRangeRegexB() {
+        let str = "self.name"
+        let range = str.range(of: "\\bname", options: .regularExpression)
+        let start = str.index(str.startIndex, offsetBy: 5)
+        let end = str.index(str.startIndex, offsetBy: 9)
+        XCTAssertEqual(range, start ..< end)
+    }
     
     func testParagraphLineRangeOfSeparator() {
         for separator in ["\n", "\r", "\r\n", "\u{2029}", "\u{2028}", "\u{85}"] {
