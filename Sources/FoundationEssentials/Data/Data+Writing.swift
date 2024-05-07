@@ -212,8 +212,9 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
             if fd >= 0 {
                 return (fd, auxFile, temporaryDirectoryPath)
             } else {
+                let savedErrno = errno
                 cleanupTemporaryDirectory(at: temporaryDirectoryPath)
-                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
             }
         }
     }
@@ -485,11 +486,12 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
                             
                             if rename(newPathFileSystemRep, auxPath2FileSystemRep) != 0 || rename(auxPathFileSystemRep, newPathFileSystemRep) != 0 {
                                 // Swap failed
+                                let savedErrno = errno
                                 unlink(auxPath2FileSystemRep)
                                 unlink(auxPathFileSystemRep)
                                 cleanupTemporaryDirectory(at: temporaryDirectoryPath)
                                 cleanupTemporaryDirectory(at: temporaryDirectoryPath2)
-                                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+                                throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
                             }
                             
                             unlink(auxPath2FileSystemRep)
@@ -504,9 +506,10 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
                         // We also throw away any other options, and do not report progress. This may or may not be a bug.
                         return try writeToFile(path: inPath, buffer: buffer, options: [], attributes: attributes, reportProgress: false)
                     } else {
+                        let savedErrno = errno
                         unlink(auxPathFileSystemRep)
                         cleanupTemporaryDirectory(at: temporaryDirectoryPath)
-                        throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+                        throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
                     }
                 }
                 
