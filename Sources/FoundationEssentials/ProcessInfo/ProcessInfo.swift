@@ -466,12 +466,12 @@ extension _ProcessInfo {
 #if os(Linux)
     // Support for CFS quotas for cpu count as used by Docker.
     // Based on swift-nio code, https://github.com/apple/swift-nio/pull/1518
-    private static let cfsQuotaPath = URL(filePath: "/sys/fs/cgroup/cpu/cpu.cfs_quota_us", directoryHint: .notDirectory)
-    private static let cfsPeriodPath = URL(filePath: "/sys/fs/cgroup/cpu/cpu.cfs_period_us", directoryHint: .notDirectory)
-    private static let cpuSetPath = URL(filePath: "/sys/fs/cgroup/cpuset/cpuset.cpus", directoryHint: .notDirectory)
+    private static let cfsQuotaURL = URL(filePath: "/sys/fs/cgroup/cpu/cpu.cfs_quota_us", directoryHint: .notDirectory)
+    private static let cfsPeriodURL = URL(filePath: "/sys/fs/cgroup/cpu/cpu.cfs_period_us", directoryHint: .notDirectory)
+    private static let cpuSetURL = URL(filePath: "/sys/fs/cgroup/cpuset/cpuset.cpus", directoryHint: .notDirectory)
 
-    private static func firstLineOfFile(path: URL) throws -> Substring {
-        let data = try Data(contentsOf: path)
+    private static func firstLineOfFile(_ url: URL) throws -> Substring {
+        let data = try Data(contentsOf: url)
         if let string = String(data: data, encoding: .utf8), let line = string.split(separator: "\n").first {
             return line
         } else {
@@ -490,8 +490,8 @@ extension _ProcessInfo {
         return 1 + last - first
     }
 
-    private static func coreCount(cpuset cpusetPath: URL) -> Int? {
-        guard let cpuset = try? firstLineOfFile(path: cpusetPath).split(separator: ","),
+    private static func coreCount(cpuset cpusetURL: URL) -> Int? {
+        guard let cpuset = try? firstLineOfFile(cpusetURL).split(separator: ","),
               !cpuset.isEmpty
         else { return nil }
         if let first = cpuset.first, let count = countCoreIds(cores: first) {
@@ -501,11 +501,11 @@ extension _ProcessInfo {
         }
     }
 
-    private static func coreCount(quota quotaPath: URL,  period periodPath: URL) -> Int? {
-        guard let quota = try? Int(firstLineOfFile(path: quotaPath)),
+    private static func coreCount(quota quotaURL: URL,  period periodURL: URL) -> Int? {
+        guard let quota = try? Int(firstLineOfFile(quotaURL)),
               quota > 0
         else { return nil }
-        guard let period = try? Int(firstLineOfFile(path: periodPath)),
+        guard let period = try? Int(firstLineOfFile(periodURL)),
               period > 0
         else { return nil }
 
@@ -513,9 +513,9 @@ extension _ProcessInfo {
     }
 
     private static func fsCoreCount() -> Int? {
-        if let quota = coreCount(quota: cfsQuotaPath, period: cfsPeriodPath) {
+        if let quota = coreCount(quota: cfsQuotaURL, period: cfsPeriodURL) {
             return quota
-        } else if let cpusetCount = coreCount(cpuset: cpuSetPath) {
+        } else if let cpusetCount = coreCount(cpuset: cpuSetURL) {
             return cpusetCount
         } else {
             return nil
