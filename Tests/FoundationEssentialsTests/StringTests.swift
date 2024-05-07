@@ -308,9 +308,9 @@ final class StringTests : XCTestCase {
         test("🏳️‍🌈AB👩‍👩‍👧‍👦ab🕵️‍♀️")
     }
 
-    func testRangeRegexB() {
+    func testRangeRegexB() throws {
         let str = "self.name"
-        let range = str.range(of: "\\bname", options: .regularExpression)
+        let range = try str[...]._range(of: "\\bname"[...], options: .regularExpression)
         let start = str.index(str.startIndex, offsetBy: 5)
         let end = str.index(str.startIndex, offsetBy: 9)
         XCTAssertEqual(range, start ..< end)
