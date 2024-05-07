@@ -234,15 +234,6 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         throw CocoaError.errorWithFilePath(inPath, errno: EFBIG, reading: true)
     }
 
-    guard let hMapping: HANDLE = CreateFileMappingW(hFile, nil, PAGE_READONLY, 0, 0, nil) else {
-        throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: true)
-    }
-
-    let szMapSize: SIZE_T = min(UInt64(maxLength ?? Int.max), szFileSize)
-    guard let pData: UnsafeMutableRawPointer = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, szMapSize) else {
-        throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: true)
-    }
-
     let localProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(szFileSize)) : nil
     guard szFileSize > 0 else {
         localProgress?.totalUnitCount = 1
@@ -276,7 +267,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         do {
             let dwLength = try read(from: hFile, at: inPath, into: pBuffer, length: Int(szFileSize), progress: reportProgress)
             localProgress?.resignCurrent()
-            return ReadBytesResult(bytes: pData, length: dwLength, deallocator: .free)
+            return ReadBytesResult(bytes: pBuffer, length: dwLength, deallocator: .free)
         } catch {
             localProgress?.resignCurrent()
             free(pBuffer)
