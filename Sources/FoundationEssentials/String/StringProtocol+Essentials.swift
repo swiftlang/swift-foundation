@@ -34,7 +34,7 @@ extension String {
                     }
                 }
             } else {
-                var earlyCheckAllASCII = self.utf8.withContiguousStorageIfAvailable {
+                let earlyCheckAllASCII = self.utf8.withContiguousStorageIfAvailable {
                     _allASCII($0)
                 }
                 if let earlyCheckAllASCII, !earlyCheckAllASCII {

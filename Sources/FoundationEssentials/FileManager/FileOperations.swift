@@ -164,7 +164,7 @@ extension FileManager {
                 delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, removingItemAtPath: path)
             }
             #else
-            delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, removingItemAtPath: path)
+            delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, removingItemAt: URL(fileURLWithPath: path))
             #endif
         }
         
@@ -181,7 +181,7 @@ extension FileManager {
                 delegateResponse = delegate.fileManager?(self, shouldRemoveItemAtPath: path)
             }
             #else
-            delegateResponse = delegate.fileManager(self, shouldRemoveItemAtPath: path)
+            delegateResponse = delegate.fileManager(self, shouldRemoveItemAt: URL(fileURLWithPath: path))
             #endif
         }
         return delegateResponse ?? true
@@ -198,7 +198,7 @@ extension FileManager {
                 delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, copyingItemAtPath: path, toPath: dst)
             }
             #else
-            delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, copyingItemAtPath: path, toPath: dst)
+            delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, copyingItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
             #endif
         }
         
@@ -215,7 +215,7 @@ extension FileManager {
                 delegateResponse = delegate.fileManager?(self, shouldCopyItemAtPath: path, toPath: dst)
             }
             #else
-            delegateResponse = delegate.fileManager(self, shouldCopyItemAtPath: path, toPath: dst)
+            delegateResponse = delegate.fileManager(self, shouldCopyItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
             #endif
         }
         return delegateResponse ?? true
@@ -232,7 +232,7 @@ extension FileManager {
                 delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, linkingItemAtPath: path, toPath: dst)
             }
             #else
-            delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, linkingItemAtPath: path, toPath: dst)
+            delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, linkingItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
             #endif
         }
         
@@ -249,7 +249,7 @@ extension FileManager {
                 delegateResponse = delegate.fileManager?(self, shouldLinkItemAtPath: path, toPath: dst)
             }
             #else
-            delegateResponse = delegate.fileManager(self, shouldLinkItemAtPath: path, toPath: dst)
+            delegateResponse = delegate.fileManager(self, shouldLinkItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
             #endif
         }
         return delegateResponse ?? true
@@ -266,7 +266,7 @@ extension FileManager {
                 delegateResponse = delegate.fileManager?(self, shouldProceedAfterError: error, movingItemAtPath: path, toPath: dst)
             }
             #else
-            delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, movingItemAtPath: path, toPath: dst)
+            delegateResponse = delegate.fileManager(self, shouldProceedAfterError: error, movingItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
             #endif
         }
         
@@ -283,7 +283,7 @@ extension FileManager {
                 delegateResponse = delegate.fileManager?(self, shouldMoveItemAtPath: path, toPath: dst)
             }
             #else
-            delegateResponse = delegate.fileManager(self, shouldMoveItemAtPath: path, toPath: dst)
+            delegateResponse = delegate.fileManager(self, shouldMoveItemAt: URL(fileURLWithPath: path), to: URL(fileURLWithPath: dst))
             #endif
         }
         return delegateResponse ?? true

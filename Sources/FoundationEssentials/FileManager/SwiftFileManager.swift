@@ -185,7 +185,7 @@ open class FileManager {
     
     open weak var delegate: (any FileManagerDelegate)?
     
-    init() {
+    public init() {
         _impl = _FileManagerImpl()
         _impl._manager = self
     }
@@ -209,6 +209,16 @@ open class FileManager {
     open func subpathsOfDirectory(atPath path: String) throws -> [String] {
         try _impl.subpathsOfDirectory(atPath: path)
     }
+    
+    #if canImport(Darwin)
+    open func urls(for directory: FileManager.SearchPathDirectory, in domainMask: FileManager.SearchPathDomainMask) -> [URL] {
+        _impl.urls(for: directory, in: domainMask)
+    }
+    
+    open func url(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
+        try _impl.url(for: directory, in: domain, appropriateFor: url, create: shouldCreate)
+    }
+    #endif
 
     open func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
         try _impl.attributesOfItem(atPath: path)
@@ -220,6 +230,10 @@ open class FileManager {
 
     open func createSymbolicLink(atPath path: String, withDestinationPath destPath: String) throws {
         try _impl.createSymbolicLink(atPath: path, withDestinationPath: destPath)
+    }
+    
+    open func createSymbolicLink(at url: URL, withDestinationURL destURL: URL) throws {
+        try _impl.createSymbolicLink(at: url, withDestinationURL: destURL)
     }
 
     open func destinationOfSymbolicLink(atPath path: String) throws -> String {
