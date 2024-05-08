@@ -679,4 +679,117 @@ final class FileManagerTests : XCTestCase {
         }
     }
     #endif
+    
+    func testSearchPaths() throws {
+        let crossPlatform: [FileManager.SearchPathDirectory] = [
+            .userDirectory,
+            .documentDirectory,
+            .autosavedInformationDirectory,
+            .autosavedInformationDirectory,
+            .desktopDirectory,
+            .cachesDirectory,
+            .applicationSupportDirectory,
+            .downloadsDirectory,
+            .moviesDirectory,
+            .musicDirectory,
+            .picturesDirectory,
+            .sharedPublicDirectory
+        ]
+        
+        let darwinOnly: [FileManager.SearchPathDirectory] = [
+            .applicationDirectory,
+            .demoApplicationDirectory,
+            .developerApplicationDirectory,
+            .adminApplicationDirectory,
+            .libraryDirectory,
+            .developerDirectory,
+            .documentationDirectory,
+            .coreServiceDirectory,
+            .inputMethodsDirectory,
+            .preferencePanesDirectory,
+            .allApplicationsDirectory,
+            .allLibrariesDirectory,
+            .printerDescriptionDirectory
+        ]
+        
+        let nonDarwinOnly: [FileManager.SearchPathDirectory] = [
+            .trashDirectory
+        ]
+        
+        let frameworkOnly: [FileManager.SearchPathDirectory] = [
+            .applicationScriptsDirectory
+        ]
+        
+        let alwaysFail: [FileManager.SearchPathDirectory] = [
+            .itemReplacementDirectory
+        ]
+        
+        #if FOUNDATION_FRAMEWORK
+        let pass = crossPlatform + darwinOnly + frameworkOnly
+        let fail = nonDarwinOnly + alwaysFail
+        #elseif canImport(Darwin)
+        let pass = crossPlatform + darwinOnly
+        let fail = frameworkOnly + nonDarwinOnly + alwaysFail
+        #else
+        let pass = crossPlatform + nonDarwinOnly
+        let fail = darwinOnly + frameworkOnly + alwaysFail
+        #endif
+        
+        for directory in pass {
+            let paths = FileManager.default.urls(for: directory, in: .allDomainsMask)
+            XCTAssertFalse(paths.isEmpty, "Directory \(directory) did not produce any paths")
+        }
+        for directory in fail {
+            let paths = FileManager.default.urls(for: directory, in: .allDomainsMask)
+            XCTAssertTrue(paths.isEmpty, "Directory \(directory) produced paths (\(paths))")
+        }
+    }
+    
+    func testSearchPaths_XDGEnvironmentVariables() throws {
+        #if canImport(Darwin) || os(Windows)
+        throw XCTSkip("This test is not applicable on this platform")
+        #else
+        try FileManagerPlayground {
+            Directory("TestPath") {}
+        }.test { fileManager in
+            #if os(Windows)
+            func setenv(_ key: String, _ value: String) -> Int32 {
+              assert(overwrite == 1)
+              guard !key.contains("=") else {
+                  errno = EINVAL
+                  return -1
+              }
+              return _putenv("\(key)=\(value)")
+            }
+            #endif
+            
+            func validate(_ key: String, suffix: String? = nil, directory: FileManager.SearchPathDirectory, domain: FileManager.SearchPathDomainMask, file: StaticString = #file, line: UInt = #line) {
+                let oldValue = ProcessInfo.processInfo.environment[key] ?? ""
+                var knownPath = fileManager.currentDirectoryPath.appendingPathComponent("TestPath")
+                setenv(key, knownPath, 1)
+                defer { setenv(key, oldValue, 1) }
+                if let suffix {
+                    // The suffix is not stored in the environment variable, it is just applied to the expectation
+                    knownPath = knownPath.appendingPathComponent(suffix)
+                }
+                let knownURL = URL(filePath: knownPath, directoryHint: .isDirectory)
+                let results = fileManager.urls(for: directory, in: domain)
+                XCTAssertTrue(results.contains(knownURL), "Results \(results.map(\.path)) did not contain known directory \(knownURL.path) for \(directory)/\(domain) while setting the \(key) environment variable", file: file, line: line)
+            }
+            
+            validate("XDG_DATA_HOME", suffix: "Autosave Information", directory: .autosavedInformationDirectory, domain: .userDomainMask)
+            validate("XDG_DATA_HOME", suffix: "Autosave Information", directory: .autosavedInformationDirectory, domain: .localDomainMask)
+            validate("HOME", suffix: ".local/share/Autosave Information", directory: .autosavedInformationDirectory, domain: .userDomainMask)
+            validate("HOME", suffix: ".local/share/Autosave Information", directory: .autosavedInformationDirectory, domain: .localDomainMask)
+            
+            validate("XDG_CACHE_HOME", directory: .cachesDirectory, domain: .userDomainMask)
+            validate("HOME", suffix: ".cache", directory: .cachesDirectory, domain: .userDomainMask)
+            
+            validate("XDG_DATA_HOME", directory: .applicationSupportDirectory, domain: .userDomainMask)
+            validate("HOME", suffix: ".local/share", directory: .applicationSupportDirectory, domain: .userDomainMask)
+            
+            validate("HOME", directory: .userDirectory, domain: .localDomainMask)
+        }
+        #endif
+    }
 }

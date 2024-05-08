@@ -21,49 +21,6 @@ internal import _ForSwiftFoundation
 #if canImport(Darwin)
 import Darwin.sysdir
 
-extension FileManager.SearchPathDirectory {
-    #if FOUNDATION_FRAMEWORK
-    fileprivate static var _homeDirectory: Self {
-        Self(rawValue: NSSearchPathDirectory_Private.homeDirectory.rawValue)!
-    }
-    #endif
-}
-
-extension FileManager.SearchPathDomainMask {
-    #if FOUNDATION_FRAMEWORK
-    #if os(macOS)
-    static var _sharedUserDomainMask: Self {
-        Self(rawValue: NSSearchPathDomainMask_Private.sharedUserDomainMask.rawValue)
-    }
-    #endif
-    
-    static var _partitionedSystemDomainMask: Self {
-        Self(rawValue: NSSearchPathDomainMask_Private.partitionedSystemDomainMask.rawValue)
-    }
-    
-    static var _appCryptexDomainMask: Self {
-        Self(rawValue: NSSearchPathDomainMask_Private.appCryptexDomainMask.rawValue)
-    }
-    
-    static var _osCryptexDomainMask: Self {
-        Self(rawValue: NSSearchPathDomainMask_Private.osCryptexDomainMask.rawValue)
-    }
-    #endif
-    
-    fileprivate var firstMask: Self? {
-        guard !self.isEmpty else { return nil }
-        return Self(rawValue: 1 << self.rawValue.trailingZeroBitCount)
-    }
-    
-    fileprivate static var valid: Self {
-        #if FOUNDATION_FRAMEWORK
-        [.userDomainMask, .localDomainMask, .networkDomainMask, .systemDomainMask, ._appCryptexDomainMask, ._osCryptexDomainMask]
-        #else
-        [.userDomainMask, .localDomainMask, .networkDomainMask, .systemDomainMask]
-        #endif
-    }
-}
-
 private func foundation_sysdir_start_search_path_enumeration(_ directory: UInt, _ domainMask: UInt) -> sysdir_search_path_enumeration_state {
     #if FOUNDATION_FRAMEWORK
     sysdir_start_search_path_enumeration_private(
@@ -78,7 +35,7 @@ private func foundation_sysdir_start_search_path_enumeration(_ directory: UInt, 
     #endif
 }
 
-private struct _SearchPathsSequence: Sequence {
+struct _DarwinSearchPathsSequence: Sequence {
     let directory: FileManager.SearchPathDirectory
     let domainMask: FileManager.SearchPathDomainMask
     
@@ -220,35 +177,5 @@ extension String {
         }
     }
 }
-#endif
-
-func _SearchPaths(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, expandTilde: Bool) -> some Sequence<String> {
-    let basic = _SearchPathsSequence(directory: directory, domainMask: domain.intersection(.valid)).lazy.map {
-        if expandTilde {
-            return $0.expandingTildeInPath
-        } else {
-            return $0
-        }
-    }
-    
-    #if os(macOS) && FOUNDATION_FRAMEWORK
-    // NSSharedUserDomainMask is basically just a wrapper around NSUserDomainMask.
-    let compatibleSharedUserDomainMask = domain != .allDomainsMask && (domain.rawValue & 16) != 0
-    if domain.contains(._sharedUserDomainMask) || compatibleSharedUserDomainMask {
-        var result = Array(basic)
-        for path in _SearchPathsSequence(directory: directory, domainMask: .userDomainMask) {
-            let expandedPath = expandTilde ? path.replacingTildeWithRealHomeDirectory : path
-            // Avoid duplicates, which would occur with (NSUserDomainMask | NSSharedUserDomainMask) in non-sandboxed apps.
-            if !result.contains(expandedPath) {
-                // Insert this path after NSUserDomainMask and before any of the more general paths.
-                let insertionIndex = domain.contains(.userDomainMask) ? 1 : 0
-                result.insert(expandedPath, at: insertionIndex)
-            }
-        }
-        return result
-    }
-    #endif
-    return Array(basic)
-}
-
-#endif
+#endif // os(macOS) && FOUNDATION_FRAMEWORK
+#endif // canImport(Darwin)
