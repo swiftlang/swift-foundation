@@ -49,7 +49,7 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
         return nil
     }
     
-    let essentialsURL = FoundationEssentials.URL(filePath: url.fileSystemPath)
+    let essentialsURL = FoundationEssentials.URL(filePath: url.path)
 
     return try? Data(contentsOf: essentialsURL)
 #else
@@ -61,7 +61,7 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
         .appending(component: "FoundationPreview_FoundationEssentialsTests.resources", directoryHint: .isDirectory)
         .appending(component: "Resources", directoryHint: .isDirectory)
     if let subdirectory {
-        path.append(component: subdirectory, directoryHint: .isDirectory)
+        path.append(path: subdirectory, directoryHint: .isDirectory)
     }
     path.append(component: resource + "." + ext, directoryHint: .notDirectory)
     return try? Data(contentsOf: path)

@@ -52,7 +52,7 @@ internal enum PathOrURL {
     var path: String {
         switch self {
         case .path(let p): return p
-        case .url(let u): return u.fileSystemPath
+        case .url(let u): return u.path
         }
     }
 }
