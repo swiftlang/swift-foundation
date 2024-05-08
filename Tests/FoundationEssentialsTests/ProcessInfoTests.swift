@@ -94,13 +94,12 @@ final class ProcessInfoTests : XCTestCase {
         XCTAssertTrue(memory > 0, "ProcessInfo doesn't think we have any memory")
     }
 
-    func testSystemUpTime() {
+    func testSystemUpTime() async throws {
         let now = ProcessInfo.processInfo.systemUptime
         XCTAssertTrue(
             now > 1, "ProcessInfo returned an unrealistically low system uptime")
         // Sleep for 0.1s
-        var ts: timespec = timespec(tv_sec: 0, tv_nsec: 100000000)
-        nanosleep(&ts, nil)
+        try await Task.sleep(for: .milliseconds(100))
         XCTAssertTrue(
             ProcessInfo.processInfo.systemUptime > now,
             "ProcessInfo returned the same system uptime with 400")
@@ -172,9 +171,7 @@ final class ProcessInfoTests : XCTestCase {
     func testProcessName() {
 #if FOUNDATION_FRAMEWORK
         let targetName = "TestHost"
-#elseif os(Windows)
-        let targetName = "swift-foundationPackageTests.exe"
-#elseif os(Linux)
+#elseif os(Linux) || os(Windows)
         let targetName = "FoundationPreviewPackageTests.xctest"
 #else
         let targetName = "xctest"
