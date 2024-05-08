@@ -1991,7 +1991,15 @@ extension URL {
 
 #if !NO_FILESYSTEM
     private static func isDirectory(_ path: String) -> Bool {
-        return FileManager.default._fileStat(path)?.isDirectory ?? false
+#if !FOUNDATION_FRAMEWORK
+        var isDirectory: Bool = false
+        _ = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+        return isDirectory
+#else
+        var isDirectory: ObjCBool = false
+        _ = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+        return isDirectory.boolValue
+#endif
     }
 #endif // !NO_FILESYSTEM
 
