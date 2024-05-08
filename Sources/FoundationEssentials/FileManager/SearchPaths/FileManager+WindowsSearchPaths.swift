@@ -14,10 +14,10 @@
 
 private func _url(for id: KNOWNFOLDERID) -> URL {
     var pszPath: PWSTR?
-    let hResult: HRESULT = withUnsafePointer(to: id) { id in
-        SHGetKnownFolderPath(id, DWORD(KF_FLAG_DEFAULT.rawValue), nil, &pszPath)
+    let hrResult: HRESULT = withUnsafePointer(to: id) { id in
+        SHGetKnownFolderPath(id, KF_FLAG_DEFAULT, nil, &pszPath)
     }
-    precondition(hResult >= 0, "SHGetKnownFolderpath failed \(GetLastError())")
+    precondition(SUCCEEDED(hrResult), "SHGetKnownFolderpath failed \(GetLastError())")
     defer { CoTaskMemFree(pszPath) }
     return URL(filePath: String(decodingCString: pszPath!, as: UTF16.self), directoryHint: .isDirectory)
 }
