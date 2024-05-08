@@ -1304,7 +1304,7 @@ public struct URL: Equatable, Sendable, Hashable {
         return Parser.percentDecode(result, excluding: charsToLeaveEncoded) ?? ""
     }
 
-    private var fileSystemPath: String {
+    var fileSystemPath: String {
         return fileSystemPath(for: path())
     }
 

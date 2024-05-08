@@ -49,7 +49,7 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
         return nil
     }
     
-    let essentialsURL = FoundationEssentials.URL(filePath: url.path(percentEncoded: false))
+    let essentialsURL = FoundationEssentials.URL(filePath: url.fileSystemPath)
 
     return try? Data(contentsOf: essentialsURL)
 #else
