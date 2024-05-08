@@ -2768,9 +2768,9 @@ extension JSONEncoderTests {
         _testRoundTrip(of: testBigDecimal)
     }
 }
+#endif // FOUNDATION_FRAMEWORK
 
 // MARK: - URL Tests
-// TODO: Reenable these tests once URL is moved
 extension JSONEncoderTests {
     func testInterceptURL() {
         // Want to make sure JSONEncoder writes out single-value URLs, not the keyed encoding.
@@ -2792,7 +2792,6 @@ extension JSONEncoderTests {
         _testRoundTrip(of: Optional(url), expectedJSON: expectedJSON, outputFormatting: [.withoutEscapingSlashes])
     }
 }
-#endif // FOUNDATION_FRAMEWORK
 
 // MARK: - Helper Global Functions
 func expectEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String) {
@@ -2942,7 +2941,6 @@ fileprivate struct Address : Codable, Equatable {
 fileprivate class Person : Codable, Equatable {
   let name: String
   let email: String
-#if FOUNDATION_FRAMEWORK
   let website: URL?
 
 
@@ -2951,22 +2949,11 @@ fileprivate class Person : Codable, Equatable {
     self.email = email
     self.website = website
   }
-#else
-  init(name: String, email: String) {
-    self.name = name
-    self.email = email
-  }
-#endif
 
   func isEqual(_ other: Person) -> Bool {
-#if FOUNDATION_FRAMEWORK
     return self.name == other.name &&
            self.email == other.email &&
            self.website == other.website
-#else
-    return self.name == other.name &&
-           self.email == other.email
-#endif
   }
 
   static func ==(_ lhs: Person, _ rhs: Person) -> Bool {
@@ -2982,17 +2969,10 @@ fileprivate class Person : Codable, Equatable {
 fileprivate class Employee : Person {
   let id: Int
 
-#if FOUNDATION_FRAMEWORK
   init(name: String, email: String, website: URL? = nil, id: Int) {
     self.id = id
     super.init(name: name, email: email, website: website)
   }
-#else
-  init(name: String, email: String, id: Int) {
-    self.id = id
-    super.init(name: name, email: email)
-  }
-#endif
 
   enum CodingKeys : String, CodingKey {
     case id
@@ -3721,9 +3701,7 @@ extension JSONPass {
             let array : [String]
             let object : [String:String]
             let address : String
-            #if FOUNDATION_FRAMEWORK
             let url : URL
-            #endif
             let comment : String
             let special_sequences_key : String
             let spaced : [Int]
@@ -3757,9 +3735,7 @@ extension JSONPass {
                 case array
                 case object
                 case address
-                #if FOUNDATION_FRAMEWORK
                 case url
-                #endif
                 case comment
                 case special_sequences_key = "# -- --> */"
                 case spaced = " s p a c e d "

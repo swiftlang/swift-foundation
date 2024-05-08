@@ -603,10 +603,10 @@ extension JSONDecoderImpl: Decoder {
         if type == Data.self {
             return try self.unwrapData(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once URL and Decimal are moved
         if type == URL.self {
             return try self.unwrapURL(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
+#if FOUNDATION_FRAMEWORK // TODO: Reenable once Decimal is moved
         if type == Decimal.self {
             return try self.unwrapDecimal(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
@@ -688,7 +688,6 @@ extension JSONDecoderImpl: Decoder {
         }
     }
 
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once URL and Decimal has been moved
     private func unwrapURL(from mapValue: JSONMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> URL {
         try checkNotNull(mapValue, expectedType: URL.self, for: codingPathNode, additionalKey)
 
@@ -700,6 +699,7 @@ extension JSONDecoderImpl: Decoder {
         return url
     }
 
+#if FOUNDATION_FRAMEWORK // TODO: Reenable once Decimal has been moved
     private func unwrapDecimal(from mapValue: JSONMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> Decimal {
         try checkNotNull(mapValue, expectedType: Decimal.self, for: codingPathNode, additionalKey)
 
