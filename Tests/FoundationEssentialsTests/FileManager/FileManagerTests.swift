@@ -523,8 +523,11 @@ final class FileManagerTests : XCTestCase {
             XCTAssertFalse($0.fileExists(atPath: "does_not_exist"))
         }
     }
-    
+
     func testFileAccessAtPath() throws {
+#if os(Windows)
+        throw XCTSkip("Windows filesystems do not conform to POSIX semantics")
+#else
         guard getuid() != 0 else {
             // Root users can always access anything, so this test will not function when run as root
             throw XCTSkip("This test is not available when running as the root user")
@@ -551,8 +554,9 @@ final class FileManagerTests : XCTestCase {
                 XCTAssertTrue($0.isDeletableFile(atPath: file), "'\(file)' failed deletable check")
             }
         }
+#endif
     }
-    
+
     func testFileSystemAttributesAtPath() throws {
         try FileManagerPlayground {
             "Foo"
