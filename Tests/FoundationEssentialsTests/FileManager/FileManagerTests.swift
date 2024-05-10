@@ -681,7 +681,15 @@ final class FileManagerTests : XCTestCase {
     #endif
     
     func testSearchPaths() throws {
-        let crossPlatform: [FileManager.SearchPathDirectory] = [
+        func assertSearchPaths(_ directories: [FileManager.SearchPathDirectory], exists: Bool, file: StaticString = #file, line: UInt = #line) {
+            for directory in directories {
+                let paths = FileManager.default.urls(for: directory, in: .allDomainsMask)
+                XCTAssertEqual(!paths.isEmpty, exists, "Directory \(directory) produced an unexpected number of paths (expected to exist: \(exists), produced: \(paths))", file: file, line: line)
+            }
+        }
+        
+        // Cross platform paths that always exist
+        assertSearchPaths([
             .userDirectory,
             .documentDirectory,
             .autosavedInformationDirectory,
@@ -694,9 +702,16 @@ final class FileManagerTests : XCTestCase {
             .musicDirectory,
             .picturesDirectory,
             .sharedPublicDirectory
-        ]
+        ], exists: true)
         
-        let darwinOnly: [FileManager.SearchPathDirectory] = [
+        #if canImport(Darwin)
+        let isDarwin = true
+        #else
+        let isDarwin = false
+        #endif
+        
+        // Darwin-only paths
+        assertSearchPaths([
             .applicationDirectory,
             .demoApplicationDirectory,
             .developerApplicationDirectory,
@@ -710,47 +725,32 @@ final class FileManagerTests : XCTestCase {
             .allApplicationsDirectory,
             .allLibrariesDirectory,
             .printerDescriptionDirectory
-        ]
-        
-        #if !os(watchOS) && !os(tvOS)
-        let nonDarwinOnly: [FileManager.SearchPathDirectory] = [
-            .trashDirectory
-        ]
-        #else
-        let nonDarwinOnly: [FileManager.SearchPathDirectory] = []
-        #endif
+        ], exists: isDarwin)
         
         #if os(macOS)
-        let frameworkOnly: [FileManager.SearchPathDirectory] = [
-            .applicationScriptsDirectory
-        ]
+        let isMacOS = true
         #else
-        let frameworkOnly: [FileManager.SearchPathDirectory] = []
+        let isMacOS = false
         #endif
-        
-        let alwaysFail: [FileManager.SearchPathDirectory] = [
-            .itemReplacementDirectory
-        ]
         
         #if FOUNDATION_FRAMEWORK
-        let pass = crossPlatform + darwinOnly + frameworkOnly
-        let fail = nonDarwinOnly + alwaysFail
-        #elseif canImport(Darwin)
-        let pass = crossPlatform + darwinOnly
-        let fail = frameworkOnly + nonDarwinOnly + alwaysFail
+        let isFramework = true
         #else
-        let pass = crossPlatform + nonDarwinOnly
-        let fail = darwinOnly + frameworkOnly + alwaysFail
+        let isFramework = false
         #endif
         
-        for directory in pass {
-            let paths = FileManager.default.urls(for: directory, in: .allDomainsMask)
-            XCTAssertFalse(paths.isEmpty, "Directory \(directory) did not produce any paths")
-        }
-        for directory in fail {
-            let paths = FileManager.default.urls(for: directory, in: .allDomainsMask)
-            XCTAssertTrue(paths.isEmpty, "Directory \(directory) produced paths (\(paths))")
-        }
+        // .trashDirectory is unavailable on watchOS/tvOS and only produces paths on macOS (the framework build) + non-Darwin
+        #if !os(watchOS) && !os(tvOS)
+        assertSearchPaths([.trashDirectory], exists: (isMacOS && isFramework) || !isDarwin)
+        #endif
+        
+        // .applicationScriptsDirectory is only available on macOS and only produces paths in the framework build
+        #if os(macOS)
+        assertSearchPaths([.applicationScriptsDirectory], exists: isFramework)
+        #endif
+        
+        // .itemReplacementDirectory never exists
+        assertSearchPaths([.itemReplacementDirectory], exists: false)
     }
     
     func testSearchPaths_XDGEnvironmentVariables() throws {
