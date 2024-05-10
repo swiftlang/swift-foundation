@@ -51,7 +51,6 @@ extension _FileManagerImpl {
         URL(filePath: String.temporaryDirectoryPath, directoryHint: .isDirectory)
     }
     
-    #if canImport(Darwin)
     func url(
         for directory: FileManager.SearchPathDirectory,
         in domain: FileManager.SearchPathDomainMask,
@@ -77,14 +76,14 @@ extension _FileManagerImpl {
         #else
         let lastElement = false
         #endif
-        let paths = Array(_SearchPaths(for: directory, in: domain, expandTilde: true))
-        guard let path = lastElement ? paths.last : paths.first else {
+        let urls = Array(_SearchPathURLs(for: directory, in: domain, expandTilde: true))
+        guard let url = lastElement ? urls.last : urls.first else {
             throw CocoaError(.fileReadUnknown)
         }
         
         if shouldCreate {
             #if FOUNDATION_FRAMEWORK
-            _LogSpecialFolderRecreation(fileManager, path)
+            _LogSpecialFolderRecreation(fileManager, url.path)
             #endif
             var isUserDomain = domain == .userDomainMask
             #if os(macOS) && FOUNDATION_FRAMEWORK
@@ -102,20 +101,17 @@ extension _FileManagerImpl {
                 }
                 #endif
             }
-            try fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: attrDictionary)
+            try fileManager.createDirectory(at: url, withIntermediateDirectories: true, attributes: attrDictionary)
         }
-        return URL(fileURLWithPath: path, isDirectory: true)
+        return url
     }
     
     func urls(
         for directory: FileManager.SearchPathDirectory,
         in domainMask: FileManager.SearchPathDomainMask
     ) -> [URL] {
-        _SearchPaths(for: directory, in: domainMask, expandTilde: true).map {
-            URL(fileURLWithPath: $0, isDirectory: true)
-        }
+        Array(_SearchPathURLs(for: directory, in: domainMask, expandTilde: true))
     }
-    #endif
     
     #if FOUNDATION_FRAMEWORK
     func containerURL(forSecurityApplicationGroupIdentifier groupIdentifier: String) -> URL? {

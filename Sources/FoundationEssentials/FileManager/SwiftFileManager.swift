@@ -110,35 +110,37 @@ extension FileManager {
     }
     
     public enum SearchPathDirectory : UInt, Sendable {
+        // The following are Darwin-only and will not produce directories on non-Darwin
         case applicationDirectory = 1
         case demoApplicationDirectory = 2
         case developerApplicationDirectory = 3
         case adminApplicationDirectory = 4
         case libraryDirectory = 5
         case developerDirectory = 6
-        case userDirectory = 7
         case documentationDirectory = 8
-        case documentDirectory = 9
         case coreServiceDirectory = 10
+        case inputMethodsDirectory = 16
+        case preferencePanesDirectory = 22
+        case allApplicationsDirectory = 100
+        case allLibrariesDirectory = 101
+        case itemReplacementDirectory = 99
+        case printerDescriptionDirectory = 20
+        
+        // The following will not produce paths in swift-foundation because it requires the code signing identifier
+        case applicationScriptsDirectory = 23
+        
+        // The following are cross-platform and may produce valid paths on non-Darwin
+        case userDirectory = 7
+        case documentDirectory = 9
         case autosavedInformationDirectory = 11
         case desktopDirectory = 12
         case cachesDirectory = 13
         case applicationSupportDirectory = 14
         case downloadsDirectory = 15
-        case inputMethodsDirectory = 16
         case moviesDirectory = 17
         case musicDirectory = 18
         case picturesDirectory = 19
-        case printerDescriptionDirectory = 20
         case sharedPublicDirectory = 21
-        case preferencePanesDirectory = 22
-        
-        // TODO: Unavailable in FoundationPreview because it requires the code signing identifier
-        // case applicationScriptsDirectory = 23
-        
-        case itemReplacementDirectory = 99
-        case allApplicationsDirectory = 100
-        case allLibrariesDirectory = 101
         case trashDirectory = 102
     }
     
@@ -210,7 +212,6 @@ open class FileManager {
         try _impl.subpathsOfDirectory(atPath: path)
     }
     
-    #if canImport(Darwin)
     open func urls(for directory: FileManager.SearchPathDirectory, in domainMask: FileManager.SearchPathDomainMask) -> [URL] {
         _impl.urls(for: directory, in: domainMask)
     }
@@ -218,7 +219,6 @@ open class FileManager {
     open func url(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
         try _impl.url(for: directory, in: domain, appropriateFor: url, create: shouldCreate)
     }
-    #endif
 
     open func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
         try _impl.attributesOfItem(atPath: path)

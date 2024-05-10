@@ -683,4 +683,125 @@ final class FileManagerTests : XCTestCase {
         }
     }
     #endif
+    
+    func testSearchPaths() throws {
+        func assertSearchPaths(_ directories: [FileManager.SearchPathDirectory], exists: Bool, file: StaticString = #file, line: UInt = #line) {
+            for directory in directories {
+                let paths = FileManager.default.urls(for: directory, in: .allDomainsMask)
+                XCTAssertEqual(!paths.isEmpty, exists, "Directory \(directory) produced an unexpected number of paths (expected to exist: \(exists), produced: \(paths))", file: file, line: line)
+            }
+        }
+        
+        // Cross platform paths that always exist
+        assertSearchPaths([
+            .userDirectory,
+            .documentDirectory,
+            .autosavedInformationDirectory,
+            .autosavedInformationDirectory,
+            .desktopDirectory,
+            .cachesDirectory,
+            .applicationSupportDirectory,
+            .downloadsDirectory,
+            .moviesDirectory,
+            .musicDirectory,
+            .picturesDirectory,
+            .sharedPublicDirectory
+        ], exists: true)
+        
+        #if canImport(Darwin)
+        let isDarwin = true
+        #else
+        let isDarwin = false
+        #endif
+        
+        // Darwin-only paths
+        assertSearchPaths([
+            .applicationDirectory,
+            .demoApplicationDirectory,
+            .developerApplicationDirectory,
+            .adminApplicationDirectory,
+            .libraryDirectory,
+            .developerDirectory,
+            .documentationDirectory,
+            .coreServiceDirectory,
+            .inputMethodsDirectory,
+            .preferencePanesDirectory,
+            .allApplicationsDirectory,
+            .allLibrariesDirectory,
+            .printerDescriptionDirectory
+        ], exists: isDarwin)
+        
+        #if os(macOS)
+        let isMacOS = true
+        #else
+        let isMacOS = false
+        #endif
+        
+        #if FOUNDATION_FRAMEWORK
+        let isFramework = true
+        #else
+        let isFramework = false
+        #endif
+        
+        // .trashDirectory is unavailable on watchOS/tvOS and only produces paths on macOS (the framework build) + non-Darwin
+        #if !os(watchOS) && !os(tvOS)
+        assertSearchPaths([.trashDirectory], exists: (isMacOS && isFramework) || !isDarwin)
+        #endif
+        
+        // .applicationScriptsDirectory is only available on macOS and only produces paths in the framework build
+        #if os(macOS)
+        assertSearchPaths([.applicationScriptsDirectory], exists: isFramework)
+        #endif
+        
+        // .itemReplacementDirectory never exists
+        assertSearchPaths([.itemReplacementDirectory], exists: false)
+    }
+    
+    func testSearchPaths_XDGEnvironmentVariables() throws {
+        #if canImport(Darwin) || os(Windows)
+        throw XCTSkip("This test is not applicable on this platform")
+        #else
+        try FileManagerPlayground {
+            Directory("TestPath") {}
+        }.test { fileManager in
+            #if os(Windows)
+            func setenv(_ key: String, _ value: String) -> Int32 {
+              assert(overwrite == 1)
+              guard !key.contains("=") else {
+                  errno = EINVAL
+                  return -1
+              }
+              return _putenv("\(key)=\(value)")
+            }
+            #endif
+            
+            func validate(_ key: String, suffix: String? = nil, directory: FileManager.SearchPathDirectory, domain: FileManager.SearchPathDomainMask, file: StaticString = #file, line: UInt = #line) {
+                let oldValue = ProcessInfo.processInfo.environment[key] ?? ""
+                var knownPath = fileManager.currentDirectoryPath.appendingPathComponent("TestPath")
+                setenv(key, knownPath, 1)
+                defer { setenv(key, oldValue, 1) }
+                if let suffix {
+                    // The suffix is not stored in the environment variable, it is just applied to the expectation
+                    knownPath = knownPath.appendingPathComponent(suffix)
+                }
+                let knownURL = URL(filePath: knownPath, directoryHint: .isDirectory)
+                let results = fileManager.urls(for: directory, in: domain)
+                XCTAssertTrue(results.contains(knownURL), "Results \(results.map(\.path)) did not contain known directory \(knownURL.path) for \(directory)/\(domain) while setting the \(key) environment variable", file: file, line: line)
+            }
+            
+            validate("XDG_DATA_HOME", suffix: "Autosave Information", directory: .autosavedInformationDirectory, domain: .userDomainMask)
+            validate("XDG_DATA_HOME", suffix: "Autosave Information", directory: .autosavedInformationDirectory, domain: .localDomainMask)
+            validate("HOME", suffix: ".local/share/Autosave Information", directory: .autosavedInformationDirectory, domain: .userDomainMask)
+            validate("HOME", suffix: ".local/share/Autosave Information", directory: .autosavedInformationDirectory, domain: .localDomainMask)
+            
+            validate("XDG_CACHE_HOME", directory: .cachesDirectory, domain: .userDomainMask)
+            validate("HOME", suffix: ".cache", directory: .cachesDirectory, domain: .userDomainMask)
+            
+            validate("XDG_DATA_HOME", directory: .applicationSupportDirectory, domain: .userDomainMask)
+            validate("HOME", suffix: ".local/share", directory: .applicationSupportDirectory, domain: .userDomainMask)
+            
+            validate("HOME", directory: .userDirectory, domain: .localDomainMask)
+        }
+        #endif
+    }
 }
