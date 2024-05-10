@@ -712,13 +712,21 @@ final class FileManagerTests : XCTestCase {
             .printerDescriptionDirectory
         ]
         
+        #if !os(watchOS) && !os(tvOS)
         let nonDarwinOnly: [FileManager.SearchPathDirectory] = [
             .trashDirectory
         ]
+        #else
+        let nonDarwinOnly: [FileManager.SearchPathDirectory] = []
+        #endif
         
+        #if os(macOS)
         let frameworkOnly: [FileManager.SearchPathDirectory] = [
             .applicationScriptsDirectory
         ]
+        #else
+        let frameworkOnly: [FileManager.SearchPathDirectory] = []
+        #endif
         
         let alwaysFail: [FileManager.SearchPathDirectory] = [
             .itemReplacementDirectory
