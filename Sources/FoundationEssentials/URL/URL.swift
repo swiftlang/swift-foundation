@@ -1739,7 +1739,7 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #endif
         guard isFileURL && !fileSystemPath.isEmpty else { return self }
-        return URL(filePath: fileSystemPath.standardizingPath, directoryHint: .checkFileSystem)
+        return URL(filePath: fileSystemPath.standardizingPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory)
     }
 
     /// Resolves any symlinks in the path of a file URL.
@@ -1754,7 +1754,7 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #endif
         guard isFileURL && !fileSystemPath.isEmpty else { return self }
-        return URL(filePath: fileSystemPath.resolvingSymlinksInPath)
+        return URL(filePath: fileSystemPath.resolvingSymlinksInPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory)
     }
 
     /// Resolves any symlinks in the path of a file URL.
