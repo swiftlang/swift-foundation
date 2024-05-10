@@ -588,6 +588,9 @@ internal struct RFC3986Parser: URLParserProtocol {
     /// Parses a URL string into `URLParseInfo`, with the option to add (or skip) encoding of invalid characters.
     /// If `encodingInvalidCharacters` is `true`, this function handles encoding of invalid components.
     static func parse(urlString: String, encodingInvalidCharacters: Bool) -> URLParseInfo? {
+        #if os(Windows)
+        let urlString = urlString.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
+        #endif
         guard let parseInfo = parse(urlString: urlString) else {
             return nil
         }
