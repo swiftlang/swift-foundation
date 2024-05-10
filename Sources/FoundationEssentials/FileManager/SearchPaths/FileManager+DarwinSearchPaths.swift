@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-internal import Foundation_Private.NSFileManager
 internal import Foundation_Private.NSPathUtilities
 internal import DarwinPrivate.dirhelper
 internal import DarwinPrivate.sysdir
@@ -157,7 +156,7 @@ struct _DarwinSearchPathsSequence: Sequence {
 
 #if os(macOS) && FOUNDATION_FRAMEWORK
 extension String {
-    fileprivate var replacingTildeWithRealHomeDirectory: String {
+    internal var replacingTildeWithRealHomeDirectory: String {
         guard self == "~" || self.hasPrefix("~/") else {
             return self
         }

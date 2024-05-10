@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+internal import Foundation_Private.NSFileManager
+#endif
+
 extension FileManager.SearchPathDirectory {
     #if FOUNDATION_FRAMEWORK
     static var _homeDirectory: Self {
@@ -39,7 +43,7 @@ extension FileManager.SearchPathDomainMask {
     }
     #endif
     
-    fileprivate var firstMask: Self? {
+    internal var firstMask: Self? {
         guard !self.isEmpty else { return nil }
         return Self(rawValue: 1 << self.rawValue.trailingZeroBitCount)
     }

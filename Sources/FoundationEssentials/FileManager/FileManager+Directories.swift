@@ -83,7 +83,7 @@ extension _FileManagerImpl {
         
         if shouldCreate {
             #if FOUNDATION_FRAMEWORK
-            _LogSpecialFolderRecreation(fileManager, path)
+            _LogSpecialFolderRecreation(fileManager, url.path)
             #endif
             var isUserDomain = domain == .userDomainMask
             #if os(macOS) && FOUNDATION_FRAMEWORK
