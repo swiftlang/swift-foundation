@@ -2033,9 +2033,7 @@ extension URL {
                     var filePathArray = Array(utf8)
                     filePathArray[1] = UInt8(ascii: ":")
                     filePathArray.insert(UInt8(ascii: "\\"), at: 0)
-                    filePath = String(unsafeUninitializedCapacity: filePathArray.count) { buffer in
-                        buffer.initialize(fromContentsOf: filePathArray)
-                    }
+                    filePath = String(decoding: filePathArray, as: UTF8.self)
                 } else {
                     filePath = "\\" + filePath
                 }
@@ -2082,14 +2080,7 @@ extension URL {
 
         #if os(Windows)
         let slash = UInt8(ascii: "\\")
-        var hostName: String?
-        var hostEnd = path.startIndex
-        if path.utf8.starts(with: [slash, slash]) {
-            let hostStart = path.utf8.index(path.utf8.startIndex, offsetBy: 2)
-            hostEnd = path[hostStart...].utf8.firstIndex { $0 == slash || $0 == UInt8(ascii: "/") } ?? path.endIndex
-            hostName = String(path[hostStart..<hostEnd])
-        }
-        var filePath = path[hostEnd...].replacing(UInt8(ascii: "/"), with: slash)
+        var filePath = path.replacing(UInt8(ascii: "/"), with: slash)
         #else
         let slash = UInt8(ascii: "/")
         var filePath = path
@@ -2104,21 +2095,12 @@ extension URL {
         #endif
 
         func absoluteFilePath() -> String {
-            #if os(Windows)
-            if let hostName {
-                return #"\\"# + hostName + filePath
-            }
-            #endif
             guard !isAbsolute, let baseURL else {
                 return filePath
             }
             #if os(Windows)
             let urlPath = filePath.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
-            var mergedPath = baseURL.mergedPath(for: urlPath).replacing(UInt8(ascii: "/"), with: UInt8(ascii: "\\"))
-            if let baseHost = baseURL.host(percentEncoded: false), !baseHost.isEmpty {
-                return #"\\"# + baseHost + mergedPath
-            }
-            return mergedPath
+            return baseURL.mergedPath(for: urlPath).replacing(UInt8(ascii: "/"), with: UInt8(ascii: "\\"))
             #else
             return baseURL.mergedPath(for: filePath)
             #endif
@@ -2159,15 +2141,7 @@ extension URL {
         var components = URLComponents()
         if isAbsolute {
             components.scheme = "file"
-            #if os(Windows)
-            if let hostName {
-                components.host = hostName
-            } else {
-                components.encodedHost = ""
-            }
-            #else
             components.encodedHost = ""
-            #endif
         }
         components.path = filePath
 
@@ -2181,7 +2155,7 @@ extension URL {
 
     private func appending<S: StringProtocol>(path: S, directoryHint: DirectoryHint, encodingSlashes: Bool) -> URL {
         #if os(Windows)
-        var path = path.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
+        let path = path.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
         #endif
         guard var pathToAppend = Parser.percentEncode(path, component: .path) else {
             return self
@@ -2189,9 +2163,7 @@ extension URL {
         if encodingSlashes {
             var utf8 = Array(pathToAppend.utf8)
             utf8.replace([UInt8(ascii: "/")], with: [UInt8(ascii: "%"), UInt8(ascii: "2"), UInt8(ascii: "F")])
-            pathToAppend = String(unsafeUninitializedCapacity: utf8.count) { buffer in
-                buffer.initialize(fromContentsOf: utf8)
-            }
+            pathToAppend = String(decoding: utf8, as: UTF8.self)
         }
 
         let slash = UInt8(ascii: "/")
