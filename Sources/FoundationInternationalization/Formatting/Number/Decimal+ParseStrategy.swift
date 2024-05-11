@@ -80,14 +80,8 @@ extension Decimal.ParseStrategy {
         } else {
             let exampleString1 = formatStyle.format(3.14)
             let exampleString2 = formatStyle.format(-12345)
-#if FOUNDATION_FRAMEWORK  // TODO: Move CocoaError
             throw CocoaError(CocoaError.formatting, userInfo: [
                 NSDebugDescriptionErrorKey: "Cannot parse \(value). String should adhere to the specified format, such as \"\(exampleString1)\" or \"\(exampleString2)\"" ])
-#else
-            throw CocoaError(
-                .formatting,
-                description: "Cannot parse \(value). String should adhere to the specified format, such as \"\(exampleString1)\" or \"\(exampleString2)\"")
-#endif // FOUNDATION_FRAMEWORK
         }
     }
 }

@@ -36,14 +36,8 @@ extension IntegerParseStrategy: ParseStrategy {
             return Format.FormatInput(clamping: Int64(v))
         } else {
             let exampleString = formatStyle.format(123)
-#if FOUNDATION_FRAMEWORK // TODO: Move `CocoaError`
             throw CocoaError(CocoaError.formatting, userInfo: [
                 NSDebugDescriptionErrorKey: "Cannot parse \(value). String should adhere to the specified format, such as \(exampleString)" ])
-#else
-            throw CocoaError(
-                .formatting,
-                description: "Cannot parse \(value). String should adhere to the specified format, such as \(exampleString)")
-#endif
         }
     }
 
