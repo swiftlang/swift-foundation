@@ -330,6 +330,28 @@ final class URLTests : XCTestCase {
         try FileManager.default.removeItem(at: URL(filePath: "\(tempDirectory.path)/tmp-dir"))
     }
 
+    func testURLFilePathRelativeToBase() throws {
+        try FileManagerPlayground {
+            Directory("dir") {
+                "Foo"
+                "Bar"
+            }
+        }.test {
+            let currentDirectoryPath = $0.currentDirectoryPath
+            let baseURL = URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
+            let relativePath = "dir"
+
+            let url1 = URL(filePath: relativePath, directoryHint: .isDirectory, relativeTo: baseURL)
+
+            let url2 = URL(filePath: relativePath, directoryHint: .checkFileSystem, relativeTo: baseURL)
+            XCTAssertEqual(url1, url2, "\(url1) was not equal to \(url2)")
+
+            // directoryHint is `.inferFromPath` by default
+            let url3 = URL(filePath: relativePath + "/", relativeTo: baseURL)
+            XCTAssertEqual(url1, url3, "\(url1) was not equal to \(url3)")
+        }
+    }
+
     func testAppendFamily() throws {
         let base = URL(string: "https://www.example.com")!
 

@@ -199,6 +199,16 @@ extension String {
         return result
     }
 
+    internal func merging(relativePath: String) -> String {
+        guard relativePath.utf8.first != UInt8(ascii: "/") else {
+            return relativePath
+        }
+        guard let basePathEnd = self.utf8.lastIndex(of: UInt8(ascii: "/")) else {
+            return relativePath
+        }
+        return self[...basePathEnd] + relativePath
+    }
+
     internal var removingDotSegments: String {
         let input = self.utf8
         guard !input.isEmpty else {

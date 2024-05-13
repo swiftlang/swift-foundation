@@ -1011,12 +1011,11 @@ public struct URL: Equatable, Sendable, Hashable {
         guard let _baseParseInfo else {
             return relativePath
         }
-        let basePath = _baseParseInfo.path
+        let basePath = String(_baseParseInfo.path)
         if _baseParseInfo.hasAuthority && basePath.isEmpty {
             return "/" + relativePath
         }
-        let basePathEnd = basePath.utf8.lastIndex(of: UInt8(ascii: "/")) ?? basePath.startIndex
-        return basePath[..<basePathEnd] + "/" + relativePath
+        return basePath.merging(relativePath: relativePath)
     }
 
     /// Calculate the "merged" path that is resovled against the base URL
@@ -1295,7 +1294,7 @@ public struct URL: Equatable, Sendable, Hashable {
         }
     }
 
-    private func fileSystemPath(for urlPath: String) -> String {
+    private static func fileSystemPath(for urlPath: String) -> String {
         var result = urlPath
         if result.count > 1 && result.utf8.last == UInt8(ascii: "/") {
             _ = result.popLast()
@@ -1305,7 +1304,7 @@ public struct URL: Equatable, Sendable, Hashable {
     }
 
     var fileSystemPath: String {
-        return fileSystemPath(for: path())
+        return URL.fileSystemPath(for: path())
     }
 
     /// Returns the path component of the URL if present, otherwise returns an empty string.
@@ -1382,7 +1381,7 @@ public struct URL: Equatable, Sendable, Hashable {
             }
         }
         #endif
-        return fileSystemPath(for: relativePath())
+        return URL.fileSystemPath(for: relativePath())
     }
 
     private func relativePath(percentEncoded: Bool = true) -> String {
@@ -2098,11 +2097,12 @@ extension URL {
             guard !isAbsolute, let baseURL else {
                 return filePath
             }
+            let basePath = baseURL.path()
             #if os(Windows)
             let urlPath = filePath.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
-            return baseURL.mergedPath(for: urlPath).replacing(UInt8(ascii: "/"), with: UInt8(ascii: "\\"))
+            return URL.fileSystemPath(for: basePath.merging(relativePath: urlPath)).replacing(UInt8(ascii: "/"), with: UInt8(ascii: "\\"))
             #else
-            return baseURL.mergedPath(for: filePath)
+            return URL.fileSystemPath(for: basePath.merging(relativePath: filePath))
             #endif
         }
 
@@ -2188,9 +2188,9 @@ extension URL {
             if isFileURL {
                 let filePath: String
                 if newPath.utf8.first == slash {
-                    filePath = fileSystemPath(for: newPath)
+                    filePath = URL.fileSystemPath(for: newPath)
                 } else {
-                    filePath = fileSystemPath(for: mergedPath(for: newPath))
+                    filePath = URL.fileSystemPath(for: mergedPath(for: newPath))
                 }
                 isDirectory = URL.isDirectory(filePath)
             } else {
