@@ -28,51 +28,23 @@ extension String {
             throw CocoaError.errorWithFilePath(.fileReadInvalidFileName, "")
         }
 
-        // 1. Normalize the path first.
-
-        var path = self
+        var iter = self.utf8.makeIterator()
+        let bLeadingSlash = if iter.next() == ._slash, iter.next()?.isLetter ?? false, iter.next() == ._colon { true } else { false }
 
         // Strip the leading `/` on a RFC8089 path (`/[drive-letter]:/...` ).  A
         // leading slash indicates a rooted path on the drive for the current
         // working directory.
-        var iter = path.makeIterator()
-        if iter.next() == "/", iter.next()?.isLetter ?? false, iter.next() == ":" {
-            path.removeFirst()
-        }
-
-        // Win32 APIs can support `/` for the arc separator. However,
-        // symlinks created with `/` do not resolve properly, so normalize
-        // the path.
-        path.replace("/", with: "\\")
-
-        // Drop trailing slashes unless it follows a drive specification.  The
-        // trailing arc separator after a drive specifier indicates the root as
-        // opposed to a drive relative path.
-        while path.count > 1, path.last == "\\" {
-            let first = path.startIndex
-            let second = path.index(after: path.startIndex)
-            if path.count == 3, path[first].isLetter, path[second] == ":" {
-                break;
-            }
-            path.removeLast()
-        }
-
-        // 2. Perform the operation on the normalized path.
-
-        return try path.withCString(encodedAs: UTF16.self) { pwszPath in
-            guard !path.hasPrefix(#"\\"#) else { return try body(pwszPath) }
-
-            let dwLength = GetFullPathNameW(pwszPath, 0, nil, nil)
-            let path = try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
-                guard GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil) == dwLength - 1 else {
-                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+        return try Substring(self.utf8.dropFirst(bLeadingSlash ? 1 : 0)).withCString(encodedAs: UTF16.self) { pwszPath in
+            // 1. Normalize the path first.
+            let dwLength: DWORD = GetFullPathNameW(pwszPath, 0, nil, nil)
+            return try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
+                guard GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil) > 0 else {
+                    throw CocoaError.errorWithFilePath(self, win32: GetLastError(), reading: true)
                 }
-                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+
+                // 2. Perform the operation on the normalized path.
+                return try body($0.baseAddress!)
             }
-            guard !path.hasPrefix(#"\\"#) else {
-                return try path.withCString(encodedAs: UTF16.self, body)
-            }
-            return try #"\\?\\#(path)"#.withCString(encodedAs: UTF16.self, body)
         }
     }
 }

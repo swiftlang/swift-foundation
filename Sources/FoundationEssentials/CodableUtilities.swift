@@ -168,6 +168,10 @@ extension UInt8 {
         guard _asciiNumbers.contains(self) else { return nil }
         return Int(self &- UInt8(ascii: "0"))
     }
+
+    internal var isLetter: Bool? {
+        return (0x41 ... 0x5a) ~= self || (0x61 ... 0x7a) ~= self
+    }
 }
 
 
