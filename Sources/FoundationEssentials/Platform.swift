@@ -263,6 +263,7 @@ extension Platform {
 #elseif os(Windows)
         let hFile = GetModuleHandleW(nil)
         let dwLength: DWORD = GetFinalPathNameByHandleW(hFile, nil, 0, FILE_NAME_NORMALIZED)
+        guard dwLength > 0 else { return nil }
         return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) { lpBuffer in
             guard GetFinalPathNameByHandleW(hFile, lpBuffer.baseAddress, dwLength, FILE_NAME_NORMALIZED) == dwLength - 1 else {
                 return nil
