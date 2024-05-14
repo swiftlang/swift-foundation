@@ -135,7 +135,7 @@ private enum _XDGUserDirectory: String {
                 
                 let path = String(line[line.unicodeScalars.index(after: equalsIdx)...])._trimmingWhitespace()
                 if !path.isEmpty {
-                    entries[directory] = home.appending(path: path)
+                    entries[directory] = URL(filePath: path, directoryHint: .isDirectory, relativeTo: home)
                 }
             } else {
                 return nil // Incorrect syntax.
