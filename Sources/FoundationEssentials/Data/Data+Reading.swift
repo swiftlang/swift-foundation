@@ -25,14 +25,24 @@ import CRT
 import WinSDK
 #endif
 
+func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutableRawPointer!, _ size: Int, _ position: UInt32, _ options: Int32) -> Int {
+#if canImport(Darwin)
+    return fgetxattr(fd, name, value, size, position, options)
+#elseif canImport(Glibc)
+    return fgetxattr(fd, name, value, size)
+#else
+    return -1
+#endif
+}
+
 private func readExtendedAttributesFromFileDescriptor(_ fd: Int32, attrsToRead: [String]) -> [String : Data] {
-#if canImport(Darwin) && !NO_FILESYSTEM
+#if !NO_FILESYSTEM
     var output: [String : Data] = [:]
     for key in attrsToRead {
         key.withCString { keyStr in
             let maxXAttrLength = 1000
             withUnsafeTemporaryAllocation(of: CUnsignedChar.self, capacity: maxXAttrLength) { buf in
-                let result = fgetxattr(fd, keyStr, buf.baseAddress, maxXAttrLength, 0, 0)
+                let result = _fgetxattr(fd, keyStr, buf.baseAddress, maxXAttrLength, 0, 0)
                 if result != -1 {
                     // -1 means no such attribute
                     // Force unwrap buffer - if we do not have a base address, assert is appropriate.
@@ -40,9 +50,9 @@ private func readExtendedAttributesFromFileDescriptor(_ fd: Int32, attrsToRead: 
                 } else if errno == ERANGE {
                     // ERANGE indicates that the buffer was too small
                     // Get its needed size (passing nil buffer)
-                    let neededSize = fgetxattr(fd, keyStr, nil, 0, 0, 0)
+                    let neededSize = _fgetxattr(fd, keyStr, nil, 0, 0, 0)
                     let fullBuffer = malloc(neededSize)!
-                    if fgetxattr(fd, keyStr, fullBuffer, neededSize, 0, 0) != neededSize {
+                    if _fgetxattr(fd, keyStr, fullBuffer, neededSize, 0, 0) != neededSize {
                         // If still an error, then give up
                         free(fullBuffer)
                     } else {
@@ -122,8 +132,8 @@ extension NSData {
         
         var attrs: [String : Data] = [:]
         let result = try readBytesFromFile(path: .path(path), reportProgress: reportProgress, maxLength: maxLength == Int.max ? nil : maxLength, options: options, attributesToRead: [NSFileAttributeStringEncoding], attributes: &attrs)
-        if let encodingAttributeData = attrs[NSFileAttributeStringEncoding] {
-            outEncoding.pointee = _NSEncodingFromDataForExtendedAttribute(encodingAttributeData)
+        if let encodingAttributeData = attrs[NSFileAttributeStringEncoding], let encoding = encodingFromDataForExtendedAttribute(encodingAttributeData) {
+            outEncoding.pointee = encoding.rawValue
         } else {
             outEncoding.pointee = UInt(kCFStringEncodingInvalidId)
         }

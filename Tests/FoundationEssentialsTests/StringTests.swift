@@ -997,16 +997,255 @@ final class StringTests : XCTestCase {
             XCTAssertEqual(result, expectedResult)
         }
     }
+
+    func test_init_contentsOfFile_encoding() {
+        withTemporaryStringFile { existingURL, nonExistentURL in
+            do {
+                let content = try String(contentsOfFile: existingURL.path, encoding: String._Encoding.ascii)
+                expectEqual(temporaryFileContents, content)
+            } catch {
+                XCTFail(error.localizedDescription)
+            }
+
+            do {
+                let _ = try String(contentsOfFile: nonExistentURL.path, encoding: String._Encoding.ascii)
+                XCTFail()
+            } catch {
+            }
+        }
+    }
+
+    func test_init_contentsOfFile_usedEncoding() {
+        withTemporaryStringFile { existingURL, nonExistentURL in
+            do {
+                var usedEncoding: String._Encoding = String._Encoding(rawValue: 0)
+                let content = try String(contentsOfFile: existingURL.path(), usedEncoding: &usedEncoding)
+                expectNotEqual(0, usedEncoding.rawValue)
+                expectEqual(temporaryFileContents, content)
+            } catch {
+                XCTFail(error.localizedDescription)
+            }
+
+            let usedEncoding: String._Encoding = String._Encoding(rawValue: 0)
+            do {
+                _ = try String(contentsOfFile: nonExistentURL.path())
+                XCTFail()
+            } catch {
+                expectEqual(0, usedEncoding.rawValue)
+            }
+        }
+
+    }
+
+
+    func test_init_contentsOf_encoding() {
+        withTemporaryStringFile { existingURL, nonExistentURL in
+            do {
+                let content = try String(contentsOf: existingURL, encoding: String._Encoding.ascii)
+                expectEqual(temporaryFileContents, content)
+            } catch {
+                XCTFail(error.localizedDescription)
+            }
+
+            do {
+                _ = try String(contentsOf: nonExistentURL, encoding: String._Encoding.ascii)
+                XCTFail()
+            } catch {
+            }
+        }
+
+    }
+
+    func test_init_contentsOf_usedEncoding() {
+#if FOUNDATION_FRAMEWORK
+        let encs : [String._Encoding] = [
+            .ascii,
+            .nextstep,
+            .japaneseEUC,
+            .utf8,
+            .isoLatin1,
+            .nonLossyASCII,
+            .shiftJIS,
+            .isoLatin2,
+            .unicode,
+            .windowsCP1251,
+            .windowsCP1252,
+            .windowsCP1253,
+            .windowsCP1254,
+            .windowsCP1250,
+            .iso2022JP,
+            .macOSRoman,
+            .utf16,
+            .utf16BigEndian,
+            .utf16LittleEndian,
+            .utf32,
+            .utf32BigEndian,
+            .utf32LittleEndian
+        ]
+#else
+        let encs : [String._Encoding] = [
+            .utf8, 
+            .utf16,
+            .utf32,
+        ]
+        
+        // A note about utf16/32 little/big endian
+        // Foundation will only write out the BOM for encoded string data when using the unspecified encoding versions (.utf16, .utf32). It will, however, write the extended attribute if it can.
+        // On non-Darwin platforms, where we have less guarantee that the extended attribute was succesfully written, we cannot actually promise that the round-trip below will work. If the xattr fails to write (which we do not report as an error, for both historical and practical reasons), and the BOM is not present, then we will just read the data back in as UTF8.
+        // Therefore, we only test here the utf8/16/32 encodings.
+#endif
+        
+        for encoding in encs {
+            withTemporaryStringFile(encoding: encoding) { existingURL, _ in
+                do {
+                    var usedEncoding = String._Encoding(rawValue: 0)
+                    let content = try String(contentsOf: existingURL, usedEncoding: &usedEncoding)
+                    
+                    expectEqual(encoding, usedEncoding)
+                    expectEqual(temporaryFileContents, content)
+                } catch {
+                    XCTFail("\(error) - encoding \(encoding)")
+                }
+            }
+        }
+        
+        // Test non-existent file
+        withTemporaryStringFile { _, nonExistentURL in
+            var usedEncoding: String._Encoding = String._Encoding(rawValue: 0)
+            do {
+                _ = try String(contentsOf: nonExistentURL, usedEncoding: &usedEncoding)
+                XCTFail()
+            } catch {
+                expectEqual(0, usedEncoding.rawValue)
+            }
+        }
+    }
+    
+    func test_extendedAttributeData() {
+        // XAttr is supported on some platforms, but not all. For now we just test this code on Darwin.
+#if FOUNDATION_FRAMEWORK
+        let encs : [String._Encoding] = [
+            .ascii,
+            .nextstep,
+            .japaneseEUC,
+            .utf8,
+            .isoLatin1,
+            .nonLossyASCII,
+            .shiftJIS,
+            .isoLatin2,
+            .unicode,
+            .windowsCP1251,
+            .windowsCP1252,
+            .windowsCP1253,
+            .windowsCP1254,
+            .windowsCP1250,
+            .iso2022JP,
+            .macOSRoman,
+            .utf16,
+            .utf16BigEndian,
+            .utf16LittleEndian,
+            .utf32,
+            .utf32BigEndian,
+            .utf32LittleEndian
+        ]
+        
+        for encoding in encs {
+            // Round trip the 
+            let packageData = extendedAttributeData(for: encoding)
+            XCTAssertNotNil(packageData)
+            
+            let back = encodingFromDataForExtendedAttribute(packageData!)!
+            XCTAssertEqual(back, encoding)
+        }
+        
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("us-ascii;1536".data(using: .utf8)!)!.rawValue, String._Encoding.ascii.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("x-nextstep;2817".data(using: .utf8)!)!.rawValue, String._Encoding.nextstep.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("euc-jp;2336".data(using: .utf8)!)!.rawValue, String._Encoding.japaneseEUC.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("utf-8;134217984".data(using: .utf8)!)!.rawValue, String._Encoding.utf8.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("iso-8859-1;513".data(using: .utf8)!)!.rawValue, String._Encoding.isoLatin1.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute(";3071".data(using: .utf8)!)!.rawValue, String._Encoding.nonLossyASCII.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("cp932;1056".data(using: .utf8)!)!.rawValue, String._Encoding.shiftJIS.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("iso-8859-2;514".data(using: .utf8)!)!.rawValue, String._Encoding.isoLatin2.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("utf-16;256".data(using: .utf8)!)!.rawValue, String._Encoding.unicode.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("windows-1251;1282".data(using: .utf8)!)!.rawValue, String._Encoding.windowsCP1251.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("windows-1252;1280".data(using: .utf8)!)!.rawValue, String._Encoding.windowsCP1252.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("windows-1253;1283".data(using: .utf8)!)!.rawValue, String._Encoding.windowsCP1253.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("windows-1254;1284".data(using: .utf8)!)!.rawValue, String._Encoding.windowsCP1254.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("windows-1250;1281".data(using: .utf8)!)!.rawValue, String._Encoding.windowsCP1250.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("iso-2022-jp;2080".data(using: .utf8)!)!.rawValue, String._Encoding.iso2022JP.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("macintosh;0".data(using: .utf8)!)!.rawValue, String._Encoding.macOSRoman.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("utf-16;256".data(using: .utf8)!)!.rawValue, String._Encoding.utf16.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("utf-16be;268435712".data(using: .utf8)!)!.rawValue, String._Encoding.utf16BigEndian.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("utf-16le;335544576".data(using: .utf8)!)!.rawValue, String._Encoding.utf16LittleEndian.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("utf-32;201326848".data(using: .utf8)!)!.rawValue, String._Encoding.utf32.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("utf-32be;402653440".data(using: .utf8)!)!.rawValue, String._Encoding.utf32BigEndian.rawValue)
+        XCTAssertEqual(encodingFromDataForExtendedAttribute("utf-32le;469762304".data(using: .utf8)!)!.rawValue, String._Encoding.utf32LittleEndian.rawValue)
+#endif
+    }
+
+    func test_write_toFile() {
+        withTemporaryStringFile { existingURL, nonExistentURL in
+            let nonExistentPath = nonExistentURL.path()
+            do {
+                let s = "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
+                try s.write(toFile: nonExistentPath, atomically: false, encoding: String._Encoding.ascii)
+
+                let content = try String(contentsOfFile: nonExistentPath, encoding: String._Encoding.ascii)
+
+                expectEqual(s, content)
+            } catch {
+
+                XCTFail(error.localizedDescription)
+            }
+        }
+
+    }
+
+    func test_write_to() {
+        withTemporaryStringFile { existingURL, nonExistentURL in
+            let nonExistentPath = nonExistentURL.path()
+            do {
+                let s = "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
+                try s.write(to: nonExistentURL, atomically: false, encoding: String._Encoding.ascii)
+
+                let content = try String(contentsOfFile: nonExistentPath, encoding: String._Encoding.ascii)
+
+                expectEqual(s, content)
+            } catch {
+                XCTFail(error.localizedDescription)
+            }
+        }
+
+    }
+
 }
 
+// MARK: - Helper functions
+
+let temporaryFileContents = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+
+func withTemporaryStringFile(encoding: String._Encoding = .utf8, _ block: (_ existingURL: URL, _ nonExistentURL: URL) -> ()) {
+
+    let rootURL = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let fileURL = rootURL.appending(path: "NSStringTest.txt", directoryHint: .notDirectory)
+    try! FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+    defer {
+        do {
+            try FileManager.default.removeItem(at: rootURL)
+        } catch {
+            XCTFail()
+        }
+    }
+
+    try! temporaryFileContents.write(to: fileURL, atomically: true, encoding: encoding)
+    
+    let nonExisting = rootURL.appending(path: "-NonExist", directoryHint: .notDirectory)
+    block(fileURL, nonExisting)
+}
+
+// MARK: -
 
 #if FOUNDATION_FRAMEWORK
-
-extension String {
-    var lines: [Substring] {
-        self.split(separator: "\n")
-    }
-}
 
 final class StringTestsStdlib: XCTestCase {
 
@@ -1053,30 +1292,6 @@ final class StringTestsStdlib: XCTestCase {
         var _value: [UInt16]
     }
 
-    let temporaryFileContents =
-    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,\n" +
-    "sed do eiusmod tempor incididunt ut labore et dolore magna\n" +
-    "aliqua.\n"
-
-
-    func withTemporaryStringFile(_ block: (_ existingURL: URL, _ nonExistentURL: URL) -> ()) {
-        let rootURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let fileURL = rootURL.appending(path: "NSStringTest.txt", directoryHint: .notDirectory)
-        try! FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
-        defer {
-            do {
-                try FileManager.default.removeItem(at: rootURL)
-            } catch {
-                XCTFail()
-            }
-        }
-
-
-        try! Data(temporaryFileContents.utf8).write(to: fileURL)
-        let nonExisting = rootURL.appending(path: "-NonExist", directoryHint: .notDirectory)
-        block(fileURL, nonExisting)
-    }
-
     func test_Encodings() {
         let availableEncodings: [String.Encoding] = String.availableStringEncodings
         expectNotEqual(0, availableEncodings.count)
@@ -1116,100 +1331,6 @@ final class StringTestsStdlib: XCTestCase {
 
         expectEqual("0.5", String.init(format: "%g", locale: Locale(identifier: "en_US"), 0.5))
         expectEqual("0,5", String.init(format: "%g", locale: Locale(identifier: "uk"), 0.5))
-    }
-
-    func test_init_contentsOfFile_encoding() {
-        withTemporaryStringFile { existingURL, nonExistentURL in
-            do {
-                let content = try String(
-                    contentsOfFile: existingURL.path, encoding: .ascii)
-                expectEqual(
-                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,",
-                    content.lines[0])
-            } catch {
-                XCTFail(error.localizedDescription)
-            }
-
-            do {
-                let _ = try String(
-                    contentsOfFile: nonExistentURL.path, encoding: .ascii)
-                XCTFail()
-            } catch {
-            }
-        }
-    }
-
-    func test_init_contentsOfFile_usedEncoding() {
-        withTemporaryStringFile { existingURL, nonExistentURL in
-            do {
-                var usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
-                let content = try String(
-                    contentsOfFile: existingURL.path(), usedEncoding: &usedEncoding)
-                expectNotEqual(0, usedEncoding.rawValue)
-                expectEqual(
-                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,",
-                    content.lines[0])
-            } catch {
-                XCTFail(error.localizedDescription)
-            }
-
-            let usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
-            do {
-                _ = try String(contentsOfFile: nonExistentURL.path())
-                XCTFail()
-            } catch {
-                expectEqual(0, usedEncoding.rawValue)
-            }
-        }
-
-    }
-
-
-    func test_init_contentsOf_encoding() {
-        withTemporaryStringFile { existingURL, nonExistentURL in
-            do {
-                let content = try String(
-                    contentsOf: existingURL, encoding: .ascii)
-                expectEqual(
-                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,",
-                    content.lines[0])
-            } catch {
-                XCTFail(error.localizedDescription)
-            }
-
-            do {
-                _ = try String(contentsOf: nonExistentURL, encoding: .ascii)
-                XCTFail()
-            } catch {
-            }
-        }
-
-    }
-
-    func test_init_contentsOf_usedEncoding() {
-        withTemporaryStringFile { existingURL, nonExistentURL in
-            do {
-                var usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
-                let content = try String(
-                    contentsOf: existingURL, usedEncoding: &usedEncoding)
-
-                expectNotEqual(0, usedEncoding.rawValue)
-                expectEqual(
-                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit,",
-                    content.lines[0])
-            } catch {
-                XCTFail(error.localizedDescription)
-            }
-
-            var usedEncoding: String.Encoding = String.Encoding(rawValue: 0)
-            do {
-                _ = try String(contentsOf: nonExistentURL, usedEncoding: &usedEncoding)
-                XCTFail()
-            } catch {
-                expectEqual(0, usedEncoding.rawValue)
-            }
-        }
-
     }
 
     func test_init_cString_encoding() {
@@ -1797,7 +1918,7 @@ final class StringTestsStdlib: XCTestCase {
     }
 
     func test_init_bytes_encoding() {
-        var s: String = "abc あかさた"
+        let s = "abc あかさた"
         expectEqual(
             s, String(bytes: s.utf8, encoding: .utf8))
 
@@ -1814,7 +1935,7 @@ final class StringTestsStdlib: XCTestCase {
 
     @available(*, deprecated)
     func test_init_bytesNoCopy_length_encoding_freeWhenDone() {
-        var s: String = "abc あかさた"
+        let s = "abc あかさた"
         var bytes: [UInt8] = Array(s.utf8)
         expectEqual(s, String(bytesNoCopy: &bytes,
                               length: bytes.count, encoding: .utf8,
@@ -2692,45 +2813,6 @@ final class StringTestsStdlib: XCTestCase {
         // But because the whole string is converted to uppercase, we get U+0049
         // LATIN CAPITAL LETTER I.
         expectLocalizedEquality("\u{0046}\u{0049}", { loc in "\u{fb01}".uppercased(with: loc) }, "ru")
-    }
-
-    func test_write_toFile() {
-        withTemporaryStringFile { existingURL, nonExistentURL in
-            let nonExistentPath = nonExistentURL.path()
-            do {
-                let s = "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
-                try s.write(
-                    toFile: nonExistentPath, atomically: false, encoding: .ascii)
-
-                let content = try String(
-                    contentsOfFile: nonExistentPath, encoding: .ascii)
-
-                expectEqual(s, content)
-            } catch {
-
-                XCTFail(error.localizedDescription)
-            }
-        }
-
-    }
-
-    func test_write_to() {
-        withTemporaryStringFile { existingURL, nonExistentURL in
-            let nonExistentPath = nonExistentURL.path()
-            do {
-                let s = "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
-                try s.write(
-                    to: nonExistentURL, atomically: false, encoding: .ascii)
-
-                let content = try String(
-                    contentsOfFile: nonExistentPath, encoding: .ascii)
-
-                expectEqual(s, content)
-            } catch {
-                XCTFail(error.localizedDescription)
-            }
-        }
-
     }
 
     func test_applyingTransform() {
