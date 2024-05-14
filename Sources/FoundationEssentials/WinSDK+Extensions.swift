@@ -174,7 +174,7 @@ package var GENERIC_WRITE: DWORD {
 }
 
 package var KF_FLAG_DEFAULT: DWORD {
-    DWORD(WinSDK.KF_FLAG_DEFAULT)
+    DWORD(WinSDK.KF_FLAG_DEFAULT.rawValue)
 }
 
 package var MOVEFILE_COPY_ALLOWED: DWORD {

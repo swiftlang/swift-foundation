@@ -12,6 +12,8 @@
 
 #if os(Windows)
 
+import WinSDK
+
 private func _url(for id: KNOWNFOLDERID) -> URL {
     var pszPath: PWSTR?
     let hrResult: HRESULT = withUnsafePointer(to: id) { id in
