@@ -358,11 +358,12 @@ enum _FileOperations {
             try directory.withNTPathRepresentation {
                 if RemoveDirectoryW($0) { return }
                 let dwError: DWORD = GetLastError()
-                if dwError == ERROR_DIR_NOT_EMPTY {
+                guard dwError == ERROR_DIR_NOT_EMPTY else {
                     let error = CocoaError.removeFileError(dwError, directory)
                     guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: directory) ?? false) else {
                         throw error
                     }
+                    return
                 }
                 stack.append(directory)
 
