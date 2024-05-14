@@ -34,6 +34,10 @@ private func openFileDescriptorProtected(path: UnsafePointer<CChar>, flags: Int3
 #if FOUNDATION_FRAMEWORK
     // Use file protection on this platform
     return _NSOpenFileDescriptor_Protected(path, Int(flags), options, 0o666)
+#elseif os(Windows)
+    var fd: CInt = 0
+    _ = _sopen_s(&fd, path, flags, _SH_DENYNO, _S_IREAD | _S_IWRITE)
+    return fd
 #else
     return open(path, flags, 0o666)
 #endif
