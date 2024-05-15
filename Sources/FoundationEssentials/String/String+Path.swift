@@ -507,11 +507,44 @@ extension String {
 #endif
 #endif
     }
+    /// Replaces any number of sequential `/`
+    /// characters with /
+    /// NOTE: Internal so it's testable
+    /// - Returns: The replaced String
+    internal func _transmutingCompressingSlashes() -> String {
+        let input = self.utf8
+        guard input.count > 1 else {
+            return self
+        }
 
-    private func _transmutingCompressingSlashes(replacement: String = "/") -> String {
-        self.replacing(#//+/#, with: { _ in replacement })
+        enum SlashState {
+            case initial
+            case slash
+        }
+
+        return String(unsafeUninitializedCapacity: input.count) { buffer in
+            var state = SlashState.initial
+            var i = 0
+            for v in input {
+                switch state {
+                case .initial:
+                    buffer[i] = v
+                    i += 1
+                    if v == ._slash {
+                        state = .slash
+                    }
+                case .slash:
+                    if v != ._slash {
+                        buffer[i] = v
+                        i += 1
+                        state = .initial
+                    }
+                }
+            }
+            return i
+        }
     }
-    
+
     private var _droppingTrailingSlashes: String {
         guard !self.isEmpty else {
             return self
@@ -532,8 +565,7 @@ extension String {
         } else {
             result.startIndex
         }
-        let dotDotRegex = #/[^/]\.\.[/$]/#
-        let hasDotDot = result[postNetStart...].contains(dotDotRegex)
+        let hasDotDot = result[postNetStart...]._hasDotDotComponent()
         if hasDotDot, let resolved = result._resolvingSymlinksInPath() {
             result = resolved
         }
@@ -734,6 +766,12 @@ extension String {
     #endif // !NO_FILESYSTEM
 }
 
+fileprivate enum DotState {
+    case initial
+    case dot
+    case dotDot
+    case lookingForSlash
+}
 extension StringProtocol {
     internal func replacing(_ a: UInt8, with b: UInt8) -> String {
         var utf8Array = Array(self.utf8)
@@ -751,5 +789,47 @@ extension StringProtocol {
         return String(unsafeUninitializedCapacity: utf8Array.count) { buffer in
             buffer.initialize(fromContentsOf: utf8Array)
         }
+    }
+
+    internal func _hasDotDotComponent() -> Bool {
+        let input = self.utf8
+        guard input.count >= 2 else {
+            return false
+        }
+
+        var state = DotState.initial
+        for v in input {
+            switch state {
+            case .initial:
+                if v == ._dot {
+                    state = .dot
+                } else if v == ._slash {
+                    continue
+                } else {
+                    state = .lookingForSlash
+                }
+            case .dot:
+                if v == ._dot {
+                    state = .dotDot
+                } else if v == ._slash {
+                    state = .initial
+                } else {
+                    state = .lookingForSlash
+                }
+            case .dotDot:
+                if v == ._slash {
+                    return true // Starts with "../"
+                } else {
+                    state = .lookingForSlash
+                }
+            case .lookingForSlash:
+                if v == ._slash {
+                    state = .initial
+                } else {
+                    continue
+                }
+            }
+        }
+        return state == .dotDot
     }
 }
