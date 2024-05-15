@@ -78,7 +78,9 @@ func _readFileAttributePrimitive<T: BinaryInteger>(_ value: Any?, as type: T.Typ
     }
     #endif
     
-    if let binInt = value as? (any BinaryInteger), let result = T(exactly: binInt) {
+    if let exact = value as? T {
+        return exact
+    } else if let binInt = value as? (any BinaryInteger), let result = T(exactly: binInt) {
         return result
     }
     return nil
