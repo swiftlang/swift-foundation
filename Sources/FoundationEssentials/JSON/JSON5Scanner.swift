@@ -1189,6 +1189,7 @@ internal extension UInt8 {
     static var _singleQuote: UInt8 { UInt8(ascii: "'") }
     static var _dollar: UInt8 { UInt8(ascii: "$") }
     static var _underscore: UInt8 { UInt8(ascii: "_") }
+    static var _dot: UInt8 { UInt8(ascii: ".") }
 }
 
 var _json5Infinity: StaticString { "Infinity" }

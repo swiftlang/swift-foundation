@@ -962,6 +962,41 @@ final class StringTests : XCTestCase {
         XCTAssertEqual("e\u{301}\u{301}f".data(using: .ascii, allowLossyConversion: true), Data([UInt8(ascii: "e"), 0xFF, 0xFF, UInt8(ascii: "f")]))
         XCTAssertEqual("e\u{301}\u{301}f".data(using: .nonLossyASCII, allowLossyConversion: true), Data([UInt8(ascii: "e"), UInt8(ascii: "?"), UInt8(ascii: "?"), UInt8(ascii: "f")]))
     }
+
+    func test_transmutingCompressingSlashes() {
+        let testCases: [(String, String)] = [
+            ("/////", "/"),                 // All slashes
+            ("ABCDE", "ABCDE"),             // No slashes
+            ("//ABC", "/ABC"),              // Starts with multiple slashes
+            ("/ABCD", "/ABCD"),             // Starts with single slash
+            ("ABC//", "ABC/"),              // Ends with multiple slashes
+            ("ABCD/", "ABCD/"),             // Ends with single slash
+            ("AB//DF/GH//I", "AB/DF/GH/I") // Internal slashes
+        ]
+        for (testString, expectedResult) in testCases {
+            let result = testString
+                ._transmutingCompressingSlashes()
+            XCTAssertEqual(result, expectedResult)
+        }
+    }
+
+    func test_pathHasDotDotComponent() {
+        let testCases: [(String, Bool)] = [
+            ("../AB", true),            //Begins with ..
+            ("/ABC/..", true),          // Ends with ..
+            ("/ABC/../DEF", true),      // Internal ..
+            ("/ABC/DEF..", false),      // Ends with .. but not part of path
+            ("ABC/../../DEF", true),    // Multiple internal dot dot
+            ("/AB/./CD", false),        // Internal single dot
+            ("/AB/..../CD", false),     // Internal multiple dots
+            ("..", true)                // Dot dot only
+        ]
+        for (testString, expectedResult) in testCases {
+            let result = testString
+                ._hasDotDotComponent()
+            XCTAssertEqual(result, expectedResult)
+        }
+    }
 }
 
 
