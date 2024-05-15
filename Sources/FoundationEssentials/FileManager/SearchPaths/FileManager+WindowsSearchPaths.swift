@@ -16,10 +16,10 @@ import WinSDK
 
 private func _url(for id: KNOWNFOLDERID) -> URL {
     var pszPath: PWSTR?
-    let hrResult: HRESULT = withUnsafePointer(to: id) { id in
+    let hr: HRESULT = withUnsafePointer(to: id) { id in
         SHGetKnownFolderPath(id, KF_FLAG_DEFAULT, nil, &pszPath)
     }
-    precondition(SUCCEEDED(hrResult), "SHGetKnownFolderpath failed \(GetLastError())")
+    precondition(SUCCEEDED(hr), "SHGetKnownFolderPath failed \(String(hr, radix: 16))")
     defer { CoTaskMemFree(pszPath) }
     return URL(filePath: String(decodingCString: pszPath!, as: UTF16.self), directoryHint: .isDirectory)
 }
@@ -37,7 +37,7 @@ func _WindowsSearchPathURL(for directory: FileManager.SearchPathDirectory, in do
 
     case (.applicationSupportDirectory, .localDomainMask):
         _url(for: FOLDERID_ProgramData)
-        
+
     case (.applicationSupportDirectory, .userDomainMask):
         _url(for: FOLDERID_LocalAppData)
 
@@ -60,7 +60,11 @@ func _WindowsSearchPathURL(for directory: FileManager.SearchPathDirectory, in do
         _url(for: FOLDERID_Public)
 
     case (.trashDirectory, .userDomainMask):
-        _url(for: FOLDERID_RecycleBinFolder)
+        // The "Recycle Bin" is a virtual folder and we cannot get a path from
+        // it directly using `SHGetKnownFolderPath`.
+        // TODO: identify how to get a path, even if a namespaced PIDL, for the
+        // user.
+        nil
 
     default: nil
     }

@@ -742,10 +742,16 @@ final class FileManagerTests : XCTestCase {
         #else
         let isFramework = false
         #endif
+
+        #if os(Windows)
+        let isWindows = true
+        #else
+        let isWindows = false
+        #endif
         
         // .trashDirectory is unavailable on watchOS/tvOS and only produces paths on macOS (the framework build) + non-Darwin
         #if !os(watchOS) && !os(tvOS)
-        assertSearchPaths([.trashDirectory], exists: (isMacOS && isFramework) || !isDarwin)
+        assertSearchPaths([.trashDirectory], exists: (isMacOS && isFramework) || (!isDarwin && !isWindows))
         #endif
         
         // .applicationScriptsDirectory is only available on macOS and only produces paths in the framework build
