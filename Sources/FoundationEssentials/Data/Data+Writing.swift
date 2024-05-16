@@ -162,7 +162,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             // Furthermore, we can't compatibly switch to mkstemp() until we have the ability to set fchmod correctly, which requires the ability to query the current umask, which we don't have. (22033100)
 #if os(Windows)
             guard _mktemp_s(templateFileSystemRep, template.count + 1) == 0 else {
-                throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
             }
 #else
             guard mktemp(templateFileSystemRep) != nil else {
