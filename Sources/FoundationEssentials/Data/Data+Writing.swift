@@ -164,13 +164,14 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             guard _mktemp_s(templateFileSystemRep, template.count + 1) == 0 else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
             }
+            let flags: CInt = _O_CREAT | _O_EXCL | _O_RDWR
 #else
             guard mktemp(templateFileSystemRep) != nil else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
             }
+            let flags: CInt = O_CREAT | O_EXCL | O_RDWR
 #endif
-            
-            let flags: Int32 = O_CREAT | O_EXCL | O_RDWR
+
             let fd = openFileDescriptorProtected(path: templateFileSystemRep, flags: flags, options: options)
             if fd >= 0 {
                 // Got a good fd
