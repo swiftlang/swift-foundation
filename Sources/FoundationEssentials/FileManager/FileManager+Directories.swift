@@ -382,7 +382,7 @@ extension _FileManagerImpl {
         // Get url's resource identifier, volume identifier, and make sure it is a directory
         let dirValues = try directoryURL.resourceValues(forKeys: [.fileResourceIdentifierKey, .volumeIdentifierKey, .isDirectoryKey])
         
-        guard dirValues.isDirectory! else {
+        guard let isDirectory = dirValues.isDirectory, isDirectory else {
             outRelationship.pointee = .other
             return
         }
