@@ -336,7 +336,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
         }
 
-        defer { _close(fd) }
+        defer { if fd >= 0 { _close(fd) } }
 
         let callback = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(buffer.count)) : nil
 
@@ -360,6 +360,9 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
 
         // We're done now
         guard let auxPath else { return }
+
+        _close(fd)
+        fd = -1
 
         try auxPath.withNTPathRepresentation { pwszAuxiliaryPath in
             guard MoveFileExW(pwszAuxiliaryPath, pwszPath, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) else {
