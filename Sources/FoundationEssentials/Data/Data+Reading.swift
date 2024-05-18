@@ -312,7 +312,6 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     
     let fileSize = min(Int(clamping: filestat.st_size), maxLength ?? Int.max)
     let fileType = filestat.st_mode & S_IFMT
-    let preferredChunkSize = filestat.st_blksize
 #if !NO_FILESYSTEM
     let shouldMap = shouldMapFileDescriptor(fd, path: inPath, options: options)
 #else
@@ -370,7 +369,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         
         localProgress?.becomeCurrent(withPendingUnitCount: Int64(fileSize))
         do {
-            let length = try readBytesFromFileDescriptor(fd, path: inPath, buffer: bytes, length: fileSize, chunkSize: size_t(preferredChunkSize), reportProgress: reportProgress)
+            let length = try readBytesFromFileDescriptor(fd, path: inPath, buffer: bytes, length: fileSize, reportProgress: reportProgress)
             localProgress?.resignCurrent()
             
             result = ReadBytesResult(bytes: bytes, length: length, deallocator: .free)
@@ -390,16 +389,21 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
 }
 
 // Takes an `Int` size and returns an `Int` to match `Data`'s count. If we are going to read more than Int.max, throws - because we won't be able to store it in `Data`.
-private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer inBuffer: UnsafeMutableRawPointer, length: Int, chunkSize: size_t, reportProgress: Bool) throws -> Int {
-    
+private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer inBuffer: UnsafeMutableRawPointer, length: Int, reportProgress: Bool) throws -> Int {
     var buffer = inBuffer
     // If chunkSize (8-byte value) is more than blksize_t.max (4 byte value), then use the 4 byte max and chunk
-    var preferredChunkSize = chunkSize
-    let localProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(length)) : nil
     
-    if localProgress != nil {
-        // To report progress, we have to try reading in smaller chunks than the whole file. If we have a readingAttributes struct, we already know it. Otherwise, get one that makes sense for this destination.
-        preferredChunkSize = chunkSize
+    let preferredChunkSize: size_t
+    let localProgress: Progress?
+    
+    if Progress.current() != nil && reportProgress {
+        localProgress = Progress(totalUnitCount: Int64(length))
+        // To report progress, we have to try reading in smaller chunks than the whole file. Aim for about 1% increments.
+        preferredChunkSize = max(length / 100, 1024 * 4)
+    } else {
+        localProgress = nil
+        // Get it all in one go, if possible
+        preferredChunkSize = length
     }
     
     var numBytesRemaining = length
@@ -408,12 +412,12 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
             throw CocoaError(.userCancelled)
         }
         
-        // We will only request a max of Int32.max bytes
-        var numBytesRequested = CUnsignedInt(clamping: preferredChunkSize)
+        // We will only request a max of Int32.max bytes. Some platforms will return an error over that amount.
+        var numBytesRequested = CUnsignedInt(clamping: min(preferredChunkSize, Int(CInt.max)))
         
         // Furthermore, don't request more than the number of bytes remaining
         if numBytesRequested > numBytesRemaining {
-            numBytesRequested = CUnsignedInt(clamping: numBytesRemaining)
+            numBytesRequested = CUnsignedInt(clamping: min(numBytesRemaining, Int(CInt.max)))
         }
 
         var numBytesRead: CInt
@@ -440,6 +444,10 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
             break
         } else {
             numBytesRemaining -= Int(clamping: numBytesRead)
+            if numBytesRemaining < 0 {
+                // Just in case; we do not want to have a negative amount of bytes remaining. We will just assume that is the end.
+                numBytesRemaining = 0
+            }
             localProgress?.completedUnitCount = Int64(length - numBytesRemaining)
             // Anytime we read less than actually requested, stop, since the length is considered "max" for socket calls
             if numBytesRead < numBytesRequested {

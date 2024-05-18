@@ -43,43 +43,20 @@ private func openFileDescriptorProtected(path: UnsafePointer<CChar>, flags: Int3
 #endif
 }
 
-private func preferredChunkSizeForFileDescriptor(_ fd: Int32) -> Int? {
-#if canImport(Darwin)
-    var preferredChunkSize = -1
-    var fsinfo = statfs()
-    var fileinfo = stat()
-    if fstatfs(fd, &fsinfo) != -1 {
-        if fstat(fd, &fileinfo) != -1 {
-            preferredChunkSize = Int(fileinfo.st_blksize)
-        } else {
-            logFileIOErrno(errno, at: "fstat")
-        }
-    } else {
-        preferredChunkSize = Int(fsinfo.f_iosize)
-    }
-
-    // Make sure we don't return something completely bone-headed, like zero.
-    if (preferredChunkSize <= 0) {
-        return nil
-    }
-    
-    return preferredChunkSize
-#else
-    return nil
-#endif
-}
-
 private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBufferPointer, reportProgress: Bool) throws -> Int {
     // Fetch this once
     let length = buffer.count
-    var preferredChunkSize = length
-    let localProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(preferredChunkSize)) : nil
     
-    if localProgress != nil {
-        // To report progress, we have to try writing in smaller chunks than the whole file. Get one that makes sense for this destination.
-        if let smarterChunkSize = preferredChunkSizeForFileDescriptor(fd) {
-            preferredChunkSize = smarterChunkSize
-        }
+    let preferredChunkSize: Int
+    let localProgress: Progress?
+    if reportProgress && Progress.current() != nil {
+        // To report progress, we have to try writing in smaller chunks than the whole file.
+        // Aim for about 1% increments in progress updates.
+        preferredChunkSize = max(length / 100, 1024 * 4)
+        localProgress = Progress(totalUnitCount: Int64(length))
+    } else {
+        preferredChunkSize = length
+        localProgress = nil
     }
 
     var nextRange = buffer.startIndex..<buffer.startIndex.advanced(by: length)
@@ -118,6 +95,10 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBuf
                 break
             } else {
                 numBytesRemaining -= Int(numBytesWritten)
+                if numBytesRemaining < 0 {
+                    // Just in case, do not allow a negative number of bytes remaining
+                    numBytesRemaining = 0
+                }
                 if let localProgress {
                     localProgress.completedUnitCount = Int64(length - numBytesRemaining)
                 }
