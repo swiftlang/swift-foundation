@@ -22,10 +22,27 @@
 ///   `a > b`   then return `.orderedDescending`. The left operand is greater than the right operand.
 ///   `a == b`  then return `.orderedSame`. The operands are equal.
 @frozen @available(macOS 10.0, iOS 2.0, tvOS 9.0, watchOS 2.0, *)
-public enum ComparisonResult : Int, Codable, Sendable {
+public enum ComparisonResult : Int, Sendable {
     case orderedAscending   = -1
     case orderedSame        = 0
     case orderedDescending  = 1
 }
 
 #endif // !FOUNDATION_FRAMEWORK
+
+@available(FoundationPreview 0.1, *)
+extension ComparisonResult : Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let intValue = try container.decode(Int.self)
+        guard let value = ComparisonResult(rawValue: intValue) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot initialize ComparisonResult with invalid value of '\(intValue)'")
+        }
+        self = value
+    }
+}
