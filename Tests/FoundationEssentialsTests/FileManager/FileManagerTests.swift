@@ -399,8 +399,9 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual($0.contents(atPath: "dir2/foo"), data)
             XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")])
             
-            try $0.copyItem(atPath: "does_not_exist", toPath: "dir3")
-            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError.last, .init("does_not_exist", "dir3", code: .fileNoSuchFile))
+            XCTAssertThrowsError(try $0.copyItem(atPath: "does_not_exist", toPath: "dir3")) {
+                XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
+            }
             
             #if canImport(Darwin)
             // Not supported on linux because it ends up trying to set attributes that are currently unimplemented

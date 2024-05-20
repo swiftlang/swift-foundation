@@ -154,7 +154,7 @@ struct _FTSSequence: Sequence {
         init(_ path: UnsafePointer<CChar>, _ opts: Int32) {
             self.path = path
             var statBuf = stat()
-            if lstat(path, &statBuf) > 0 {
+            guard lstat(path, &statBuf) == 0 else {
                 state = .error(errno, String(cString: path))
                 return
             }
