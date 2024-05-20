@@ -157,7 +157,10 @@ final class DateFormatStyleTests : XCTestCase {
                 let timeZone = TimeZone(secondsFromGMT: -3600)!
 
                 let formatStyle = Date.FormatStyle(date: .abbreviated, locale: locale, timeZone: timeZone)
-                let formatterFromCache = ICUDateFormatter.cachedFormatter(for: formatStyle)
+                guard let formatterFromCache = ICUDateFormatter.cachedFormatter(for: formatStyle) else {
+                    XCTFail("Unexpected nil formatter")
+                    return
+                }
 
                 let expected = expectations[localeIdentifier]!
                 let result = formatterFromCache.format(date)
