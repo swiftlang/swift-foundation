@@ -626,15 +626,17 @@ private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoi
 }
 
 private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
-#if FOUNDATION_FRAMEWORK
     // Write extended attributes
     for (key, value) in attributes {
         value.withUnsafeBytes { valueBuf in
-            _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0, 0)
             // Returns non-zero on error, but we ignore them
+#if canImport(Darwin)
+            _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0, 0)
+#elseif canImport(Glibc)
+            _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0)
+#endif
         }
     }
-#endif
 }
 
 #endif // !NO_FILESYSTEM

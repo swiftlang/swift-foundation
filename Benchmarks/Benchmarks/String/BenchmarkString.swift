@@ -106,4 +106,84 @@ let benchmarks = {
         
     // MARK: - UTF32
 
+    Benchmark("utf32-encode", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+        for _ in benchmark.scaledIterations {
+            autoreleasepool {
+                blackHole(asciiSmallStr.data(using: .utf32BigEndian))
+                blackHole(nonAsciiSmallStr.data(using: .utf32BigEndian))
+                
+                blackHole(asciiLargeStr.data(using: .utf32BigEndian))
+                blackHole(nonAsciiLargeStr.data(using: .utf32BigEndian))
+                
+                blackHole(asciiSmallStr.data(using: .utf32LittleEndian))
+                blackHole(nonAsciiSmallStr.data(using: .utf32LittleEndian))
+                
+                blackHole(asciiLargeStr.data(using: .utf32LittleEndian))
+                blackHole(nonAsciiLargeStr.data(using: .utf32LittleEndian))
+
+                blackHole(asciiLargeStr.data(using: .utf32))
+                blackHole(nonAsciiLargeStr.data(using: .utf32))
+            }
+        }
+    }
+    
+    Benchmark("utf32-decode", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+        for _ in benchmark.scaledIterations {
+            autoreleasepool {
+                blackHole(String(bytes: asciiSmallStrDataUTF32BE, encoding: .utf32BigEndian))
+                blackHole(String(bytes: nonAsciiSmallStrDataUTF32BE, encoding: .utf32BigEndian))
+
+                blackHole(String(bytes: asciiLargeStrDataUTF32BE, encoding: .utf32BigEndian))
+                blackHole(String(bytes: nonAsciiLargeStrDataUTF32BE, encoding: .utf32BigEndian))
+
+                blackHole(String(bytes: asciiSmallStrDataUTF32LE, encoding: .utf32LittleEndian))
+                blackHole(String(bytes: nonAsciiSmallStrDataUTF32LE, encoding: .utf32LittleEndian))
+
+                blackHole(String(bytes: asciiLargeStrDataUTF32LE, encoding: .utf32LittleEndian))
+                blackHole(String(bytes: nonAsciiLargeStrDataUTF32LE, encoding: .utf32LittleEndian))
+
+                // Use big endian input data with plain UTF32 to get a valid string.
+                blackHole(String(bytes: asciiLargeStrDataUTF32BE, encoding: .utf32))
+                blackHole(String(bytes: nonAsciiLargeStrDataUTF32BE, encoding: .utf32))
+            }
+        }
+    }
+
+    // MARK: - I/O
+    let str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+
+    Benchmark("read-utf8", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+        let rootURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = rootURL.appending(path: "benchmark.txt", directoryHint: .notDirectory)
+        try! FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        try! str.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        for _ in benchmark.scaledIterations {
+            autoreleasepool {
+                blackHole(try! String(contentsOf: fileURL, encoding: .utf8))
+            }
+        }
+    }
+
+    Benchmark("read-utf16", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+        let rootURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = rootURL.appending(path: "benchmark.txt", directoryHint: .notDirectory)
+        try! FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        try! str.write(to: fileURL, atomically: true, encoding: .utf16LittleEndian)
+
+        for _ in benchmark.scaledIterations {
+            autoreleasepool {
+                blackHole(try! String(contentsOf: fileURL, encoding: .utf16LittleEndian))
+            }
+        }
+    }
+
 }
