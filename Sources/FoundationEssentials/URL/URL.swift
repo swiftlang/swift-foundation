@@ -2007,7 +2007,7 @@ extension URL {
         #if os(Windows)
         var isAbsolute = false
         let utf8 = filePath.utf8
-        if utf8.first == UInt8(ascii: "\\") {
+        if utf8.first == ._backslash {
             // Either an absolute path or a UNC path
             isAbsolute = true
         } else if utf8.count >= 3 {
@@ -2019,16 +2019,16 @@ extension URL {
             let third = utf8[thirdIndex]
             isAbsolute = (
                 first.isAlpha
-                && (second == UInt8(ascii: ":") || second == UInt8(ascii: "|"))
-                && third == UInt8(ascii: "\\")
+                && (second == ._colon || second == ._pipe)
+                && third == ._backslash
             )
 
             if isAbsolute {
                 // Standardize to "\[drive-letter]:\..."
-                if second == UInt8(ascii: "|") {
+                if second == ._pipe {
                     var filePathArray = Array(utf8)
-                    filePathArray[1] = UInt8(ascii: ":")
-                    filePathArray.insert(UInt8(ascii: "\\"), at: 0)
+                    filePathArray[1] = ._colon
+                    filePathArray.insert(._backslash, at: 0)
                     filePath = String(decoding: filePathArray, as: UTF8.self)
                 } else {
                     filePath = "\\" + filePath

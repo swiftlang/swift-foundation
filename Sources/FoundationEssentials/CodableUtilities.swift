@@ -163,6 +163,7 @@ extension UInt8 {
     internal static var _question: UInt8 { UInt8(ascii: "?") }
     internal static var _exclamation: UInt8 { UInt8(ascii: "!") }
     internal static var _ampersand: UInt8 { UInt8(ascii: "&") }
+    internal static var _pipe: UInt8 { UInt8(ascii: "|") }
 
     internal var digitValue: Int? {
         guard _asciiNumbers.contains(self) else { return nil }
