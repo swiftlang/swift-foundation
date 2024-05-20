@@ -2023,10 +2023,7 @@ extension URL {
                 && third == UInt8(ascii: "\\")
             )
 
-            if !isAbsolute {
-                // Strip the drive letter so it's not mistaken as a scheme
-                filePath = String(filePath[thirdIndex...])
-            } else {
+            if isAbsolute {
                 // Standardize to "\[drive-letter]:\..."
                 if second == UInt8(ascii: "|") {
                     var filePathArray = Array(utf8)
