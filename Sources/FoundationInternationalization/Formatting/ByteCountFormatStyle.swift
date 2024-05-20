@@ -259,13 +259,19 @@ private func localizedParens(locale: Locale) -> (String, String) {
     let ulocdata = locale.identifier.withCString {
         ulocdata_open($0, &status)
     }
-    try! status.checkSuccess()
     defer { ulocdata_close(ulocdata) }
 
+    guard status.checkSuccessAndLogError("ulocdata_open failed.") else {
+        return (" (", ")")
+    }
+
     let exemplars = ulocdata_getExemplarSet(ulocdata, nil, 0, .punctuation, &status)
-    try! status.checkSuccess()
     defer { uset_close(exemplars) }
 
+    guard status.checkSuccessAndLogError("ulocdata_getExemplarSet failed.") else {
+        return (" (", ")")
+    }
+    
     let fullwidthLeftParenUTF32 = 0x0000FF08 as Int32
     let containsFullWidth = uset_contains(exemplars!, fullwidthLeftParenUTF32).boolValue
 

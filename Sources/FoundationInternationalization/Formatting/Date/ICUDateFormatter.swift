@@ -29,7 +29,7 @@ final class ICUDateFormatter {
     var udateFormat: UnsafeMutablePointer<UDateFormat?>
     var lenientParsing: Bool
 
-    private init(localeIdentifier: String, timeZoneIdentifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Int, minimumDaysInFirstWeek: Int, capitalizationContext: FormatStyleCapitalizationContext, pattern: String, twoDigitStartDate: Date, lenientParsing: Bool) {
+    private init?(localeIdentifier: String, timeZoneIdentifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Int, minimumDaysInFirstWeek: Int, capitalizationContext: FormatStyleCapitalizationContext, pattern: String, twoDigitStartDate: Date, lenientParsing: Bool) {
         self.lenientParsing = lenientParsing
 
         // We failed to construct a locale with the given calendar; fall back to locale's identifier
@@ -39,11 +39,19 @@ final class ICUDateFormatter {
         let pt = Array(pattern.utf16)
 
         var status = U_ZERO_ERROR
-        udateFormat = udat_open(UDAT_PATTERN, UDAT_PATTERN, localeIdentifierWithCalendar, tz, Int32(tz.count), pt, Int32(pt.count), &status)!
-        try! status.checkSuccess()
+        let udat = udat_open(UDAT_PATTERN, UDAT_PATTERN, localeIdentifierWithCalendar, tz, Int32(tz.count), pt, Int32(pt.count), &status)
+
+        guard status.checkSuccessAndLogError("udat_open failed."), let udat else {
+            if (udat != nil) {
+                udat_close(udat)
+            }
+            return nil
+        }
+
+        udateFormat = udat
 
         udat_setContext(udateFormat, capitalizationContext.icuContext, &status)
-        try! status.checkSuccess()
+        _ = status.checkSuccessAndLogError("udat_setContext failed.")
 
         if lenientParsing {
             udat_setLenient(udateFormat, UBool.true)
@@ -51,22 +59,24 @@ final class ICUDateFormatter {
             udat_setLenient(udateFormat, UBool.false)
 
             udat_setBooleanAttribute(udateFormat, UDAT_PARSE_ALLOW_WHITESPACE, UBool.false, &status)
-            try! status.checkSuccess()
+            _ = status.checkSuccessAndLogError("Cannot set UDAT_PARSE_ALLOW_WHITESPACE.")
 
             udat_setBooleanAttribute(udateFormat, UDAT_PARSE_ALLOW_NUMERIC, UBool.false, &status)
-            try! status.checkSuccess()
+            _ = status.checkSuccessAndLogError("Cannot set UDAT_PARSE_ALLOW_NUMERIC.")
 
             udat_setBooleanAttribute(udateFormat, UDAT_PARSE_PARTIAL_LITERAL_MATCH, UBool.false, &status)
-            try! status.checkSuccess()
+            _ = status.checkSuccessAndLogError("Cannot set UDAT_PARSE_PARTIAL_LITERAL_MATCH.")
 
             udat_setBooleanAttribute(udateFormat, UDAT_PARSE_MULTIPLE_PATTERNS_FOR_MATCH, UBool.false, &status)
-            try! status.checkSuccess()
+            _ = status.checkSuccessAndLogError("Cannot set UDAT_PARSE_MULTIPLE_PATTERNS_FOR_MATCH.")
         }
 
         let udatCalendar = udat_getCalendar(udateFormat)
         let ucal = ucal_clone(udatCalendar, &status)
         defer { ucal_close(ucal) }
-        try! status.checkSuccess()
+        guard status.checkSuccessAndLogError("ucal_clone failed."), let ucal else {
+            return
+        }
 
         ucal_clear(ucal)
         ucal_setAttribute(ucal, .firstDayOfWeek, Int32(firstWeekday))
@@ -227,10 +237,6 @@ final class ICUDateFormatter {
         var parseLenient: Bool
         var parseTwoDigitStartDate: Date
 
-        func createICUDateFormatter() -> ICUDateFormatter {
-            ICUDateFormatter(localeIdentifier: localeIdentifier, timeZoneIdentifier: timeZoneIdentifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, capitalizationContext: capitalizationContext, pattern: pattern, twoDigitStartDate: parseTwoDigitStartDate, lenientParsing: parseLenient)
-        }
-
         init(localeIdentifier: String?, timeZoneIdentifier: String, calendarIdentifier: Calendar.Identifier, firstWeekday: Int, minimumDaysInFirstWeek: Int, capitalizationContext: FormatStyleCapitalizationContext, pattern: String, parseLenient: Bool = true, parseTwoDigitStartDate: Date = Date(timeIntervalSince1970: 0)) {
             if let localeIdentifier {
                 self.localeIdentifier = localeIdentifier
@@ -250,11 +256,13 @@ final class ICUDateFormatter {
         }
     }
 
-    static let formatterCache = FormatterCache<DateFormatInfo, ICUDateFormatter>()
+    static let formatterCache = FormatterCache<DateFormatInfo, ICUDateFormatter?>()
     static var patternCache = LockedState<[PatternCacheKey : String]>(initialState: [:])
 
-    static func cachedFormatter(for dateFormatInfo: DateFormatInfo) -> ICUDateFormatter {
-        return Self.formatterCache.formatter(for: dateFormatInfo, creator: dateFormatInfo.createICUDateFormatter)
+    static func cachedFormatter(for dateFormatInfo: DateFormatInfo) -> ICUDateFormatter? {
+        return Self.formatterCache.formatter(for: dateFormatInfo) {
+            ICUDateFormatter(localeIdentifier: dateFormatInfo.localeIdentifier, timeZoneIdentifier: dateFormatInfo.timeZoneIdentifier, calendarIdentifier: dateFormatInfo.calendarIdentifier, firstWeekday: dateFormatInfo.firstWeekday, minimumDaysInFirstWeek: dateFormatInfo.minimumDaysInFirstWeek, capitalizationContext: dateFormatInfo.capitalizationContext, pattern: dateFormatInfo.pattern, twoDigitStartDate: dateFormatInfo.parseTwoDigitStartDate, lenientParsing: dateFormatInfo.parseLenient)
+        }
     }
 
     struct PatternCacheKey : Hashable {
@@ -264,17 +272,17 @@ final class ICUDateFormatter {
         var datePatternOverride: String?
     }
 
-    static func cachedFormatter(for format: Date.FormatStyle) -> ICUDateFormatter {
-        return cachedFormatter(for: .init(format))
+    static func cachedFormatter(for format: Date.FormatStyle) -> ICUDateFormatter? {
+        cachedFormatter(for: .init(format))
     }
 
-    static func cachedFormatter(for format: Date.VerbatimFormatStyle) -> ICUDateFormatter {
-        return cachedFormatter(for: .init(format))
+    static func cachedFormatter(for format: Date.VerbatimFormatStyle) -> ICUDateFormatter? {
+        cachedFormatter(for: .init(format))
     }
 
     // Returns a formatter to retrieve localized calendar symbols
-    static func cachedFormatter(for calendar: Calendar) -> ICUDateFormatter {
-        return cachedFormatter(for: .init(calendar))
+    static func cachedFormatter(for calendar: Calendar) -> ICUDateFormatter? {
+        cachedFormatter(for: .init(calendar))
     }
 }
 

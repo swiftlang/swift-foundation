@@ -24,11 +24,11 @@ final class ICUDateIntervalFormatter {
         let dateTemplate: String
     }
     
-    internal static let cache = FormatterCache<Signature, ICUDateIntervalFormatter>()
+    internal static let cache = FormatterCache<Signature, ICUDateIntervalFormatter?>()
 
     let uformatter: OpaquePointer // UDateIntervalFormat
 
-    private init(signature: Signature) {
+    private init?(signature: Signature) {
         var comps = signature.localeComponents
         comps.calendar = signature.calendarIdentifier
         let id = comps.icuIdentifier
@@ -37,36 +37,39 @@ final class ICUDateIntervalFormatter {
         let dateTemplate16 = Array(signature.dateTemplate.utf16)
 
         var status = U_ZERO_ERROR
-        uformatter = tz16.withUnsafeBufferPointer { tz in
+        let formatter = tz16.withUnsafeBufferPointer { tz in
             dateTemplate16.withUnsafeBufferPointer { template in
                 udtitvfmt_open(id, template.baseAddress, Int32(template.count), tz.baseAddress, Int32(tz.count), &status)
             }
         }
 
-        try! status.checkSuccess()
+        guard status.checkSuccessAndLogError("udtitvfmt_open failed."), let formatter else {
+            if (formatter != nil) {
+                udtitvfmt_close(formatter)
+            }
+            return nil
+        }
+
+        uformatter = formatter
 
         udtitvfmt_setAttribute(uformatter, UDTITVFMT_MINIMIZE_TYPE, UDTITVFMT_MINIMIZE_NONE, &status)
-
-        try! status.checkSuccess()
+        _ = status.checkSuccessAndLogError("udtitvfmt_setAttribute failed.")
     }
 
     deinit {
         udtitvfmt_close(uformatter)
     }
 
-    func string(from: Range<Date>) -> String {
+    func string(from: Range<Date>) -> String? {
         let fromUDate = from.lowerBound.udate
         let toUDate = from.upperBound.udate
 
-        let result = _withResizingUCharBuffer { buffer, size, status in
+        return _withResizingUCharBuffer { buffer, size, status in
             udtitvfmt_format(uformatter, fromUDate, toUDate, buffer, size, nil /* position */, &status)
         }
-
-        if let result { return result }
-        return ""
     }
 
-    internal static func formatter(for style: Date.IntervalFormatStyle) -> ICUDateIntervalFormatter {
+    internal static func formatter(for style: Date.IntervalFormatStyle) -> ICUDateIntervalFormatter? {
         var template = style.symbols.formatterTemplate(overridingDayPeriodWithLocale: style.locale)
 
         if template.isEmpty {
@@ -80,9 +83,8 @@ final class ICUDateIntervalFormatter {
         let comps = Locale.Components(locale: style.locale)
         let signature = Signature(localeComponents: comps, calendarIdentifier: style.calendar.identifier, timeZoneIdentifier: style.timeZone.identifier, dateTemplate: template)
         
-        let formatter = Self.cache.formatter(for: signature) {
+        return Self.cache.formatter(for: signature) {
             ICUDateIntervalFormatter(signature: signature)
         }
-        return formatter
     }
 }

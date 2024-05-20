@@ -306,7 +306,7 @@ extension Date {
 
         /// Returns an attributed string with `AttributeScopes.FoundationAttributes.DateFieldAttribute`
         public func format(_ value: Date) -> AttributedString {
-            let fm: ICUDateFormatter
+            let fm: ICUDateFormatter?
             switch innerStyle {
             case .formatStyle(let formatStyle):
                 fm = ICUDateFormatter.cachedFormatter(for: formatStyle)
@@ -314,14 +314,11 @@ extension Date {
                 fm = ICUDateFormatter.cachedFormatter(for: verbatimFormatStyle)
             }
 
-            var result: AttributedString
-            if let (str, attributes) = fm.attributedFormat(value) {
-                result = str._attributedStringFromPositions(attributes)
-            } else {
-                result = AttributedString("")
+            guard let fm, let (str, attributes) = fm.attributedFormat(value) else {
+                return AttributedString("")
             }
-
-            return result
+            
+            return str._attributedStringFromPositions(attributes)
         }
 
         public func locale(_ locale: Locale) -> Self {
@@ -376,16 +373,10 @@ extension Date.FormatStyle {
         }
 
         public func format(_ value: Date) -> AttributedString {
-            let fm = ICUDateFormatter.cachedFormatter(for: base)
-
-            var result: AttributedString
-            if let (str, attributes) = fm.attributedFormat(value) {
-                result = str._attributedStringFromPositions(attributes)
-            } else {
-                result = AttributedString("")
+            guard let fm = ICUDateFormatter.cachedFormatter(for: base), let (str, attributes) = fm.attributedFormat(value) else {
+                return AttributedString("")
             }
-
-            return result
+            return str._attributedStringFromPositions(attributes)
         }
 
         public func locale(_ locale: Locale) -> Self {
@@ -691,8 +682,10 @@ extension Date.FormatStyle.Attributed {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle : FormatStyle {
     public func format(_ value: Date) -> String {
-        let fm = ICUDateFormatter.cachedFormatter(for: self)
-        return fm.format(value) ?? ""
+        guard let fm = ICUDateFormatter.cachedFormatter(for: self), let result = fm.format(value) else {
+            return ""
+        }
+        return result
     }
 
     public func locale(_ locale: Locale) -> Self {
@@ -707,7 +700,10 @@ extension Date.FormatStyle : FormatStyle {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle : ParseStrategy {
     public func parse(_ value: String) throws -> Date {
-        let fm = ICUDateFormatter.cachedFormatter(for: self)
+        guard let fm = ICUDateFormatter.cachedFormatter(for: self) else {
+            throw CocoaError(CocoaError.formatting, userInfo: [ NSDebugDescriptionErrorKey: "Error creating icu date formatter" ])
+        }
+
         guard let date = fm.parse(value) else {
             throw parseError(value, exampleFormattedString: fm.format(Date.now))
         }
@@ -1093,7 +1089,10 @@ extension Date.FormatStyle : CustomConsumingRegexComponent {
         guard index < bounds.upperBound else {
             return nil
         }
-        return ICUDateFormatter.cachedFormatter(for: self).parse(input, in: index..<bounds.upperBound)
+        guard let fmt = ICUDateFormatter.cachedFormatter(for: self) else {
+            return nil
+        }
+        return fmt.parse(input, in: index..<bounds.upperBound)
     }
 }
 

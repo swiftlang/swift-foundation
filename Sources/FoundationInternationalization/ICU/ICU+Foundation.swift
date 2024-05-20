@@ -12,6 +12,10 @@
 
 internal import FoundationICU
 
+#if canImport(os)
+internal import os
+#endif
+
 enum ICU { }
 
 internal struct ICUError: Error, CustomDebugStringConvertible {
@@ -23,6 +27,12 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
     var debugDescription: String {
         String(validatingUTF8: u_errorName(code)) ?? "Unknown ICU error \(code.rawValue)"
     }
+
+#if canImport(os)
+    internal static let logger: Logger = {
+        Logger(subsystem: "com.apple.foundation", category: "icu")
+    }()
+#endif
 }
 
 extension UErrorCode {
@@ -34,6 +44,15 @@ extension UErrorCode {
 
     var isSuccess: Bool {
         self.rawValue <= U_ZERO_ERROR.rawValue
+    }
+
+    func checkSuccessAndLogError(_ message: @escaping @autoclosure () -> String) -> Bool {
+#if canImport(os)
+        if !isSuccess {
+            ICUError.logger.error("\(message()). Error: \(ICUError(code: self).debugDescription)")
+        }
+#endif
+        return isSuccess
     }
 }
 

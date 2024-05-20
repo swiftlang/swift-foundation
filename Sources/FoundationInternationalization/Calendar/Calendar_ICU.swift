@@ -1959,7 +1959,11 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar {
     private func symbols(for key: UDateFormatSymbolType) -> [String] {
-        ICUDateFormatter.cachedFormatter(for: self).symbols(for: key)
+        guard let fmt = ICUDateFormatter.cachedFormatter(for: self) else {
+            return []
+        }
+
+        return fmt.symbols(for: key)
     }
 
     /// A list of eras in this calendar, localized to the Calendar's `locale`.
