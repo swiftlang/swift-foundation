@@ -312,18 +312,17 @@ final class PredicateCodableTests: XCTestCase {
         let decoded2 = try _encodeDecode(predicate2)
         XCTAssertEqual(try decoded2.evaluate(.example), try predicate2.evaluate(.example))
         
-        #if FIXED_127296261
+        
         var predicate3 = #Predicate<Array<String>> {
             $0.isEmpty
         }
         var decoded3 = try _encodeDecode(predicate3)
         XCTAssertEqual(try decoded3.evaluate(["A", "B", "C"]), try predicate3.evaluate(["A", "B", "C"]))
-        #endif
         
-        let predicate3 = #Predicate<Array<String>> {
+        predicate3 = #Predicate<Array<String>> {
             $0.count == 2
         }
-        let decoded3 = try _encodeDecode(predicate3)
+        decoded3 = try _encodeDecode(predicate3)
         XCTAssertEqual(try decoded3.evaluate(["A", "B", "C"]), try predicate3.evaluate(["A", "B", "C"]))
         
         var predicate4 = #Predicate<Dictionary<String, Int>> {
