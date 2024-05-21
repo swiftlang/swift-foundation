@@ -388,8 +388,10 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
 #endif
 }
 
-// Takes an `Int` size and returns an `Int` to match `Data`'s count. If we are going to read more than Int.max, throws - because we won't be able to store it in `Data`.
-private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer inBuffer: UnsafeMutableRawPointer, length: Int, reportProgress: Bool) throws -> Int {
+/// Read data from a file descriptor.
+/// Takes an `Int` size and returns an `Int` to match `Data`'s count. If we are going to read more than Int.max, throws - because we won't be able to store it in `Data`.
+/// If `readUntilEOF` is `false`, this can be used to read from something like a socket.
+private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer inBuffer: UnsafeMutableRawPointer, length: Int, readUntilEOF: Bool = true, reportProgress: Bool) throws -> Int {
     var buffer = inBuffer
     // If chunkSize (8-byte value) is more than blksize_t.max (4 byte value), then use the 4 byte max and chunk
     
@@ -435,22 +437,24 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
         } while numBytesRead < 0 && errno == EINTR
         
         if numBytesRead < 0 {
+            // The read failed
             let errNum = errno
             logFileIOErrno(errNum, at: "read")
-            // The read failed
             throw CocoaError.errorWithFilePath(path, errno: errNum, reading: true)
         } else if numBytesRead == 0 {
             // Getting zero here is weird, since it may imply unexpected end of file... If we do, return the number of bytes read so far (which is compatible with the way read() would work with just one call).
             break
         } else {
+            // Partial read
             numBytesRemaining -= Int(clamping: numBytesRead)
             if numBytesRemaining < 0 {
                 // Just in case; we do not want to have a negative amount of bytes remaining. We will just assume that is the end.
                 numBytesRemaining = 0
             }
             localProgress?.completedUnitCount = Int64(length - numBytesRemaining)
-            // Anytime we read less than actually requested, stop, since the length is considered "max" for socket calls
-            if numBytesRead < numBytesRequested {
+
+            // If we are not reading until EOF, stop here
+            if !readUntilEOF && numBytesRead < numBytesRequested {
                 break
             }
 
