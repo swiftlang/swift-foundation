@@ -718,7 +718,10 @@ extension _FileManagerImpl {
                 let seconds = modification.timeIntervalSince1601
 
                 var uiTime: ULARGE_INTEGER = .init()
-                uiTime.QuadPart = UInt64(seconds * 10000000)
+                guard let converted = UInt64(exactly: seconds * 10000000.0) else {
+                    return
+                }
+                uiTime.QuadPart = converted
 
                 var ftTime: FILETIME = .init()
                 ftTime.dwLowDateTime = uiTime.LowPart
