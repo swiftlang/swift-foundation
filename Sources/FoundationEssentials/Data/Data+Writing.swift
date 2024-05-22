@@ -225,7 +225,7 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
     }
 #endif
     
-    let temporaryDirectoryPath = destinationPath.deletingLastPathComponent()
+    let temporaryDirectoryPath = destinationPath.deletingLastPathComponent().withFileSystemRepresentation { String(cString: $0!) }
     let (fd, auxFile) = try createTemporaryFile(at: temporaryDirectoryPath, inPath: inPath, prefix: ".dat.nosync", options: options)
     return (fd, auxFile, nil)
 }
