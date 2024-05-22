@@ -347,11 +347,36 @@ internal struct JSONWriter {
         }
 
         if sortedKeys {
-            let elems = dict.sorted { a, b in
-                a.key.utf8.lexicographicallyPrecedes(b.key.utf8)
+            #if FOUNDATION_FRAMEWORK
+            var compatibilitySorted = false
+            if JSONEncoder.compatibility1 {
+                // If applicable, use the old NSString-based sorting with appropriate options
+                compatibilitySorted = true
+                let nsKeysAndValues = dict.map {
+                    (key: $0.key as NSString, value: $0.value)
+                }
+                let elems = nsKeysAndValues.sorted(by: { a, b in
+                    let options: String.CompareOptions = [.numeric, .caseInsensitive, .forcedOrdering]
+                    let range = NSMakeRange(0, a.key.length)
+                    let locale = Locale.system
+                    return a.key.compare(b.key as String, options: options, range: range, locale: locale) == .orderedAscending
+                })
+                for elem in elems {
+                    try serializeObjectElement(key: elem.key as String, value: elem.value, depth: depth)
+                }
             }
-            for elem in elems {
-                try serializeObjectElement(key: elem.key as String, value: elem.value, depth: depth)
+            #else
+            let compatibilitySorted = false
+            #endif
+            
+            // If we didn't use the NSString-based compatibility sorting, sort lexicographically by the UTF-8 view
+            if !compatibilitySorted {
+                let elems = dict.sorted { a, b in
+                    a.key.utf8.lexicographicallyPrecedes(b.key.utf8)
+                }
+                for elem in elems {
+                    try serializeObjectElement(key: elem.key as String, value: elem.value, depth: depth)
+                }
             }
         } else {
             for (key, value) in dict {
