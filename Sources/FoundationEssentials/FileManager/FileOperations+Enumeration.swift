@@ -23,6 +23,7 @@ struct _Win32DirectoryContentsSequence: Sequence {
         }
 
         private var hFind: HANDLE?
+        private var bValid: Bool = true
         private var ffdData: WIN32_FIND_DATAW = .init()
         private var prefix: String = ""
         private var slash: Bool
@@ -69,6 +70,7 @@ struct _Win32DirectoryContentsSequence: Sequence {
 
         func next() -> Element? {
             guard let hFind else { return nil }
+            guard bValid else { return nil }
             repeat {
                 let name = withUnsafeBytes(of: ffdData.cFileName) {
                     String(decodingCString: $0.baseAddress!.assumingMemoryBound(to: WCHAR.self), as: UTF16.self)
@@ -80,8 +82,10 @@ struct _Win32DirectoryContentsSequence: Sequence {
 
                 let prefixed: String =
                     prefix + name + ((slash && ffdData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY) ? #"\"# : "")
+                defer { bValid = FindNextFileW(hFind, &ffdData) }
                 return Element(fileName: name, fileNameWithPrefix: prefixed, dwFileAttributes: ffdData.dwFileAttributes)
             } while FindNextFileW(hFind, &ffdData)
+            bValid = false
             return nil
         }
     }
