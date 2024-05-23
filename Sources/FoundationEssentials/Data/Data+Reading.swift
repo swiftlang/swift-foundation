@@ -390,8 +390,8 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
 
 /// Read data from a file descriptor.
 /// Takes an `Int` size and returns an `Int` to match `Data`'s count. If we are going to read more than Int.max, throws - because we won't be able to store it in `Data`.
-/// If `readUntilEOF` is `false`, this can be used to read from something like a socket.
-private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer inBuffer: UnsafeMutableRawPointer, length: Int, readUntilEOF: Bool = true, reportProgress: Bool) throws -> Int {
+/// If `readUntilLength` is `false`, then we will end the read if we receive less than `length` bytes. This can be used to read from something like a socket, where the `length` simply represents the maximum size you can read at once.
+private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer inBuffer: UnsafeMutableRawPointer, length: Int, readUntilLength: Bool = true, reportProgress: Bool) throws -> Int {
     var buffer = inBuffer
     // If chunkSize (8-byte value) is more than blksize_t.max (4 byte value), then use the 4 byte max and chunk
     
@@ -453,8 +453,8 @@ private func readBytesFromFileDescriptor(_ fd: Int32, path: PathOrURL, buffer in
             }
             localProgress?.completedUnitCount = Int64(length - numBytesRemaining)
 
-            // If we are not reading until EOF, stop here
-            if !readUntilEOF && numBytesRead < numBytesRequested {
+            // The `readUntilLength` argument controls if we should end early when `read` returns less than the amount requested, or if we should continue to loop until we have reached `length` bytes.
+            if !readUntilLength && numBytesRead < numBytesRequested {
                 break
             }
 
