@@ -368,7 +368,7 @@ enum _FileOperations {
                 stack.append(directory)
 
                 for entry in _Win32DirectoryContentsSequence(path: directory, appendSlashForDirectory: false, prefix: [directory]) {
-                    try entry.fileName.withNTPathRepresentation {
+                    try entry.fileNameWithPrefix.withNTPathRepresentation {
                         if entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY,
                                 entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
                             stack.append(entry.fileNameWithPrefix)
