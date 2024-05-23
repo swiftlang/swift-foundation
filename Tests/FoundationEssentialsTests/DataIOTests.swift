@@ -33,10 +33,7 @@ class DataIOTests : XCTestCase {
         URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent("testfile-\(UUID().uuidString)")
     }
     
-    func generateTestData() -> Data {
-        // 16 MB file, big enough to trigger things like chunking
-        let count = 16_777_216
-        
+    func generateTestData(count: Int = 16_777_216) -> Data {
         let memory = malloc(count)!
         let ptr = memory.bindMemory(to: UInt8.self, capacity: count)
         
@@ -209,10 +206,20 @@ class DataIOTests : XCTestCase {
         let size = 0x80010000
         let url = testURL()
 
-        let data = Data(count: size)
+        let data = generateTestData(count: size)
         
         try data.write(to: url)
+        let read = try! Data(contentsOf: url)
         
+        // No need to compare the contents, but do compare the size
+        XCTAssertEqual(data.count, read.count)
+        
+#if FOUNDATION_FRAMEWORK
+        // Try the NSData path
+        let readNS = try! NSData(contentsOf: url) as Data
+        XCTAssertEqual(data.count, readNS.count)
+#endif
+
         cleanup(at: url)
 #endif
     }

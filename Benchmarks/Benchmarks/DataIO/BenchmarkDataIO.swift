@@ -103,6 +103,19 @@ let benchmarks = {
         blackHole(try Data(contentsOf: readMe))
     }
     
+    Benchmark("read-hugeFile",
+              configuration: .init(
+                setup: {
+                    try! generateTestData(count: 1 << 30).write(to: readMe)
+                },
+                teardown: {
+                    cleanup(at: readMe)
+                }
+              )
+    ) { benchmark in
+        blackHole(try Data(contentsOf: readMe))
+    }
+    
     // MARK: base64
         
     Benchmark("base64-encode", configuration: .init(scalingFactor: .kilo)) { benchmark in
