@@ -635,6 +635,7 @@ final class FileManagerTests : XCTestCase {
             File("foo", attributes: [.posixPermissions : UInt16(0o644)])
         }.test {
             let attributes = try $0.attributesOfItem(atPath: "foo")
+#if !os(Windows)
             // Ensure the unconventional UInt16 was accepted as input
             XCTAssertEqual(attributes[.posixPermissions] as? UInt, 0o644)
             #if FOUNDATION_FRAMEWORK
@@ -643,6 +644,7 @@ final class FileManagerTests : XCTestCase {
             // Ensure that the file type can be converted to a String when it is an ObjC enum
             XCTAssertEqual(attributes[.type] as? String, FileAttributeType.typeRegular.rawValue)
             #endif
+#endif
             // Ensure that the file type can be converted to a FileAttributeType when it is an ObjC enum and in swift-foundation
             XCTAssertEqual(attributes[.type] as? FileAttributeType, .typeRegular)
             
