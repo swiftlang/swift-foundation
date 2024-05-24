@@ -163,8 +163,7 @@ extension _FileManagerImpl {
     func subpathsOfDirectory(atPath path: String) throws -> [String] {
 #if os(Windows)
         var results: [String] = []
-        let iterator = _Win32DirectoryContentsSequence(path: path, appendSlashForDirectory: true).makeIterator()
-        while let item = iterator.next() {
+        for item in _Win32DirectoryContentsSequence(path: path, appendSlashForDirectory: true) {
             results.append(item.fileName)
             if item.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY &&
                 item.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != FILE_ATTRIBUTE_REPARSE_POINT {
@@ -176,7 +175,7 @@ extension _FileManagerImpl {
                 }
                 defer { LocalFree(pwszSubPath) }
 
-                results.append(contentsOf: try subpathsOfDirectory(atPath: item.fileName).map {
+                results.append(contentsOf: try subpathsOfDirectory(atPath: String(decodingCString: pwszSubPath!, as: UTF16.self)).map {
                     var pwszFullPath: PWSTR? = nil
                     _ = PathAllocCombine(item.fileName, $0, PATHCCH_ALLOW_LONG_PATHS, &pwszFullPath)
                     defer { LocalFree(pwszFullPath) }
