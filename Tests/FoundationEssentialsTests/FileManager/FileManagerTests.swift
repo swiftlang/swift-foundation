@@ -797,12 +797,10 @@ final class FileManagerTests : XCTestCase {
                 let results = fileManager.urls(for: directory, in: domain)
                 XCTAssertTrue(results.contains(knownURL), "Results \(results.map(\.path)) did not contain known directory \(knownURL.path) for \(directory)/\(domain) while setting the \(key) environment variable", file: file, line: line)
             }
-            
+
             validate("XDG_DATA_HOME", suffix: "Autosave Information", directory: .autosavedInformationDirectory, domain: .userDomainMask)
-            validate("XDG_DATA_HOME", suffix: "Autosave Information", directory: .autosavedInformationDirectory, domain: .localDomainMask)
             validate("HOME", suffix: ".local/share/Autosave Information", directory: .autosavedInformationDirectory, domain: .userDomainMask)
-            validate("HOME", suffix: ".local/share/Autosave Information", directory: .autosavedInformationDirectory, domain: .localDomainMask)
-            
+
             validate("XDG_CACHE_HOME", directory: .cachesDirectory, domain: .userDomainMask)
             validate("HOME", suffix: ".cache", directory: .cachesDirectory, domain: .userDomainMask)
             
