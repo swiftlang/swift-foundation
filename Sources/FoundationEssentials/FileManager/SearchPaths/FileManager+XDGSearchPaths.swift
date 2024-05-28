@@ -164,7 +164,7 @@ private enum _XDGUserDirectory: String {
 
 func _XDGSearchPathURL(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask) -> URL? {
     return switch (directory, domain) {
-    case (.autosavedInformationDirectory, _):
+    case (.autosavedInformationDirectory, .userDomainMask):
         _xdgDataHomeURL().appending(component: "Autosave Information", directoryHint: .isDirectory)
         
     case (.desktopDirectory, .userDomainMask):
