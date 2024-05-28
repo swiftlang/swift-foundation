@@ -26,6 +26,9 @@ private func _url(for id: KNOWNFOLDERID) -> URL {
 
 func _WindowsSearchPathURL(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask) -> URL? {
     switch (directory, domain) {
+    case (.autosavedInformationDirectory, .userDomainMask):
+        _url(for: FOLDERID_LocalAppData).appending(component: "Autosave Information", directoryHint: .isDirectory)
+
     case (.desktopDirectory, .userDomainMask):
         _url(for: FOLDERID_Desktop)
 
