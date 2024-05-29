@@ -55,9 +55,11 @@ extension _FileManagerImpl {
         _ = fileManager.fileExists(atPath: destPath, isDirectory: &bIsDirectory)
 
         try path.withNTPathRepresentation { lpSymlinkFileName in
-            try destPath.withNTPathRepresentation { lpTargetFileName in
-                if CreateSymbolicLinkW(lpSymlinkFileName, lpTargetFileName, SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE | (bIsDirectory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0)) == 0 {
-                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+            try destPath.withFileSystemRepresentation {
+                try String(cString: $0!).withCString(encodedAs: UTF16.self) { lpTargetFileName in
+                    if CreateSymbolicLinkW(lpSymlinkFileName, lpTargetFileName, SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE | (bIsDirectory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0)) == 0 {
+                        throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+                    }
                 }
             }
         }
@@ -139,39 +141,39 @@ extension _FileManagerImpl {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
                 }
                 // Ensure that we have enough data.
-                guard dwBytesWritten == MAXIMUM_REPARSE_DATA_BUFFER_SIZE else {
+                guard dwBytesWritten >= MemoryLayout<REPARSE_DATA_BUFFER>.size else {
                     throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
                 }
 
                 return try pBuffer.withMemoryRebound(to: REPARSE_DATA_BUFFER.self, capacity: 1) { pRDB in
-                    let destination: String
+                    let data: Data
                     switch pRDB.pointee.ReparseTag {
                     case CUnsignedLong(IO_REPARSE_TAG_SYMLINK):
                         let SubstituteNameOffset = pRDB.pointee.SymbolicLinkReparseBuffer.SubstituteNameOffset
                         let SubstituteNameLength = pRDB.pointee.SymbolicLinkReparseBuffer.SubstituteNameLength
-                        destination = try withUnsafePointer(to: &pRDB.pointee.SymbolicLinkReparseBuffer.PathBuffer) {
-                            let pBuffer = UnsafeRawPointer($0).assumingMemoryBound(to: CChar.self)
-                            let data: Data = Data(bytes: pBuffer.advanced(by: Int(SubstituteNameOffset)), count: Int(SubstituteNameLength))
-                            guard let destination = String(data: data, encoding: .utf16LittleEndian) else {
-                                throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
-                            }
-                            return destination
+                        guard SubstituteNameOffset + SubstituteNameLength <= dwBytesWritten else {
+                            throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
                         }
+
+                        let pBuffer = UnsafeRawPointer(pRDB).advanced(by: _ioshims_reparse_data_buffer_symboliclinkreparsebuffer_pathbuffer_offset()).assumingMemoryBound(to: CChar.self)
+                        data = Data(bytes: pBuffer.advanced(by: Int(SubstituteNameOffset)), count: Int(SubstituteNameLength))
                         break
                     case CUnsignedLong(IO_REPARSE_TAG_MOUNT_POINT):
                         let SubstituteNameOffset = pRDB.pointee.MountPointReparseBuffer.SubstituteNameOffset
                         let SubstituteNameLength = pRDB.pointee.MountPointReparseBuffer.SubstituteNameLength
-                        destination = try withUnsafePointer(to: &pRDB.pointee.MountPointReparseBuffer.PathBuffer) {
-                            let pBuffer = UnsafeRawPointer($0).assumingMemoryBound(to: CChar.self)
-                            let data: Data = Data(bytes: pBuffer.advanced(by: Int(SubstituteNameOffset)), count: Int(SubstituteNameLength))
-                            guard let destination = String(data: data, encoding: .utf16LittleEndian) else {
-                                throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
-                            }
-                            return destination
+                        guard SubstituteNameOffset + SubstituteNameLength <= dwBytesWritten else {
+                            throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
                         }
+
+                        let pBuffer = UnsafeRawPointer(pRDB).advanced(by: _ioshims_reparse_data_buffer_mountpointreparsebuffer_pathbuffer_offset()).assumingMemoryBound(to: CChar.self)
+                        data = Data(bytes: pBuffer.advanced(by: Int(SubstituteNameOffset)), count: Int(SubstituteNameLength))
                         break
                     default:
                         throw CocoaError.errorWithFilePath(path, win32: ERROR_BAD_ARGUMENTS, reading: true)
+                    }
+
+                    guard let destination: String = String(data: data, encoding: .utf16LittleEndian) else {
+                        throw CocoaError.errorWithFilePath(path, win32: ERROR_INVALID_DATA, reading: false)
                     }
 
                     // Canonicalize the NT object manager path to the DOS style

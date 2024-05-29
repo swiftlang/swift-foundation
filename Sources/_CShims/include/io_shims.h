@@ -46,6 +46,8 @@ typedef struct FullPathAttributes {
 
 #if TARGET_OS_WINDOWS
 
+#include <stddef.h>
+
 // Replicated from ntifs.h
 // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer
 
@@ -74,6 +76,14 @@ typedef struct _REPARSE_DATA_BUFFER {
         } GenericReparseBuffer;
     };
 } REPARSE_DATA_BUFFER;
+
+static inline intptr_t _ioshims_reparse_data_buffer_symboliclinkreparsebuffer_pathbuffer_offset(void) {
+  return offsetof(struct _REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer);
+}
+
+static inline intptr_t _ioshims_reparse_data_buffer_mountpointreparsebuffer_pathbuffer_offset(void) {
+  return offsetof(struct _REPARSE_DATA_BUFFER, MountPointReparseBuffer.PathBuffer);
+}
 
 #endif
 #endif /* IOShims_h */
