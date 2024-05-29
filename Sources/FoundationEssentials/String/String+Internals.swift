@@ -138,7 +138,17 @@ extension String {
             return try block(buffer.baseAddress!)
         }
         #else
-        try self.withCString {
+        var iter = self.utf8.makeIterator()
+#if os(Windows)
+        let bLeadingSlash = if iter.next() == ._slash, iter.next()?.isLetter ?? false, iter.next() == ._colon { true } else { false }
+#else
+        let bLeadingSlash = false
+#endif
+
+        // Strip the leading `/` on a RFC8089 path (`/[drive-letter]:/...` ).  A
+        // leading slash indicates a rooted path on the drive for the current
+        // working directory.
+        return try Substring(self.utf8.dropFirst(bLeadingSlash ? 1 : 0)).withCString {
             try block($0)
         }
         #endif
@@ -153,7 +163,16 @@ extension String {
             return try block(buffer.baseAddress!)
         }
         #else
-        var mut = self
+        var iter = self.utf8.makeIterator()
+#if os(Windows)
+        let bLeadingSlash = if iter.next() == ._slash, iter.next()?.isLetter ?? false, iter.next() == ._colon { true } else { false }
+#else
+        let bLeadingSlash = false
+#endif
+
+        var mut: Substring =
+            Substring(self.utf8[self.utf8.index(self.utf8.startIndex, offsetBy: bLeadingSlash ? 1 : 0)...])
+
         return try mut.withUTF8 { utf8Buffer in
             // Leave space for a null byte at the end
             try withUnsafeTemporaryAllocation(of: CChar.self, capacity: utf8Buffer.count + 1) { temporaryBuffer in
