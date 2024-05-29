@@ -106,6 +106,18 @@ func _readFileAttributePrimitive(_ value: Any?, as type: Bool.Type) -> Bool? {
     return nil
 }
 
+#if !FOUNDATION_FRAMEWORK
+@_spi(SwiftCorelibsFoundation)
+public protocol _NSNumberInitializer {
+    static func initialize(value: Bool) -> Any
+    static func initialize(value: some BinaryInteger) -> Any
+}
+
+private let _nsNumberInitializer: (any _NSNumberInitializer.Type)? = {
+    _typeByName("Foundation._FoundationNSNumberInitializer") as? any _NSNumberInitializer.Type
+}()
+#endif
+
 func _writeFileAttributePrimitive<T: BinaryInteger, U: BinaryInteger>(_ value: T, as type: U.Type) -> Any {
     #if FOUNDATION_FRAMEWORK
     if let int = Int64(exactly: value) {
@@ -114,7 +126,11 @@ func _writeFileAttributePrimitive<T: BinaryInteger, U: BinaryInteger>(_ value: T
         NSNumber(value: UInt64(value))
     }
     #else
-    U(value)
+    if let ns = _nsNumberInitializer?.initialize(value: value) {
+        return ns
+    } else {
+        return U(value)
+    }
     #endif
 }
 
@@ -122,7 +138,11 @@ func _writeFileAttributePrimitive(_ value: Bool) -> Any {
     #if FOUNDATION_FRAMEWORK
     NSNumber(value: value)
     #else
-    value
+    if let ns = _nsNumberInitializer?.initialize(value: value) {
+        return ns
+    } else {
+        return value
+    }
     #endif
 }
 
