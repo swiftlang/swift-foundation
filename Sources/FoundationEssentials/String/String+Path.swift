@@ -665,7 +665,9 @@ extension String {
                 guard GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwLength, VOLUME_NAME_DOS) == dwLength - 1 else {
                     return nil
                 }
-                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+
+                // When using `VOLUME_NAME_DOS`, the returned path uses `\\?\`.
+                return String(decodingCString: $0.baseAddress!.advanced(by: 4), as: UTF16.self)
             }
         }
 #else
