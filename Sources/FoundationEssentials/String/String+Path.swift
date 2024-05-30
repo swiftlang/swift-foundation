@@ -667,7 +667,7 @@ extension String {
                 }
 
                 // When using `VOLUME_NAME_DOS`, the returned path uses `\\?\`.
-                return String(String(decodingCString: $0.baseAddress!.advanced(by: 4), as: UTF16.self))
+                return String(decodingCString: $0.baseAddress!.advanced(by: 4), as: UTF16.self)
             }
         }
 #else
