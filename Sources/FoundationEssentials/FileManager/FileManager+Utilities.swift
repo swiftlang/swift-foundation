@@ -112,7 +112,8 @@ extension _FileManagerImpl {
         #endif
     }
     
-    private static let _catInfoKeys: [FileAttributeKey] = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden, .creationDate]
+    // Exclude .creationDate from this check because it is unconditionally returned from attributesOfItem(atPath:)
+    private static let _catInfoKeys: [FileAttributeKey] = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden]
     static func _setCatInfoAttributes(_ attributes: [FileAttributeKey : Any], path: String) throws {
         let hasRelevantKeys = attributes.keys.contains(where: { _catInfoKeys.contains($0) })
         guard hasRelevantKeys else { return }
