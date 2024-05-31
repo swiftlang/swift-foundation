@@ -22,7 +22,7 @@ import Glibc
 import CRT
 #endif
 
-internal import FoundationICU
+internal import _FoundationICU
 
 internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     let lock: LockedState<Void>

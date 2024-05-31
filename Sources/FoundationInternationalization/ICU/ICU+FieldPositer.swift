@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import FoundationICU
+internal import _FoundationICU
 
 extension ICU {
     final class FieldPositer {

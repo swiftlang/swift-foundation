@@ -14,7 +14,7 @@
 import FoundationEssentials
 #endif
 
-internal import FoundationICU
+internal import _FoundationICU
 
 // MARK: Date.AnchoredRelativeFormatStyle
 

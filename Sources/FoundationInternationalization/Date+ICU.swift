@@ -13,7 +13,7 @@
 import FoundationEssentials
 #endif
 
-internal import FoundationICU
+internal import _FoundationICU
 
 #if canImport(Glibc)
 import Glibc

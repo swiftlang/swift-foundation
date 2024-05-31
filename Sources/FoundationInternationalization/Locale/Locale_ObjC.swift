@@ -47,7 +47,7 @@ extension NSLocale {
 
     @objc
     private class func _newLocaleAsIfCurrent(_ name: String?, overrides: CFDictionary?, disableBundleMatching: Bool) -> NSLocale? {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         let inner = LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: overrides, disableBundleMatching: disableBundleMatching)
         return _NSSwiftLocale(inner)
 #else
@@ -73,7 +73,7 @@ extension NSLocale {
         LocaleCache.cache.preferredLanguages(forCurrentUser: forCurrentUser)
     }
 
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
     @objc
     class var _availableLocaleIdentifiers: [String] {
         Locale.availableIdentifiers
@@ -99,7 +99,7 @@ extension NSLocale {
         Locale.isoCurrencyCodes
     }
 
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
     @objc
     class var _commonISOCurrencyCodes: [String] {
         Locale.commonISOCurrencyCodes
@@ -134,7 +134,7 @@ extension NSLocale {
         Locale.canonicalLanguageIdentifier(from: string)
     }
 
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
     @objc(_localeIdentifierFromWindowsLocaleCode:)
     class func _localeIdentifier(fromWindowsLocaleCode: UInt32) -> String? {
         guard let code = Int(exactly: fromWindowsLocaleCode) else {
@@ -166,7 +166,7 @@ extension NSLocale {
 
     @objc(_numberingSystemForLocaleIdentifier:)
     class func _numberingSystem(forLocaleIdentifier identifier: String) -> String? {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         let components = Locale.Components(identifier: identifier)
         if let system = components.numberingSystem {
             return system.identifier
@@ -180,7 +180,7 @@ extension NSLocale {
 
     @objc(_validNumberingSystemsForLocaleIdentifier:)
     class func _validNumberingSystems(forLocaleIdentifier identifier: String) -> [String] {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.NumberingSystem.validNumberingSystems(for: identifier).map { $0.identifier }
 #else
         []
@@ -189,7 +189,7 @@ extension NSLocale {
 
     @objc(_localeIdentifierByReplacingLanguageCodeAndScriptCodeForLangCode:desiredComponents:)
     class func _localeIdentifierByReplacingLanguageCodeAndScriptCode(_ localeIDWithDesiredLangCode: String, desiredComponents localeIDWithDesiredComponents: String) -> String? {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.localeIdentifierByReplacingLanguageCodeAndScriptCode(localeIDWithDesiredLangCode: localeIDWithDesiredLangCode, localeIDWithDesiredComponents: localeIDWithDesiredComponents)
 #else
         nil
@@ -198,7 +198,7 @@ extension NSLocale {
 
     @objc(_localeIdentifierByAddingLikelySubtags:)
     class func _localeIdentifierByAddingLikelySubtags(_ localeID: String) -> String {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.localeIdentifierWithLikelySubtags(localeID)
 #else
         ""
@@ -578,7 +578,7 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     @available(watchOS, deprecated: 9, message: "Use `Locale.LanguageCode.isoLanguageCodes` instead")
     public static var isoLanguageCodes: [String] {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.LanguageCode._isoLanguageCodeStrings
 #else
         []
@@ -606,7 +606,7 @@ extension Locale {
     @available(watchOS, deprecated: 9, message: "Use `Locale.Region.isoRegions` instead")
     public static var isoRegionCodes: [String] {
         // This was renamed from Obj-C
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.Region.isoCountries
 #else
         []
@@ -619,7 +619,7 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.Currency.isoCurrencies` instead")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Currency.isoCurrencies` instead")
     public static var isoCurrencyCodes: [String] {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         Locale.Currency.isoCurrencies.map { $0.identifier }
 #else
         []
@@ -632,7 +632,7 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.Language(identifier:).characterDirection`")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Language(identifier:).characterDirection`")
     public static func characterDirection(forLanguage isoLangCode: String) -> Locale.LanguageDirection {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         let language = Locale.Language(components: .init(identifier: isoLangCode))
         return language.characterDirection
 #else
@@ -646,7 +646,7 @@ extension Locale {
     @available(tvOS, deprecated: 16, message: "Use `Locale.Language(identifier:).lineLayoutDirection`")
     @available(watchOS, deprecated: 9, message: "Use `Locale.Language(identifier:).lineLayoutDirection`")
     public static func lineDirection(forLanguage isoLangCode: String) -> Locale.LanguageDirection {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         let language = Locale.Language(components: .init(identifier: isoLangCode))
         return language.lineLayoutDirection
 #else

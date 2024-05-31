@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import FoundationICU
+internal import _FoundationICU
 
 #if os(Windows)
 typealias EnumRawType = CInt

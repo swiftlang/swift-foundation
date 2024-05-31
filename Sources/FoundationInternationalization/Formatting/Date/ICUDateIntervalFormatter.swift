@@ -14,7 +14,7 @@
 import FoundationEssentials
 #endif
 
-internal import FoundationICU
+internal import _FoundationICU
 
 final class ICUDateIntervalFormatter {
     struct Signature : Hashable {

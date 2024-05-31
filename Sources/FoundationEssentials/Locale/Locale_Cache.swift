@@ -141,7 +141,7 @@ struct LocaleCache : Sendable {
             }
         }
         
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         mutating func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
             let id = IdentifierAndPrefs(identifier: locale.identifier, prefs: locale.prefs)
             if let locale = cachedFixedLocaleToNSLocales[id] {
@@ -175,7 +175,7 @@ struct LocaleCache : Sendable {
                 return nil
             }
 
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
             // We have neither a Swift Locale nor an NSLocale. Recalculate and set both.
             let locale = _LocaleICU(name: nil, prefs: preferences, disableBundleMatching: false)
 #else
@@ -305,7 +305,7 @@ struct LocaleCache : Sendable {
         lock.withLock { $0.fixedNSLocale(identifier: id) }
     }
 
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
     func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
         lock.withLock { $0.fixedNSLocale(locale) }
     }

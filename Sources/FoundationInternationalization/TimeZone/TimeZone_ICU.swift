@@ -22,8 +22,8 @@ import Glibc
 import ucrt
 #endif
 
-#if canImport(FoundationICU)
-internal import FoundationICU
+#if canImport(_FoundationICU)
+internal import _FoundationICU
 
 internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     init?(secondsFromGMT: Int) {

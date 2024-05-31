@@ -50,7 +50,7 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     }
 
     func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> any _LocaleProtocol {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         // Round trip through Locale.Components
         var comps = Locale.Components(identifier: self.identifier)
         comps.calendar = identifier
