@@ -109,7 +109,7 @@ extension NSTimeZone {
 
     @objc
     static func _knownTimeZoneIdentifiers() -> [String] {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         TimeZone.knownTimeZoneIdentifiers
 #else
         []
@@ -118,7 +118,7 @@ extension NSTimeZone {
 
     @objc
     static func _timeZoneDataVersion() -> String {
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
         TimeZone.timeZoneDataVersion
 #else
         ""

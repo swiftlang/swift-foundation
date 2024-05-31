@@ -14,7 +14,7 @@
 import FoundationEssentials
 #endif
 
-internal import FoundationICU
+internal import _FoundationICU
 
 extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.Symbol {
     init?(unumberFormatField: UNumberFormatFields) {

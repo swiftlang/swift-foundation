@@ -18,7 +18,7 @@ import Glibc
 import FoundationEssentials
 #endif
 
-internal import FoundationICU
+internal import _FoundationICU
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Components {

@@ -14,7 +14,7 @@
 import FoundationEssentials
 #endif
 
-internal import FoundationICU
+internal import _FoundationICU
 
 internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
     let offset: Int

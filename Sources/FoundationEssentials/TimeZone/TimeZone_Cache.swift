@@ -375,7 +375,7 @@ struct TimeZoneCache : Sendable {
                 bridgedFixedTimeZones[identifier] = bridged
                 return bridged
             }
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
             if let innerTz = _TimeZoneICU(identifier: identifier) {
                 // In this case, the identifier is unique and we need to cache it (in two places)
                 fixedTimeZones[identifier] = innerTz
@@ -397,7 +397,7 @@ struct TimeZoneCache : Sendable {
                 bridgedOffsetTimeZones[offset] = bridged
                 return bridged
             }
-#if canImport(FoundationICU)
+#if canImport(_FoundationICU)
             let maybeInnerTz = _TimeZoneGMTICU(secondsFromGMT: offset)
 #else
             let maybeInnerTz = _TimeZoneGMT(secondsFromGMT: offset)

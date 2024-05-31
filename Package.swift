@@ -51,7 +51,7 @@ let package = Package(
             from: "1.1.0"),
         .package(
             url: "https://github.com/apple/swift-foundation-icu",
-            exact: "0.0.6"),
+            exact: "0.0.7"),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
             from: "510.0.0")
@@ -112,7 +112,7 @@ let package = Package(
             dependencies: [
                 .target(name: "FoundationEssentials"),
                 .target(name: "_CShims"),
-                .product(name: "FoundationICU", package: "swift-foundation-icu")
+                .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
