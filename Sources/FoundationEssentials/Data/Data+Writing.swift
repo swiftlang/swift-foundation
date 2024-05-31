@@ -539,7 +539,7 @@ private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoi
 
 #if os(Windows)
     try inPath.path.withNTPathRepresentation { pwszPath in
-        let hFile = CreateFileW(pwszPath, GENERIC_WRITE, FILE_SHARE_READ, nil, CREATE_ALWAYS | (options.contains(.withoutOverwriting) ? CREATE_NEW : 0), FILE_ATTRIBUTE_NORMAL, nil)
+        let hFile = CreateFileW(pwszPath, GENERIC_WRITE, FILE_SHARE_READ, nil, options.contains(.withoutOverwriting) ? CREATE_NEW : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nil)
         if hFile == INVALID_HANDLE_VALUE {
             throw CocoaError.errorWithFilePath(inPath, win32: GetLastError(), reading: false)
         }
