@@ -53,7 +53,8 @@ extension Dictionary<String, AnyHashable> {
     fileprivate func addingUserInfo(forPath path: String) -> Self {
         var dict = self
         dict[NSFilePathErrorKey] = path
-        dict[NSURLErrorKey] = URL(fileURLWithPath: path)
+        // Use the failable approach here bcause this could be an Error for a malformed path
+        dict[NSURLErrorKey] = URL(_fileManagerFailableFileURLWithPath: path)
         return dict
     }
     

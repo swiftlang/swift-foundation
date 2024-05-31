@@ -896,6 +896,22 @@ public struct URL: Equatable, Sendable, Hashable {
         #endif
         self.init(filePath: path, directoryHint: .checkFileSystem)
     }
+    
+    // NSURL(fileURLWithPath:) can return nil incorrectly for some malformed paths
+    // This is only to be used by FileManager when dealing with potentially malformed paths, and only when truly necessary
+    internal init?(_fileManagerFailableFileURLWithPath path: __shared String) {
+        #if FOUNDATION_FRAMEWORK
+        guard foundation_swift_url_enabled() else {
+            let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path))
+            guard unsafeBitCast(url, to: UnsafeRawPointer?.self) != nil else {
+                return nil
+            }
+            self.init(reference: url)
+            return
+        }
+        #endif
+        self.init(filePath: path, directoryHint: .checkFileSystem)
+    }
 
     /// Initializes a newly created URL using the contents of the given data, relative to a base URL.
     ///
