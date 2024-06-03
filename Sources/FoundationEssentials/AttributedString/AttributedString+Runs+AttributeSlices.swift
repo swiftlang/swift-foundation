@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_spi(Unstable) internal import CollectionsInternal
-#else
-internal import _RopeModule
-#endif
-
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs {
     @preconcurrency

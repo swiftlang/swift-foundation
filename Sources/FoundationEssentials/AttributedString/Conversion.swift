@@ -15,8 +15,10 @@
 import Darwin
 internal import os
 @_spi(Unstable) internal import CollectionsInternal
-#else
+#elseif canImport(_RopeModule)
 internal import _RopeModule
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
 #endif
 
 extension String {

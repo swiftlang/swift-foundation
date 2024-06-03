@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_spi(Unstable) internal import CollectionsInternal
-#else
-internal import _RopeModule
-#endif
-
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributeContainer : Sendable {

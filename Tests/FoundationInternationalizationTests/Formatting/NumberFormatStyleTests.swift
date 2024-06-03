@@ -21,9 +21,6 @@ import TestSupport
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
-@_spi(Unstable) import CollectionsInternal
-#else
-import _RopeModule
 #endif
 
 final class NumberFormatStyleTests: XCTestCase {
