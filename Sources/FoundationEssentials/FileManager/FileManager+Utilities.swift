@@ -113,13 +113,18 @@ extension _FileManagerImpl {
     }
     
     private static let _catInfoKeys: [FileAttributeKey] = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden, .creationDate]
+    private static let _swiftFoundationUnsupportedKeys: [FileAttributeKey] = [.hfsCreatorCode, .hfsTypeCode, .busy, .extensionHidden]
     static func _setCatInfoAttributes(_ attributes: [FileAttributeKey : Any], path: String) throws {
         let hasRelevantKeys = attributes.keys.contains(where: { _catInfoKeys.contains($0) })
         guard hasRelevantKeys else { return }
         
         #if !FOUNDATION_FRAMEWORK
-        // TODO: Implement CAT info attributes for swift-foundation
-        throw CocoaError.errorWithFilePath(.featureUnsupported, path)
+        // Exclude some attributes (like .creationDate) from this check since they are unconditionally, implicitly included in `attributesForItem(atPath:)` results
+        if attributes.keys.contains(where: { _swiftFoundationUnsupportedKeys.contains($0) }) {
+            throw CocoaError.errorWithFilePath(.featureUnsupported, path)
+        } else {
+            return // TODO: support relevant cat info keys in swift-foundation
+        }
         #else
         // -setAttributes:ofItemAtPath:error: follows symlinks (<rdar://5815920>), but the NSURL resource value API doesn't, so we have to manually resolve the symlink.
         // We lie to fileURLWithPath:isDirectory: to avoid the extra stat. Since this URL isn't used as a base URL for another URL, it shouldn't make any difference.

@@ -811,4 +811,13 @@ final class FileManagerTests : XCTestCase {
         }
         #endif
     }
+    
+    func testGetSetAttributes() throws {
+        try FileManagerPlayground {
+            File("foo", contents: randomData())
+        }.test {
+            let attrs = try $0.attributesOfItem(atPath: "foo")
+            try $0.setAttributes(attrs, ofItemAtPath: "foo")
+        }
+    }
 }
