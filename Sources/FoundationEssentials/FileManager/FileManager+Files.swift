@@ -626,6 +626,11 @@ extension _FileManagerImpl {
     func attributesOfFileSystem(forPath path: String) throws -> [FileAttributeKey : Any] {
 #if os(Windows)
         return try path.withNTPathRepresentation { pwszPath in
+            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
+            guard GetFileAttributesExW(pwszPath, GetFileExInfoStandard, &faAttributes) else {
+                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+            }
+
             let dwLength: DWORD = GetFullPathNameW(pwszPath, 0, nil, nil)
             guard dwLength > 0 else {
                 throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
