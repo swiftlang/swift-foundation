@@ -81,14 +81,14 @@ internal struct _FileManagerImpl {
     ) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
-            let hLHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
+            let hLHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
             if hLHS == INVALID_HANDLE_VALUE {
                 return false
             }
             defer { CloseHandle(hLHS) }
 
             return (try? other.withNTPathRepresentation {
-                let hRHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
+                let hRHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
                 if hRHS == INVALID_HANDLE_VALUE {
                     return false
                 }
@@ -155,8 +155,7 @@ internal struct _FileManagerImpl {
                     }
 
                     return true
-                } else if fbiLHS.FileAttributes & FILE_ATTRIBUTE_NORMAL == FILE_ATTRIBUTE_NORMAL,
-                          fbiRHS.FileAttributes & FILE_ATTRIBUTE_NORMAL == FILE_ATTRIBUTE_NORMAL {
+                } else {
                     var liLHSSize: LARGE_INTEGER = .init()
                     var liRHSSize: LARGE_INTEGER = .init()
                     guard GetFileSizeEx(hLHS, &liLHSSize), GetFileSizeEx(hRHS, &liRHSSize), LARGE_INTEGER._equals(liLHSSize, liRHSSize) else {
