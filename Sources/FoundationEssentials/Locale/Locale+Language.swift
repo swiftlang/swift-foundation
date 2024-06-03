@@ -69,7 +69,7 @@ extension Locale {
 
         /// Returns a list of system languages, includes the languages of all product localization for the current platform
         public static var systemLanguages: [Language] {
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
             NSLocale.systemLanguages().map {
                 let comp = Components(identifier: $0 as! String)
                 return Language(components: comp)

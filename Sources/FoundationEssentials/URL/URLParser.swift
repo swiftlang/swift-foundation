@@ -161,7 +161,7 @@ package protocol UIDNAHook {
 internal struct RFC3986Parser: URLParserProtocol {
     static let kind: URLParserKind = .RFC3986
     static var uidnaHook: UIDNAHook.Type? = {
-        #if FOUNDATION_FRAMEWORK && !canImport(FoundationICU)
+        #if FOUNDATION_FRAMEWORK && !canImport(_FoundationICU)
         nil
         #elseif FOUNDATION_FRAMEWORK
         UIDNAHookICU.self

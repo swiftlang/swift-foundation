@@ -36,7 +36,7 @@ struct TimeZoneCache : Sendable {
     
     // _TimeZoneICU, if present
     static var timeZoneICUClass: _TimeZoneProtocol.Type? = {
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
         _TimeZoneICU.self
 #else
         if let name = _typeByName("FoundationInternationalization._TimeZoneICU"), let t = name as? _TimeZoneProtocol.Type {
@@ -49,7 +49,7 @@ struct TimeZoneCache : Sendable {
     
     // _TimeZoneGMTICU or _TimeZoneGMT
     static var timeZoneGMTClass: _TimeZoneProtocol.Type = {
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
         _TimeZoneGMTICU.self
 #else
         if let name = _typeByName("FoundationInternationalization._TimeZoneGMTICU"), let t = name as? _TimeZoneProtocol.Type {

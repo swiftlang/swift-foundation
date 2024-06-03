@@ -23,7 +23,7 @@ extension StringProtocol {
     /// using the current locale.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var localizedCapitalized: String {
-#if FOUNDATION_FRAMEWORK && !canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && !canImport(_FoundationICU)
         _ns.localizedCapitalized
 #else
         String(self)._capitalized(with: .current)
@@ -34,7 +34,7 @@ extension StringProtocol {
     /// using the specified locale.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func capitalized(with locale: Locale?) -> String {
-#if FOUNDATION_FRAMEWORK && !canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && !canImport(_FoundationICU)
         _ns.capitalized(with: locale)
 #else
         String(self)._capitalized(with: locale)
@@ -45,7 +45,7 @@ extension StringProtocol {
     /// locale.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var localizedLowercase: String {
-#if FOUNDATION_FRAMEWORK && !canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && !canImport(_FoundationICU)
         _ns.localizedLowercase
 #else
         String(self)._lowercased(with: .current)
@@ -58,7 +58,7 @@ extension StringProtocol {
     /// locale.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public func lowercased(with locale: Locale?) -> String {
-#if FOUNDATION_FRAMEWORK && !canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && !canImport(_FoundationICU)
         _ns.lowercased(with: locale)
 #else
         String(self)._lowercased(with: locale)
@@ -69,7 +69,7 @@ extension StringProtocol {
     /// locale.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var localizedUppercase: String {
-#if FOUNDATION_FRAMEWORK && !canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && !canImport(_FoundationICU)
         _ns.localizedUppercase
 #else
         String(self)._uppercased(with: .current)
@@ -81,7 +81,7 @@ extension StringProtocol {
     /// locale.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public func uppercased(with locale: Locale?) -> String {
-#if FOUNDATION_FRAMEWORK && !canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && !canImport(_FoundationICU)
         _ns.uppercased(with: locale)
 #else
         String(self)._uppercased(with: locale)
