@@ -83,7 +83,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         Locale(inner: LocaleCache.cache.unlocalized)
     }
 
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
     internal static func localeAsIfCurrent(name: String?, cfOverrides: CFDictionary? = nil, disableBundleMatching: Bool = false) -> Locale {
         return LocaleCache.cache.localeAsIfCurrent(name: name, cfOverrides: cfOverrides, disableBundleMatching: disableBundleMatching)

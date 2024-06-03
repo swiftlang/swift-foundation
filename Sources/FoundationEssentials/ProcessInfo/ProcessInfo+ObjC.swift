@@ -47,7 +47,7 @@ extension _NSSwiftProcessInfo {
     }
 
     override var isMacCatalystApp: Bool {
-#if (os(macOS) || targetEnvironment(macCatalyst)) && !(FOUNDATION_FRAMEWORK && !canImport(FoundationICU))
+#if (os(macOS) || targetEnvironment(macCatalyst)) && !(FOUNDATION_FRAMEWORK && !canImport(_FoundationICU))
         return dyld_get_active_platform() == PLATFORM_MACCATALYST ||
             dyld_get_active_platform() == PLATFORM_IOS
 #else

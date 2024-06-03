@@ -22,7 +22,7 @@ struct CalendarCache : Sendable {
     
     // _CalendarICU, if present
     static func calendarICUClass(identifier: Calendar.Identifier, useGregorian: Bool) -> _CalendarProtocol.Type? {
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
         if useGregorian && identifier == .gregorian {
             return _CalendarGregorian.self
         } else {

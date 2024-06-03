@@ -25,7 +25,7 @@ struct LocaleCache : Sendable {
     
     // _LocaleICU, if present. Otherwise we use _LocaleUnlocalized. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
     static var localeICUClass: _LocaleProtocol.Type = {
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
         return _LocaleICU.self
 #else
         if let name = _typeByName("FoundationInternationalization._LocaleICU"), let t = name as? _LocaleProtocol.Type {
@@ -429,7 +429,7 @@ struct LocaleCache : Sendable {
     }
 
     func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
         guard !allowsMixedLocalizations else {
             let (prefs, _) = preferences()
             let inner = _LocaleICU(name: nil, prefs: prefs, disableBundleMatching: true)

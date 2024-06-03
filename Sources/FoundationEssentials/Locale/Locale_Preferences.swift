@@ -89,7 +89,7 @@ package struct LocalePreferences: Hashable {
 
     package init() { }
     
-#if FOUNDATION_FRAMEWORK && canImport(FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
     // The framework init supports customized dateFormats
     package init(metricUnits: Bool? = nil,
          languages: [String]? = nil,

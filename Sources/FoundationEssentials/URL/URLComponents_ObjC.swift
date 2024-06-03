@@ -93,7 +93,7 @@ extension NSURLComponents {
         return string._toRelativeNSRange(range)
     }
 }
-#endif // canImport(FoundationICU)
+#endif // canImport(_FoundationICU)
 
 @objc(_NSSwiftURLComponents)
 internal class _NSSwiftURLComponents: _NSURLComponentsBridge {
