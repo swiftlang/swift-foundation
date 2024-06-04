@@ -27,9 +27,8 @@ extension String {
         self = s
     }
     
-    /// Creates a new string equivalent to the given bytes interpreted in the
-    /// specified encoding.
-    ///
+    /// Creates a new string equivalent to the given bytes interpreted in the specified encoding.
+    /// Note: This API does not interpret embedded nulls as termination of the string. Use `String?(validatingCString:)` instead for null-terminated C strings.
     /// - Parameters:
     ///   - bytes: A sequence of bytes to interpret using `encoding`.
     ///   - encoding: The encoding to use to interpret `bytes`.
@@ -45,7 +44,30 @@ extension String {
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
                 self = string
             } else {
+#if FOUNDATION_FRAMEWORK
+                // Compatibility path: for callers that expect this API to perform null termination (it does not, it uses the full length of the sequence), NSString would happily return a value with embedded null values, even if it has garbage after the null byte. This sometimes worked, if the result was only inspected at the start, e.g. using prefix functions.
+                if Self.compatibility1 {
+                    let fromNSString : String? = Array(bytes).withUnsafeBufferPointer { bytes in
+                        if let ns = NSString(bytes: bytes.baseAddress.unsafelyUnwrapped, length: bytes.count, encoding: encoding.rawValue) {
+                            return String._unconditionallyBridgeFromObjectiveC(ns)
+                        } else {
+                            return nil
+                        }
+                    }
+                    
+                    if let fromNSString {
+                        self = fromNSString
+                    } else {
+                        return nil
+                    }
+                } else {
+                    return nil
+                }
+#else
+                // String is not valid ASCII
                 return nil
+#endif
+
             }
         case .utf8:
             func makeString(buffer: UnsafeBufferPointer<UInt8>) -> String? {
@@ -59,6 +81,7 @@ extension String {
             if let string = bytes.withContiguousStorageIfAvailable(makeString) ?? Array(bytes).withUnsafeBufferPointer(makeString) {
                 self = string
             } else {
+                // String is not valid UTF8
                 return nil
             }
         case .utf16BigEndian, .utf16LittleEndian, .utf16:
