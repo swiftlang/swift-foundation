@@ -135,8 +135,8 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     // MARK: - Logging
 #if FOUNDATION_FRAMEWORK
-    static private let log: OSLog = {
-        OSLog(subsystem: "com.apple.foundation", category: "locale")
+    static private let log: SendableOSLog = {
+        .init(OSLog(subsystem: "com.apple.foundation", category: "locale"))
     }()
 #endif // FOUNDATION_FRAMEWORK
     
@@ -184,11 +184,11 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         if let name {
             ident = Locale._canonicalLocaleIdentifier(from: name)
 #if FOUNDATION_FRAMEWORK
-            if Self.log.isEnabled(type: .debug) {
+            if Self.log.log.isEnabled(type: .debug) {
                 if let ident {
                     let components = Locale.Components(identifier: ident)
                     if components.languageComponents.region == nil {
-                        Logger(Self.log).debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
+                        Logger(Self.log.log).debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
                     }
                 }
             }
@@ -213,7 +213,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
             #if FOUNDATION_FRAMEWORK
             if preferredLanguages == nil && (preferredLocale == nil || performBundleMatching) {
-                Logger(Self.log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
+                Logger(Self.log.log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
             }
             #endif
 
@@ -246,18 +246,18 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                         // Country???
                         if let countryCode = prefs.country {
                             #if FOUNDATION_FRAMEWORK
-                            Logger(Self.log).debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
+                            Logger(Self.log.log).debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
                             #endif // FOUNDATION_FRAMEWORK
                             ident = Locale._canonicalLocaleIdentifier(from: "\(languageIdentifier)_\(countryCode)")
                         } else {
                             #if FOUNDATION_FRAMEWORK
-                            Logger(Self.log).debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
+                            Logger(Self.log.log).debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
                             #endif // FOUNDATION_FRAMEWORK
                             ident = Locale._canonicalLocaleIdentifier(from: languageIdentifier)
                         }
                     } else {
                         #if FOUNDATION_FRAMEWORK
-                        Logger(Self.log).debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
+                        Logger(Self.log.log).debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
                         #endif // FOUNDATION_FRAMEWORK
                     }
                 } else {
@@ -326,19 +326,19 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             }
             return result
         case "AppleICUDateTimeSymbols":
-            return prefs.icuDateTimeSymbols
+            return prefs.icuSymbolsAndStrings.icuDateTimeSymbols
         case "AppleICUForce24HourTime":
             return prefs.force24Hour
         case "AppleICUForce12HourTime":
             return prefs.force12Hour
         case "AppleICUDateFormatStrings":
-            return prefs.icuDateFormatStrings
+            return prefs.icuSymbolsAndStrings.icuDateFormatStrings
         case "AppleICUTimeFormatStrings":
-            return prefs.icuTimeFormatStrings
+            return prefs.icuSymbolsAndStrings.icuTimeFormatStrings
         case "AppleICUNumberFormatStrings":
-            return prefs.icuNumberFormatStrings
+            return prefs.icuSymbolsAndStrings.icuNumberFormatStrings
         case "AppleICUNumberSymbols":
-            return prefs.icuNumberSymbols
+            return prefs.icuSymbolsAndStrings.icuNumberSymbols
         default:
             return nil
         }

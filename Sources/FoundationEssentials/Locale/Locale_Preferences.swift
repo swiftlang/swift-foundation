@@ -16,7 +16,7 @@ internal import _ForSwiftFoundation
 #endif
 
 /// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identifier locales never have preferences.
-package struct LocalePreferences: Hashable {
+package struct LocalePreferences: Hashable, Sendable {
     package enum MeasurementUnit {
         case centimeters
         case inches
@@ -66,15 +66,20 @@ package struct LocalePreferences: Hashable {
     package var firstWeekday: [Calendar.Identifier : Int]?
     package var minDaysInFirstWeek: [Calendar.Identifier : Int]?
 #if FOUNDATION_FRAMEWORK
-    // The following `CFDictionary` ivars are used directly by `CFDateFormatter`. Keep them as `CFDictionary` to avoid bridging them into and out of Swift. We don't need to access them from Swift at all.
+    struct ICUSymbolsAndStrings : Hashable, @unchecked Sendable {
+        // The following `CFDictionary` ivars are used directly by `CFDateFormatter`. Keep them as `CFDictionary` to avoid bridging them into and out of Swift. We don't need to access them from Swift at all.
+        
+        package var icuDateTimeSymbols: CFDictionary?
+        package var icuDateFormatStrings: CFDictionary?
+        package var icuTimeFormatStrings: CFDictionary?
+        
+        // The OS no longer writes out this preference, but we keep it here for compatibility with CFDateFormatter behavior.
+        package var icuNumberFormatStrings: CFDictionary?
+        package var icuNumberSymbols: CFDictionary?
+    }
     
-    package var icuDateTimeSymbols: CFDictionary?
-    package var icuDateFormatStrings: CFDictionary?
-    package var icuTimeFormatStrings: CFDictionary?
+    var icuSymbolsAndStrings = ICUSymbolsAndStrings()
     
-    // The OS no longer writes out this preference, but we keep it here for compatibility with CFDateFormatter behavior.
-    package var icuNumberFormatStrings: CFDictionary?
-    package var icuNumberSymbols: CFDictionary?
 #if !NO_FORMATTERS
     package var dateFormats: [Date.FormatStyle.DateStyle: String]? // Bridged version of `icuDateFormatStrings`
 #endif
@@ -116,13 +121,6 @@ package struct LocalePreferences: Hashable {
         self.temperatureUnit = temperatureUnit
         self.force24Hour = force24Hour
         self.force12Hour = force12Hour
-
-        icuDateTimeSymbols = nil
-        icuDateFormatStrings = nil
-        icuTimeFormatStrings = nil
-        icuNumberFormatStrings = nil
-        icuNumberSymbols = nil
-        
         self.numberSymbols = numberSymbols
         self.dateFormats = dateFormats
     }
@@ -205,11 +203,11 @@ package struct LocalePreferences: Hashable {
         }
 
         if let icuDateTimeSymbols = __CFLocalePrefsCopyAppleICUDateTimeSymbols(prefs)?.takeRetainedValue() {
-            self.icuDateTimeSymbols = icuDateTimeSymbols
+            self.icuSymbolsAndStrings.icuDateTimeSymbols = icuDateTimeSymbols
         }
 
         if let icuDateFormatStrings = __CFLocalePrefsCopyAppleICUDateFormatStrings(prefs)?.takeRetainedValue() {
-            self.icuDateFormatStrings = icuDateFormatStrings
+            self.icuSymbolsAndStrings.icuDateFormatStrings = icuDateFormatStrings
             // Bridge the mapping for Locale's usage
             if let dateFormatPrefs = icuDateFormatStrings as? [String: String] {
                 var mapped: [Date.FormatStyle.DateStyle : String] = [:]
@@ -223,16 +221,16 @@ package struct LocalePreferences: Hashable {
         }
         
         if let icuTimeFormatStrings = __CFLocalePrefsCopyAppleICUTimeFormatStrings(prefs)?.takeRetainedValue() {
-            self.icuTimeFormatStrings = icuTimeFormatStrings
+            self.icuSymbolsAndStrings.icuTimeFormatStrings = icuTimeFormatStrings
         }
         
         if let icuNumberFormatStrings = __CFLocalePrefsCopyAppleICUNumberFormatStrings(prefs)?.takeRetainedValue() {
-            self.icuNumberFormatStrings = icuNumberFormatStrings
+            self.icuSymbolsAndStrings.icuNumberFormatStrings = icuNumberFormatStrings
         }
         
         if let icuNumberSymbols = __CFLocalePrefsCopyAppleICUNumberSymbols(prefs)?.takeRetainedValue() {
             // Store the CFDictionary for passing back to CFDateFormatter
-            self.icuNumberSymbols = icuNumberSymbols
+            self.icuSymbolsAndStrings.icuNumberSymbols = icuNumberSymbols
             
             // And bridge the mapping for our own usage in Locale
             if let numberSymbolsPrefs = icuNumberSymbols as? [String: String] {
@@ -288,11 +286,11 @@ package struct LocalePreferences: Hashable {
         if let other = prefs.minDaysInFirstWeek { self.minDaysInFirstWeek = other }
         if let other = prefs.numberSymbols { self.numberSymbols = other }
 #if FOUNDATION_FRAMEWORK
-        if let other = prefs.icuDateTimeSymbols { self.icuDateTimeSymbols = other }
-        if let other = prefs.icuDateFormatStrings { self.icuDateFormatStrings = other }
-        if let other = prefs.icuTimeFormatStrings { self.icuTimeFormatStrings = other }
-        if let other = prefs.icuNumberFormatStrings { self.icuNumberFormatStrings = other }
-        if let other = prefs.icuNumberSymbols { self.icuNumberSymbols = other }
+        if let other = prefs.icuSymbolsAndStrings.icuDateTimeSymbols { self.icuSymbolsAndStrings.icuDateTimeSymbols = other }
+        if let other = prefs.icuSymbolsAndStrings.icuDateFormatStrings { self.icuSymbolsAndStrings.icuDateFormatStrings = other }
+        if let other = prefs.icuSymbolsAndStrings.icuTimeFormatStrings { self.icuSymbolsAndStrings.icuTimeFormatStrings = other }
+        if let other = prefs.icuSymbolsAndStrings.icuNumberFormatStrings { self.icuSymbolsAndStrings.icuNumberFormatStrings = other }
+        if let other = prefs.icuSymbolsAndStrings.icuNumberSymbols { self.icuSymbolsAndStrings.icuNumberSymbols = other }
 #if !NO_FORMATTERS
         if let other = prefs.dateFormats { self.dateFormats = other }
 #endif // !NO_FORMATTERS

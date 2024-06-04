@@ -12,7 +12,7 @@
 
 #if !FOUNDATION_FRAMEWORK
 
-public protocol FileManagerDelegate : AnyObject {
+public protocol FileManagerDelegate : AnyObject, Sendable {
     // String-based requirements
     func fileManager(_ fileManager: FileManager, shouldCopyItemAtPath srcPath: String, toPath dstPath: String) -> Bool
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: Error, copyingItemAtPath srcPath: String, toPath dstPath: String) -> Bool

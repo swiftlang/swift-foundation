@@ -57,7 +57,9 @@ extension CocoaError.Code : _ErrorCodeProtocol {
 public struct CocoaError : Error {
     // On not-Darwin, CocoaError is backed by a simple code.
     public let code: Code
-    public let userInfo: [String: Any]
+    
+    // On Darwin, this is backed by an NSDictionary which allows for non-Sendable types to be inserted into the userInfo.
+    public nonisolated(unsafe) let userInfo: [String: Any]
     
     public init(_ code: Code, userInfo: [String: Any] = [:]) {
         self.code = code

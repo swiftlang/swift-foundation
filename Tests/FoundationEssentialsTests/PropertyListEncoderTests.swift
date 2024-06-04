@@ -475,7 +475,8 @@ class TestPropertyListEncoder : XCTestCase {
         } catch {}
     }
 
-    private func _testRoundTrip<T>(of value: T, in format: PropertyListDecoder.PropertyListFormat, expectedPlist plist: Data? = nil) where T : Codable, T : Equatable {
+    @discardableResult
+    private func _testRoundTrip<T>(of value: T, in format: PropertyListDecoder.PropertyListFormat, expectedPlist plist: Data? = nil) -> T? where T : Codable, T : Equatable {
         var payload: Data! = nil
         do {
             let encoder = PropertyListEncoder()
@@ -494,8 +495,10 @@ class TestPropertyListEncoder : XCTestCase {
             let decoded = try PropertyListDecoder().decode(T.self, from: payload, format: &decodedFormat)
             XCTAssertEqual(format, decodedFormat, "Encountered plist format differed from requested format.")
             XCTAssertEqual(decoded, value, "\(T.self) did not round-trip to an equal value.")
+            return decoded
         } catch {
             XCTFail("Failed to decode \(T.self) from plist: \(error)")
+            return nil
         }
     }
 
@@ -565,13 +568,13 @@ class TestPropertyListEncoder : XCTestCase {
 #endif
 
     struct GenericProperties : Decodable {
-        static var assertionFailure: String?
+        var assertionFailure: String?
 
         enum CodingKeys: String, CodingKey {
             case array1, item1, item2
         }
 
-        static func AssertEqual<T: Equatable>(_ t1: T, _ t2: T) {
+        mutating func assertEqual<T: Equatable>(_ t1: T, _ t2: T) {
             if t1 != t2 {
                 assertionFailure = "Values are not equal: \(t1) != \(t2)"
             }
@@ -581,19 +584,19 @@ class TestPropertyListEncoder : XCTestCase {
             let keyed = try decoder.container(keyedBy: CodingKeys.self)
 
             var arrayContainer = try keyed.nestedUnkeyedContainer(forKey: .array1)
-            Self.AssertEqual(try arrayContainer.decode(String.self), "arr0")
-            Self.AssertEqual(try arrayContainer.decode(Int.self), 42)
-            Self.AssertEqual(try arrayContainer.decode(Bool.self), false)
+            assertEqual(try arrayContainer.decode(String.self), "arr0")
+            assertEqual(try arrayContainer.decode(Int.self), 42)
+            assertEqual(try arrayContainer.decode(Bool.self), false)
 
             let comps = DateComponents(calendar: .init(identifier: .gregorian), timeZone: .init(secondsFromGMT: 0), year: 1976, month: 04, day: 01, hour: 12, minute: 00, second: 00)
             let date = comps.date!
-            Self.AssertEqual(try arrayContainer.decode(Date.self), date)
+            assertEqual(try arrayContainer.decode(Date.self), date)
 
             let someData = Data([0xaa, 0xbb, 0xcc, 0xdd, 0x00, 0x11, 0x22, 0x33])
-            Self.AssertEqual(try arrayContainer.decode(Data.self), someData)
+            assertEqual(try arrayContainer.decode(Data.self), someData)
 
-            Self.AssertEqual(try keyed.decode(String.self, forKey: .item1), "value1")
-            Self.AssertEqual(try keyed.decode(String.self, forKey: .item2), "value2")
+            assertEqual(try keyed.decode(String.self, forKey: .item1), "value1")
+            assertEqual(try keyed.decode(String.self, forKey: .item2), "value2")
         }
     }
 
@@ -603,45 +606,36 @@ class TestPropertyListEncoder : XCTestCase {
     }
 
     func test_genericProperties_XML() throws {
-        defer { GenericProperties.assertionFailure = nil }
-
         let data = testData(forResource: "Generic_XML_Properties", withExtension: "plist")!
 
-        XCTAssertNoThrow(try PropertyListDecoder().decode(GenericProperties.self, from: data))
-        XCTAssertNil(GenericProperties.assertionFailure)
+        let props = try PropertyListDecoder().decode(GenericProperties.self, from: data)
+        XCTAssertNil(props.assertionFailure)
     }
 
     func test_genericProperties_binary() throws {
         let data = testData(forResource: "Generic_XML_Properties_Binary", withExtension: "plist")!
 
-        defer { GenericProperties.assertionFailure = nil }
-
-        XCTAssertNoThrow(try PropertyListDecoder().decode(GenericProperties.self, from: data))
-        XCTAssertNil(GenericProperties.assertionFailure)
+        let props = try PropertyListDecoder().decode(GenericProperties.self, from: data)
+        XCTAssertNil(props.assertionFailure)
     }
 
     // <rdar://problem/5877417> Binary plist parser should parse any version 'bplist0?'
-    func test_5877417() {
+    func test_5877417() throws {
         var data = testData(forResource: "Generic_XML_Properties_Binary", withExtension: "plist")!
 
         // Modify the data so the header starts with bplist0x
         data[7] = UInt8(ascii: "x")
 
-        defer { GenericProperties.assertionFailure = nil }
-
-        XCTAssertNoThrow(try PropertyListDecoder().decode(GenericProperties.self, from: data))
-        XCTAssertNil(GenericProperties.assertionFailure)
+        let props = try PropertyListDecoder().decode(GenericProperties.self, from: data)
+        XCTAssertNil(props.assertionFailure)
     }
 
     func test_xmlErrors() {
         let data = testData(forResource: "Generic_XML_Properties", withExtension: "plist")!
         let originalXML = String(data: data, encoding: .utf8)!
 
-        defer { GenericProperties.assertionFailure = nil }
-
         // Try an empty plist
         XCTAssertThrowsError(try PropertyListDecoder().decode(GenericProperties.self, from: Data()))
-        XCTAssertNil(GenericProperties.assertionFailure)
         // We'll modify this string in all kinds of nasty ways to introduce errors
         // ---
         /*
@@ -1199,17 +1193,17 @@ data1 = <7465
         XCTAssertEqual(result, expected)
     }
     
-    func test_supers() {
+    func test_supers() throws {
         struct UsesSupers : Codable, Equatable {
-            static var assertionFailure: String?
+            var assertionFailure: String?
             
-            static func AssertEqual<T: Equatable>(_ t1: T, _ t2: T) {
+            mutating func assertEqual<T: Equatable>(_ t1: T, _ t2: T) {
                 if t1 != t2 {
                     assertionFailure = "Values are not equal: \(t1) != \(t2)"
                 }
             }
             
-            static func AssertTrue( _ res: Bool) {
+            mutating func assertTrue( _ res: Bool) {
                 if !res {
                     assertionFailure = "Expected true result"
                 }
@@ -1246,36 +1240,36 @@ data1 = <7465
             
             init(from decoder: Decoder) throws {
                 let keyed = try decoder.container(keyedBy: CodingKeys.self)
-                Self.AssertTrue(try keyed.decodeNil(forKey: .a))
+                assertTrue(try keyed.decodeNil(forKey: .a))
                 
                 let superB = try keyed.superDecoder(forKey: .b)
                 let bSVC = try superB.singleValueContainer()
-                Self.AssertEqual("b", try bSVC.decode(String.self))
+                assertEqual("b", try bSVC.decode(String.self))
                 
                 let s = try keyed.superDecoder()
                 let sSVC = try s.singleValueContainer()
-                Self.AssertEqual("super", try sSVC.decode(String.self))
+                assertEqual("super", try sSVC.decode(String.self))
                 
                 let superUnkeyed = try keyed.superDecoder(forKey: .unkeyed)
                 var unkeyed = try superUnkeyed.unkeyedContainer()
                 
                 let gotNil = try unkeyed.decodeNil()
-                Self.AssertTrue(gotNil)
+                assertTrue(gotNil)
                 
                 let superInUnkeyed = try unkeyed.superDecoder()
                 let sIUSVC = try superInUnkeyed.singleValueContainer()
-                Self.AssertEqual("middle", try sIUSVC.decode(String.self))
+                assertEqual("middle", try sIUSVC.decode(String.self))
                 
-                Self.AssertEqual("final", try unkeyed.decode(String.self))
+                assertEqual("final", try unkeyed.decode(String.self))
             }
             
             init() { }
         }
         
-        _testRoundTrip(of: UsesSupers(), in: .xml)
-        XCTAssertNil(UsesSupers.assertionFailure)
-        _testRoundTrip(of: UsesSupers(), in: .binary)
-        XCTAssertNil(UsesSupers.assertionFailure)
+        let result1 = try XCTUnwrap(_testRoundTrip(of: UsesSupers(), in: .xml))
+        XCTAssertNil(result1.assertionFailure)
+        let result2 = try XCTUnwrap(_testRoundTrip(of: UsesSupers(), in: .binary))
+        XCTAssertNil(result2.assertionFailure)
     }
     
     func test_badReferenceIndex() {

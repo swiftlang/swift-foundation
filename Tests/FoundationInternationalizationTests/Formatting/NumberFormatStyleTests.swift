@@ -36,18 +36,18 @@ final class NumberFormatStyleTests: XCTestCase {
     let testNegativePositiveDoubleData: [Double] = [ 87650, 8765, 876.5, 87.65, 8.765, 0.8765, 0.08765, 0.008765, 0, -0.008765, -876.5, -87650 ]
     let testNegativePositiveDecimalData: [Decimal] = [  Decimal(string:"87650")!, Decimal(string:"8765")!, Decimal(string:"876.5")!, Decimal(string:"87.65")!, Decimal(string:"8.765")!, Decimal(string:"0.8765")!, Decimal(string:"0.08765")!, Decimal(string:"0.008765")!, Decimal(string:"0")!, Decimal(string:"-0.008765")!, Decimal(string:"-876.5")!, Decimal(string:"-87650")! ]
 
-    func _testNegativePositiveInt<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: String = "", file: StaticString = #file, line: UInt = #line) where F.FormatInput == Int, F.FormatOutput == String {
+    func _testNegativePositiveInt<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) where F.FormatInput == Int, F.FormatOutput == String {
         for i in 0..<testNegativePositiveIntegerData.count {
             XCTAssertEqual(style.format(testNegativePositiveIntegerData[i]), expected[i], testName, file: file, line: line)
         }
     }
-    func _testNegativePositiveDouble<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: String = "", file: StaticString = #file, line: UInt = #line) where F.FormatInput == Double, F.FormatOutput == String {
+    func _testNegativePositiveDouble<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) where F.FormatInput == Double, F.FormatOutput == String {
         for i in 0..<testNegativePositiveDoubleData.count {
             XCTAssertEqual(style.format(testNegativePositiveDoubleData[i]), expected[i], testName, file: file, line: line)
         }
     }
 
-    func _testNegativePositiveDecimal<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: String = "", file: StaticString = #file, line: UInt = #line) where F.FormatInput == Decimal, F.FormatOutput == String {
+    func _testNegativePositiveDecimal<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) where F.FormatInput == Decimal, F.FormatOutput == String {
         for i in 0..<testNegativePositiveDecimalData.count {
             XCTAssertEqual((testNegativePositiveDecimalData[i]).formatted(style), expected[i], testName, file: file, line: line)
         }
@@ -2092,7 +2092,7 @@ extension FormatStylePatternMatchingTests {
         range: Range<Int>,
         expectedUpperBound: Int?,
         expectedValue: Value?,
-        file: StaticString = #file, line: UInt = #line) where Consumer.RegexOutput == Value {
+        file: StaticString = #filePath, line: UInt = #line) where Consumer.RegexOutput == Value {
             let upperInString = expectedUpperBound != nil ? str.index(str.startIndex, offsetBy: expectedUpperBound!) : nil
             let rangeInString = str.index(str.startIndex, offsetBy: range.lowerBound)..<str.index(str.startIndex, offsetBy: range.upperBound)
             let startingAtInStr = startingAt != nil ? str.index(str.startIndex, offsetBy: startingAt!) : nil
@@ -2107,7 +2107,7 @@ extension FormatStylePatternMatchingTests {
         range: Range<String.Index>? = nil,
         expectedUpperBound: String.Index?,
         expectedValue: Value?,
-        file: StaticString = #file, line: UInt = #line) where Consumer.RegexOutput == Value {
+        file: StaticString = #filePath, line: UInt = #line) where Consumer.RegexOutput == Value {
         let resolvedRange = range ?? str.startIndex ..< str.endIndex
         let m = try? formatStyle.consuming(str, startingAt: startingAt ?? resolvedRange.lowerBound, in: resolvedRange)
         let upperBound = m?.upperBound

@@ -71,7 +71,7 @@ final class NumberParseStrategyTests : XCTestCase {
     }
 
     func testRoundtripParsing_percent() {
-        func _verifyRoundtripPercent(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Percent, _ testName: String = "", file: StaticString = #file, line: UInt = #line) {
+        func _verifyRoundtripPercent(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Percent, _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) {
             for value in testData {
                 let str = style.format(value)
                 let parsed = try! Int(str, strategy: style.parseStrategy)
@@ -100,7 +100,7 @@ final class NumberParseStrategyTests : XCTestCase {
         _verifyRoundtripPercent(negativeData, percentStyle.notation(.scientific), "percent style, scientific notation")
         _verifyRoundtripPercent(negativeData, percentStyle.decimalSeparator(strategy: .always), "percent style, decimal display: always")
 
-        func _verifyRoundtripPercent(_ testData: [Double], _ style: FloatingPointFormatStyle<Double>.Percent, _ testName: String = "", file: StaticString = #file, line: UInt = #line) {
+        func _verifyRoundtripPercent(_ testData: [Double], _ style: FloatingPointFormatStyle<Double>.Percent, _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) {
             for value in testData {
                 let str = style.format(value)
                 let parsed = try! Double(str, format: style, lenient: true)
@@ -128,7 +128,7 @@ final class NumberParseStrategyTests : XCTestCase {
             -87650000, -8765000, -876500, -87650, -8765, -876, -87, -8
         ]
 
-        func _verifyRoundtripCurrency(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Currency, _ testName: String = "", file: StaticString = #file, line: UInt = #line) {
+        func _verifyRoundtripCurrency(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Currency, _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) {
             for value in testData {
                 let str = style.format(value)
                 let parsed = try! Int(str, strategy: style.parseStrategy)

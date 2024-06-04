@@ -17,7 +17,9 @@ import FoundationEssentials
 internal import _FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal final class ICUListFormatter {
+internal final class ICUListFormatter : @unchecked Sendable {
+    
+    /// `Sendable` notes: `UListFormatter` is thread safe for formatting, and we only use `ulistfmt_format` after init.
     let uformatter: OpaquePointer
 
     struct Signature : Hashable {

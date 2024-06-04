@@ -38,8 +38,8 @@ extension DateInterval {
 extension Calendar {
     // MARK: - Logging
 #if FOUNDATION_FRAMEWORK
-    static fileprivate let log: OSLog = {
-        OSLog(subsystem: "com.apple.foundation", category: "calendar_enumeration")
+    static fileprivate let log: SendableOSLog = {
+        .init(OSLog(subsystem: "com.apple.foundation", category: "calendar_enumeration"))
     }()
 #endif // FOUNDATION_FRAMEWORK
 
@@ -253,19 +253,19 @@ private func _handleCalendarError(_ error: CalendarEnumerationError, date: Date,
 #if FOUNDATION_FRAMEWORK
     switch error {
     case .dateOutOfRange(let component, let test):
-        Logger(Calendar.log).error("Out of range Calendar enumeration result: start: \(date.timeIntervalSinceReferenceDate, privacy: .public) test: \(test.timeIntervalSinceReferenceDate, privacy: .public) \(component.debugDescription, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
+        Logger(Calendar.log.log).error("Out of range Calendar enumeration result: start: \(date.timeIntervalSinceReferenceDate, privacy: .public) test: \(test.timeIntervalSinceReferenceDate, privacy: .public) \(component.debugDescription, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
         
     case .notAdvancing(let next, let previous):
-        Logger(Calendar.log).error("Not advancing Calendar enumeration result: \(date.timeIntervalSinceReferenceDate, privacy: .public) next: \(next.timeIntervalSinceReferenceDate, privacy: .public) previous: \(previous.timeIntervalSinceReferenceDate, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
+        Logger(Calendar.log.log).error("Not advancing Calendar enumeration result: \(date.timeIntervalSinceReferenceDate, privacy: .public) next: \(next.timeIntervalSinceReferenceDate, privacy: .public) previous: \(previous.timeIntervalSinceReferenceDate, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
     case .unexpectedResult(let component, let test):
-        Logger(Calendar.log).error("Unexpected Calendar enumeration result: start: \(date.timeIntervalSinceReferenceDate, privacy: .public) test: \(test.timeIntervalSinceReferenceDate, privacy: .public) \(component.debugDescription, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
+        Logger(Calendar.log.log).error("Unexpected Calendar enumeration result: start: \(date.timeIntervalSinceReferenceDate, privacy: .public) test: \(test.timeIntervalSinceReferenceDate, privacy: .public) \(component.debugDescription, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
     }
 #endif
 }
 
 private func _handleCalendarResultNotFound(date: Date, calendar: Calendar, comps: DateComponents, direction: Calendar.SearchDirection, matchingPolicy: Calendar.MatchingPolicy, repeatedTimePolicy: Calendar.RepeatedTimePolicy) {
 #if FOUNDATION_FRAMEWORK
-    Logger(Calendar.log).debug("Unable to find Calendar enumeration result: \(date.timeIntervalSinceReferenceDate, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
+    Logger(Calendar.log.log).debug("Unable to find Calendar enumeration result: \(date.timeIntervalSinceReferenceDate, privacy: .public) \(calendar, privacy: .public) \(comps, privacy: .public) \(direction.debugDescription, privacy: .public) \(matchingPolicy.debugDescription, privacy: .public) \(repeatedTimePolicy.debugDescription)")
 #endif
 }
 

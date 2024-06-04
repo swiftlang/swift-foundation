@@ -138,7 +138,7 @@ final class LocaleComponentsTests: XCTestCase {
     }
 
     func testCreation_identifier() {
-        func verify(_ identifier: String, file: StaticString = #file, line: UInt = #line, expected components: () -> Locale.Components ) {
+        func verify(_ identifier: String, file: StaticString = #filePath, line: UInt = #line, expected components: () -> Locale.Components ) {
             let comps = Locale.Components(identifier: identifier)
             let expected = components()
             XCTAssertEqual(comps, expected, "expect: \"\(expected.icuIdentifier)\", actual: \"\(comps.icuIdentifier)\"", file: file, line: line)
@@ -235,7 +235,7 @@ final class LocaleComponentsTests: XCTestCase {
     }
 
     func testCreation_roundTripLocale() {
-        func verify(_ identifier: String, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ identifier: String, file: StaticString = #filePath, line: UInt = #line) {
 
             let locale = Locale(identifier: identifier)
 
@@ -256,7 +256,7 @@ final class LocaleComponentsTests: XCTestCase {
 
     func testLocaleComponentInitNoCrash() {
         // Test that parsing invalid identifiers does not crash
-        func test(_ identifier: String, file: StaticString = #file, line: UInt = #line) {
+        func test(_ identifier: String, file: StaticString = #filePath, line: UInt = #line) {
             let comp = Locale.Components(identifier: identifier)
             XCTAssertNotNil(comp, file: file, line: line)
         }
@@ -268,7 +268,7 @@ final class LocaleComponentsTests: XCTestCase {
 
     func test_userPreferenceOverride() {
 
-        func verifyHourCycle(_ localeID: String, _ expectDefault: Locale.HourCycle?, shouldRespectUserPref: Bool, file: StaticString = #file, line: UInt = #line) {
+        func verifyHourCycle(_ localeID: String, _ expectDefault: Locale.HourCycle?, shouldRespectUserPref: Bool, file: StaticString = #filePath, line: UInt = #line) {
             let loc = Locale(identifier: localeID)
             let nonCurrentDefault = Locale.Components(locale: loc)
             XCTAssertEqual(nonCurrentDefault.hourCycle, expectDefault,  "default did not match", file: file, line: line)
@@ -331,7 +331,7 @@ final class LocaleComponentsTests: XCTestCase {
 final class LocaleCodableTests: XCTestCase {
 
     // Test types that used to encode both `identifier` and `normalizdIdentifier` now only encodes `identifier`
-    func _testRoundtripCoding<T: Codable>(_ obj: T, identifier: String, normalizedIdentifier: String, file: StaticString = #file, line: UInt = #line) -> T? {
+    func _testRoundtripCoding<T: Codable>(_ obj: T, identifier: String, normalizedIdentifier: String, file: StaticString = #filePath, line: UInt = #line) -> T? {
         let previousEncoded = "{\"_identifier\":\"\(identifier)\",\"_normalizedIdentifier\":\"\(normalizedIdentifier)\"}"
         let previousEncodedData = previousEncoded.data(using: String._Encoding.utf8)!
         let decoder = JSONDecoder()
@@ -488,7 +488,7 @@ final class LocaleCodableTests: XCTestCase {
     }
 
     func test_decode_compatible_localeComponents() {
-        func expectDecode(_ encoded: String, _ expected: Locale.Components, file: StaticString = #file, line: UInt = #line) {
+        func expectDecode(_ encoded: String, _ expected: Locale.Components, file: StaticString = #filePath, line: UInt = #line) {
             guard let data = encoded.data(using: String._Encoding.utf8), let decoded = try? JSONDecoder().decode(Locale.Components.self, from: data) else {
                 XCTFail(file: file, line: line)
                 return
@@ -522,7 +522,7 @@ final class LocaleCodableTests: XCTestCase {
 
     func test_decode_compatible_language() {
 
-        func expectDecode(_ encoded: String, _ expected: Locale.Language, file: StaticString = #file, line: UInt = #line) {
+        func expectDecode(_ encoded: String, _ expected: Locale.Language, file: StaticString = #filePath, line: UInt = #line) {
             guard let data = encoded.data(using: String._Encoding.utf8), let decoded = try? JSONDecoder().decode(Locale.Language.self, from: data) else {
                 XCTFail(file: file, line: line)
                 return
@@ -540,7 +540,7 @@ final class LocaleCodableTests: XCTestCase {
     }
 
     func test_decode_compatible_languageComponents() {
-        func expectDecode(_ encoded: String, _ expected: Locale.Language.Components, file: StaticString = #file, line: UInt = #line) {
+        func expectDecode(_ encoded: String, _ expected: Locale.Language.Components, file: StaticString = #filePath, line: UInt = #line) {
             guard let data = encoded.data(using: String._Encoding.utf8), let decoded = try? JSONDecoder().decode(Locale.Language.Components.self, from: data) else {
                 XCTFail(file: file, line: line)
                 return
@@ -580,7 +580,7 @@ final class LocaleCodableTests: XCTestCase {
     }
 
     func test_encode_language() {
-        func expectEncode(_ lang: Locale.Language, _ expectedEncoded: String, file: StaticString = #file, line: UInt = #line) {
+        func expectEncode(_ lang: Locale.Language, _ expectedEncoded: String, file: StaticString = #filePath, line: UInt = #line) {
             guard let encoded = _encodeAsJSON(lang) else {
                 XCTFail(file: file, line: line)
                 return
@@ -625,7 +625,7 @@ final class LocaleCodableTests: XCTestCase {
     }
 
     func test_encode_languageComponents() {
-        func expectEncode(_ lang: Locale.Language.Components, _ expectedEncoded: String, file: StaticString = #file, line: UInt = #line) {
+        func expectEncode(_ lang: Locale.Language.Components, _ expectedEncoded: String, file: StaticString = #filePath, line: UInt = #line) {
             guard let encoded = _encodeAsJSON(lang) else {
                 XCTFail(file: file, line: line)
                 return
@@ -665,7 +665,7 @@ final class LocaleCodableTests: XCTestCase {
 
     func test_encode_localeComponents() {
 
-        func expectEncode(_ lang: Locale.Components, _ expectedEncoded: String, file: StaticString = #file, line: UInt = #line) {
+        func expectEncode(_ lang: Locale.Components, _ expectedEncoded: String, file: StaticString = #filePath, line: UInt = #line) {
             guard let encoded = _encodeAsJSON(lang) else {
                 XCTFail(file: file, line: line)
                 return

@@ -400,8 +400,8 @@ extension NSURLQueryItem {
 }
 
 @objc(_NSSwiftURLQueryItem)
-internal class _NSSwiftURLQueryItem: _NSURLQueryItemBridge {
-    var queryItem: URLQueryItem
+internal final class _NSSwiftURLQueryItem: _NSURLQueryItemBridge, @unchecked Sendable {
+    let queryItem: URLQueryItem
 
     init(queryItem: URLQueryItem) {
         self.queryItem = queryItem

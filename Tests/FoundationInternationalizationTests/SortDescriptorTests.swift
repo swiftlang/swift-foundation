@@ -21,6 +21,11 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
+@_nonSendable
+class Hello {
+    var str: NSMutableString = "hi"
+}
+
 @available(FoundationPreview 0.1, *)
 final class SortDescriptorTests: XCTestCase {
     struct NonNSObjectRoot {
@@ -34,6 +39,7 @@ final class SortDescriptorTests: XCTestCase {
             }
         }
 
+        var o = Hello()
         let number: Int
         let word: String
         let maybeWord: String?

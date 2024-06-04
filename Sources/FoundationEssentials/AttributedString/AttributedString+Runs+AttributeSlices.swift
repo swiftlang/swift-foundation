@@ -100,11 +100,13 @@ extension AttributedString.Runs {
         // down to the nearest valid indices.
     }
 
-    public subscript<T : AttributedStringKey>(_ keyPath: KeyPath<AttributeDynamicLookup, T>) -> AttributesSlice1<T> {
+    @preconcurrency
+    public subscript<T : AttributedStringKey>(_ keyPath: KeyPath<AttributeDynamicLookup, T>) -> AttributesSlice1<T> where T.Value : Sendable {
         return AttributesSlice1<T>(runs: self)
     }
 
-    public subscript<T : AttributedStringKey>(_ t: T.Type) -> AttributesSlice1<T> {
+    @preconcurrency
+    public subscript<T : AttributedStringKey>(_ t: T.Type) -> AttributesSlice1<T> where T.Value : Sendable {
         return AttributesSlice1<T>(runs: self)
     }
 }
@@ -205,23 +207,31 @@ extension AttributedString.Runs {
         // down to the nearest valid indices.
     }
 
+    @preconcurrency
     public subscript <
         T : AttributedStringKey,
         U : AttributedStringKey
     > (
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>
-    ) -> AttributesSlice2<T, U> {
+    ) -> AttributesSlice2<T, U>
+    where
+        T.Value : Sendable,
+        U.Value : Sendable {
         return AttributesSlice2<T, U>(runs: self)
     }
 
+    @preconcurrency
     public subscript <
         T : AttributedStringKey,
         U : AttributedStringKey
     > (
         _ t: T.Type,
         _ u: U.Type
-    ) -> AttributesSlice2<T, U> {
+    ) -> AttributesSlice2<T, U>
+    where 
+        T.Value : Sendable,
+        U.Value : Sendable {
         return AttributesSlice2<T, U>(runs: self)
     }
 }
@@ -328,6 +338,7 @@ extension AttributedString.Runs {
         // down to the nearest valid indices.
     }
 
+    @preconcurrency
     public subscript <
         T : AttributedStringKey,
         U : AttributedStringKey,
@@ -336,10 +347,15 @@ extension AttributedString.Runs {
         _ t: KeyPath<AttributeDynamicLookup, T>,
         _ u: KeyPath<AttributeDynamicLookup, U>,
         _ v: KeyPath<AttributeDynamicLookup, V>
-    ) -> AttributesSlice3<T, U, V> {
+    ) -> AttributesSlice3<T, U, V>
+    where
+        T.Value : Sendable,
+        U.Value : Sendable,
+        V.Value : Sendable {
         return AttributesSlice3<T, U, V>(runs: self)
     }
 
+    @preconcurrency
     public subscript <
         T : AttributedStringKey,
         U : AttributedStringKey,
@@ -348,7 +364,11 @@ extension AttributedString.Runs {
         _ t: T.Type,
         _ u: U.Type,
         _ v: V.Type
-    ) -> AttributesSlice3<T, U, V> {
+    ) -> AttributesSlice3<T, U, V>
+    where
+        T.Value : Sendable,
+        U.Value : Sendable,
+        V.Value : Sendable {
         return AttributesSlice3<T, U, V>(runs: self)
     }
 }
@@ -464,6 +484,7 @@ extension AttributedString.Runs {
         // down to the nearest valid indices.
     }
 
+    @preconcurrency
     public subscript <
         T : AttributedStringKey,
         U : AttributedStringKey,
@@ -478,6 +499,7 @@ extension AttributedString.Runs {
         return AttributesSlice4<T, U, V, W>(runs: self)
     }
 
+    @preconcurrency
     public subscript <
         T : AttributedStringKey,
         U : AttributedStringKey,
@@ -610,6 +632,7 @@ extension AttributedString.Runs {
         // down to the nearest valid indices.
     }
 
+    @preconcurrency
     public subscript <
         T : AttributedStringKey,
         U : AttributedStringKey,
@@ -622,10 +645,17 @@ extension AttributedString.Runs {
         _ v: KeyPath<AttributeDynamicLookup, V>,
         _ w: KeyPath<AttributeDynamicLookup, W>,
         _ x: KeyPath<AttributeDynamicLookup, X>
-    ) -> AttributesSlice5<T, U, V, W, X> {
+    ) -> AttributesSlice5<T, U, V, W, X> 
+    where
+        T.Value : Sendable,
+        U.Value : Sendable,
+        V.Value : Sendable,
+        W.Value : Sendable,
+        X.Value : Sendable {
         return AttributesSlice5<T, U, V, W, X>(runs: self)
     }
 
+    @preconcurrency
     public subscript <
         T : AttributedStringKey,
         U : AttributedStringKey,
@@ -638,7 +668,13 @@ extension AttributedString.Runs {
         _ v: V.Type,
         _ w: W.Type,
         _ x: X.Type
-    ) -> AttributesSlice5<T, U, V, W, X> {
+    ) -> AttributesSlice5<T, U, V, W, X> 
+    where
+        T.Value : Sendable,
+        U.Value : Sendable,
+        V.Value : Sendable,
+        W.Value : Sendable,
+        X.Value : Sendable {
         return AttributesSlice5<T, U, V, W, X>(runs: self)
     }
 }

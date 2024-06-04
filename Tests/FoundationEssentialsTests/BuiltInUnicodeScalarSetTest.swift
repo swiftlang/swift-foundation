@@ -23,7 +23,7 @@ import TestSupport
 final class BuiltInUnicodeScalarSetTest: XCTestCase {
 
     func testMembership() {
-        func setContainsScalar(_ set: BuiltInUnicodeScalarSet, _ scalar: Unicode.Scalar, _ expect: Bool, file: StaticString = #file, line: UInt = #line) {
+        func setContainsScalar(_ set: BuiltInUnicodeScalarSet, _ scalar: Unicode.Scalar, _ expect: Bool, file: StaticString = #filePath, line: UInt = #line) {
             let actual = set.contains(scalar)
             XCTAssertEqual(actual, expect, file: file, line: line)
         }

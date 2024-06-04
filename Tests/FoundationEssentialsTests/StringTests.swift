@@ -24,7 +24,7 @@ final class StringTests : XCTestCase {
     // MARK: - Case mapping
 
     func testCapitalize() {
-        func test(_ string: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
+        func test(_ string: String, _ expected: String, file: StaticString = #filePath, line: UInt = #line) {
             XCTAssertEqual(string._capitalized(), expected, file: file, line: line)
         }
 
@@ -64,7 +64,7 @@ final class StringTests : XCTestCase {
     }
 
     func testTrimmingWhitespace() {
-        func test(_ str: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
+        func test(_ str: String, _ expected: String, file: StaticString = #filePath, line: UInt = #line) {
             XCTAssertEqual(str._trimmingWhitespace(), expected, file: file, line: line)
         }
         test(" \tABCDEFGAbc \t \t  ", "ABCDEFGAbc")
@@ -80,7 +80,7 @@ final class StringTests : XCTestCase {
     }
 
     func testTrimmingCharactersWithPredicate() {
-        func test(_ str: String, while predicate: (Character) -> Bool, _ expected: Substring, file: StaticString = #file, line: UInt = #line) {
+        func test(_ str: String, while predicate: (Character) -> Bool, _ expected: Substring, file: StaticString = #filePath, line: UInt = #line) {
             XCTAssertEqual(str._trimmingCharacters(while: predicate), expected, file: file, line: line)
         }
 
@@ -136,7 +136,7 @@ final class StringTests : XCTestCase {
         test("11 B\u{0662}\u{0661}", while: alwaysTrim, "")
     }
 
-    func _testRangeOfString(_ tested: String, string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #file, line: UInt = #line) {
+    func _testRangeOfString(_ tested: String, string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #filePath, line: UInt = #line) {
         let result = tested._range(of: string, anchored: anchored, backwards: backwards)
         var exp: Range<String.Index>?
         if let expectation {
@@ -157,7 +157,7 @@ final class StringTests : XCTestCase {
 
     func testRangeOfString() {
         var tested: String
-        func testASCII(_ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #file, line: UInt = #line) {
+        func testASCII(_ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #filePath, line: UInt = #line) {
             return _testRangeOfString(tested, string: string, anchored: anchored, backwards: backwards, expectation, file: file, line: line)
         }
 
@@ -207,7 +207,7 @@ final class StringTests : XCTestCase {
 
     func testRangeOfString_graphemeCluster() {
         var tested: String
-        func test(_ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #file, line: UInt = #line) {
+        func test(_ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #filePath, line: UInt = #line) {
             return _testRangeOfString(tested, string: string, anchored: anchored, backwards: backwards, expectation, file: file, line: line)
         }
 
@@ -241,7 +241,7 @@ final class StringTests : XCTestCase {
     }
 
     func testRangeOfString_lineSeparator() {
-        func test(_ tested: String, _ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #file, line: UInt = #line) {
+        func test(_ tested: String, _ string: String, anchored: Bool, backwards: Bool, _ expectation: Range<Int>?, file: StaticString = #filePath, line: UInt = #line) {
             return _testRangeOfString(tested, string: string, anchored: anchored, backwards: backwards, expectation, file: file, line: line)
         }
         test("\r\n \r", "\r", anchored: false, backwards: false, 2..<3)
@@ -256,7 +256,7 @@ final class StringTests : XCTestCase {
     }
 
     func testTryFromUTF16() {
-        func test(_ utf16Buffer: [UInt16], expected: String?, file: StaticString = #file, line: UInt = #line) {
+        func test(_ utf16Buffer: [UInt16], expected: String?, file: StaticString = #filePath, line: UInt = #line) {
             let result = utf16Buffer.withUnsafeBufferPointer {
                 String(_utf16: $0)
             }
@@ -285,7 +285,7 @@ final class StringTests : XCTestCase {
 
     func testTryFromUTF16_roundtrip() {
 
-        func test(_ string: String, file: StaticString = #file, line: UInt = #line) {
+        func test(_ string: String, file: StaticString = #filePath, line: UInt = #line) {
             let utf16Array = Array(string.utf16)
             let res = utf16Array.withUnsafeBufferPointer {
                 String(_utf16: $0)
@@ -335,7 +335,7 @@ final class StringTests : XCTestCase {
     }
     
     func testFileSystemRepresentation() {
-        func assertCString(_ ptr: UnsafePointer<CChar>, equals other: String, file: StaticString = #file, line: UInt = #line) {
+        func assertCString(_ ptr: UnsafePointer<CChar>, equals other: String, file: StaticString = #filePath, line: UInt = #line) {
             XCTAssertEqual(String(cString: ptr), other, file: file, line: line)
         }
         

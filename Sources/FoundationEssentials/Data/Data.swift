@@ -41,12 +41,14 @@
 @usableFromInline let memcmp = WASILibc.memcmp
 #endif
 
+internal import _CShims
+
 #if canImport(Darwin)
 import Darwin
 
 internal func __DataInvokeDeallocatorVirtualMemory(_ mem: UnsafeMutableRawPointer, _ length: Int) {
     guard vm_deallocate(
-        mach_task_self_,
+        _platform_mach_task_self(),
         vm_address_t(UInt(bitPattern: mem)),
         vm_size_t(length)) == ERR_SUCCESS else {
         fatalError("*** __DataInvokeDeallocatorVirtualMemory(\(mem), \(length)) failed")
@@ -2032,7 +2034,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     public typealias ReadingOptions = NSData.ReadingOptions
     public typealias WritingOptions = NSData.WritingOptions
 #else
-    public struct ReadingOptions : OptionSet {
+    public struct ReadingOptions : OptionSet, Sendable {
         public let rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
         
@@ -2042,7 +2044,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     }
     
     // This is imported from the ObjC 'option set', which is actually a combination of an option and an enumeration (file protection).
-    public struct WritingOptions : OptionSet {
+    public struct WritingOptions : OptionSet, Sendable {
         public let rawValue: UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
 

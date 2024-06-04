@@ -227,7 +227,7 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
 #endif
 
     func testVariousDatesAndTimes() {
-        func verify(_ str: String, _ strategy: Date.ParseStrategy, _ expected: String?, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ str: String, _ strategy: Date.ParseStrategy, _ expected: String?, file: StaticString = #filePath, line: UInt = #line) {
             let match = str.wholeMatch(of: strategy) // Regex<Date>.Match?
             if let expected {
                 guard let match else {
@@ -270,7 +270,7 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
     }
 
     func testMatchISO8601String() {
-        func verify(_ str: String, _ strategy: Date.ISO8601FormatStyle, _ expected: String?, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ str: String, _ strategy: Date.ISO8601FormatStyle, _ expected: String?, file: StaticString = #filePath, line: UInt = #line) {
 
             let match = str.wholeMatch(of: strategy) // Regex<Date>.Match?
             if let expected {

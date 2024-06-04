@@ -96,7 +96,12 @@ extension AttributeScopes.FoundationAttributes {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum LinkAttribute : CodableAttributedStringKey {
         public typealias Value = URL
-        public static var name = "NSLink"
+        
+        public static var name: String {
+            // Used to be: public static var name = "NSLink", but changed for Sendability and ABI compatibility
+            get { "NSLink" }
+            set { }
+        }
     }
     
 #if FOUNDATION_FRAMEWORK

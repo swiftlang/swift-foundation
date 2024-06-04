@@ -28,7 +28,10 @@ extension IntegerParseStrategy : Sendable where Format : Sendable {}
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension IntegerParseStrategy: ParseStrategy {
     public func parse(_ value: String) throws -> Format.FormatInput {
-        let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient)
+        guard let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient) else {
+            throw CocoaError(CocoaError.formatting, userInfo: [
+                NSDebugDescriptionErrorKey: "Cannot parse \(value). Could not create parser." ])
+        }
         let trimmedString = value._trimmingWhitespace()
         if let v = parser.parseAsInt(trimmedString) {
             return Format.FormatInput(v)
@@ -46,7 +49,9 @@ extension IntegerParseStrategy: ParseStrategy {
             return nil
         }
 
-        let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient)
+        guard let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient) else {
+            return nil
+        }
         let substr = value[index..<range.upperBound]
         var upperBound = 0
         if let value = parser.parseAsInt(substr, upperBound: &upperBound) {

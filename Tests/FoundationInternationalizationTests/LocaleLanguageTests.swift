@@ -27,7 +27,7 @@ final class LocaleLanguageComponentsTests : XCTestCase {
                           expectedLanguageCode: String?,
                           expectedScriptCode: String?,
                           expectedRegionCode: String?,
-                          file: StaticString = #file, line: UInt = #line) {
+                          file: StaticString = #filePath, line: UInt = #line) {
         let comp = Locale.Language.Components(identifier: identifier)
         XCTAssertEqual(comp.languageCode?.identifier, expectedLanguageCode, file: file, line: line)
         XCTAssertEqual(comp.script?.identifier, expectedScriptCode, file: file, line: line)
@@ -60,7 +60,7 @@ final class LocaleLanguageComponentsTests : XCTestCase {
 
 class LocaleLanguageTests: XCTestCase {
 
-    func verify(_ identifier: String, expectedParent: Locale.Language, minBCP47: String, maxBCP47: String, langCode: Locale.LanguageCode?, script: Locale.Script?, region: Locale.Region?, lineDirection: Locale.LanguageDirection, characterDirection: Locale.LanguageDirection, file: StaticString = #file, line: UInt = #line) {
+    func verify(_ identifier: String, expectedParent: Locale.Language, minBCP47: String, maxBCP47: String, langCode: Locale.LanguageCode?, script: Locale.Script?, region: Locale.Region?, lineDirection: Locale.LanguageDirection, characterDirection: Locale.LanguageDirection, file: StaticString = #filePath, line: UInt = #line) {
         let lan = Locale.Language(identifier: identifier)
         XCTAssertEqual(lan.parent, expectedParent, "Parents should be equal", file: file, line: line)
         XCTAssertEqual(lan.minimalIdentifier, minBCP47, "minimalIdentifiers should be equal", file: file, line: line)
@@ -86,7 +86,7 @@ class LocaleLanguageTests: XCTestCase {
     }
 
     func testEquivalent() {
-        func verify(lang1: String, lang2: String, isEqual: Bool, file: StaticString = #file, line: UInt = #line) {
+        func verify(lang1: String, lang2: String, isEqual: Bool, file: StaticString = #filePath, line: UInt = #line) {
             let language1 = Locale.Language(identifier: lang1)
             let language2 = Locale.Language(identifier: lang2)
 

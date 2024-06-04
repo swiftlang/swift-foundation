@@ -29,7 +29,10 @@ extension FloatingPointParseStrategy : Sendable where Format : Sendable {}
 extension FloatingPointParseStrategy: ParseStrategy {
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
     public func parse(_ value: String) throws -> Format.FormatInput {
-        let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient)
+        guard let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient) else {
+            throw CocoaError(CocoaError.formatting, userInfo: [
+                NSDebugDescriptionErrorKey: "Cannot parse \(value), unable to create formatter" ])
+        }
         if let v = parser.parseAsDouble(value._trimmingWhitespace()) {
             return Format.FormatInput(v)
         } else {
@@ -45,7 +48,9 @@ extension FloatingPointParseStrategy: ParseStrategy {
             return nil
         }
 
-        let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient)
+        guard let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient) else {
+            return nil
+        }
         let substr = value[index..<range.upperBound]
         var upperBound = 0
         if let value = parser.parseAsDouble(substr, upperBound: &upperBound) {

@@ -16,8 +16,9 @@ import FoundationEssentials
 
 internal import _FoundationICU
 
-final class ICUPatternGenerator {
+final class ICUPatternGenerator : @unchecked Sendable {
 
+    /// `Sendable` notes: We create this in init, and the non-thread safe API of `udatpg_getBestPatternWithOptions` is performed on a clone of it. `udatpg_getDefaultHourCycle` is thread safe as the underlying data is initialized at init time of the pattern generator itself.
     let upatternGenerator: UnsafeMutablePointer<UDateTimePatternGenerator?>
 
     private init?(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) {

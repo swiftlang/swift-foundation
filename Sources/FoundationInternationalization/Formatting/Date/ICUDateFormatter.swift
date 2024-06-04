@@ -24,8 +24,9 @@ import Glibc
 
 typealias UChar = UInt16
 
-final class ICUDateFormatter {
+final class ICUDateFormatter : @unchecked Sendable {
 
+    /// `Sendable` notes: `UDateFormat` is safe to use from multiple threads after initialization. The `UCal` using API clones the calendar before using it.
     var udateFormat: UnsafeMutablePointer<UDateFormat?>
     var lenientParsing: Bool
 
@@ -257,7 +258,7 @@ final class ICUDateFormatter {
     }
 
     static let formatterCache = FormatterCache<DateFormatInfo, ICUDateFormatter?>()
-    static var patternCache = LockedState<[PatternCacheKey : String]>(initialState: [:])
+    static let patternCache = LockedState<[PatternCacheKey : String]>(initialState: [:])
 
     static func cachedFormatter(for dateFormatInfo: DateFormatInfo) -> ICUDateFormatter? {
         return Self.formatterCache.formatter(for: dateFormatInfo) {

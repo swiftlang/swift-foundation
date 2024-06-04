@@ -27,7 +27,7 @@ final class DurationExtensionTests : XCTestCase {
 
     func testRoundingMode() {
 
-        func verify(_ tests: [Int64], increment: Int64, expected: [FloatingPointRoundingRule: [Int64]], file: StaticString = #file, line: UInt = #line) {
+        func verify(_ tests: [Int64], increment: Int64, expected: [FloatingPointRoundingRule: [Int64]], file: StaticString = #filePath, line: UInt = #line) {
             let modes: [FloatingPointRoundingRule] = [.down, .up, .towardZero, .awayFromZero, .toNearestOrEven, .toNearestOrAwayFromZero]
             for mode in modes {
                 var actual: [Duration] = []

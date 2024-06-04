@@ -141,8 +141,8 @@ public enum NumberFormatStyleConfiguration {
 
         // The maximum total length that ICU allows is 999.
         // We take one off to reserve one character for the non-zero digit skeleton (the "0" skeleton in the number format)
-        static var validPartLength = 0..<999
-        static var validSignificantDigits = 1..<999
+        static let validPartLength = 0..<999
+        static let validSignificantDigits = 1..<999
 
         // min 3, max 3: 12345 -> 12300
         // min 3, max 3: 0.12345 -> 0.123

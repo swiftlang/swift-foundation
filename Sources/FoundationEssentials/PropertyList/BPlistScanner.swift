@@ -128,7 +128,7 @@ class BPlistMap : PlistDecodingMap {
 
     @inline(__always)
     func withBuffer<T>(
-      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T
+      for region: Region, perform closure: @Sendable (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T
     ) rethrows -> T {
         try dataLock.withLock {
             return try closure($0.buffer[region], $0.buffer)
@@ -157,7 +157,8 @@ class BPlistMap : PlistDecodingMap {
     }
 
     func loadValue(at idx: BPlistObjectIndex) throws -> Value {
-        return try dataLock.withLock { state in
+        // Sendable note: We do not mutate self from within this lock
+        return try dataLock.withLockUnchecked { state in
             guard Int(idx) < objectOffsets.count else {
                 throw BPlistError.corruptedValue("object index")
             }

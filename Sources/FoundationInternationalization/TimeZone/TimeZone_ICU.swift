@@ -479,7 +479,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
 
 // MARK: -
 
-var icuTZIdentifiers: [String] = {
+let icuTZIdentifiers: [String] = {
     _TimeZoneICU.timeZoneNamesFromICU()
 }()
 

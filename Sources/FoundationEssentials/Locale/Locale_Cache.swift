@@ -24,7 +24,7 @@ struct LocaleCache : Sendable {
     // MARK: - Concrete Classes
     
     // _LocaleICU, if present. Otherwise we use _LocaleUnlocalized. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
-    static var localeICUClass: _LocaleProtocol.Type = {
+    static let localeICUClass: _LocaleProtocol.Type = {
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
         return _LocaleICU.self
 #else

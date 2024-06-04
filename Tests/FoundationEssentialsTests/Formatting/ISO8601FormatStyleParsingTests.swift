@@ -188,11 +188,11 @@ result  : \(parsed != nil ? parsed!.debugDescription : "nil") \(parsed != nil ? 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
 
-    func _matchFullRange(_ str: String, formatStyle: Date.ISO8601FormatStyle, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #file, line: UInt = #line) {
+    func _matchFullRange(_ str: String, formatStyle: Date.ISO8601FormatStyle, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
         _matchRange(str, formatStyle: formatStyle, range: nil, expectedUpperBound: expectedUpperBound, expectedDate: expectedDate, file: file, line: line)
     }
 
-    func _matchRange(_ str: String, formatStyle: Date.ISO8601FormatStyle, range: Range<String.Index>?, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #file, line: UInt = #line) {
+    func _matchRange(_ str: String, formatStyle: Date.ISO8601FormatStyle, range: Range<String.Index>?, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
         // FIXME: Need tests that starts from somewhere else
         let m = try? formatStyle.consuming(str, startingAt: str.startIndex, in: range ?? str.startIndex..<str.endIndex)
         let upperBound = m?.upperBound
@@ -215,7 +215,7 @@ final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
     func testMatchDefaultISO8601Style() throws {
 
         let iso8601FormatStyle = Date.ISO8601FormatStyle()
-        func verify(_ str: String, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ str: String, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
             _matchFullRange(str, formatStyle: iso8601FormatStyle, expectedUpperBound: expectedUpperBound, expectedDate: expectedDate, file: file, line: line)
         }
 
@@ -233,7 +233,7 @@ final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
     func testPartialMatchISO8601() throws {
         var expectedDate: Date?
         var expectedLength: Int?
-        func verify(_ str: String, _ style: Date.ISO8601FormatStyle,  file: StaticString = #file, line: UInt = #line) {
+        func verify(_ str: String, _ style: Date.ISO8601FormatStyle,  file: StaticString = #filePath, line: UInt = #line) {
             let expectedUpperBoundStrIndx = (expectedLength != nil) ? str.index(str.startIndex, offsetBy: expectedLength!) : nil
             _matchFullRange(str, formatStyle: style, expectedUpperBound: expectedUpperBoundStrIndx, expectedDate: expectedDate, file: file, line: line)
         }
@@ -305,7 +305,7 @@ final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
     func testFullMatch() {
 
         var expectedDate: Date
-        func verify(_ str: String, _ style: Date.ISO8601FormatStyle, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ str: String, _ style: Date.ISO8601FormatStyle, file: StaticString = #filePath, line: UInt = #line) {
             _matchFullRange(str, formatStyle: style, expectedUpperBound: str.endIndex, expectedDate: expectedDate, file: file, line: line)
         }
 

@@ -20,8 +20,10 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         string: AttributedString,
         matches expected: [(String, K.Value?)],
         for key: KeyPath<AttributeDynamicLookup, K>,
-        file: StaticString = #file, line: UInt = #line
-    ) {
+        file: StaticString = #filePath, line: UInt = #line
+    ) 
+    where K.Value : Sendable
+    {
         let runs = string.runs[key]
         XCTAssertEqual(runs.count, expected.count, "Unexpected number of runs", file: file, line: line)
         for ((val, range), expectation) in zip(runs, expected) {
@@ -36,7 +38,9 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         }
     }
     
-    func verify<K: AttributedStringKey, K2: AttributedStringKey>(string: AttributedString, matches expected: [(String, K.Value?, K2.Value?)], for key: KeyPath<AttributeDynamicLookup, K>, _ key2: KeyPath<AttributeDynamicLookup, K2>, file: StaticString = #file, line: UInt = #line) {
+    func verify<K: AttributedStringKey, K2: AttributedStringKey>(string: AttributedString, matches expected: [(String, K.Value?, K2.Value?)], for key: KeyPath<AttributeDynamicLookup, K>, _ key2: KeyPath<AttributeDynamicLookup, K2>, file: StaticString = #filePath, line: UInt = #line) 
+    where K.Value : Sendable, K2.Value : Sendable
+    {
         let runs = string.runs[key, key2]
         XCTAssertEqual(runs.count, expected.count, "Unexpected number of runs", file: file, line: line)
         for ((val1, val2, range), expectation) in zip(runs, expected) {
@@ -51,7 +55,9 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         }
     }
     
-    func verify<K: AttributedStringKey, K2: AttributedStringKey, K3: AttributedStringKey>(string: AttributedString, matches expected: [(String, K.Value?, K2.Value?, K3.Value?)], for key: KeyPath<AttributeDynamicLookup, K>, _ key2: KeyPath<AttributeDynamicLookup, K2>, _ key3: KeyPath<AttributeDynamicLookup, K3>, file: StaticString = #file, line: UInt = #line) {
+    func verify<K: AttributedStringKey, K2: AttributedStringKey, K3: AttributedStringKey>(string: AttributedString, matches expected: [(String, K.Value?, K2.Value?, K3.Value?)], for key: KeyPath<AttributeDynamicLookup, K>, _ key2: KeyPath<AttributeDynamicLookup, K2>, _ key3: KeyPath<AttributeDynamicLookup, K3>, file: StaticString = #filePath, line: UInt = #line) 
+    where K.Value : Sendable, K2.Value : Sendable, K3.Value : Sendable
+    {
         let runs = string.runs[key, key2, key3]
         XCTAssertEqual(runs.count, expected.count, "Unexpected number of runs", file: file, line: line)
         for ((val1, val2, val3, range), expectation) in zip(runs, expected) {

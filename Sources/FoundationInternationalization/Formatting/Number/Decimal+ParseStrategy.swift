@@ -62,7 +62,9 @@ extension Decimal.ParseStrategy {
             locale = .autoupdatingCurrent
         }
 
-        let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient)
+        guard let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient) else {
+            return nil
+        }
         let substr = value[index..<range.upperBound]
         var upperBound = 0
         guard let value = parser.parseAsDecimal(substr, upperBound: &upperBound) else {

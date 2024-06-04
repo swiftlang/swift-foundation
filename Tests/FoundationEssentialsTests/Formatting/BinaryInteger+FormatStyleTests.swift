@@ -226,22 +226,22 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     
     // MARK: Assertions
     
-    func check(_ integer: some BinaryInteger, expectation: String, file: StaticString = #file, line: UInt = #line) {
+    func check(_ integer: some BinaryInteger, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(integer.description, expectation, "integer description does not match expectation", file: file, line: line)
         check(ascii: integer.numericStringRepresentation.utf8, expectation: expectation, file: file, line: line)
         check(words: Array(integer.words), isSigned: type(of: integer).isSigned, expectation: expectation, file: file, line: line)
     }
     
-    func check(x64: [UInt64], isSigned: Bool, expectation: String, file: StaticString = #file, line: UInt = #line) {
+    func check(x64: [UInt64], isSigned: Bool, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
         check(words: x64.flatMap(\.words), isSigned: isSigned, expectation: expectation, file: file, line: line)
     }
     
-    func check(words: [UInt], isSigned: Bool, expectation: String, file: StaticString = #file, line: UInt = #line) {
+    func check(words: [UInt], isSigned: Bool, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
         let ascii =  numericStringRepresentationForBinaryInteger(words: words, isSigned: isSigned).utf8
         check(ascii: ascii, expectation: expectation, file: file, line: line)
     }
     
-    func check(ascii: some Collection<UInt8>, expectation: String, file: StaticString = #file, line: UInt = #line) {
+    func check(ascii: some Collection<UInt8>, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(String(decoding: ascii, as: Unicode.ASCII.self), expectation, file: file, line: line)
     }
 }

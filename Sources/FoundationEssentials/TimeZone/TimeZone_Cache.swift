@@ -35,7 +35,7 @@ struct TimeZoneCache : Sendable {
     // MARK: - Concrete Classes
     
     // _TimeZoneICU, if present
-    static var timeZoneICUClass: _TimeZoneProtocol.Type? = {
+    static let timeZoneICUClass: _TimeZoneProtocol.Type? = {
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
         _TimeZoneICU.self
 #else
@@ -48,7 +48,7 @@ struct TimeZoneCache : Sendable {
     }()
     
     // _TimeZoneGMTICU or _TimeZoneGMT
-    static var timeZoneGMTClass: _TimeZoneProtocol.Type = {
+    static let timeZoneGMTClass: _TimeZoneProtocol.Type = {
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
         _TimeZoneGMTICU.self
 #else

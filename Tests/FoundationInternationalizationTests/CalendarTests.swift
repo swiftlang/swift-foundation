@@ -215,7 +215,7 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(modified, decodedModified)
     }
 
-    func validateOrdinality(_ expected: Array<Array<Int?>>, calendar: Calendar, date: Date) {
+    static func validateOrdinality(_ expected: Array<Array<Int?>>, calendar: Calendar, date: Date) {
         let units: [Calendar.Component] = [.era, .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .nanosecond]
 
         var smallerIndex = 0
@@ -291,7 +291,7 @@ final class CalendarTests : XCTestCase {
         // August 22, 2022 at 3:02:38 PM PDT
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
-        validateOrdinality(expected, calendar: calendar, date: Date(timeIntervalSinceReferenceDate: 682898558.712307))
+        Self.validateOrdinality(expected, calendar: calendar, date: Date(timeIntervalSinceReferenceDate: 682898558.712307))
     }
 
     func test_ordinality_dst() {
@@ -317,7 +317,7 @@ final class CalendarTests : XCTestCase {
         // let d = try! Date("2022-03-13T03:02:08.712-07:00", strategy: .iso8601)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
-        validateOrdinality(expected, calendar: calendar, date: Date(timeIntervalSinceReferenceDate: 668858528.712))
+        Self.validateOrdinality(expected, calendar: calendar, date: Date(timeIntervalSinceReferenceDate: 668858528.712))
     }
     #endif // arch(x86_64) || arch(arm64)
     
@@ -346,15 +346,16 @@ final class CalendarTests : XCTestCase {
         // August 22, 2022 at 3:02:38 PM PDT
         let date = Date(timeIntervalSinceReferenceDate: 682898558.712307)
 
-        // Explicitly shared amongst all the below threads
+        // Explicitly shared amongst all the below threads - turn off Sendable checking because we are intentionally racing on this type to test its thread safety
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
 
+        let immutableCalendar = calendar
         let group = DispatchGroup()
         let queue = DispatchQueue(label: "calendar test", qos: .default, attributes: .concurrent, autoreleaseFrequency: .workItem)
         for _ in 1..<10 {
             queue.async(group: group) {
-                self.validateOrdinality(expected, calendar: calendar, date: date)
+                Self.validateOrdinality(expected, calendar: immutableCalendar, date: date)
             }
         }
         XCTAssertEqual(.success, group.wait(timeout: .now().advanced(by: .seconds(3))))
@@ -1000,7 +1001,7 @@ final class CalendarTests : XCTestCase {
         calendar.minimumDaysInFirstWeek = 1
         calendar.firstWeekday = 1
 
-        func test(_ dc: DateComponents, _ expectation: Date, file: StaticString = #file, line: UInt = #line) {
+        func test(_ dc: DateComponents, _ expectation: Date, file: StaticString = #filePath, line: UInt = #line) {
             let date = calendar.date(from: dc)!
             XCTAssertEqual(date, expectation, "expect: \(date.timeIntervalSinceReferenceDate)", file: file, line: line)
         }
@@ -1150,7 +1151,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
-        func test(_ dateComponents: DateComponents, file: StaticString = #file, line: UInt = #line) {
+        func test(_ dateComponents: DateComponents, file: StaticString = #filePath, line: UInt = #line) {
             let date_new = gregorianCalendar.date(from: dateComponents)!
             let date_old = icuCalendar.date(from: dateComponents)!
             expectEqual(date_new, date_old)
@@ -1191,7 +1192,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
     func testDateFromComponentsCompatibilityCustom() {
 
         self.continueAfterFailure = false
-        func test(_ dateComponents: DateComponents, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, file: StaticString = #file, line: UInt = #line) {
+        func test(_ dateComponents: DateComponents, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, file: StaticString = #filePath, line: UInt = #line) {
             let date_new = gregorianCalendar.date(from: dateComponents)!
             let date_old = icuCalendar.date(from: dateComponents)!
             expectEqual(date_new, date_old, "dateComponents: \(dateComponents), first weekday: \(gregorianCalendar.firstWeekday), minimumDaysInFirstWeek: \(gregorianCalendar.minimumDaysInFirstWeek)")
@@ -1256,7 +1257,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
 
-        func test(_ dateComponents: DateComponents, file: StaticString = #file, line: UInt = #line) {
+        func test(_ dateComponents: DateComponents, file: StaticString = #filePath, line: UInt = #line) {
             let date_new = gregorianCalendar.date(from: dateComponents)!
             let date_old = icuCalendar.date(from: dateComponents)!
             expectEqual(date_new, date_old, "dateComponents: \(dateComponents)")
@@ -1296,7 +1297,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
 
-        func test(_ dateComponents: DateComponents, file: StaticString = #file, line: UInt = #line) {
+        func test(_ dateComponents: DateComponents, file: StaticString = #filePath, line: UInt = #line) {
             let date_new = gregorianCalendar.date(from: dateComponents)!
             let date_old = icuCalendar.date(from: dateComponents)!
             expectEqual(date_new, date_old, "dateComponents: \(dateComponents)")
@@ -1332,7 +1333,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
 
-        func test(_ dateComponents: DateComponents, file: StaticString = #file, line: UInt = #line) {
+        func test(_ dateComponents: DateComponents, file: StaticString = #filePath, line: UInt = #line) {
             let date_new = gregorianCalendar.date(from: dateComponents)!
             let date_old = icuCalendar.date(from: dateComponents)!
             expectEqual(date_new, date_old, "dateComponents: \(dateComponents)")
@@ -1351,7 +1352,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
-        func test(_ date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, timeZone: TimeZone = .gmt, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+        func test(_ date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, timeZone: TimeZone = .gmt, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
             let gregResult = gregorianCalendar.dateComponents(componentSet, from: date, in: timeZone)
             let icuResult = icuCalendar.dateComponents(componentSet, from: date, in: timeZone)
             // The original implementation does not set quarter
@@ -1437,7 +1438,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: tz, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
-        func test(_ date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+        func test(_ date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
             let gregResult = gregorianCalendar.dateComponents(componentSet, from: date, in: tz)
             let icuResult = icuCalendar.dateComponents(componentSet, from: date, in: tz)
             // The original implementation does not set quarter
@@ -1510,7 +1511,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
     func testDateComponentsFromDate_distantDates() {
 
         let componentSet = Calendar.ComponentSet([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar])
-        func test(_ date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+        func test(_ date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
             let gregResult = gregorianCalendar.dateComponents(componentSet, from: date, in: gregorianCalendar.timeZone)
             let icuResult = icuCalendar.dateComponents(componentSet, from: date, in: icuCalendar.timeZone)
             // The original implementation does not set quarter
@@ -1541,7 +1542,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
 
     func testDateComponentsFromDate() {
         let componentSet = Calendar.ComponentSet([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .calendar])
-        func test(_ date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+        func test(_ date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
             let gregResult = gregorianCalendar.dateComponents(componentSet, from: date, in: gregorianCalendar.timeZone)
             let icuResult = icuCalendar.dateComponents(componentSet, from: date, in: icuCalendar.timeZone)
             // The original implementation does not set quarter
@@ -1565,7 +1566,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
 
     }
     // MARK: - adding
-    func verifyAdding(_ components: DateComponents, to date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, wrap: Bool = false, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+    func verifyAdding(_ components: DateComponents, to date: Date, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, wrap: Bool = false, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
         let added_icu = icuCalendar.date(byAdding: components, to: date, wrappingComponents: wrap)
         let added_greg = gregorianCalendar.date(byAdding: components, to: date, wrappingComponents: wrap)
         guard let added_icu, let added_greg else {
@@ -1583,7 +1584,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
     func testAddComponentsCompatibility_singleField() {
 
         self.continueAfterFailure = false
-        func verify(_ date: Date, wrap: Bool, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+        func verify(_ date: Date, wrap: Bool, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
             for v in stride(from: -100, through: 100, by: 3) {
                 verifyAdding(DateComponents(component: .era, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
                 verifyAdding(DateComponents(component: .year, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
@@ -1639,7 +1640,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
     func testAddComponentsCompatibility_singleField_custom() {
 
         self.continueAfterFailure = false
-        func verify(_ date: Date, wrap: Bool, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+        func verify(_ date: Date, wrap: Bool, icuCalendar: _CalendarICU, gregorianCalendar: _CalendarGregorian, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
             for v in stride(from: -100, through: 100, by: 23) {
                 verifyAdding(DateComponents(component: .era, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)
                 verifyAdding(DateComponents(component: .year, value: v)!, to: date, icuCalendar: icuCalendar, gregorianCalendar: gregorianCalendar, wrap: wrap, message(), file: file, line: line)

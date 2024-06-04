@@ -196,11 +196,11 @@ final class JSONEncoderTests : XCTestCase {
         let timestamp = Date()
 
         // We'll encode a number instead of a date.
-        let encode = { (_ data: Date, _ encoder: Encoder) throws -> Void in
+        let encode = { @Sendable (_ data: Date, _ encoder: Encoder) throws -> Void in
             var container = encoder.singleValueContainer()
             try container.encode(42)
         }
-        let decode = { (_: Decoder) throws -> Date in return timestamp }
+        let decode = { @Sendable (_: Decoder) throws -> Date in return timestamp }
 
         let expectedJSON = "42".data(using: String._Encoding.utf8)!
         _testRoundTrip(of: timestamp,
@@ -219,8 +219,8 @@ final class JSONEncoderTests : XCTestCase {
         let timestamp = Date()
 
         // Encoding nothing should encode an empty keyed container ({}).
-        let encode = { (_: Date, _: Encoder) throws -> Void in }
-        let decode = { (_: Decoder) throws -> Date in return timestamp }
+        let encode = { @Sendable (_: Date, _: Encoder) throws -> Void in }
+        let decode = { @Sendable (_: Decoder) throws -> Date in return timestamp }
 
         let expectedJSON = "{}".data(using: String._Encoding.utf8)!
         _testRoundTrip(of: timestamp,
@@ -254,11 +254,11 @@ final class JSONEncoderTests : XCTestCase {
 
     func testEncodingDataCustom() {
         // We'll encode a number instead of data.
-        let encode = { (_ data: Data, _ encoder: Encoder) throws -> Void in
+        let encode = { @Sendable (_ data: Data, _ encoder: Encoder) throws -> Void in
             var container = encoder.singleValueContainer()
             try container.encode(42)
         }
-        let decode = { (_: Decoder) throws -> Data in return Data() }
+        let decode = { @Sendable (_: Decoder) throws -> Data in return Data() }
 
         let expectedJSON = "42".data(using: String._Encoding.utf8)!
         _testRoundTrip(of: Data(),
@@ -275,8 +275,8 @@ final class JSONEncoderTests : XCTestCase {
 
     func testEncodingDataCustomEmpty() {
         // Encoding nothing should encode an empty keyed container ({}).
-        let encode = { (_: Data, _: Encoder) throws -> Void in }
-        let decode = { (_: Decoder) throws -> Data in return Data() }
+        let encode = { @Sendable (_: Data, _: Encoder) throws -> Void in }
+        let decode = { @Sendable (_: Decoder) throws -> Data in return Data() }
 
         let expectedJSON = "{}".data(using: String._Encoding.utf8)!
         _testRoundTrip(of: Data(),
@@ -379,7 +379,7 @@ final class JSONEncoderTests : XCTestCase {
         let encoded = EncodeMe(keyName: "hello")
 
         let encoder = JSONEncoder()
-        let customKeyConversion = { (_ path : [CodingKey]) -> CodingKey in
+        let customKeyConversion = { @Sendable (_ path : [CodingKey]) -> CodingKey in
             let key = _TestKey(stringValue: "QQQ" + path.last!.stringValue)!
             return key
         }
@@ -413,9 +413,10 @@ final class JSONEncoderTests : XCTestCase {
         let encoded = EncodeNestedNested(outerValue: EncodeNested(nestedValue: EncodeMe(keyName: "helloWorld")))
 
         let encoder = JSONEncoder()
-        var callCount = 0
+        // We only will mutate this from one thread as we call the encoder synchronously
+        nonisolated(unsafe) var callCount = 0
 
-        let customKeyConversion = { (_ path : [CodingKey]) -> CodingKey in
+        let customKeyConversion = { @Sendable (_ path : [CodingKey]) -> CodingKey in
             // This should be called three times:
             // 1. to convert 'outerValue' to something
             // 2. to convert 'nestedValue' to something
@@ -462,7 +463,7 @@ final class JSONEncoderTests : XCTestCase {
     func testDecodingKeyStrategyCustom() {
         let input = "{\"----hello\":\"test\"}".data(using: String._Encoding.utf8)!
         let decoder = JSONDecoder()
-        let customKeyConversion = { (_ path: [CodingKey]) -> CodingKey in
+        let customKeyConversion = { @Sendable (_ path: [CodingKey]) -> CodingKey in
             // This converter removes the first 4 characters from the start of all string keys, if it has more than 4 characters
             let string = path.last!.stringValue
             guard string.count > 4 else { return path.last! }
@@ -539,7 +540,7 @@ final class JSONEncoderTests : XCTestCase {
             }
         }
 
-        let customKeyConversion = { (_ path: [CodingKey]) -> CodingKey in
+        let customKeyConversion = { @Sendable (_ path: [CodingKey]) -> CodingKey in
             // All keys are the same!
             return _TestKey(stringValue: "oneTwo")!
         }

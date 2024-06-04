@@ -38,14 +38,14 @@ final class TestAttributedStringCOW: XCTestCase {
         return str
     }
     
-    func assertCOWCopy(file: StaticString = #file, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
+    func assertCOWCopy(file: StaticString = #filePath, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
         let str = createAttributedString()
         var copy = str
         operation(&copy)
         XCTAssertNotEqual(str, copy, "Mutation operation did not copy when multiple references exist", file: file, line: line)
     }
     
-    func assertCOWNoCopy(file: StaticString = #file, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
+    func assertCOWNoCopy(file: StaticString = #filePath, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
         var str = createAttributedString()
         let gutsPtr = Unmanaged.passUnretained(str._guts)
         operation(&str)
@@ -53,7 +53,7 @@ final class TestAttributedStringCOW: XCTestCase {
         XCTAssertEqual(gutsPtr.toOpaque(), newGutsPtr.toOpaque(), "Mutation operation copied when only one reference exists", file: file, line: line)
     }
     
-    func assertCOWBehavior(file: StaticString = #file, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
+    func assertCOWBehavior(file: StaticString = #filePath, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
         assertCOWCopy(file: file, line: line, operation)
         assertCOWNoCopy(file: file, line: line, operation)
     }
