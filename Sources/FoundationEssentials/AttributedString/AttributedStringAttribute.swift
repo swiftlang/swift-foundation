@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_spi(Unstable) internal import CollectionsInternal
-#else
-internal import _RopeModule
-#endif
-
 // MARK: AttributedStringKey API
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)

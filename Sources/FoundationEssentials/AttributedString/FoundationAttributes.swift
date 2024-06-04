@@ -14,9 +14,6 @@
 
 #if FOUNDATION_FRAMEWORK
 internal import Foundation_Private.NSAttributedString
-@_spi(Unstable) internal import CollectionsInternal
-#else
-internal import _RopeModule
 #endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)

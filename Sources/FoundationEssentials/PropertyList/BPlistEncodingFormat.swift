@@ -21,6 +21,8 @@ internal import _CShims
 internal import CollectionsInternal
 #elseif canImport(OrderedCollections)
 internal import OrderedCollections
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
 #endif
 
 // MARK: - __PlistEncoder
@@ -655,7 +657,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
 
             case array(ContiguousArray<Reference>)
             // Ordered, because some clients are expecting some level of stability from binary plist encoding
-#if canImport(CollectionsInternal) || canImport(OrderedCollections)
+#if canImport(CollectionsInternal) || canImport(OrderedCollections) || canImport(_FoundationCollections)
             case dictionary(OrderedDictionary<Reference,Reference>)
 #else
             case dictionary(Dictionary<Reference,Reference>)
@@ -1059,7 +1061,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             write(sizedInteger: dateAsTimeInterval.bitPattern)
         }
 
-#if canImport(CollectionsInternal) || canImport(OrderedCollections)
+#if canImport(CollectionsInternal) || canImport(OrderedCollections) || canImport(_FoundationCollections)
         mutating func append(_ dictionary: OrderedDictionary<Reference,Reference>) {
             // First write the indexes of the dictionary contents, then write the actual contents to the output in a pre-order traversal.
             append(.dict, count: dictionary.count)

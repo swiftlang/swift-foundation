@@ -23,12 +23,6 @@ import TestSupport
 @testable import Foundation
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@_spi(Unstable) import CollectionsInternal
-#else
-import _RopeModule
-#endif
-
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 final class DateFormatStyleTests : XCTestCase {
     let referenceDate = Date(timeIntervalSinceReferenceDate: 0)
