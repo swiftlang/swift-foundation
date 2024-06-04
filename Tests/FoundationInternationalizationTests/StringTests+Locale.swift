@@ -35,7 +35,7 @@ final class StringLocaleTests: XCTestCase {
         // declared twice on Darwin: once in FoundationInternationalization
         // and once in SDK. Therefore it is ambiguous when building the package
         // on Darwin. Workaround it by testing the internal implementation.
-        func test(_ string: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
+        func test(_ string: String, _ expected: String, file: StaticString = #filePath, line: UInt = #line) {
             XCTAssertEqual(string._capitalized(with: locale), expected, file: file, line: line)
         }
 
@@ -86,7 +86,7 @@ final class StringLocaleTests: XCTestCase {
 
     func testUppercase_localized() {
 
-        func test(_ localeID: String?, _ string: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
+        func test(_ localeID: String?, _ string: String, _ expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let locale: Locale?
             if let localeID {
                 locale = Locale(identifier: localeID)
@@ -129,7 +129,7 @@ final class StringLocaleTests: XCTestCase {
     }
 
     func testLowercase_localized() {
-        func test(_ localeID: String?, _ string: String, _ expected: String, file: StaticString = #file, line: UInt = #line) {
+        func test(_ localeID: String?, _ string: String, _ expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let locale: Locale?
             if let localeID {
                 locale = Locale(identifier: localeID)

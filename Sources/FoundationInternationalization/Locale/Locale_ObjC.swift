@@ -226,7 +226,7 @@ extension NSLocale {
 /// Wraps a Swift `struct Locale` with an `NSLocale`, so that it can be used from Objective-C.
 /// The goal is to forward as much of the implementation as possible into Swift.
 @objc(_NSSwiftLocale)
-internal class _NSSwiftLocale: _NSLocaleBridge {
+internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
     var locale: Locale
 
     internal init(_ locale: Locale) {
@@ -658,8 +658,8 @@ extension Locale {
 
 extension NSLocale.Key {
     // Extra keys used by CoreFoundation
-    static var cfLocaleCollatorID = NSLocale.Key(rawValue: "locale:collator id")
-    static var languageIdentifier = NSLocale.Key(rawValue: "locale:languageIdentifier")
+    static let cfLocaleCollatorID = NSLocale.Key(rawValue: "locale:collator id")
+    static let languageIdentifier = NSLocale.Key(rawValue: "locale:languageIdentifier")
 }
 
 #endif // FOUNDATION_FRAMEWORK

@@ -36,6 +36,16 @@ INTERNAL char * _Nullable * _Nullable _platform_shims_get_environ();
 INTERNAL void _platform_shims_lock_environ();
 INTERNAL void _platform_shims_unlock_environ();
 
+#if __has_include(<mach/vm_page_size.h>)
+#include <mach/vm_page_size.h>
+INTERNAL vm_size_t _platform_shims_vm_size();
+#endif
+
+#if __has_include(<mach/mach.h>)
+#include <mach/mach.h>
+INTERNAL mach_port_t _platform_mach_task_self();
+#endif
+
 #if __has_include(<libkern/OSThermalNotification.h>)
 typedef enum {
 #if TARGET_OS_OSX || TARGET_OS_MACCATALYST

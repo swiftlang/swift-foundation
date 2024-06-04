@@ -598,6 +598,7 @@ internal class __PlistDictionaryReferencingEncoder : __PlistDictionaryEncoder {
     }
 }
 
-internal let _plistNullNSString = NSString(string: _plistNullString)
+// Sendable note: This is an immutable instance of NSString.
+internal nonisolated(unsafe) let _plistNullNSString = NSString(string: _plistNullString)
 
 #endif // FOUNDATION_FRAMEWORK

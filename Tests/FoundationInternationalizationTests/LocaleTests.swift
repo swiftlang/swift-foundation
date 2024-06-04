@@ -135,7 +135,7 @@ final class LocaleTests : XCTestCase {
 
     func test_identifierTypesFromComponents() throws {
 
-        func verify(cldr: String, bcp47: String, icu: String, file: StaticString = #file, line: UInt = #line, _ components: () -> Locale.Components) {
+        func verify(cldr: String, bcp47: String, icu: String, file: StaticString = #filePath, line: UInt = #line, _ components: () -> Locale.Components) {
             let loc = Locale(components: components())
             let types: [Locale.IdentifierType] = [.cldr, .bcp47, .icu]
             let expected = [cldr, bcp47, icu]
@@ -244,7 +244,7 @@ final class LocaleTests : XCTestCase {
         }
     }
 
-    func verify(_ locID: String, cldr: String, bcp47: String, icu: String, file: StaticString = #file, line: UInt = #line) {
+    func verify(_ locID: String, cldr: String, bcp47: String, icu: String, file: StaticString = #filePath, line: UInt = #line) {
         let loc = Locale(identifier: locID)
         let types: [Locale.IdentifierType] = [.cldr, .bcp47, .icu]
         let expected = [cldr, bcp47, icu]
@@ -341,7 +341,7 @@ final class LocaleTests : XCTestCase {
     #endif
 
     func test_identifierCapturingPreferences() {
-        func expectIdentifier(_ localeIdentifier: String, preferences: LocalePreferences, expectedFullIdentifier: String, file: StaticString = #file, line: UInt = #line) {
+        func expectIdentifier(_ localeIdentifier: String, preferences: LocalePreferences, expectedFullIdentifier: String, file: StaticString = #filePath, line: UInt = #line) {
             let locale = Locale.localeAsIfCurrent(name: localeIdentifier, overrides: preferences)
             XCTAssertEqual(locale.identifier, localeIdentifier, file: file, line: line)
             XCTAssertEqual(locale.identifierCapturingPreferences, expectedFullIdentifier, file: file, line: line)
@@ -380,7 +380,7 @@ final class LocaleTests : XCTestCase {
 
 final class LocalePropertiesTests : XCTestCase {
 
-    func _verify(locale: Locale, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, file: StaticString = #file, line: UInt = #line) {
+    func _verify(locale: Locale, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(locale.language.languageCode, language, "languageCode should be equal", file: file, line: line)
         XCTAssertEqual(locale.language.script, script, "script should be equal", file: file, line: line)
         XCTAssertEqual(locale.language.region, languageRegion, "language region should be equal", file: file, line: line)
@@ -397,13 +397,13 @@ final class LocalePropertiesTests : XCTestCase {
         XCTAssertEqual(locale.variant, variant, "variant should be equal", file: file, line: line)
     }
 
-    func verify(_ identifier: String, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, file: StaticString = #file, line: UInt = #line) {
+    func verify(_ identifier: String, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, file: StaticString = #filePath, line: UInt = #line) {
         let loc = Locale(identifier: identifier)
         _verify(locale: loc, expectedLanguage: language, script: script, languageRegion: languageRegion, region: region, subdivision: subdivision, measurementSystem: measurementSystem, calendar: calendar, hourCycle: hourCycle, currency: currency, numberingSystem: numberingSystem, numberingSystems: numberingSystems, firstDayOfWeek: firstDayOfWeek, collation: collation, variant: variant, file: file, line: line)
     }
 
     func test_localeComponentsAndLocale() {
-        func verify(components: Locale.Components, identifier: String, file: StaticString = #file, line: UInt = #line) {
+        func verify(components: Locale.Components, identifier: String, file: StaticString = #filePath, line: UInt = #line) {
             let locFromComponents = Locale(components: components)
             let locFromIdentifier = Locale(identifier: identifier)
             _verify(locale: locFromComponents, expectedLanguage: locFromIdentifier.language.languageCode, script: locFromIdentifier.language.script, languageRegion: locFromIdentifier.language.region, region: locFromIdentifier.region, measurementSystem: locFromIdentifier.measurementSystem, calendar: locFromIdentifier.calendar.identifier, hourCycle: locFromIdentifier.hourCycle, currency: locFromIdentifier.currency, numberingSystem: locFromIdentifier.numberingSystem, numberingSystems: Set(locFromIdentifier.availableNumberingSystems), firstDayOfWeek: locFromIdentifier.firstDayOfWeek, collation: locFromIdentifier.collation, variant: locFromIdentifier.variant, file: file, line: line)
@@ -439,7 +439,7 @@ final class LocalePropertiesTests : XCTestCase {
 
     // Test retrieving user's preference values as set in the system settings
     func test_userPreferenceOverride_hourCycle() {
-        func verifyHourCycle(_ localeID: String, _ expectDefault: Locale.HourCycle, shouldRespectUserPref: Bool, file: StaticString = #file, line: UInt = #line) {
+        func verifyHourCycle(_ localeID: String, _ expectDefault: Locale.HourCycle, shouldRespectUserPref: Bool, file: StaticString = #filePath, line: UInt = #line) {
             let loc = Locale(identifier: localeID)
             XCTAssertEqual(loc.hourCycle, expectDefault,  "default did not match", file: file, line: line)
 
@@ -472,7 +472,7 @@ final class LocalePropertiesTests : XCTestCase {
     }
 
     func test_userPreferenceOverride_measurementSystem() {
-        func verify(_ localeID: String, _ expected: Locale.MeasurementSystem, shouldRespectUserPref: Bool, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ localeID: String, _ expected: Locale.MeasurementSystem, shouldRespectUserPref: Bool, file: StaticString = #filePath, line: UInt = #line) {
             let localeNoPref = Locale.localeAsIfCurrent(name: localeID, overrides: .init())
             XCTAssertEqual(localeNoPref.measurementSystem, expected, file: file, line: line)
 
@@ -586,13 +586,6 @@ final class LocalePropertiesTests : XCTestCase {
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
 
-extension NSLocale {
-    fileprivate static var fakeCurrentLocale: NSLocale = NSLocale.current as NSLocale
-    @objc public class var _swizzledCurrentLocale: NSLocale {
-        return NSLocale.fakeCurrentLocale
-    }
-}
-
 final class LocaleBridgingTests : XCTestCase {
     
     @available(macOS, deprecated: 13)
@@ -692,7 +685,7 @@ final class LocaleBridgingTests : XCTestCase {
 #if FOUNDATION_FRAMEWORK
 extension LocaleTests {
     func test_userPreferenceOverride_firstWeekday() {
-        func verify(_ localeID: String, _ expected: Locale.Weekday, shouldRespectUserPrefForGregorian: Bool, shouldRespectUserPrefForIslamic: Bool, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ localeID: String, _ expected: Locale.Weekday, shouldRespectUserPrefForGregorian: Bool, shouldRespectUserPrefForIslamic: Bool, file: StaticString = #filePath, line: UInt = #line) {
             let localeNoPref = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [:]))
             XCTAssertEqual(localeNoPref.firstDayOfWeek, expected, file: file, line: line)
 

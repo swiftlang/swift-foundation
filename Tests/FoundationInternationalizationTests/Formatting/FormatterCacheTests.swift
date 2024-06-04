@@ -25,14 +25,14 @@ import TestSupport
 
 final class FormatterCacheTests: XCTestCase {
 
-    class TestCacheItem: Equatable {
+    final class TestCacheItem: Equatable, Sendable {
         static func == (lhs: FormatterCacheTests.TestCacheItem, rhs: FormatterCacheTests.TestCacheItem) -> Bool {
             return lhs.value == rhs.value
         }
 
         let value: Int
-        let deinitBlock: () -> Void
-        init(value: Int, deinitBlock: @escaping () -> Void) {
+        let deinitBlock: @Sendable () -> Void
+        init(value: Int, deinitBlock: @Sendable @escaping () -> Void) {
             self.value = value
             self.deinitBlock = deinitBlock
         }

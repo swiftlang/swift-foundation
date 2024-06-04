@@ -513,7 +513,7 @@ class JSONReference {
         case directArray([String])
     }
     
-    var backing: Backing
+    private(set) var backing: Backing
 
     @inline(__always)
     func insert(_ ref: JSONReference, for key: String) {
@@ -595,15 +595,21 @@ class JSONReference {
         return true
     }
 
-    static let null : JSONReference = .init(.null)
+    // Sendable note: this is an immutable singleton
+    static nonisolated(unsafe) let null : JSONReference = .init(.null)
     static func string(_ str: String) -> JSONReference { .init(.string(str)) }
     static func number(_ str: String) -> JSONReference { .init(.number(str)) }
-    static let `true` : JSONReference = .init(.bool(true))
-    static let `false` : JSONReference = .init(.bool(false))
+    
+    // Sendable note: this is an immutable singleton
+    static nonisolated(unsafe) let `true` : JSONReference = .init(.bool(true))
+    
+    // Sendable note: this is an immutable singleton
+    static nonisolated(unsafe) let `false` : JSONReference = .init(.bool(false))
     static func bool(_ b: Bool) -> JSONReference { b ? .true : .false }
     static var emptyArray : JSONReference { .init(.array([])) }
     static var emptyObject : JSONReference { .init(.object([:])) }
 }
+
 
 private struct _JSONEncodingStorage {
     // MARK: Properties

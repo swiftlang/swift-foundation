@@ -124,7 +124,7 @@ final class DateIntervalFormatStyleTests: XCTestCase {
 
         let range = (date..<date + hour)
         let afternoon = (Date(timeIntervalSince1970: 13 * 3600)..<Date(timeIntervalSince1970: 15 * 3600))
-        func verify(date: Date.IntervalFormatStyle.DateStyle? = nil, time: Date.IntervalFormatStyle.TimeStyle, locale: Locale, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func verify(date: Date.IntervalFormatStyle.DateStyle? = nil, time: Date.IntervalFormatStyle.TimeStyle, locale: Locale, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let style = Date.IntervalFormatStyle(date: date, time: time, locale: locale, calendar: calendar, timeZone: timeZone)
 
             XCTAssertEqualIgnoreSeparator(style.format(range), expected, file: file, line: line)
@@ -150,7 +150,7 @@ final class DateIntervalFormatStyleTests: XCTestCase {
         verify(date: .numeric, time: .standard, locale: default24force24, expected: "01/01/2001, 00:00:00 – 01:00:00")
         verify(date: .numeric, time: .standard, locale: default24force12, expected: "01/01/2001, 12:00:00 AM – 1:00:00 AM")
 
-        func verify(_ tests: (locale: Locale, expected: String, expectedAfternoon: String)..., file: StaticString = #file, line: UInt = #line, customStyle: (Date.IntervalFormatStyle) -> (Date.IntervalFormatStyle)) {
+        func verify(_ tests: (locale: Locale, expected: String, expectedAfternoon: String)..., file: StaticString = #filePath, line: UInt = #line, customStyle: (Date.IntervalFormatStyle) -> (Date.IntervalFormatStyle)) {
 
             let style = customStyle(Date.IntervalFormatStyle(locale: enUSLocale, calendar: calendar, timeZone: timeZone))
             for (i, (locale, expected, expectedAfternoon)) in tests.enumerated() {

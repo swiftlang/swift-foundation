@@ -11,8 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 /// A comparison algorithm for a given type.
+@preconcurrency
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
-public protocol SortComparator<Compared>: Hashable {
+public protocol SortComparator<Compared>: Hashable, Sendable {
     /// The type that the `SortComparator` provides a comparison for.
     associatedtype Compared
 
@@ -77,29 +78,26 @@ extension ComparisonResult {
 }
 
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
-package struct AnySortComparator: SortComparator {
-    var _base: Any // internal for testing
-
-    private var hashableBase: AnyHashable
+package struct AnySortComparator: SortComparator, Sendable {
+    var _base: any Hashable & Sendable // internal for testing
 
     /// Takes `base` and two values to be compared and compares the two values
     /// using `base`.
-    private let _compare: (Any, Any, Any) -> ComparisonResult
+    private let _compare: @Sendable (Any, Any, Any) -> ComparisonResult
 
     /// Takes `base` inout, and a new `SortOrder` and changes `base`s `order`
     /// to match the new `SortOrder`.
-    private let setOrder: (inout Any, SortOrder) -> AnyHashable
+    private let setOrder: @Sendable (inout any Hashable & Sendable, SortOrder) -> any Hashable & Sendable
 
     /// Gets the current `order` property of `base`.
-    private let getOrder: (Any) -> SortOrder
+    private let getOrder: @Sendable (Any) -> SortOrder
 
-    package init<Comparator: SortComparator>(_ comparator: Comparator) {
-        self.hashableBase = AnyHashable(comparator)
+    package init<Comparator: SortComparator>(_ comparator: Comparator) where Comparator : Sendable {
         self._base = comparator
         self._compare = { (base: Any, lhs: Any, rhs: Any) -> ComparisonResult in
             (base as! Comparator).compare(lhs as! Comparator.Compared, rhs as! Comparator.Compared)
         }
-        self.setOrder = { (base: inout Any, newOrder: SortOrder) -> AnyHashable in
+        self.setOrder = { (base: inout any Hashable & Sendable, newOrder: SortOrder) -> AnyHashable in
             var typedBase = base as! Comparator
             typedBase.order = newOrder
             base = typedBase
@@ -115,7 +113,7 @@ package struct AnySortComparator: SortComparator {
             return getOrder(_base)
         }
         set {
-            hashableBase = setOrder(&_base, newValue)
+            _base = setOrder(&_base, newValue)
         }
     }
 
@@ -124,11 +122,18 @@ package struct AnySortComparator: SortComparator {
     }
 
     package func hash(into hasher: inout Hasher) {
-        hasher.combine(hashableBase)
+        hasher.combine(_base)
     }
 
     package static func == (lhs: Self, rhs: Self) -> Bool {
-        return lhs.hashableBase == rhs.hashableBase
+        func compare<L : Equatable, R : Equatable>(_ l : L, _ r : R) -> Bool {
+            guard let rr = r as? L else {
+                return false
+            }
+            return l == rr
+        }
+        
+        return compare(lhs, rhs)
     }
 }
 
@@ -163,7 +168,6 @@ public struct ComparableComparator<Compared: Comparable>: SortComparator, Sendab
 /// A comparator which orders optional values using a comparator which
 /// compares the optional's `Wrapped` type. `nil` values are ordered before
 /// non-nil values when `order` is `forward`.
-@available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 package struct OptionalComparator<Base: SortComparator>: SortComparator {
     private var base: Base
 
@@ -185,6 +189,8 @@ package struct OptionalComparator<Base: SortComparator>: SortComparator {
         return base.compare(lhs, rhs)
     }
 }
+
+extension OptionalComparator : Sendable where Base : Sendable { }
 
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 extension Never: SortComparator {

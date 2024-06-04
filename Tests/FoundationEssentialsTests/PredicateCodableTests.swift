@@ -70,7 +70,7 @@ final class PredicateCodableTests: XCTestCase {
         var g: [Int]
         var h: Object2
         
-        static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.Object>] {
+        static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.Object> & Sendable] {
             [
                 "Object.f" : \.f,
                 "Object.g" : \.g,
@@ -85,7 +85,7 @@ final class PredicateCodableTests: XCTestCase {
         var a: Int
         var b: String
         
-        static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.Object2>] {
+        static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.Object2> & Sendable] {
             ["Object2.a" : \.a]
         }
     }
@@ -345,7 +345,7 @@ final class PredicateCodableTests: XCTestCase {
     }
     
     func testMalformedData() {
-        func _malformedDecode<T: PredicateCodingConfigurationProviding>(_ json: String, config: T.Type = StandardConfig.self, reason: String, file: StaticString = #file, line: UInt = #line) {
+        func _malformedDecode<T: PredicateCodingConfigurationProviding>(_ json: String, config: T.Type = StandardConfig.self, reason: String, file: StaticString = #filePath, line: UInt = #line) {
             let data = Data(json.utf8)
             let decoder = JSONDecoder()
             XCTAssertThrowsError(try decoder.decode(CodableConfiguration<Predicate<Object>, T>.self, from: data), file: file, line: line) {

@@ -177,15 +177,28 @@ extension FileManager {
 }
 
 @_nonSendable
-open class FileManager {
+open class FileManager : @unchecked Sendable {
+    // Sendable note: _impl may only be mutated in `init`
     private var _impl: _FileManagerImpl
+    private let _lock = LockedState<State>(initialState: .init(delegate: nil))
     
-    private static var _default = FileManager()
+    private static let _default = FileManager()
     open class var `default`: FileManager {
         _default
     }
     
-    open weak var delegate: (any FileManagerDelegate)?
+    private struct State {
+        weak var delegate: (any FileManagerDelegate)?
+    }
+
+    open weak var delegate: (any FileManagerDelegate)? {
+        get {
+            _lock.withLock { $0.delegate }
+        }
+        set {
+            _lock.withLock { $0.delegate = newValue }
+        }
+    }
     
     public init() {
         _impl = _FileManagerImpl()

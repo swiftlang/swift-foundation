@@ -65,7 +65,7 @@ extension NSUUID : _HasCustomAnyHashableRepresentation {
 }
 
 @objc(__NSConcreteUUID)
-internal class __NSConcreteUUID : _NSUUIDBridge {
+internal class __NSConcreteUUID : _NSUUIDBridge, @unchecked Sendable {
     final var _storage: UUID
 
     fileprivate init(value: Foundation.UUID) {

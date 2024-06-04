@@ -27,7 +27,8 @@ internal func resetAllNumberFormatterCaches() {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal class ICUNumberFormatterBase {
+internal class ICUNumberFormatterBase : @unchecked Sendable {
+    /// `Sendable` notes: ICU's `UNumberFormatter` itself is thread safe. The result type is not, but we create that each time we format.
     internal let uformatter: OpaquePointer
     /// Stored for testing purposes only
     internal let skeleton: String
@@ -219,7 +220,7 @@ internal class ICUNumberFormatterBase {
 
 // MARK: - Integer
 
-final class ICUNumberFormatter : ICUNumberFormatterBase {
+final class ICUNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
     fileprivate struct Signature : Hashable {
         let collection: NumberFormatStyleConfiguration.Collection
         let localeIdentifier: String
@@ -256,7 +257,7 @@ final class ICUNumberFormatter : ICUNumberFormatterBase {
 
 // MARK: - Currency
 
-final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase {
+final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
     fileprivate struct Signature : Hashable {
         let collection: CurrencyFormatStyleConfiguration.Collection
         let currencyCode: String
@@ -305,7 +306,7 @@ final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase {
 
 // MARK: - Integer Percent
 
-final class ICUPercentNumberFormatter : ICUNumberFormatterBase {
+final class ICUPercentNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
     fileprivate struct Signature : Hashable {
         let collection: NumberFormatStyleConfiguration.Collection
         let localeIdentifier: String
@@ -351,7 +352,7 @@ final class ICUPercentNumberFormatter : ICUNumberFormatterBase {
 
 // MARK: - Byte Count
 
-final class ICUByteCountNumberFormatter : ICUNumberFormatterBase {
+final class ICUByteCountNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
     fileprivate struct Signature : Hashable {
         let skeleton: String
         let localeIdentifier: String
@@ -410,7 +411,7 @@ final class ICUByteCountNumberFormatter : ICUNumberFormatterBase {
 
 // MARK: - Measurement
 
-final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase {
+final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
     fileprivate struct Signature : Hashable {
         let skeleton: String
         let localeIdentifier: String

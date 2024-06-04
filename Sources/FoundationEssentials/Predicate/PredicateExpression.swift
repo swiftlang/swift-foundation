@@ -172,7 +172,8 @@ extension PredicateExpressions {
         arg
     }
     
-    public static func build_KeyPath<Root, Value>(root: Root, keyPath: Swift.KeyPath<Root.Output, Value>) -> PredicateExpressions.KeyPath<Root, Value> {
+    @preconcurrency
+    public static func build_KeyPath<Root, Value>(root: Root, keyPath: Swift.KeyPath<Root.Output, Value> & Sendable) -> PredicateExpressions.KeyPath<Root, Value> {
         KeyPath(root: root, keyPath: keyPath)
     }
 

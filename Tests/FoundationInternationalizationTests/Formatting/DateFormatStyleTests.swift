@@ -329,7 +329,7 @@ final class DateFormatStyleTests : XCTestCase {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
 
-        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: String, file: StaticString = #file, line: UInt = #line) {
+        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let locale = Locale.localeAsIfCurrent(name: enUS, overrides: .init(dateFormats: dateFormatOverride))
             let style = Date.FormatStyle(date: dateStyle, time: timeStyle, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
             let formatted = style.format(date)
@@ -418,7 +418,7 @@ final class DateFormatStyleTests : XCTestCase {
 
         var locale: Locale
         var format: Date.FormatStyle
-        func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let fmt = format.locale(locale)
             let formatted = fmt.format(date)
             XCTAssertEqualIgnoreSeparator(formatted, expected, file: file, line: line)
@@ -586,7 +586,7 @@ final class DateFormatStyleTests : XCTestCase {
     @available(FoundationPreview 0.4, *)
     func testRemovingFields() {
         var format: Date.FormatStyle = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
-        func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let formatted = format.format(date)
             XCTAssertEqualIgnoreSeparator(formatted, expected, file: file, line: line)
         }
@@ -692,7 +692,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
         let zhTW = Locale(identifier: "zh_TW")
 
-        func test(_ attributedResult: AttributedString, _ expected: [Segment], file: StaticString = #file, line: UInt = #line) {
+        func test(_ attributedResult: AttributedString, _ expected: [Segment], file: StaticString = #filePath, line: UInt = #line) {
             XCTAssertEqual(attributedResult, expected.attributedString, file: file, line: line)
         }
 
@@ -711,7 +711,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
 
-        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: [Segment], file: StaticString = #file, line: UInt = #line) {
+        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: [Segment], file: StaticString = #filePath, line: UInt = #line) {
             let locale = Locale.localeAsIfCurrent(name: enUS, overrides: .init(dateFormats: dateFormatOverride))
             let style = Date.FormatStyle(date: dateStyle, time: timeStyle, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone).attributed
             XCTAssertEqualIgnoreSeparator(style.format(date), expected.attributedString, file: file, line: line)
@@ -872,7 +872,7 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
 
-        func verify(_ f: Date.FormatString, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ f: Date.FormatString, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)))
             XCTAssertEqual(s, expected, file: file, line: line)
         }
@@ -893,7 +893,7 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
     func testParseable() throws {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
-        func verify(_ f: Date.FormatString, expectedString: String, expectedDate: Date, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ f: Date.FormatString, expectedString: String, expectedDate: Date, file: StaticString = #filePath, line: UInt = #line) {
             let style = Date.VerbatimFormatStyle.verbatim(f, timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian))
             let s = date.formatted(style)
             XCTAssertEqual(s, expectedString)
@@ -915,7 +915,7 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
 
         // dateFormatter.date(from: "1970-01-01 00:00:00")!
         let date = Date(timeIntervalSinceReferenceDate: -978307200.0)
-        func verify(_ f: Date.FormatString, localeID: String, calendarID: Calendar.Identifier, expectedString: String, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ f: Date.FormatString, localeID: String, calendarID: Calendar.Identifier, expectedString: String, file: StaticString = #filePath, line: UInt = #line) {
             let style = Date.VerbatimFormatStyle.verbatim(f, locale: Locale(identifier: localeID), timeZone: .gmt, calendar: Calendar(identifier: calendarID))
 
             let s = date.formatted(style)
@@ -977,7 +977,7 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
     func testAttributedString() throws {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
-        func verify(_ f: Date.FormatString, expected: [Segment], file: StaticString = #file, line: UInt = #line) {
+        func verify(_ f: Date.FormatString, expected: [Segment], file: StaticString = #filePath, line: UInt = #line) {
             let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale:Locale(identifier: "en_US"), timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)).attributed)
             XCTAssertEqual(s, expected.attributedString, file: file, line: line)
         }
@@ -1009,7 +1009,7 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
         let gregorian = Calendar(identifier: .gregorian)
         let enUS = Locale(identifier: "en_US")
 
-        func _verify(_ f: Date.FormatString, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func _verify(_ f: Date.FormatString, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale: enUS, timeZone: utcTimeZone, calendar: gregorian))
             XCTAssertEqual(s, expected, file: file, line: line)
         }
@@ -1073,14 +1073,14 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
     let utcTimeZone = TimeZone(identifier: "UTC")!
     let gregorian = Calendar(identifier: .gregorian)
 
-    func _verifyUTF16String(_ string: String, matches format: Date.FormatString, in range: Range<Int>, expectedUpperBound: Int?, expectedDate: Date?, file: StaticString = #file, line: UInt = #line) {
+    func _verifyUTF16String(_ string: String, matches format: Date.FormatString, in range: Range<Int>, expectedUpperBound: Int?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
         let lower = string.index(string.startIndex, offsetBy: range.lowerBound)
         let upper = string.index(string.startIndex, offsetBy: range.upperBound)
 
         _verifyString(string, matches: format, start: lower, in: lower..<upper, expectedUpperBound: (expectedUpperBound != nil) ? string.index(string.startIndex, offsetBy: expectedUpperBound!) : nil, expectedDate: expectedDate, file: file, line: line)
     }
 
-    func _verifyString(_ string: String, matches format: Date.FormatString, start: String.Index, in range: Range<String.Index>, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #file, line: UInt = #line) {
+    func _verifyString(_ string: String, matches format: Date.FormatString, start: String.Index, in range: Range<String.Index>, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
         let style = Date.VerbatimFormatStyle(format: format, locale: enUS, timeZone: utcTimeZone, calendar: gregorian)
 
         let m = try? style.consuming(string, startingAt: start, in: range)
@@ -1094,7 +1094,7 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
     }
 
     func testMatchFullRanges() {
-        func verify(_ string: String, matches format: Date.FormatString, expectedDate: TimeInterval?, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ string: String, matches format: Date.FormatString, expectedDate: TimeInterval?, file: StaticString = #filePath, line: UInt = #line) {
             let targetDate: Date? = (expectedDate != nil) ? Date(timeIntervalSinceReferenceDate: expectedDate!) : nil
             _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: (expectedDate != nil) ? string.endIndex: nil, expectedDate: targetDate, file: file, line: line)
         }
@@ -1140,7 +1140,7 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
 #if FOUNDATION_FRAMEWORK
     // Disabled in package because _range is imported twice, once from Essentials, once from Internationalization
     func testMatchPartialRangesFromBeginning() {
-        func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, file: StaticString = #filePath, line: UInt = #line) {
             let occurrenceRange = string._range(of: expectedMatch, anchored: false, backwards: false)!
             _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), file: file, line: line)
         }
@@ -1156,7 +1156,7 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
 #endif
 
     func testMatchPartialRangesWithinLegitimateString() {
-        func verify(_ string: String, in range: Range<Int>,  matches format: Date.FormatString, expectedDate: TimeInterval, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ string: String, in range: Range<Int>,  matches format: Date.FormatString, expectedDate: TimeInterval, file: StaticString = #filePath, line: UInt = #line) {
             _verifyUTF16String(string, matches: format, in: range, expectedUpperBound: range.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), file: file, line: line)
         }
 
@@ -1169,7 +1169,7 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
     func testDateFormatStyleMatchRoundtrip() {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
-        func verify(_ formatStyle: Date.FormatStyle, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ formatStyle: Date.FormatStyle, file: StaticString = #filePath, line: UInt = #line) {
             var format = formatStyle
             format.calendar = gregorian
             format.timeZone = utcTimeZone
@@ -1216,7 +1216,7 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
     }
 
     func testMatchPartialRangesFromMiddle() {
-        func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, file: StaticString = #file, line: UInt = #line) {
+        func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, file: StaticString = #filePath, line: UInt = #line) {
             let occurrenceRange = string.range(of: expectedMatch)!
             _verifyString(string, matches: format, start: occurrenceRange.lowerBound, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), file: file, line: line)
         }
@@ -1324,7 +1324,7 @@ extension DateFormatStyleTests {
 
     }
 
-    func _verify(_ style: Date.FormatStyle, expectedFormat: String, locale: Locale, file: StaticString = #file, line: UInt = #line) {
+    func _verify(_ style: Date.FormatStyle, expectedFormat: String, locale: Locale, file: StaticString = #filePath, line: UInt = #line) {
         var style = style
         let timeZone = TimeZone(secondsFromGMT: -3600)!
         style.timeZone = timeZone

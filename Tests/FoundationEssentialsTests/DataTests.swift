@@ -603,7 +603,7 @@ class DataTests : XCTestCase {
             func assertFirstRange(_ data: Data, _ fragment: Data, range: ClosedRange<Int>? = nil,
                                   expectedStartIndex: Int?,
                                   _ message: @autoclosure () -> String = "",
-                                  file: StaticString = #file, line: UInt = #line) {
+                                  file: StaticString = #filePath, line: UInt = #line) {
                 if let index = expectedStartIndex {
                     let expectedRange: Range<Int> = index..<(index + fragment.count)
                     if let someRange = range {
@@ -645,7 +645,7 @@ class DataTests : XCTestCase {
             func assertLastRange(_ data: Data, _ fragment: Data, range: ClosedRange<Int>? = nil,
                                  expectedStartIndex: Int?,
                                  _ message: @autoclosure () -> String = "",
-                                 file: StaticString = #file, line: UInt = #line) {
+                                 file: StaticString = #filePath, line: UInt = #line) {
                 if let index = expectedStartIndex {
                     let expectedRange: Range<Int> = index..<(index + fragment.count)
                     if let someRange = range {

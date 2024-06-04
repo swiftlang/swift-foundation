@@ -20,12 +20,12 @@ import FoundationEssentials
 
 extension Optional {
     @available(*, unavailable, message: "Use XCTUnwrap() instead")
-    func unwrapped(_ fn: String = #function, file: StaticString = #file, line: UInt = #line) throws -> Wrapped {
+    func unwrapped(_ fn: String = #function, file: StaticString = #filePath, line: UInt = #line) throws -> Wrapped {
         return try XCTUnwrap(self, file: file, line: line)
     }
 }
 
-func expectThrows<Error: Swift.Error & Equatable>(_ expectedError: Error, _ test: () throws -> Void, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+func expectThrows<Error: Swift.Error & Equatable>(_ expectedError: Error, _ test: () throws -> Void, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
     var caught = false
     do {
         try test()
@@ -39,31 +39,31 @@ func expectThrows<Error: Swift.Error & Equatable>(_ expectedError: Error, _ test
     XCTAssert(caught, "No error thrown -- \(message())", file: file, line: line)
 }
 
-func expectDoesNotThrow(_ test: () throws -> Void, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+func expectDoesNotThrow(_ test: () throws -> Void, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertNoThrow(try test(), message(), file: file, line: line)
 }
 
-func expectTrue(_ actual: Bool, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+func expectTrue(_ actual: Bool, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertTrue(actual, message(), file: file, line: line)
 }
 
-func expectFalse(_ actual: Bool, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+func expectFalse(_ actual: Bool, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertFalse(actual, message(), file: file, line: line)
 }
 
-public func expectEqual<T: Equatable>(_ expected: T, _ actual: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+public func expectEqual<T: Equatable>(_ expected: T, _ actual: T, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertEqual(expected, actual, message(), file: file, line: line)
 }
 
-public func expectNotEqual<T: Equatable>(_ expected: T, _ actual: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+public func expectNotEqual<T: Equatable>(_ expected: T, _ actual: T, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertNotEqual(expected, actual, message(), file: file, line: line)
 }
 
-public func expectEqual<T: FloatingPoint>(_ expected: T, _ actual: T, within: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+public func expectEqual<T: FloatingPoint>(_ expected: T, _ actual: T, within: T, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertEqual(expected, actual, accuracy: within, message(), file: file, line: line)
 }
 
-public func expectEqual<T: FloatingPoint>(_ expected: T?, _ actual: T, within: T, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+public func expectEqual<T: FloatingPoint>(_ expected: T?, _ actual: T, within: T, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertNotNil(expected, message(), file: file, line: line)
     if let expected = expected {
         XCTAssertEqual(expected, actual, accuracy: within, message(), file: file, line: line)
@@ -74,7 +74,7 @@ public func expectEqual(
     _ expected: Any.Type,
     _ actual: Any.Type,
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
 ) {
     XCTAssertTrue(expected == actual, message(), file: file, line: line)
@@ -102,13 +102,13 @@ public func expectEqualSequence< Expected: Sequence, Actual: Sequence>(
     }
 }
 
-func expectEqual(_ actual: Date, _ expected: Date , within: Double = 0.001, file: StaticString = #file, line: UInt = #line) {
+func expectEqual(_ actual: Date, _ expected: Date , within: Double = 0.001, file: StaticString = #filePath, line: UInt = #line) {
     let debugDescription = "\nactual: \(actual.formatted(.iso8601));\nexpected: \(expected.formatted(.iso8601))"
     XCTAssertEqual(actual.timeIntervalSinceReferenceDate, expected.timeIntervalSinceReferenceDate, accuracy: within, debugDescription, file: file, line: line)
 }
 
 // Compare two date components like the original equality, but compares nanosecond within a reasonable epsilon, and optionally ignores quarter and calendar equality since they were often not supported in the original implementation
-public func expectEqual(_ first: DateComponents, _ second: DateComponents, within nanosecondAccuracy: Int = 5000, expectQuarter: Bool = true, expectCalendar: Bool = true, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line) {
+public func expectEqual(_ first: DateComponents, _ second: DateComponents, within nanosecondAccuracy: Int = 5000, expectQuarter: Bool = true, expectCalendar: Bool = true, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertEqual(first.era, second.era, message(), file: file, line: line)
     XCTAssertEqual(first.year, second.year, message(), file: file, line: line)
     XCTAssertEqual(first.month, second.month, message(), file: file, line: line)
@@ -142,7 +142,7 @@ public func expectEqual(_ first: DateComponents, _ second: DateComponents, withi
 
 }
 
-func expectChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line, _ expression: () throws -> ()) rethrows {
+func expectChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line, _ expression: () throws -> ()) rethrows {
     let valueBefore = check()
     try expression()
     let valueAfter = check()
@@ -153,7 +153,7 @@ func expectChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by differenc
     }
 }
 
-func expectNoChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #file, line: UInt = #line, _ expression: () throws -> ()) rethrows {
+func expectNoChanges<T: BinaryInteger>(_ check: @autoclosure () -> T, by difference: T? = nil, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line, _ expression: () throws -> ()) rethrows {
     let valueBefore = check()
     try expression()
     let valueAfter = check()
@@ -175,7 +175,7 @@ public func checkEquatable<Instances: Collection>(
     oracle: (Instances.Index, Instances.Index) -> Bool,
     allowBrokenTransitivity: Bool = false,
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
 ) where Instances.Element: Equatable {
     let indices = Array(instances.indices)
@@ -201,7 +201,7 @@ internal func _checkEquatableImpl<Instance : Equatable>(
     oracle: (Int, Int) -> Bool,
     allowBrokenTransitivity: Bool = false,
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
 ) {
     // For each index (which corresponds to an instance being tested) track the
@@ -285,7 +285,7 @@ public func checkHashable<Instances: Collection>(
     equalityOracle: (Instances.Index, Instances.Index) -> Bool,
     allowIncompleteHashing: Bool = false,
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #file, line: UInt = #line
+    file: StaticString = #filePath, line: UInt = #line
 ) where Instances.Element: Hashable {
     checkHashable(
         instances,
@@ -304,7 +304,7 @@ public func checkHashable<Instances: Collection>(
     hashEqualityOracle: (Instances.Index, Instances.Index) -> Bool,
     allowIncompleteHashing: Bool = false,
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #file, line: UInt = #line
+    file: StaticString = #filePath, line: UInt = #line
 ) where Instances.Element: Hashable {
 
     checkEquatable(
@@ -394,7 +394,7 @@ public func checkHashableGroups<Groups: Collection>(
     _ groups: Groups,
     _ message: @autoclosure () -> String = "",
     allowIncompleteHashing: Bool = false,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
 ) where Groups.Element: Collection, Groups.Element.Element: Hashable {
     let instances = groups.flatMap { $0 }

@@ -25,6 +25,9 @@ import RegexBuilder
 macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
 #endif
 
+// Work around an issue issue on older Swift compilers
+#if compiler(>=6.0)
+
 final class PredicateTests: XCTestCase {
     
     override func setUp() async throws {
@@ -251,11 +254,8 @@ final class PredicateTests: XCTestCase {
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     func testLazyDefaultValueSubscript() throws {
         struct Foo : Codable, Sendable {
-            static var num = 1
-            
             var property: Int {
-                defer { Foo.num += 1 }
-                return Foo.num
+                fatalError("This property should not have been accessed")
             }
         }
         
@@ -264,7 +264,6 @@ final class PredicateTests: XCTestCase {
             $0["key", default: foo.property] == 1
         }
         XCTAssertFalse(try predicate.evaluate(["key" : 2]))
-        XCTAssertEqual(Foo.num, 1)
     }
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
@@ -466,3 +465,5 @@ final class PredicateTests: XCTestCase {
         }
     }
 }
+
+#endif // compiler(>=6.0)

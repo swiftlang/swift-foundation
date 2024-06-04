@@ -45,7 +45,7 @@ final class TestAttributedString: XCTestCase {
         }
     }
 
-    func verifyAttributes<T>(_ runs: AttributedString.Runs.AttributesSlice1<T>, string: AttributedString, expectation: [(String, T.Value?)]) {
+    func verifyAttributes<T>(_ runs: AttributedString.Runs.AttributesSlice1<T>, string: AttributedString, expectation: [(String, T.Value?)]) where T.Value : Sendable {
         // Test that the attribute is correct when iterating through attribute runs
         var expectIterator = expectation.makeIterator()
         for (attribute, range) in runs {
@@ -65,7 +65,7 @@ final class TestAttributedString: XCTestCase {
         XCTAssertNil(expectIterator.next(), "Additional runs expected but not found")
     }
 
-    func verifyAttributes<T, U>(_ runs: AttributedString.Runs.AttributesSlice2<T, U>, string: AttributedString, expectation: [(String, T.Value?, U.Value?)]) {
+    func verifyAttributes<T, U>(_ runs: AttributedString.Runs.AttributesSlice2<T, U>, string: AttributedString, expectation: [(String, T.Value?, U.Value?)]) where T.Value : Sendable, U.Value : Sendable {
         // Test that the attributes are correct when iterating through attribute runs
         var expectIterator = expectation.makeIterator()
         for (attribute, attribute2, range) in runs {
@@ -88,7 +88,7 @@ final class TestAttributedString: XCTestCase {
     }
     
 #if FOUNDATION_FRAMEWORK
-    func verifyAttributes(_ runs: AttributedString.Runs.NSAttributesSlice, string: AttributedString, expectation: [(String, AttributeContainer)], file: StaticString = #file, line: UInt = #line) {
+    func verifyAttributes(_ runs: AttributedString.Runs.NSAttributesSlice, string: AttributedString, expectation: [(String, AttributeContainer)], file: StaticString = #filePath, line: UInt = #line) {
         // Test that the attribute is correct when iterating through attribute runs
         var expectIterator = expectation.makeIterator()
         for (attribute, range) in runs {
@@ -1213,7 +1213,7 @@ E {
     func testCodingErrorsPropagateUpToCallSite() {
         enum CustomAttribute : CodableAttributedStringKey {
             typealias Value = String
-            static var name = "CustomAttribute"
+            static let name = "CustomAttribute"
             
             static func encode(_ value: Value, to encoder: Encoder) throws {
                 throw TestError.encodingError
@@ -1243,7 +1243,7 @@ E {
     func testEncodeWithPartiallyCodableScope() throws {
         enum NonCodableAttribute : AttributedStringKey {
             typealias Value = Int
-            static var name = "NonCodableAttributes"
+            static let name = "NonCodableAttributes"
         }
         struct PartialCodableScope : AttributeScope {
             var codableAttr : AttributeScopes.TestAttributes.TestIntAttribute
@@ -1637,7 +1637,7 @@ E {
                 var subValue: String
             }
             typealias ObjectiveCValue = NSString
-            static var name = "Convertible"
+            static let name = "Convertible"
             
             static func objectiveCValue(for value: Value) throws -> NSString {
                 return value.subValue as NSString
@@ -1689,7 +1689,7 @@ E {
         
         // Ensure attributes that throw are dropped
         enum Attribute : ObjectiveCConvertibleAttributedStringKey {
-            static var name = "TestAttribute"
+            static let name = "TestAttribute"
             typealias Value = Int
             typealias ObjectiveCValue = NSString
             

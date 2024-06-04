@@ -11,9 +11,9 @@
 
 // Import for POSIXErrorCode
 #if canImport(Glibc)
-import Glibc 
+@preconcurrency import Glibc 
 #elseif canImport(Darwin)
-import Darwin
+@preconcurrency import Darwin
 #elseif os(Windows)
 import CRT
 import WinSDK
@@ -46,7 +46,7 @@ extension POSIXErrorCode : _ErrorCodeProtocol {
 #else
 
 /// Describes an error in the POSIX error domain.
-public struct POSIXError : Error, Hashable {
+public struct POSIXError : Error, Hashable, Sendable {
     public let code: Code
 
     public static var errorDomain: String { return "NSPOSIXErrorDomain" }

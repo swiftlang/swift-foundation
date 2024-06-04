@@ -17,7 +17,7 @@ import FoundationEssentials
 internal import _FoundationICU
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal final class ICURelativeDateFormatter {
+internal final class ICURelativeDateFormatter : @unchecked Sendable {
     struct Signature : Hashable {
         let localeIdentifier: String
         let numberFormatStyle: UNumberFormatStyle.RawValue?
@@ -37,6 +37,7 @@ internal final class ICURelativeDateFormatter {
         .second: .second
     ]
 
+    /// `Sendable` notes: `ureldatefmt_format` is thread safe after initialization.
     let uformatter: OpaquePointer
 
     internal static let cache = FormatterCache<Signature, ICURelativeDateFormatter?>()

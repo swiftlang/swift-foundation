@@ -120,7 +120,7 @@ extension DiagnosticTest {
     }
 }
 
-func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String = "TestModule", testFileName: String = "test.swift", _ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], file: StaticString = #file, line: UInt = #line) {
+func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String = "TestModule", testFileName: String = "test.swift", _ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], file: StaticString = #filePath, line: UInt = #line) {
     let context = BasicMacroExpansionContext()
     let origSourceFile = Parser.parse(source: source)
     let expandedSourceFile: Syntax
@@ -146,7 +146,7 @@ func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String 
     }
 }
 
-func AssertPredicateExpansion(_ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], file: StaticString = #file, line: UInt = #line) {
+func AssertPredicateExpansion(_ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], file: StaticString = #filePath, line: UInt = #line) {
     AssertMacroExpansion(
         macros: ["Predicate": PredicateMacro.self],
         source,

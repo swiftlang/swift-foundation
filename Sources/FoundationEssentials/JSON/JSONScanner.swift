@@ -127,7 +127,7 @@ internal class JSONMap {
 
     @inline(__always)
     func withBuffer<T>(
-      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T
+      for region: Region, perform closure: @Sendable (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws -> T
     ) rethrows -> T {
         try dataLock.withLock {
             return try closure($0.buffer[region], $0.buffer)

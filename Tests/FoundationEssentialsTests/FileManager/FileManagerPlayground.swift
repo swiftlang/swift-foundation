@@ -100,7 +100,7 @@ struct FileManagerPlayground {
         self.directory = Directory("FileManagerPlayground_\(UUID().uuidString)", contentsClosure)
     }
     
-    func test(captureDelegateCalls: Bool = false, file: StaticString = #file, line: UInt = #line, _ tester: (FileManager) throws -> Void) throws {
+    func test(captureDelegateCalls: Bool = false, file: StaticString = #filePath, line: UInt = #line, _ tester: (FileManager) throws -> Void) throws {
         let capturingDelegate = CapturingFileManagerDelegate()
         try withExtendedLifetime(capturingDelegate) {
             let fileManager = FileManager()

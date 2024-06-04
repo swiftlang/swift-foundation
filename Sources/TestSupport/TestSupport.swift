@@ -234,7 +234,7 @@ public typealias URLQueryItem = FoundationEssentials.URLQueryItem
 
 /// ICU uses `\u{202f}` and `\u{020f}` interchangeably.
 /// This function compares two strings ignoring the separator.
-public func XCTAssertEqualIgnoreSeparator(_ lhs: String, _ rhs: String, file: StaticString = #file, line: UInt = #line) {
+public func XCTAssertEqualIgnoreSeparator(_ lhs: String, _ rhs: String, file: StaticString = #filePath, line: UInt = #line) {
     return XCTAssertEqual(
         lhs.normalizingICUSeparator(),
         rhs.normalizingICUSeparator(),
@@ -245,7 +245,7 @@ public func XCTAssertEqualIgnoreSeparator(_ lhs: String, _ rhs: String, file: St
 
 /// ICU uses `\u{202f}` and `\u{020f}` interchangeably.
 /// This function compares two attributed strings ignoring the separator.
-public func XCTAssertEqualIgnoreSeparator(_ lhs: AttributedString, _ rhs: AttributedString, file: StaticString = #file, line: UInt = #line) {
+public func XCTAssertEqualIgnoreSeparator(_ lhs: AttributedString, _ rhs: AttributedString, file: StaticString = #filePath, line: UInt = #line) {
     return XCTAssertEqual(lhs.normalizingICUSeparator(), rhs.normalizingICUSeparator(), file: file, line: line)
 }
 

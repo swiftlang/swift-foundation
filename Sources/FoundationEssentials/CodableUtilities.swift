@@ -21,7 +21,7 @@ import Glibc
 //===----------------------------------------------------------------------===//
 
 // This construction allows overall fewer and smaller allocations as the coding path is modified.
-internal enum _CodingPathNode {
+internal enum _CodingPathNode : Sendable {
     case root
     indirect case node(CodingKey, _CodingPathNode, depth: Int)
     indirect case indexNode(Int, _CodingPathNode, depth: Int)

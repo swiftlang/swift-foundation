@@ -9,20 +9,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal import _CShims
+
 #if canImport(Darwin)
 import Darwin
 internal import MachO.dyld
 
-fileprivate var _pageSize: Int {
-    Int(vm_page_size)
-}
+fileprivate let _pageSize: Int = {
+    Int(_platform_shims_vm_size())
+}()
 #elseif canImport(WinSDK)
 import WinSDK
-fileprivate var _pageSize: Int {
+fileprivate let _pageSize: Int = {
     var sysInfo: SYSTEM_INFO = SYSTEM_INFO()
     GetSystemInfo(&sysInfo)
     return Int(sysInfo.dwPageSize)
-}
+}()
 #elseif os(WASI)
 // WebAssembly defines a fixed page size
 fileprivate let _pageSize: Int = 65_536
@@ -37,7 +39,6 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 internal import CoreFoundation_Private
 #endif
 
-internal import _CShims
 
 package struct Platform {
     static var pageSize: Int {
@@ -59,7 +60,7 @@ package struct Platform {
     static func copyMemoryPages(_ source: UnsafeRawPointer, _ dest: UnsafeMutableRawPointer, _ length: Int) {
 #if canImport(Darwin)
         if vm_copy(
-            mach_task_self_,
+            _platform_mach_task_self(),
             vm_address_t(UInt(bitPattern: source)),
             vm_size_t(length),
             vm_address_t(UInt(bitPattern: dest))) != KERN_SUCCESS {
@@ -86,7 +87,7 @@ private func _getSVUID() -> uid_t? {
     return kinfo.kp_eproc.e_pcred.p_svuid
 }
 
-private var _canChangeUIDs: Bool = {
+private let _canChangeUIDs: Bool = {
     let euid = geteuid()
     let uid = getuid()
     let svuid = _getSVUID()
@@ -103,7 +104,7 @@ private func _lookupUGIDs() -> (uid_t, gid_t) {
     return (uRes, gRes)
 }
 
-private var _cachedUGIDs: (uid_t, gid_t) = {
+private let _cachedUGIDs: (uid_t, gid_t) = {
     _lookupUGIDs()
 }()
 #endif

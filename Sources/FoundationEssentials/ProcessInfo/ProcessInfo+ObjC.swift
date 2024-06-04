@@ -16,12 +16,12 @@ internal import MachO_Private.dyld
 internal import CoreFoundation_Private
 
 @objc(_NSSwiftProcessInfo)
-internal final class _NSSwiftProcessInfo: ProcessInfo {
+internal final class _NSSwiftProcessInfo: ProcessInfo, @unchecked Sendable {
 
     private static let _shared: _NSSwiftProcessInfo = _NSSwiftProcessInfo()
 
     internal static let _globalState: LockedState<GlobalState> = .init(initialState: .init())
-    internal var _state: LockedState<State>
+    internal let _state: LockedState<State>
     private let _processInfo: _ProcessInfo
 
     override static var processInfo: ProcessInfo {

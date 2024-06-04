@@ -58,7 +58,7 @@ final class TimeZoneTests : XCTestCase {
     }
 
     func testLocalizedName_103036605() {
-        func test(_ tzIdentifier: String, _ localeIdentifier: String, _ style: TimeZone.NameStyle, _ expected: String?, file: StaticString = #file, line: UInt = #line) {
+        func test(_ tzIdentifier: String, _ localeIdentifier: String, _ style: TimeZone.NameStyle, _ expected: String?, file: StaticString = #filePath, line: UInt = #line) {
             let tz = TimeZone(identifier: tzIdentifier)
             guard let expected else {
                 XCTAssertNil(tz, file: file, line: line)
@@ -93,7 +93,7 @@ final class TimeZoneTests : XCTestCase {
 
     func testTimeZoneName_103097012() {
 
-        func _verify(_ tz: TimeZone?, _ expectedOffset: Int?, _ createdId: String?, file: StaticString = #file, line: UInt = #line) {
+        func _verify(_ tz: TimeZone?, _ expectedOffset: Int?, _ createdId: String?, file: StaticString = #filePath, line: UInt = #line) {
             if let expectedOffset {
                 XCTAssertNotNil(tz, file: file, line: line)
                 XCTAssertEqual(tz!.secondsFromGMT(for: Date(timeIntervalSince1970: 0)), expectedOffset, file: file, line: line)
@@ -103,11 +103,11 @@ final class TimeZoneTests : XCTestCase {
             }
         }
 
-        func testIdentifier(_ tzID: String, _ expectedOffset: Int?, _ createdId: String?, file: StaticString = #file, line: UInt = #line) {
+        func testIdentifier(_ tzID: String, _ expectedOffset: Int?, _ createdId: String?, file: StaticString = #filePath, line: UInt = #line) {
             _verify(TimeZone(identifier: tzID), expectedOffset, createdId, file: file, line: line)
         }
 
-        func testAbbreviation(_ abb: String, _ expectedOffset: Int?, _ createdId: String?, file: StaticString = #file, line: UInt = #line) {
+        func testAbbreviation(_ abb: String, _ expectedOffset: Int?, _ createdId: String?, file: StaticString = #filePath, line: UInt = #line) {
             _verify(TimeZone(abbreviation: abb), expectedOffset, createdId, file: file, line: line)
 
         }
@@ -216,7 +216,7 @@ final class TimeZoneICUTests: XCTestCase {
 
         var gmt_calendar = Calendar(identifier: .gregorian)
         gmt_calendar.timeZone = .gmt
-        func test(_ dateComponent: DateComponents, expectedRawOffset: Int, expectedDSTOffset: TimeInterval, file: StaticString = #file, line: UInt = #line) {
+        func test(_ dateComponent: DateComponents, expectedRawOffset: Int, expectedDSTOffset: TimeInterval, file: StaticString = #filePath, line: UInt = #line) {
             let d = gmt_calendar.date(from: dateComponent)! // date in GMT
             let (rawOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: d)
             XCTAssertEqual(rawOffset, expectedRawOffset, file: file, line: line)

@@ -29,7 +29,7 @@ extension FileManager {
     }
 }
 
-private struct DelegateCaptures : Equatable {
+private struct DelegateCaptures : Equatable, Sendable {
     struct Operation : Equatable, CustomStringConvertible {
         let src: String
         let dst: String?
@@ -80,8 +80,9 @@ private struct DelegateCaptures : Equatable {
 }
 
 #if FOUNDATION_FRAMEWORK
-class CapturingFileManagerDelegate : NSObject, FileManagerDelegate {
-    fileprivate var captures = DelegateCaptures()
+class CapturingFileManagerDelegate : NSObject, FileManagerDelegate, @unchecked Sendable {
+    // Sendable note: This is only used on one thread during testing
+    fileprivate nonisolated(unsafe) var captures = DelegateCaptures()
     
     func fileManager(_ fileManager: FileManager, shouldCopyItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldCopy.append(.init(srcPath, dstPath))
@@ -124,8 +125,9 @@ class CapturingFileManagerDelegate : NSObject, FileManagerDelegate {
     }
 }
 #else
-class CapturingFileManagerDelegate : FileManagerDelegate {
-    fileprivate var captures = DelegateCaptures()
+final class CapturingFileManagerDelegate : FileManagerDelegate, Sendable {
+    // Sendable note: This is only used on one thread during testing
+    fileprivate nonisolated(unsafe) var captures = DelegateCaptures()
     
     func fileManager(_ fileManager: FileManager, shouldCopyItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldCopy.append(.init(srcPath, dstPath))
@@ -688,7 +690,7 @@ final class FileManagerTests : XCTestCase {
     #endif
     
     func testSearchPaths() throws {
-        func assertSearchPaths(_ directories: [FileManager.SearchPathDirectory], exists: Bool, file: StaticString = #file, line: UInt = #line) {
+        func assertSearchPaths(_ directories: [FileManager.SearchPathDirectory], exists: Bool, file: StaticString = #filePath, line: UInt = #line) {
             for directory in directories {
                 let paths = FileManager.default.urls(for: directory, in: .allDomainsMask)
                 XCTAssertEqual(!paths.isEmpty, exists, "Directory \(directory) produced an unexpected number of paths (expected to exist: \(exists), produced: \(paths))", file: file, line: line)
@@ -784,7 +786,7 @@ final class FileManagerTests : XCTestCase {
             }
             #endif
             
-            func validate(_ key: String, suffix: String? = nil, directory: FileManager.SearchPathDirectory, domain: FileManager.SearchPathDomainMask, file: StaticString = #file, line: UInt = #line) {
+            func validate(_ key: String, suffix: String? = nil, directory: FileManager.SearchPathDirectory, domain: FileManager.SearchPathDomainMask, file: StaticString = #filePath, line: UInt = #line) {
                 let oldValue = ProcessInfo.processInfo.environment[key] ?? ""
                 var knownPath = fileManager.currentDirectoryPath.appendingPathComponent("TestPath")
                 setenv(key, knownPath, 1)

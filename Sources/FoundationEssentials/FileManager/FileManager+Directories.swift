@@ -28,11 +28,8 @@ import WinSDK
 internal import _CShims
 
 #if FOUNDATION_FRAMEWORK
-var _shouldLog: Bool = {
-    UserDefaults.standard.bool(forKey: "NSLogSpecialFolderRecreation")
-}()
 func _LogSpecialFolderRecreation(_ fileManager: FileManager, _ path: String) {
-    if _shouldLog && !fileManager.fileExists(atPath: path) {
+    if UserDefaults.standard.bool(forKey: "NSLogSpecialFolderRecreation") && !fileManager.fileExists(atPath: path) {
         Logger().info("*** Application: \(Bundle.main.bundleIdentifier ?? "(null)") just recreated special folder: \(path)")
     }
 }

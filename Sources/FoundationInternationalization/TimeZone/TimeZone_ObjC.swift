@@ -130,7 +130,7 @@ extension NSTimeZone {
 
 /// Wraps a Swift `struct TimeZone` with an `NSTimeZone` so it can be used from Objective-C. The goal here is to forward as much of the meaningful implementation as possible to Swift.
 @objc(_NSSwiftTimeZone)
-final class _NSSwiftTimeZone: _NSTimeZoneBridge {
+final class _NSSwiftTimeZone: _NSTimeZoneBridge, @unchecked Sendable {
     var timeZone: TimeZone
     struct State {
         var data: Data?

@@ -26,7 +26,7 @@ final class ICUPatternGeneratorTests: XCTestCase {
 
         var locale: Locale
         var calendar: Calendar
-        func test(symbols: Date.FormatStyle.DateFieldCollection, expectedPattern: String, file: StaticString = #file, line: UInt = #line) {
+        func test(symbols: Date.FormatStyle.DateFieldCollection, expectedPattern: String, file: StaticString = #filePath, line: UInt = #line) {
             let pattern = ICUPatternGenerator.localizedPattern(symbols: symbols, locale: locale, calendar: calendar)
             XCTAssertEqualIgnoreSeparator(pattern, expectedPattern, file: file, line: line)
 

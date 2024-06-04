@@ -67,7 +67,7 @@ final class DateRelativeFormatStyleTests: XCTestCase {
     func testNamedStyleRounding() throws {
         let named = Date.RelativeFormatStyle(presentation: .named, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let date = Date(timeIntervalSinceReferenceDate: dateValue)
             let refDate = Date(timeIntervalSinceReferenceDate: relativeTo)
             let formatted = named._format(date, refDate: refDate)
@@ -189,7 +189,7 @@ final class DateRelativeFormatStyleTests: XCTestCase {
     func testNumericStyleRounding() throws {
         let numeric = Date.RelativeFormatStyle(presentation: .numeric, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let date = Date(timeIntervalSinceReferenceDate: dateValue)
             let refDate = Date(timeIntervalSinceReferenceDate: relativeTo)
             let formatted = numeric._format(date, refDate: refDate)
@@ -332,7 +332,7 @@ final class DateRelativeFormatStyleTests: XCTestCase {
     func testAllowedFieldsNamed() throws {
         var named = Date.RelativeFormatStyle(presentation: .named, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let date = try! Date.ISO8601FormatStyle().parse(dateStr)
             let refDate = try! Date.ISO8601FormatStyle().parse(relativeTo)
             let formatted = named._format(date, refDate: refDate)
@@ -366,7 +366,7 @@ final class DateRelativeFormatStyleTests: XCTestCase {
     func testAllowedFieldsNumeric() throws {
         var named = Date.RelativeFormatStyle(presentation: .numeric, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, file: StaticString = #file, line: UInt = #line) {
+        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let date = try! Date.ISO8601FormatStyle().parse(dateStr)
             let refDate = try! Date.ISO8601FormatStyle().parse(relativeTo)
             let formatted = named._format(date, refDate: refDate)

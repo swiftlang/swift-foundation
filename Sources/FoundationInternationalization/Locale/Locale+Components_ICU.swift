@@ -180,7 +180,7 @@ extension Locale.LanguageCode {
     }
     
     // This is sorted
-    internal static var _isoLanguageCodeStrings: [String] = {
+    internal static let _isoLanguageCodeStrings: [String] = {
         var result: [String] = []
         let langs = uloc_getISOLanguages()
         guard var langs else { return [] }
@@ -276,7 +276,7 @@ extension Locale.Region {
     }
 
     /// Used for deprecated ISO Country Code
-    internal static var isoCountries: [String] = {
+    internal static let isoCountries: [String] = {
         var result: [String] = []
         let langs = uloc_getISOCountries()
         guard var langs else { return [] }
@@ -288,7 +288,7 @@ extension Locale.Region {
         return result
     }()
 
-    internal static var _isoRegionCodes: [String] {
+    internal static let _isoRegionCodes: [String] = {
         var status = U_ZERO_ERROR
         let types = [URGN_WORLD, URGN_CONTINENT, URGN_SUBCONTINENT, URGN_TERRITORY]
         var codes: [String] = []
@@ -301,7 +301,7 @@ extension Locale.Region {
             }
         }
         return codes
-    }
+    }()
 }
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
