@@ -25,7 +25,7 @@ import CRT
 import WinSDK
 #endif
 
-internal import _CShims
+internal import _FoundationCShims
 
 #if FOUNDATION_FRAMEWORK
 func _LogSpecialFolderRecreation(_ fileManager: FileManager, _ path: String) {

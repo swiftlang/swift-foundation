@@ -15,7 +15,7 @@ internal import _ForSwiftFoundation
 internal import DarwinPrivate // for VREG
 #endif
 
-internal import _CShims
+internal import _FoundationCShims
 
 #if canImport(Darwin)
 import Darwin

@@ -17,7 +17,7 @@ internal import CoreFoundation_Private.CFNotificationCenter
 internal import os
 #endif
 
-internal import _CShims
+internal import _FoundationCShims
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
 struct LocaleCache : Sendable {

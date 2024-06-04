@@ -9,7 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import _CShims
+internal import _FoundationCShims
 
 // Native implementation of CFCharacterSet.
 // Represents sets of unicode scalars of those whose bitmap data we own.

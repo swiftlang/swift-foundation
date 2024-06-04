@@ -71,8 +71,8 @@ let package = Package(
             ],
             path: "Sources/Foundation"),
 
-        // _CShims (Internal)
-        .target(name: "_CShims",
+        // _FoundationCShims (Internal)
+        .target(name: "_FoundationCShims",
                 cSettings: [.define("_CRT_SECURE_NO_WARNINGS",
                                     .when(platforms: [.windows]))]),
 
@@ -86,7 +86,7 @@ let package = Package(
         .target(
           name: "FoundationEssentials",
           dependencies: [
-            "_CShims",
+            "_FoundationCShims",
             "FoundationMacros",
             .product(name: "_RopeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
@@ -134,7 +134,7 @@ let package = Package(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
-                .target(name: "_CShims"),
+                .target(name: "_FoundationCShims"),
                 .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
             exclude: [

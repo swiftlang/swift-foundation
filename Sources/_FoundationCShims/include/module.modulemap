@@ -1,0 +1,5 @@
+module _FoundationCShims {
+    header "_FoundationCShims.h"
+
+    export *
+}

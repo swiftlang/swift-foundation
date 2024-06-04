@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import _CShims
+internal import _FoundationCShims
 
 private let plistBytes : StaticString = "plist"
 private let arrayBytes : StaticString = "array"
