@@ -419,7 +419,7 @@ enum _FileOperations {
         let ctx = _FileRemoveContext(fileManager)
         try withExtendedLifetime(ctx) {
             let ctxPtr = Unmanaged.passUnretained(ctx).toOpaque()
-            state.attachCallbacks(context: ctxPtr, confirm: { state, pathPtr, contextPtr in
+            state.attachCallbacks(context: ctxPtr, confirm: { _, pathPtr, contextPtr in
                 let context = Unmanaged<_FileOperations._FileRemoveContext>.fromOpaque(contextPtr).takeUnretainedValue()
                 let path = String(cString: pathPtr)
                 
