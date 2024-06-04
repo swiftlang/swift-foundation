@@ -673,7 +673,7 @@ final class FileManagerTests : XCTestCase {
             try $0.createSymbolicLink(atPath: "link", withDestinationPath: "destination")
             let absolutePath = $0.currentDirectoryPath.appendingPathComponent("link")
             let resolved = absolutePath._resolvingSymlinksInPath() // Call internal function to avoid path standardization
-            XCTAssertEqual(resolved, $0.currentDirectoryPath.appendingPathComponent("destination"))
+            XCTAssertEqual(resolved, $0.currentDirectoryPath.appendingPathComponent("destination").withFileSystemRepresentation { String(cString: $0!) })
         }
     }
     
