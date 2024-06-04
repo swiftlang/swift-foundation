@@ -36,12 +36,7 @@
 #endif
 
 #if __has_include(<removefile.h>)
-#include <stdint.h>
 #include <removefile.h>
-
-INTERNAL void _filemanagershims_removefile_attach_callbacks(removefile_state_t state, void *ctx);
-INTERNAL int _filemanagershims_removefile_state_get_errnum(removefile_state_t state);
-
 #endif // __has_include(<removefile.h>)
 
 #if FOUNDATION_FRAMEWORK && __has_include(<sys/types.h>)
