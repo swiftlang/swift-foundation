@@ -659,7 +659,7 @@ internal struct RFC3986Parser: URLParserProtocol {
 
         let path = parseInfo.path
         if invalidComponents.contains(.path) {
-            finalURLString += percentEncodePath(path)
+            finalURLString += percentEncode(path, component: .path)!
         } else {
             finalURLString += path
         }
