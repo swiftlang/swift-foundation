@@ -338,8 +338,12 @@ final class StringTests : XCTestCase {
         func assertCString(_ ptr: UnsafePointer<CChar>, equals other: String, file: StaticString = #filePath, line: UInt = #line) {
             XCTAssertEqual(String(cString: ptr), other, file: file, line: line)
         }
-        
+
+#if os(Windows)
+        let original = #"\Path1\Path Two\Path Three\Some Really Long File Name Section.txt"#
+#else
         let original = "/Path1/Path Two/Path Three/Some Really Long File Name Section.txt"
+#endif
         original.withFileSystemRepresentation {
             XCTAssertNotNil($0)
             assertCString($0!, equals: original)
