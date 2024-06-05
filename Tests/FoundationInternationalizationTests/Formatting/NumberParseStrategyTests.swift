@@ -188,6 +188,28 @@ final class NumberParseStrategyTests : XCTestCase {
         XCTAssertEqual(try! strategy.parse("-1,234.56 US dollars"), Decimal(string: "-1234.56")!)
         XCTAssertEqual(try! strategy.parse("-USD\u{00A0}1,234.56"), Decimal(string: "-1234.56")!)
     }
+    
+    func testNumericBoundsParsing() throws {
+        let locale = Locale(identifier: "en_US")
+        do {
+            let format: IntegerFormatStyle<UInt64> = .init(locale: locale)
+            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
+            XCTAssertEqual(try parseStrategy.parse(0.formatted(format)), 0)
+            let aboveInt64Max = UInt64(Int64.max) + 1
+            XCTAssertEqual(try parseStrategy.parse(aboveInt64Max.formatted(format)), aboveInt64Max)
+            XCTAssertThrowsError(try parseStrategy.parse("-1"))
+            XCTAssertThrowsError(try parseStrategy.parse("-1,000,000"))
+        }
+        
+        do {
+            let format: IntegerFormatStyle<Int8> = .init(locale: locale)
+            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
+            XCTAssertEqual(try parseStrategy.parse(Int8.min.formatted(format)), Int8.min)
+            XCTAssertEqual(try parseStrategy.parse(Int8.max.formatted(format)), Int8.max)
+            XCTAssertThrowsError(try parseStrategy.parse("-129"))
+            XCTAssertThrowsError(try parseStrategy.parse("128"))
+        }
+    }
 }
 
 final class NumberExtensionParseStrategyTests: XCTestCase {

@@ -34,9 +34,17 @@ extension IntegerParseStrategy: ParseStrategy {
         }
         let trimmedString = value._trimmingWhitespace()
         if let v = parser.parseAsInt(trimmedString) {
-            return Format.FormatInput(v)
+            guard let exact = Format.FormatInput(exactly: v) else {
+                throw CocoaError(CocoaError.formatting, userInfo: [
+                    NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the valid bounds of the specified output type" ])
+            }
+            return exact
         } else if let v = parser.parseAsDouble(trimmedString) {
-            return Format.FormatInput(clamping: Int64(v))
+            guard let exact = Format.FormatInput(exactly: v) else {
+                throw CocoaError(CocoaError.formatting, userInfo: [
+                    NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the valid bounds of the specified output type" ])
+            }
+            return exact
         } else {
             let exampleString = formatStyle.format(123)
             throw CocoaError(CocoaError.formatting, userInfo: [
