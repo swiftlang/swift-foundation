@@ -125,33 +125,6 @@ extension CocoaError {
 #endif
 }
 
-#if canImport(Darwin)
-@_cdecl("_FileRemove_ConfirmCallback")
-internal func _FileRemove_ConfirmCallback(_ state: removefile_state_t, _ pathPtr: UnsafePointer<CChar>, _ contextPtr: UnsafeRawPointer) -> Int {
-    let context = Unmanaged<_FileOperations._FileRemoveContext>.fromOpaque(contextPtr).takeUnretainedValue()
-    let path = String(cString: pathPtr)
-    
-    // Proceed unless the delegate says to skip
-    return (context.manager?._shouldRemoveItemAtPath(path) ?? true) ? REMOVEFILE_PROCEED : REMOVEFILE_SKIP
-}
-
-@_cdecl("_FileRemove_ErrorCallback")
-internal func _FileRemove_ErrorCallback(_ state: removefile_state_t, _ pathPtr: UnsafePointer<CChar>, _ contextPtr: UnsafeRawPointer) -> Int {
-    let context = Unmanaged<_FileOperations._FileRemoveContext>.fromOpaque(contextPtr).takeUnretainedValue()
-    let path = String(cString: pathPtr)
-    
-    let err = CocoaError.removeFileError(Int32(_filemanagershims_removefile_state_get_errnum(state)), path)
-    
-    // Proceed only if the delegate says so
-    if context.manager?._shouldProceedAfter(error: err, removingItemAtPath: path) ?? false {
-        return REMOVEFILE_PROCEED
-    } else {
-        context.error = err
-        return REMOVEFILE_STOP
-    }
-}
-#endif
-
 extension FileManager {
     fileprivate func _shouldProceedAfter(error: Error, removingItemAtPath path: String) -> Bool {
         var delegateResponse: Bool?
@@ -317,6 +290,25 @@ private extension LinkOrCopyDelegate {
     var extraCopyFileFlags: Int32 { 0 }
 }
 
+#if canImport(Darwin)
+private typealias RemoveFileCallback = @convention(c) (removefile_state_t, UnsafePointer<CChar>, UnsafeRawPointer) -> Int
+
+extension removefile_state_t {
+    fileprivate var errnum: Int32 {
+        var num: Int32 = 0
+        removefile_state_get(self, UInt32(REMOVEFILE_STATE_ERRNO), &num)
+        return num
+    }
+    
+    fileprivate func attachCallbacks(context: UnsafeRawPointer?, confirm: RemoveFileCallback, error: RemoveFileCallback) {
+        removefile_state_set(self, UInt32(REMOVEFILE_STATE_CONFIRM_CONTEXT), context)
+        removefile_state_set(self, UInt32(REMOVEFILE_STATE_CONFIRM_CALLBACK), unsafeBitCast(confirm, to: UnsafeRawPointer.self))
+        removefile_state_set(self, UInt32(REMOVEFILE_STATE_ERROR_CONTEXT), context)
+        removefile_state_set(self, UInt32(REMOVEFILE_STATE_ERROR_CALLBACK), unsafeBitCast(error, to: UnsafeRawPointer.self))
+    }
+}
+#endif
+
 enum _FileOperations {
     // MARK: removefile
 
@@ -421,20 +413,39 @@ enum _FileOperations {
     }
     
     private static func _removeFile(_ pathPtr: UnsafePointer<CChar>, _ pathStr: String, with fileManager: FileManager?) throws {
-        let state = removefile_state_alloc()
+        let state = removefile_state_alloc()!
         defer { removefile_state_free(state) }
         
         let ctx = _FileRemoveContext(fileManager)
         try withExtendedLifetime(ctx) {
             let ctxPtr = Unmanaged.passUnretained(ctx).toOpaque()
-            _filemanagershims_removefile_attach_callbacks(state, ctxPtr)
+            state.attachCallbacks(context: ctxPtr, confirm: { _, pathPtr, contextPtr in
+                let context = Unmanaged<_FileOperations._FileRemoveContext>.fromOpaque(contextPtr).takeUnretainedValue()
+                let path = String(cString: pathPtr)
+                
+                // Proceed unless the delegate says to skip
+                return (context.manager?._shouldRemoveItemAtPath(path) ?? true) ? REMOVEFILE_PROCEED : REMOVEFILE_SKIP
+            }, error: { state, pathPtr, contextPtr in
+                let context = Unmanaged<_FileOperations._FileRemoveContext>.fromOpaque(contextPtr).takeUnretainedValue()
+                let path = String(cString: pathPtr)
+                
+                let err = CocoaError.removeFileError(state.errnum, path)
+                
+                // Proceed only if the delegate says so
+                if context.manager?._shouldProceedAfter(error: err, removingItemAtPath: path) ?? false {
+                    return REMOVEFILE_PROCEED
+                } else {
+                    context.error = err
+                    return REMOVEFILE_STOP
+                }
+            })
             
             let err = removefile(pathPtr, state, removefile_flags_t(REMOVEFILE_RECURSIVE))
             if err < 0 {
                 if errno != 0 {
                     throw CocoaError.removeFileError(Int32(errno), pathStr)
                 }
-                throw CocoaError.removeFileError(Int32(_filemanagershims_removefile_state_get_errnum(state)), pathStr)
+                throw CocoaError.removeFileError(state.errnum, pathStr)
             }
             
             if let error = ctx.error {
