@@ -176,7 +176,7 @@ extension _FileManagerImpl {
                     var pwszFullPath: PWSTR? = nil
                     _ = PathAllocCombine(item.fileName, $0, PATHCCH_ALLOW_LONG_PATHS, &pwszFullPath)
                     defer { LocalFree(pwszFullPath) }
-                    return String(decodingCString: pwszFullPath!, as: UTF16.self).standardizingPath
+                    return String(decodingCString: pwszFullPath!, as: UTF16.self).standardizingPath.replacing("\\", with: "/")
                  })
             }
         }
