@@ -73,7 +73,7 @@ struct UTF16EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
         mutating func next() -> UInt16? {
             // First check for the BOM.
             // If the encoding was unspecified (`.utf16`), then we detect the BOM here, specify the encoding, and remove the BOM.
-            // If the encoding was specified, and a BOM is present, and it matches, then remove the BOM.
+            // If the encoding was specified, and a BOM is present, and it matches, then leave the BOM in place.
             // If the encoding was specified, and a BOM is present, and it does not match, then all bets are off. Leave the BOM and pass it on to String to deal with.
             if !bomCheck {
                 // Only do this once
@@ -91,19 +91,25 @@ struct UTF16EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
                     }
                     
                     if bom1 == 0xFF && bom2 == 0xFE {
-                        if endianness == nil || endianness == .little {
+                        if endianness == nil {
                             // 0xFF FE is little endian
                             self.endianness = .little
                             // Continue below, now that we have skipped BOM
+                        } else if endianness == .little {
+                            // Do not skip BOM
+                            return swap(bom1, bom2)
                         } else {
                             // Mismatch of BOM and encoding. Pass it on to String.
                             return swap(bom1, bom2)
                         }
                     } else if bom1 == 0xFE && bom2 == 0xFF {
-                        if endianness == nil || endianness == .big {
+                        if endianness == nil {
                             // 0xFE FF is big endian
                             self.endianness = .big
                             // Continue below, now that we have skipped BOM
+                        } else if endianness == .big {
+                            // Do not skip BOM
+                            return swap(bom1, bom2)
                         } else {
                             // Mismatch of BOM and encoding. Pass it on to String.
                             return swap(bom1, bom2)
@@ -172,7 +178,7 @@ struct UTF32EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
         mutating func next() -> UInt32? {
             // First check for the BOM.
             // If the encoding was unspecified (`.utf32`), then we detect the BOM here, specify the encoding, and remove the BOM.
-            // If the encoding was specified, and a BOM is present, and it matches, then remove the BOM.
+            // If the encoding was specified, and a BOM is present, and it matches, then leave the BOM in place.
             // If the encoding was specified, and a BOM is present, and it does not match, then all bets are off. Leave the BOM and pass it on to String to deal with.
             if !bomCheck {
                 // Only do this once
@@ -189,19 +195,25 @@ struct UTF32EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
                     guard let bom4 = i.next() else { return nil }
 
                     if bom1 == 0xFF && bom2 == 0xFE && bom3 == 0x00 && bom4 == 0x00 {
-                        if endianness == nil || endianness == .little {
+                        if endianness == nil {
                             // 0xFF FE 00 00 is little endian
                             self.endianness = .little
                             // Continue below, now that we have skipped BOM
+                        } else if endianness == .little {
+                            // Do not skip BOM
+                            return swap(bom1, bom2, bom3, bom4)
                         } else {
                             // Mismatch of BOM and encoding. Pass it on to String.
                             return swap(bom1, bom2, bom3, bom4)
                         }
                     } else if bom1 == 0x00 && bom2 == 0x00 && bom3 == 0xFE && bom4 == 0xFF {
-                        if endianness == nil || endianness == .big {
+                        if endianness == nil {
                             // 0x00 00 FE FF is big endian
                             self.endianness = .big
                             // Continue below, now that we have skipped BOM
+                        } else if endianness == .big {
+                            // Do not skip BOM
+                            return swap(bom1, bom2, bom3, bom4)
                         } else {
                             // Mismatch of BOM and encoding. Pass it on to String.
                             return swap(bom1, bom2, bom3, bom4)
