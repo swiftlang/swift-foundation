@@ -12,7 +12,7 @@
 
 #if !FOUNDATION_FRAMEWORK
 
-public struct Bundle: Hashable, Equatable, Sendable {
+package struct Bundle: Hashable, Equatable, Sendable {
     public static let main: Bundle = Bundle()
 
     public var localizations: [String] { return [] }
