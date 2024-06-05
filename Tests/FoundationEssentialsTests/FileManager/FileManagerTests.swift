@@ -426,8 +426,8 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["dir", "dir/foo", "other"])
             XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar")])
             XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [])
-            
-            let rootDir = $0.currentDirectoryPath
+
+            let rootDir = URL(fileURLWithPath: $0.currentDirectoryPath).path
             try $0.removeItem(atPath: "dir")
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["other"])
             XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo")])
@@ -441,6 +441,22 @@ final class FileManagerTests : XCTestCase {
             try $0.removeItem(atPath: "does_not_exist")
             XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo"), .init("other"), .init("does_not_exist")])
             XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [.init("does_not_exist", code: .fileNoSuchFile)])
+        }
+
+        try FileManagerPlayground {
+            Directory("dir") {
+                Directory("dir2") {
+                    "file"
+                }
+            }
+        }.test(captureDelegateCalls: true) {
+            let rootDir = URL(fileURLWithPath: $0.currentDirectoryPath).path
+
+            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            try $0.removeItem(atPath: "dir")
+            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), [])
+            XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("\(rootDir)/dir"), .init("\(rootDir)/dir/dir2"), .init("\(rootDir)/dir/dir2/file")])
+            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [])
         }
 
         #if canImport(Darwin)
