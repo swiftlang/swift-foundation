@@ -357,7 +357,7 @@ enum _FileOperations {
                     guard checked || filemanager?._shouldRemoveItemAtPath(ntpath) ?? true else { return }
 
                     if RemoveDirectoryW($0) { return }
-                    var dwError: DWORD = GetLastError()
+                    let dwError: DWORD = GetLastError()
                     guard dwError == ERROR_DIR_NOT_EMPTY else {
                         let error = CocoaError.removeFileError(dwError, directory)
                         guard (filemanager?._shouldProceedAfter(error: error, removingItemAtPath: ntpath) ?? false) else {
