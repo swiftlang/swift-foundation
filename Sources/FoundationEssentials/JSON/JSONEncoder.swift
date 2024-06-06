@@ -1121,11 +1121,9 @@ private extension __JSONEncoder {
             // Encode URLs as single strings.
             let url = value as! URL
             return self.wrap(url.absoluteString)
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once Decimal is moved
         case is Decimal.Type:
             let decimal = value as! Decimal
             return .number(decimal.description)
-#endif // FOUNDATION_FRAMEWORK
         case is _JSONStringDictionaryEncodableMarker.Type:
             return try self.wrap(value as! [String : Encodable], for: node, additionalKey)
         case is _JSONDirectArrayEncodable.Type:

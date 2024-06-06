@@ -606,11 +606,9 @@ extension JSONDecoderImpl: Decoder {
         if type == URL.self {
             return try self.unwrapURL(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once Decimal is moved
         if type == Decimal.self {
             return try self.unwrapDecimal(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
-#endif// FOUNDATION_FRAMEWORK
         if T.self is _JSONStringDictionaryDecodableMarker.Type {
             return try self.unwrapDictionary(from: mapValue, as: type, for: codingPathNode, additionalKey)
         }
@@ -699,7 +697,6 @@ extension JSONDecoderImpl: Decoder {
         return url
     }
 
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once Decimal has been moved
     private func unwrapDecimal(from mapValue: JSONMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> Decimal {
         try checkNotNull(mapValue, expectedType: Decimal.self, for: codingPathNode, additionalKey)
 
@@ -747,7 +744,6 @@ extension JSONDecoderImpl: Decoder {
             }
         }
     }
-#endif // FOUNDATION_FRAMEWORK
 
     private func unwrapDictionary<T: Decodable>(from mapValue: JSONMap.Value, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
         try checkNotNull(mapValue, expectedType: [String:Any].self, for: codingPathNode, additionalKey)
@@ -992,14 +988,12 @@ extension JSONDecoderImpl: Decoder {
         }
 
         let number = String(decoding: numberBuffer, as: Unicode.ASCII.self)
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once Decimal is moved
         if let decimal = Decimal(entire: number) {
             guard let value = T(decimal) else {
                 throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
             }
             return value
         }
-#endif // FOUNDATION_FRAMEWORK
         // Maybe it was just an unreadable sequence?
         if json5 {
             throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitBeginning), fullSource: fullSource)
@@ -1016,7 +1010,6 @@ extension JSONDecoderImpl: Decoder {
     }
 }
 
-#if FOUNDATION_FRAMEWORK // TODO: Reenable once Decimal is moved
 extension FixedWidthInteger {
     init?(_ decimal: Decimal) {
         let isNegative = decimal._isNegative != 0
@@ -1072,17 +1065,14 @@ extension FixedWidthInteger {
 
 extension Decimal {
     init?(entire string: String) {
-        let scan = Scanner(string: string)
-        guard let decimal = scan.scanDecimal() else {
+        guard let value = Decimal.decimal(
+            from: string.utf8, matchEntireString: true
+        ) else {
             return nil
         }
-        guard scan.isAtEnd else {
-            return nil
-        }
-        self = decimal
+        self = value
     }
 }
-#endif // FOUNDATION_FRAMEWORK
 
 extension JSONDecoderImpl : SingleValueDecodingContainer {
     func decodeNil() -> Bool {

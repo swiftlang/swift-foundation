@@ -2520,6 +2520,56 @@ extension JSONEncoderTests {
     }
 }
 
+// MARK: - Decimal Tests
+extension JSONEncoderTests {
+    func testInterceptDecimal() {
+        let expectedJSON = "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000".data(using: String._Encoding.utf8)!
+
+        // Want to make sure we write out a JSON number, not the keyed encoding here.
+        // 1e127 is too big to fit natively in a Double, too, so want to make sure it's encoded as a Decimal.
+        let decimal = Decimal(sign: .plus, exponent: 127, significand: Decimal(1))
+        _testRoundTrip(of: decimal, expectedJSON: expectedJSON)
+
+        // Optional Decimals should encode the same way.
+        _testRoundTrip(of: Optional(decimal), expectedJSON: expectedJSON)
+    }
+
+    func test_hugeNumbers() {
+        let json = "23456789012000000000000000000000000000000000000000000000000000000000000000000 "
+        let data = json.data(using: String._Encoding.utf8)!
+
+        let decimal = try! JSONDecoder().decode(Decimal.self, from: data)
+        let expected = Decimal(string: json)
+        XCTAssertEqual(decimal, expected)
+    }
+
+    func testInterceptLargeDecimal() {
+        struct TestBigDecimal: Codable, Equatable {
+            var uint64Max: Decimal = Decimal(UInt64.max)
+            var unit64MaxPlus1: Decimal = Decimal(
+                _exponent: 0,
+                _length: 5,
+                _isNegative: 0,
+                _isCompact: 1,
+                _reserved: 0,
+                _mantissa: (0, 0, 0, 0, 1, 0, 0, 0)
+            )
+            var int64Min: Decimal = Decimal(Int64.min)
+            var int64MinMinus1: Decimal = Decimal(
+                _exponent: 0,
+                _length: 4,
+                _isNegative: 1,
+                _isCompact: 1,
+                _reserved: 0,
+                _mantissa: (1, 0, 0, 32768, 0, 0, 0, 0)
+            )
+        }
+
+        let testBigDecimal = TestBigDecimal()
+        _testRoundTrip(of: testBigDecimal)
+    }
+}
+
 // MARK: - Framework-only tests
 
 #if FOUNDATION_FRAMEWORK
@@ -2731,45 +2781,6 @@ extension JSONEncoderTests {
         XCTAssertEqual(string, "{\"a\":\"c\",\"other\":\"foo\"}")
     }
 }
-
-#if FOUNDATION_FRAMEWORK
-// MARK: - Decimal Tests
-// TODO: Reenable these tests once Decimal is moved
-extension JSONEncoderTests {
-    func testInterceptDecimal() {
-        let expectedJSON = "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000".data(using: String._Encoding.utf8)!
-
-        // Want to make sure we write out a JSON number, not the keyed encoding here.
-        // 1e127 is too big to fit natively in a Double, too, so want to make sure it's encoded as a Decimal.
-        let decimal = Decimal(sign: .plus, exponent: 127, significand: Decimal(1))
-        _testRoundTrip(of: decimal, expectedJSON: expectedJSON)
-
-        // Optional Decimals should encode the same way.
-        _testRoundTrip(of: Optional(decimal), expectedJSON: expectedJSON)
-    }
-
-    func test_hugeNumbers() {
-        let json = "23456789012000000000000000000000000000000000000000000000000000000000000000000 "
-        let data = json.data(using: String._Encoding.utf8)!
-
-        let decimal = try! JSONDecoder().decode(Decimal.self, from: data)
-        let expected = Decimal(string: json)
-        XCTAssertEqual(decimal, expected)
-    }
-
-    func testInterceptLargeDecimal() {
-        struct TestBigDecimal: Codable, Equatable {
-            var uint64Max: Decimal = Decimal(UInt64.max)
-            var unit64MaxPlus1: Decimal = Decimal(UInt64.max) + Decimal(1)
-            var int64Min: Decimal = Decimal(Int64.min)
-            var int64MinMinus1: Decimal = Decimal(Int64.min) - Decimal(1)
-        }
-
-        let testBigDecimal = TestBigDecimal()
-        _testRoundTrip(of: testBigDecimal)
-    }
-}
-#endif // FOUNDATION_FRAMEWORK
 
 // MARK: - URL Tests
 extension JSONEncoderTests {
