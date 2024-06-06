@@ -210,6 +210,25 @@ final class NumberParseStrategyTests : XCTestCase {
             XCTAssertThrowsError(try parseStrategy.parse("128"))
         }
     }
+    
+    func testIntegerParseStrategyDoesNotRoundLargeIntegersToNearestDouble() {
+        XCTAssertEqual(Double.significandBitCount, 52, "Double can represent each integer in -2^53 ... 2^53")
+        let locale = Locale(identifier: "en_US")
+        
+        do {
+            let format: IntegerFormatStyle<Int64> = .init(locale: locale)
+            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
+            XCTAssertNotEqual(try? parseStrategy.parse("-9223372036854776832"), -9223372036854775808) // -2^63 - 1024 (Double: -2^63)
+            XCTAssertNil(     try? parseStrategy.parse("-9223372036854776833"))                       // -2^63 - 1025 (Double: -2^63 - 2048)
+        }
+        
+        do {
+            let format: IntegerFormatStyle<UInt64> = .init(locale: locale)
+            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
+            XCTAssertNotEqual(try? parseStrategy.parse( "9223372036854776832"),  9223372036854775808) // +2^63 + 1024 (Double: +2^63)
+            XCTAssertNotEqual(try? parseStrategy.parse( "9223372036854776833"),  9223372036854777856) // +2^63 + 1025 (Double: +2^63 + 2048)
+        }
+    }
 }
 
 final class NumberExtensionParseStrategyTests: XCTestCase {
