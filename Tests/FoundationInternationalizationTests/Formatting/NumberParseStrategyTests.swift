@@ -237,9 +237,11 @@ final class NumberParseStrategyTests : XCTestCase {
     }
     
     func testIntegerParseStrategyDoesNotRoundLargeIntegersToNearestDouble() {
+        XCTAssertEqual(Double("9007199254740992"), Double(exactly: UInt64(1) << 53)!) // +2^53 + 0 -> +2^53
+        XCTAssertEqual(Double("9007199254740993"), Double(exactly: UInt64(1) << 53)!) // +2^53 + 1 -> +2^53
         XCTAssertEqual(Double.significandBitCount, 52, "Double can represent each integer in -2^53 ... 2^53")
         let locale = Locale(identifier: "en_US")
-        
+
         do {
             let format: IntegerFormatStyle<Int64> = .init(locale: locale)
             let parseStrategy = IntegerParseStrategy(format: format, lenient: true)

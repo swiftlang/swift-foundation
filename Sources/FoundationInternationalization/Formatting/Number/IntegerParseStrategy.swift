@@ -40,7 +40,7 @@ extension IntegerParseStrategy: ParseStrategy {
             }
             return exact
         } else if let v = parser.parseAsDouble(trimmedString) {
-            guard v.magnitude <= Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) else {
+            guard v.magnitude < Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) else {
                 throw CocoaError(CocoaError.formatting, userInfo: [
                     NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the lossless floating-point range" ])
             }
