@@ -566,14 +566,21 @@ enum _FileOperations {
 
                 try source.withNTPathRepresentation { pwszSource in
                     var faSourceAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
-                    guard GetFileAttributesExW(pwszSource, GetFileExInfoStandard, &faSourceAttributes) else {
-                        throw CocoaError.moveFileError(GetLastError(), src, dst)
+                    if !GetFileAttributesExW(pwszSource, GetFileExInfoStandard, &faSourceAttributes) {
+                        let error = CocoaError.moveFileError(GetLastError(), src, dst)
+                        guard fileManager._shouldProceedAfter(error: error, movingItemAtPath: source, to: destination) else {
+                            throw error
+                        }
+                        return
                     }
 
                     try destination.withNTPathRepresentation { pwszDestination in
                         var faDestinationAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
-                        guard GetFileAttributesExW(pwszDestination, GetFileExInfoStandard, &faDestinationAttributes) else {
-                            throw CocoaError.moveFileError(GetLastError(), src, dst)
+                        if GetFileAttributesExW(pwszDestination, GetFileExInfoStandard, &faDestinationAttributes) {
+                            let error = CocoaError.moveFileError(GetLastError(), src, dst)
+                            guard fileManager._shouldProceedAfter(error: error, movingItemAtPath: source, to: destination) else {
+                                throw error
+                            }
                         }
 
                         // `MoveFileExW` does not work if the source and
