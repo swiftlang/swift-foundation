@@ -955,6 +955,23 @@ final class StringTests : XCTestCase {
         XCTAssertNil(utf32BEBOMStringMismatch)
     }
 
+    func test_dataUsingEncoding_preservingBOM() {
+        func roundTrip(_ data: Data) -> Bool {
+            let str = String(data: data, encoding: .utf8)!
+            let strAsUTF16BE = str.data(using: .utf16BigEndian)!
+            let strRoundTripUTF16BE = String(data: strAsUTF16BE, encoding: .utf16BigEndian)!
+            return strRoundTripUTF16BE == str
+        }
+        
+        // Verify that the BOM is preserved through a UTF8/16 transformation.
+
+        // ASCII '2' followed by UTF8 BOM
+        XCTAssertTrue(roundTrip(Data([ 0x32, 0xef, 0xbb, 0xbf ])))
+        
+        // UTF8 BOM followed by ASCII '4'
+        XCTAssertTrue(roundTrip(Data([ 0xef, 0xbb, 0xbf, 0x34 ])))
+    }
+    
     func test_dataUsingEncoding_ascii() {
         XCTAssertEqual("abc".data(using: .ascii), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
         XCTAssertEqual("abc".data(using: .nonLossyASCII), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
