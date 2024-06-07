@@ -1615,7 +1615,9 @@ extension Locale {
     }
 
     internal static func keywordValue(identifier: String, key: String) -> String? {
-        return _withFixedCharBuffer(size: ULOC_KEYWORD_AND_VALUES_CAPACITY) { buffer, size, status in
+        // Unlike other many ICU variables, `ULOC_KEYWORD_AND_VALUES_CAPACITY` does not include null-termination.
+        // Manually add one here.
+        return _withFixedCharBuffer(size: ULOC_KEYWORD_AND_VALUES_CAPACITY + 1) { buffer, size, status in
             return uloc_getKeywordValue(identifier, key, buffer, size, &status)
         }
     }

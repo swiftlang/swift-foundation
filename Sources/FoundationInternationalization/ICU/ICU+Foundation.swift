@@ -114,6 +114,7 @@ internal func _withResizingCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeMu
                     var innerStatus = U_ZERO_ERROR
                     if let innerLen = body(innerBuffer.baseAddress!, len + 1, &innerStatus) {
                         if innerStatus.isSuccess && innerLen > 0 {
+                            buffer[Int(innerLen)] = 0
                             return String(validatingUTF8: innerBuffer.baseAddress!)
                         }
                     }
@@ -122,6 +123,7 @@ internal func _withResizingCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeMu
                     return nil
                 }
             } else if status.isSuccess && len > 0 {
+                buffer[Int(len)] = 0
                 return String(validatingUTF8: buffer.baseAddress!)
             }
         }
@@ -137,7 +139,7 @@ internal func _withFixedCharBuffer(size: Int32 = ULOC_FULLNAME_CAPACITY + ULOC_K
         var status = U_ZERO_ERROR
         if let len = body(buffer.baseAddress!, size, &status) {
             if status.isSuccess && len > 0 {
-                buffer[Int(len + 1)] = 0
+                buffer[Int(len)] = 0
                 return String(validatingUTF8: buffer.baseAddress!)
             }
         }

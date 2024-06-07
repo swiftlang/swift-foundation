@@ -581,6 +581,11 @@ final class LocalePropertiesTests : XCTestCase {
 
         verify("ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz;sd=usca", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: "usca", measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: [ "traditio", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dict")
     }
+
+    func test_longLocaleKeywordValues() {
+        let x = Locale.keywordValue(identifier: "ar_EG@vt=kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", key: "vt")
+        XCTAssertEqual(x, "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
+    }
 }
 
 // MARK: - Bridging Tests
