@@ -31,6 +31,14 @@ internal import QuarantinePrivate
 internal import _CShims
 
 extension CocoaError {
+    fileprivate static func fileOperationError(_ code: CocoaError.Code,  _ sourcePath: String, _ destinationPath: String? = nil, variant: String? = nil) -> CocoaError {
+        var info: [String : AnyHashable] = [NSSourceFilePathErrorKey:sourcePath]
+        if let destinationPath {
+            info[NSDestinationFilePathErrorKey] = destinationPath
+        }
+        return CocoaError.errorWithFilePath(code, sourcePath, variant: variant, userInfo: info)
+    }
+
 #if os(Windows)
     private static func fileOperationError(_ dwError: DWORD, _ suspectedErroneousPath: String, sourcePath: String? = nil, destinationPath: String? = nil, variant: String? = nil) -> CocoaError {
         var path = suspectedErroneousPath
@@ -788,7 +796,7 @@ enum _FileOperations {
         try src.withNTPathRepresentation { pwszSource in
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
             guard GetFileAttributesExW(pwszSource, GetFileExInfoStandard, &faAttributes) else {
-                throw CocoaError.copyFileError(GetLastError(), src, dst)
+                throw CocoaError.fileOperationError(.fileReadNoSuchFile, src, dst, variant: bCopyFile ? "Copy" : "Link")
             }
 
             try dst.withNTPathRepresentation { pwszDestination in

@@ -129,6 +129,14 @@ extension CocoaError {
         )
     }
 
+    static func errorWithFilePath(_ code: CocoaError.Code, _ path: String, variant: String? = nil, userInfo: [String : AnyHashable] = [:]) -> CocoaError {
+        var info: [String:AnyHashable] = userInfo.addingUserInfo(forPath: path)
+        if let variant {
+            info[NSUserStringVariantErrorKey] = [variant]
+        }
+        return CocoaError(code, userInfo: info)
+    }
+
 #if os(Windows)
     static func errorWithFilePath(_ path: PathOrURL, win32 dwError: DWORD, reading: Bool, variant: String? = nil, userInfo: [String : AnyHashable] = [:]) -> CocoaError {
         switch path {
