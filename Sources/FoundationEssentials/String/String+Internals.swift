@@ -29,7 +29,7 @@ extension String {
         }
 
         var iter = self.utf8.makeIterator()
-        let bLeadingSlash = if iter.next() == ._slash, iter.next()?.isLetter ?? false, iter.next() == ._colon { true } else { false }
+        let bLeadingSlash = if [._slash, ._backslash].contains(iter.next()), iter.next()?.isLetter ?? false, iter.next() == ._colon { true } else { false }
 
         // Strip the leading `/` on a RFC8089 path (`/[drive-letter]:/...` ).  A
         // leading slash indicates a rooted path on the drive for the current
