@@ -799,20 +799,32 @@ enum _FileOperations {
                 throw CocoaError.fileOperationError(.fileReadNoSuchFile, src, dst, variant: bCopyFile ? "Copy" : "Link")
             }
 
+            guard delegate.shouldPerformOnItemAtPath(src, to: dst) else { return }
+
             try dst.withNTPathRepresentation { pwszDestination in
-                if bCopyFile || faAttributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
+                    do {
+                        try fileManager.createDirectory(atPath: dst, withIntermediateDirectories: true)
+                    } catch {
+                        try delegate.throwIfNecessary(error, src, dst)
+                    }
+                    for item in _Win32DirectoryContentsSequence(path: src, appendSlashForDirectory: true) {
+                        try linkOrCopyFile(src.appendingPathComponent(item.fileName), dst: dst.appendingPathComponent(item.fileName), with: fileManager, delegate: delegate)
+                    }
+                } else if bCopyFile || faAttributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
                     var ExtendedParameters: COPYFILE2_EXTENDED_PARAMETERS = .init()
                     ExtendedParameters.dwSize = DWORD(MemoryLayout<COPYFILE2_EXTENDED_PARAMETERS>.size)
-                    ExtendedParameters.dwCopyFlags = COPY_FILE_COPY_SYMLINK | COPY_FILE_NO_BUFFERING | COPY_FILE_OPEN_AND_COPY_REPARSE_POINT
-                    if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
-                        ExtendedParameters.dwCopyFlags |= COPY_FILE_DIRECTORY
-                    }
+                    ExtendedParameters.dwCopyFlags = COPY_FILE_FAIL_IF_EXISTS | COPY_FILE_COPY_SYMLINK | COPY_FILE_NO_BUFFERING | COPY_FILE_OPEN_AND_COPY_REPARSE_POINT
 
-                    guard SUCCEEDED(CopyFile2(pwszSource, pwszDestination, &ExtendedParameters)) else {
-                        throw CocoaError.copyFileError(GetLastError(), src, dst)
+                    if FAILED(CopyFile2(pwszSource, pwszDestination, &ExtendedParameters)) {
+                        try delegate.throwIfNecessary(GetLastError(), src, dst)
                     }
                 } else {
-                    try fileManager.createSymbolicLink(atPath: dst, withDestinationPath: src)
+                    do {
+                        try fileManager.createSymbolicLink(atPath: dst, withDestinationPath: src)
+                    } catch {
+                        try delegate.throwIfNecessary(error, src, dst)
+                    }
                 }
             }
         }
