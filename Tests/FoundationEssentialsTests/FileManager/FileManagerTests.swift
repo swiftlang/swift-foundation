@@ -405,11 +405,8 @@ final class FileManagerTests : XCTestCase {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
             }
             
-            #if canImport(Darwin)
-            // Not supported on linux because it ends up trying to set attributes that are currently unimplemented
             try $0.copyItem(atPath: "dir", toPath: "other_file")
             XCTAssertTrue($0.delegateCaptures.shouldProceedAfterCopyError.contains(.init("dir", "other_file", code: .fileWriteFileExists)))
-            #endif
         }
     }
     
