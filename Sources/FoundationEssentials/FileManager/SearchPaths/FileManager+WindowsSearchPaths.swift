@@ -14,12 +14,12 @@
 
 import WinSDK
 
-private func _url(for id: KNOWNFOLDERID) -> URL {
+private func _url(for id: KNOWNFOLDERID) -> URL? {
     var pszPath: PWSTR?
     let hr: HRESULT = withUnsafePointer(to: id) { id in
         SHGetKnownFolderPath(id, KF_FLAG_DEFAULT, nil, &pszPath)
     }
-    precondition(SUCCEEDED(hr), "SHGetKnownFolderPath failed \(String(hr, radix: 16))")
+    guard SUCCEEDED(hr) else { return nil }
     defer { CoTaskMemFree(pszPath) }
     return URL(filePath: String(decodingCString: pszPath!, as: UTF16.self), directoryHint: .isDirectory)
 }
@@ -27,7 +27,8 @@ private func _url(for id: KNOWNFOLDERID) -> URL {
 func _WindowsSearchPathURL(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask) -> URL? {
     switch (directory, domain) {
     case (.autosavedInformationDirectory, .userDomainMask):
-        _url(for: FOLDERID_LocalAppData).appending(component: "Autosave Information", directoryHint: .isDirectory)
+        _url(for: FOLDERID_LocalAppData)?
+            .appending(component: "Autosave Information", directoryHint: .isDirectory)
 
     case (.desktopDirectory, .userDomainMask):
         _url(for: FOLDERID_Desktop)

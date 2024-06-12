@@ -726,7 +726,6 @@ final class FileManagerTests : XCTestCase {
             .downloadsDirectory,
             .moviesDirectory,
             .musicDirectory,
-            .picturesDirectory,
             .sharedPublicDirectory
         ], exists: true)
         
@@ -774,6 +773,12 @@ final class FileManagerTests : XCTestCase {
         // .trashDirectory is unavailable on watchOS/tvOS and only produces paths on macOS (the framework build) + non-Darwin
         #if !os(watchOS) && !os(tvOS)
         assertSearchPaths([.trashDirectory], exists: (isMacOS && isFramework) || (!isDarwin && !isWindows))
+        #endif
+
+        // .picturesDirectory does not exist in CI, though it does exist in user
+        // desktop scenarios.
+        #if !os(Windows)
+        assertSearchPaths([.picturesDirectory], exists: true)
         #endif
         
         // .applicationScriptsDirectory is only available on macOS and only produces paths in the framework build
