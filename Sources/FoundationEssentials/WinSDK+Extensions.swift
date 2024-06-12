@@ -13,6 +13,10 @@
 
 import WinSDK
 
+package var COPY_FILE_FAIL_IF_EXISTS: DWORD {
+    DWORD(WinSDK.COPY_FILE_FAIL_IF_EXISTS)
+}
+
 package var COPY_FILE_COPY_SYMLINK: DWORD {
     DWORD(WinSDK.COPY_FILE_COPY_SYMLINK)
 }
@@ -247,6 +251,11 @@ package func PathAllocCombine(_ pszPathIn: String, _ pszMore: String, _ dwFlags:
             WinSDK.PathAllocCombine(pszPathIn, pszMore, dwFlags, ppszPathOut)
         }
     }
+}
+
+@inline(__always)
+package func FAILED(_ hr: HRESULT) -> Bool {
+    hr < 0
 }
 
 @inline(__always)

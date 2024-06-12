@@ -399,8 +399,12 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["dir", "dir/bar", "dir/foo", "dir2", "dir2/bar", "dir2/foo", "other_file"])
             XCTAssertEqual($0.contents(atPath: "dir/foo"), data)
             XCTAssertEqual($0.contents(atPath: "dir2/foo"), data)
+#if os(Windows)
+            XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/bar", "dir2/bar"), .init("dir/foo", "dir2/foo")])
+#else
             XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")])
-            
+#endif
+
             XCTAssertThrowsError(try $0.copyItem(atPath: "does_not_exist", toPath: "dir3")) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
             }
