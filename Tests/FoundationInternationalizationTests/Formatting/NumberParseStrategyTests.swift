@@ -222,17 +222,17 @@ final class NumberParseStrategyTests : XCTestCase {
             // TODO: Parse integers greater than Int64
             let format: IntegerFormatStyle<UInt64> = .init(locale: locale)
             let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
-            XCTAssertEqual(try parseStrategy.parse(UInt64.min.formatted(format)), UInt64.min)
-            //XCTAssertEqual(try parseStrategy.parse(UInt64.max.formatted(format)), UInt64.max)
+            XCTAssertEqual(      try parseStrategy.parse(UInt64.min.formatted(format)), UInt64.min)
+            XCTAssertThrowsError(try parseStrategy.parse(UInt64.max.formatted(format)))
             XCTAssertThrowsError(try parseStrategy.parse("-1"))
             XCTAssertThrowsError(try parseStrategy.parse("18446744073709551616"))
             
             // TODO: Parse integers greater than Int64
             let maxInt64 = UInt64(Int64.max)
-            XCTAssertEqual(try parseStrategy.parse((maxInt64 + 0).formatted(format)), maxInt64 + 0) // not a Double
-            //XCTAssertEqual(try parseStrategy.parse((maxInt64 + 1).formatted(format)), maxInt64 + 1) // exact Double
-            //XCTAssertEqual(try parseStrategy.parse((maxInt64 + 2).formatted(format)), maxInt64 + 2) // not a Double
-            //XCTAssertEqual(try parseStrategy.parse((maxInt64 + 3).formatted(format)), maxInt64 + 3) // not a Double
+            XCTAssertEqual(      try parseStrategy.parse((maxInt64 + 0).formatted(format)), maxInt64) // not a Double
+            XCTAssertThrowsError(try parseStrategy.parse((maxInt64 + 1).formatted(format)))           // exact Double
+            XCTAssertThrowsError(try parseStrategy.parse((maxInt64 + 2).formatted(format)))           // not a Double
+            XCTAssertThrowsError(try parseStrategy.parse((maxInt64 + 3).formatted(format)))           // not a Double
         }
     }
     
