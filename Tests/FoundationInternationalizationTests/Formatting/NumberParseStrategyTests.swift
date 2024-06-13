@@ -192,22 +192,68 @@ final class NumberParseStrategyTests : XCTestCase {
     func testNumericBoundsParsing() throws {
         let locale = Locale(identifier: "en_US")
         do {
-            let format: IntegerFormatStyle<UInt64> = .init(locale: locale)
-            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
-            XCTAssertEqual(try parseStrategy.parse(0.formatted(format)), 0)
-            let aboveInt64Max = UInt64(Int64.max) + 1
-            XCTAssertEqual(try parseStrategy.parse(aboveInt64Max.formatted(format)), aboveInt64Max)
-            XCTAssertThrowsError(try parseStrategy.parse("-1"))
-            XCTAssertThrowsError(try parseStrategy.parse("-1,000,000"))
-        }
-        
-        do {
             let format: IntegerFormatStyle<Int8> = .init(locale: locale)
             let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
             XCTAssertEqual(try parseStrategy.parse(Int8.min.formatted(format)), Int8.min)
             XCTAssertEqual(try parseStrategy.parse(Int8.max.formatted(format)), Int8.max)
             XCTAssertThrowsError(try parseStrategy.parse("-129"))
             XCTAssertThrowsError(try parseStrategy.parse("128"))
+        }
+        
+        do {
+            let format: IntegerFormatStyle<Int64> = .init(locale: locale)
+            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
+            XCTAssertEqual(try parseStrategy.parse(Int64.min.formatted(format)), Int64.min)
+            XCTAssertEqual(try parseStrategy.parse(Int64.max.formatted(format)), Int64.max)
+            XCTAssertThrowsError(try parseStrategy.parse("-9223372036854775809"))
+            XCTAssertThrowsError(try parseStrategy.parse("9223372036854775808"))
+        }
+        
+        do {
+            let format: IntegerFormatStyle<UInt8> = .init(locale: locale)
+            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
+            XCTAssertEqual(try parseStrategy.parse(UInt8.min.formatted(format)), UInt8.min)
+            XCTAssertEqual(try parseStrategy.parse(UInt8.max.formatted(format)), UInt8.max)
+            XCTAssertThrowsError(try parseStrategy.parse("-1"))
+            XCTAssertThrowsError(try parseStrategy.parse("256"))
+        }
+        
+        do {
+            // TODO: Parse integers greater than Int64
+            let format: IntegerFormatStyle<UInt64> = .init(locale: locale)
+            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
+            XCTAssertEqual(      try parseStrategy.parse(UInt64.min.formatted(format)), UInt64.min)
+            XCTAssertThrowsError(try parseStrategy.parse(UInt64.max.formatted(format)))
+            XCTAssertThrowsError(try parseStrategy.parse("-1"))
+            XCTAssertThrowsError(try parseStrategy.parse("18446744073709551616"))
+            
+            // TODO: Parse integers greater than Int64
+            let maxInt64 = UInt64(Int64.max)
+            XCTAssertEqual(      try parseStrategy.parse((maxInt64 + 0).formatted(format)), maxInt64) // not a Double
+            XCTAssertThrowsError(try parseStrategy.parse((maxInt64 + 1).formatted(format)))           // exact Double
+            XCTAssertThrowsError(try parseStrategy.parse((maxInt64 + 2).formatted(format)))           // not a Double
+            XCTAssertThrowsError(try parseStrategy.parse((maxInt64 + 3).formatted(format)))           // not a Double
+        }
+    }
+    
+    func testIntegerParseStrategyDoesNotRoundLargeIntegersToNearestDouble() {
+        XCTAssertEqual(Double("9007199254740992"), Double(exactly: UInt64(1) << 53)!) // +2^53 + 0 -> +2^53
+        XCTAssertEqual(Double("9007199254740993"), Double(exactly: UInt64(1) << 53)!) // +2^53 + 1 -> +2^53
+        XCTAssertEqual(Double.significandBitCount, 52, "Double can represent each integer in -2^53 ... 2^53")
+        let locale = Locale(identifier: "en_US")
+
+        do {
+            let format: IntegerFormatStyle<Int64> = .init(locale: locale)
+            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
+            XCTAssertNotEqual(try? parseStrategy.parse("-9223372036854776832"), -9223372036854775808) // -2^63 - 1024 (Double: -2^63)
+            XCTAssertNil(     try? parseStrategy.parse("-9223372036854776833"))                       // -2^63 - 1025 (Double: -2^63 - 2048)
+        }
+        
+        do {
+            let format: IntegerFormatStyle<UInt64> = .init(locale: locale)
+            let parseStrategy = IntegerParseStrategy(format: format, lenient: true)
+            XCTAssertNotEqual(try? parseStrategy.parse( "9223372036854776832"),  9223372036854775808) // +2^63 + 1024 (Double: +2^63)
+            XCTAssertNotEqual(try? parseStrategy.parse( "9223372036854776833"),  9223372036854777856) // +2^63 + 1025 (Double: +2^63 + 2048)
         }
     }
 }
