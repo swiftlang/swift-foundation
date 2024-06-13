@@ -18,6 +18,7 @@ internal import _ForSwiftFoundation
 @available(FoundationPreview 0.4, *)
 extension String {
     public func data(using encoding: String.Encoding, allowLossyConversion: Bool = false) -> Data? {
+        // allowLossyConversion is a no-op for UTF8 and UTF16. For UTF32, we fall back to NSString when lossy conversion is requested on Darwin platforms.
         switch encoding {
         case .utf8:
             return Data(self.utf8)
@@ -53,57 +54,101 @@ extension String {
                 }
                 return allASCII ? data : nil
             }
-        default:
+        case .utf16BigEndian, .utf16LittleEndian, .utf16:
+            let bom: UInt16?
+            let swap: Bool
+            
+            if encoding == .utf16 {
+                swap = false
+                bom = 0xFEFF
+            } else if encoding == .utf16BigEndian {
+#if _endian(little)
+                swap = true
+#else
+                swap = false
+#endif
+                bom = nil
+            } else if encoding == .utf16LittleEndian {
+#if _endian(little)
+                swap = false
+#else
+                swap = true
+#endif
+                bom = nil
+            } else {
+                fatalError("Unreachable")
+            }
+            
+            // Grab this value once, as it requires doing a calculation over String's UTF8 storage
+            let inputCount = self.utf16.count
+            
+            // The output may have 1 additional UTF16 character, if it has a BOM
+            let outputCount = bom == nil ? inputCount : inputCount + 1
+            
+            // Allocate enough memory to hold the UTF16 bytes after conversion. We will pass this off to Data.
+            let utf16Pointer = calloc(outputCount, MemoryLayout<UInt16>.size)!.assumingMemoryBound(to: UInt16.self)
+            let utf16Buffer = UnsafeMutableBufferPointer<UInt16>(start: utf16Pointer, count: outputCount)
+            
+            if let bom {
+                // Put the BOM in, then copy the UTF16 bytes to the buffer after it.
+                utf16Buffer[0] = bom
+                let afterBOMBuffer = UnsafeMutableBufferPointer(rebasing: utf16Buffer[1..<utf16Buffer.endIndex])
+                self._copyUTF16CodeUnits(into: afterBOMBuffer, range: 0..<inputCount)
+            } else {
+                self._copyUTF16CodeUnits(into: utf16Buffer, range: 0..<inputCount)
+            }
+            
+            
+            // If we need to swap endianness, we do it as a second pass over the data
+            if swap {
+#if _endian(little)
+                // Swap, including the BOM if it is there
+                for u in utf16Buffer.enumerated() {
+                    utf16Buffer[u.0] = u.1.bigEndian
+                }
+#else
+                for u in utf16Buffer.enumerated() {
+                    utf16Buffer[u.0] = u.1.littleEndian
+                }
+#endif
+            }
+            
+            return Data(bytesNoCopy: utf16Buffer.baseAddress!, count: utf16Buffer.count * 2, deallocator: .free)
+
+        case .utf32BigEndian, .utf32LittleEndian:
+            // This creates a contiguous storage for Data to simply memcpy.
+            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: self.unicodeScalars.count * 4) { utf32Buffer in
+                _ = utf32Buffer.initialize(from: UnicodeScalarToDataAdaptor(self.unicodeScalars, endianness: Endianness(encoding)!))
+                defer { utf32Buffer.deinitialize() }
+                return Data(utf32Buffer)
+            }
+        case .utf32:
 #if FOUNDATION_FRAMEWORK
-            // TODO: Implement data(using:allowLossyConversion:) in Swift
-            return _ns.data(
-                using: encoding.rawValue,
-                allowLossyConversion: allowLossyConversion)
-#else
-            switch encoding {
-            case .utf16BigEndian, .utf16LittleEndian:
-                // This creates a contiguous storage for Data to simply memcpy, the most efficient way to give it bytes.
-                return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: self.utf16.count * 2) { utf16Buffer in
-                    _ = utf16Buffer.initialize(from: UTF16ToDataAdaptor(self.utf16, endianness: Endianness(encoding)!))
-                    defer { utf16Buffer.deinitialize() }
-                    return Data(utf16Buffer)
-                }
-            case .utf16:
-#if _endian(little)
-                let data = Data([0xFF, 0xFE])
-                let hostEncoding : String.Encoding = .utf16LittleEndian
-#else
-                let data = Data([0xFE, 0xFF])
-                let hostEncoding : String.Encoding  = .utf16BigEndian
+            // Only the CoreFoundation code currently handles the rare case of allowing lossy conversion for UTF32
+            if allowLossyConversion {
+                return _ns.data(
+                    using: encoding.rawValue,
+                    allowLossyConversion: allowLossyConversion)
+            }
 #endif
-                guard let swapped = self.data(using: hostEncoding, allowLossyConversion: allowLossyConversion) else {
-                    return nil
-                }
-                
-                return data + swapped
-            case .utf32BigEndian, .utf32LittleEndian:
-                // This creates a contiguous storage for Data to simply memcpy, the most efficient way to give it bytes.
-                return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: self.unicodeScalars.count * 4) { utf32Buffer in
-                    _ = utf32Buffer.initialize(from: UnicodeScalarToDataAdaptor(self.unicodeScalars, endianness: Endianness(encoding)!))
-                    defer { utf32Buffer.deinitialize() }
-                    return Data(utf32Buffer)
-                }
-            case .utf32:
 #if _endian(little)
-                let data = Data([0xFF, 0xFE, 0x00, 0x00])
-                let hostEncoding : String.Encoding = .utf32LittleEndian
+            let data = Data([0xFF, 0xFE, 0x00, 0x00])
+            let hostEncoding : String.Encoding = .utf32LittleEndian
 #else
-                let data = Data([0x00, 0x00, 0xFE, 0xFF])
-                let hostEncoding : String.Encoding = .utf32BigEndian
+            let data = Data([0x00, 0x00, 0xFE, 0xFF])
+            let hostEncoding : String.Encoding = .utf32BigEndian
 #endif
-                guard let swapped = self.data(using: hostEncoding, allowLossyConversion: allowLossyConversion) else {
-                    return nil
-                }
-                
-                return data + swapped
-            default:
+            guard let swapped = self.data(using: hostEncoding, allowLossyConversion: allowLossyConversion) else {
                 return nil
             }
+            
+            return data + swapped
+        default:
+#if FOUNDATION_FRAMEWORK
+            // Other encodings, defer to the CoreFoundation implementation
+            return _ns.data(using: encoding.rawValue, allowLossyConversion: allowLossyConversion)
+#else
+            return nil
 #endif
         }
     }

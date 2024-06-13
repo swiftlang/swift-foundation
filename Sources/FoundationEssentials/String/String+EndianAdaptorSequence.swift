@@ -244,66 +244,6 @@ struct UTF32EndianAdaptor<S : Sequence> : Sequence where S.Element == UInt8 {
     }
 }
 
-/// Converts a UTF16View to endian-swapped UInt16 values.
-struct UTF16ToDataAdaptor : Sequence {
-    typealias Element = UInt8
-    typealias S = String.UTF16View
-    
-    let underlying: S
-    let endianness: Endianness
-
-    init(_ sequence: S, endianness: Endianness) {
-        underlying = sequence
-        self.endianness = endianness
-    }
-    
-    func makeIterator() -> Iterator {
-        Iterator(i: underlying.makeIterator(), endianness: endianness)
-    }
-    
-    struct Iterator : IteratorProtocol {
-        var u16: UInt16?
-        var i: S.Iterator
-        var endianness: Endianness
-        var done: Bool
-        
-        init(i: S.Iterator, endianness: Endianness) {
-            u16 = nil
-            done = false
-            self.i = i
-            self.endianness = endianness
-        }
-        
-        mutating func next() -> Element? {
-            guard !done else { return nil }
-            
-            if var u16 {
-                // We have a value already, return second byte
-                self.u16 = nil
-                return withUnsafeBytes(of: &u16) {
-                    $0[1]
-                }
-            } else {
-                if let u16 = i.next() {
-                    var value = switch endianness {
-                    case .little:
-                        u16.littleEndian
-                    case .big:
-                        u16.bigEndian
-                    }
-                    self.u16 = value
-                    return withUnsafeBytes(of: &value) {
-                        $0[0]
-                    }
-                } else {
-                    done = true
-                    return nil
-                }
-            }
-        }
-    }
-}
-
 struct UnicodeScalarToDataAdaptor : Sequence {
     typealias Element = UInt8
     typealias S = String.UnicodeScalarView
