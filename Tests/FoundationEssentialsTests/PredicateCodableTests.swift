@@ -70,7 +70,7 @@ final class PredicateCodableTests: XCTestCase {
         var g: [Int]
         var h: Object2
         
-        static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.Object> & Sendable] {
+        static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.Object>] {
             [
                 "Object.f" : \.f,
                 "Object.g" : \.g,
@@ -85,7 +85,7 @@ final class PredicateCodableTests: XCTestCase {
         var a: Int
         var b: String
         
-        static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.Object2> & Sendable] {
+        static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.Object2>] {
             ["Object2.a" : \.a]
         }
     }

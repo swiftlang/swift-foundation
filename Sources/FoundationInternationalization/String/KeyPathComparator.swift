@@ -20,8 +20,7 @@ import FoundationEssentials
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 public struct KeyPathComparator<Compared>: SortComparator {
     /// The key path to the property to be used for comparisons.
-    @preconcurrency
-    public let keyPath: PartialKeyPath<Compared> & Sendable
+    public let keyPath: PartialKeyPath<Compared>
 
     public var order: SortOrder {
         get {
@@ -34,7 +33,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
 
     var comparator: AnySortComparator
 
-    private let extractField: @Sendable (Compared) -> Any
+    private let extractField: (Compared) -> Any
 
     /// Get the field at `cachedOffset` if there is one, otherwise
     /// access the field directly through the keypath.
@@ -61,8 +60,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /// - Parameters:
     ///   - keyPath: The key path to the field to use for the comparison.
     ///   - order: The initial order to use for comparison.
-    @preconcurrency
-    public init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value> & Sendable, order: SortOrder = .forward) {
+    public init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value>, order: SortOrder = .forward) {
         self.keyPath = keyPath
         if Value.self is String.Type {
 #if FOUNDATION_FRAMEWORK
@@ -99,8 +97,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /// - Parameters:
     ///   - keyPath: The key path to the field to use for the comparison.
     ///   - order: The initial order to use for comparison.
-    @preconcurrency
-    public init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value?> & Sendable, order: SortOrder = .forward) {
+    public init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value?>, order: SortOrder = .forward) {
         self.keyPath = keyPath
         if Value.self is String.Type {
 #if FOUNDATION_FRAMEWORK
@@ -133,8 +130,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /// - Parameters:
     ///   - keyPath: The key path to the value used for the comparison.
     ///   - comparator: The `SortComparator` used to order values.
-    @preconcurrency
-    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value> & Sendable, comparator: Comparator) where Comparator.Compared == Value {
+    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value>, comparator: Comparator) where Comparator.Compared == Value {
         self.keyPath = keyPath
         self.comparator = AnySortComparator(comparator)
         let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
@@ -159,8 +155,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     /// - Parameters:
     ///   - keyPath: The key path to the value used for the comparison.
     ///   - comparator: The `SortComparator` used to order values.
-    @preconcurrency
-    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?> & Sendable, comparator: Comparator) where Comparator.Compared == Value {
+    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?>, comparator: Comparator) where Comparator.Compared == Value {
         self.keyPath = keyPath
         self.comparator = AnySortComparator(OptionalComparator(comparator))
         let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
@@ -180,8 +175,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     ///   - keyPath: The key path to the value used for the comparison.
     ///   - comparator: The `SortComparator` used to order values.
     ///   - order: The initial order to use for comparison.
-    @preconcurrency
-    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value> & Sendable, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
+    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value>, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         self.keyPath = keyPath
         self.comparator = AnySortComparator(comparator)
         let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
@@ -205,8 +199,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
     ///   - keyPath: The key path to the value used for the comparison.
     ///   - comparator: The `SortComparator` used to order values.
     ///   - order: The initial order to use for comparison.
-    @preconcurrency
-    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?> & Sendable, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
+    public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?>, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         self.keyPath = keyPath
         self.comparator = AnySortComparator(OptionalComparator(comparator))
         let cachedOffset = MemoryLayout<Compared>.offset(of: keyPath)
