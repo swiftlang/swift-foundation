@@ -90,16 +90,24 @@ final class DateTests : XCTestCase {
         XCTAssertEqual("1970-01-01 00:00:00 +0000", date.description)
     }
 
-    func testDescriptionDistantPast() {
+    func testDescriptionDistantPast() throws {
+#if os(Windows)
+        throw XCTSkip("ucrt does not support distant past")
+#else
 #if FOUNDATION_FRAMEWORK
         XCTAssertEqual("0001-01-01 00:00:00 +0000", Date.distantPast.description)
 #else
         XCTAssertEqual("0000-12-30 00:00:00 +0000", Date.distantPast.description)
 #endif
+#endif
     }
 
-    func testDescriptionDistantFuture() {
+    func testDescriptionDistantFuture() throws {
+#if os(Windows)
+        throw XCTSkip("ucrt does not support distant future")
+#else
         XCTAssertEqual("4001-01-01 00:00:00 +0000", Date.distantFuture.description)
+#endif
     }
 
     func testDescriptionBeyondDistantPast() {
