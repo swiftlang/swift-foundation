@@ -17,8 +17,7 @@
 
 @available(FoundationPredicate 0.1, *)
 public protocol PredicateCodableKeyPathProviding {
-    //@preconcurrency
-    static var predicateCodableKeyPaths : [String : PartialKeyPath<Self> & Sendable] { get }
+    static var predicateCodableKeyPaths : [String : PartialKeyPath<Self>] { get }
 }
 
 @available(FoundationPredicate 0.1, *)
@@ -49,7 +48,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
     }
     
     enum AllowListKeyPath : Equatable, Sendable {
-        typealias Constructor = @Sendable (GenericArguments) -> (AnyKeyPath & Sendable)?
+        typealias Constructor = @Sendable (GenericArguments) -> AnyKeyPath?
         
         case concrete(AnyKeyPath & Sendable)
         case partial(PartialType, Constructor, String)
@@ -169,8 +168,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
         }
     }
     
-    @preconcurrency
-    public mutating func allowKeyPath(_ keyPath: AnyKeyPath & Sendable, identifier: String) {
+    public mutating func allowKeyPath(_ keyPath: AnyKeyPath, identifier: String) {
         keyPath._validateForPredicateUsage()
         for (id, existingKeyPath) in allowedKeyPaths {
             if id == identifier {
@@ -193,8 +191,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
         _allowType(type(of: keyPath).valueType, preferNewIdentifier: false)
     }
     
-    @preconcurrency
-    public mutating func disallowKeyPath(_ keyPath: AnyKeyPath & Sendable) {
+    public mutating func disallowKeyPath(_ keyPath: AnyKeyPath) {
         keyPath._validateForPredicateUsage()
         allowedKeyPaths = allowedKeyPaths.filter {
             $0.value != .concrete(keyPath)
@@ -262,7 +259,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
 
 @available(FoundationPredicate 0.1, *)
 extension PredicateCodableConfiguration {
-    func _identifier(for keyPath: AnyKeyPath & Sendable) -> String? {
+    func _identifier(for keyPath: AnyKeyPath) -> String? {
         let concreteIdentifier = allowedKeyPaths.first {
             $0.value == .concrete(keyPath)
         }?.key
@@ -289,7 +286,7 @@ extension PredicateCodableConfiguration {
         return nil
     }
     
-    func _keyPath(for identifier: String, rootType: Any.Type) -> (AnyKeyPath & Sendable)? {
+    func _keyPath(for identifier: String, rootType: Any.Type) -> AnyKeyPath? {
         guard let value = allowedKeyPaths[identifier] else {
             return nil
         }
@@ -421,7 +418,7 @@ extension PredicateCodableConfiguration {
                 return nil
             }
             
-            func project<E>(_: E.Type) -> AnyKeyPath & Sendable {
+            func project<E>(_: E.Type) -> AnyKeyPath {
                 \Array<E>.count
             }
             return _openExistential(elementType.swiftType, do: project)
@@ -431,7 +428,7 @@ extension PredicateCodableConfiguration {
                 return nil
             }
             
-            func project<E>(_: E.Type) -> AnyKeyPath & Sendable {
+            func project<E>(_: E.Type) -> AnyKeyPath {
                 \Array<E>.isEmpty
             }
             return _openExistential(elementType.swiftType, do: project)
@@ -441,7 +438,7 @@ extension PredicateCodableConfiguration {
                 return nil
             }
             
-            func project<E>(_: E.Type) -> AnyKeyPath & Sendable {
+            func project<E>(_: E.Type) -> AnyKeyPath {
                 \Array<E>.first
             }
             return _openExistential(elementType.swiftType, do: project)
@@ -451,7 +448,7 @@ extension PredicateCodableConfiguration {
                 return nil
             }
             
-            func project<E>(_: E.Type) -> AnyKeyPath & Sendable {
+            func project<E>(_: E.Type) -> AnyKeyPath {
                 \Array<E>.last
             }
             return _openExistential(elementType.swiftType, do: project)
@@ -463,7 +460,7 @@ extension PredicateCodableConfiguration {
                 return nil
             }
             
-            func project<E: Hashable>(_: E.Type) -> AnyKeyPath & Sendable {
+            func project<E: Hashable>(_: E.Type) -> AnyKeyPath {
                 \Set<E>.count
             }
             return project(elementType)
@@ -473,7 +470,7 @@ extension PredicateCodableConfiguration {
                 return nil
             }
             
-            func project<E: Hashable>(_: E.Type) -> AnyKeyPath & Sendable {
+            func project<E: Hashable>(_: E.Type) -> AnyKeyPath {
                 \Set<E>.isEmpty
             }
             return project(elementType)
@@ -485,8 +482,8 @@ extension PredicateCodableConfiguration {
                 return nil
             }
             
-            func project<K: Hashable>(_: K.Type) -> AnyKeyPath & Sendable {
-                func project2<V>(_: V.Type) -> AnyKeyPath & Sendable {
+            func project<K: Hashable>(_: K.Type) -> AnyKeyPath {
+                func project2<V>(_: V.Type) -> AnyKeyPath {
                     \Dictionary<K, V>.count
                 }
                 return _openExistential(genericArgs[1].swiftType, do: project2)
@@ -498,8 +495,8 @@ extension PredicateCodableConfiguration {
                 return nil
             }
             
-            func project<K: Hashable>(_: K.Type) -> AnyKeyPath & Sendable {
-                func project2<V>(_: V.Type) -> AnyKeyPath & Sendable {
+            func project<K: Hashable>(_: K.Type) -> AnyKeyPath {
+                func project2<V>(_: V.Type) -> AnyKeyPath {
                     \Dictionary<K, V>.isEmpty
                 }
                 return _openExistential(genericArgs[1].swiftType, do: project2)
