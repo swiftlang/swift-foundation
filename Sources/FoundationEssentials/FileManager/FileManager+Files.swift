@@ -32,6 +32,7 @@ extension Date {
 }
 
 #if !os(Windows)
+#if !os(WASI)
 private func _nameFor(uid: uid_t) -> String? {
     guard let pwd = getpwuid(uid), let name = pwd.pointee.pw_name else {
         return nil
@@ -45,6 +46,7 @@ private func _nameFor(gid: gid_t) -> String? {
     }
     return String(cString: name)
 }
+#endif
 
 extension mode_t {
     private var _fileType: FileAttributeType {
@@ -178,12 +180,14 @@ extension stat {
             .ownerAccountID : _writeFileAttributePrimitive(st_uid, as: UInt.self),
             .groupOwnerAccountID : _writeFileAttributePrimitive(st_gid, as: UInt.self)
         ]
+        #if !os(WASI)
         if let userName = _nameFor(uid: st_uid) {
             result[.ownerAccountName] = userName
         }
         if let groupName = _nameFor(gid: st_gid) {
             result[.groupOwnerAccountName] = groupName
         }
+        #endif
         switch fileType as FileAttributeType {
         case .typeBlockSpecial, .typeCharacterSpecial:
             result[.deviceIdentifier] = _writeFileAttributePrimitive(st_rdev, as: UInt.self)
@@ -830,6 +834,10 @@ extension _FileManagerImpl {
             // Like the immutable flag, if write permissions are being set, do it first. If they are being unset, do it last.
             var setMode: (() throws -> Void)?
             if let mode {
+                #if os(WASI)
+                // WASI does not have the concept of permissions
+                throw CocoaError.errorWithFilePath(.featureUnsupported, path)
+                #else
                 setMode = {
                     if chmod(fileSystemRepresentation, mode_t(mode)) != 0 {
                         throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
@@ -840,6 +848,7 @@ extension _FileManagerImpl {
                     try setMode?()
                     setMode = nil
                 }
+                #endif
             }
             
             let user = attributes[.ownerAccountName] as? String
