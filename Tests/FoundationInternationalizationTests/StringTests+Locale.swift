@@ -143,6 +143,7 @@ final class StringLocaleTests: XCTestCase {
 
         test(nil, "ᾈ", "ᾀ")     // 0x1F88
         test("en", "ᾈ", "ᾀ")
+        test("en", "SOMEVERYVERYVERYVERYVERYVERYVERYVERYVERYLONGSTRING", "someveryveryveryveryveryveryveryveryverylongstring")
         test("el_GR", "ᾈ", "ᾀ")
 
         // Turkik
@@ -153,6 +154,13 @@ final class StringLocaleTests: XCTestCase {
         test(nil, "İİ", "i̇i̇")
         test("en", "İİ", "i̇i̇")
         test("tr", "İİ", "ii")
+    }
+
+    func testFuzzFailure() throws {
+        let input = String(data: Data(base64Encoded: "77+977+977+977+977+977+977+977+977+977+9Cg==")!, encoding: .utf8)!
+        _ = input.lowercased(with: Locale(identifier: "en_US"))
+        _ = input.capitalized(with: Locale(identifier: "en_US"))
+        _ = input.capitalized(with: Locale(identifier: "en_US"))
     }
 }
 
