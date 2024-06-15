@@ -1269,6 +1269,50 @@ final class JSONEncoderTests : XCTestCase {
         let number = result["a"]!
         XCTAssertEqual(number, num)
     }
+    
+    func test_largeIntegerNumberIsNotRoundedToNearestDoubleWhenDecodingAsAnInteger() {
+        XCTAssertEqual(Double(sign: .plus, exponent: 63, significand: 1).ulp, 2048)
+        XCTAssertEqual(Double(sign: .plus, exponent: 64, significand: 1).ulp, 4096)
+        
+        let int64s: [(String, Int64?)] = [
+            ("-9223372036854776833", nil),            // -2^63 - 1025 (Double: -2^63 - 2048)
+            ("-9223372036854776832", nil),            // -2^63 - 1024 (Double: -2^63)
+            ("-9223372036854775809", nil),            // -2^63 - 1    (Double: -2^63)
+            ("-9223372036854775808", Int64.min),      // -2^63        (Double: -2^63)
+            
+            ( "9223372036854775807", Int64.max),      //  2^63 - 1    (Double:  2^63)
+            ( "9223372036854775808", nil),            //  2^63        (Double:  2^63)
+            ( "9223372036854776832", nil),            //  2^63 + 1024 (Double:  2^63)
+            ( "9223372036854776833", nil),            //  2^63 + 1025 (Double:  2^63 + 2048)
+        ]
+        
+        let uint64s: [(String, UInt64?)] = [
+            ( "9223372036854775807", 1 << 63 - 0001), //  2^63 - 1    (Double:  2^63)
+            ( "9223372036854775808", 1 << 63 + 0000), //  2^63        (Double:  2^63)
+            ( "9223372036854776832", 1 << 63 + 1024), //  2^63 + 1024 (Double:  2^63)
+            ( "9223372036854776833", 1 << 63 + 1025), //  2^63 + 1025 (Double:  2^63 + 2048)
+            
+            ("18446744073709551615", UInt64.max),     //  2^64 - 1    (Double:  2^64)
+            ("18446744073709551616", nil),            //  2^64        (Double:  2^64)
+            ("18446744073709553664", nil),            //  2^64 + 2048 (Double:  2^64)
+            ("18446744073709553665", nil),            //  2^64 + 2049 (Double:  2^64 + 4096)
+        ]
+        
+        for json5 in [true, false] {
+            let decoder = JSONDecoder()
+            decoder.allowsJSON5 = json5
+            
+            for (json, value) in int64s {
+                let result = try? decoder.decode(Int64.self, from: json.data(using: String._Encoding.utf8)!)
+                XCTAssertEqual(result, value, "Unexpected \(decoder) result for input \"\(json)\"")
+            }
+            
+            for (json, value) in uint64s {
+                let result = try? decoder.decode(UInt64.self, from: json.data(using: String._Encoding.utf8)!)
+                XCTAssertEqual(result, value, "Unexpected \(decoder) result for input \"\(json)\"")
+            }
+        }
+    }
 
     func test_roundTrippingExtremeValues() {
         struct Numbers : Codable, Equatable {
