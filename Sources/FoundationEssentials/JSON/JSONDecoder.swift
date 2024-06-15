@@ -981,10 +981,12 @@ extension JSONDecoderImpl: Decoder {
     static private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(as type: T.Type, json5: Bool, numberBuffer: BufferView<UInt8>, fullSource: BufferView<UInt8>, digitBeginning: BufferViewIndex<UInt8>, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         // This is the slow path... If the fast path has failed. For example for "34.0" as an integer, we try to parse as either a Decimal or a Double and then convert back, losslessly.
         if let double = Double(prevalidatedBuffer: numberBuffer) {
-            guard let value = T(exactly: double) else {
-                throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+            if double.magnitude < Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) {
+                guard let value = T(exactly: double) else {
+                    throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+                }
+                return value
             }
-            return value
         }
 
         let number = String(decoding: numberBuffer, as: Unicode.ASCII.self)
