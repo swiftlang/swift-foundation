@@ -2219,7 +2219,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             guard !r.isEmpty else { return 0 }
             copyRange = r.lowerBound..<(r.lowerBound + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, r.upperBound - r.lowerBound))
         } else {
-            copyRange = 0..<Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, cnt)
+            copyRange = startIndex..<(startIndex + Swift.min(buffer.count * MemoryLayout<DestinationType>.stride, cnt))
         }
 
         guard !copyRange.isEmpty else { return 0 }
