@@ -99,11 +99,18 @@ extension String {
                 // Put the BOM in, then copy the UTF16 bytes to the buffer after it.
                 utf16Buffer[0] = bom
                 let afterBOMBuffer = UnsafeMutableBufferPointer(rebasing: utf16Buffer[1..<utf16Buffer.endIndex])
-                self._copyUTF16CodeUnits(into: afterBOMBuffer, range: 0..<inputCount)
+                if self.isContiguousUTF8 {
+                    self._copyUTF16CodeUnits(into: afterBOMBuffer, range: 0..<inputCount)
+                } else {
+                    _ = afterBOMBuffer.initialize(fromContentsOf: self.utf16)
+                }
             } else {
-                self._copyUTF16CodeUnits(into: utf16Buffer, range: 0..<inputCount)
-            }
-            
+                if self.isContiguousUTF8 {
+                    self._copyUTF16CodeUnits(into: utf16Buffer, range: 0..<inputCount)
+                } else {
+                    _ = utf16Buffer.initialize(fromContentsOf: self.utf16)
+                }
+            }            
             
             // If we need to swap endianness, we do it as a second pass over the data
             if swap {
