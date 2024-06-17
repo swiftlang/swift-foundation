@@ -70,6 +70,9 @@ target_link_libraries(FoundationEssentials PUBLIC
     _CShims
     _FoundationCollections)
 
+target_link_options(FoundationEssentials PRIVATE
+    "SHELL:-no-toolchain-stdlib-rpath")
+
 set_target_properties(FoundationEssentials PROPERTIES
     INSTALL_RPATH "$ORIGIN")
 
