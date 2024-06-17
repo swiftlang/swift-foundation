@@ -24,6 +24,10 @@
 #include <xlocale.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(_WIN32)
 #define locale_t _locale_t
 #endif
@@ -34,8 +38,12 @@
 
 INTERNAL int _stringshims_strncasecmp_l(const char * _Nullable s1, const char * _Nullable s2, size_t n, locale_t _Nullable loc);
 
-INTERNAL double _stringshims_strtod_l(const char * _Nullable restrict nptr, char * _Nullable * _Nullable restrict endptr, locale_t _Nullable loc);
+INTERNAL double _stringshims_strtod_l(const char * _Nullable __restrict nptr, char * _Nullable * _Nullable __restrict endptr, locale_t _Nullable loc);
 
-INTERNAL float _stringshims_strtof_l(const char * _Nullable restrict nptr, char * _Nullable * _Nullable restrict endptr, locale_t _Nullable loc);
+INTERNAL float _stringshims_strtof_l(const char * _Nullable __restrict nptr, char * _Nullable * _Nullable __restrict endptr, locale_t _Nullable loc);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CSHIMS_STRING_H */
