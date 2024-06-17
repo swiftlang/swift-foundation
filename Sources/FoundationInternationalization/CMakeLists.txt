@@ -39,6 +39,9 @@ target_link_libraries(FoundationInternationalization PUBLIC
     _CShims
     _FoundationICU)
 
+target_link_options(FoundationInternationalization PRIVATE
+    "SHELL:-no-toolchain-stdlib-rpath")
+
 set_target_properties(FoundationInternationalization PROPERTIES
     INSTALL_RPATH "$ORIGIN")
 
