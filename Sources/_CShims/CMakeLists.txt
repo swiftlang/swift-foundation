@@ -33,3 +33,11 @@ install(DIRECTORY
         DESTINATION
             lib/${install_directory}/_CShims)
 
+if(NOT BUILD_SHARED_LIBS)
+    get_swift_host_os(swift_os)
+    install(TARGETS _CShims
+        ARCHIVE DESTINATION lib/${install_directory}/${swift_os}
+        LIBRARY DESTINATION lib/${install_directory}/${swift_os}
+        RUNTIME DESTINATION bin)
+endif()
+
