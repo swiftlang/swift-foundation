@@ -39,6 +39,13 @@ target_link_libraries(FoundationInternationalization PUBLIC
     _CShims
     _FoundationICU)
 
+if(NOT BUILD_SHARED_LIBS)
+    target_compile_options(FoundationInternationalization PRIVATE
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _CShims>")
+    target_compile_options(FoundationInternationalization PRIVATE
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationICU>")
+endif()
+
 target_link_options(FoundationInternationalization PRIVATE
     "SHELL:-no-toolchain-stdlib-rpath")
 

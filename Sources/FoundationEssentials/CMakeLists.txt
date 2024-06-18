@@ -70,6 +70,13 @@ target_link_libraries(FoundationEssentials PUBLIC
     _CShims
     _FoundationCollections)
 
+if(NOT BUILD_SHARED_LIBS)
+    target_compile_options(FoundationEssentials PRIVATE
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _CShims>")
+    target_compile_options(FoundationEssentials PRIVATE
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationCollections>")
+endif()
+
 target_link_options(FoundationEssentials PRIVATE
     "SHELL:-no-toolchain-stdlib-rpath")
 
