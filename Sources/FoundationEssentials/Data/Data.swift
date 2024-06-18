@@ -1120,6 +1120,12 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             self.storage = storage
             self.slice = RangeReference(0..<count)
         }
+        
+        @inlinable // This is @inlinable as a trivial initializer.
+        init(_ storage: __DataStorage, range: Range<Int>) {
+            self.storage = storage
+            self.slice = RangeReference(range)
+        }
 
         @inlinable // This is @inlinable as trivially computable (and inlining may help avoid retain-release traffic).
         mutating func ensureUniqueReference() {
@@ -1360,6 +1366,19 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
                 self = .slice(InlineSlice(storage, count: count))
             } else {
                 self = .large(LargeSlice(storage, count: count))
+            }
+        }
+        
+        @inlinable
+        init(_ storage: __DataStorage, range: Range<Int>) {
+            if range.count == 0 {
+                self = .empty
+            } else if range.startIndex == 0 {
+                self.init(storage, count: range.count)
+            } else if InlineSlice.canStore(count: range.count) {
+                self = .slice(InlineSlice(storage, range: range))
+            } else {
+                self = .large(LargeSlice(storage, range: range))
             }
         }
 
