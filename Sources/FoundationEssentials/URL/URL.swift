@@ -833,7 +833,7 @@ public struct URL: Equatable, Sendable, Hashable {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
             let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path, isDirectory: isDirectory, relativeTo: base))
-            self.init(reference: url)
+            self.init(convertedReference: url)
             return
         }
         #endif
@@ -852,7 +852,7 @@ public struct URL: Equatable, Sendable, Hashable {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
             let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path, relativeTo: base))
-            self.init(reference: url)
+            self.init(convertedReference: url)
             return
         }
         #endif
@@ -871,7 +871,7 @@ public struct URL: Equatable, Sendable, Hashable {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
             let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path, isDirectory: isDirectory))
-            self.init(reference: url)
+            self.init(convertedReference: url)
             return
         }
         #endif
@@ -890,7 +890,7 @@ public struct URL: Equatable, Sendable, Hashable {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
             let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path))
-            self.init(reference: url)
+            self.init(convertedReference: url)
             return
         }
         #endif
@@ -906,7 +906,7 @@ public struct URL: Equatable, Sendable, Hashable {
             guard unsafeBitCast(url, to: UnsafeRawPointer?.self) != nil else {
                 return nil
             }
-            self.init(reference: url)
+            self.init(convertedReference: url)
             return
         }
         #endif
@@ -1000,7 +1000,7 @@ public struct URL: Equatable, Sendable, Hashable {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
             let url = URL._converted(from: NSURL(fileURLWithFileSystemRepresentation: path, isDirectory: isDirectory, relativeTo: baseURL))
-            self.init(reference: url)
+            self.init(convertedReference: url)
             return
         }
         #endif
@@ -1936,6 +1936,10 @@ public struct URL: Equatable, Sendable, Hashable {
         #endif
     }
 
+    private init(convertedReference: __shared NSURL) {
+        _url = convertedReference
+    }
+
     private init(reference: __shared NSURL) {
         _url = URL._converted(from: reference).copy() as! NSURL
         #if FOUNDATION_FRAMEWORK
@@ -2077,7 +2081,7 @@ extension URL {
                 let isDirectory = filePath.hasSuffix("/")
                 url = URL._converted(from: NSURL(fileURLWithPath: filePath, isDirectory: isDirectory, relativeTo: base))
             }
-            self.init(reference: url)
+            self.init(convertedReference: url)
             return
         }
         #endif // FOUNDATION_FRAMEWORK
