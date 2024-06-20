@@ -817,6 +817,11 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         static func canStore(count: Int) -> Bool {
             return count < HalfInt.max
         }
+        
+        @inlinable // This is @inlinable as trivially computable.
+        static func canStore(range: Range<Int>) -> Bool {
+            return range.lowerBound < HalfInt.max && range.upperBound < HalfInt.max
+        }
 
         @inlinable // This is @inlinable as a convenience initializer.
         init(_ buffer: UnsafeRawBufferPointer) {
@@ -1375,7 +1380,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
                 self = .empty
             } else if range.startIndex == 0 {
                 self.init(storage, count: range.count)
-            } else if InlineSlice.canStore(count: range.count) {
+            } else if InlineSlice.canStore(range: range) {
                 self = .slice(InlineSlice(storage, range: range))
             } else {
                 self = .large(LargeSlice(storage, range: range))
