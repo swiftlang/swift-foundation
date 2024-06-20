@@ -1122,6 +1122,37 @@ final class CalendarTests : XCTestCase {
         // 2024-03-03T02:34:36-0800, 2024-03-11T02:34:36-0700
         try test(Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476))
     }
+
+#if !os(watchOS) // This test assumes Int is Int64
+    func test_dateFromComponentsOverflow() {
+        let calendar = Calendar(identifier: .gregorian)
+
+        do {
+            let components = DateComponents(year: -1157442765409226769, month: -1157442765409226769, day: -1157442765409226769)
+            let date = calendar.date(from: components)
+            XCTAssertNil(date)
+        }
+
+        do {
+            let components = DateComponents(year: -8935141660703064064, month: -8897841259083430780, day: -8897841259083430780)
+            let date = calendar.date(from: components)
+            XCTAssertNil(date)
+        }
+
+        do {
+            let components = DateComponents(era: 3475652213542486016, year: -1, month: 72056757140062316, day: 7812738666521952255)
+            let date = calendar.date(from: components)
+            XCTAssertNil(date)
+        }
+
+        do {
+            let components = DateComponents(weekOfYear: -5280832742222096118, yearForWeekOfYear: 182)
+            let date = calendar.date(from: components)
+            XCTAssertNil(date)
+        }
+
+    }
+#endif
 }
 
 // MARK: - Bridging Tests

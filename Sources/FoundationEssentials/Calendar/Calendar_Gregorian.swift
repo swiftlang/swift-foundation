@@ -1586,11 +1586,48 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     // MARK:
 
+    static func isComponentsInSupportedRange(_ components: DateComponents) -> Bool {
+        // `Date.validCalendarRange` supports approximately from year -4713 to year 506713. These valid ranges were chosen as if representing the entire supported date range in one calendar unit.
+        let validEra = -10...10
+        let validYear = -4714...506714
+        let validQuarter = -4714*4...506714*4
+        let validWeek = -4714*52...506714*52
+        let validWeekday = -4714*52*7...506714*52*7
+        let validMonth = -4714*12...506714*12
+        let validDayOfYear = -4714*365...506714*365
+        let validDayOfMonth = -4714*12*31...506714*12*31
+        let validHour = -4714*8760...Int(Int32.max)
+        let validMinute = Int(Int32.min)...Int(Int32.max)
+        let validSecond = Int(Int32.min)...Int(Int32.max)
+
+        if let value = components.era { guard validEra.contains(value) else { return false } }
+        if let value = components.year { guard validYear.contains(value) else { return false } }
+        if let value = components.quarter { guard validQuarter.contains(value) else { return false } }
+        if let value = components.weekOfYear { guard validWeek.contains(value) else { return false } }
+        if let value = components.weekOfMonth { guard validWeek.contains(value) else { return false } }
+        if let value = components.yearForWeekOfYear { guard validYear.contains(value) else { return false } }
+        if let value = components.weekday { guard validWeekday.contains(value) else { return false } }
+        if let value = components.weekdayOrdinal { guard validWeek.contains(value) else { return false } }
+        if let value = components.month { guard validMonth.contains(value) else { return false } }
+        if let value = components.dayOfYear { guard validDayOfYear.contains(value) else { return false } }
+        if let value = components.day { guard validDayOfMonth.contains(value) else { return false } }
+        if let value = components.hour { guard validHour.contains(value) else { return false } }
+        if let value = components.minute { guard validMinute.contains(value) else { return false } }
+        if let value = components.second { guard validSecond.contains(value) else { return false } }
+        return true
+    }
+
     func date(from components: DateComponents) -> Date? {
+        guard _CalendarGregorian.isComponentsInSupportedRange(components) else {
+
+            // One or more values exceeds supported date range
+            return nil
+        }
+
         // If the components specifies a new time zone, perform this calculation using the specified timezone
         // If the date falls into the skipped time frame when transitioning into DST (e.g. 1:00 - 3:00 AM for PDT), we want to treat it as if DST hasn't happened yet. So, use .former for dstRepeatedTimePolicy.
         // If the date falls into the repeated time frame when DST ends (e.g. 1:00 - 2:00 AM for PDT), we want the first instance, i.e. the instance before turning back the clock. So, use .former for dstSkippedTimePolicy.
-        date(from: components, inTimeZone: components.timeZone ?? timeZone, dstRepeatedTimePolicy: .former, dstSkippedTimePolicy: .former)
+        return date(from: components, inTimeZone: components.timeZone ?? timeZone, dstRepeatedTimePolicy: .former, dstSkippedTimePolicy: .former)
     }
 
     //  Returns the weekday with reference to `firstWeekday`, in the range of 0...6
