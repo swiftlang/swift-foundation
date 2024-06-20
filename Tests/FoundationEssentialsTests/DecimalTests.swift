@@ -258,4 +258,14 @@ final class DecimalTests : XCTestCase {
         XCTAssertNotNil(decimal)
         XCTAssertEqual(decimal!.description, "3.14")
     }
+
+    func testStringNoMatch() {
+        // This test makes sure Decimal returns nil
+        // if the does not start with a number
+        var notDecimal = Decimal(string: "A Flamingo's head has to be upside down when it eats.")
+        XCTAssertNil(notDecimal)
+        // Same if the number does not appear at the beginning
+        notDecimal = Decimal(string: "Jump 22 Street")
+        XCTAssertNil(notDecimal)
+    }
 }
