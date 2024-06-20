@@ -444,6 +444,18 @@ class DataTests : XCTestCase {
         }
     }
 
+    func testCopyBytes_fromSubSequenceToGenericBuffer() {
+        let source = Data([1, 3, 5, 7, 9])[1..<3]
+        var destination = Array<UInt8>(repeating: 8, count: 4)
+        
+        destination.withUnsafeMutableBufferPointer {
+            let count = source.copyBytes(to: $0)
+            XCTAssertEqual(count, 2)
+        }
+        
+        XCTAssertEqual(destination, [3, 5, 8, 8])
+    }
+
     func test_genericBuffers() {
         let a : [Int32] = [1, 0, 1, 0, 1]
         var data = a.withUnsafeBufferPointer {
