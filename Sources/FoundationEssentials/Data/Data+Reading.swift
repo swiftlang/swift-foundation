@@ -14,7 +14,7 @@
 internal import _ForSwiftFoundation
 #endif
 
-internal import _CShims
+internal import _FoundationCShims
 
 #if canImport(Darwin)
 import Darwin

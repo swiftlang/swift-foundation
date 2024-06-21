@@ -28,7 +28,7 @@ internal import QuarantinePrivate
 #endif
 #endif
 
-internal import _CShims
+internal import _FoundationCShims
 
 extension CocoaError {
     fileprivate static func fileOperationError(_ code: CocoaError.Code,  _ sourcePath: String, _ destinationPath: String? = nil, variant: String? = nil) -> CocoaError {

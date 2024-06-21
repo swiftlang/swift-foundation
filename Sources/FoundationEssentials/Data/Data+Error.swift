@@ -14,7 +14,7 @@
 // For Logger
 internal import os
 internal import _ForSwiftFoundation
-internal import _CShims
+internal import _FoundationCShims
 #endif
 
 internal func logFileIOErrno(_ err: Int32, at place: String) {

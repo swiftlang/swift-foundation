@@ -17,7 +17,7 @@ import Glibc
 #elseif os(Windows)
 import CRT
 import WinSDK
-internal import _CShims
+internal import _FoundationCShims
 #endif
 
 extension _FileManagerImpl {

@@ -111,7 +111,7 @@ struct _Win32DirectoryContentsSequence: Sequence {
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-internal import _CShims
+internal import _FoundationCShims
 #endif
 
 // MARK: Directory Iteration

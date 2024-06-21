@@ -19,7 +19,7 @@ internal import DarwinPrivate.sys.content_protection
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-internal import _CShims
+internal import _FoundationCShims
 #elseif os(Windows)
 import CRT
 import WinSDK

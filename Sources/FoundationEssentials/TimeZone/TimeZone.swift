@@ -16,7 +16,7 @@ import Darwin
 import Glibc
 #endif
 
-internal import _CShims
+internal import _FoundationCShims
 
 /**
  `TimeZone` defines the behavior of a time zone. Time zone values represent geopolitical regions. Consequently, these values have names for these regions. Time zone values also represent a temporal offset, either plus or minus, from Greenwich Mean Time (GMT) and an abbreviation (such as PST for Pacific Standard Time).

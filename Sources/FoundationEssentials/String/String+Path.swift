@@ -18,7 +18,7 @@ import Glibc
 import WinSDK
 #endif
 
-internal import _CShims
+internal import _FoundationCShims
 
 extension String {
     internal func deletingLastPathComponent() -> String {
