@@ -345,6 +345,11 @@ extension Decimal {
                 return nil
             }
         }
+        if index == stringView.startIndex {
+            // If we weren't able to process any character
+            // the entire string isn't a valid decimal
+            return nil
+        }
         result.compact()
         // if we get to this point, and have NaN,
         // then the input string was probably "-0"
