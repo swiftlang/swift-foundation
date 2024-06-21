@@ -1831,6 +1831,17 @@ extension DataTests {
         dataII.replaceSubrange(0..<1, with: Data())
         XCTAssertEqual(dataII[0], 0x02)
     }
+    
+    func testEOPNOTSUPP() throws {
+        #if !canImport(Darwin) && !os(Linux)
+        throw XCTSkip("POSIXError.Code is not supported on this platform")
+        #else
+        // Opening a socket via open(2) on Darwin can result in the EOPNOTSUPP error code
+        // Validate that this does not crash despite missing a case in POSIXError.Code
+        let error = CocoaError.errorWithFilePath("/foo/bar", errno: EOPNOTSUPP, reading: true)
+        XCTAssertEqual(error.filePath, "/foo/bar")
+        #endif
+    }
 }
 
 #if FOUNDATION_FRAMEWORK // FIXME: Re-enable tests once range(of:) is implemented

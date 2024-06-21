@@ -89,12 +89,16 @@ extension CocoaError {
     // MARK: Error Creation with errno
     
     private static func _errorWithErrno(_ errno: Int32, reading: Bool, variant: String?, userInfo: [String : AnyHashable]) -> CocoaError {
-        guard let code = POSIXError.Code(rawValue: errno) else {
-            fatalError("Invalid posix errno \(errno)")
-        }
-        
         var userInfo = userInfo
-        userInfo[NSUnderlyingErrorKey] = POSIXError(code)
+        
+        // (130280235) POSIXError.Code does not have a case for EOPNOTSUPP
+        if errno != EOPNOTSUPP {
+            guard let code = POSIXError.Code(rawValue: errno) else {
+                fatalError("Invalid posix errno \(errno)")
+            }
+            
+            userInfo[NSUnderlyingErrorKey] = POSIXError(code)
+        }
         if let variant {
             userInfo[NSUserStringVariantErrorKey] = [variant]
         }
