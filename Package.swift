@@ -41,6 +41,34 @@ let concurrencyChecking: [SwiftSetting] = [
     .enableUpcomingFeature("InferSendableFromCaptures")
 ]
 
+var dependencies: [Package.Dependency] {
+    if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] != nil {
+        [
+            .package(
+                name: "swift-collections",
+                path: "../swift-collections"),
+            .package(
+                name: "swift-foundation-icu",
+                path: "../swift-foundation-icu"),
+            .package(
+                name: "swift-syntax",
+                path: "../swift-syntax")
+        ]
+    } else {
+        [
+            .package(
+                url: "https://github.com/apple/swift-collections",
+                from: "1.1.0"),
+            .package(
+                url: "https://github.com/apple/swift-foundation-icu",
+                exact: "0.0.8"),
+            .package(
+                url: "https://github.com/apple/swift-syntax",
+                from: "600.0.0-latest")
+        ]
+    }
+}
+
 let package = Package(
     name: "FoundationPreview",
     platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
@@ -50,17 +78,7 @@ let package = Package(
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
     ],
-    dependencies: [
-        .package(
-            url: "https://github.com/apple/swift-collections",
-            from: "1.1.0"),
-        .package(
-            url: "https://github.com/apple/swift-foundation-icu",
-            exact: "0.0.8"),
-        .package(
-            url: "https://github.com/apple/swift-syntax.git",
-            from: "600.0.0-latest")
-    ],
+    dependencies: dependencies,
     targets: [
         // Foundation (umbrella)
         .target(
