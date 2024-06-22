@@ -12,7 +12,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-add_subdirectory(_CShims)
+add_subdirectory(_FoundationCShims)
 add_subdirectory(FoundationMacros)
 add_subdirectory(FoundationEssentials)
 add_subdirectory(FoundationInternationalization)

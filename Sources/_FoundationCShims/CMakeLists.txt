@@ -12,14 +12,14 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-add_library(_CShims STATIC
+add_library(_FoundationCShims STATIC
     platform_shims.c
     string_shims.c
     uuid.c)
 
-target_include_directories(_CShims PUBLIC include)
+target_include_directories(_FoundationCShims PUBLIC include)
 
-set_property(GLOBAL APPEND PROPERTY SWIFT_FOUNDATION_EXPORTS _CShims)
+set_property(GLOBAL APPEND PROPERTY SWIFT_FOUNDATION_EXPORTS _FoundationCShims)
 
 if(BUILD_SHARED_LIBS)
     set(install_directory swift)
@@ -31,11 +31,11 @@ endif()
 install(DIRECTORY
             include/
         DESTINATION
-            lib/${install_directory}/_CShims)
+            lib/${install_directory}/_FoundationCShims)
 
 if(NOT BUILD_SHARED_LIBS)
     get_swift_host_os(swift_os)
-    install(TARGETS _CShims
+    install(TARGETS _FoundationCShims
         ARCHIVE DESTINATION lib/${install_directory}/${swift_os}
         LIBRARY DESTINATION lib/${install_directory}/${swift_os}
         RUNTIME DESTINATION bin)
