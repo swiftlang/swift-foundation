@@ -36,12 +36,12 @@ target_compile_options(FoundationInternationalization PRIVATE -package-name "Swi
 
 target_link_libraries(FoundationInternationalization PUBLIC
     FoundationEssentials
-    _CShims
+    _FoundationCShims
     _FoundationICU)
 
 if(NOT BUILD_SHARED_LIBS)
     target_compile_options(FoundationInternationalization PRIVATE
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _CShims>")
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationCShims>")
     target_compile_options(FoundationInternationalization PRIVATE
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationICU>")
 endif()

@@ -67,12 +67,12 @@ target_compile_options(FoundationEssentials PRIVATE ${_SwiftFoundation_availabil
 target_compile_options(FoundationEssentials PRIVATE -package-name "SwiftFoundation")
 
 target_link_libraries(FoundationEssentials PUBLIC
-    _CShims
+    _FoundationCShims
     _FoundationCollections)
 
 if(NOT BUILD_SHARED_LIBS)
     target_compile_options(FoundationEssentials PRIVATE
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _CShims>")
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationCShims>")
     target_compile_options(FoundationEssentials PRIVATE
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationCollections>")
 endif()
