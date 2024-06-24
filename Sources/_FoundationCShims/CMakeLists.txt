@@ -27,6 +27,12 @@ else()
     set(install_directory swift_static)
 endif()
 
+# Copy Headers to known directory for direct client (XCTest) test builds
+file(COPY
+        include/
+    DESTINATION
+        ${CMAKE_BINARY_DIR}/_CModulesForClients/_FoundationCShims)
+
 # Install headers
 install(DIRECTORY
             include/
