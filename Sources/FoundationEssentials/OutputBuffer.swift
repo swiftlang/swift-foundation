@@ -193,10 +193,16 @@ extension String {
                     initializing: buffer.baseAddress.unsafelyUnwrapped,
                     capacity: capacity
                 )
-                try initializer(&output)
-                let initialized = output.relinquishBorrowedMemory()
-                assert(initialized.baseAddress == buffer.baseAddress)
-                return initialized.count
+                do {
+                    try initializer(&output)
+                    let initialized = output.relinquishBorrowedMemory()
+                    assert(initialized.baseAddress == buffer.baseAddress)
+                    return initialized.count
+                } catch {
+                    // Do this regardless of outcome
+                    _ = output.relinquishBorrowedMemory()
+                    throw error
+                }
             }
         )
     }
@@ -216,11 +222,17 @@ extension Data {
                     initializing: buffer.baseAddress.unsafelyUnwrapped,
                     capacity: capacity
                 )
-                try initializer(&output)
-                let initialized = output.relinquishBorrowedMemory()
-                assert(initialized.baseAddress == buffer.baseAddress)
-                buffer[initialized.count..<buffer.count].initialize(repeating: 0)
-                return initialized.count
+                do {
+                    try initializer(&output)
+                    let initialized = output.relinquishBorrowedMemory()
+                    assert(initialized.baseAddress == buffer.baseAddress)
+                    buffer[initialized.count..<buffer.count].initialize(repeating: 0)
+                    return initialized.count
+                } catch {
+                    // Do this regardless of outcome
+                    _ = output.relinquishBorrowedMemory()
+                    throw error
+                }
             }
         }
         assert(count <= self.count)
