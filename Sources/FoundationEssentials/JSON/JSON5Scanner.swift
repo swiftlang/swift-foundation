@@ -1167,7 +1167,7 @@ internal func _parseJSON5Integer<Result: FixedWidthInteger>(
         digitsToParse = digitsToParse.dropFirst(2)
         return _parseHexIntegerDigits(digitsToParse, isNegative: isNegative)
     } else {
-        return _parseIntegerDigits(codeUnits, isNegative: isNegative)
+        return _parseIntegerDigits(digitsToParse, isNegative: isNegative)
     }
 }
 
