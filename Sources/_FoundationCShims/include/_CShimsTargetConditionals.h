@@ -47,4 +47,10 @@
 #define TARGET_OS_WASI 0
 #endif
 
+#if defined(__ANDROID__)
+#define TARGET_OS_ANDROID 1
+#else
+#define TARGET_OS_ANDROID 0
+#endif
+
 #endif // _C_SHIMS_TARGET_CONDITIONALS_H
