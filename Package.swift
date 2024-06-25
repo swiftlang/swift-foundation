@@ -63,7 +63,7 @@ var dependencies: [Package.Dependency] {
                 url: "https://github.com/apple/swift-foundation-icu",
                 exact: "0.0.8"),
             .package(
-                url: "https://github.com/apple/swift-syntax",
+                url: "https://github.com/swiftlang/swift-syntax",
                 from: "600.0.0-latest")
         ]
     }
