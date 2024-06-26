@@ -14,6 +14,9 @@ internal import _FoundationCShims
 
 #if canImport(Darwin)
 import Darwin
+#elseif os(Android)
+import Bionic
+import unistd
 #elseif canImport(Glibc)
 import Glibc
 #elseif os(Windows)
@@ -158,7 +161,7 @@ final class _ProcessInfo: Sendable {
     }
 
     var userName: String {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc)
         // Darwin and Linux
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
@@ -193,7 +196,7 @@ final class _ProcessInfo: Sendable {
     }
 
     var fullUserName: String {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc)
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
            let fullname = upwd.pointee.pw_gecos {

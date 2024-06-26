@@ -15,6 +15,8 @@ internal import _ForSwiftFoundation
 
 #if canImport(Darwin)
 import Darwin
+#elseif os(Android)
+import Bionic
 #elseif canImport(Glibc)
 import Glibc
 #elseif os(Windows)

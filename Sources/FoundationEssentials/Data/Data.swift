@@ -17,8 +17,15 @@
 @usableFromInline let memset = ucrt.memset
 @usableFromInline let memcpy = ucrt.memcpy
 @usableFromInline let memcmp = ucrt.memcmp
-#endif
-#if canImport(Glibc)
+#elseif os(Android)
+import Bionic
+@usableFromInline let calloc = Bionic.calloc
+@usableFromInline let malloc = Bionic.malloc
+@usableFromInline let free = Bionic.free
+@usableFromInline let memset = Bionic.memset
+@usableFromInline let memcpy = Bionic.memcpy
+@usableFromInline let memcmp = Bionic.memcmp
+#elseif canImport(Glibc)
 @usableFromInline let calloc = Glibc.calloc
 @usableFromInline let malloc = Glibc.malloc
 @usableFromInline let free = Glibc.free

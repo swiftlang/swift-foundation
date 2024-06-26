@@ -109,6 +109,9 @@ struct _Win32DirectoryContentsSequence: Sequence {
 
 #if canImport(Darwin)
 import Darwin
+#elseif os(Android)
+import Android
+import posix_filesystem.dirent
 #elseif canImport(Glibc)
 import Glibc
 internal import _FoundationCShims
@@ -315,7 +318,7 @@ extension Sequence<_FTSSequence.Element> {
 struct _POSIXDirectoryContentsSequence: Sequence {
     #if canImport(Darwin)
     typealias DirectoryEntryPtr = UnsafeMutablePointer<DIR>
-    #elseif canImport(Glibc)
+    #elseif os(Android) || canImport(Glibc)
     typealias DirectoryEntryPtr = OpaquePointer
     #endif
     
