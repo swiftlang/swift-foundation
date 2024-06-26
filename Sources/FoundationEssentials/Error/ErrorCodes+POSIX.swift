@@ -11,7 +11,7 @@
 
 // Import for POSIXErrorCode
 #if os(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(Glibc)
 @preconcurrency import Glibc 
 #elseif canImport(Darwin)
