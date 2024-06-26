@@ -38,7 +38,8 @@ int _stringshims_strncasecmp_l(const char * _Nullable s1,
   return _strnicmp_l(s1, s2, n, loc ? loc : *cloc);
 #else
     if (loc != NULL) {
-#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
+#if (defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT) || \
+      (defined(TARGET_OS_ANDROID) && TARGET_OS_ANDROID && __ANDROID_API__ < 23)
         abort();
 #else
         return strncasecmp_l(s1, s2, n, loc);
@@ -46,7 +47,8 @@ int _stringshims_strncasecmp_l(const char * _Nullable s1,
     }
     // On Darwin, NULL loc means unlocalized compare.
     // Uses the standard C locale for Linux in this case
-#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
+#if (defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT) || \
+      (defined(TARGET_OS_ANDROID) && TARGET_OS_ANDROID && __ANDROID_API__ < 23)
     return strncasecmp(s1, s2, n);
 #elif TARGET_OS_MAC
     return strncasecmp_l(s1, s2, n, NULL);
