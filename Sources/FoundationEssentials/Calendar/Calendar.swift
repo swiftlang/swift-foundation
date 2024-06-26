@@ -12,6 +12,8 @@
 
 #if canImport(Darwin)
 internal import os
+#elseif os(Android)
+import Android
 #elseif canImport(Glibc)
 import Glibc
 #elseif canImport(CRT)

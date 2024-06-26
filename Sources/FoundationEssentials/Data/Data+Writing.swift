@@ -19,6 +19,9 @@ internal import _FoundationCShims
 
 #if canImport(Darwin)
 import Darwin
+#elseif os(Android)
+import Android
+import unistd
 #elseif canImport(Glibc)
 import Glibc
 #elseif os(Windows)

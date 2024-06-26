@@ -11,6 +11,8 @@
 
 #if canImport(Darwin)
 import Darwin
+#elseif os(Android)
+import Bionic
 #elseif canImport(Glibc)
 import Glibc
 #elseif canImport(WinSDK)
@@ -22,7 +24,7 @@ internal import threads
 #endif
 
 struct _ThreadLocal {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc)
     fileprivate typealias PlatformKey = pthread_key_t
 #elseif USE_TSS
     fileprivate typealias PlatformKey = tss_t
@@ -34,7 +36,7 @@ struct _ThreadLocal {
         fileprivate let key: PlatformKey
         
         init() {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc)
             var key = PlatformKey()
             pthread_key_create(&key, nil)
             self.key = key
@@ -50,7 +52,7 @@ struct _ThreadLocal {
     
     private static subscript(_ key: PlatformKey) -> UnsafeMutableRawPointer? {
         get {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc)
             pthread_getspecific(key)
 #elseif USE_TSS
             tss_get(key)
@@ -60,7 +62,7 @@ struct _ThreadLocal {
         }
         
         set {
-#if canImport(Darwin) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc)
             pthread_setspecific(key, newValue)
 #elseif USE_TSS
             tss_set(key, newValue)
