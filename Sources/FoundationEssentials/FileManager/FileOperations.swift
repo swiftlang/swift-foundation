@@ -522,11 +522,16 @@ enum _FileOperations {
             case let .entry(entry):
                 switch Int32(entry.ftsEnt.fts_info) {
                 case FTS_DEFAULT, FTS_F, FTS_NSOK, FTS_SL, FTS_SLNONE:
-                    let currentPathStr = resolve(path: String(cString: entry.ftsEnt.fts_path))
+                    // Android's fts_path is nullable.
+                    let fts_path: UnsafeMutablePointer<CChar>? = entry.ftsEnt.fts_path
+                    guard let fts_path else {
+                        break
+                    }
+                    let currentPathStr = resolve(path: String(cString: fts_path))
                     guard fileManager?._shouldRemoveItemAtPath(currentPathStr) ?? true else {
                         break
                     }
-                    if unlink(entry.ftsEnt.fts_path) != 0 {
+                    if unlink(fts_path) != 0 {
                         let error = CocoaError.removeFileError(errno, currentPathStr)
                         if !(fileManager?._shouldProceedAfter(error: error, removingItemAtPath: currentPathStr) ?? false) {
                             throw error
@@ -538,20 +543,35 @@ enum _FileOperations {
                         isFirst = false
                         break
                     }
-                    let currentPathStr = resolve(path: String(cString: entry.ftsEnt.fts_path))
+                    // Android's fts_path is nullable.
+                    let fts_path: UnsafeMutablePointer<CChar>? = entry.ftsEnt.fts_path
+                    guard let fts_path else {
+                        break
+                    }
+                    let currentPathStr = resolve(path: String(cString: fts_path))
                     if !(fileManager?._shouldRemoveItemAtPath(currentPathStr) ?? true) {
                         iterator.skipDescendants(of: entry, skipPostProcessing: true)
                     }
                 case FTS_DP:
-                    if rmdir(entry.ftsEnt.fts_path) != 0 {
-                        let currentPathStr = resolve(path: String(cString: entry.ftsEnt.fts_path))
+                    // Android's fts_path is nullable.
+                    let fts_path: UnsafeMutablePointer<CChar>? = entry.ftsEnt.fts_path
+                    guard let fts_path else {
+                        break
+                    }
+                    if rmdir(fts_path) != 0 {
+                        let currentPathStr = resolve(path: String(cString: fts_path))
                         let error = CocoaError.removeFileError(errno, currentPathStr)
                         if !(fileManager?._shouldProceedAfter(error: error, removingItemAtPath: currentPathStr) ?? false) {
                             throw error
                         }
                     }
                 case FTS_DNR, FTS_ERR, FTS_NS:
-                    let currentPathStr = resolve(path: String(cString: entry.ftsEnt.fts_path))
+                    // Android's fts_path is nullable.
+                    let fts_path: UnsafeMutablePointer<CChar>? = entry.ftsEnt.fts_path
+                    guard let fts_path else {
+                        break
+                    }
+                    let currentPathStr = resolve(path: String(cString: fts_path))
                     throw CocoaError.removeFileError(entry.ftsEnt.fts_errno, currentPathStr)
                 default:
                     break
@@ -868,10 +888,14 @@ enum _FileOperations {
         
         let total = fileInfo.st_size
         let chunkSize = Int(fileInfo.st_blksize)
+#if canImport(Android)
+        var current: off_t = 0
+#else
         var current = 0
+#endif
         
         while current < total {
-            guard sendfile(dstfd, srcfd, &current, Swift.min(total - current, chunkSize)) != -1 else {
+            guard sendfile(dstfd, srcfd, &current, Swift.min(Int(total) - Int(current), chunkSize)) != -1 else {
                 try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
                 return
             }
@@ -894,11 +918,16 @@ enum _FileOperations {
                     throw CocoaError.errorWithFilePath(path, errno: errno, reading: true)
                     
                 case let .entry(entry):
-                    let trimmedPathPtr = entry.ftsEnt.fts_path.advanced(by: srcLen)
+                    // Android's fts_path is nullable
+                    let fts_path: UnsafeMutablePointer<CChar>? = entry.ftsEnt.fts_path
+                    guard let fts_path else {
+                        continue
+                    }
+                    let trimmedPathPtr = fts_path.advanced(by: srcLen)
                     Platform.copyCString(dst: dstAppendPtr, src: trimmedPathPtr, size: remainingBuffer)
                     
                     // we don't want to ask the delegate on the way back -up- the hierarchy if they want to copy a directory they've already seen and therefore already said "YES" to.
-                    guard entry.ftsEnt.fts_info == FTS_DP || delegate.shouldPerformOnItemAtPath(String(cString: entry.ftsEnt.fts_path), to: String(cString: buffer.baseAddress!)) else {
+                    guard entry.ftsEnt.fts_info == FTS_DP || delegate.shouldPerformOnItemAtPath(String(cString: fts_path), to: String(cString: buffer.baseAddress!)) else {
                         if entry.ftsEnt.fts_info == FTS_D {
                             iterator.skipDescendants(of: entry, skipPostProcessing: true)
                         }
@@ -911,29 +940,29 @@ enum _FileOperations {
                     case FTS_D:
                         // Directory being visited in pre-order - create it with whatever default perms will be on the destination.
                         #if canImport(Darwin)
-                        if copyfile(entry.ftsEnt.fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_DATA | COPYFILE_EXCL | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
-                            try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
+                        if copyfile(fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_DATA | COPYFILE_EXCL | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
+                            try delegate.throwIfNecessary(errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
                         }
                         #else
                         do {
                             try fileManager.createDirectory(atPath: String(cString: buffer.baseAddress!), withIntermediateDirectories: true)
                         } catch {
-                            try delegate.throwIfNecessary(error, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
+                            try delegate.throwIfNecessary(error, String(cString: fts_path), String(cString: buffer.baseAddress!))
                         }
                         #endif
                         
                     case FTS_DP:
                         // Directory being visited in post-order - copy the permissions over.
                         #if canImport(Darwin)
-                        if copyfile(entry.ftsEnt.fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_METADATA | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
-                            try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
+                        if copyfile(fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_METADATA | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
+                            try delegate.throwIfNecessary(errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
                         }
                         #else
                         do {
-                            let attributes = try fileManager.attributesOfItem(atPath: String(cString: entry.ftsEnt.fts_path))
+                            let attributes = try fileManager.attributesOfItem(atPath: String(cString: fts_path))
                             try fileManager.setAttributes(attributes, ofItemAtPath: String(cString: buffer.baseAddress!))
                         } catch {
-                            try delegate.throwIfNecessary(error, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
+                            try delegate.throwIfNecessary(error, String(cString: fts_path), String(cString: buffer.baseAddress!))
                         }
                         #endif
                         
@@ -947,18 +976,18 @@ enum _FileOperations {
                         } else {
                             flags = COPYFILE_DATA | COPYFILE_METADATA | COPYFILE_EXCL | COPYFILE_NOFOLLOW | extraFlags
                         }
-                        if copyfile(entry.ftsEnt.fts_path, buffer.baseAddress!, nil, copyfile_flags_t(flags)) != 0 {
-                            try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
+                        if copyfile(fts_path, buffer.baseAddress!, nil, copyfile_flags_t(flags)) != 0 {
+                            try delegate.throwIfNecessary(errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
                         }
                         #else
                         try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { tempBuff in
                             tempBuff.initialize(repeating: 0)
                             defer { tempBuff.deinitialize() }
-                            let len = readlink(entry.ftsEnt.fts_path, tempBuff.baseAddress!, FileManager.MAX_PATH_SIZE - 1)
+                            let len = readlink(fts_path, tempBuff.baseAddress!, FileManager.MAX_PATH_SIZE - 1)
                             if len >= 0, symlink(tempBuff.baseAddress!, buffer.baseAddress!) != -1 {
                                 return
                             }
-                            try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
+                            try delegate.throwIfNecessary(errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
                         }
                         #endif
                         
@@ -966,15 +995,15 @@ enum _FileOperations {
                     case FTS_F:                     // Regular file.
                         if delegate.copyData {
                             #if canImport(Darwin)
-                            if copyfile(entry.ftsEnt.fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_CLONE | COPYFILE_ALL | COPYFILE_EXCL | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
-                                try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
+                            if copyfile(fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_CLONE | COPYFILE_ALL | COPYFILE_EXCL | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
+                                try delegate.throwIfNecessary(errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
                             }
                             #else
-                            try Self._copyRegularFile(entry.ftsEnt.fts_path, buffer.baseAddress!, delegate: delegate)
+                            try Self._copyRegularFile(fts_path, buffer.baseAddress!, delegate: delegate)
                             #endif
                         } else {
-                            if link(entry.ftsEnt.fts_path, buffer.baseAddress!) != 0 {
-                                try delegate.throwIfNecessary(errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
+                            if link(fts_path, buffer.baseAddress!) != 0 {
+                                try delegate.throwIfNecessary(errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
                             }
                         }
                         
@@ -982,7 +1011,7 @@ enum _FileOperations {
                     case FTS_DNR: fallthrough   // Directory cannot be read.
                     case FTS_ERR: fallthrough   // Some error occurred, but we don't know what.
                     case FTS_NS:                // No stat(2) information is available.
-                        try delegate.throwIfNecessary(entry.ftsEnt.fts_errno, String(cString: entry.ftsEnt.fts_path), String(cString: buffer.baseAddress!))
+                        try delegate.throwIfNecessary(entry.ftsEnt.fts_errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
                         
                     default: break
                     }

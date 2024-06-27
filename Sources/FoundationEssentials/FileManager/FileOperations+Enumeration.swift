@@ -299,13 +299,19 @@ extension Sequence<_FTSSequence.Element> {
                 case FTS_NSOK: fallthrough      // No stat(2) information was requested, but that's OK.
                 case FTS_SL: fallthrough        // Symlink.
                 case FTS_SLNONE:                // Symlink with no target.
-                    return .entry(String(cString: ent.ftsEnt.fts_path))
+                    // Android's fts_path is nullable.
+                    let fts_path: UnsafeMutablePointer<CChar>? = ent.ftsEnt.fts_path
+                    guard let fts_path else { return nil }
+                    return .entry(String(cString: fts_path))
                     
                 // Error returns
                 case FTS_DNR: fallthrough   // Directory cannot be read.
                 case FTS_ERR: fallthrough   // Some error occurred, but we don't know what.
                 case FTS_NS:                // No stat(2) information is available.
-                    let path = String(cString: ent.ftsEnt.fts_path)
+                    // Android's fts_path is nullable.
+                    let fts_path: UnsafeMutablePointer<CChar>? = ent.ftsEnt.fts_path
+                    guard let fts_path else { return nil }
+                    let path = String(cString: fts_path)
                     return .error(ent.ftsEnt.fts_errno, path)
                     
                 default: return nil

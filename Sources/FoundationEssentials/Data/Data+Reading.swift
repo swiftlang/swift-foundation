@@ -356,10 +356,16 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         result = ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
     } else if shouldMap {
 #if !NO_FILESYSTEM
-        guard let bytes = mmap(nil, Int(fileSize), PROT_READ, MAP_PRIVATE, fd, 0) else {
+        // Android's mmap is non-null, so coerce to an optional always
+        let mmapOptPointer: UnsafeMutableRawPointer? = mmap(nil, Int(fileSize), PROT_READ, MAP_PRIVATE, fd, 0)
+        guard let bytes = mmapOptPointer else {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
         }
         
+#if canImport(Android)
+        // MAP_FAILED is not importable from Android NDK due to the macro syntax.
+        let MAP_FAILED = UnsafeMutableRawPointer(bitPattern: UInt.max) // -1
+#endif
         guard bytes != MAP_FAILED else {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
         }
