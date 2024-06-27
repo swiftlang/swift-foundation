@@ -138,7 +138,7 @@ final class _ProcessInfo: Sendable {
 
     var processIdentifier: Int32 {
 #if os(Windows)
-        return Int32(GetProcessId(GetCurrentProcess()))
+        return Int32(bitPattern: UInt32(GetProcessId(GetCurrentProcess())))
 #else
         return Int32(getpid())
 #endif
