@@ -503,7 +503,17 @@ extension Decimal /* : SignedNumeric */ {
         self = Decimal(_exponent: exponent, _length: UInt32(length), _isNegative: negative, _isCompact: 1, _reserved: 0, _mantissa: mantissaParts)
     }
 
+#if FOUNDATION_FRAMEWORK
+    @usableFromInline internal static var __zeroForABI: Decimal {
+        @_silgen_name("$sSo9NSDecimala10FoundationE4zeroABvgZ")
+        get {
+            return Decimal(0)
+        }
+    }
+#else
+    // We need this symbol until Decimal fully conform to SignedNumeric
     public static var zero: Decimal {
         return Decimal(0)
     }
+#endif
 }
