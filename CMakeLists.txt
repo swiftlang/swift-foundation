@@ -84,6 +84,7 @@ list(APPEND _SwiftFoundation_availability_macros
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicateRegex 0.3:macOS 10000, iOS 10000, tvOS 10000, watchOS 10000\">"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicateRegex 0.4:macOS 10000, iOS 10000, tvOS 10000, watchOS 10000\">")
 
+include(GNUInstallDirs)
 include(SwiftFoundationSwiftSupport)
 
 add_subdirectory(Sources)
