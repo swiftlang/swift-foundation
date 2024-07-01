@@ -165,8 +165,8 @@ struct _FTSSequence: Sequence {
                 state = .error(errno, String(cString: path))
                 return
             }
-            
-            state = [UnsafeMutablePointer(mutating: path), nil].withUnsafeBufferPointer{ dirList in
+
+            state = [UnsafeMutablePointer(mutating: path), nil].withUnsafeBufferPointer { dirList in
                 guard let stream = fts_open(dirList.baseAddress!, opts, nil) else {
                     return .error(errno, String(cString: path))
                 }
@@ -299,13 +299,13 @@ extension Sequence<_FTSSequence.Element> {
                 case FTS_NSOK: fallthrough      // No stat(2) information was requested, but that's OK.
                 case FTS_SL: fallthrough        // Symlink.
                 case FTS_SLNONE:                // Symlink with no target.
-                    return .entry(String(cString: ent.ftsEnt.fts_path))
+                    return .entry(String(cString: ent.ftsEnt.fts_path!))
                     
                 // Error returns
                 case FTS_DNR: fallthrough   // Directory cannot be read.
                 case FTS_ERR: fallthrough   // Some error occurred, but we don't know what.
                 case FTS_NS:                // No stat(2) information is available.
-                    let path = String(cString: ent.ftsEnt.fts_path)
+                    let path = String(cString: ent.ftsEnt.fts_path!)
                     return .error(ent.ftsEnt.fts_errno, path)
                     
                 default: return nil

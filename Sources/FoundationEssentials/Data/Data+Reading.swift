@@ -356,6 +356,12 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         result = ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
     } else if shouldMap {
 #if !NO_FILESYSTEM
+#if os(Android)
+        let bytes = mmap(nil, Int(fileSize), PROT_READ, MAP_PRIVATE, fd, 0)
+        if bytes == UnsafeMutableRawPointer(bitPattern: -1) {
+            throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
+        }
+#else
         guard let bytes = mmap(nil, Int(fileSize), PROT_READ, MAP_PRIVATE, fd, 0) else {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
         }
@@ -363,6 +369,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         guard bytes != MAP_FAILED else {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
         }
+#endif
         
         // Using bytes as the unit in this case doesn't really make any sense, since the amount of work required for mmap isn't meanginfully proportional to the size being mapped.
         localProgress?.totalUnitCount = 1
