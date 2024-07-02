@@ -16,6 +16,8 @@ import FoundationEssentials
 
 #if canImport(Darwin)
 import Darwin
+#elseif os(Android)
+import Android
 #elseif canImport(Glibc)
 import Glibc
 #elseif os(Windows)
