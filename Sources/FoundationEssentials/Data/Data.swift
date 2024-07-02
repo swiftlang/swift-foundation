@@ -824,11 +824,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         static func canStore(count: Int) -> Bool {
             return count < HalfInt.max
         }
-        
-        @inlinable // This is @inlinable as trivially computable.
-        static func canStore(range: Range<Int>) -> Bool {
-            return range.lowerBound < HalfInt.max && range.upperBound < HalfInt.max
-        }
 
         @inlinable // This is @inlinable as a convenience initializer.
         init(_ buffer: UnsafeRawBufferPointer) {
@@ -1132,12 +1127,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             self.storage = storage
             self.slice = RangeReference(0..<count)
         }
-        
-        @inlinable // This is @inlinable as a trivial initializer.
-        init(_ storage: __DataStorage, range: Range<Int>) {
-            self.storage = storage
-            self.slice = RangeReference(range)
-        }
 
         @inlinable // This is @inlinable as trivially computable (and inlining may help avoid retain-release traffic).
         mutating func ensureUniqueReference() {
@@ -1378,19 +1367,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
                 self = .slice(InlineSlice(storage, count: count))
             } else {
                 self = .large(LargeSlice(storage, count: count))
-            }
-        }
-        
-        @inlinable
-        init(_ storage: __DataStorage, range: Range<Int>) {
-            if range.count == 0 {
-                self = .empty
-            } else if range.startIndex == 0 {
-                self.init(storage, count: range.count)
-            } else if InlineSlice.canStore(range: range) {
-                self = .slice(InlineSlice(storage, range: range))
-            } else {
-                self = .large(LargeSlice(storage, range: range))
             }
         }
 
