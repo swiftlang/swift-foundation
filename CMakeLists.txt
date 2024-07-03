@@ -45,6 +45,8 @@ set(BUILD_TESTING NO)
 set(COLLECTIONS_SINGLE_MODULE YES)
 set(COLLECTIONS_FOUNDATION_TOOLCHAIN_MODULE YES)
 
+set(SwiftFoundation_MACRO "" CACHE STRING "Path to Foundation macro plugin")
+
 # Make sure our dependencies exists
 include(FetchContent)
 if (_SwiftFoundationICU_SourceDIR)
