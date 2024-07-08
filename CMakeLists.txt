@@ -62,7 +62,7 @@ if (_SwiftCollections_SourceDIR)
 else()
     FetchContent_Declare(SwiftCollections
         GIT_REPOSITORY https://github.com/apple/swift-collections.git
-        GIT_TAG 1.1.1)
+        GIT_TAG 1.1.2)
 endif()
 FetchContent_MakeAvailable(SwiftFoundationICU SwiftCollections)
 
