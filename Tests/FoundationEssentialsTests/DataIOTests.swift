@@ -209,19 +209,19 @@ class DataIOTests : XCTestCase {
         let data = generateTestData(count: size)
         
         try data.write(to: url)
-        let read = try! Data(contentsOf: url)
-        
+        let read = try! Data(contentsOf: url, options: .mappedIfSafe)
+
         // No need to compare the contents, but do compare the size
         XCTAssertEqual(data.count, read.count)
         
 #if FOUNDATION_FRAMEWORK
         // Try the NSData path
-        let readNS = try! NSData(contentsOf: url) as Data
+        let readNS = try! NSData(contentsOf: url, options: .mappedIfSafe) as Data
         XCTAssertEqual(data.count, readNS.count)
 #endif
 
         cleanup(at: url)
-#endif
+#endif // !os(watchOS)
     }
     
     func test_writeToSpecialFile() throws {
