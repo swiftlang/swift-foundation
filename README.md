@@ -48,18 +48,11 @@ Later this year, the porting effort will continue. It will bring high quality Sw
 
 ## Building and Testing
 
-Building this package requires the Swift 5.9 toolchain or later.
+> [!NOTE]
+> Building swift-foundation requires the in-development Swift 6.0 toolchain. You can download the Swift 6.0 nightly toolchain from [the Swift website](https://swift.org/install).
 
-### macOS
+Before building Foundation, first ensure that you have Swift installed on your device. Once you have a Swift toolchain installed, check out the _Getting Started_ section of the [Foundation Build Process](Foundation_Build_Process.md#getting-started) guide for steps to build Foundation.
 
-macOS Ventura 13.3.1 is the minimum supported version.
-
-- Download the latest Xcode from the App Store
-- Open `Package.swift` and select *Product > Test*
-
-### Linux
-- Download the latest [Swift 5.9 docker image](https://hub.docker.com/r/swiftlang/swift/tags?name=5.9) and follow instructions to attach
-- Run `swift test`
 ## Performance
 
 Being written in Swift, this new implementation provides some major benefits over the previous C and Objective-C versions.
