@@ -230,7 +230,14 @@ private func write(buffer: UnsafeRawBufferPointer, toFileDescriptor fd: Int32, p
     
     if !buffer.isEmpty {
 #if os(Windows)
-        let res = _commit(fd)
+        let hFile: HANDLE? = HANDLE(bitPattern: _get_osfhandle(fd))
+        // On Windows, only call _commit if the fd corresponds to an actual file
+        // on disk.
+        let res: CInt = if let hFile, GetFileType(hFile) == FILE_TYPE_DISK {
+            _commit(fd)
+        } else {
+            0
+        }
 #else
         let res = fsync(fd)
 #endif
