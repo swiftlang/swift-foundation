@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 package struct FormatterCache<Format : Hashable & Sendable, FormattingType: Sendable>: Sendable {
-
     let countLimit = 100
 
     private let _lock: LockedState<[Format: FormattingType]>
