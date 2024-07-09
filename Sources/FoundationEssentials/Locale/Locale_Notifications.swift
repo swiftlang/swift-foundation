@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Synchronization)
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
 internal import Synchronization
 #endif
 
@@ -20,14 +20,14 @@ internal import Synchronization
 struct LocaleNotifications : Sendable, ~Copyable {
     static let cache = LocaleNotifications()
     
-#if canImport(Synchronization)
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
     let _count = Atomic<Int>(1)
 #else
     let _count = LockedState<Int>(initialState: 1)
 #endif
     
     func count() -> Int {
-#if canImport(Synchronization)
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         _count.load(ordering: .relaxed)
 #else
         _count.withLock { $0 }
@@ -39,7 +39,7 @@ struct LocaleNotifications : Sendable, ~Copyable {
         LocaleCache.cache.reset()
         CalendarCache.cache.reset()
         _ = TimeZoneCache.cache.reset()
-#if canImport(Synchronization)
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         _count.add(1, ordering: .relaxed)
 #else
         _count.withLock { $0 += 1 }
