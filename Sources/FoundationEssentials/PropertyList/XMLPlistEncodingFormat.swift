@@ -1001,7 +1001,14 @@ struct _XMLPlistEncodingFormat : PlistEncodingFormat {
                     return "-infinity"
                 }
             }
-            return val.description
+            // Historically whole-value reals (2.0, -5.0, etc) are
+            // encoded without the `.0` suffix.
+            // JSONEncoder also has the same behavior. See `JSONWriter.swift`
+            var string = val.description
+            if string.hasSuffix(".0") {
+                string.removeLast(2)
+            }
+            return string
         }
         
         mutating func appendDate(_ date: Date) {

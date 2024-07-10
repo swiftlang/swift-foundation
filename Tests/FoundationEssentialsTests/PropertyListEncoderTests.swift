@@ -1055,6 +1055,36 @@ data1 = <7465
         XCTAssertEqual(d.timeIntervalSinceReferenceDate, -63145612800)
     }
 
+    func test_realEncodeRemoveZeroSuffix() throws {
+        // Tests that we encode "whole-value reals" (such as `2.0`, `-5.0`, etc)
+        // **without** the `.0` for backwards compactability
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .xml
+        let template = "\(_XMLPlistEncodingFormat.Writer.header)<array>\n\t<real><%EXPECTED%></real>\n</array>\n</plist>\n"
+
+        let wholeFloat: Float = 2.0
+        var data = try encoder.encode([wholeFloat])
+        var str = try XCTUnwrap(String(data: data, encoding: String.Encoding.utf8))
+        var expected = template.replacingOccurrences(
+            of: "<%EXPECTED%>", with: "2")
+        XCTAssertEqual(str, expected)
+
+        let wholeDouble: Double = -5.0
+        data = try encoder.encode([wholeDouble])
+        str = try XCTUnwrap(String(data: data, encoding: String.Encoding.utf8))
+        expected = template.replacingOccurrences(
+            of: "<%EXPECTED%>", with: "-5")
+        XCTAssertEqual(str, expected)
+
+        // Make sure other reals are not affacted
+        let notWholeDouble = 0.5
+        data = try encoder.encode([notWholeDouble])
+        str = try XCTUnwrap(String(data: data, encoding: String.Encoding.utf8))
+        expected = template.replacingOccurrences(
+            of: "<%EXPECTED%>", with: "0.5")
+        XCTAssertEqual(str, expected)
+    }
+
     func test_farFutureDates() throws {
         let date = Date(timeIntervalSince1970: 999999999999.0)
 
