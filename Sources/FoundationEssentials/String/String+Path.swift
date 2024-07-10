@@ -462,36 +462,22 @@ extension String {
         return normalizedPath(with: String(decodingCString: wszPath, as: UTF16.self).standardizingPath)
 #else
 #if canImport(Darwin)
-        let safe_confstr = { (name: Int32, buf: UnsafeMutablePointer<UInt8>?, len: Int) -> Int in
-            // POSIX moment of weird: confstr() is one of those annoying APIs which
-            // can return zero for both error and non-error conditions, so the only
-            // way to disambiguate is to put errno in a known state before calling.
-            errno = 0
-            let result = confstr(name, buf, len)
-            
-            // result == 0 is only error if errno is not zero. But, if there was an
-            // error, bail; all possible errors from confstr() are Very Bad Things.
-            let err = errno // only read errno once in the failure case.
-            precondition(result > 0 || err == 0, "Unexpected confstr() error: \(err)")
-            
-            // This is extreme paranoia and should never happen; this would mean
-            // confstr() returned < 0, which would only happen for impossibly long
-            // sizes of value or long-dead versions of the OS.
-            assert(result >= 0, "confstr() returned impossible result: \(result)")
-            
-            return result
-        }
-        
-        let length: Int = safe_confstr(_CS_DARWIN_USER_TEMP_DIR, nil, 0)
+        // If confstr returns 0 it either failed or the variable had no content
+        // If the variable had no content, we should continue on below
+        // If it fails, we should also silently ignore the error and continue on below. This API can fail for non-programmer reasons such as the device being out of storage space when libSystem attempts to create the directory
+        let length: Int = confstr(_CS_DARWIN_USER_TEMP_DIR, nil, 0)
         if length > 0 {
-            var buffer: [UInt8] = .init(repeating: 0, count: length)
-            let final_length = safe_confstr(_CS_DARWIN_USER_TEMP_DIR, &buffer, buffer.count)
-            
-            assert(length == final_length, "Value of _CS_DARWIN_USER_TEMP_DIR changed?")
-            if length > 0 && length < buffer.count {
-                return buffer.withUnsafeBufferPointer { b in
-                    String(bytes: b, encoding: .utf8)!
+            let result: String? = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: length) { buffer in
+                let finalLength = confstr(_CS_DARWIN_USER_TEMP_DIR, buffer.baseAddress!, buffer.count)
+                assert(length == finalLength, "Value of _CS_DARWIN_USER_TEMP_DIR changed?")
+                if length > 0 && length < buffer.count {
+                    return String(decoding: buffer, as: UTF8.self)
                 }
+                return nil
+            }
+            
+            if let result {
+                return result
             }
         }
 #endif
