@@ -1857,6 +1857,63 @@ E {
         XCTAssertEqual(b.count, 0)
     }
 
+    func testCharacterSlicing_RangeExpressions() {
+        // Make sure `AttributedString` and `String` produce consistent results when slicing,
+        // for every range expression, whether or not the bounds fall on `Character` boundaries.
+        //
+        // (SE-0180 mistakenly prevented `String` from rounding down indices to Character boundaries
+        // when slicing, and `AttributedString` has to emulate that choice. However,
+        // `AttributedSubstring` (intentionally, and unavoidably) has to round down the boundaries
+        // of its character view -- so we expect some differences when comparing `characters`.
+        // The substring's `unicodeScalars` view always gives us the precise original boundaries.)
+
+        let str = "F\u{301}a\u{308}n\u{303}c\u{327}y\u{30a}" // "F́äñçẙ"
+        let astr = AttributedString(str)
+
+        func check<T: Equatable>(
+            _ a: some Sequence<T>,
+            _ b: some Sequence<T>,
+            file: StaticString = #file, line: UInt = #line
+        ) {
+            XCTAssertTrue(
+                a.elementsEqual(b),
+                "'\(Array(a))' does not equal '\(Array(b))'",
+                file: file, line: line)
+        }
+
+        check(str, astr.characters)
+        check(str.unicodeScalars, astr.unicodeScalars)
+
+        // Go through all valid range expressions within the two strings and compare slicing
+        // results.
+        var i1 = str.unicodeScalars.startIndex
+        var i2 = astr.unicodeScalars.startIndex
+        while true {
+            check(str[..<i1].unicodeScalars, astr[..<i2].unicodeScalars)
+            check(str[i1...].unicodeScalars, astr[i2...].unicodeScalars)
+
+            var j1 = i1
+            var j2 = i2
+            while true {
+                check(str[i1..<j1].unicodeScalars, astr[i2..<j2].unicodeScalars)
+
+                if j1 == str.endIndex { break }
+
+                check(str[i1...j1].unicodeScalars, astr[i2...j2].unicodeScalars)
+
+                str.unicodeScalars.formIndex(after: &j1)
+                j2 = astr.index(afterUnicodeScalar: j2)
+            }
+
+            if i1 == str.endIndex { break }
+
+            check(str[...i1].unicodeScalars, astr[...i2].unicodeScalars)
+
+            str.unicodeScalars.formIndex(after: &i1)
+            i2 = astr.index(afterUnicodeScalar: i2)
+        }
+    }
+
     func testUnicodeScalarsSlicing() {
         let attrStr = AttributedString("Cafe\u{301}", attributes: AttributeContainer().testInt(1))
         let range = attrStr.startIndex ..< attrStr.endIndex

@@ -292,8 +292,9 @@ extension AttributedString {
 
     public mutating func replaceSubrange(_ range: some RangeExpression<Index>, with s: some AttributedStringProtocol) {
         ensureUniqueReference()
-        // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
-        let subrange = range.relative(to: unicodeScalars)._bstringRange
+        // Note: slicing generally allows sub-Character ranges, but we need to resolve range
+        // expressions using the characters view, to remain consistent with the stdlib.
+        let subrange = range.relative(to: characters)._bstringRange
         _guts.replaceSubrange(subrange, with: s)
     }
 }
@@ -327,14 +328,16 @@ extension AttributedString {
 extension AttributedString {
     public subscript(bounds: some RangeExpression<Index>) -> AttributedSubstring {
         get {
-            // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
-            let bounds = bounds.relative(to: unicodeScalars)
+            // Note: slicing generally allows sub-Character ranges, but we need to resolve range
+            // expressions using the characters view, to remain consistent with the stdlib.
+            let bounds = bounds.relative(to: characters)
             return AttributedSubstring(_guts, in: bounds._bstringRange)
         }
         _modify {
             ensureUniqueReference()
-            // Note: we allow sub-Character ranges, so we must use `unicodeScalars` here, not `characters`.
-            let bounds = bounds.relative(to: unicodeScalars)
+            // Note: slicing generally allows sub-Character ranges, but we need to resolve range
+            // expressions using the characters view, to remain consistent with the stdlib.
+            let bounds = bounds.relative(to: characters)
             var substr = AttributedSubstring(_guts, in: bounds._bstringRange)
             let ident = Self._nextModifyIdentity
             substr._identity = ident
@@ -348,6 +351,10 @@ extension AttributedString {
             yield &substr
         }
         set {
+            // Note: slicing generally allows sub-Character ranges, but we need to resolve range
+            // expressions using the characters view, to remain consistent with the stdlib.
+            let bounds = bounds.relative(to: characters)
+
             // FIXME: Why is this allowed if _modify traps on replacement?
             self.replaceSubrange(bounds, with: newValue)
         }
