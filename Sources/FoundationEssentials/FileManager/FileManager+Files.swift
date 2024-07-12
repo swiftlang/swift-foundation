@@ -553,22 +553,22 @@ extension _FileManagerImpl {
     func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
 #if os(Windows)
         return try path.withNTPathRepresentation { pwszPath in
-            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
-            guard GetFileAttributesExW(pwszPath, GetFileExInfoStandard, &faAttributes) else {
-                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
-            }
-
             let hFile = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
             if hFile == INVALID_HANDLE_VALUE {
                 throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
             }
             defer { CloseHandle(hFile) }
 
+            var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
+            guard GetFileInformationByHandle(hFile, &info) else {
+              throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+            }
+
             let dwFileType = GetFileType(hFile)
             let fatType: FileAttributeType = switch (dwFileType) {
                 case FILE_TYPE_CHAR: FileAttributeType.typeCharacterSpecial
                 case FILE_TYPE_DISK:
-                    faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
+                    info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
                             ? FileAttributeType.typeDirectory
                             : FileAttributeType.typeRegular
                 case FILE_TYPE_PIPE: FileAttributeType.typeSocket
@@ -576,25 +576,41 @@ extension _FileManagerImpl {
                 default: FileAttributeType.typeUnknown
             }
 
-            let size: UInt64 = (UInt64(faAttributes.nFileSizeHigh) << 32) | UInt64(faAttributes.nFileSizeLow)
-            let creation: Date = Date(timeIntervalSince1970: faAttributes.ftCreationTime.timeIntervalSince1970)
-            let modification: Date = Date(timeIntervalSince1970: faAttributes.ftLastWriteTime.timeIntervalSince1970)
+            let systemNumber = UInt64(info.dwVolumeSerialNumber)
+            let systemFileNumber = UInt64(info.nFileIndexHigh << 32) | UInt64(info.nFileIndexLow)
+            let referenceCount = UInt64(info.nNumberOfLinks)
+
+            let isReadOnly = info.dwFileAttributes & FILE_ATTRIBUTE_READONLY != 0
+            // Directories are always considered executable, but we check for other types
+            let isExecutable = fatType == .typeDirectory || SaferiIsExecutableFileType(pwszPath, 0)
+            var posixPermissions = UInt16(_S_IREAD)
+            if !isReadOnly {
+                posixPermissions |= UInt16(_S_IWRITE)
+            }
+            if isExecutable {
+                posixPermissions |= UInt16(_S_IEXEC)
+            }
+
+            let size: UInt64 = (UInt64(info.nFileSizeHigh) << 32) | UInt64(info.nFileSizeLow)
+            let creation: Date = Date(timeIntervalSince1970: info.ftCreationTime.timeIntervalSince1970)
+            let modification: Date = Date(timeIntervalSince1970: info.ftLastWriteTime.timeIntervalSince1970)
             return [
                 .size: _writeFileAttributePrimitive(size, as: UInt.self),
                 .modificationDate: modification,
                 .creationDate: creation,
                 .type: fatType,
+                .systemNumber: _writeFileAttributePrimitive(systemNumber, as: UInt.self),
+                .systemFileNumber: _writeFileAttributePrimitive(systemFileNumber, as: UInt.self),
+                .posixPermissions: _writeFileAttributePrimitive(posixPermissions, as: UInt.self),
+                .referenceCount: _writeFileAttributePrimitive(referenceCount, as: UInt.self),
 
-                // TODO(compnerd) support these attributes, remapping the Windows semantics...
-                // .posixPermissions: ...,
-                // .referenceCount: ...,
-                // .systemNumber: ...,
-                // .systemFileNumber: ...,
-                // .ownerAccountID: ...,
-                // .groupownerAccountID: ...,
-                // .ownerAccountName: ...,
-                // .groupOwnerAccountName: ...,
-                // .deviceIdentifier: ...,
+                // Uid is always 0 on Windows systems
+                .ownerAccountID: _writeFileAttributePrimitive(0, as: UInt.self),
+
+                // Group id is always 0 on Windows
+                .groupOwnerAccountID: _writeFileAttributePrimitive(0, as: UInt.self)
+
+                // TODO: Support .deviceIdentifier
             ]
         }
 #else
