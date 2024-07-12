@@ -594,7 +594,7 @@ extension _FileManagerImpl {
             let size: UInt64 = (UInt64(info.nFileSizeHigh) << 32) | UInt64(info.nFileSizeLow)
             let creation: Date = Date(timeIntervalSince1970: info.ftCreationTime.timeIntervalSince1970)
             let modification: Date = Date(timeIntervalSince1970: info.ftLastWriteTime.timeIntervalSince1970)
-            var result: [FileAttributeKey : Any] = [
+            return [
                 .size: _writeFileAttributePrimitive(size, as: UInt.self),
                 .modificationDate: modification,
                 .creationDate: creation,
@@ -609,12 +609,9 @@ extension _FileManagerImpl {
 
                 // Group id is always 0 on Windows
                 .groupOwnerAccountID: _writeFileAttributePrimitive(0, as: UInt.self)
-            ]
 
-            if fatType == .typeCharacterSpecial || fatType == .typeBlockSpecial {
-                result[.deviceIdentifier] = _writeFileAttributePrimitive(info.dwVolumeSerialNumber, as: UInt.self)
-            }
-            return result
+                // TODO: Support .deviceIdentifier
+            ]
         }
 #else
         try fileManager.withFileSystemRepresentation(for: path) { fsRep in
