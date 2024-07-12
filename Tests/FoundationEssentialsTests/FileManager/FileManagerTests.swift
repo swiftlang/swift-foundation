@@ -686,6 +686,9 @@ final class FileManagerTests : XCTestCase {
     }
     
     func testResolveSymlinksViaGetAttrList() throws {
+        #if !canImport(Darwin)
+        throw XCTSkip("This test is not applicable on this platform")
+        #else
         try FileManagerPlayground {
             "destination"
         }.test {
@@ -694,6 +697,7 @@ final class FileManagerTests : XCTestCase {
             let resolved = absolutePath._resolvingSymlinksInPath() // Call internal function to avoid path standardization
             XCTAssertEqual(resolved, $0.currentDirectoryPath.appendingPathComponent("destination").withFileSystemRepresentation { String(cString: $0!) })
         }
+        #endif
     }
     
     #if os(macOS) && FOUNDATION_FRAMEWORK
