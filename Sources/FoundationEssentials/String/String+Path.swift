@@ -22,8 +22,24 @@ import WinSDK
 
 internal import _FoundationCShims
 
+extension StringProtocol {
+    fileprivate func _standardizingSlashes() -> String {
+        #if os(Windows)
+        // The string functions below all assume that the path separator is a forward slash
+        // Standardize the path to use forward slashes before processing for consistency
+        return self.replacing(._backslash, with: ._slash)
+        #else
+        return String(self)
+        #endif
+    }
+}
+
 extension String {
     internal func deletingLastPathComponent() -> String {
+        _standardizingSlashes()._deletingLastPathComponent()
+    }
+    
+    private func _deletingLastPathComponent() -> String {
         let lastSlash = self.lastIndex { $0 == "/" }
         guard let lastSlash else {
             // No slash
@@ -50,6 +66,10 @@ extension String {
     }
         
     internal func appendingPathComponent(_ component: String) -> String {
+        _standardizingSlashes()._appendingPathComponent(component)
+    }
+    
+    private func _appendingPathComponent(_ component: String) -> String {
         var result = self
         if !component.isEmpty {
             var needsSlash = true
@@ -103,6 +123,10 @@ extension String {
     }
 
     internal var lastPathComponent: String {
+        _standardizingSlashes()._lastPathComponent
+    }
+    
+    private var _lastPathComponent: String {
         let lastSlash = self.lastIndex { $0 == "/" }
         guard let lastSlash else {
             // No slash, just return self
@@ -170,11 +194,11 @@ extension String {
             return false
         }
         if let lastDot = pathExtension.utf8.lastIndex(of: UInt8(ascii: ".")) {
-            let beforeDot = pathExtension[..<lastDot].unicodeScalars
-            let afterDot = pathExtension[pathExtension.index(after: lastDot)...].unicodeScalars
+            let beforeDot = pathExtension[..<lastDot]._standardizingSlashes().unicodeScalars
+            let afterDot = pathExtension[pathExtension.index(after: lastDot)...]._standardizingSlashes().unicodeScalars
             return beforeDot.allSatisfy { $0 != "/" } && afterDot.allSatisfy { !String.invalidExtensionScalars.contains($0) }
         } else {
-            return pathExtension.unicodeScalars.allSatisfy { !String.invalidExtensionScalars.contains($0) }
+            return pathExtension._standardizingSlashes().unicodeScalars.allSatisfy { !String.invalidExtensionScalars.contains($0) }
         }
     }
 
@@ -202,6 +226,10 @@ extension String {
     }
 
     internal func merging(relativePath: String) -> String {
+        _standardizingSlashes()._merging(relativePath: relativePath)
+    }
+    
+    private func _merging(relativePath: String) -> String {
         guard relativePath.utf8.first != UInt8(ascii: "/") else {
             return relativePath
         }
@@ -212,6 +240,10 @@ extension String {
     }
 
     internal var removingDotSegments: String {
+        _standardizingSlashes()._removingDotSegments
+    }
+    
+    private var _removingDotSegments: String {
         let input = self.utf8
         guard !input.isEmpty else {
             return ""
@@ -440,18 +472,16 @@ extension String {
     
     // From swift-corelibs-foundation's NSTemporaryDirectory. Internal for now, pending a better public API.
     internal static var temporaryDirectoryPath: String {
-#if os(Windows)
-        let validPathSeps: [Character] = ["\\", "/"]
-#else
-        let validPathSeps: [Character] = ["/"]
-#endif
-        
         func normalizedPath(with path: String) -> String {
-            if validPathSeps.contains(where: { path.hasSuffix(String($0)) }) {
+            guard path.utf8.last != ._slash else {
                 return path
-            } else {
-                return path + String(validPathSeps.last!)
             }
+            #if os(Windows)
+            guard path.utf8.last != ._backslash else {
+                return path
+            }
+            #endif
+            return path + "/"
         }
 #if os(Windows)
         let cchLength: DWORD = GetTempPathW(0, nil)
@@ -547,7 +577,7 @@ extension String {
     static var NETWORK_PREFIX: String { #"\\"# }
     
     private var _standardizingPath: String {
-        var result = _transmutingCompressingSlashes()._droppingTrailingSlashes
+        var result = _standardizingSlashes()._transmutingCompressingSlashes()._droppingTrailingSlashes
         let postNetStart = if result.starts(with: String.NETWORK_PREFIX) {
             result.firstIndex(of: "/") ?? result.endIndex
         } else {
@@ -558,7 +588,7 @@ extension String {
             result = resolved
         }
 
-        result = result.removingDotSegments
+        result = result._removingDotSegments
 
         // Automounted paths need to be stripped for various flavors of paths
         let exclusionList = ["/Applications", "/Library", "/System", "/Users", "/Volumes", "/bin", "/cores", "/dev", "/opt", "/private", "/sbin", "/usr"]
@@ -584,6 +614,10 @@ extension String {
     
     // _NSPathComponents
     var pathComponents: [String] {
+        _standardizingSlashes()._pathComponents
+    }
+    
+    private var _pathComponents: [String] {
         var components = self.components(separatedBy: "/").filter { !$0.isEmpty }
         if self.first == "/" {
             components.insert("/", at: 0)
@@ -596,6 +630,10 @@ extension String {
     
     #if !NO_FILESYSTEM
     var abbreviatingWithTildeInPath: String {
+        _standardizingSlashes()._abbreviatingWithTildeInPath
+    }
+    
+    private var _abbreviatingWithTildeInPath: String {
         guard !self.isEmpty && self != "/" else { return self }
         let homeDir = String.homeDirectoryPath()
         guard self.starts(with: homeDir) else { return self }
@@ -605,6 +643,10 @@ extension String {
     }
     
     var expandingTildeInPath: String {
+        _standardizingSlashes()._expandingTildeInPath
+    }
+    
+    private var _expandingTildeInPath: String {
         guard self.first == "~" else { return self }
         var user: String? = nil
         let firstSlash = self.firstIndex(of: "/") ?? self.endIndex
@@ -781,6 +823,7 @@ extension StringProtocol {
         }
     }
 
+    // Internal for testing purposes
     internal func _hasDotDotComponent() -> Bool {
         let input = self.utf8
         guard input.count >= 2 else {

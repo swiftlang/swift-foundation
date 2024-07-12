@@ -282,10 +282,16 @@ final class FileManagerTests : XCTestCase {
             try $0.createDirectory(atPath: "create_dir_test2/nested2", withIntermediateDirectories: true)
             XCTAssertEqual(try $0.contentsOfDirectory(atPath: "create_dir_test2").sorted(), ["nested", "nested2"])
             XCTAssertNoThrow(try $0.createDirectory(atPath: "create_dir_test2/nested2", withIntermediateDirectories: true))
+            
+            #if os(Windows)
+            try $0.createDirectory(atPath: "create_dir_test3\\nested", withIntermediateDirectories: true)
+            XCTAssertEqual(try $0.contentsOfDirectory(atPath: "create_dir_test3"), ["nested"])
+            #endif
+            
             XCTAssertThrowsError(try $0.createDirectory(atPath: "create_dir_test", withIntermediateDirectories: false)) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileWriteFileExists)
             }
-            XCTAssertThrowsError(try $0.createDirectory(atPath: "create_dir_test3/nested", withIntermediateDirectories: false)) {
+            XCTAssertThrowsError(try $0.createDirectory(atPath: "create_dir_test4/nested", withIntermediateDirectories: false)) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileNoSuchFile)
             }
             XCTAssertThrowsError(try $0.createDirectory(atPath: "preexisting_file", withIntermediateDirectories: false)) {
