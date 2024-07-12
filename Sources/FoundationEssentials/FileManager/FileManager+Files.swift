@@ -560,7 +560,9 @@ extension _FileManagerImpl {
             defer { CloseHandle(hFile) }
 
             var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
-            GetFileInformationByHandle(hFile, &info)
+            guard GetFileInformationByHandle(hFile, &info) else {
+              throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+            }
 
             let dwFileType = GetFileType(hFile)
             let fatType: FileAttributeType = switch (dwFileType) {
