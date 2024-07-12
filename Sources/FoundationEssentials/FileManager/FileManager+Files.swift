@@ -581,9 +581,17 @@ extension _FileManagerImpl {
             let referenceCount = UInt64(info.nNumberOfLinks)
 
             let isReadOnly = info.dwFileAttributes & FILE_ATTRIBUTE_READONLY != 0
-            var posixPermissions = UInt16(_S_IEXEC | _S_IREAD)
+            let isExecutable = if fatType == .typeDirectory {
+                true // Directories are always considered executable
+            } else {
+                SaferiIsExecutableFileType(pwszPath, 0)
+            }
+            var posixPermissions = UInt16(_S_IREAD)
             if !isReadOnly {
                 posixPermissions |= UInt16(_S_IWRITE)
+            }
+            if isExecutable {
+                posixPermissions |= UInt16(_S_IEXEC)
             }
 
             let size: UInt64 = (UInt64(info.nFileSizeHigh) << 32) | UInt64(info.nFileSizeLow)
