@@ -29,7 +29,11 @@ extension StringProtocol {
         // Standardize the path to use forward slashes before processing for consistency
         return self.replacing(._backslash, with: ._slash)
         #else
-        return String(self)
+        if let str = _specializingCast(self, to: String.self) {
+            return str
+        } else {
+            return String(self)
+        }
         #endif
     }
 }
