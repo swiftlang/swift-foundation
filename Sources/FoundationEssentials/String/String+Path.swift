@@ -473,15 +473,11 @@ extension String {
     // From swift-corelibs-foundation's NSTemporaryDirectory. Internal for now, pending a better public API.
     internal static var temporaryDirectoryPath: String {
         func normalizedPath(with path: String) -> String {
-            guard path.utf8.last != ._slash else {
-                return path
+            var result = path._standardizingSlashes()
+            guard result.utf8.last != ._slash else {
+                return result
             }
-            #if os(Windows)
-            guard path.utf8.last != ._backslash else {
-                return path
-            }
-            #endif
-            return path + "/"
+            return result + "/"
         }
 #if os(Windows)
         let cchLength: DWORD = GetTempPathW(0, nil)
