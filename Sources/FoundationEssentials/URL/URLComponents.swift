@@ -847,6 +847,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use encodedHost instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use encodedHost instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use encodedHost instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use encodedHost instead")
     public var percentEncodedHost: String? {
         get { components.percentEncodedHost }
         set {
