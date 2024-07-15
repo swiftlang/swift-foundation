@@ -268,4 +268,525 @@ final class DecimalTests : XCTestCase {
         notDecimal = Decimal(string: "Jump 22 Street")
         XCTAssertNil(notDecimal)
     }
+
+    func testNormalize() throws {
+        var one = Decimal(1)
+        var ten = Decimal(-10)
+        var lossPrecision = try Decimal._normalize(a: &one, b: &ten, roundingMode: .plain)
+        XCTAssertFalse(lossPrecision)
+        XCTAssertEqual(Decimal(1), one)
+        XCTAssertEqual(Decimal(-10), ten)
+        XCTAssertEqual(1, one._length)
+        XCTAssertEqual(1, ten._length)
+        one = Decimal(1)
+        ten = Decimal(10)
+        lossPrecision = try Decimal._normalize(a: &one, b: &ten, roundingMode: .plain)
+        XCTAssertFalse(lossPrecision)
+        XCTAssertEqual(Decimal(1), one)
+        XCTAssertEqual(Decimal(10), ten)
+        XCTAssertEqual(1, one._length)
+        XCTAssertEqual(1, ten._length)
+    }
+
+    func testAdditionWithNormalization() throws {
+        let one: Decimal = Decimal(1)
+        var addend: Decimal = one
+        // 2 digits
+        addend._exponent = -1
+        var (result, lostPrecision) = try one._add(rhs: addend, roundingMode: .plain)
+        var expected: Decimal = Decimal()
+        expected._isNegative = 0
+        expected._isCompact = 0
+        expected._exponent = -1
+        expected._length = 1
+        expected._mantissa.0 = 11
+        XCTAssertTrue(Decimal._compare(lhs: result, rhs: expected) == .orderedSame)
+        // 38 digits
+        addend._exponent = -37
+        expected._exponent = -37;
+        expected._length = 8;
+        expected._mantissa.0 = 0x0001;
+        expected._mantissa.1 = 0x0000;
+        expected._mantissa.2 = 0x36a0;
+        expected._mantissa.3 = 0x00f4;
+        expected._mantissa.4 = 0x46d9;
+        expected._mantissa.5 = 0xd5da;
+        expected._mantissa.6 = 0xee10;
+        expected._mantissa.7 = 0x0785;
+        (result, _) = try one._add(rhs: addend, roundingMode: .plain)
+        XCTAssertTrue(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
+        // 39 Digits -- not guaranteed to work
+        addend._exponent = -38
+        (result, lostPrecision) = try one._add(rhs: addend, roundingMode: .plain)
+        if !lostPrecision {
+            expected._exponent = -38;
+            expected._length = 8;
+            expected._mantissa.0 = 0x0001;
+            expected._mantissa.1 = 0x0000;
+            expected._mantissa.2 = 0x2240;
+            expected._mantissa.3 = 0x098a;
+            expected._mantissa.4 = 0xc47a;
+            expected._mantissa.5 = 0x5a86;
+            expected._mantissa.6 = 0x4ca8;
+            expected._mantissa.7 = 0x4b3b;
+            XCTAssertTrue(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
+        } else {
+            XCTAssertTrue(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
+        }
+        // 40 Digits -- does NOT work, make sure we round
+        addend._exponent = -39
+        (result, lostPrecision) = try one._add(rhs: addend, roundingMode: .plain)
+        XCTAssertTrue(lostPrecision)
+        XCTAssertEqual("1", result.description)
+        XCTAssertTrue(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
+    }
+
+    func testSimpleMultiplication() throws {
+        var multiplicand = Decimal()
+        multiplicand._isNegative = 0
+        multiplicand._isCompact = 0
+        multiplicand._length = 1
+        multiplicand._exponent = 1
+        var multiplier = multiplicand
+        multiplier._exponent = 2
+
+        var expected = multiplicand
+        expected._isNegative = 0
+        expected._isCompact = 0
+        expected._exponent = 3
+        expected._length = 1
+
+        for i in 1 ..< UInt8.max {
+            multiplicand._mantissa.0 = UInt16(i)
+            for j in 1 ..< UInt8.max {
+                multiplier._mantissa.0 = UInt16(j)
+                expected._mantissa.0 = UInt16(i) * UInt16(j)
+
+                let result = try multiplicand._multiply(
+                    by: multiplier, roundingMode: .plain
+                )
+                XCTAssertTrue(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
+            }
+        }
+    }
+
+    func testNegativeAndZeroMultiplication() throws {
+        let one = Decimal(1)
+        let zero = Decimal(0)
+        var negativeOne = one
+        negativeOne._isNegative = 1
+
+        // 1 * 1
+        var result = try one._multiply(by: one, roundingMode: .plain)
+        XCTAssertTrue(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
+        // 1 * -1
+        result = try one._multiply(by: negativeOne, roundingMode: .plain)
+        XCTAssertTrue(Decimal._compare(lhs: negativeOne, rhs: result) == .orderedSame)
+        // -1 * 1
+        result = try negativeOne._multiply(by: one, roundingMode: .plain)
+        XCTAssertTrue(Decimal._compare(lhs: negativeOne, rhs: result) == .orderedSame)
+        // -1 * -1
+        result = try negativeOne._multiply(by: negativeOne, roundingMode: .plain)
+        XCTAssertTrue(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
+        // 1 * 0
+        result = try one._multiply(by: zero, roundingMode: .plain)
+        XCTAssertTrue(Decimal._compare(lhs: zero, rhs: result) == .orderedSame)
+        // 0 * 1
+        result = try zero._multiply(by: negativeOne, roundingMode: .plain)
+        XCTAssertTrue(Decimal._compare(lhs: zero, rhs: result) == .orderedSame)
+    }
+
+    func testMultiplicationOverflow() throws {
+        let multiplicand = Decimal(
+            _exponent: 0,
+            _length: 8,
+            _isNegative: 0,
+            _isCompact: 0,
+            _reserved: 0,
+            _mantissa: (0xffff, 0xffff, 0xffff, 0xffff,
+                        0xffff, 0xffff, 0xffff, 0xffff)
+        )
+        var multiplier = Decimal(1)
+        multiplier._mantissa.0 = 2
+
+        // This test makes sure the following does NOT throw
+        // max_mantissa * 2
+        _ = try multiplicand._multiply(
+            by: multiplier, roundingMode: .plain)
+        // 2 * max_mantissa
+        _ = try multiplier._multiply(
+            by: multiplicand, roundingMode: .plain)
+
+        // The following should throw .overlow
+        multiplier._exponent = 0x7F
+        do {
+            // 2e127 * max_mantissa
+            _ = try multiplicand._multiply(
+                by: multiplier, roundingMode: .plain)
+            XCTFail("Expected _CalculationError.overflow to be thrown")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+
+        do {
+            // max_mantissa * 2e127
+            _ = try multiplier._multiply(
+                by: multiplicand, roundingMode: .plain)
+            XCTFail("Expected _CalculationError.overflow to be thrown")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+    }
+
+    func testMultiplyByPowerOfTen() throws {
+        let a = Decimal(1234)
+        var result = try a._multiplyByPowerOfTen(power: 1, roundingMode: .plain)
+        XCTAssertEqual(result, Decimal(12340))
+        result = try a._multiplyByPowerOfTen(power: 2, roundingMode: .plain)
+        XCTAssertEqual(result, Decimal(123400))
+        result = try a._multiplyByPowerOfTen(power: 0, roundingMode: .plain)
+        XCTAssertEqual(result, Decimal(1234))
+        result = try a._multiplyByPowerOfTen(power: -2, roundingMode: .plain)
+        XCTAssertEqual(result, Decimal(12.34))
+
+        // Overflow
+        do {
+            _ = try a._multiplyByPowerOfTen(power: 128, roundingMode: .plain)
+            XCTFail("Expected overflow to have been thrown")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+
+        // Underflow
+        do {
+            _ = try Decimal(12.34)._multiplyByPowerOfTen(power: -128, roundingMode: .plain)
+            XCTFail("Expected underflow to have been thrown")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .underflow)
+        }
+    }
+
+    func testRepeatingDivision() throws {
+        let repeatingNumerator = Decimal(16)
+        let repeatingDenominator = Decimal(9)
+        let repeating = try repeatingNumerator._divide(
+            by: repeatingDenominator, roundingMode: .plain
+        )
+        let numerator = Decimal(1010)
+        let result = try numerator._divide(
+            by: repeating, roundingMode: .plain
+        )
+        var expected = Decimal()
+        expected._exponent = -35
+        expected._length = 8
+        expected._isNegative = 0
+        expected._isCompact = 1
+        expected._reserved = 0
+        expected._mantissa.0 = 51946
+        expected._mantissa.1 = 3
+        expected._mantissa.2 = 15549
+        expected._mantissa.3 = 55864
+        expected._mantissa.4 = 57984
+        expected._mantissa.5 = 55436
+        expected._mantissa.6 = 45186
+        expected._mantissa.7 = 10941
+        XCTAssertTrue(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
+    }
+
+    func testPower() throws {
+        var a = Decimal(1234)
+        var result = try a._power(exponent: 0, roundingMode: .plain)
+        XCTAssert(Decimal._compare(lhs: result, rhs: Decimal(1)) == .orderedSame)
+        a = Decimal(8)
+        result = try a._power(exponent: 2, roundingMode: .plain)
+        XCTAssert(Decimal._compare(lhs: result, rhs: Decimal(64)) == .orderedSame)
+        a = Decimal(-2)
+        result = try a._power(exponent: 3, roundingMode: .plain)
+        XCTAssert(Decimal._compare(lhs: result, rhs: Decimal(-8)) == .orderedSame)
+        result = try a._power(exponent: 0, roundingMode: .plain)
+        XCTAssert(Decimal._compare(lhs: result, rhs: Decimal(1)) == .orderedSame)
+        // Positive base
+        let six = Decimal(6)
+        for exponent in 1 ..< 10 {
+            result = try six._power(exponent: UInt(exponent), roundingMode: .plain)
+            XCTAssertEqual(result.doubleValue, pow(6.0, Double(exponent)))
+        }
+        // Negative base
+        let negativeSix = Decimal(-6)
+        for exponent in 1 ..< 10 {
+            result = try negativeSix._power(exponent: UInt(exponent), roundingMode: .plain)
+            XCTAssertEqual(result.doubleValue, pow(-6.0, Double(exponent)))
+        }
+        for i in -2 ... 10 {
+            for j in 0 ... 5 {
+                let actual = Decimal(i)
+                let result = try actual._power(
+                    exponent: UInt(j), roundingMode: .plain
+                )
+                let expected = Decimal(pow(Double(i), Double(j)))
+                XCTAssertEqual(expected, result, "\(result) == \(i)^\(j)")
+            }
+        }
+    }
+
+    func testNaNInput() throws {
+        let nan = Decimal.nan
+        let one = Decimal(1)
+
+        do {
+            // NaN + 1
+            _ = try nan._add(rhs: one, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+        do {
+            // 1 + NaN
+            _ = try one._add(rhs: nan, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+
+        do {
+            // NaN - 1
+            _ = try nan._subtract(rhs: one, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+        do {
+            // 1 - NaN
+            _ = try one._subtract(rhs: nan, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+
+        do {
+            // NaN * 1
+            _ = try nan._multiply(by: one, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+        do {
+            // 1 * NaN
+            _ = try one._multiply(by: nan, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+
+        do {
+            // NaN / 1
+            _ = try nan._divide(by: one, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+        do {
+            // 1 / NaN
+            _ = try one._divide(by: nan, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+
+        do {
+            // NaN ^ 0
+            _ = try nan._power(exponent: 0, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+        do {
+            // NaN ^ 1
+            _ = try nan._power(exponent: 1, roundingMode: .plain)
+            XCTFail("Expected to throw error")
+        } catch {
+            guard let calculationError = error as? Decimal._CalculationError else {
+                XCTFail("Wrong error thrown")
+                return
+            }
+            XCTAssertEqual(calculationError, .overflow)
+        }
+    }
+
+    func testDecimalRoundBankers() throws {
+        let onePointTwo = Decimal(1.2)
+        var result = try onePointTwo._round(scale: 1, roundingMode: .bankers)
+        XCTAssertEqual(1.2, result.doubleValue, accuracy: 0.0001)
+
+        let onePointTwoOne = Decimal(1.21)
+        result = try onePointTwoOne._round(scale: 1, roundingMode: .bankers)
+        XCTAssertEqual(1.2, result.doubleValue, accuracy: 0.0001)
+
+        let onePointTwoFive = Decimal(1.25)
+        result = try onePointTwoFive._round(scale: 1, roundingMode: .bankers)
+        XCTAssertEqual(1.2, result.doubleValue, accuracy: 0.0001)
+
+        let onePointThreeFive = Decimal(1.35)
+        result = try onePointThreeFive._round(scale: 1, roundingMode: .bankers)
+        XCTAssertEqual(1.4, result.doubleValue, accuracy: 0.0001)
+
+        let onePointTwoSeven = Decimal(1.27)
+        result = try onePointTwoSeven._round(scale: 1, roundingMode: .bankers)
+        XCTAssertEqual(1.3, result.doubleValue, accuracy: 0.0001)
+
+        let minusEightPointFourFive = Decimal(-8.45)
+        result = try minusEightPointFourFive._round(scale: 1, roundingMode: .bankers)
+        XCTAssertEqual(-8.4, result.doubleValue, accuracy: 0.0001)
+
+        let minusFourPointNineEightFive = Decimal(-4.985)
+        result = try minusFourPointNineEightFive._round(scale: 2, roundingMode: .bankers)
+        XCTAssertEqual(-4.98, result.doubleValue, accuracy: 0.0001)
+    }
+
+    func test_Maths() {
+        for i in -2...10 {
+            for j in 0...5 {
+                XCTAssertEqual(Decimal(i*j), Decimal(i) * Decimal(j), "\(Decimal(i*j)) == \(i) * \(j)")
+                XCTAssertEqual(Decimal(i+j), Decimal(i) + Decimal(j), "\(Decimal(i+j)) == \(i)+\(j)")
+                XCTAssertEqual(Decimal(i-j), Decimal(i) - Decimal(j), "\(Decimal(i-j)) == \(i)-\(j)")
+                if j != 0 {
+                    let approximation = Decimal(Double(i)/Double(j))
+                    let answer = Decimal(i) / Decimal(j)
+                    let answerDescription = answer.description
+                    let approximationDescription = approximation.description
+                    var failed: Bool = false
+                    var count = 0
+                    let SIG_FIG = 14
+                    for (a, b) in zip(answerDescription, approximationDescription) {
+                        if a != b {
+                            failed = true
+                            break
+                        }
+                        if count == 0 && (a == "-" || a == "0" || a == ".") {
+                            continue // don't count these as significant figures
+                        }
+                        if count >= SIG_FIG {
+                            break
+                        }
+                        count += 1
+                    }
+                    XCTAssertFalse(failed, "\(Decimal(i/j)) == \(i)/\(j)")
+                }
+            }
+        }
+    }
+
+    func testMisc() throws {
+        XCTAssertEqual(Decimal(-5.2).sign, .minus)
+        XCTAssertEqual(Decimal(5.2).sign, .plus)
+        var d = Decimal(5.2)
+        XCTAssertEqual(d.sign, .plus)
+        d.negate()
+        XCTAssertEqual(d.sign, .minus)
+        d.negate()
+        XCTAssertEqual(d.sign, .plus)
+        var e = Decimal(0)
+        e.negate()
+        XCTAssertEqual(e, Decimal(0))
+        XCTAssertTrue(Decimal(3.5).isEqual(to: Decimal(3.5)))
+        XCTAssertTrue(Decimal.nan.isEqual(to: Decimal.nan))
+        XCTAssertTrue(Decimal(1.28).isLess(than: Decimal(2.24)))
+        XCTAssertFalse(Decimal(2.28).isLess(than: Decimal(2.24)))
+        XCTAssertTrue(Decimal(1.28).isTotallyOrdered(belowOrEqualTo: Decimal(2.24)))
+        XCTAssertFalse(Decimal(2.28).isTotallyOrdered(belowOrEqualTo: Decimal(2.24)))
+        XCTAssertTrue(Decimal(1.2).isTotallyOrdered(belowOrEqualTo: Decimal(1.2)))
+        XCTAssertTrue(Decimal.nan.isEqual(to: Decimal.nan))
+        XCTAssertTrue(Decimal.nan.isLess(than: Decimal(0)))
+        XCTAssertFalse(Decimal.nan.isLess(than: Decimal.nan))
+        XCTAssertTrue(Decimal.nan.isLessThanOrEqualTo(Decimal(0)))
+        XCTAssertTrue(Decimal.nan.isLessThanOrEqualTo(Decimal.nan))
+        XCTAssertFalse(Decimal.nan.isTotallyOrdered(belowOrEqualTo: Decimal.nan))
+        XCTAssertFalse(Decimal.nan.isTotallyOrdered(belowOrEqualTo: Decimal(2.3)))
+        XCTAssertTrue(Decimal(2) < Decimal(3))
+        XCTAssertTrue(Decimal(3) > Decimal(2))
+        XCTAssertEqual(Decimal(-9), Decimal(1) - Decimal(10))
+        XCTAssertEqual(Decimal(3), Decimal(2).nextUp)
+        XCTAssertEqual(Decimal(2), Decimal(3).nextDown)
+        XCTAssertEqual(Decimal(-476), Decimal(1024).distance(to: Decimal(1500)))
+        XCTAssertEqual(Decimal(68040), Decimal(386).advanced(by: Decimal(67654)))
+        XCTAssertEqual(Decimal(1.234), abs(Decimal(1.234)))
+        XCTAssertEqual(Decimal(1.234), abs(Decimal(-1.234)))
+        XCTAssertTrue(Decimal.nan.magnitude.isNaN)
+    }
+
+    func test_Constants() {
+        let smallest = Decimal(_exponent: 127, _length: 8, _isNegative: 1, _isCompact: 1, _reserved: 0, _mantissa: (UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max))
+        XCTAssertEqual(smallest, Decimal.leastFiniteMagnitude)
+        let biggest = Decimal(_exponent: 127, _length: 8, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max))
+        XCTAssertEqual(biggest, Decimal.greatestFiniteMagnitude)
+        let leastNormal = Decimal(_exponent: -127, _length: 1, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (1, 0, 0, 0, 0, 0, 0, 0))
+        XCTAssertEqual(leastNormal, Decimal.leastNormalMagnitude)
+        let leastNonzero = Decimal(_exponent: -127, _length: 1, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (1, 0, 0, 0, 0, 0, 0, 0))
+        XCTAssertEqual(leastNonzero, Decimal.leastNonzeroMagnitude)
+        let pi = Decimal(_exponent: -38, _length: 8, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (0x6623, 0x7d57, 0x16e7, 0xad0d, 0xaf52, 0x4641, 0xdfa7, 0xec58))
+        XCTAssertEqual(pi, Decimal.pi)
+        XCTAssertEqual(10, Decimal.radix)
+        XCTAssertTrue(Decimal().isCanonical)
+        XCTAssertFalse(Decimal().isSignalingNaN)
+        XCTAssertFalse(Decimal.nan.isSignalingNaN)
+        XCTAssertTrue(Decimal.nan.isNaN)
+        XCTAssertEqual(.quietNaN, Decimal.nan.floatingPointClass)
+        XCTAssertEqual(.positiveZero, Decimal().floatingPointClass)
+        XCTAssertEqual(.negativeNormal, smallest.floatingPointClass)
+        XCTAssertEqual(.positiveNormal, biggest.floatingPointClass)
+        XCTAssertFalse(Double.nan.isFinite)
+        XCTAssertFalse(Double.nan.isInfinite)
+    }
 }

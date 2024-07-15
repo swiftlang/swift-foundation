@@ -37,7 +37,7 @@ public struct Decimal: Sendable {
         var mantissa: Mantissa
     }
 
-    private var storage: Storage
+    internal var storage: Storage
 
     // Int8
     internal var _exponent: Int32 {
@@ -88,7 +88,15 @@ public struct Decimal: Sendable {
     }
     // Only 18 bits
     internal var _reserved: UInt32 {
-        return (UInt32(self.storage.lengthFlagsAndReserved & 0x03) << 16) | UInt32(self.storage.reserved)
+        get {
+            return (UInt32(self.storage.lengthFlagsAndReserved & 0x03) << 16) | UInt32(self.storage.reserved)
+        }
+        set {
+            // Bottom 16 bits
+            self.storage.reserved = UInt16(newValue & 0xFFFF)
+            self.storage.lengthFlagsAndReserved &= 0xFC
+            self.storage.lengthFlagsAndReserved |= UInt8(newValue >> 16) & 0xFF
+        }
     }
 
     internal var _mantissa: Mantissa {
@@ -100,12 +108,21 @@ public struct Decimal: Sendable {
         }
     }
 
+    internal var _lengthFlagsAndReserved: UInt8 {
+        get {
+            return self.storage.lengthFlagsAndReserved
+        }
+        set {
+            self.storage.lengthFlagsAndReserved = newValue
+        }
+    }
+
     internal init(
-        _exponent: Int32,
+        _exponent: Int32 = 0,
         _length: UInt32,
-        _isNegative: UInt32,
+        _isNegative: UInt32 = 0,
         _isCompact: UInt32,
-        _reserved: UInt32,
+        _reserved: UInt32 = 0,
         _mantissa: Mantissa
     ) {
         let length: UInt8 = (UInt8(truncatingIfNeeded: _length) & 0xF) << 4
@@ -130,19 +147,22 @@ public struct Decimal: Sendable {
     }
 }
 
-extension Decimal: Equatable {
-    public static func == (lhs: Decimal, rhs: Decimal) -> Bool {
-        return lhs.storage.exponent == rhs.storage.exponent &&
-        lhs.storage.lengthFlagsAndReserved == rhs.storage.lengthFlagsAndReserved &&
-        lhs.storage.reserved == rhs.storage.reserved &&
-        lhs.storage.mantissa.0 == rhs.storage.mantissa.0 &&
-        lhs.storage.mantissa.1 == rhs.storage.mantissa.1 &&
-        lhs.storage.mantissa.2 == rhs.storage.mantissa.2 &&
-        lhs.storage.mantissa.3 == rhs.storage.mantissa.3 &&
-        lhs.storage.mantissa.4 == rhs.storage.mantissa.4 &&
-        lhs.storage.mantissa.5 == rhs.storage.mantissa.5 &&
-        lhs.storage.mantissa.6 == rhs.storage.mantissa.6 &&
-        lhs.storage.mantissa.7 == rhs.storage.mantissa.7
+extension Decimal {
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public enum RoundingMode: UInt, Sendable {
+        case plain
+        case down
+        case up
+        case bankers
+    }
+
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public enum CalculationError: UInt, Sendable {
+        case noError
+        case lossOfPrecision
+        case overflow
+        case underflow
+        case divideByZero
     }
 }
 
@@ -178,7 +198,9 @@ extension Decimal {
                 buffer.append(separator)
             }
             copy._exponent += 1
-            let (result, remainder) = copy._divide(by: 10)
+            // _divide only throws `.divideByZero` which we are obviously
+            // not doing here, hence try!
+            let (result, remainder) = try! copy._divide(by: 10)
             copy = result
             let zero = Unicode.Scalar("0")
             buffer.append(String(Unicode.Scalar(zero.value + UInt32(remainder))!))
@@ -202,13 +224,13 @@ extension Decimal {
     internal static func decimal(
         from stringView: String.UTF8View,
         matchEntireString: Bool
-    ) -> Decimal? {
+    ) -> (result: Decimal?, processedLength: Int) {
         func multiplyBy10AndAdd(
             _ decimal: Decimal,
             number: UInt16
         ) throws -> Decimal {
             do {
-                var result = try decimal._multiply(by: 10)
+                var result = try decimal._multiply(byShort: 10)
                 result = try result._add(number)
                 return result
             } catch {
@@ -258,7 +280,7 @@ extension Decimal {
             if tooBigToFit {
                 incrementExponent(&result)
                 if result.isNaN {
-                    return nil
+                    return (result: nil, processedLength: 0)
                 }
                 continue
             }
@@ -269,7 +291,7 @@ extension Decimal {
                 tooBigToFit = true
                 incrementExponent(&result)
                 if result.isNaN {
-                    return nil
+                    return (result: nil, processedLength: 0)
                 }
                 continue
             }
@@ -298,7 +320,7 @@ extension Decimal {
                 // Before decrementing the exponent, we need to check
                 // if it's still possible to decrement.
                 if result._exponent == Int8.min {
-                    return nil
+                    return (result: nil, processedLength: 0)
                 }
                 result._exponent -= 1
             }
@@ -319,7 +341,7 @@ extension Decimal {
                 exponent = 10 * exponent + digitValue
                 if exponent > 2 * Int(Int8.max) {
                     // Too big to fit
-                    return nil
+                    return (result: nil, processedLength: 0)
                 }
                 stringView.formIndex(after: &index)
             }
@@ -329,7 +351,7 @@ extension Decimal {
             // Check to see if it will fit into the exponent field
             exponent += Int(result._exponent)
             if exponent > Int8.max || exponent < Int8.min {
-                return nil
+                return (result: nil, processedLength: 0)
             }
             result._exponent = Int32(exponent)
         }
@@ -342,132 +364,24 @@ extension Decimal {
             guard index == stringView.endIndex else {
                 // Any unprocessed content means the string
                 // contains something not valid
-                return nil
+                return (result: nil, processedLength: 0)
             }
         }
         if index == stringView.startIndex {
             // If we weren't able to process any character
             // the entire string isn't a valid decimal
-            return nil
+            return (result: nil, processedLength: 0)
         }
         result.compact()
+        let processedLength = stringView.distance(from: stringView.startIndex, to: index)
         // if we get to this point, and have NaN,
         // then the input string was probably "-0"
         // or some variation on that, and
         // normalize that to zero.
         if result.isNaN {
-            return Decimal(0)
+            return (result: Decimal(0), processedLength: processedLength)
         }
-        return result
-    }
-}
-
-// MARK: - Mathmatics
-extension Decimal {
-    private static let maxSize = 8
-    private enum _CalculationError: Error {
-        case overflow
-        case underflow
-    }
-
-    mutating func compact() {
-        var secureExponent = self._exponent
-        if self._isCompact != 0 || self.isNaN || self._length == 0 {
-            // No need to compact
-            return
-        }
-        // Divide by 10 as much as possible
-        var remainder: UInt16 = 0
-        repeat {
-            let (result, _remainder) = self._divide(by: 10)
-            remainder = _remainder
-            self = result
-            secureExponent += 1
-        } while remainder == 0 && self._length > 0
-        if self._length == 0 && remainder == 0 {
-            self = Decimal()
-            return
-        }
-
-        // Put the non-null remdr in place
-        self = try! self._multiply(by: 10)
-        self = try! self._add(remainder)
-        secureExponent -= 1
-
-        // Set the new exponent
-        while secureExponent > Int8.max {
-            self = try! self._multiply(by: 10)
-            secureExponent -= 1
-        }
-        self._exponent = secureExponent
-        // Mark the decimal as compact
-        self._isCompact = 1
-    }
-
-    private func _divide(by divisor: UInt16) -> (result: Decimal, remainder: UInt16) {
-        guard divisor != 0 else {
-            fatalError("Divide by zero")
-        }
-        var result = self
-        var carry: UInt32 = 0
-        for index in (0 ..< result._length).reversed() {
-            let acc = UInt32(result[index]) + carry * (1 << 16)
-            result[index] = UInt16(acc / UInt32(divisor))
-            carry = acc % UInt32(divisor)
-        }
-        var resultLength = result._length
-        while resultLength != 0 && result[resultLength-1] == 0 {
-            resultLength -= 1
-        }
-        result._length = resultLength
-        return (result: result, remainder: UInt16(carry))
-    }
-
-    private func _multiply(by multiplicand: UInt16) throws -> Decimal {
-        var result = self
-        if multiplicand == 0 {
-            result._length = 0
-            return result
-        }
-        var carry: UInt32 = 0
-        var index: UInt32 = 0
-        while index < result._length {
-            let acc = UInt32(result[index]) *
-                UInt32(multiplicand) + carry
-            carry = acc >> 16
-            result[index] = UInt16(acc & 0xFFFF)
-            index += 1
-        }
-        if carry != 0 {
-            if result._length >= Decimal.maxSize {
-                throw _CalculationError.overflow
-            }
-            result[index] = UInt16(carry)
-            index += 1
-        }
-        result._length = index
-        return result
-    }
-
-    private func _add(_ amount: UInt16) throws -> Decimal {
-        var result = self
-        var carry: UInt32 = UInt32(amount)
-        var index: UInt32 = 0
-        while index < result._length {
-            let acc = UInt32(result[index]) + carry
-            carry = acc >> 16
-            result[index] = UInt16(acc & 0xFFFF)
-            index += 1
-        }
-        if carry != 0 {
-            if result._length >= Decimal.maxSize {
-                throw _CalculationError.overflow
-            }
-            result[index] = UInt16(carry)
-            index += 1
-        }
-        result._length = index
-        return result
+        return (result: result, processedLength: processedLength)
     }
 }
 

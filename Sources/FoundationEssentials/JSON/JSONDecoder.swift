@@ -1076,7 +1076,7 @@ extension Decimal {
     init?(entire string: String) {
         guard let value = Decimal.decimal(
             from: string.utf8, matchEntireString: true
-        ) else {
+        ).result else {
             return nil
         }
         self = value
