@@ -551,13 +551,12 @@ final class FileManagerTests : XCTestCase {
     }
 
     func testFileAccessAtPath() throws {
-#if os(Windows)
-        throw XCTSkip("Windows filesystems do not conform to POSIX semantics")
-#else
+        #if !os(Windows)
         guard getuid() != 0 else {
             // Root users can always access anything, so this test will not function when run as root
             throw XCTSkip("This test is not available when running as the root user")
         }
+        #endif
         
         try FileManagerPlayground {
             File("000", attributes: [.posixPermissions: 0o000])
@@ -569,18 +568,29 @@ final class FileManagerTests : XCTestCase {
             File("666", attributes: [.posixPermissions: 0o666])
             File("777", attributes: [.posixPermissions: 0o777])
         }.test {
+            #if os(Windows)
+            // All files are readable on Windows
+            let readable = ["000", "111", "222", "333", "444", "555", "666", "777"]
+            // None of these files are executable on Windows
+            let executable: [String] = []
+            #else
             let readable = ["444", "555", "666", "777"]
-            let writable = ["222", "333", "666", "777"]
             let executable = ["111", "333", "555", "777"]
+            #endif
+            let writable = ["222", "333", "666", "777"]
             for number in 0...7 {
                 let file = "\(number)\(number)\(number)"
                 XCTAssertEqual($0.isReadableFile(atPath: file), readable.contains(file), "'\(file)' failed readable check")
                 XCTAssertEqual($0.isWritableFile(atPath: file), writable.contains(file), "'\(file)' failed writable check")
                 XCTAssertEqual($0.isExecutableFile(atPath: file), executable.contains(file), "'\(file)' failed executable check")
+                #if os(Windows)
+                // Only writable files are deletable on Windows
+                XCTAssertEqual($0.isDeletableFile(atPath: file), writable.contains(file), "'\(file)' failed deletable check")
+                #else
                 XCTAssertTrue($0.isDeletableFile(atPath: file), "'\(file)' failed deletable check")
+                #endif
             }
         }
-#endif
     }
 
     func testFileSystemAttributesAtPath() throws {
@@ -660,16 +670,21 @@ final class FileManagerTests : XCTestCase {
             File("foo", attributes: [.posixPermissions : UInt16(0o644)])
         }.test {
             let attributes = try $0.attributesOfItem(atPath: "foo")
-#if !os(Windows)
+
             // Ensure the unconventional UInt16 was accepted as input
+            #if os(Windows)
+            XCTAssertEqual(attributes[.posixPermissions] as? UInt, 0o600)
+            #else
             XCTAssertEqual(attributes[.posixPermissions] as? UInt, 0o644)
+            #endif
+
             #if FOUNDATION_FRAMEWORK
             // Where we have NSNumber, ensure that we can get the value back as an unconventional Double value
             XCTAssertEqual(attributes[.posixPermissions] as? Double, Double(0o644))
             // Ensure that the file type can be converted to a String when it is an ObjC enum
             XCTAssertEqual(attributes[.type] as? String, FileAttributeType.typeRegular.rawValue)
             #endif
-#endif
+
             // Ensure that the file type can be converted to a FileAttributeType when it is an ObjC enum and in swift-foundation
             XCTAssertEqual(attributes[.type] as? FileAttributeType, .typeRegular)
             

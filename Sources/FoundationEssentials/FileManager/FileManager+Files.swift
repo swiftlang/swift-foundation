@@ -780,6 +780,24 @@ extension _FileManagerImpl {
                 throw CocoaError.errorWithFilePath(.featureUnsupported, path)
             }
 
+            var attributesToSet: DWORD?
+            if let mode {
+                let existingAttributes = GetFileAttributesW($0)
+                guard existingAttributes != INVALID_FILE_ATTRIBUTES else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+                }
+                let isReadOnly = (existingAttributes & FILE_ATTRIBUTE_READONLY) != 0
+                let requestedReadOnly = (mode & UInt(_S_IWRITE)) == 0
+                if isReadOnly && !requestedReadOnly {
+                    guard SetFileAttributesW($0, existingAttributes & ~FILE_ATTRIBUTE_READONLY) else {
+                        throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+                    }
+                } else if !isReadOnly && requestedReadOnly {
+                    // Make the file read-only later after setting other attributes
+                    attributesToSet = existingAttributes | FILE_ATTRIBUTE_READONLY
+                }
+            }
+
             if let modification = attributes[.modificationDate] as? Date {
                 let seconds = modification.timeIntervalSince1601
 
@@ -800,6 +818,13 @@ extension _FileManagerImpl {
                 defer { CloseHandle(hFile) }
 
                 guard SetFileTime(hFile, nil, nil, &ftTime) else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+                }
+            }
+
+            // Finally, make the file read-only if requested
+            if let attributesToSet {
+                guard SetFileAttributesW($0, attributesToSet) else {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
                 }
             }
