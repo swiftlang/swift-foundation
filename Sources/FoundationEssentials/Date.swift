@@ -229,7 +229,7 @@ extension Date {
         li.LowPart = ft.dwLowDateTime
         li.HighPart = ft.dwHighDateTime
         // FILETIME represents 100-ns intervals since January 1, 1601 (UTC)
-        return TimeInterval((li.QuadPart - 1164447360_000_000) / 1_000_000_000)
+        return TimeInterval(Double(li.QuadPart) / 10_000_000.0 - Self.timeIntervalBetween1601AndReferenceDate)
 #else
         var ts: timespec = timespec()
         clock_gettime(CLOCK_REALTIME, &ts)

@@ -127,6 +127,11 @@ final class DateTests : XCTestCase {
         XCTAssertEqual("<description unavailable>", date.description)
 #endif
     }
+    
+    func testNowIsAfterReasonableDate() {
+        let date = Date.now
+        XCTAssert(date.timeIntervalSinceReferenceDate > 742700000.0)
+    }
 }
 
 // MARK: - Bridging
