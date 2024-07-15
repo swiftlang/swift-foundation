@@ -1243,7 +1243,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
-    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     public var user: String? {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
