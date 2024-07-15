@@ -130,7 +130,8 @@ final class DateTests : XCTestCase {
     
     func testNowIsAfterReasonableDate() {
         let date = Date.now
-        XCTAssert(date.timeIntervalSinceReferenceDate > 742700000.0)
+        XCTAssert(date.timeIntervalSinceReferenceDate > 742100000.0) // "2024-07-08T02:53:20Z"
+        XCTAssert(date.timeIntervalSinceReferenceDate < 3896300000.0) // "2124-06-21T01:33:20Z"
     }
 }
 
