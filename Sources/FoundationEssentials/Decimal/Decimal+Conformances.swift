@@ -22,7 +22,7 @@ extension Decimal : CustomStringConvertible {
         if let decimalSeparator = locale?.decimalSeparator {
             decimalString = decimalString.replacing(decimalSeparator, with: ".")
         }
-        guard let value = Decimal.decimal(from: decimalString.utf8, matchEntireString: false) else {
+        guard let value = Decimal.decimal(from: decimalString.utf8, matchEntireString: false).result else {
             return nil
         }
         self = value
@@ -35,11 +35,8 @@ extension Decimal : CustomStringConvertible {
 
 // The methods in this extension exist to match the protocol requirements of
 // FloatingPoint, even if we can't conform directly.
-//
-// If it becomes clear that conformance is truly impossible, we can deprecate
-// some of the methods (e.g. `isEqual(to:)` in favor of operators).
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal {
+extension Decimal /* : FloatingPoint */ {
     public static let leastFiniteMagnitude = Decimal(
         _exponent: 127,
         _length: 8,
@@ -310,6 +307,56 @@ extension Decimal {
 
     @available(*, unavailable, message: "Decimal does not yet fully adopt FloatingPoint.")
     public mutating func formTruncatingRemainder(dividingBy other: Decimal) { fatalError("Decimal does not yet fully adopt FloatingPoint") }
+
+    public var nextUp: Decimal {
+        return self + Decimal(
+            _exponent: _exponent,
+            _length: 1,
+            _isNegative: 0,
+            _isCompact: 1,
+            _reserved: 0,
+            _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000)
+        )
+    }
+
+    public var nextDown: Decimal {
+        return self - Decimal(
+            _exponent: _exponent,
+            _length: 1,
+            _isNegative: 0,
+            _isCompact: 1,
+            _reserved: 0,
+            _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000)
+        )
+    }
+
+    public func isEqual(to other: Decimal) -> Bool {
+        return self == other
+    }
+
+    public func isLess(than other: Decimal) -> Bool {
+        return Decimal._compare(lhs: self, rhs: other) == .orderedAscending
+    }
+
+    public func isLessThanOrEqualTo(_ other: Decimal) -> Bool {
+        let order = Decimal._compare(lhs: self, rhs: other)
+        return order == .orderedAscending || order == .orderedSame
+    }
+
+    public func isTotallyOrdered(belowOrEqualTo other: Decimal) -> Bool {
+        // Note: Decimal does not have -0 or infinities to worry about
+        if self.isNaN {
+            return false
+        }
+        if self < other {
+            return true
+        }
+        if other < self {
+            return false
+        }
+        // Fall through to == behavior
+        return true
+    }
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -389,6 +436,52 @@ extension Decimal: Hashable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Decimal : Equatable {
+    public static func ==(lhs: Decimal, rhs: Decimal) -> Bool {
+#if FOUNDATION_FRAMEWORK
+        let bitwiseEqual: Bool =
+            lhs._exponent == rhs._exponent &&
+            lhs._length == rhs._length &&
+            lhs._isNegative == rhs._isNegative &&
+            lhs._isCompact == rhs._isCompact &&
+            lhs._reserved == rhs._reserved &&
+            lhs._mantissa.0 == rhs._mantissa.0 &&
+            lhs._mantissa.1 == rhs._mantissa.1 &&
+            lhs._mantissa.2 == rhs._mantissa.2 &&
+            lhs._mantissa.3 == rhs._mantissa.3 &&
+            lhs._mantissa.4 == rhs._mantissa.4 &&
+            lhs._mantissa.5 == rhs._mantissa.5 &&
+            lhs._mantissa.6 == rhs._mantissa.6 &&
+            lhs._mantissa.7 == rhs._mantissa.7
+#else
+        let bitwiseEqual: Bool =
+            lhs.storage.exponent == rhs.storage.exponent &&
+            lhs.storage.lengthFlagsAndReserved == rhs.storage.lengthFlagsAndReserved &&
+            lhs.storage.reserved == rhs.storage.reserved &&
+            lhs.storage.mantissa.0 == rhs.storage.mantissa.0 &&
+            lhs.storage.mantissa.1 == rhs.storage.mantissa.1 &&
+            lhs.storage.mantissa.2 == rhs.storage.mantissa.2 &&
+            lhs.storage.mantissa.3 == rhs.storage.mantissa.3 &&
+            lhs.storage.mantissa.4 == rhs.storage.mantissa.4 &&
+            lhs.storage.mantissa.5 == rhs.storage.mantissa.5 &&
+            lhs.storage.mantissa.6 == rhs.storage.mantissa.6 &&
+            lhs.storage.mantissa.7 == rhs.storage.mantissa.7
+#endif
+        if bitwiseEqual {
+            return true
+        }
+        return Decimal._compare(lhs: lhs, rhs: rhs) == .orderedSame
+    }
+}
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Decimal : Comparable {
+    public static func <(lhs: Decimal, rhs: Decimal) -> Bool {
+        return Decimal._compare(lhs: lhs, rhs: rhs) == .orderedAscending
+    }
+}
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : Codable {
     private enum CodingKeys : Int, CodingKey {
         case exponent
@@ -445,10 +538,8 @@ extension Decimal : Codable {
 }
 
 // MARK: - SignedNumeric
-// SwiftFoundation's `Decimal` does not fully conform to
-// SignedNumeric yet because no arithmetics have been implemented
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Decimal /* : SignedNumeric */ {
+extension Decimal : SignedNumeric {
     public var magnitude: Decimal {
         guard _length != 0 else { return self }
         return Decimal(
@@ -510,10 +601,73 @@ extension Decimal /* : SignedNumeric */ {
             return Decimal(0)
         }
     }
-#else
-    // We need this symbol until Decimal fully conform to SignedNumeric
-    public static var zero: Decimal {
-        return Decimal(0)
-    }
 #endif
+
+    public static func +=(lhs: inout Decimal, rhs: Decimal) {
+        let result = try? lhs._add(rhs: rhs, roundingMode: .plain)
+        if let result = result {
+            lhs = result.result
+        }
+    }
+
+    public static func -=(lhs: inout Decimal, rhs: Decimal) {
+        let result = try? lhs._subtract(rhs: rhs, roundingMode: .plain)
+        if let result = result {
+            lhs = result
+        }
+    }
+
+    public static func *=(lhs: inout Decimal, rhs: Decimal) {
+        let result = try? lhs._multiply(by: rhs, roundingMode: .plain)
+        if let result = result {
+            lhs = result
+        }
+    }
+
+    public static func /=(lhs: inout Decimal, rhs: Decimal) {
+        let result = try? lhs._divide(by: rhs, roundingMode: .plain)
+        if let result = result {
+            lhs = result
+        }
+    }
+
+    public static func +(lhs: Decimal, rhs: Decimal) -> Decimal {
+        var answer = lhs
+        answer += rhs
+        return answer
+    }
+
+    public static func -(lhs: Decimal, rhs: Decimal) -> Decimal {
+        var answer = lhs
+        answer -= rhs
+        return answer
+    }
+
+    public static func *(lhs: Decimal, rhs: Decimal) -> Decimal {
+        var answer = lhs
+        answer *= rhs
+        return answer
+    }
+
+    public static func /(lhs: Decimal, rhs: Decimal) -> Decimal {
+        var answer = lhs
+        answer /= rhs
+        return answer
+    }
+
+    public mutating func negate() {
+        guard self._length != 0 else { return }
+        self._isNegative = self._isNegative == 0 ? 1 : 0
+    }
+}
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Decimal : Strideable {
+    public func distance(to other: Decimal) -> Decimal {
+        return self - other
+    }
+
+    public func advanced(by n: Decimal) -> Decimal {
+        return self + n
+    }
 }
