@@ -209,6 +209,7 @@ public struct URLResourceValues {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use .contentType instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use .contentType instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use .contentType instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use .contentType instead")
     public var typeIdentifier: String? { return _get(.typeIdentifierKey) }
 
     /// User-visible type or "kind" description.
@@ -829,6 +830,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     public init(fileURLWithPath path: __shared String, isDirectory: Bool, relativeTo base: __shared URL?) {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -848,6 +850,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     public init(fileURLWithPath path: __shared String, relativeTo base: __shared URL?) {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -867,6 +870,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     public init(fileURLWithPath path: __shared String, isDirectory: Bool) {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -886,6 +890,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     public init(fileURLWithPath path: __shared String) {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1175,6 +1180,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
     public var host: String? {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1237,6 +1243,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     public var user: String? {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1277,6 +1284,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use password(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use password(percentEncoded:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use password(percentEncoded:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use password(percentEncoded:) instead")
     public var password: String? {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1331,6 +1339,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use path(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use path(percentEncoded:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use path(percentEncoded:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use path(percentEncoded:) instead")
     public var path: String {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1415,6 +1424,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use query(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use query(percentEncoded:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use query(percentEncoded:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use query(percentEncoded:) instead")
     public var query: String? {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1458,6 +1468,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use fragment(percentEncoded:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use fragment(percentEncoded:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use fragment(percentEncoded:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use fragment(percentEncoded:) instead")
     public var fragment: String? {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1559,6 +1570,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     public func appendingPathComponent(_ pathComponent: String, isDirectory: Bool) -> URL {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1588,6 +1600,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     public func appendingPathComponent(_ pathComponent: String) -> URL {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1676,6 +1689,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     public mutating func appendPathComponent(_ pathComponent: String, isDirectory: Bool) {
         self = appendingPathComponent(pathComponent, isDirectory: isDirectory)
     }
@@ -1688,6 +1702,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     public mutating func appendPathComponent(_ pathComponent: String) {
         self = appendingPathComponent(pathComponent)
     }
