@@ -17,7 +17,8 @@ add_library(FoundationInternationalization
     Date+ICU.swift
     Duration+Utils.swift
     RangeExpression.swift
-    TimeInterval+Utils.swift)
+    TimeInterval+Utils.swift
+    URLParser+ICU.swift)
 
 add_subdirectory(Calendar)
 add_subdirectory(Formatting)
