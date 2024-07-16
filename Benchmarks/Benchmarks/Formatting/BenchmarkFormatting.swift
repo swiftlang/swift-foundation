@@ -12,13 +12,11 @@
 
 import Benchmark
 import func Benchmark.blackHole
-import Dispatch
 
 #if FOUNDATION_FRAMEWORK
 import Foundation
 #else
 import FoundationEssentials
-import FoundationInternationalization
 #endif
 
 let benchmarks = {
@@ -59,35 +57,4 @@ let benchmarks = {
             }
         }
     }
-    
-    Benchmark("parallel-number-formatting", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        for _ in benchmark.scaledIterations {
-            DispatchQueue.concurrentPerform(iterations: 1000) { _ in
-                let result = 10.123.formatted()
-                blackHole(result)
-            }
-        }
-    }
-
-    Benchmark("parallel-and-serialized-number-formatting", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        for _ in benchmark.scaledIterations {
-            DispatchQueue.concurrentPerform(iterations: 10) { _ in
-                // Reuse the values on this thread a bunch
-                for _ in 0..<100 {
-                    let result = 10.123.formatted()
-                    blackHole(result)
-                }
-            }
-        }
-    }
-
-    Benchmark("serialized-number-formatting", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        for _ in benchmark.scaledIterations {
-            for _ in 0..<1000 {
-                let result = 10.123.formatted()
-                blackHole(result)
-            }
-        }
-    }
-
 }

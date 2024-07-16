@@ -116,7 +116,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     #endif
 
     /// The time zone currently used by the system.
-    public static var current: TimeZone {
+    public static var current : TimeZone {
         TimeZone(inner: TimeZoneCache.cache.current._tz)
     }
 
@@ -125,8 +125,8 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     /// If this time zone is mutated, then it no longer tracks the system time zone.
     ///
     /// The autoupdating time zone only compares equal to itself.
-    public static var autoupdatingCurrent: TimeZone {
-        TimeZone(inner: TimeZoneCache.cache.autoupdatingCurrent)
+    public static var autoupdatingCurrent : TimeZone {
+        TimeZone(inner: TimeZoneCache.cache.autoupdatingCurrent())
     }
 
     /// The default time zone, settable via ObjC but not available in Swift API (because it's global mutable state).
@@ -405,7 +405,7 @@ extension TimeZone {
     internal static func resetSystemTimeZone() -> TimeZone? {
         let oldTimeZone = TimeZoneCache.cache.reset()
         // Also reset the calendar cache, since the current calendar uses the current time zone
-        LocaleNotifications.cache.reset()
+        CalendarCache.cache.reset()
         return oldTimeZone
     }
     

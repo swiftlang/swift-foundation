@@ -52,11 +52,7 @@ extension String {
 
 extension String {
     package func _trimmingWhitespace() -> String {
-        if self.isEmpty {
-            return ""
-        }
-        
-        return String(unicodeScalars._trimmingCharacters {
+        String(unicodeScalars._trimmingCharacters {
             $0.properties.isWhitespace
         })
     }
