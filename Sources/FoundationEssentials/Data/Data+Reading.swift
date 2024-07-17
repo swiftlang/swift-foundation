@@ -351,9 +351,26 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     let localProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(fileSize)) : nil
     
     if fileSize == 0 {
+        #if os(Linux)
+        // Linux has some files that may report a size of 0 but actually have contents
+        let chunkSize = 1024 * 4
+        var buffer = malloc(chunkSize)!
+        var totalRead = 0
+        while true {
+            let length = try readBytesFromFileDescriptor(fd, path: inPath, buffer: buffer.advanced(by: totalRead), length: chunkSize, readUntilLength: false, reportProgress: false)
+            
+            totalRead += length
+            if length != chunkSize {
+                break
+            }
+            buffer = realloc(buffer, totalRead + chunkSize)
+        }
+        result = ReadBytesResult(bytes: buffer, length: totalRead, deallocator: .free)
+        #else
+        result = ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
+        #endif
         localProgress?.totalUnitCount = 1
         localProgress?.completedUnitCount = 1
-        result = ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
     } else if shouldMap {
 #if !NO_FILESYSTEM
 #if os(Android)
