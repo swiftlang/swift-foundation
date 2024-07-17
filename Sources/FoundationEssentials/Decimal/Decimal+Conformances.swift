@@ -339,25 +339,11 @@ extension Decimal /* : FloatingPoint */ {
     public mutating func formTruncatingRemainder(dividingBy other: Decimal) { fatalError("Decimal does not yet fully adopt FloatingPoint") }
 
     public var nextUp: Decimal {
-        return self + Decimal(
-            _exponent: _exponent,
-            _length: 1,
-            _isNegative: 0,
-            _isCompact: 1,
-            _reserved: 0,
-            _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000)
-        )
+        return self + ulp
     }
 
     public var nextDown: Decimal {
-        return self - Decimal(
-            _exponent: _exponent,
-            _length: 1,
-            _isNegative: 0,
-            _isCompact: 1,
-            _reserved: 0,
-            _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000)
-        )
+        return -(-self).nextUp
     }
 
     public func isEqual(to other: Decimal) -> Bool {
