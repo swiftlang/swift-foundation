@@ -20,7 +20,7 @@ import Glibc
 import CRT
 #endif
 
-internal let powerOfTen: [Decimal.VariableLengthInteger] = [
+private let powerOfTen: [Decimal.VariableLengthInteger] = [
     /*^00*/ [0x0001],
     /*^01*/ [0x000a],
     /*^02*/ [0x0064],
