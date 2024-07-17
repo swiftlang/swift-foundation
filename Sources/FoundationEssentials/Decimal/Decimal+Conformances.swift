@@ -170,16 +170,35 @@ extension Decimal /* : FloatingPoint */ {
             self = Decimal()
             let negative = value < 0
             var val = negative ? -1 * value : value
-            var exponent = 0
+            var exponent: Int8 = 0
+
+            // Try to get val as close to UInt64.max whilst adjusting the exponent
+            // to reduce the number of digits after the decimal point.
             while val < Double(UInt64.max - 1) {
+                guard exponent > Int8.min else {
+                    self = .nan
+                    return
+                }
                 val *= 10.0
                 exponent -= 1
             }
-            while Double(UInt64.max - 1) < val {
+            while Double(UInt64.max) <= val {
+                guard exponent < Int8.max else {
+                    self = .nan
+                    return
+                }
                 val /= 10.0
                 exponent += 1
             }
-            var mantissa = UInt64(val)
+            var mantissa: UInt64
+            let maxMantissa = Double(UInt64.max).nextDown
+            if val > maxMantissa {
+                // UInt64(Double(UInt64.max)) gives an overflow error,
+                // this is the largest mantissa that can be set.
+                mantissa = UInt64(maxMantissa)
+            } else {
+                mantissa = UInt64(val)
+            }
 
             var i: UInt32 = 0
             // This is a bit ugly but it is the closest approximation of the C
