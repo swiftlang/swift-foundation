@@ -944,6 +944,11 @@ final class DecimalTests : XCTestCase {
     }
 
     func test_Significand() {
+        let x = -42 as Decimal
+        XCTAssertEqual(x.significand.sign, .plus)
+        let y = Decimal(sign: .plus, exponent: 0, significand: x)
+        XCTAssertEqual(y.sign, .minus)
+
         let a = Decimal.leastNonzeroMagnitude
         XCTAssertEqual(Decimal(sign: .plus, exponent: -10, significand: a), 0)
         let b = Decimal.greatestFiniteMagnitude

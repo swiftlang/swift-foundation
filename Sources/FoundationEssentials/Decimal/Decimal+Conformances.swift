@@ -272,7 +272,7 @@ extension Decimal /* : FloatingPoint */ {
 
     public var significand: Decimal {
         return Decimal(
-            _exponent: 0, _length: _length, _isNegative: _isNegative, _isCompact: _isCompact,
+            _exponent: 0, _length: _length, _isNegative: 0, _isCompact: _isCompact,
             _reserved: 0, _mantissa: _mantissa)
     }
 
