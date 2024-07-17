@@ -683,7 +683,7 @@ extension Decimal : SignedNumeric {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : Strideable {
     public func distance(to other: Decimal) -> Decimal {
-        return self - other
+        return other - self
     }
 
     public func advanced(by n: Decimal) -> Decimal {

@@ -951,4 +951,12 @@ final class DecimalTests : XCTestCase {
         XCTAssertEqual(d8?.description, "-1")
         XCTAssertEqual(d8?._length, 1)
     }
+
+    func test_Strideable() {
+        let x = 42 as Decimal
+        XCTAssertEqual(x.distance(to: 43), 1)
+        XCTAssertEqual(x.advanced(by: 1), 43)
+        XCTAssertEqual(x.distance(to: 41), -1)
+        XCTAssertEqual(x.advanced(by: -1), 41)
+    }
 }
