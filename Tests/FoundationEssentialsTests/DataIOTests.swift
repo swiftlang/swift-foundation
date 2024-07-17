@@ -236,6 +236,17 @@ class DataIOTests : XCTestCase {
         XCTAssertNoThrow(try Data("Output to STDOUT\n".utf8).write(to: path))
         #endif
     }
+    
+    func test_zeroSizeFile() throws {
+        #if !os(Linux)
+        throw XCTSkip("This test is only applicable on Linux")
+        #else
+        // Some files in /proc report a file size of 0 bytes via a stat call
+        // Ensure that these files can still be read despite appearing to be empty
+        let maps = try String(contentsOfFile: "/proc/self/maps", encoding: String._Encoding.utf8)
+        XCTAssertFalse(maps.isEmpty)
+        #endif
+    }
 
     // MARK: - String Path Tests
     func testStringDeletingLastPathComponent() {
