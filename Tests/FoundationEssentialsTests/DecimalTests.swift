@@ -126,8 +126,8 @@ final class DecimalTests : XCTestCase {
         XCTAssertEqual(0, m5)
         XCTAssertEqual(0, m6)
         XCTAssertEqual(0, m7)
-        XCTAssertEqual(8, NSDecimalMaxSize)
-        XCTAssertEqual(32767, NSDecimalNoScale)
+        XCTAssertEqual(8, Decimal.maxSize)
+        XCTAssertEqual(32767, CShort.max)
         XCTAssertFalse(zero.isNormal)
         XCTAssertTrue(zero.isFinite)
         XCTAssertTrue(zero.isZero)
@@ -207,7 +207,7 @@ final class DecimalTests : XCTestCase {
             ( 12.34, " 01234e-02", "12.34"),
         ]
         for testCase in testCases {
-            let (expected, string, expectedString) = testCase
+            let (expected, string, _) = testCase
             let decimal = Decimal(string:string)!
             let aboutOne = Decimal(expected) / decimal
             let approximatelyRight = aboutOne >= Decimal(0.99999) && aboutOne <= Decimal(1.00001)
@@ -296,8 +296,9 @@ final class DecimalTests : XCTestCase {
         var aNormalized = a
         var bNormalized = b
 
-        let normalizeError = NSDecimalNormalize(&aNormalized, &bNormalized, .plain)
-        XCTAssertEqual(normalizeError, NSDecimalNumber.CalculationError.lossOfPrecision)
+        lossPrecision = try Decimal._normalize(
+            a: &aNormalized, b: &bNormalized, roundingMode: .plain)
+        XCTAssertTrue(lossPrecision)
 
         XCTAssertEqual(aNormalized.exponent, -31)
         XCTAssertEqual(aNormalized._mantissa.0, 0)
