@@ -31,7 +31,7 @@ public enum AttributeScopes { }
 
 import Darwin
 internal import MachO.dyld
-@preconcurrency internal import ReflectionInternal
+internal import ReflectionInternal
 
 fileprivate struct ScopeDescription : Sendable {
     var attributes: [String : any AttributedStringKey.Type] = [:]

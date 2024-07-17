@@ -172,10 +172,35 @@ extension PredicateExpressions {
         arg
     }
     
-    public static func build_KeyPath<Root, Value>(root: Root, keyPath: Swift.KeyPath<Root.Output, Value>) -> PredicateExpressions.KeyPath<Root, Value> {
-        KeyPath(root: root, keyPath: keyPath)
+    /* public */
+    @usableFromInline static func build_KeyPath<Root, Value>(root: Root, keyPath: Swift.KeyPath<Root.Output, Value>) -> PredicateExpressions.KeyPath<Root, Value> {
+        KeyPath(root: root, keyPath: keyPath._unsafeAssumeSendable)
     }
+    
+    // A temporary workaround to a compiler bug that changes the ABI when adding the & Sendable constraint
+    // Should be removed and the above function should be made public when rdar://131764614 is resolved
+    @_alwaysEmitIntoClient
+    public static func build_KeyPath<Root, Value>(root: Root, keyPath: Swift.KeyPath<Root.Output, Value> & Sendable) -> PredicateExpressions.KeyPath<Root, Value> {
+        PredicateExpressions.build_KeyPath(root: root, keyPath: keyPath as Swift.KeyPath<Root.Output, Value>)
+    }
+}
 
+extension KeyPath {
+    package var _unsafeAssumeSendable: KeyPath<Root, Value> & Sendable {
+        func _unsafeCast<T, U>(_ t: T) -> U {
+            t as! U
+        }
+        return _unsafeCast(self) as KeyPath<Root, Value> & Sendable
+    }
+}
+
+extension AnyKeyPath {
+    package var _unsafeAssumeSendableAnyKeyPath: AnyKeyPath & Sendable {
+        func _unsafeCast<T, U>(_ t: T) -> U {
+            t as! U
+        }
+        return _unsafeCast(self) as AnyKeyPath & Sendable
+    }
 }
 
 @available(FoundationPredicate 0.1, *)
@@ -209,7 +234,7 @@ extension PredicateExpressions.KeyPath : Codable where Root : Codable {
         guard let kp = anykp as? Swift.KeyPath<Root.Output, Output> else {
             throw DecodingError.dataCorruptedError(forKey: .identifier, in: container, debugDescription: "Key path '\(anykp.debugDescription)' (KeyPath<\(_typeName(type(of: anykp).rootType)), \(_typeName(type(of: anykp).valueType))>) for identifier '\(identifier)' did not match the expression's requirement for KeyPath<\(_typeName(Root.Output.self)), \(_typeName(Output.self))>")
         }
-        self.keyPath = kp
+        self.keyPath = kp._unsafeAssumeSendable
 #else
         throw DecodingError.dataCorruptedError(forKey: .identifier, in: container, debugDescription: "Decoding PredicateExpressions.KeyPath is not supported")
 #endif // FOUNDATION_FRAMEWORK
