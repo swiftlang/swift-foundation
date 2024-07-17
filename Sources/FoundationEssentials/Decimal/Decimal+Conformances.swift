@@ -281,9 +281,29 @@ extension Decimal /* : FloatingPoint */ {
     }
 
     public var ulp: Decimal {
-        if !self.isFinite { return Decimal.nan }
+        guard isFinite else { return .nan }
+
+        let exponent: Int32
+        if isZero {
+            exponent = .min
+        } else {
+            let significand = Decimal(
+                _exponent: 0, _length: _length,
+                _isNegative: 0, _isCompact: 0, _reserved: 0,
+                _mantissa: _mantissa
+            )
+            let maxPowerOfTen = powerOfTen.count
+            let powerOfTen = powerOfTen.firstIndex {
+                var value = Decimal()
+                try? value.copyVariableLengthInteger($0)
+                print("Checking: \(value.description)")
+                return value > significand
+            } ?? maxPowerOfTen
+            exponent = _exponent &- Int32(maxPowerOfTen &- powerOfTen)
+        }
+
         return Decimal(
-            _exponent: _exponent, _length: 1, _isNegative: 0, _isCompact: 1,
+            _exponent: max(exponent, -128), _length: 1, _isNegative: 0, _isCompact: 1,
             _reserved: 0, _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000))
     }
 
@@ -620,30 +640,38 @@ extension Decimal : SignedNumeric {
 #endif
 
     public static func +=(lhs: inout Decimal, rhs: Decimal) {
-        let result = try? lhs._add(rhs: rhs, roundingMode: .plain)
-        if let result = result {
+        do {
+            let result = try lhs._add(rhs: rhs, roundingMode: .plain)
             lhs = result.result
+        } catch {
+            lhs = .nan
         }
     }
 
     public static func -=(lhs: inout Decimal, rhs: Decimal) {
-        let result = try? lhs._subtract(rhs: rhs, roundingMode: .plain)
-        if let result = result {
+        do {
+            let result = try lhs._subtract(rhs: rhs, roundingMode: .plain)
             lhs = result
+        } catch {
+            lhs = .nan
         }
     }
 
     public static func *=(lhs: inout Decimal, rhs: Decimal) {
-        let result = try? lhs._multiply(by: rhs, roundingMode: .plain)
-        if let result = result {
+        do {
+            let result = try lhs._multiply(by: rhs, roundingMode: .plain)
             lhs = result
+        } catch {
+            lhs = .nan
         }
     }
 
     public static func /=(lhs: inout Decimal, rhs: Decimal) {
-        let result = try? lhs._divide(by: rhs, roundingMode: .plain)
-        if let result = result {
+        do {
+            let result = try lhs._divide(by: rhs, roundingMode: .plain)
             lhs = result
+        } catch {
+            lhs = .nan
         }
     }
 

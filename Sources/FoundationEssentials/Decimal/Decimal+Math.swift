@@ -20,7 +20,7 @@ import Glibc
 import CRT
 #endif
 
-private let powerOfTen: [Decimal.VariableLengthInteger] = [
+internal let powerOfTen: [Decimal.VariableLengthInteger] = [
     /*^00*/ [0x0001],
     /*^01*/ [0x000a],
     /*^02*/ [0x0064],
@@ -650,7 +650,11 @@ extension Decimal {
         }
     }
 
-    private mutating func copyVariableLengthInteger(_ source: VariableLengthInteger) throws {
+    internal mutating func copyVariableLengthInteger(_ source: VariableLengthInteger) throws {
+        guard source.count <= Decimal.maxSize else {
+            throw _CalculationError.overflow
+        }
+        self._length = UInt32(source.count)
         switch source.count {
         case 0:
             self._mantissa = (0, 0, 0, 0, 0, 0, 0, 0)
