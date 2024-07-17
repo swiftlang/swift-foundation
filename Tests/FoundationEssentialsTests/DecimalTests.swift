@@ -907,4 +907,48 @@ final class DecimalTests : XCTestCase {
             XCTAssertEqual(Decimal(d).description, try XCTUnwrap(Decimal(string: s)).description)
         }
     }
+
+    func test_initExactly() {
+        // This really requires some tests using a BinaryInteger of bitwidth > 128 to test failures.
+        let d1 = Decimal(exactly: UInt64.max)
+        XCTAssertNotNil(d1)
+        XCTAssertEqual(d1?.description, UInt64.max.description)
+        XCTAssertEqual(d1?._length, 4)
+
+        let d2 = Decimal(exactly: Int64.min)
+        XCTAssertNotNil(d2)
+        XCTAssertEqual(d2?.description, Int64.min.description)
+        XCTAssertEqual(d2?._length, 4)
+
+        let d3 = Decimal(exactly: Int64.max)
+        XCTAssertNotNil(d3)
+        XCTAssertEqual(d3?.description, Int64.max.description)
+        XCTAssertEqual(d3?._length, 4)
+
+        let d4 = Decimal(exactly: Int32.min)
+        XCTAssertNotNil(d4)
+        XCTAssertEqual(d4?.description, Int32.min.description)
+        XCTAssertEqual(d4?._length, 2)
+
+        let d5 = Decimal(exactly: Int32.max)
+        XCTAssertNotNil(d5)
+        XCTAssertEqual(d5?.description, Int32.max.description)
+        XCTAssertEqual(d5?._length, 2)
+
+        let d6 = Decimal(exactly: 0)
+        XCTAssertNotNil(d6)
+        XCTAssertEqual(d6, Decimal.zero)
+        XCTAssertEqual(d6?.description, "0")
+        XCTAssertEqual(d6?._length, 0)
+
+        let d7 = Decimal(exactly: 1)
+        XCTAssertNotNil(d7)
+        XCTAssertEqual(d7?.description, "1")
+        XCTAssertEqual(d7?._length, 1)
+
+        let d8 = Decimal(exactly: -1)
+        XCTAssertNotNil(d8)
+        XCTAssertEqual(d8?.description, "-1")
+        XCTAssertEqual(d8?._length, 1)
+    }
 }
