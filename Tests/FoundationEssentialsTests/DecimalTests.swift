@@ -966,4 +966,9 @@ final class DecimalTests : XCTestCase {
         let b = Decimal.greatestFiniteMagnitude
         XCTAssertTrue(Decimal(sign: .plus, exponent: 10, significand: b).isNaN)
     }
+
+    func test_ULP() {
+        let x = 0.1 as Decimal
+        XCTAssertFalse(x.ulp > x)
+    }
 }
