@@ -208,7 +208,7 @@ final class DecimalTests : XCTestCase {
         XCTAssertEqual(0, ulp._mantissa.7)
     }
 
-    func test_ScanDecimal() {
+    func test_ScanDecimal() throws {
         let testCases = [
             // expected, value
             ( 123.456e78, "123.456e78", "123456000000000000000000000000000000000000000000000000000000000000000000000000000" ),
@@ -224,30 +224,47 @@ final class DecimalTests : XCTestCase {
         for testCase in testCases {
             let (expected, string, expectedString) = testCase
             let decimal = Decimal(string:string)!
-#if FOUNDATION_FRAMEWORK
             let aboutOne = Decimal(expected) / decimal
             let approximatelyRight = aboutOne >= Decimal(0.99999) && aboutOne <= Decimal(1.00001)
             XCTAssertTrue(approximatelyRight, "\(expected) ~= \(decimal) : \(aboutOne) \(aboutOne >= Decimal(0.99999)) \(aboutOne <= Decimal(1.00001))" )
-#else
-            // No calculation implemented yet
-            XCTAssertEqual(decimal.description, expectedString)
-#endif
         }
         guard let answer = Decimal(string:"12345679012345679012345679012345679012.3") else {
             XCTFail("Unable to parse Decimal(string:'12345679012345679012345679012345679012.3')")
             return
         }
-#if FOUNDATION_FRAMEWORK
         guard let ones = Decimal(string:"111111111111111111111111111111111111111") else {
             XCTFail("Unable to parse Decimal(string:'111111111111111111111111111111111111111')")
             return
         }
         let num = ones / Decimal(9)
         XCTAssertEqual(answer,num,"\(ones) / 9 = \(answer) \(num)")
-#else
-        // No calculation implemented yet
-        XCTAssertEqual(answer.description, "12345679012345679012345679012345679012.3")
-#endif
+
+        // Exponent overflow, returns nil
+        XCTAssertNil(Decimal(string: "1e200"))
+        XCTAssertNil(Decimal(string: "1e-200"))
+        XCTAssertNil(Decimal(string: "1e300"))
+        XCTAssertNil(Decimal(string: "1" + String(repeating: "0", count: 170)))
+        XCTAssertNil(Decimal(string: "0." + String(repeating: "0", count: 170) + "1"))
+        XCTAssertNil(Decimal(string: "0e200"))
+
+        // Parsing zero in different forms
+        let zero1 = try XCTUnwrap(Decimal(string: "000.000e123"))
+        XCTAssertTrue(zero1.isZero)
+        XCTAssertEqual(zero1._isNegative, 0)
+        XCTAssertEqual(zero1._length, 0)
+        XCTAssertEqual(zero1.description, "0")
+
+        let zero2 = try XCTUnwrap(Decimal(string: "+000.000e-123"))
+        XCTAssertTrue(zero2.isZero)
+        XCTAssertEqual(zero2._isNegative, 0)
+        XCTAssertEqual(zero2._length, 0)
+        XCTAssertEqual(zero2.description, "0")
+
+        let zero3 = try XCTUnwrap(Decimal(string: "-0.0e1"))
+        XCTAssertTrue(zero3.isZero)
+        XCTAssertEqual(zero3._isNegative, 0)
+        XCTAssertEqual(zero3._length, 0)
+        XCTAssertEqual(zero3.description, "0")
     }
 
     func testStringPartialMatch() {
