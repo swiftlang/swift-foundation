@@ -248,6 +248,7 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
         self.init(keyPath as KeyPath<Compared, Value?>, order: order)
     }
     
+    #if FOUNDATION_FRAMEWORK
     @_alwaysEmitIntoClient
     @available(FoundationPreview 0.1, *)
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator = .localizedStandard) {
@@ -441,6 +442,7 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
     public init(_ keyPath: KeyPath<Compared, String?> & Sendable, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, String?>, comparator: comparator, order: order)
     }
+    #endif // FOUNDATION_FRAMEWORK
 
 
     /// Creates a `SortDescriptor` that orders values based on a `Value`'s
