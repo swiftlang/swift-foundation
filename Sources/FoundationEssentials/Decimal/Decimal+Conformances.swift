@@ -236,13 +236,24 @@ extension Decimal /* : FloatingPoint */ {
     }
 
     public init(sign: FloatingPointSign, exponent: Int, significand: Decimal) {
-        self.init(
-            _exponent: Int32(exponent) + significand._exponent,
-            _length: significand._length,
-            _isNegative: sign == .plus ? 0 : 1,
-            _isCompact: significand._isCompact,
-            _reserved: 0,
-            _mantissa: significand._mantissa)
+        self = significand
+        do {
+            self = try significand._multiplyByPowerOfTen(
+                power: exponent, roundingMode: .plain)
+        } catch {
+            guard let actual = error as? Decimal._CalculationError else {
+                self = .nan
+                return
+            }
+            if actual == .underflow {
+                self = 0
+            } else {
+                self = .nan
+            }
+        }
+        if sign == .minus {
+            negate()
+        }
     }
 
     public init(signOf: Decimal, magnitudeOf magnitude: Decimal) {

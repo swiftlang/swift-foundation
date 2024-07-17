@@ -959,4 +959,11 @@ final class DecimalTests : XCTestCase {
         XCTAssertEqual(x.distance(to: 41), -1)
         XCTAssertEqual(x.advanced(by: -1), 41)
     }
+
+    func test_Significand() {
+        let a = Decimal.leastNonzeroMagnitude
+        XCTAssertEqual(Decimal(sign: .plus, exponent: -10, significand: a), 0)
+        let b = Decimal.greatestFiniteMagnitude
+        XCTAssertTrue(Decimal(sign: .plus, exponent: 10, significand: b).isNaN)
+    }
 }
