@@ -78,7 +78,7 @@ if(NOT BUILD_SHARED_LIBS)
     target_compile_options(FoundationEssentials PRIVATE
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationCollections>")
     target_compile_options(FoundationEssentials PRIVATE
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend Synchronization>")
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend swiftSynchronization>")
 endif()
 
 set_target_properties(FoundationEssentials PROPERTIES
