@@ -196,8 +196,9 @@ final class DateFormatStyleTests : XCTestCase {
         let date = Date.now
         let style = Date.FormatStyle(date: .numeric, time: .shortened)
         let format = date.formatted(style)
-        let parsed = try! Date(format, strategy: style.parseStrategy)
-        XCTAssertEqual(parsed.formatted(style), format)
+        let parsed = try? Date(format, strategy: style.parseStrategy)
+        XCTAssertNotNil(parsed)
+        XCTAssertEqual(parsed?.formatted(style), format)
     }
 
     func testLeadingDotSyntax() {
@@ -898,7 +899,8 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
             let s = date.formatted(style)
             XCTAssertEqual(s, expectedString)
 
-            let d = try! Date(s, strategy: style.parseStrategy)
+            let d = try? Date(s, strategy: style.parseStrategy)
+            XCTAssertNotNil(d)
             XCTAssertEqual(d, expectedDate)
         }
 
