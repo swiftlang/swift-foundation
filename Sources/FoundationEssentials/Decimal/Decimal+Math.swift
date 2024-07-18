@@ -650,7 +650,11 @@ extension Decimal {
         }
     }
 
-    private mutating func copyVariableLengthInteger(_ source: VariableLengthInteger) throws {
+    internal mutating func copyVariableLengthInteger(_ source: VariableLengthInteger) throws {
+        guard source.count <= Decimal.maxSize else {
+            throw _CalculationError.overflow
+        }
+        self._length = UInt32(source.count)
         switch source.count {
         case 0:
             self._mantissa = (0, 0, 0, 0, 0, 0, 0, 0)
@@ -948,10 +952,8 @@ extension Decimal {
                     carry = acc >> 16
                     // FIXME: Check if truncate is okay here
                     result[j + i] = UInt16(truncatingIfNeeded:acc) & 0xFFFF
-                } else {
-                    if !(carry == 0 && (rhs[j] == 0 || lhs[i] == 0)) {
-                        throw _CalculationError.overflow
-                    }
+                } else if carry != 0 || (rhs[j] > 0 && lhs[i] > 0) {
+                    throw _CalculationError.overflow
                 }
             }
 
