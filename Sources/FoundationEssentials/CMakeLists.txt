@@ -79,11 +79,9 @@ if(NOT BUILD_SHARED_LIBS)
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationCollections>")
 endif()
 
-target_link_options(FoundationEssentials PRIVATE
-    "SHELL:-no-toolchain-stdlib-rpath")
-
 set_target_properties(FoundationEssentials PROPERTIES
-    INSTALL_RPATH "$ORIGIN")
+    INSTALL_RPATH "$ORIGIN"
+    INSTALL_REMOVE_ENVIRONMENT_RPATH ON)
 
 set_property(GLOBAL APPEND PROPERTY SWIFT_FOUNDATION_EXPORTS FoundationEssentials)
 _swift_foundation_install_target(FoundationEssentials)
