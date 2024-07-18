@@ -19,6 +19,8 @@ internal import _FoundationICU
 import Android
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Darwin)
+import Darwin
 #endif
 
 /// Internal extensions on Date, for interop with ICU.

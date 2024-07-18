@@ -17,6 +17,7 @@ import TestSupport
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
+@_spi(SwiftCorelibsFoundation)
 @testable import FoundationEssentials
 #endif
 
@@ -1208,6 +1209,17 @@ final class DecimalTests : XCTestCase {
         XCTAssertNotEqual(x.nextUp, x)
     }
 
+    #if FOUNDATION_FRAMEWORK
+    #else
+    func test_toString() {
+        let decimal = Decimal(string: "-123456.789")!
+        XCTAssertEqual(decimal.toString(with: nil), "-123456.789")
+        let en = decimal.toString(with: Locale(identifier: "en_GB"))
+        XCTAssertEqual(en, "-123456.789")
+        let fr = decimal.toString(with: Locale(identifier: "fr_FR"))
+        XCTAssertEqual(fr, "-123456,789")
+    }
+
     func test_int64Value() {
         XCTAssertEqual(Decimal(-1).int64Value, -1)
         XCTAssertEqual(Decimal(0).int64Value, 0)
@@ -1230,4 +1242,26 @@ final class DecimalTests : XCTestCase {
         let pi = Decimal(Double.pi)
         XCTAssertEqual(pi.int64Value, 3)
     }
+
+    func test_doubleValue() {
+        XCTAssertEqual(Decimal(0).doubleValue, 0)
+        XCTAssertEqual(Decimal(1).doubleValue, 1)
+        XCTAssertEqual(Decimal(-1).doubleValue, -1)
+        XCTAssertTrue(Decimal.nan.doubleValue.isNaN)
+        XCTAssertEqual(Decimal(UInt64.max).doubleValue, Double(1.8446744073709552e+19))
+    }
+    
+    func test_decimalFromString() {
+        let string = "x123x"
+        let scanLocation = 1
+        
+        let start = string.index(string.startIndex, offsetBy: scanLocation, limitedBy: string.endIndex)!
+        let substring = string[start..<string.endIndex]
+        let view = String(substring).utf8
+        let (result, length) = Decimal.decimal(from: view, decimalSeparator: ".".utf8, matchEntireString: false)
+        XCTAssertEqual(result, Decimal(123))
+        XCTAssertEqual(length, 3)
+    }
+    #endif
+
 }

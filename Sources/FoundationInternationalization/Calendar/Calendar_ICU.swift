@@ -18,10 +18,10 @@ import FoundationEssentials
 import Android
 #elseif canImport(Glibc)
 import Glibc
-#endif
-
-#if canImport(CRT)
+#elseif canImport(CRT)
 import CRT
+#elseif canImport(Darwin)
+import Darwin
 #endif
 
 internal import _FoundationICU

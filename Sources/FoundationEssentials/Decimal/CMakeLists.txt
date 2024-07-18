@@ -14,4 +14,5 @@
 target_sources(FoundationEssentials PRIVATE
     Decimal.swift
     Decimal+Conformances.swift
-    Decimal+Math.swift)
+    Decimal+Math.swift
+    Decimal+Compatibility.swift)
