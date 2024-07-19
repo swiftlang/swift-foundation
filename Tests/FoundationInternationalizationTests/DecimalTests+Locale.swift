@@ -14,7 +14,6 @@
 import TestSupport
 #endif
 
-// TODO: Reenable these tests once DateFormatStyle has been ported
 final class DecimalLocaleTests : XCTestCase {
     func test_stringWithLocale() {
         let en_US = Locale(identifier: "en_US")
