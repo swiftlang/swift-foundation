@@ -29,7 +29,7 @@ extension Decimal : CustomStringConvertible {
     }
 
     public var description: String {
-        return self.toString()
+        return self.toString(withDecimalSeparator: ".")
     }
 }
 

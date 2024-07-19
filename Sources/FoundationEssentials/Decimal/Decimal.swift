@@ -170,7 +170,7 @@ extension Decimal {
 
 // MARK: - String
 extension Decimal {
-    internal func toString(with locale: Locale? = nil) -> String {
+    internal func toString(withDecimalSeparator separator: String) -> String {
         if self.isNaN {
             return "NaN"
         }
@@ -178,13 +178,6 @@ extension Decimal {
             return "0"
         }
         var buffer = ""
-        let separator: String
-        if let locale = locale,
-           let localizedSeparator = locale.decimalSeparator {
-            separator = String(localizedSeparator.reversed())
-        } else {
-            separator = "."
-        }
         var copy = self
         while copy._exponent > 0 {
             buffer += "0"
