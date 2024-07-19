@@ -17,12 +17,12 @@ internal import _ForSwiftFoundation
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : CustomStringConvertible {
     public init?(string: __shared String, locale: __shared Locale? = nil) {
-        // Substitute the decimal sign if needed
-        var decimalString = string
-        if let decimalSeparator = locale?.decimalSeparator {
-            decimalString = decimalString.replacing(decimalSeparator, with: ".")
-        }
-        guard let value = Decimal.decimal(from: decimalString.utf8, matchEntireString: false).result else {
+        let decimalSeparator = locale?.decimalSeparator ?? "."
+        guard let value = Decimal.decimal(
+            from: string.utf8,
+            decimalSeparator: decimalSeparator.utf8,
+            matchEntireString: false
+        ).result else {
             return nil
         }
         self = value
@@ -239,7 +239,7 @@ extension Decimal /* : FloatingPoint */ {
         self = significand
         do {
             self = try significand._multiplyByPowerOfTen(
-                power: exponent, roundingMode: .plain)
+                power: Int(Int16(clamping: exponent)), roundingMode: .plain)
         } catch {
             guard let actual = error as? Decimal._CalculationError else {
                 self = .nan

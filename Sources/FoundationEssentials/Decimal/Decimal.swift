@@ -223,6 +223,7 @@ extension Decimal {
 
     internal static func decimal(
         from stringView: String.UTF8View,
+        decimalSeparator: String.UTF8View,
         matchEntireString: Bool
     ) -> (result: Decimal?, processedLength: Int) {
         func multiplyBy10AndAdd(
@@ -245,6 +246,20 @@ extension Decimal {
                 stringView.formIndex(after: &i)
             }
             return i
+        }
+
+        func stringViewContainsDecimalSeparator(at index: String.UTF8View.Index) -> Bool {
+            for indexOffset in 0 ..< decimalSeparator.count {
+                let stringIndex = stringView.index(index, offsetBy: indexOffset)
+                let decimalIndex = decimalSeparator.index(
+                    decimalSeparator.startIndex,
+                    offsetBy: indexOffset
+                )
+                if stringView[stringIndex] != decimalSeparator[decimalIndex] {
+                    return false
+                }
+            }
+            return true
         }
 
         var result = Decimal()
@@ -298,8 +313,8 @@ extension Decimal {
             result = product
         }
         // Get the decimal point
-        if index != stringView.endIndex && stringView[index] == UInt8._period {
-            stringView.formIndex(after: &index)
+        if index != stringView.endIndex && stringViewContainsDecimalSeparator(at: index) {
+            stringView.formIndex(&index, offsetBy: decimalSeparator.count)
             // Continue to build the mantissa
             while index != stringView.endIndex,
                   let digitValue = stringView[index].digitValue {
