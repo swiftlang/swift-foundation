@@ -18,7 +18,6 @@ target_sources(FoundationEssentials PRIVATE
     Locale.swift
     Locale_Autoupdating.swift
     Locale_Cache.swift
-    Locale_Notifications.swift
     Locale_Preferences.swift
     Locale_Protocol.swift
     Locale_Unlocalized.swift)
