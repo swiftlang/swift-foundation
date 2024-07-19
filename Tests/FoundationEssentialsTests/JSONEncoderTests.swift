@@ -21,6 +21,7 @@ import TestSupport
 #endif // canImport(TestSupport)
 
 #if canImport(FoundationEssentials)
+@_spi(SwiftCorelibsFoundation)
 @testable import FoundationEssentials
 #endif
 

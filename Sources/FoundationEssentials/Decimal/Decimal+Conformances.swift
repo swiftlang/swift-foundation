@@ -18,7 +18,7 @@ internal import _ForSwiftFoundation
 extension Decimal : CustomStringConvertible {
     public init?(string: __shared String, locale: __shared Locale? = nil) {
         let decimalSeparator = locale?.decimalSeparator ?? "."
-        guard let value = Decimal.decimal(
+        guard let value = Decimal._decimal(
             from: string.utf8,
             decimalSeparator: decimalSeparator.utf8,
             matchEntireString: false
@@ -29,7 +29,7 @@ extension Decimal : CustomStringConvertible {
     }
 
     public var description: String {
-        return self.toString()
+        return self._toString()
     }
 }
 

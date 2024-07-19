@@ -266,6 +266,19 @@ extension Decimal {
         result._exponent = secureExponent
         return result
     }
+    
+    internal func _multiplyBy10AndAdd(
+        number: UInt16
+    ) throws -> Decimal {
+        do {
+            var result = try _multiply(byShort: 10)
+            result = try result._add(number)
+            return result
+        } catch {
+            throw _CalculationError.overflow
+        }
+    }
+
 
     internal func _divide(by divisor: UInt16) throws -> (result: Decimal, remainder: UInt16) {
         let (resultValue, remainder) = try Self._integerDivideByShort(
@@ -702,6 +715,18 @@ extension Decimal {
         }
         return value
     }
+    
+    #if FOUNDATION_FRAMEWORK
+    #else
+    @_spi(SwiftCorelibsFoundation)
+    public var _int64Value: Int64 { int64Value }
+    
+    @_spi(SwiftCorelibsFoundation)
+    public var _uint64Value: UInt64 { uint64Value }
+    
+    @_spi(SwiftCorelibsFoundation)
+    public var _doubleValue: Double { doubleValue }
+    #endif
 }
 
 // MARK: - Integer Mathmatics

@@ -22,7 +22,8 @@ import ucrt
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Decimal: Sendable {
-    internal typealias Mantissa = (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)
+    @_spi(SwiftCorelibsFoundation)
+    public typealias Mantissa = (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16, UInt16)
 
     internal struct Storage: Sendable {
         var exponent: Int8
@@ -60,6 +61,7 @@ public struct Decimal: Sendable {
             self.storage.lengthFlagsAndReserved |= newLength // set the new length
         }
     }
+    
     // Bool
     internal var _isNegative: UInt32 {
         get {
@@ -73,6 +75,7 @@ public struct Decimal: Sendable {
             }
         }
     }
+    
     // Bool
     internal var _isCompact: UInt32 {
         get {
@@ -86,6 +89,7 @@ public struct Decimal: Sendable {
             }
         }
     }
+    
     // Only 18 bits
     internal var _reserved: UInt32 {
         get {
@@ -117,7 +121,8 @@ public struct Decimal: Sendable {
         }
     }
 
-    internal init(
+    @_spi(SwiftCorelibsFoundation)
+    public init(
         _exponent: Int32 = 0,
         _length: UInt32,
         _isNegative: UInt32 = 0,
@@ -126,15 +131,23 @@ public struct Decimal: Sendable {
         _mantissa: Mantissa
     ) {
         let length: UInt8 = (UInt8(truncatingIfNeeded: _length) & 0xF) << 4
-        let isNagitive: UInt8 = UInt8(truncatingIfNeeded: _isNegative & 0x1) == 0 ? 0 : 0b00001000
+        let isNegative: UInt8 = UInt8(truncatingIfNeeded: _isNegative & 0x1) == 0 ? 0 : 0b00001000
         let isCompact: UInt8 = UInt8(truncatingIfNeeded: _isCompact & 0x1) == 0 ? 0 : 0b00000100
         let reservedLeft: UInt8 = UInt8(truncatingIfNeeded: (_reserved & 0x3FFFF) >> 16)
         self.storage = .init(
             exponent: Int8(truncatingIfNeeded: _exponent),
-            lengthFlagsAndReserved: length | isNagitive | isCompact | reservedLeft,
+            lengthFlagsAndReserved: length | isNegative | isCompact | reservedLeft,
             reserved: UInt16(truncatingIfNeeded: _reserved & 0xFFFF),
             mantissa: _mantissa
         )
+    }
+
+    @_spi(SwiftCorelibsFoundation)
+    public init(mantissa: UInt64, exponent: Int16, isNegative: Bool) {
+        var d = Decimal(mantissa)
+        d._exponent += Int32(exponent)
+        d._isNegative = isNegative ? 1 : 0
+        self = d
     }
 
     public init() {
@@ -170,7 +183,23 @@ extension Decimal {
 
 // MARK: - String
 extension Decimal {
-    internal func toString(with locale: Locale? = nil) -> String {
+#if FOUNDATION_FRAMEWORK
+#else
+    @_spi(SwiftCorelibsFoundation)
+    public func toString(with locale: Locale? = nil) -> String {
+        _toString(with: locale)
+    }
+    
+    @_spi(SwiftCorelibsFoundation)
+    public static func decimal(
+        from stringView: String.UTF8View,
+        decimalSeparator: String.UTF8View,
+        matchEntireString: Bool
+    ) -> (result: Decimal?, processedLength: Int) {
+        _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString)
+    }
+#endif
+    internal func _toString(with locale: Locale? = nil) -> String {
         if self.isNaN {
             return "NaN"
         }
@@ -221,7 +250,7 @@ extension Decimal {
         return String(buffer.reversed())
     }
 
-    internal static func decimal(
+    internal static func _decimal(
         from stringView: String.UTF8View,
         decimalSeparator: String.UTF8View,
         matchEntireString: Bool
@@ -299,9 +328,7 @@ extension Decimal {
                 }
                 continue
             }
-            guard let product = try? multiplyBy10AndAdd(
-                result,
-                number: UInt16(digitValue)
+            guard let product = try? result._multiplyBy10AndAdd(number: UInt16(digitValue)
             ) else {
                 tooBigToFit = true
                 incrementExponent(&result)
@@ -324,9 +351,7 @@ extension Decimal {
                 guard !tooBigToFit else {
                     continue
                 }
-                guard let product = try? multiplyBy10AndAdd(
-                    result,
-                    number: UInt16(digitValue)
+                guard let product = try? result._multiplyBy10AndAdd(number: UInt16(digitValue)
                 ) else {
                     tooBigToFit = true
                     continue

@@ -1074,7 +1074,7 @@ extension FixedWidthInteger {
 
 extension Decimal {
     init?(entire string: String) {
-        guard let value = Decimal.decimal(
+        guard let value = Decimal._decimal(
             from: string.utf8,
             decimalSeparator: ".".utf8,
             matchEntireString: true
