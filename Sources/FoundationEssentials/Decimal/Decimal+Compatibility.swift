@@ -410,7 +410,7 @@ public func _NSDecimalCompact(_ number: UnsafeMutablePointer<Decimal>) {
     _ locale: Any? = nil
 ) -> String {
     let useLocale = locale as? Locale
-    return decimal.pointee.toString(with: useLocale)
+    return decimal.pointee._toString(with: useLocale)
 }
 
 #if FOUNDATION_FRAMEWORK
@@ -431,7 +431,7 @@ internal func __NSStringToDecimal(
     processedLength: UnsafeMutablePointer<Int>,
     result: UnsafeMutablePointer<Decimal>
 ) {
-    let parsed = Decimal.decimal(
+    let parsed = Decimal._decimal(
         from: string.utf8,
         decimalSeparator: ".".utf8,
         matchEntireString: false

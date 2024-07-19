@@ -112,10 +112,10 @@ final class DecimalTests : XCTestCase {
 
     func test_DescriptionWithLocale() {
         let decimal = Decimal(string: "-123456.789")!
-        XCTAssertEqual(decimal.toString(with: nil), "-123456.789")
-        let en = decimal.toString(with: Locale(identifier: "en_GB"))
+        XCTAssertEqual(decimal._toString(with: nil), "-123456.789")
+        let en = decimal._toString(with: Locale(identifier: "en_GB"))
         XCTAssertEqual(en, "-123456.789")
-        let fr = decimal.toString(with: Locale(identifier: "fr_FR"))
+        let fr = decimal._toString(with: Locale(identifier: "fr_FR"))
         XCTAssertEqual(fr, "-123456,789")
     }
 

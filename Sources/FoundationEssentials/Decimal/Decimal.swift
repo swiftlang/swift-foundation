@@ -183,8 +183,23 @@ extension Decimal {
 
 // MARK: - String
 extension Decimal {
+#if FOUNDATION_FRAMEWORK
+#else
     @_spi(SwiftCorelibsFoundation)
     public func toString(with locale: Locale? = nil) -> String {
+        _toString(with: locale)
+    }
+    
+    @_spi(SwiftCorelibsFoundation)
+    public static func decimal(
+        from stringView: String.UTF8View,
+        decimalSeparator: String.UTF8View,
+        matchEntireString: Bool
+    ) -> (result: Decimal?, processedLength: Int) {
+        _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString)
+    }
+#endif
+    internal func _toString(with locale: Locale? = nil) -> String {
         if self.isNaN {
             return "NaN"
         }
@@ -235,8 +250,7 @@ extension Decimal {
         return String(buffer.reversed())
     }
 
-    @_spi(SwiftCorelibsFoundation)
-    public static func decimal(
+    internal static func _decimal(
         from stringView: String.UTF8View,
         decimalSeparator: String.UTF8View,
         matchEntireString: Bool
