@@ -1025,4 +1025,27 @@ final class DecimalTests : XCTestCase {
         XCTAssertNotEqual(x.nextDown, x)
         XCTAssertNotEqual(x.nextUp, x)
     }
+
+    func test_int64Value() {
+        XCTAssertEqual(Decimal(-1).int64Value, -1)
+        XCTAssertEqual(Decimal(0).int64Value, 0)
+        XCTAssertEqual(Decimal(1).int64Value, 1)
+        XCTAssertEqual(Decimal.nan.int64Value, 0)
+        XCTAssertEqual(Decimal(1e50).int64Value, 0)
+        XCTAssertEqual(Decimal(1e-50).int64Value, 0)
+
+        XCTAssertEqual(Decimal(UInt64.max).uint64Value, UInt64.max)
+        XCTAssertEqual((Decimal(UInt64.max) + 1).uint64Value, 0)
+        XCTAssertEqual(Decimal(Int64.max).int64Value, Int64.max)
+        XCTAssertEqual((Decimal(Int64.max) + 1 ).int64Value, Int64.min)
+        XCTAssertEqual((Decimal(Int64.max) + 1 ).uint64Value, UInt64(Int64.max) + 1)
+        XCTAssertEqual(Decimal(Int64.min).int64Value, Int64.min)
+
+        XCTAssertEqual(Decimal(Int.min).int64Value, Int64(Int.min))
+
+        let div3 = Decimal(10) / 3
+        XCTAssertEqual(div3.int64Value, 3)
+        let pi = Decimal(Double.pi)
+        XCTAssertEqual(pi.int64Value, 3)
+    }
 }

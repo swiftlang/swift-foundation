@@ -623,6 +623,87 @@ extension Decimal {
     }
 }
 
+// MARK: - Numeric Values
+extension Decimal {
+    internal var doubleValue: Double {
+        if _length == 0 {
+            return _isNegative == 1 ? Double.nan : 0
+        }
+
+        var d = 0.0
+        for idx in (0..<min(_length, 8)).reversed() {
+            d = d * 65536 + Double(self[idx])
+        }
+
+        if _exponent < 0 {
+            for _ in _exponent..<0 {
+                d /= 10.0
+            }
+        } else {
+            for _ in 0..<_exponent {
+                d *= 10.0
+            }
+        }
+        return _isNegative != 0 ? -d : d
+    }
+
+    private var _unsignedInt64Value: UInt64 {
+        // Quick check if number if has too many zeros before decimal point or too many trailing zeros after decimal point.
+        // Log10 (2^64) ~ 19, log10 (2^128) ~ 38
+        if self._exponent < -38 || self._exponent > 20 {
+            return 0
+        }
+        if self._length == 0 || self.isZero || self.magnitude < (0 as Decimal) {
+            return 0
+        }
+        var value = self.significand
+
+        for _ in 0 ..< abs(self._exponent) {
+            if self._exponent < 0 {
+                if let result = try? value._divide(by: 10) {
+                    value = result.result
+                }
+            } else {
+                if let result = try? value._multiply(byShort: 10) {
+                    value = result
+                }
+            }
+        }
+        return UInt64(value._mantissa.3) << 48 | UInt64(value._mantissa.2) << 32 | UInt64(value._mantissa.1) << 16 | UInt64(value._mantissa.0)
+    }
+
+    internal var int64Value: Int64 {
+        let uint64Value = self._unsignedInt64Value
+        if self._isNegative > 0 {
+            if uint64Value == Int64.max.magnitude + 1 {
+                return Int64.min
+            }
+            if uint64Value <= Int64.max.magnitude {
+                var value = Int64(uint64Value)
+                value.negate()
+                return value
+            }
+        }
+        return Int64(bitPattern: uint64Value)
+    }
+
+    internal var uint64Value: UInt64 {
+        let value = self._unsignedInt64Value
+        if self._isNegative == 0 {
+            return value
+        }
+        if value == Int64.max.magnitude + 1 {
+            return UInt64(bitPattern: Int64.min)
+        }
+        if value <= Int64.max.magnitude {
+            var value = Int64(value)
+            value.negate()
+            return UInt64(bitPattern: value)
+        }
+        return value
+    }
+}
+
 // MARK: - Integer Mathmatics
 extension Decimal {
     typealias VariableLengthInteger = [UInt16]
