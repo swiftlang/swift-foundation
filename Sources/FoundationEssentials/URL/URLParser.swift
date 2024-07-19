@@ -1035,20 +1035,18 @@ fileprivate extension StringProtocol {
     }
 
     func removingURLPercentEncoding(utf8Buffer: some Collection<UInt8>, excluding: Set<UInt8>) -> String? {
-        let result: String? = withUnsafeTemporaryAllocation(of: CChar.self, capacity: utf8.count + 1) { _buffer in
-            var buffer = OutputBuffer(initializing: _buffer.baseAddress!, capacity: _buffer.count)
+        let result: String? = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: utf8Buffer.count) { buffer in
+            var i = 0
             var byte: UInt8 = 0
             var hexDigitsRequired = 0
             for v in utf8Buffer {
                 if v == UInt8(ascii: "%") {
                     guard hexDigitsRequired == 0 else {
-                        _ = buffer.relinquishBorrowedMemory()
                         return nil
                     }
                     hexDigitsRequired = 2
                 } else if hexDigitsRequired > 0 {
                     guard let hex = asciiToHex(v) else {
-                        _ = buffer.relinquishBorrowedMemory()
                         return nil
                     }
                     if hexDigitsRequired == 2 {
@@ -1056,26 +1054,24 @@ fileprivate extension StringProtocol {
                     } else if hexDigitsRequired == 1 {
                         byte += hex
                         if excluding.contains(byte) {
-                            buffer.appendElement(CChar(bitPattern: UInt8(ascii: "%")))
-                            buffer.appendElement(CChar(bitPattern: hexToAscii(byte >> 4)))
-                            buffer.appendElement(CChar(bitPattern: v))
+                            // Keep the original percent-encoding for this byte
+                            i = buffer[i...i+2].initialize(fromContentsOf: [UInt8(ascii: "%"), hexToAscii(byte >> 4), v])
                         } else {
-                            buffer.appendElement(CChar(bitPattern: byte))
+                            buffer[i] = byte
+                            i += 1
                             byte = 0
                         }
                     }
                     hexDigitsRequired -= 1
                 } else {
-                    buffer.appendElement(CChar(bitPattern: v))
+                    buffer[i] = v
+                    i += 1
                 }
             }
             guard hexDigitsRequired == 0 else {
-                _ = buffer.relinquishBorrowedMemory()
                 return nil
             }
-            buffer.appendElement(0) // NULL-terminated
-            let initialized = buffer.relinquishBorrowedMemory()
-            return String(validatingUTF8: initialized.baseAddress!)
+            return String(_validating: buffer[..<i], as: UTF8.self)
         }
         return result
     }

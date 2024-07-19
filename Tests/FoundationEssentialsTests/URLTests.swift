@@ -956,7 +956,7 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(comp.queryItems, expected)
     }
 
-    func testURLComponentsLookalikeIPLiteral () {
+    func testURLComponentsLookalikeIPLiteral() {
         // We should consider a lookalike IP literal invalid (note accent on the first bracket)
         let fakeIPLiteral = "[́::1]"
         let fakeURLString = "http://\(fakeIPLiteral):80/"
@@ -967,5 +967,11 @@ final class URLTests : XCTestCase {
         var comp2 = URLComponents()
         comp2.host = fakeIPLiteral
         XCTAssertNil(comp2.string)
+    }
+
+    func testURLComponentsDecodingNULL() {
+        let comp = URLComponents(string: "http://example.com/my\u{0}path")!
+        XCTAssertEqual(comp.percentEncodedPath, "/my%00path")
+        XCTAssertEqual(comp.path, "/my\u{0}path")
     }
 }
