@@ -319,7 +319,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: The autoupdating Calendar will only compare equal to another autoupdating Calendar.
     public static var autoupdatingCurrent : Calendar {
-        Calendar(inner: CalendarCache.autoupdatingCurrent)
+        Calendar(inner: CalendarCache.cache.autoupdatingCurrent)
     }
 
     // MARK: -

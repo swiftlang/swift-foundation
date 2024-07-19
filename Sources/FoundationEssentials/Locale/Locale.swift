@@ -65,7 +65,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     ///
     /// - note: The autoupdating Locale will only compare equal to another autoupdating Locale.
     public static var autoupdatingCurrent : Locale {
-        Locale(inner: LocaleCache.autoupdatingCurrent)
+        Locale(inner: LocaleCache.cache.autoupdatingCurrent)
     }
 
     /// Returns the user's current locale.
@@ -75,12 +75,12 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// System locale.
     internal static var system : Locale {
-        Locale(inner: LocaleCache.system)
+        Locale(inner: LocaleCache.cache.system)
     }
     
     /// Unlocalized locale (`en_001`).
     internal static var unlocalized : Locale {
-        Locale(inner: LocaleCache.unlocalized)
+        Locale(inner: LocaleCache.cache.unlocalized)
     }
 
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)

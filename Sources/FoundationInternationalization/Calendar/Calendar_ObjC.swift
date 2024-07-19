@@ -75,6 +75,11 @@ extension NSCalendar {
         }
         return _NSSwiftCalendar(calendar: Calendar(identifier: id))
     }
+
+    @objc
+    class func _resetCurrent() {
+        CalendarCache.cache.reset()
+    }
 }
 
 // MARK: -
