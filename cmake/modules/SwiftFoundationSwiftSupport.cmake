@@ -50,5 +50,6 @@ function(_swift_foundation_install_target module)
   install(FILES $<TARGET_PROPERTY:${module},Swift_MODULE_DIRECTORY>/${module_name}.swiftmodule
     DESTINATION lib/${swift}/${swift_os}/${module_name}.swiftmodule
     RENAME ${SwiftFoundation_MODULE_TRIPLE}.swiftmodule)
-
+  install(FILES $<TARGET_LINKER_FILE:${module}>
+    DESTINATION lib)
 endfunction()
