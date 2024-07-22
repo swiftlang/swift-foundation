@@ -45,13 +45,13 @@ if(NOT BUILD_SHARED_LIBS)
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationCShims>")
     target_compile_options(FoundationInternationalization PRIVATE
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend _FoundationICU>")
+    target_compile_options(FoundationEssentials PRIVATE
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend swiftSynchronization>")
 endif()
 
-target_link_options(FoundationInternationalization PRIVATE
-    "SHELL:-no-toolchain-stdlib-rpath")
-
 set_target_properties(FoundationInternationalization PROPERTIES
-    INSTALL_RPATH "$ORIGIN")
+    INSTALL_RPATH "$ORIGIN"
+    INSTALL_REMOVE_ENVIRONMENT_RPATH ON)
 
 set_property(GLOBAL APPEND PROPERTY SWIFT_FOUNDATION_EXPORTS FoundationInternationalization)
 _swift_foundation_install_target(FoundationInternationalization)
