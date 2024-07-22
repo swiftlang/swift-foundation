@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-extension UTF8.CodeUnit {
+package extension UTF8.CodeUnit {
     static let newline: Self = 0x0A
     static let carriageReturn: Self = 0x0D
 
