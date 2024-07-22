@@ -435,7 +435,7 @@ internal func __NSStringToDecimal(
         from: string.utf8,
         decimalSeparator: ".".utf8,
         matchEntireString: false
-    )
+    ).asOptional
     processedLength.pointee = parsed.processedLength
     if let parsedResult = parsed.result {
         result.pointee = parsedResult

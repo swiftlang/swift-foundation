@@ -2613,6 +2613,11 @@ extension JSONEncoderTests {
         let testBigDecimal = TestBigDecimal()
         _testRoundTrip(of: testBigDecimal)
     }
+
+    func testOverlargeDecimal() {
+        // Check value too large fails to decode.
+        XCTAssertThrowsError(try JSONDecoder().decode(Decimal.self, from: "100e200".data(using: .utf8)!))
+    }
 }
 
 // MARK: - Framework-only tests
