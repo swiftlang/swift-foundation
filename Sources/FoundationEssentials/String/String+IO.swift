@@ -14,7 +14,37 @@
 internal import _ForSwiftFoundation
 #endif
 
+internal import _FoundationCShims
+
 fileprivate let stringEncodingAttributeName = "com.apple.TextEncoding"
+
+private struct ExtendingToUTF16Sequence<Base: Sequence<UInt8>> : Sequence {
+    typealias Element = UInt16
+    
+    struct Iterator : IteratorProtocol {
+        private var base: Base.Iterator
+        
+        init(_ base: Base.Iterator) {
+            self.base = base
+        }
+        
+        mutating func next() -> Element? {
+            guard let value = base.next() else { return nil }
+            return UInt16(value)
+        }
+    }
+    
+    private let base: Base
+    
+    init(_ base: Base) {
+        self.base = base
+    }
+    
+    func makeIterator() -> Iterator {
+        Iterator(base.makeIterator())
+    }
+}
+
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
@@ -139,6 +169,29 @@ extension String {
             } else {
                 return nil
             }
+        case .isoLatin1:
+            guard bytes.allSatisfy(\.isValidISOLatin1) else {
+                return nil
+            }
+            // isoLatin1 is an 8-bit encoding that represents a subset of UTF-16
+            // Map to 16-bit values and decode as UTF-16
+            self.init(_validating: ExtendingToUTF16Sequence(bytes), as: UTF16.self)
+        case .macOSRoman:
+            func buildString(_ bytes: UnsafeBufferPointer<UInt8>) -> String {
+                String(unsafeUninitializedCapacity: bytes.count * 3) { buffer in
+                    var next = 0
+                    for byte in bytes {
+                        if Unicode.ASCII.isASCII(byte) {
+                            buffer.initializeElement(at: next, to: byte)
+                            next += 1
+                        } else {
+                            next = buffer.suffix(from: next).initialize(fromContentsOf: byte.macRomanNonASCIIAsUTF8)
+                        }
+                    }
+                    return next
+                }
+            }
+            self = bytes.withContiguousStorageIfAvailable(buildString) ?? Array(bytes).withUnsafeBufferPointer(buildString)
         default:
 #if FOUNDATION_FRAMEWORK
             // In the framework, we can fall back to NS/CFString to handle more esoteric encodings.
@@ -261,6 +314,8 @@ internal func encodingFromDataForExtendedAttribute(_ value: Data) -> String.Enco
                 }
 #else
                 foundEncoding = switch enc {
+                case 0x0: .macOSRoman
+                case 0x0201: .isoLatin1
                 case 0x0600: .ascii
                 case 0x08000100: .utf8
                 case 0x0100: .utf16
@@ -304,6 +359,8 @@ internal func encodingFromDataForExtendedAttribute(_ value: Data) -> String.Enco
         case "utf-32": return .utf32
         case "utf-32be": return .utf32BigEndian
         case "utf-32le": return .utf32LittleEndian
+        case "iso-8859-1": return .isoLatin1
+        case "macintosh": return .macOSRoman
         default: return nil // Unknown encoding value
         }
 #endif
@@ -322,6 +379,8 @@ internal func extendedAttributeData(for encoding: String.Encoding) -> Data? {
     let encodingName = CFStringConvertEncodingToIANACharSetName(cfEncoding)
 #else
     let cfEncoding : UInt? = switch encoding {
+    case .macOSRoman: 0x0
+    case .isoLatin1: 0x0201
     case .ascii: 0x0600
     case .utf8: 0x08000100
     case .utf16: 0x0100
@@ -346,6 +405,8 @@ internal func extendedAttributeData(for encoding: String.Encoding) -> Data? {
     case .utf32: "utf-32"
     case .utf32BigEndian: "utf-32be"
     case .utf32LittleEndian: "utf-32le"
+    case .macOSRoman: "macintosh"
+    case .isoLatin1: "iso-8859-1"
     default: nil
     }
 #endif

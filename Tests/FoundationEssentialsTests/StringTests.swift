@@ -1104,8 +1104,8 @@ final class StringTests : XCTestCase {
             .utf32LittleEndian
         ]
 #else
-        let encs : [String._Encoding] = [
-            .utf8, 
+        var encs : [String._Encoding] = [
+            .utf8,
             .utf16,
             .utf32,
         ]
@@ -1114,6 +1114,15 @@ final class StringTests : XCTestCase {
         // Foundation will only write out the BOM for encoded string data when using the unspecified encoding versions (.utf16, .utf32). It will, however, write the extended attribute if it can.
         // On non-Darwin platforms, where we have less guarantee that the extended attribute was succesfully written, we cannot actually promise that the round-trip below will work. If the xattr fails to write (which we do not report as an error, for both historical and practical reasons), and the BOM is not present, then we will just read the data back in as UTF8.
         // Therefore, we only test here the utf8/16/32 encodings.
+        
+        #if canImport(Darwin)
+        // Only test non-UTF encodings on platforms where we successfully read/write the extended file attribute
+        encs += [
+            .ascii,
+            .macOSRoman,
+            .isoLatin1
+        ]
+        #endif
 #endif
         
         for encoding in encs {
@@ -1238,7 +1247,46 @@ final class StringTests : XCTestCase {
         }
 
     }
-
+    
+    func verifyEncoding(_ encoding: String._Encoding, valid: [String], invalid: [String], file: StaticString = #file, line: UInt = #line) throws {
+        for string in valid {
+            let data = try XCTUnwrap(string.data(using: encoding), "Failed to encode \(string.debugDescription)", file: file, line: line)
+            XCTAssertNotNil(String(data: data, encoding: encoding), "Failed to decode \(data) (\(string.debugDescription))", file: file, line: line)
+        }
+        for string in invalid {
+            XCTAssertNil(string.data(using: .macOSRoman), "Incorrectly successfully encoded \(string.debugDescription)", file: file, line: line)
+        }
+    }
+    
+    func testISOLatin1Encoding() throws {
+        try verifyEncoding(.isoLatin1, valid: [
+            "abcdefghijklmnopqrstuvwxyz",
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            "0123456789",
+            "!\"#$%&'()*+,-./",
+            "¡¶ÅÖæöÿ\u{00A0}~"
+        ], invalid: [
+            "🎺",
+            "מ",
+            "✁",
+            "abcd🎺efgh"
+        ])
+    }
+    
+    func testMacRomanEncoding() throws {
+        try verifyEncoding(.macOSRoman, valid: [
+            "abcdefghijklmnopqrstuvwxyz",
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            "0123456789",
+            "!\"#$%&'()*+,-./",
+            "ÄÇçÑû¶≠∏\u{00A0}÷Êˇ"
+        ], invalid: [
+            "🎺",
+            "מ",
+            "✁",
+            "abcd🎺efgh"
+        ])
+    }
 }
 
 // MARK: - Helper functions
