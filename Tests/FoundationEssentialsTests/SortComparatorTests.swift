@@ -53,14 +53,14 @@ class SortComparatorTests: XCTestCase {
     }
     
     func testAnySortComparatorEquality() {
-        let a = AnySortComparator(ComparableComparator<Int>())
-        let b = AnySortComparator(ComparableComparator<Int>(order: .reverse))
-        let c = AnySortComparator(ComparableComparator<Double>())
-        XCTAssertEqual(a, a)
-        XCTAssertEqual(b, b)
-        XCTAssertEqual(c, c)
-        XCTAssertNotEqual(a, b)
-        XCTAssertNotEqual(b, c)
-        XCTAssertNotEqual(a, c)
+        let a: ComparableComparator<Int> = ComparableComparator<Int>()
+        let b: ComparableComparator<Int> = ComparableComparator<Int>(order: .reverse)
+        let c: ComparableComparator<Double> = ComparableComparator<Double>()
+        XCTAssertEqual(AnySortComparator(a), AnySortComparator(a))
+        XCTAssertEqual(AnySortComparator(b), AnySortComparator(b))
+        XCTAssertEqual(AnySortComparator(c), AnySortComparator(c))
+        XCTAssertNotEqual(AnySortComparator(a), AnySortComparator(b))
+        XCTAssertNotEqual(AnySortComparator(b), AnySortComparator(c))
+        XCTAssertNotEqual(AnySortComparator(a), AnySortComparator(c))
     }
 }
