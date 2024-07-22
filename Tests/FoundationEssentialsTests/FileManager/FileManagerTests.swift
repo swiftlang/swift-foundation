@@ -642,6 +642,8 @@ final class FileManagerTests : XCTestCase {
                 XCTAssertEqual(result[.immutable] as? Bool, test.immutable, "Item at path '\(test.path)' did not provide expected result for immutable key")
                 XCTAssertEqual(result[.appendOnly] as? Bool, test.appendOnly, "Item at path '\(test.path)' did not provide expected result for appendOnly key")
                 
+                XCTAssertNil(result[.busy], "Item at path '\(test.path)' has non-nil value for .busy attribute") // Should only be set when true
+                
                 // Manually clean up attributes so removal does not fail
                 try $0.setAttributes([.immutable: false, .appendOnly: false], ofItemAtPath: test.path)
             }
