@@ -27,6 +27,13 @@ internal import _FoundationICU
 import Glibc
 #endif
 
+#if !FOUNDATION_FRAMEWORK
+@_dynamicReplacement(for: _localeICUClass())
+private func _localeICUClass_localized() -> any _LocaleProtocol.Type {
+    return _LocaleICU.self
+}
+#endif
+
 let MAX_ICU_NAME_SIZE: Int32 = 1024
 
 internal final class _LocaleICU: _LocaleProtocol, Sendable {
