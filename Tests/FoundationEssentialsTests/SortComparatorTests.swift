@@ -50,5 +50,17 @@ class SortComparatorTests: XCTestCase {
         XCTAssertEqual(
             compareOptions.compare("test2", "test005"),
             "test2".compare("test005", options: [.numeric]))
-    }    
+    }
+    
+    func testAnySortComparatorEquality() {
+        let a = AnySortComparator(ComparableComparator<Int>())
+        let b = AnySortComparator(ComparableComparator<Int>(order: .reverse))
+        let c = AnySortComparator(ComparableComparator<Double>())
+        XCTAssertEqual(a, a)
+        XCTAssertEqual(b, b)
+        XCTAssertEqual(c, c)
+        XCTAssertNotEqual(a, b)
+        XCTAssertNotEqual(b, c)
+        XCTAssertNotEqual(a, c)
+    }
 }
