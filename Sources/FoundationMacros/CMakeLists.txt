@@ -57,5 +57,3 @@ install(TARGETS FoundationMacros
     ARCHIVE DESTINATION lib/swift/host/plugins
     LIBRARY DESTINATION lib/swift/host/plugins
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES $<TARGET_LINKER_FILE:FoundationMacros>
-  DESTINATION lib)
