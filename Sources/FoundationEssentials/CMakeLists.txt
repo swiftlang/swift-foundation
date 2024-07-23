@@ -48,7 +48,7 @@ add_subdirectory(String)
 add_subdirectory(TimeZone)
 add_subdirectory(URL)
 
-if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Windows" OR CMAKE_SYSTEM_NAME STREQUAL "Android"))
     # Depend on FoundationMacros
     add_dependencies(FoundationEssentials FoundationMacros)
     target_compile_options(FoundationEssentials PRIVATE -plugin-path ${CMAKE_BINARY_DIR}/lib)

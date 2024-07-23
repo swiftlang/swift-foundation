@@ -14,8 +14,8 @@
 
 add_subdirectory(_FoundationCShims)
 
-# Disable the macro build on Windows until we can correctly build it for the host architecture
-if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+# Disable the macro build on Windows and Android until we can correctly build it for the host architecture
+if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Windows" OR CMAKE_SYSTEM_NAME STREQUAL "Android"))
 	add_subdirectory(FoundationMacros)
 endif()
 
