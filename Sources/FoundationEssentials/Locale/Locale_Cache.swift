@@ -19,15 +19,17 @@ internal import os
 
 internal import _FoundationCShims
 
-dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
-    // Here, we always have access to _LocaleICU
-    return _LocaleICU.self
-#else
-    // Return _LocaleUnlocalized if FoundationInternationalization isn't loaded. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
-    return _LocaleUnlocalized.self
-#endif
+// Here, we always have access to _LocaleICU
+internal func _localeICUClass() -> _LocaleProtocol.Type {
+    _LocaleICU.self
 }
+#else
+dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
+    // Return _LocaleUnlocalized if FoundationInternationalization isn't loaded. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
+    _LocaleUnlocalized.self
+}
+#endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
 struct LocaleCache : Sendable {

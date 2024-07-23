@@ -158,13 +158,15 @@ package protocol UIDNAHook {
     static func decode(_ host: some StringProtocol) -> String?
 }
 
-dynamic package func _uidnaHook() -> UIDNAHook.Type? {
-    #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+internal func _uidnaHook() -> UIDNAHook.Type? {
     UIDNAHookICU.self
-    #else
-    nil
-    #endif
 }
+#else
+dynamic package func _uidnaHook() -> UIDNAHook.Type? {
+    nil
+}
+#endif
 
 internal struct RFC3986Parser: URLParserProtocol {
     static let kind: URLParserKind = .RFC3986

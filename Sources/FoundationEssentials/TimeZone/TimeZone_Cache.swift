@@ -31,23 +31,22 @@ internal import _ForSwiftFoundation
 internal import CoreFoundation_Private.CFNotificationCenter
 #endif
 
-// _TimeZoneICU, if present
-dynamic package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
-    _TimeZoneICU.self
-#else
-    nil
-#endif
-}
 
-// _TimeZoneGMTICU or _TimeZoneGMT
-dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
-    _TimeZoneGMTICU.self
-#else
-    _TimeZoneGMT.self
-#endif
+internal func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
+    _TimeZoneICU.self
 }
+internal func _timeZoneGMTClass() -> _TimeZoneProtocol.Type? {
+    _TimeZoneGMTICU.self
+}
+#else
+dynamic package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
+    nil
+}
+dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
+    _TimeZoneGMT.self
+}
+#endif
 
 /// Singleton which listens for notifications about preference changes for TimeZone and holds cached values for current, fixed time zones, etc.
 struct TimeZoneCache : Sendable {

@@ -15,13 +15,15 @@ internal import _ForSwiftFoundation
 import CoreFoundation
 #endif
 
-dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
-    #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+internal func _calendarICUClass() -> _CalendarProtocol.Type? {
     _CalendarICU.self
-    #else
-    nil
-    #endif
 }
+#else
+dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
+    nil
+}
+#endif
 
 func _calendarClass(identifier: Calendar.Identifier, useGregorian: Bool) -> _CalendarProtocol.Type? {
     if useGregorian && identifier == .gregorian {
