@@ -25,6 +25,13 @@ import ucrt
 #if canImport(_FoundationICU)
 internal import _FoundationICU
 
+#if !FOUNDATION_FRAMEWORK
+@_dynamicReplacement(for: _timeZoneICUClass())
+private func _timeZoneICUClass_localized() -> _TimeZoneProtocol.Type? {
+    return _TimeZoneICU.self
+}
+#endif
+
 internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     init?(secondsFromGMT: Int) {
         fatalError("Unexpected init")

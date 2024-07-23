@@ -15,7 +15,14 @@ import FoundationEssentials
 
 internal import _FoundationICU
 
-internal final class UIDNAHookICU: UIDNAHook {
+#if !FOUNDATION_FRAMEWORK
+@_dynamicReplacement(for: _uidnaHook())
+private func _uidnaHook_localized() -> UIDNAHook.Type? {
+    return UIDNAHookICU.self
+}
+#endif
+
+struct UIDNAHookICU: UIDNAHook {
     // `Sendable` notes: `UIDNA` from ICU is thread safe.
     struct UIDNAPointer : @unchecked Sendable {
         init(_ ptr: OpaquePointer?) { self.idnaTranscoder = ptr }

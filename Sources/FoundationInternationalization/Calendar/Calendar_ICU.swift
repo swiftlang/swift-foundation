@@ -26,6 +26,13 @@ import Darwin
 
 internal import _FoundationICU
 
+#if !FOUNDATION_FRAMEWORK
+@_dynamicReplacement(for: _calendarICUClass())
+private func _calendarICUClass_localized() -> _CalendarProtocol.Type? {
+    return _CalendarICU.self
+}
+#endif
+
 internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     let lock: LockedState<Void>
     let identifier: Calendar.Identifier
