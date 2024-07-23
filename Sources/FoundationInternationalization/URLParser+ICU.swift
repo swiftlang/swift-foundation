@@ -22,7 +22,7 @@ private func _uidnaHook_localized() -> UIDNAHook.Type? {
 }
 #endif
 
-private struct UIDNAHookICU: UIDNAHook {
+struct UIDNAHookICU: UIDNAHook {
     // `Sendable` notes: `UIDNA` from ICU is thread safe.
     struct UIDNAPointer : @unchecked Sendable {
         init(_ ptr: OpaquePointer?) { self.idnaTranscoder = ptr }

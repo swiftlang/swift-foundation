@@ -36,7 +36,7 @@ internal import CoreFoundation_Private.CFNotificationCenter
 internal func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
     _TimeZoneICU.self
 }
-internal func _timeZoneGMTClass() -> _TimeZoneProtocol.Type? {
+internal func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
     _TimeZoneGMTICU.self
 }
 #else
