@@ -257,7 +257,8 @@ open class JSONDecoder {
     }
 
     /// Contextual user-provided information for use during decoding.
-    open var userInfo: [CodingUserInfoKey : Any] {
+    @preconcurrency
+    open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
             optionsLock.lock()
             defer { optionsLock.unlock() }
@@ -309,7 +310,7 @@ open class JSONDecoder {
         var dataDecodingStrategy: DataDecodingStrategy = .base64
         var nonConformingFloatDecodingStrategy: NonConformingFloatDecodingStrategy = .throw
         var keyDecodingStrategy: KeyDecodingStrategy = .useDefaultKeys
-        var userInfo: [CodingUserInfoKey : Any] = [:]
+        var userInfo: [CodingUserInfoKey : any Sendable] = [:]
         var json5: Bool = false
     }
 
