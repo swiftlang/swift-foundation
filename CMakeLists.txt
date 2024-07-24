@@ -100,7 +100,7 @@ foreach(version ${_SwiftFoundation_versions})
         endif()
 
         list(APPEND _SwiftFoundation_availability_macros
-            "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=${name} ${version}=${release}\">")
+            "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=${name} ${version}:${release}\">")
     endforeach()
 endforeach()
 
