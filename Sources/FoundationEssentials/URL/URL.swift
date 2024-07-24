@@ -907,7 +907,7 @@ public struct URL: Equatable, Sendable, Hashable {
     internal init?(_fileManagerFailableFileURLWithPath path: __shared String) {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
-            let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path))
+            let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path, isDirectory: path.utf8.last == ._slash))
             guard unsafeBitCast(url, to: UnsafeRawPointer?.self) != nil else {
                 return nil
             }
@@ -915,7 +915,8 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif
-        self.init(filePath: path, directoryHint: .checkFileSystem)
+        // Infer from the path to prevent a file system check for what is likely a non-existant, malformed, or inaccessible path
+        self.init(filePath: path, directoryHint: .inferFromPath)
     }
 
     /// Initializes a newly created URL using the contents of the given data, relative to a base URL.
