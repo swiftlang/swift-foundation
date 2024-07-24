@@ -821,20 +821,13 @@ final class FileManagerTests : XCTestCase {
         #if canImport(Darwin) || os(Windows)
         throw XCTSkip("This test is not applicable on this platform")
         #else
+        if let key = ProcessInfo.processInfo.environment.keys.first(where: { $0.starts(with: "XDG") }) {
+            throw XCTSkip("Skipping due to presence of '\(key)' environment variable which may affect this test")
+        }
+        
         try FileManagerPlayground {
             Directory("TestPath") {}
         }.test { fileManager in
-            #if os(Windows)
-            func setenv(_ key: String, _ value: String) -> Int32 {
-              assert(overwrite == 1)
-              guard !key.contains("=") else {
-                  errno = EINVAL
-                  return -1
-              }
-              return _putenv("\(key)=\(value)")
-            }
-            #endif
-            
             func validate(_ key: String, suffix: String? = nil, directory: FileManager.SearchPathDirectory, domain: FileManager.SearchPathDomainMask, file: StaticString = #filePath, line: UInt = #line) {
                 let oldValue = ProcessInfo.processInfo.environment[key] ?? ""
                 var knownPath = fileManager.currentDirectoryPath.appendingPathComponent("TestPath")
