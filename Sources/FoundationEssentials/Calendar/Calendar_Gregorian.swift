@@ -134,19 +134,19 @@ enum ResolvedDateComponents {
                 adjustedYear = year
             }
             self = .day(year: adjustedYear, month: month, day: d, weekOfYear: components.weekOfYear)
+        } else if let weekdayOrdinal = components.weekdayOrdinal, let weekday = components.weekday {
+            self = .weekdayOrdinal(year: year, month: month, weekdayOrdinal: weekdayOrdinal, weekday: weekday)
         } else if let woy = components.weekOfYear, let weekday = components.weekday {
             self = .weekOfYear(year: year, weekOfYear: woy, weekday: weekday)
         } else if let wom = components.weekOfMonth, let weekday = components.weekday {
             self = .weekOfMonth(year: year, month: month, weekOfMonth: wom, weekday: weekday)
-        } else if let weekdayOrdinal = components.weekdayOrdinal, let weekday = components.weekday {
-            self = .weekdayOrdinal(year: year, month: month, weekdayOrdinal: weekdayOrdinal, weekday: weekday)
         } else if let dayOfYear = components.dayOfYear {
             self = .dayOfYear(year: year, dayOfYear: dayOfYear)
-        } else if components.year != nil {
-            self = .day(year: year, month: month, day: components.day, weekOfYear: components.weekOfYear)
         } else if components.yearForWeekOfYear != nil  {
             self = .weekOfYear(year: year, weekOfYear: components.weekOfYear, weekday: components.weekday)
-        } else if let weekOfYear = components.weekOfYear  {
+        } else if components.year != nil {
+            self = .day(year: year, month: month, day: components.day, weekOfYear: components.weekOfYear)
+        } else if let weekOfYear = components.weekOfYear {
             self = .weekOfYear(year: year, weekOfYear: weekOfYear, weekday: components.weekday)
         } else if let weekOfMonth = components.weekOfMonth {
             self = .weekOfMonth(year: year, month: month, weekOfMonth: weekOfMonth, weekday: components.weekday)
