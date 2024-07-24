@@ -211,6 +211,7 @@ extension String {
             }
             
             return data + swapped
+        #if !FOUNDATION_FRAMEWORK
         case .isoLatin1:
             return try? Data(capacity: self.utf16.count) { buffer in
                 for scalar in self.utf16 {
@@ -229,6 +230,7 @@ extension String {
                     buffer.appendElement(value)
                 }
             }
+        #endif
         default:
 #if FOUNDATION_FRAMEWORK
             // Other encodings, defer to the CoreFoundation implementation

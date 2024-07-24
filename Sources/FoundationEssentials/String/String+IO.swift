@@ -169,6 +169,7 @@ extension String {
             } else {
                 return nil
             }
+        #if !FOUNDATION_FRAMEWORK
         case .isoLatin1:
             guard bytes.allSatisfy(\.isValidISOLatin1) else {
                 return nil
@@ -192,6 +193,7 @@ extension String {
                 }
             }
             self = bytes.withContiguousStorageIfAvailable(buildString) ?? Array(bytes).withUnsafeBufferPointer(buildString)
+        #endif
         default:
 #if FOUNDATION_FRAMEWORK
             // In the framework, we can fall back to NS/CFString to handle more esoteric encodings.
