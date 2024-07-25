@@ -890,13 +890,11 @@ final class FileManagerTests : XCTestCase {
                 XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeDirectory)
             }
             
-            #if !os(Windows)
             do {
                 try $0.createSymbolicLink(atPath: "symlink", withDestinationPath: "file")
                 let attrs = try $0.attributesOfItem(atPath: "symlink")
                 XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeSymbolicLink)
             }
-            #endif
         }
     }
 }
