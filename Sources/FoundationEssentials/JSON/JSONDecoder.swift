@@ -1134,6 +1134,11 @@ extension JSONDecoderImpl : SingleValueDecodingContainer {
     func decode(_: Int64.Type) throws -> Int64 {
         try decodeFixedWidthInteger()
     }
+  
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    func decode(_: Int128.Type) throws -> Int128 {
+      try decodeFixedWidthInteger()
+    }
 
     func decode(_: UInt.Type) throws -> UInt {
         try decodeFixedWidthInteger()
@@ -1153,6 +1158,11 @@ extension JSONDecoderImpl : SingleValueDecodingContainer {
 
     func decode(_: UInt64.Type) throws -> UInt64 {
         try decodeFixedWidthInteger()
+    }
+  
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    func decode(_: UInt128.Type) throws -> UInt128 {
+      try decodeFixedWidthInteger()
     }
 
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
@@ -1280,6 +1290,11 @@ extension JSONDecoderImpl {
         func decode(_: Int64.Type, forKey key: K) throws -> Int64 {
             try decodeFixedWidthInteger(key: key)
         }
+      
+        @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+        func decode(_: Int128.Type, forKey key: K) throws -> Int128 {
+          try decodeFixedWidthInteger(key: key)
+        }
 
         func decode(_: UInt.Type, forKey key: K) throws -> UInt {
             try decodeFixedWidthInteger(key: key)
@@ -1299,6 +1314,11 @@ extension JSONDecoderImpl {
 
         func decode(_: UInt64.Type, forKey key: K) throws -> UInt64 {
             try decodeFixedWidthInteger(key: key)
+        }
+      
+        @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+        func decode(_: UInt128.Type, forKey key: K) throws -> UInt128 {
+          try decodeFixedWidthInteger(key: key)
         }
 
         func decode<T: Decodable>(_ type: T.Type, forKey key: K) throws -> T {
@@ -1462,6 +1482,11 @@ extension JSONDecoderImpl {
         mutating func decode(_: Int64.Type) throws -> Int64 {
             try decodeFixedWidthInteger()
         }
+      
+        @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+        mutating func decode(_: Int128.Type) throws -> Int128 {
+          try decodeFixedWidthInteger()
+        }
 
         mutating func decode(_: UInt.Type) throws -> UInt {
             try decodeFixedWidthInteger()
@@ -1481,6 +1506,11 @@ extension JSONDecoderImpl {
 
         mutating func decode(_: UInt64.Type) throws -> UInt64 {
             try decodeFixedWidthInteger()
+        }
+      
+        @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+        mutating func decode(_: UInt128.Type) throws -> UInt128 {
+          try decodeFixedWidthInteger()
         }
 
         mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
