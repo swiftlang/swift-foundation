@@ -117,3 +117,14 @@ Dependencies are managed by the `utils/update-checkout` script. This will check 
 ## `FOUNDATION_FRAMEWORK` Build
 
 The swift-foundation project is also built internally within Apple as part of the `Foundation.framework` library that is installed into the OS of all Apple platforms. This is a special build configuration with the `FOUNDATION_FRAMEWORK` condition defined that is not built via open source CI. Code within this condition is only relevant when building swift-foundation as part of `Foundation.framework` and is not used in any open source builds of Swift. Note that this does not apply to swift-foundation-icu (which is built differently internally) or swift-corelibs-foundation (which is not built for Darwin platforms).
+
+## Benchmarks
+
+Benchmarks for `swift-foundation` are in a separate Swift Package in the `Benchmarks` subfolder of this repository. 
+They use the [`package-benchmark`](https://github.com/ordo-one/package-benchmark) plugin.
+Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics.
+An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`. 
+Afterwards you can run the benchmarks from CLI by going to the `Benchmarks` subfolder (e.g. `cd Benchmarks`) and invoking:
+```
+swift package benchmark
+```
