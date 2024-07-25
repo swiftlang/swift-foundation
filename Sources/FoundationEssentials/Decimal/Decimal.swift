@@ -187,7 +187,14 @@ extension Decimal {
 #else
     @_spi(SwiftCorelibsFoundation)
     public func toString(with locale: Locale? = nil) -> String {
-        _toString(with: locale)
+        let separator: String
+        if let locale = locale,
+           let localizedSeparator = locale.decimalSeparator {
+            separator = localizedSeparator
+        } else {
+            separator = "."
+        }
+        return _toString(withDecimalSeparator: separator)
     }
     
     @_spi(SwiftCorelibsFoundation)
@@ -199,7 +206,7 @@ extension Decimal {
         _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString).asOptional
     }
 #endif
-    internal func _toString(with locale: Locale? = nil) -> String {
+    internal func _toString(withDecimalSeparator separator: String) -> String {
         if self.isNaN {
             return "NaN"
         }
@@ -207,13 +214,6 @@ extension Decimal {
             return "0"
         }
         var buffer = ""
-        let separator: String
-        if let locale = locale,
-           let localizedSeparator = locale.decimalSeparator {
-            separator = String(localizedSeparator.reversed())
-        } else {
-            separator = "."
-        }
         var copy = self
         while copy._exponent > 0 {
             buffer += "0"
