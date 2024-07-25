@@ -1022,6 +1022,74 @@ final class CalendarTests : XCTestCase {
         // Month is ignored
         test(.init(month: 3, weekOfYear: 1, yearForWeekOfYear: 2000), Date(timeIntervalSinceReferenceDate: -32140800.0))  // 1999-12-26
         test(.init(month: 1, weekOfYear: 53, yearForWeekOfYear: 1998), Date(timeIntervalSinceReferenceDate: -63590400.0)) // 1998-12-27
+
+        // year and yearForWeekOfYear
+        test(.init(year: 2024, weekOfYear: 30, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 743212800.0)) // 2024-07-21 00:00:00 UTC
+        test(.init(year: 2023, weekOfYear: 1 ,yearForWeekOfYear: 2023), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
+        test(.init(year: 2023, weekOfYear: 52, yearForWeekOfYear: 2023), Date(timeIntervalSinceReferenceDate: 725068800.0)) // 2023-12-24T00:00:00Z
+        test(.init(year: 2023, weekOfYear: 53, yearForWeekOfYear: 2023), Date(timeIntervalSinceReferenceDate: 725673600.0)) // 2023-12-31T00:00:00Z
+        test(.init(year: 2024, weekOfYear: 30, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 743212800.0)) // 2024-07-21T00:00:00Z
+        test(.init(year: 2024, weekOfYear: 53, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
+        test(.init(year: 2025, weekOfYear: 1 ,yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
+        test(.init(year: 2024, weekOfYear: 1 ,yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
+        test(.init(year: 2025, weekOfYear: 1 ,yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 725673600.0)) // 2023-12-31T00:00:00Z
+        test(.init(year: 2024, weekOfYear: 52, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 787968000.0)) // 2025-12-21T00:00:00Z
+        test(.init(year: 2025, weekOfYear: 52, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 756518400.0)) // 2024-12-22T00:00:00Z
+        test(.init(year: 2024, weekOfYear: 53, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 788572800.0)) // 2025-12-28T00:00:00Z
+        test(.init(year: 2025, weekOfYear: 53, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
+
+        // year and weekOfYear, not valid setting so the result is just the first day of the year
+        test(.init(year: 2023, weekOfYear: 1), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
+        test(.init(year: 2023, weekOfYear: 30), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
+        test(.init(year: 2023, weekOfYear: 52), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
+        test(.init(year: 2023, weekOfYear: 53), Date(timeIntervalSinceReferenceDate: 694224000.0)) // 2023-01-01T00:00:00Z
+        
+        // weekOfYear and yearForWeekOfYear
+        test(.init(weekOfYear: 1, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
+        test(.init(weekOfYear: 52, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 787968000.0)) // 2025-12-21T00:00:00Z
+        test(.init(weekOfYear: 53, yearForWeekOfYear: 2025), Date(timeIntervalSinceReferenceDate: 788572800.0)) // 2025-12-28T00:00:00Z
+
+        test(.init(weekOfYear: 1, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 725673600.0)) // 2023-12-31T00:00:00Z
+        test(.init(weekOfYear: 52, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 756518400.0)) // 2024-12-22T00:00:00Z
+        test(.init(weekOfYear: 53, yearForWeekOfYear: 2024), Date(timeIntervalSinceReferenceDate: 757123200.0)) // 2024-12-29T00:00:00Z
+
+        // weekday ordinal
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3), Date(timeIntervalSinceReferenceDate: -156124800.0)) // 1996-01-21T00:00:00Z
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2), Date(timeIntervalSinceReferenceDate: -156124800.0)) // 1996-01-21T00:00:00Z
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2), Date(timeIntervalSinceReferenceDate: -156124800.0)) // 1996-01-21T00:00:00Z
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, weekOfYear: 4), Date(timeIntervalSinceReferenceDate: -156124800.0)) // 1996-01-21T00:00:00Z
+
+        // yearForWeekOfYear takes precedence over year
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 3, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 1, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 1, weekOfYear: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 1, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 1, weekOfYear: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+
+        // weekdayOrdinal takes precedence over other week fields when weekday is set
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 1, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 1, weekOfYear: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -189388800.0)) // 1995-01-01T00:00:00Z
+
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995), Date(timeIntervalSinceReferenceDate: -188179200.0)) // 1995-01-15T00:00:00Z
     }
 
     func test_firstWeekday() {
@@ -1217,6 +1285,77 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         test(.init())
         test(.init(month: 1, day: 1))
         test(.init(month: 1, day: 1, hour: 1))
+
+        // both year and yearForWeekOfYear are set
+        test(.init(year: 2023, weekOfYear: 1, yearForWeekOfYear: 2023))
+        test(.init(year: 2023, weekOfYear: 52, yearForWeekOfYear: 2023))
+        test(.init(year: 2023, weekOfYear: 53, yearForWeekOfYear: 2023))
+
+        test(.init(year: 2024, weekOfYear: 30, yearForWeekOfYear: 2024))
+        test(.init(year: 2024, weekOfYear: 53, yearForWeekOfYear: 2024))
+
+        test(.init(year: 2025, weekOfYear: 1, yearForWeekOfYear: 2025))
+
+        // Conflicting setting of year and yearForWeekOfYear
+        test(.init(year: 2024, weekOfYear: 1, yearForWeekOfYear: 2025))
+        test(.init(year: 2025, weekOfYear: 1, yearForWeekOfYear: 2024))
+        test(.init(year: 2024, weekOfYear: 52, yearForWeekOfYear: 2025))
+        test(.init(year: 2025, weekOfYear: 52, yearForWeekOfYear: 2024))
+        test(.init(year: 2024, weekOfYear: 53, yearForWeekOfYear: 2025))
+        test(.init(year: 2025, weekOfYear: 53, yearForWeekOfYear: 2024))
+
+        test(.init(year: 2023, weekOfYear: 1))
+        test(.init(year: 2023, weekOfYear: 30))
+        test(.init(year: 2023, weekOfYear: 52))
+        test(.init(year: 2023, weekOfYear: 53))
+
+        test(.init(weekOfYear: 1, yearForWeekOfYear: 2025))
+        test(.init(weekOfYear: 1, yearForWeekOfYear: 2024))
+        test(.init(weekOfYear: 52, yearForWeekOfYear: 2025))
+        test(.init(weekOfYear: 52, yearForWeekOfYear: 2024))
+        test(.init(weekOfYear: 53, yearForWeekOfYear: 2025))
+        test(.init(weekOfYear: 53, yearForWeekOfYear: 2024))
+
+        // weekOfMonth and weekOfYear
+        test(.init(year: 1996, weekOfMonth: 2, weekOfYear: 10))
+        test(.init(year: 1996, weekday: 3, weekOfMonth: 2, weekOfYear: 10))
+
+        // weekday ordinal
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3))
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2))
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2))
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, weekOfYear: 4))
+
+        // weekday ordinal, year, and WOY
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 1, yearForWeekOfYear: 1995))
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 1, weekOfYear: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995))
+
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 1, yearForWeekOfYear: 1995))
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 1, weekOfYear: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995))
+
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 1, yearForWeekOfYear: 1995))
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 1, weekOfYear: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 1, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995))
+
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, yearForWeekOfYear: 1995))
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1996, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995))
+        
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, yearForWeekOfYear: 1995))
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1995, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995))
+
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 3, yearForWeekOfYear: 1995))
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 3, weekOfYear: 2, yearForWeekOfYear: 1995))
+        test(.init(year: 1994, weekday: 1, weekdayOrdinal: 3, weekOfMonth: 2, weekOfYear: 4, yearForWeekOfYear: 1995))
     }
 
 
