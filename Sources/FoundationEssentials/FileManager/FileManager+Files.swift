@@ -555,7 +555,7 @@ extension _FileManagerImpl {
     func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
 #if os(Windows)
         return try path.withNTPathRepresentation { pwszPath in
-            let hFile = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
+            let hFile = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nil)
             if hFile == INVALID_HANDLE_VALUE {
                 throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
             }
@@ -567,7 +567,7 @@ extension _FileManagerImpl {
             }
 
             let dwFileType = GetFileType(hFile)
-            let fatType: FileAttributeType = switch (dwFileType) {
+            var fatType: FileAttributeType = switch (dwFileType) {
                 case FILE_TYPE_CHAR: FileAttributeType.typeCharacterSpecial
                 case FILE_TYPE_DISK:
                     info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
@@ -576,6 +576,16 @@ extension _FileManagerImpl {
                 case FILE_TYPE_PIPE: FileAttributeType.typeSocket
                 case FILE_TYPE_UNKNOWN: FileAttributeType.typeUnknown
                 default: FileAttributeType.typeUnknown
+            }
+
+            if info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                // This could by a symlink, check if that's the case and update fatType if necessary
+                var tagInfo = FILE_ATTRIBUTE_TAG_INFO()
+                if GetFileInformationByHandleEx(hFile, FileAttributeTagInfo, &tagInfo, DWORD(MemoryLayout<FILE_ATTRIBUTE_TAG_INFO>.size)) {
+                    if tagInfo.ReparseTag == IO_REPARSE_TAG_SYMLINK {
+                        fatType = .typeSymbolicLink
+                    }
+                }
             }
 
             let systemNumber = UInt64(info.dwVolumeSerialNumber)
