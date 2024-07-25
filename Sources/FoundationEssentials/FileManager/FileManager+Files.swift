@@ -553,7 +553,7 @@ extension _FileManagerImpl {
     func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
 #if os(Windows)
         return try path.withNTPathRepresentation { pwszPath in
-            let hFile = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
+            let hFile = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
             if hFile == INVALID_HANDLE_VALUE {
                 throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
             }

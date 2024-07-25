@@ -869,4 +869,39 @@ final class FileManagerTests : XCTestCase {
             try $0.setAttributes(attrs, ofItemAtPath: "foo")
         }
     }
+    
+    func testAttributesOfItemAtPath() throws {
+        try FileManagerPlayground {
+            "file"
+            File("fileWithContents", contents: randomData())
+            Directory("directory") {
+                "file"
+            }
+        }.test {
+            do {
+                let attrs = try $0.attributesOfItem(atPath: "file")
+                XCTAssertEqual(attrs[.size] as? UInt, 0)
+                XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeRegular)
+            }
+            
+            do {
+                let attrs = try $0.attributesOfItem(atPath: "fileWithContents")
+                XCTAssertGreaterThan(try XCTUnwrap(attrs[.size] as? UInt), 0)
+                XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeRegular)
+            }
+            
+            do {
+                let attrs = try $0.attributesOfItem(atPath: "directory")
+                XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeDirectory)
+            }
+            
+            #if !os(Windows)
+            do {
+                try $0.createSymbolicLink(atPath: "symlink", withDestinationPath: "file")
+                let attrs = try $0.attributesOfItem(atPath: "symlink")
+                XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeSymbolicLink)
+            }
+            #endif
+        }
+    }
 }
