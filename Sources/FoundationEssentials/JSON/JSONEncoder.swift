@@ -712,6 +712,10 @@ private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContain
     public mutating func encode(_ value: Int64, forKey key: Key) throws {
         reference.insert(self.encoder.wrap(value), for: _converted(key))
     }
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    public mutating func encode(_ value: Int128, forKey key: Key) throws {
+        reference.insert(self.encoder.wrap(value), for: _converted(key))
+    }
     public mutating func encode(_ value: UInt, forKey key: Key) throws {
         reference.insert(self.encoder.wrap(value), for: _converted(key))
     }
@@ -725,6 +729,10 @@ private struct _JSONKeyedEncodingContainer<K : CodingKey> : KeyedEncodingContain
         reference.insert(self.encoder.wrap(value), for: _converted(key))
     }
     public mutating func encode(_ value: UInt64, forKey key: Key) throws {
+        reference.insert(self.encoder.wrap(value), for: _converted(key))
+    }
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    public mutating func encode(_ value: UInt128, forKey key: Key) throws {
         reference.insert(self.encoder.wrap(value), for: _converted(key))
     }
     public mutating func encode(_ value: String, forKey key: Key) throws {
@@ -827,11 +835,15 @@ private struct _JSONUnkeyedEncodingContainer : UnkeyedEncodingContainer {
     public mutating func encode(_ value: Int16)  throws { self.reference.insert(self.encoder.wrap(value)) }
     public mutating func encode(_ value: Int32)  throws { self.reference.insert(self.encoder.wrap(value)) }
     public mutating func encode(_ value: Int64)  throws { self.reference.insert(self.encoder.wrap(value)) }
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    public mutating func encode(_ value: Int128)  throws { self.reference.insert(self.encoder.wrap(value)) }
     public mutating func encode(_ value: UInt)   throws { self.reference.insert(self.encoder.wrap(value)) }
     public mutating func encode(_ value: UInt8)  throws { self.reference.insert(self.encoder.wrap(value)) }
     public mutating func encode(_ value: UInt16) throws { self.reference.insert(self.encoder.wrap(value)) }
     public mutating func encode(_ value: UInt32) throws { self.reference.insert(self.encoder.wrap(value)) }
     public mutating func encode(_ value: UInt64) throws { self.reference.insert(self.encoder.wrap(value)) }
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    public mutating func encode(_ value: UInt128)  throws { self.reference.insert(self.encoder.wrap(value)) }
     public mutating func encode(_ value: String) throws { self.reference.insert(self.encoder.wrap(value)) }
 
     public mutating func encode(_ value: Float)  throws {
@@ -908,6 +920,12 @@ extension __JSONEncoder : SingleValueEncodingContainer {
         assertCanEncodeNewValue()
         self.storage.push(ref: wrap(value))
     }
+    
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    public func encode(_ value: Int128) throws {
+        assertCanEncodeNewValue()
+        self.storage.push(ref: wrap(value))
+    }
 
     public func encode(_ value: UInt) throws {
         assertCanEncodeNewValue()
@@ -930,6 +948,12 @@ extension __JSONEncoder : SingleValueEncodingContainer {
     }
 
     public func encode(_ value: UInt64) throws {
+        assertCanEncodeNewValue()
+        self.storage.push(ref: wrap(value))
+    }
+    
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    public func encode(_ value: UInt128) throws {
         assertCanEncodeNewValue()
         self.storage.push(ref: wrap(value))
     }
@@ -967,11 +991,15 @@ private extension __JSONEncoder {
     @inline(__always) func wrap(_ value: Int16)  -> JSONReference { .number(from: value) }
     @inline(__always) func wrap(_ value: Int32)  -> JSONReference { .number(from: value) }
     @inline(__always) func wrap(_ value: Int64)  -> JSONReference { .number(from: value) }
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    @inline(__always) func wrap(_ value: Int128)  -> JSONReference { .number(from: value) }
     @inline(__always) func wrap(_ value: UInt)   -> JSONReference { .number(from: value) }
     @inline(__always) func wrap(_ value: UInt8)  -> JSONReference { .number(from: value) }
     @inline(__always) func wrap(_ value: UInt16) -> JSONReference { .number(from: value) }
     @inline(__always) func wrap(_ value: UInt32) -> JSONReference { .number(from: value) }
     @inline(__always) func wrap(_ value: UInt64) -> JSONReference { .number(from: value) }
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    @inline(__always) func wrap(_ value: UInt128)  -> JSONReference { .number(from: value) }
     @inline(__always) func wrap(_ value: String) -> JSONReference { .string(value) }
 
     @inline(__always)
@@ -1302,11 +1330,15 @@ extension Int8 : _JSONSimpleValueArrayElement { }
 extension Int16 : _JSONSimpleValueArrayElement { }
 extension Int32 : _JSONSimpleValueArrayElement { }
 extension Int64 : _JSONSimpleValueArrayElement { }
+@available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+extension Int128 : _JSONSimpleValueArrayElement { }
 extension UInt : _JSONSimpleValueArrayElement { }
 extension UInt8 : _JSONSimpleValueArrayElement { }
 extension UInt16 : _JSONSimpleValueArrayElement { }
 extension UInt32 : _JSONSimpleValueArrayElement { }
 extension UInt64 : _JSONSimpleValueArrayElement { }
+@available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+extension UInt128 : _JSONSimpleValueArrayElement { }
 extension String: _JSONSimpleValueArrayElement {
     fileprivate func jsonRepresentation(options: JSONEncoder._Options) -> String {
         self.serializedForJSON(withoutEscapingSlashes: options.outputFormatting.contains(.withoutEscapingSlashes))
