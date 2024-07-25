@@ -14,6 +14,7 @@
 #define CSHIMS_STRING_H
 
 #include "_CShimsMacros.h"
+#include "_CStdlib.h"
 
 #if __has_include(<locale.h>)
 #include <locale.h>
@@ -41,6 +42,9 @@ INTERNAL int _stringshims_strncasecmp_l(const char * _Nullable s1, const char * 
 INTERNAL double _stringshims_strtod_l(const char * _Nullable __restrict nptr, char * _Nullable * _Nullable __restrict endptr, locale_t _Nullable loc);
 
 INTERNAL float _stringshims_strtof_l(const char * _Nullable __restrict nptr, char * _Nullable * _Nullable __restrict endptr, locale_t _Nullable loc);
+
+#define _STRINGSHIMS_MACROMAN_MAP_SIZE 129
+INTERNAL const uint8_t _stringshims_macroman_mapping[_STRINGSHIMS_MACROMAN_MAP_SIZE][3];
 
 #ifdef __cplusplus
 }
