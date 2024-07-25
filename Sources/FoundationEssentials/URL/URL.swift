@@ -2188,27 +2188,37 @@ extension URL {
 
     private func appending<S: StringProtocol>(path: S, directoryHint: DirectoryHint, encodingSlashes: Bool) -> URL {
         #if os(Windows)
-        let path = path.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
+        var path = path.replacing(._backslash, with: ._slash)
+        #else
+        var path = String(path)
         #endif
+
+        var newPath = relativePath()
+        var insertedSlash = false
+        if !newPath.isEmpty && path.utf8.first != ._slash {
+            // Don't treat as first path segment when encoding
+            path = "/" + path
+            insertedSlash = true
+        }
+
         guard var pathToAppend = Parser.percentEncode(path, component: .path) else {
             return self
         }
         if encodingSlashes {
             var utf8 = Array(pathToAppend.utf8)
-            utf8.replace([UInt8(ascii: "/")], with: [UInt8(ascii: "%"), UInt8(ascii: "2"), UInt8(ascii: "F")])
+            utf8[(insertedSlash ? 1 : 0)...].replace([._slash], with: [UInt8(ascii: "%"), UInt8(ascii: "2"), UInt8(ascii: "F")])
             pathToAppend = String(decoding: utf8, as: UTF8.self)
         }
 
-        let slash = UInt8(ascii: "/")
-        var newPath = relativePath()
-        if newPath.utf8.last != slash && pathToAppend.utf8.first != slash {
+        if newPath.utf8.last != ._slash && pathToAppend.utf8.first != ._slash {
             newPath += "/"
-        } else if newPath.utf8.last == slash && pathToAppend.utf8.first == slash {
+        } else if newPath.utf8.last == ._slash && pathToAppend.utf8.first == ._slash {
             _ = newPath.popLast()
         }
 
         newPath += pathToAppend
-        let hasTrailingSlash = newPath.utf8.last == slash
+
+        let hasTrailingSlash = newPath.utf8.last == ._slash
         let isDirectory: Bool
         switch directoryHint {
         case .isDirectory:
@@ -2220,7 +2230,7 @@ extension URL {
             // We can only check file system if the URL is a file URL
             if isFileURL {
                 let filePath: String
-                if newPath.utf8.first == slash {
+                if newPath.utf8.first == ._slash {
                     filePath = URL.fileSystemPath(for: newPath)
                 } else {
                     filePath = URL.fileSystemPath(for: mergedPath(for: newPath))
@@ -2236,7 +2246,7 @@ extension URL {
         case .inferFromPath:
             isDirectory = hasTrailingSlash
         }
-        if isDirectory && newPath.utf8.last != slash {
+        if isDirectory && newPath.utf8.last != ._slash {
             newPath += "/"
         }
 

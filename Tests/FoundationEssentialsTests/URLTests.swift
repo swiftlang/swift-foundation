@@ -514,6 +514,46 @@ final class URLTests : XCTestCase {
         }
     }
 
+    func testURLAppendingPathDoesNotEncodeColon() throws {
+        let baseURL = URL(string: "file:///var/mobile/")!
+        let url = URL(string: "relative", relativeTo: baseURL)!
+        let component = "no:slash"
+        let slashComponent = "/with:slash"
+
+        // Make sure we don't encode ":" since `component` is not the first path segment
+        var appended = url.appending(path: component, directoryHint: .notDirectory)
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
+        XCTAssertEqual(appended.relativePath, "relative/no:slash")
+
+        appended = url.appending(path: slashComponent, directoryHint: .notDirectory)
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/with:slash")
+        XCTAssertEqual(appended.relativePath, "relative/with:slash")
+
+        appended = url.appending(component: component, directoryHint: .notDirectory)
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
+        XCTAssertEqual(appended.relativePath, "relative/no:slash")
+
+        // `appending(component:)` should explicitly treat `component` as a single
+        // path component, meaning "/" should be encoded to "%2F" before appending
+        appended = url.appending(component: slashComponent, directoryHint: .notDirectory)
+        #if FOUNDATION_FRAMEWORK_NSURL
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/with:slash")
+        XCTAssertEqual(appended.relativePath, "relative/with:slash")
+        #else
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/%2Fwith:slash")
+        XCTAssertEqual(appended.relativePath, "relative/%2Fwith:slash")
+        #endif
+
+        appended = url.appendingPathComponent(component, isDirectory: false)
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
+        XCTAssertEqual(appended.relativePath, "relative/no:slash")
+
+        // Test deprecated API, which acts like `appending(path:)`
+        appended = url.appendingPathComponent(slashComponent, isDirectory: false)
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/with:slash")
+        XCTAssertEqual(appended.relativePath, "relative/with:slash")
+    }
+
     func testURLComponentsPercentEncodedUnencodedProperties() throws {
         var comp = URLComponents()
 
