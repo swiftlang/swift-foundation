@@ -409,8 +409,24 @@ public func _NSDecimalCompact(_ number: UnsafeMutablePointer<Decimal>) {
     _ decimal: UnsafePointer<Decimal>,
     _ locale: Any? = nil
 ) -> String {
-    let useLocale = locale as? Locale
-    return decimal.pointee._toString(with: useLocale)
+    var decimalSeparator = "."
+    if let useLocale = locale as? Locale,
+       let separator = useLocale.decimalSeparator {
+        decimalSeparator = separator
+    }
+#if FOUNDATION_FRAMEWORK
+    if let dictionary = locale as? [AnyHashable : Any] {
+        // NSDecimal favored NSLocale.Key.decimalSeparator if
+        // both keys are present.
+        if let separator = dictionary["NSDecimalSeparator"] as? String {
+            decimalSeparator = separator
+        }
+        if let separator = dictionary[NSLocale.Key.decimalSeparator.rawValue] as? String {
+            decimalSeparator = separator
+        }
+    }
+#endif
+    return decimal.pointee._toString(withDecimalSeparator: decimalSeparator)
 }
 
 #if FOUNDATION_FRAMEWORK
