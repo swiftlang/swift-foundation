@@ -355,7 +355,7 @@ extension Decimal {
             result = product
         }
         // Get the decimal point
-        if index != utf8View.endIndex && stringViewContainsDecimalSeparator(at: index) {
+        if index < utf8View.endIndex && stringViewContainsDecimalSeparator(at: index) {
             utf8View.formIndex(&index, offsetBy: decimalSeparator.count)
             // Continue to build the mantissa
             while index != utf8View.endIndex,
@@ -381,8 +381,21 @@ extension Decimal {
             }
         }
         // Get the exponent if any
-        if index != utf8View.endIndex && (utf8View[index] == UInt8._E || utf8View[index] == UInt8._e) {
+        if index < utf8View.endIndex && (utf8View[index] == UInt8._E || utf8View[index] == UInt8._e) {
             utf8View.formIndex(after: &index)
+            // If there is no content after e, the string is invalid
+            guard index != utf8View.endIndex else {
+                // Normally we should return .parseFailure
+                // However, NSDecimal historically parses any
+                // - Invalid strings starting with `e` as 0
+                //    - "en" -> 0
+                //    - "e" -> 0
+                // - Strings ending with `e` but nothing after as valid
+                //    - "1234e" -> 1234
+                // So let's keep that behavior here as well
+                let processedLength = utf8View.distance(from: utf8View.startIndex, to: index)
+                return .success(result, processedLength: processedLength)
+            }
             var exponentIsNegative = false
             var exponent = 0
             // Get the exponent sign
