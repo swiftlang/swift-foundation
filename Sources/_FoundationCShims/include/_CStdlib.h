@@ -60,7 +60,17 @@
 #endif
 
 #if __has_include(<signal.h>)
-#include <signal.h>
+/* wasi-libc's signal.h is available only if _WASI_EMULATED_SIGNAL is defined */
+# if !defined(__wasi__) || defined(_WASI_EMULATED_SIGNAL)
+#  include <signal.h>
+# endif
+#endif
+
+#if __has_include(<sys/mman.h>)
+/* wasi-libc's mman.h is available only if _WASI_EMULATED_MMAN is defined */
+# if !defined(__wasi__) || defined(_WASI_EMULATED_MMAN)
+#  include <sys/mman.h>
+# endif
 #endif
 
 #if __has_include(<stdalign.h>)

@@ -70,6 +70,11 @@ var dependencies: [Package.Dependency] {
     }
 }
 
+let wasiLibcCSettings: [CSetting] = [
+    .define("_WASI_EMULATED_SIGNAL", .when(platforms: [.wasi])),
+    .define("_WASI_EMULATED_MMAN", .when(platforms: [.wasi])),
+]
+
 let package = Package(
     name: "swift-foundation",
     platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
@@ -80,15 +85,23 @@ let package = Package(
     dependencies: dependencies,
     targets: [
         // _FoundationCShims (Internal)
-        .target(name: "_FoundationCShims",
-                cSettings: [.define("_CRT_SECURE_NO_WARNINGS",
-                                    .when(platforms: [.windows]))]),
+        .target(
+            name: "_FoundationCShims",
+            cSettings: [
+                .define("_CRT_SECURE_NO_WARNINGS", .when(platforms: [.windows]))
+            ] + wasiLibcCSettings
+        ),
 
         // TestSupport (Internal)
-        .target(name: "TestSupport", dependencies: [
-            "FoundationEssentials",
-            "FoundationInternationalization",
-        ], swiftSettings: availabilityMacros + concurrencyChecking),
+        .target(
+            name: "TestSupport",
+            dependencies: [
+                "FoundationEssentials",
+                "FoundationInternationalization",
+            ],
+            cSettings: wasiLibcCSettings,
+            swiftSettings: availabilityMacros + concurrencyChecking
+        ),
 
         // FoundationEssentials
         .target(
@@ -119,11 +132,14 @@ let package = Package(
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux]))
-          ],
+          ] + wasiLibcCSettings,
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
-          ] + availabilityMacros + concurrencyChecking
+          ] + availabilityMacros + concurrencyChecking,
+          linkerSettings: [
+            .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
+          ]
         ),
         .testTarget(
             name: "FoundationEssentialsTests",
@@ -155,6 +171,7 @@ let package = Package(
                 "CMakeLists.txt",
                 "Predicate/CMakeLists.txt"
             ],
+            cSettings: wasiLibcCSettings,
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
             ] + availabilityMacros + concurrencyChecking
