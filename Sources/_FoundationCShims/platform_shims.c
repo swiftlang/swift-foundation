@@ -21,6 +21,10 @@
 extern char **environ;
 #endif
 
+#if __wasi__
+#include <wasi/libc-environ.h> // for __wasilibc_get_environ
+#endif
+
 #if __has_include(<libc_private.h>)
 #import <libc_private.h>
 void _platform_shims_lock_environ() {
