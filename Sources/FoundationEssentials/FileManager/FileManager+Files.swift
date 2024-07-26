@@ -482,7 +482,7 @@ extension _FileManagerImpl {
 #endif
     }
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
     private func _extendedAttribute(_ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data? {
         #if canImport(Darwin)
         var size = getxattr(path, key, nil, 0, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
@@ -626,10 +626,11 @@ extension _FileManagerImpl {
             
             var attributes = statAtPath.fileAttributes
             try? Self._catInfo(for: URL(filePath: path, directoryHint: .isDirectory), statInfo: statAtPath, into: &attributes)
-            
+            #if !os(WASI) // WASI does not support extended attributes
             if let extendedAttrs = try? _extendedAttributes(at: fsRep, followSymlinks: false) {
                 attributes[._extendedAttributes] = extendedAttrs
             }
+            #endif
             
             #if !targetEnvironment(simulator) && FOUNDATION_FRAMEWORK
             if statAtPath.isRegular || statAtPath.isDirectory {
@@ -691,6 +692,9 @@ extension _FileManagerImpl {
                 ]
             }
         }
+#elseif os(WASI)
+        // WASI does not support file system attributes
+        return [:]
 #else
         try fileManager.withFileSystemRepresentation(for: path) { rep in
             guard let rep else {
@@ -918,7 +922,12 @@ extension _FileManagerImpl {
             try Self._setCatInfoAttributes(attributes, path: path)
             
             if let extendedAttrs = attributes[.init("NSFileExtendedAttributes")] as? [String : Data] {
+                #if os(WASI)
+                // WASI does not support extended attributes
+                throw CocoaError.errorWithFilePath(.featureUnsupported, path)
+                #else
                 try Self._setAttributes(extendedAttrs, at: fileSystemRepresentation, followSymLinks: false)
+                #endif
             }
             
             if let date = attributes[.modificationDate] as? Date {
