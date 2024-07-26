@@ -465,10 +465,12 @@ extension POSIXError {
         return .ESTALE
     }
 
+    #if !os(WASI)
     /// Too many levels of remote in path.
     public static var EREMOTE: POSIXErrorCode {
         return .EREMOTE
     }
+    #endif
     #endif
 
     #if canImport(Darwin)
