@@ -21,6 +21,8 @@ import unistd
 import Glibc
 #elseif os(Windows)
 import WinSDK
+#elseif os(WASI)
+import WASILibc
 #endif
 
 #if !NO_PROCESS

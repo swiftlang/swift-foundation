@@ -19,6 +19,8 @@ import Glibc
 #elseif os(Windows)
 import CRT
 import WinSDK
+#elseif os(WASI)
+import WASILibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
