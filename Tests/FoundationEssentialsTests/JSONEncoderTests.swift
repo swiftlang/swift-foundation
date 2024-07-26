@@ -612,6 +612,9 @@ final class JSONEncoderTests : XCTestCase {
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt16], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt32], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt64], as: [Bool].self)
+        if #available(macOS 15.0, *) {
+          _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt128], as: [Bool].self)
+        }
         _testRoundTripTypeCoercionFailure(of: [0.0, 1.0] as [Float], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0.0, 1.0] as [Double], as: [Bool].self)
     }
@@ -1322,6 +1325,94 @@ final class JSONEncoderTests : XCTestCase {
         }
         let testValue = Numbers(floats: [.greatestFiniteMagnitude, .leastNormalMagnitude], doubles: [.greatestFiniteMagnitude, .leastNormalMagnitude])
         _testRoundTrip(of: testValue)
+    }
+  
+    func test_roundTrippingInt128() {
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+            let values = [
+                Int128.min,
+                Int128.min + 1,
+                -0x1_0000_0000_0000_0000,
+                0x0_8000_0000_0000_0000,
+                -1,
+                0,
+                0x7fff_ffff_ffff_ffff,
+                0x8000_0000_0000_0000,
+                0xffff_ffff_ffff_ffff,
+                0x1_0000_0000_0000_0000,
+                .max
+            ]
+            for i128 in values {
+                _testRoundTrip(of: i128)
+            }
+        }
+    }
+    
+    func test_Int128SlowPath() {
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+            let decoder = JSONDecoder()
+            let work: [Int128] = [18446744073709551615, -18446744073709551615]
+            for value in work {
+                // force the slow-path by appending ".0"
+                let json = "\(value).0".data(using: String._Encoding.utf8)!
+                XCTAssertEqual(value, try? decoder.decode(Int128.self, from: json))
+            }
+            // These should work, but making them do so probably requires
+            // rewriting the slow path to use a dedicated parser. For now,
+            // we ensure that they throw instead of returning some bogus
+            // result.
+            let shouldWorkButDontYet: [Int128] = [
+                .min, -18446744073709551616, 18446744073709551616, .max
+            ]
+            for value in shouldWorkButDontYet {
+                // force the slow-path by appending ".0"
+                let json = "\(value).0".data(using: String._Encoding.utf8)!
+                XCTAssertThrowsError(try decoder.decode(Int128.self, from: json))
+            }
+        }
+    }
+    
+    func test_roundTrippingUInt128() {
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+            let values = [
+                UInt128.zero,
+                1,
+                0x0000_0000_0000_0000_7fff_ffff_ffff_ffff,
+                0x0000_0000_0000_0000_8000_0000_0000_0000,
+                0x0000_0000_0000_0000_ffff_ffff_ffff_ffff,
+                0x0000_0000_0000_0001_0000_0000_0000_0000,
+                0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff,
+                0x8000_0000_0000_0000_0000_0000_0000_0000,
+                .max
+            ]
+            for u128 in values {
+                _testRoundTrip(of: u128)
+            }
+        }
+    }
+    
+    func test_UInt128SlowPath() {
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+            let decoder = JSONDecoder()
+            let work: [UInt128] = [18446744073709551615]
+            for value in work {
+                // force the slow-path by appending ".0"
+                let json = "\(value).0".data(using: String._Encoding.utf8)!
+                XCTAssertEqual(value, try? decoder.decode(UInt128.self, from: json))
+            }
+            // These should work, but making them do so probably requires
+            // rewriting the slow path to use a dedicated parser. For now,
+            // we ensure that they throw instead of returning some bogus
+            // result.
+            let shouldWorkButDontYet: [UInt128] = [
+                18446744073709551616, .max
+            ]
+            for value in shouldWorkButDontYet {
+                // force the slow-path by appending ".0"
+                let json = "\(value).0".data(using: String._Encoding.utf8)!
+                XCTAssertThrowsError(try decoder.decode(UInt128.self, from: json))
+            }
+        }
     }
 
     func test_roundTrippingDoubleValues() {
