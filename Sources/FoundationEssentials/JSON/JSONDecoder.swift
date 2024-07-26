@@ -727,20 +727,27 @@ extension JSONDecoderImpl: Decoder {
                     // TODO: Proper handling of Infinity and NaN Decimal values.
                     return Decimal.quietNaN
                 } else {
-                    let numberString = String(decoding: numberBuffer, as: UTF8.self)
-                    if let decimal = Decimal(entire: numberString) {
-                        return decimal
+                    switch Decimal._decimal(from: numberBuffer, matchEntireString: true) {
+                    case .success(let result, _):
+                        return result
+                    case .overlargeValue:
+                        throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+                    case .parseFailure:
+                        throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), fullSource: fullSource)
                     }
-                    throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), fullSource: fullSource)
+
                 }
 
             } else {
                 let digitsStartPtr = try JSONScanner.prevalidateJSONNumber(from: numberBuffer, hasExponent: hasExponent, fullSource: fullSource)
-                let numberString = String(decoding: numberBuffer, as: UTF8.self)
-                if let decimal = Decimal(entire: numberString) {
-                    return decimal
+                switch Decimal._decimal(from: numberBuffer, matchEntireString: true) {
+                case .success(let result, _):
+                    return result
+                case .overlargeValue:
+                    throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+                case .parseFailure:
+                    throw JSONScanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), fullSource: fullSource)
                 }
-                throw JSONScanner.validateNumber(from: numberBuffer.suffix(from: digitsStartPtr), fullSource: fullSource)
             }
         }
     }
@@ -996,8 +1003,8 @@ extension JSONDecoderImpl: Decoder {
             }
         }
 
-        let number = String(decoding: numberBuffer, as: Unicode.ASCII.self)
-        if let decimal = Decimal(entire: number) {
+        let decimalParseResult = Decimal._decimal(from: numberBuffer, matchEntireString: true).asOptional
+        if let decimal = decimalParseResult.result {
             guard let value = T(decimal) else {
                 throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
             }
@@ -1069,19 +1076,6 @@ extension FixedWidthInteger {
             }
             self = sized
         }
-    }
-}
-
-extension Decimal {
-    init?(entire string: String) {
-        guard let value = Decimal._decimal(
-            from: string.utf8,
-            decimalSeparator: ".".utf8,
-            matchEntireString: true
-        ).result else {
-            return nil
-        }
-        self = value
     }
 }
 

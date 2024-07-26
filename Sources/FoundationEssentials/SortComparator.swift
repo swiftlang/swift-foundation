@@ -133,7 +133,7 @@ package struct AnySortComparator: SortComparator, Sendable {
             return l == rr
         }
         
-        return compare(lhs, rhs)
+        return compare(lhs._base, rhs._base)
     }
 }
 

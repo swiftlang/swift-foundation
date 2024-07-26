@@ -642,6 +642,8 @@ final class FileManagerTests : XCTestCase {
                 XCTAssertEqual(result[.immutable] as? Bool, test.immutable, "Item at path '\(test.path)' did not provide expected result for immutable key")
                 XCTAssertEqual(result[.appendOnly] as? Bool, test.appendOnly, "Item at path '\(test.path)' did not provide expected result for appendOnly key")
                 
+                XCTAssertNil(result[.busy], "Item at path '\(test.path)' has non-nil value for .busy attribute") // Should only be set when true
+                
                 // Manually clean up attributes so removal does not fail
                 try $0.setAttributes([.immutable: false, .appendOnly: false], ofItemAtPath: test.path)
             }
@@ -819,20 +821,13 @@ final class FileManagerTests : XCTestCase {
         #if canImport(Darwin) || os(Windows)
         throw XCTSkip("This test is not applicable on this platform")
         #else
+        if let key = ProcessInfo.processInfo.environment.keys.first(where: { $0.starts(with: "XDG") }) {
+            throw XCTSkip("Skipping due to presence of '\(key)' environment variable which may affect this test")
+        }
+        
         try FileManagerPlayground {
             Directory("TestPath") {}
         }.test { fileManager in
-            #if os(Windows)
-            func setenv(_ key: String, _ value: String) -> Int32 {
-              assert(overwrite == 1)
-              guard !key.contains("=") else {
-                  errno = EINVAL
-                  return -1
-              }
-              return _putenv("\(key)=\(value)")
-            }
-            #endif
-            
             func validate(_ key: String, suffix: String? = nil, directory: FileManager.SearchPathDirectory, domain: FileManager.SearchPathDomainMask, file: StaticString = #filePath, line: UInt = #line) {
                 let oldValue = ProcessInfo.processInfo.environment[key] ?? ""
                 var knownPath = fileManager.currentDirectoryPath.appendingPathComponent("TestPath")
@@ -867,6 +862,41 @@ final class FileManagerTests : XCTestCase {
         }.test {
             let attrs = try $0.attributesOfItem(atPath: "foo")
             try $0.setAttributes(attrs, ofItemAtPath: "foo")
+        }
+    }
+    
+    func testAttributesOfItemAtPath() throws {
+        try FileManagerPlayground {
+            "file"
+            File("fileWithContents", contents: randomData())
+            Directory("directory") {
+                "file"
+            }
+        }.test {
+            do {
+                let attrs = try $0.attributesOfItem(atPath: "file")
+                XCTAssertEqual(attrs[.size] as? UInt, 0)
+                XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeRegular)
+            }
+            
+            do {
+                let attrs = try $0.attributesOfItem(atPath: "fileWithContents")
+                XCTAssertGreaterThan(try XCTUnwrap(attrs[.size] as? UInt), 0)
+                XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeRegular)
+            }
+            
+            do {
+                let attrs = try $0.attributesOfItem(atPath: "directory")
+                XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeDirectory)
+            }
+            
+            #if !os(Windows)
+            do {
+                try $0.createSymbolicLink(atPath: "symlink", withDestinationPath: "file")
+                let attrs = try $0.attributesOfItem(atPath: "symlink")
+                XCTAssertEqual(attrs[.type] as? FileAttributeType, FileAttributeType.typeSymbolicLink)
+            }
+            #endif
         }
     }
 }

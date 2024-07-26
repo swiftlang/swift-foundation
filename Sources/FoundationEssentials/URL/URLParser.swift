@@ -158,17 +158,18 @@ package protocol UIDNAHook {
     static func decode(_ host: some StringProtocol) -> String?
 }
 
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+internal func _uidnaHook() -> UIDNAHook.Type? {
+    UIDNAHookICU.self
+}
+#else
+dynamic package func _uidnaHook() -> UIDNAHook.Type? {
+    nil
+}
+#endif
+
 internal struct RFC3986Parser: URLParserProtocol {
     static let kind: URLParserKind = .RFC3986
-    static let uidnaHook: UIDNAHook.Type? = {
-        #if FOUNDATION_FRAMEWORK && !canImport(_FoundationICU)
-        nil
-        #elseif FOUNDATION_FRAMEWORK
-        UIDNAHookICU.self
-        #else
-        _typeByName("FoundationInternationalization.UIDNAHookICU") as? UIDNAHook.Type
-        #endif
-    }()
 
     // MARK: - Encoding
 
@@ -233,7 +234,7 @@ internal struct RFC3986Parser: URLParserProtocol {
     }
 
     static func shouldPercentEncodeHost(_ host: some StringProtocol, forScheme scheme: (some StringProtocol)?) -> Bool {
-        guard uidnaHook != nil else {
+        guard _uidnaHook() != nil else {
             // Always percent-encode the host if we can't access UIDNA encoding functions
             return true
         }
@@ -279,13 +280,13 @@ internal struct RFC3986Parser: URLParserProtocol {
     static func IDNAEncodeHost(_ host: (some StringProtocol)?) -> String? {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
-        return uidnaHook?.encode(host)
+        return _uidnaHook()?.encode(host)
     }
 
     static func IDNADecodeHost(_ host: (some StringProtocol)?) -> String? {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
-        guard let uidnaHook else { return String(host) }
+        guard let uidnaHook = _uidnaHook() else { return String(host) }
         return uidnaHook.decode(host)
     }
 

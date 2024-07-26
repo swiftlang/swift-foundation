@@ -19,6 +19,61 @@ import Darwin
 import Glibc
 #endif
 
+internal import _FoundationCShims
+
+extension BinaryInteger {
+    var isValidISOLatin1: Bool {
+        (0x20 <= self && self <= 0x7E) || (0xA0 <= self && self <= 0xFF)
+    }
+}
+
+extension UInt8 {
+    private typealias UTF8Representation = (UInt8, UInt8, UInt8)
+    private static func withMacRomanMap<R>(_ body: (UnsafeBufferPointer<UTF8Representation>) -> R) -> R {
+        withUnsafePointer(to: _stringshims_macroman_mapping) {
+            $0.withMemoryRebound(to: UTF8Representation.self, capacity: Int(_STRINGSHIMS_MACROMAN_MAP_SIZE)) {
+                body(UnsafeBufferPointer(start: $0, count: Int(_STRINGSHIMS_MACROMAN_MAP_SIZE)))
+            }
+        }
+    }
+    
+    var macRomanNonASCIIAsUTF8: some Collection<UInt8> {
+        assert(!Unicode.ASCII.isASCII(self))
+        return Self.withMacRomanMap { map in
+            let utf8Rep = map[Int(self) - 128]
+            if utf8Rep.2 == 0 {
+                return [utf8Rep.0, utf8Rep.1]
+            } else {
+                return [utf8Rep.0, utf8Rep.1, utf8Rep.2]
+            }
+        }
+    }
+    
+    init?(macRomanFor scalar: UnicodeScalar) {
+        guard !scalar.isASCII else {
+            self.init(scalar.value)
+            return
+        }
+        
+        let utf8 = Array(scalar.utf8)
+        guard utf8.count <= 3 else {
+            return nil
+        }
+        let tuple = (utf8[0], utf8[1], utf8.count == 2 ? 0 : utf8[2])
+        
+        let value: UInt8? = Self.withMacRomanMap { map in
+            if let found = map.firstIndex(where: { $0 == tuple }) {
+                return UInt8(found) + 128
+            } else {
+                return nil
+            }
+        }
+        
+        guard let value else { return nil }
+        self = value
+    }
+}
+
 // These provides concrete implementations for String and Substring, enhancing performance over generic StringProtocol.
 
 @available(FoundationPreview 0.4, *)
@@ -156,6 +211,26 @@ extension String {
             }
             
             return data + swapped
+        #if !FOUNDATION_FRAMEWORK
+        case .isoLatin1:
+            return try? Data(capacity: self.utf16.count) { buffer in
+                for scalar in self.utf16 {
+                    guard scalar.isValidISOLatin1 else {
+                        throw CocoaError(.fileWriteInapplicableStringEncoding)
+                    }
+                    buffer.appendElement(UInt8(scalar & 0xFF))
+                }
+            }
+        case .macOSRoman:
+            return try? Data(capacity: self.unicodeScalars.count) { buffer in
+                for scalar in self.unicodeScalars {
+                    guard let value = UInt8(macRomanFor: scalar) else {
+                        throw CocoaError(.fileWriteInapplicableStringEncoding)
+                    }
+                    buffer.appendElement(value)
+                }
+            }
+        #endif
         default:
 #if FOUNDATION_FRAMEWORK
             // Other encodings, defer to the CoreFoundation implementation

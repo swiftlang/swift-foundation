@@ -15,30 +15,26 @@ internal import _ForSwiftFoundation
 import CoreFoundation
 #endif
 
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+internal func _calendarICUClass() -> _CalendarProtocol.Type? {
+    _CalendarICU.self
+}
+#else
+dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
+    nil
+}
+#endif
+
+func _calendarClass(identifier: Calendar.Identifier, useGregorian: Bool) -> _CalendarProtocol.Type? {
+    if useGregorian && identifier == .gregorian {
+        return _CalendarGregorian.self
+    } else {
+        return _calendarICUClass()
+    }
+}
+
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.
 struct CalendarCache : Sendable {
-    
-    // MARK: - Concrete Classes
-    
-    // _CalendarICU, if present
-    static func calendarICUClass(identifier: Calendar.Identifier, useGregorian: Bool) -> _CalendarProtocol.Type? {
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
-        if useGregorian && identifier == .gregorian {
-            return _CalendarGregorian.self
-        } else {
-            return _CalendarICU.self
-        }
-#else
-        if useGregorian && identifier == .gregorian {
-            return _CalendarGregorian.self
-        } else if let name = _typeByName("FoundationInternationalization._CalendarICU"), let t = name as? _CalendarProtocol.Type {
-            return t
-        } else {
-            return nil
-        }
-#endif
-    }
-
     // MARK: - State
     
     struct State : Sendable {
@@ -78,7 +74,7 @@ struct CalendarCache : Sendable {
             } else {
                 let id = Locale.current._calendarIdentifier
                 // If we cannot create the right kind of class, we fail immediately here
-                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: true)!
+                let calendarClass = _calendarClass(identifier: id, useGregorian: true)!
                 let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 currentCalendar = calendar
                 return calendar
@@ -101,7 +97,7 @@ struct CalendarCache : Sendable {
                 return cached
             } else {
                 // If we cannot create the right kind of class, we fail immediately here
-                let calendarClass = CalendarCache.calendarICUClass(identifier: id, useGregorian: true)!
+                let calendarClass = _calendarClass(identifier: id, useGregorian: true)!
                 let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
                 fixedCalendars[id] = new
                 return new
@@ -140,7 +136,7 @@ struct CalendarCache : Sendable {
     func fixed(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
         // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
         // If we cannot create the right kind of class, we fail immediately here
-        let calendarClass = CalendarCache.calendarICUClass(identifier: identifier, useGregorian: true)!
+        let calendarClass = _calendarClass(identifier: identifier, useGregorian: true)!
         return calendarClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 

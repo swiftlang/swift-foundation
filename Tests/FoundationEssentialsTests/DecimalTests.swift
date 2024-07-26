@@ -112,10 +112,10 @@ final class DecimalTests : XCTestCase {
 
     func test_DescriptionWithLocale() {
         let decimal = Decimal(string: "-123456.789")!
-        XCTAssertEqual(decimal._toString(with: nil), "-123456.789")
-        let en = decimal._toString(with: Locale(identifier: "en_GB"))
+        XCTAssertEqual(decimal._toString(withDecimalSeparator: "."), "-123456.789")
+        let en = decimal._toString(withDecimalSeparator: Locale(identifier: "en_GB").decimalSeparator!)
         XCTAssertEqual(en, "-123456.789")
-        let fr = decimal._toString(with: Locale(identifier: "fr_FR"))
+        let fr = decimal._toString(withDecimalSeparator: Locale(identifier: "fr_FR").decimalSeparator!)
         XCTAssertEqual(fr, "-123456,789")
     }
 
@@ -260,6 +260,15 @@ final class DecimalTests : XCTestCase {
         XCTAssertEqual(zero3._isNegative, 0)
         XCTAssertEqual(zero3._length, 0)
         XCTAssertEqual(zero3.description, "0")
+
+        // Bin compat: invalid strings starting with E should be parsed as 0
+        var zeroE = try XCTUnwrap(Decimal(string: "en"))
+        XCTAssertTrue(zeroE.isZero)
+        zeroE = try XCTUnwrap(Decimal(string: "e"))
+        XCTAssertTrue(zeroE.isZero)
+        // Partitally valid strings ending with e shold be parsed
+        let notZero = try XCTUnwrap(Decimal(string: "123e"))
+        XCTAssertEqual(notZero, Decimal(123))
     }
 
     func test_stringWithLocale() {
@@ -1213,10 +1222,10 @@ final class DecimalTests : XCTestCase {
     #else
     func test_toString() {
         let decimal = Decimal(string: "-123456.789")!
-        XCTAssertEqual(decimal.toString(with: nil), "-123456.789")
-        let en = decimal.toString(with: Locale(identifier: "en_GB"))
+        XCTAssertEqual(decimal._toString(withDecimalSeparator: "."), "-123456.789")
+        let en = decimal._toString(withDecimalSeparator: Locale(identifier: "en_GB").decimalSeparator!)
         XCTAssertEqual(en, "-123456.789")
-        let fr = decimal.toString(with: Locale(identifier: "fr_FR"))
+        let fr = decimal._toString(withDecimalSeparator: Locale(identifier: "fr_FR").decimalSeparator!)
         XCTAssertEqual(fr, "-123456,789")
     }
 

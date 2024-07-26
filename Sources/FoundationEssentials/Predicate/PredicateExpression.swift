@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
+#if canImport(Synchronization) && (!canImport(Darwin) || FOUNDATION_FRAMEWORK)
 internal import Synchronization
 #endif
 
@@ -85,14 +85,14 @@ public struct PredicateError: Error, Hashable, CustomDebugStringConvertible {
 extension PredicateExpressions {
     public struct VariableID: Hashable, Codable, Sendable {
         let id: UInt
-        #if FOUNDATION_FRAMEWORK
+        #if canImport(Synchronization) && (!canImport(Darwin) || FOUNDATION_FRAMEWORK)
         private static let nextID = Atomic<UInt>(0)
         #else
         private static let nextID = LockedState(initialState: UInt(0))
         #endif
         
         init() {
-            #if FOUNDATION_FRAMEWORK
+            #if canImport(Synchronization) && (!canImport(Darwin) || FOUNDATION_FRAMEWORK)
             self.id = Self.nextID.wrappingAdd(1, ordering: .relaxed).oldValue
             #else
             self.id = Self.nextID.withLock { value in

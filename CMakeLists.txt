@@ -69,20 +69,40 @@ FetchContent_MakeAvailable(SwiftFoundationICU SwiftCollections)
 list(APPEND CMAKE_MODULE_PATH ${SwiftFoundation_SOURCE_DIR}/cmake/modules)
 
 # Availability Macros (only applies to FoundationEssentials and FoundationInternationalization)
-set(_SwiftFoundation_availability_macros)
-list(APPEND _SwiftFoundation_availability_macros
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPreview 0.1:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPreview 0.2:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPreview 0.3:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPreview 0.4:macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicate 0.1:macOS 14, iOS 17, tvOS 17, watchOS 10\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicate 0.2:macOS 14, iOS 17, tvOS 17, watchOS 10\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicate 0.3:macOS 14, iOS 17, tvOS 17, watchOS 10\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicate 0.4:macOS 14, iOS 17, tvOS 17, watchOS 10\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicateRegex 0.1:macOS 10000, iOS 10000, tvOS 10000, watchOS 10000\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicateRegex 0.2:macOS 10000, iOS 10000, tvOS 10000, watchOS 10000\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicateRegex 0.3:macOS 10000, iOS 10000, tvOS 10000, watchOS 10000\">"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=FoundationPredicateRegex 0.4:macOS 10000, iOS 10000, tvOS 10000, watchOS 10000\">")
+set(_SwiftFoundation_BaseAvailability "macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4")
+set(_SwiftFoundation_macOS14Availability "macOS 14, iOS 17, tvOS 17, watchOS 10")
+set(_SwiftFoundation_macOS15Availability "macOS 15, iOS 18, tvOS 18, watchOS 11")
+set(_SwiftFoundation_FutureAvailability "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000")
+
+# All versions to define for each availability name
+list(APPEND _SwiftFoundation_versions
+    "0.1"
+    "0.2"
+    "0.3"
+    "0.4")
+
+# Each availability name to define
+list(APPEND _SwiftFoundation_availability_names
+    "FoundationPreview"
+    "FoundationPredicate"
+    "FoundationPredicateRegex")
+
+# The aligned availability for each name (in the same order)
+list(APPEND _SwiftFoundation_availability_releases
+    ${_SwiftFoundation_BaseAvailability}
+    ${_SwiftFoundation_macOS14Availability}
+    ${_SwiftFoundation_macOS15Availability})
+
+foreach(version ${_SwiftFoundation_versions})
+    foreach(name release IN ZIP_LISTS _SwiftFoundation_availability_names _SwiftFoundation_availability_releases)
+        if(NOT DEFINED name OR NOT DEFINED release)
+            message(FATAL_ERROR "_SwiftFoundation_availability_names and _SwiftFoundation_availability_releases are not the same length")
+        endif()
+
+        list(APPEND _SwiftFoundation_availability_macros
+            "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend \"AvailabilityMacro=${name} ${version}:${release}\">")
+    endforeach()
+endforeach()
 
 include(GNUInstallDirs)
 include(SwiftFoundationSwiftSupport)

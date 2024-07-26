@@ -19,23 +19,20 @@ internal import os
 
 internal import _FoundationCShims
 
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+// Here, we always have access to _LocaleICU
+internal func _localeICUClass() -> _LocaleProtocol.Type {
+    _LocaleICU.self
+}
+#else
+dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
+    // Return _LocaleUnlocalized if FoundationInternationalization isn't loaded. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
+    _LocaleUnlocalized.self
+}
+#endif
+
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
 struct LocaleCache : Sendable {
-    // MARK: - Concrete Classes
-    
-    // _LocaleICU, if present. Otherwise we use _LocaleUnlocalized. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
-    static let localeICUClass: _LocaleProtocol.Type = {
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
-        return _LocaleICU.self
-#else
-        if let name = _typeByName("FoundationInternationalization._LocaleICU"), let t = name as? _LocaleProtocol.Type {
-            return t
-        } else {
-            return _LocaleUnlocalized.self
-        }
-#endif
-    }()
-
     // MARK: - State
     
     struct State {
@@ -99,7 +96,7 @@ struct LocaleCache : Sendable {
                 return nil
             }
 
-            let locale = LocaleCache.localeICUClass.init(name: nil, prefs: preferences, disableBundleMatching: disableBundleMatching)
+            let locale = _localeICUClass().init(name: nil, prefs: preferences, disableBundleMatching: disableBundleMatching)
             if cache {
                 // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
                 self.cachedCurrentLocale = locale
@@ -122,7 +119,7 @@ struct LocaleCache : Sendable {
             if let locale = cachedFixedLocales[id] {
                 return locale
             } else {
-                let locale = LocaleCache.localeICUClass.init(identifier: id, prefs: nil)
+                let locale = _localeICUClass().init(identifier: id, prefs: nil)
                 cachedFixedLocales[id] = locale
                 return locale
             }
@@ -217,7 +214,7 @@ struct LocaleCache : Sendable {
             if let l = cachedFixedComponentsLocales[comps] {
                 return l
             } else {
-                let new = LocaleCache.localeICUClass.init(components: comps)
+                let new = _localeICUClass().init(components: comps)
                 
                 cachedFixedComponentsLocales[comps] = new
                 return new
@@ -229,7 +226,7 @@ struct LocaleCache : Sendable {
                 return locale
             }
 
-            let locale = LocaleCache.localeICUClass.init(identifier: "", prefs: nil)
+            let locale = _localeICUClass().init(identifier: "", prefs: nil)
             cachedSystemLocale = locale
             return locale
         }
@@ -415,13 +412,13 @@ struct LocaleCache : Sendable {
         var (prefs, _) = preferences()
         if let overrides { prefs.apply(overrides) }
         
-        let inner = LocaleCache.localeICUClass.init(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        let inner = _localeICUClass().init(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
         return Locale(inner: inner)
     }
 
     func localeWithPreferences(identifier: String, prefs: LocalePreferences?) -> Locale {
         if let prefs {
-            let inner = LocaleCache.localeICUClass.init(identifier: identifier, prefs: prefs)
+            let inner = _localeICUClass().init(identifier: identifier, prefs: prefs)
             return Locale(inner: inner)
         } else {
             return Locale(inner: LocaleCache.cache.fixed(identifier))

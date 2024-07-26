@@ -31,37 +31,25 @@ internal import _ForSwiftFoundation
 internal import CoreFoundation_Private.CFNotificationCenter
 #endif
 
+
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+internal func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
+    _TimeZoneICU.self
+}
+internal func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
+    _TimeZoneGMTICU.self
+}
+#else
+dynamic package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
+    nil
+}
+dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
+    _TimeZoneGMT.self
+}
+#endif
+
 /// Singleton which listens for notifications about preference changes for TimeZone and holds cached values for current, fixed time zones, etc.
 struct TimeZoneCache : Sendable {
-    
-    // MARK: - Concrete Classes
-    
-    // _TimeZoneICU, if present
-    static let timeZoneICUClass: _TimeZoneProtocol.Type? = {
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
-        _TimeZoneICU.self
-#else
-        if let name = _typeByName("FoundationInternationalization._TimeZoneICU"), let t = name as? _TimeZoneProtocol.Type {
-            return t
-        } else {
-            return nil
-        }
-#endif
-    }()
-    
-    // _TimeZoneGMTICU or _TimeZoneGMT
-    static let timeZoneGMTClass: _TimeZoneProtocol.Type = {
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
-        _TimeZoneGMTICU.self
-#else
-        if let name = _typeByName("FoundationInternationalization._TimeZoneGMTICU"), let t = name as? _TimeZoneProtocol.Type {
-            return t
-        } else {
-            return _TimeZoneGMT.self
-        }
-#endif
-    }()
-
     // MARK: - State
     
     struct State {
@@ -239,7 +227,7 @@ struct TimeZoneCache : Sendable {
             } else if let cached = fixedTimeZones[identifier] {
                 return cached
             } else {
-                if let innerTz = TimeZoneCache.timeZoneICUClass?.init(identifier: identifier) {
+                if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
                     fixedTimeZones[identifier] = innerTz
                     return innerTz
                 } else {
@@ -254,7 +242,7 @@ struct TimeZoneCache : Sendable {
             } else {
                 // In order to avoid bloating a cache with weird time zones, only cache values that are 30min offsets (including 1hr offsets).
                 let doCache = abs(offset) % 1800 == 0
-                if let innerTz = TimeZoneCache.timeZoneGMTClass.init(secondsFromGMT: offset) {
+                if let innerTz = _timeZoneGMTClass().init(secondsFromGMT: offset) {
                     if doCache {
                         offsetTimeZones[offset] = innerTz
                     }

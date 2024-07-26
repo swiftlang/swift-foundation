@@ -98,7 +98,11 @@ extension _FileManagerImpl {
                 attributes[.hfsCreatorCode] = _writeFileAttributePrimitive(kSymLinkCreator, as: UInt.self)
                 attributes[.hfsTypeCode] = _writeFileAttributePrimitive(kSymLinkFileType, as: UInt.self)
             }
-            attributes[.busy] = _writeFileAttributePrimitive((finderInfo.extendedFileInfo.extended_flags & 0x80 /*kExtendedFlagObjectIsBusy*/) != 0)
+            // To preserve historical behavior, only set this attribute if the value is true
+            let isBusy = (finderInfo.extendedFileInfo.extended_flags & 0x80 /*kExtendedFlagObjectIsBusy*/) != 0
+            if isBusy {
+                attributes[.busy] = _writeFileAttributePrimitive(true)
+            }
         }
         #endif
         
