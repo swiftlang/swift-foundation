@@ -115,9 +115,15 @@ import posix_filesystem.dirent
 #elseif canImport(Glibc)
 import Glibc
 internal import _FoundationCShims
+#elseif os(WASI)
+import WASILibc
+internal import _FoundationCShims
 #endif
 
 // MARK: Directory Iteration
+
+// No FTS support in wasi-libc for now (https://github.com/WebAssembly/wasi-libc/issues/520)
+#if !os(WASI)
 
 struct _FTSSequence: Sequence {
     enum Element {
@@ -315,10 +321,12 @@ extension Sequence<_FTSSequence.Element> {
     }
 }
 
+#endif // !os(WASI)
+
 struct _POSIXDirectoryContentsSequence: Sequence {
     #if canImport(Darwin)
     typealias DirectoryEntryPtr = UnsafeMutablePointer<DIR>
-    #elseif os(Android) || canImport(Glibc)
+    #elseif os(Android) || canImport(Glibc) || os(WASI)
     typealias DirectoryEntryPtr = OpaquePointer
     #endif
     
@@ -343,10 +351,18 @@ struct _POSIXDirectoryContentsSequence: Sequence {
                     continue
                 }
                 // Use name
-                let fileName = withUnsafeBytes(of: &dent.pointee.d_name) { buf in
+                let fileName: String
+                #if os(WASI)
+                // Use shim on WASI because wasi-libc defines `d_name` as
+                // "flexible array member" which is not supported by
+                // ClangImporter yet.
+                fileName = String(cString: _platform_shims_dirent_d_name(dent))
+                #else
+                fileName = withUnsafeBytes(of: &dent.pointee.d_name) { buf in
                     let ptr = buf.baseAddress!.assumingMemoryBound(to: CChar.self)
                     return String(cString: ptr)
                 }
+                #endif
 
                 if fileName == "." || fileName == ".." || fileName == "._" {
                     continue

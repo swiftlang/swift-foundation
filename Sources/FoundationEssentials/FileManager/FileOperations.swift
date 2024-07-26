@@ -512,7 +512,14 @@ enum _FileOperations {
             // We failed for a reason other than the directory not being empty, so throw
             throw CocoaError.removeFileError(errno, resolve(path: pathStr))
         }
-        
+
+        #if os(WASI)
+
+        // wasi-libc does not support FTS, so we don't support removing non-empty directories on WASI for now.
+        throw CocoaError.errorWithFilePath(.featureUnsupported, pathStr)
+
+        #else
+
         let seq = _FTSSequence(path, FTS_PHYSICAL | FTS_XDEV | FTS_NOCHDIR | FTS_NOSTAT)
         let iterator = seq.makeIterator()
         var isFirst = true
@@ -561,6 +568,7 @@ enum _FileOperations {
                 }
             }
         }
+        #endif
         
     }
     #endif
@@ -903,6 +911,44 @@ enum _FileOperations {
     }
     #endif
 
+    #if os(WASI)
+    private static func _linkOrCopyFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
+        let src = String(cString: srcPtr)
+        let dst = String(cString: dstPtr)
+        guard delegate.shouldPerformOnItemAtPath(src, to: dst) else { return }
+
+        var stat = stat()
+        guard lstat(srcPtr, &stat) == 0, !stat.isDirectory else {
+            // wasi-libc does not support FTS for now, so we don't support copying/linking
+            // directories on WASI for now.
+            throw CocoaError.errorWithFilePath(.featureUnsupported, String(cString: srcPtr))
+        }
+
+        // For now, we support only copying regular files and symlinks.
+        // After we get FTS support (https://github.com/WebAssembly/wasi-libc/pull/522),
+        // we can remove this method and use the below FTS-based implementation.
+
+        if stat.isSymbolicLink {
+            try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { tempBuff in
+                tempBuff.initialize(repeating: 0)
+                defer { tempBuff.deinitialize() }
+                let len = readlink(srcPtr, tempBuff.baseAddress!, FileManager.MAX_PATH_SIZE - 1)
+                if len >= 0, symlink(tempBuff.baseAddress!, dstPtr) != -1 {
+                    return
+                }
+                try delegate.throwIfNecessary(errno, src, dst)
+            }
+        } else {
+            if delegate.copyData {
+                try _copyRegularFile(srcPtr, dstPtr, delegate: delegate)
+            } else {
+                if link(srcPtr, dstPtr) != 0 {
+                    try delegate.throwIfNecessary(errno, src, dst)
+                }
+            }
+        }
+    }
+    #else
     private static func _linkOrCopyFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
         try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             let dstLen = Platform.copyCString(dst: buffer.baseAddress!, src: dstPtr, size: FileManager.MAX_PATH_SIZE)
@@ -1015,6 +1061,7 @@ enum _FileOperations {
             }
         }
     }
+    #endif
     
     private static func linkOrCopyFile(_ src: String, dst: String, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
         try src.withFileSystemRepresentation { srcPtr in

@@ -29,4 +29,25 @@ internal var CLOCK_MONOTONIC_RAW: clockid_t {
     return CLOCK_MONOTONIC
 }
 
+// MARK: - File Operations
+
+internal var DT_DIR: UInt8 {
+    return _platform_shims_DT_DIR()
+}
+internal var DT_UNKNOWN: UInt8 {
+    return _platform_shims_DT_UNKNOWN()
+}
+internal var O_CREAT: Int32 {
+    return _platform_shims_O_CREAT()
+}
+internal var O_EXCL: Int32 {
+    return _platform_shims_O_EXCL()
+}
+internal var O_TRUNC: Int32 {
+    return _platform_shims_O_TRUNC()
+}
+internal var O_WRONLY: Int32 {
+    return _platform_shims_O_WRONLY()
+}
+
 #endif // os(WASI)
