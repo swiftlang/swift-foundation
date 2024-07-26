@@ -31,19 +31,19 @@
 #include <security.h>
 #endif
 
-INTERNAL char * _Nullable * _Nullable _platform_shims_get_environ();
+INTERNAL char * _Nullable * _Nullable _platform_shims_get_environ(void);
 
-INTERNAL void _platform_shims_lock_environ();
-INTERNAL void _platform_shims_unlock_environ();
+INTERNAL void _platform_shims_lock_environ(void);
+INTERNAL void _platform_shims_unlock_environ(void);
 
 #if __has_include(<mach/vm_page_size.h>)
 #include <mach/vm_page_size.h>
-INTERNAL vm_size_t _platform_shims_vm_size();
+INTERNAL vm_size_t _platform_shims_vm_size(void);
 #endif
 
 #if __has_include(<mach/mach.h>)
 #include <mach/mach.h>
-INTERNAL mach_port_t _platform_mach_task_self();
+INTERNAL mach_port_t _platform_mach_task_self(void);
 #endif
 
 #if __has_include(<libkern/OSThermalNotification.h>)
@@ -65,7 +65,7 @@ typedef enum {
 } _platform_shims_OSThermalPressureLevel;
 
 
-INTERNAL const char * _Nonnull _platform_shims_kOSThermalNotificationPressureLevelName();
+INTERNAL const char * _Nonnull _platform_shims_kOSThermalNotificationPressureLevelName(void);
 #endif
 
 #endif /* CSHIMS_PLATFORM_SHIMS */
