@@ -30,6 +30,7 @@ add_library(FoundationEssentials
     SortComparator.swift
     UUID_Wrappers.swift
     UUID.swift
+    WASILibc+Extensions.swift
     WinSDK+Extensions.swift)
 
 add_subdirectory(AttributedString)
