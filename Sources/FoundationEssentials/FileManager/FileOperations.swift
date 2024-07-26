@@ -855,12 +855,14 @@ enum _FileOperations {
         }
         defer { close(dstfd) }
 
+        #if !os(WASI) // WASI doesn't have fchmod for now
         // Set the file permissions using fchmod() instead of when open()ing to avoid umask() issues
         let permissions = fileInfo.st_mode & ~S_IFMT
         guard fchmod(dstfd, permissions) == 0 else {
             try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
             return
         }
+        #endif
 
         if fileInfo.st_size == 0 {
             // no copying required
