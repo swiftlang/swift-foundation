@@ -94,7 +94,15 @@ extension CocoaError {
         var userInfo = userInfo
         
         // (130280235) POSIXError.Code does not have a case for EOPNOTSUPP
-        if errno != EOPNOTSUPP {
+        let _EOPNOTSUPP: Int32
+        #if os(WASI)
+        // wasi-libc's errno.h constants cannot be directly imported into Swift
+        // so we use Swift stdlib's POSIXErrorCode instead
+        _EOPNOTSUPP = POSIXErrorCode.EOPNOTSUPP.rawValue
+        #else
+        _EOPNOTSUPP = EOPNOTSUPP
+        #endif
+        if errno != _EOPNOTSUPP {
             guard let code = POSIXError.Code(rawValue: errno) else {
                 fatalError("Invalid posix errno \(errno)")
             }
