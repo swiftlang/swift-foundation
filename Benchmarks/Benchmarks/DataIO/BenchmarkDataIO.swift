@@ -27,16 +27,10 @@ import Glibc
 import Darwin
 #endif
 
-#if !FOUNDATION_FRAMEWORK
-func testPath() -> String {
-    // Generate a random file name
-    FileManager.default.temporaryDirectory.path.appendingPathComponent("testfile-\(UUID().uuidString)")
-}
-#else
 func testPath() -> URL {
+    // Generate a random file name
     FileManager.default.temporaryDirectory.appending(path: "testfile-\(UUID().uuidString)", directoryHint: .notDirectory)
 }
-#endif
 
 func generateTestData(count: Int) -> Data {
     let memory = malloc(count)!
@@ -51,17 +45,10 @@ func generateTestData(count: Int) -> Data {
     return Data(bytesNoCopy: ptr, count: count, deallocator: .free)
 }
 
-#if !FOUNDATION_FRAMEWORK
-func cleanup(at path: String) {
-    try? FileManager.default.removeItem(atPath: path)
-    // Ignore any errors
-}
-#else
 func cleanup(at path: URL) {
     try? FileManager.default.removeItem(at: path)
     // Ignore any errors
 }
-#endif
 
 // 16 MB file, big enough to trigger things like chunking
 let data = generateTestData(count: 1 << 24)
