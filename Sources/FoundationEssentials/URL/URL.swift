@@ -2155,14 +2155,6 @@ extension URL {
             isDirectory = filePath.utf8.last == slash
         }
 
-        if !isAbsolute {
-            #if !NO_FILESYSTEM
-            filePath = filePath.standardizingPath
-            #else
-            filePath = filePath.removingDotSegments
-            #endif
-        }
-
         #if os(Windows)
         // Convert any "\" back to "/" before storing the URL parse info
         filePath = filePath.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
