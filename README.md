@@ -9,91 +9,64 @@ It is designed with these goals in mind:
 * Demonstrate useful conventions that can be widely adopted by the Swift ecosystem
 * Support internationalization and localization to make software accessible around the world
 
-## Current State
+This project, `swift-foundation`, provides a shared implementation of key Foundation API for all platforms.
 
-This package is a work in progress that aims to build a new and unified Swift implementation of Foundation for all platforms.
+On macOS, iOS, and other Apple platforms, apps should use the Foundation that comes with the operating system. The Foundation framework includes this code.
 
-It is in its early stages with many features still to be implemented.
-
-The following types are available, with more to come later:
-
-* **FoundationEssentials**
-    * `AttributedString`
-    * `Data`
-    * `Date`
-    * `DateInterval`
-    * `JSONEncoder`
-    * `JSONDecoder`
-    * `Predicate`
-    * `String` extensions
-    * `UUID`
-* **Internationalization**
-    * `Calendar`
-    * `TimeZone`
-    * `Locale`
-    * `DateComponents`
-    * `FormatStyle`
-    * `ParseStrategy`
-
-Many types, including `JSONEncoder`, `Calendar`, `TimeZone`, and `Locale` are all-new Swift implementations. `FormatStyle` and `ParseStrategy` available as open source for the first time.
-
-For internationalization support on non-Darwin platforms, we created a separate package named *[FoundationICU](https://github.com/apple/swift-foundation-icu)*. This repository contains the necessary ICU implementations and data from the upstream [Apple OSS Distribution ICU](https://github.com/apple-oss-distributions/ICU), wrapped in Swift so FoundationInternationalization can easily depend on it.
-
-Using a common version of ICU will result in more reliable and consistent results when formatting dates, times, and numbers.
-### Development Focus for 2023
-
-Quality and performance are our two most important goals for the project. Therefore, the plans for the first half of 2023 are continuing refinement of the core API, adding to our suites of unit and performance tests, and expanding to other platforms where possible, using the most relevant code from [swift-corelibs-foundation](https://github.com/apple/swift-corelibs-foundation).
-
-Later this year, the porting effort will continue. It will bring high quality Swift implementations of additional important Foundation API such as `URL`, `Bundle`, `FileManager`, `FileHandle`, `Process`, `SortDescriptor`, `SortComparator` and more. 
+On all other Swift platforms, `swift-foundation` is available as part of the toolchain. Simply `import FoundationEssentials` or `import FoundationInternationalization` to use its API. It is also re-exported from [swift-corelibs-foundation](http://github.com/apple/swift-corelibs-foundation)'s `Foundation`, `FoundationXML`, and `FoundationNetworking` modules.
 
 ## Building and Testing
 
 > [!NOTE]
 > Building swift-foundation requires the in-development Swift 6.0 toolchain. You can download the Swift 6.0 nightly toolchain from [the Swift website](https://swift.org/install).
 
-Before building Foundation, first ensure that you have Swift installed on your device. Once you have a Swift toolchain installed, check out the _Getting Started_ section of the [Foundation Build Process](Foundation_Build_Process.md#getting-started) guide for steps to build Foundation.
+Before building Foundation, first ensure that you have a Swift toolchain installed. Next, check out the _Getting Started_ section of the [Foundation Build Process](Foundation_Build_Process.md#getting-started) guide for detailed steps on building and testing.
 
-## Performance
 
-Being written in Swift, this new implementation provides some major benefits over the previous C and Objective-C versions.
+## Project Navigator
 
-`Locale`, `TimeZone` and `Calendar` no longer require bridging from Objective-C. Common tasks like getting a fixed `Locale` are an order of magnitude faster for Swift clients. `Calendar`'s ability to calculate important dates can take better advantage of Swift’s value semantics to avoid intermediate allocations, resulting in over a 20% improvement in some benchmarks. Date formatting using `FormatStyle` also has some major performance upgrades, showing a massive 150% improvement in a benchmark of formatting with a standard date and time template.
+Foundation builds in different configurations and is composed of several projects.
 
-Even more exciting are the improvements to JSON decoding in the new package. Foundation has a brand-new Swift implementation for `JSONDecoder` and `JSONEncoder`, eliminating costly roundtrips to and from the Objective-C collection types. The tight integration of parsing JSON in Swift for initializing `Codable` types improves performance, too. In benchmarks parsing [test data](https://www.boost.org/doc/libs/master/libs/json/doc/html/json/benchmarks.html), there are improvements in decode time from 200% to almost 500%.
-
-### Benchmarks
-
-Benchmarks for `swift-foundation` are in a separate Swift Package in the `Benchmarks` subfolder of this repository. 
-They use the [`package-benchmark`](https://github.com/ordo-one/package-benchmark) plugin.
-Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics.
-An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`. 
-Afterwards you can run the benchmarks from CLI by going to the `Benchmarks` subfolder (e.g. `cd Benchmarks`) and invoking:
+```mermaid
+  graph TD;
+      FF[Foundation.framework]-->SF
+      subgraph GitHub
+        SCLF[swift-corelibs-foundation]-->SF
+        SF[swift-foundation]-->FICU[swift-foundation-icu]
+        SF-->SC[swift-collections]
+      end   
 ```
-swift package benchmark
-```
+
+### Swift Foundation
+
+A shared library shipped in the Swift toolchain, written in Swift. It provides the core implementation of many key types, including `URL`, `Data`, `JSONDecoder`, `Locale`, `Calendar`, and more in the `FoundationEssentials` and `FoundationInternationalization` modules. Its source code is shared across all platforms.
+
+_swift-foundation_ depends on a limited set of packages, primarily [swift-collections](http://github.com/apple/swift-collections) and [swift-syntax](http://github.com/apple/swift-syntax).
+
+### Swift Corelibs Foundation
+
+A shared library shipped in the Swift toolchain. It provides compatibility API for clients that need pre-Swift API from Foundation. It is written in Swift and C. It provides, among other types, `NSObject`, class-based data structures, `NSFormatter`, and `NSKeyedArchiver`. It re-exports the `FoundationEssentials` and `FoundationInternationalization` modules, allowing compatibility for source written before the introduction of the _swift-foundation_ project. As these implementations are distinct from those written in Objective-C, the compatibility is best-effort only.
+
+[swift-corelibs-foundation](http://github.com/apple/swift-corelibs-foundation) builds for non-Darwin platforms only. It installs the `Foundation` umbrella module, `FoundationXML`, and `FoundationNetworking`.
+
+### Foundation ICU
+
+A private library for Foundation, wrapping ICU. Using a standard version of ICU provides stability in the behavior of our internationalization API, and consistency with the latest releases on Darwin platforms. It is imported from the `FoundationInternationalization` module only. Clients that do not need API that relies upon the data provided by ICU can import `FoundationEssentials` instead.
+
+### Foundation Framework
+
+A [framework](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Frameworks.html) built into macOS, iOS, and all other Darwin platforms. It is written in a combination of C, Objective-C, and Swift. The Foundation framework compiles the sources from _swift-foundation_ into its binary and provides one `Foundation` module that contains all features.
 
 ## Governance
 
-The success of the Swift language is an example of what's possible when a community comes together with a shared interest.
+Foundation's goal is to create the best fundamental data types and internationalization features, and make them available to Swift developers everywhere. It takes advantage of emerging features in the language as they are added, and enables library and app authors to build higher level API with confidence.
 
-For Foundation, our goal is to create the best fundamental data types and internationalization features, and make them available to Swift developers everywhere. It will take advantage of emerging features in the language as they are added, and enable library and app authors to build higher level API with confidence.
-
-Moving Foundation into this future requires not only an improved implementation, but also an improved process for using it outside of Apple’s platforms. Therefore, Foundation now has a path for the community to add new API for the benefit of Swift developers on every platform.
-
-The Foundation package is an independent project in its early incubation stages. Inspired by the workgroups in the Swift project, it has a workgroup to (a) oversee [community API proposals](Evolution.md) and (b) to closely coordinate with developments in the Swift project and Apple platforms. In the future, we will explore how to sunset the existing [swift-corelibs-foundation](https://github.com/apple/swift-corelibs-foundation) and migrate to using the new version of Foundation created by this project.
-
-The workgroup meets regularly to review proposals, look at emerging trends in the Swift ecosystem, and discuss how the library can evolve to best meet our common goals.
-
-## Foundation Framework and Foundation Package
-
-The Swift code in the package is the core of the Foundation framework that ships on macOS, iOS, and other Apple platforms. As new Swift implementations of Foundation API are implemented in the package, Apple will use those implementations in the framework as well. 
-
-The Foundation framework may have the occasional need to add Darwin-specific API, but our goal is to share as much code and API between all platforms as possible. In cases where platform-specific code is needed within a single source file, a compiler directive is used to include or exclude it.
+This project is part of the overall [Swift project](https://swift.org). It has a workgroup to (a) oversee [community API proposals](Evolution.md) and (b) to closely coordinate with developments in the Swift project and Apple platforms. The workgroup meets regularly to review proposals, look at emerging trends in the Swift ecosystem, and discuss how the library should evolve.
 
 ## Contributions
 
 Foundation welcomes contributions from the community, including bug fixes, tests, documentation, and ports to new platforms.
 
-The project uses the [Swift forums for discussion](https://forums.swift.org/c/related-projects/foundation/99) and [GitHub Issues](https://github.com/apple/swift-foundation/issues) for tracking bugs, feature requests, and other work.
+We use the [Swift forums for discussion](https://forums.swift.org/c/related-projects/foundation/99) and [GitHub Issues](https://github.com/apple/swift-foundation/issues) for tracking bugs, feature requests, and other work.
 
 Please see the [CONTRIBUTING](https://github.com/apple/swift-foundation/blob/main/CONTRIBUTING.md) document for more information, including the process for accepting community contributions for new API in Foundation.
