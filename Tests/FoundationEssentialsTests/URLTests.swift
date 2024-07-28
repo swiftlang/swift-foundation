@@ -352,6 +352,23 @@ final class URLTests : XCTestCase {
         }
     }
 
+    func testURLRelativeDotDotResolution() throws {
+        let baseURL = URL(filePath: "/docs/src/")
+        var result = URL(filePath: "../images/foo.png", relativeTo: baseURL)
+        #if FOUNDATION_FRAMEWORK_NSURL
+        XCTAssertEqual(result.path, "/docs/images/foo.png")
+        #else
+        XCTAssertEqual(result.path(), "/docs/images/foo.png")
+        #endif
+
+        result = URL(filePath: "/../images/foo.png", relativeTo: baseURL)
+        #if FOUNDATION_FRAMEWORK_NSURL
+        XCTAssertEqual(result.path, "/../images/foo.png")
+        #else
+        XCTAssertEqual(result.path(), "/../images/foo.png")
+        #endif
+    }
+
     func testAppendFamily() throws {
         let base = URL(string: "https://www.example.com")!
 
