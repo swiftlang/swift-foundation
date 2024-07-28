@@ -143,6 +143,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     func testInt32() {
         check( Int32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0")
         check( Int32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
+        check( Int32(truncatingIfNeeded: 0x3f3e3d3c as UInt32), expectation:  "1061043516")
         check( Int32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647") //  Int32.max
         check( Int32(truncatingIfNeeded: 0x80000000 as UInt32), expectation: "-2147483648") //  Int32.min
         check( Int32(truncatingIfNeeded: 0x81807f7e as UInt32), expectation: "-2122285186")
@@ -153,6 +154,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     func testUInt32() {
         check(UInt32(truncatingIfNeeded: 0x00000000 as UInt32), expectation:           "0") // UInt32.min
         check(UInt32(truncatingIfNeeded: 0x03020100 as UInt32), expectation:    "50462976")
+        check(UInt32(truncatingIfNeeded: 0x3f3e3d3c as UInt32), expectation:  "1061043516")
         check(UInt32(truncatingIfNeeded: 0x7fffffff as UInt32), expectation:  "2147483647")
         check(UInt32(truncatingIfNeeded: 0x80000000 as UInt32), expectation:  "2147483648")
         check(UInt32(truncatingIfNeeded: 0x81807f7e as UInt32), expectation:  "2172682110")
@@ -163,6 +165,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     func testInt64() {
         check( Int64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0")
         check( Int64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
+        check( Int64(truncatingIfNeeded: 0x3f3e3d3c3b3a3938 as UInt64), expectation:  "4557147201846524216")
         check( Int64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807") //  Int64.max
         check( Int64(truncatingIfNeeded: 0x8000000000000000 as UInt64), expectation: "-9223372036854775808") //  Int64.max
         check( Int64(truncatingIfNeeded: 0x838281807f7e7d7c as UInt64), expectation: "-8970465118873813636")
@@ -173,6 +176,7 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     func testUInt64() {
         check(UInt64(truncatingIfNeeded: 0x0000000000000000 as UInt64), expectation:                    "0") // UInt64.min
         check(UInt64(truncatingIfNeeded: 0x0706050403020100 as UInt64), expectation:   "506097522914230528")
+        check(UInt64(truncatingIfNeeded: 0x3f3e3d3c3b3a3938 as UInt64), expectation:  "4557147201846524216")
         check(UInt64(truncatingIfNeeded: 0x7fffffffffffffff as UInt64), expectation:  "9223372036854775807")
         check(UInt64(truncatingIfNeeded: 0x8000000000000000 as UInt64), expectation:  "9223372036854775808")
         check(UInt64(truncatingIfNeeded: 0x838281807f7e7d7c as UInt64), expectation:  "9476278954835737980")
@@ -183,50 +187,91 @@ final class BinaryIntegerFormatStyleTestsUsingBinaryIntegerWords: XCTestCase {
     // MARK: Tests + Big Integer
     
     func testInt128() {
-        check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: true,  expectation:                                        "0")
-        check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: true,  expectation:   "20011376718272490338853433276725592320")
-        check(x64:[0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: true,  expectation:  "170141183460469231731687303715884105727") //  Int128.max
-        check(x64:[0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: true,  expectation: "-170141183460469231731687303715884105728") //  Int128.min
-        check(x64:[0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: true,  expectation:      "-5233100606242806050955395731361296")
-        check(x64:[0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: true,  expectation:                                       "-1")
+        check(x64: [0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: true,  expectation:                                        "0")
+        check(x64: [0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: true,  expectation:   "20011376718272490338853433276725592320")
+        check(x64: [0x3736353433323130, 0x3f3e3d3c3b3a3938] as [UInt64], isSigned: true,  expectation:   "84064528138684436402547477028587843888")
+        check(x64: [0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: true,  expectation:  "170141183460469231731687303715884105727") //  Int128.max
+        check(x64: [0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: true,  expectation: "-170141183460469231731687303715884105728") //  Int128.min
+        check(x64: [0x7f7e7d7c7b7a7978, 0x8786858483828180] as [UInt64], isSigned: true,  expectation: "-160138111651636107965286064775386990216")
+        check(x64: [0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: true,  expectation:      "-5233100606242806050955395731361296")
+        check(x64: [0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: true,  expectation:                                       "-1")
+        
+        guard #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) else { return }
+        
+        check( Int128(truncatingIfNeeded: 0x00000000000000000000000000000000 as UInt128), expectation:                                        "0")
+        check( Int128(truncatingIfNeeded: 0x0f0e0d0c0b0a09080706050403020100 as UInt128), expectation:   "20011376718272490338853433276725592320")
+        check( Int128(truncatingIfNeeded: 0x3f3e3d3c3b3a39383736353433323130 as UInt128), expectation:   "84064528138684436402547477028587843888")
+        check( Int128(truncatingIfNeeded: 0x7fffffffffffffffffffffffffffffff as UInt128), expectation:  "170141183460469231731687303715884105727") //  Int128.max
+        check( Int128(truncatingIfNeeded: 0x80000000000000000000000000000000 as UInt128), expectation: "-170141183460469231731687303715884105728") //  Int128.min
+        check( Int128(truncatingIfNeeded: 0x87868584838281807f7e7d7c7b7a7978 as UInt128), expectation: "-160138111651636107965286064775386990216")
+        check( Int128(truncatingIfNeeded: 0xfffefdfcfbfaf9f8f7f6f5f4f3f2f1f0 as UInt128), expectation:      "-5233100606242806050955395731361296")
+        check( Int128(truncatingIfNeeded: 0xffffffffffffffffffffffffffffffff as UInt128), expectation:                                       "-1")
     }
     
     func testUInt128() {
-        check(x64:[0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: false, expectation:                                        "0") // UInt128.min
-        check(x64:[0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: false, expectation:   "20011376718272490338853433276725592320")
-        check(x64:[0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105728")
-        check(x64:[0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: false, expectation:  "340277133820332220657323652036036850160")
-        check(x64:[0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105727")
-        check(x64:[0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: false, expectation:  "340282366920938463463374607431768211455") // UInt128.max
+        check(x64: [0x0000000000000000, 0x0000000000000000] as [UInt64], isSigned: false, expectation:                                        "0") // UInt128.min
+        check(x64: [0x0706050403020100, 0x0f0e0d0c0b0a0908] as [UInt64], isSigned: false, expectation:   "20011376718272490338853433276725592320")
+        check(x64: [0x3736353433323130, 0x3f3e3d3c3b3a3938] as [UInt64], isSigned: false, expectation:   "84064528138684436402547477028587843888")
+        check(x64: [0xffffffffffffffff, 0x7fffffffffffffff] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105727")
+        check(x64: [0x0000000000000000, 0x8000000000000000] as [UInt64], isSigned: false, expectation:  "170141183460469231731687303715884105728")
+        check(x64: [0x7f7e7d7c7b7a7978, 0x8786858483828180] as [UInt64], isSigned: false, expectation:  "180144255269302355498088542656381221240")
+        check(x64: [0xf7f6f5f4f3f2f1f0, 0xfffefdfcfbfaf9f8] as [UInt64], isSigned: false, expectation:  "340277133820332220657323652036036850160")
+        check(x64: [0xffffffffffffffff, 0xffffffffffffffff] as [UInt64], isSigned: false, expectation:  "340282366920938463463374607431768211455") // UInt128.max
+        
+        guard #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) else { return }
+        
+        check(UInt128(truncatingIfNeeded: 0x00000000000000000000000000000000 as UInt128), expectation:                                        "0") // UInt128.min
+        check(UInt128(truncatingIfNeeded: 0x0f0e0d0c0b0a09080706050403020100 as UInt128), expectation:   "20011376718272490338853433276725592320")
+        check(UInt128(truncatingIfNeeded: 0x3f3e3d3c3b3a39383736353433323130 as UInt128), expectation:   "84064528138684436402547477028587843888")
+        check(UInt128(truncatingIfNeeded: 0x7fffffffffffffffffffffffffffffff as UInt128), expectation:  "170141183460469231731687303715884105727")
+        check(UInt128(truncatingIfNeeded: 0x80000000000000000000000000000000 as UInt128), expectation:  "170141183460469231731687303715884105728")
+        check(UInt128(truncatingIfNeeded: 0x87868584838281807f7e7d7c7b7a7978 as UInt128), expectation:  "180144255269302355498088542656381221240")
+        check(UInt128(truncatingIfNeeded: 0xfffefdfcfbfaf9f8f7f6f5f4f3f2f1f0 as UInt128), expectation:  "340277133820332220657323652036036850160")
+        check(UInt128(truncatingIfNeeded: 0xffffffffffffffffffffffffffffffff as UInt128), expectation:  "340282366920938463463374607431768211455") // UInt128.max
     }
     
     // MARK: Tests + Big Integer + Miscellaneous
     
     func testWordsIsEmptyResultsInZero() {
-        check(words:[              ] as [UInt], isSigned: true,  expectation:  "0")
-        check(words:[              ] as [UInt], isSigned: false, expectation:  "0")
+        check(words: [] as [UInt], isSigned: true,  expectation: "0")
+        check(words: [] as [UInt], isSigned: false, expectation: "0")
     }
     
     func testSignExtendingDoesNotChangeTheResult() {
-        check(words:[ 0            ] as [UInt], isSigned: true,  expectation:  "0")
-        check(words:[ 0,  0        ] as [UInt], isSigned: true,  expectation:  "0")
-        check(words:[ 0,  0,  0    ] as [UInt], isSigned: true,  expectation:  "0")
-        check(words:[ 0,  0,  0,  0] as [UInt], isSigned: true,  expectation:  "0")
-        
-        check(words:[~0            ] as [UInt], isSigned: true,  expectation: "-1")
-        check(words:[~0, ~0        ] as [UInt], isSigned: true,  expectation: "-1")
-        check(words:[~0, ~0, ~0    ] as [UInt], isSigned: true,  expectation: "-1")
-        check(words:[~0, ~0, ~0, ~0] as [UInt], isSigned: true,  expectation: "-1")
-        
-        check(words:[ 0            ] as [UInt], isSigned: false, expectation:  "0")
-        check(words:[ 0,  0        ] as [UInt], isSigned: false, expectation:  "0")
-        check(words:[ 0,  0,  0    ] as [UInt], isSigned: false, expectation:  "0")
-        check(words:[ 0,  0,  0,  0] as [UInt], isSigned: false, expectation:  "0")
+        for isSigned in [true, false] {
+            
+            check(words: [ 0            ] as [UInt], isSigned: isSigned, expectation:  "0")
+            check(words: [ 0,  0        ] as [UInt], isSigned: isSigned, expectation:  "0")
+            check(words: [ 0,  0,  0    ] as [UInt], isSigned: isSigned, expectation:  "0")
+            check(words: [ 0,  0,  0,  0] as [UInt], isSigned: isSigned, expectation:  "0")
+            
+            check(words: [ 1            ] as [UInt], isSigned: isSigned, expectation:  "1")
+            check(words: [ 1,  0        ] as [UInt], isSigned: isSigned, expectation:  "1")
+            check(words: [ 1,  0,  0    ] as [UInt], isSigned: isSigned, expectation:  "1")
+            check(words: [ 1,  0,  0,  0] as [UInt], isSigned: isSigned, expectation:  "1")
+            
+            guard isSigned else { continue }
+            
+            check(words: [~1            ] as [UInt], isSigned: isSigned, expectation: "-2")
+            check(words: [~1, ~0        ] as [UInt], isSigned: isSigned, expectation: "-2")
+            check(words: [~1, ~0, ~0    ] as [UInt], isSigned: isSigned, expectation: "-2")
+            check(words: [~1, ~0, ~0, ~0] as [UInt], isSigned: isSigned, expectation: "-2")
+            
+            check(words: [~0            ] as [UInt], isSigned: isSigned, expectation: "-1")
+            check(words: [~0, ~0        ] as [UInt], isSigned: isSigned, expectation: "-1")
+            check(words: [~0, ~0, ~0    ] as [UInt], isSigned: isSigned, expectation: "-1")
+            check(words: [~0, ~0, ~0, ~0] as [UInt], isSigned: isSigned, expectation: "-1")
+        }
     }
     
     // MARK: Assertions
     
-    func check(_ integer: some BinaryInteger, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
+    func check(_ integer: some FixedWidthInteger, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(integer, type(of: integer).init(expectation), file: file, line: line)
+        check(binary: integer, expectation: expectation, file: file, line: line)
+    }
+    
+    func check(binary integer: some BinaryInteger, expectation: String, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(integer.description, expectation, "integer description does not match expectation", file: file, line: line)
         check(ascii: integer.numericStringRepresentation.utf8, expectation: expectation, file: file, line: line)
         check(words: Array(integer.words), isSigned: type(of: integer).isSigned, expectation: expectation, file: file, line: line)
