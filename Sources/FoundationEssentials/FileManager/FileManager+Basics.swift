@@ -41,21 +41,12 @@ extension LARGE_INTEGER /* : @retroactive Equatable */ {
 
 internal struct _FileManagerImpl {
     weak var _manager: FileManager?
-    weak var delegate: FileManagerDelegate?
     
     var fileManager: FileManager {
         guard let _manager else {
             fatalError("_FileManagerImpl called without a valid reference to a FileManager")
         }
         return _manager
-    }
-    
-    var safeDelegate: FileManagerDelegate? {
-#if FOUNDATION_FRAMEWORK
-        fileManager._safeDelegate() as? FileManagerDelegate
-#else
-        self.delegate
-#endif
     }
     
     init() {}
