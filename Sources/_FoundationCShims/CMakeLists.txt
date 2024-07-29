@@ -19,6 +19,9 @@ add_library(_FoundationCShims STATIC
 
 target_include_directories(_FoundationCShims PUBLIC include)
 
+target_compile_options(_FoundationCShims INTERFACE
+  "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/include/module.modulemap>")
+
 set_property(GLOBAL APPEND PROPERTY SWIFT_FOUNDATION_EXPORTS _FoundationCShims)
 
 if(BUILD_SHARED_LIBS)
