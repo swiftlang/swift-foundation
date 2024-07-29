@@ -10,6 +10,13 @@ let package = Package(
         .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1"),
     ],
     targets: [
+        .target(
+            name: "FoundationBenchmarkSupport",
+            dependencies: [
+                .product(name: "FoundationEssentials", package: "swift-foundation-local"),
+            ]
+        ),
+
         .executableTarget(
             name: "PredicateBenchmarks",
             dependencies: [
@@ -49,6 +56,7 @@ let package = Package(
             dependencies: [
                 .product(name: "FoundationEssentials", package: "swift-foundation-local"),
                 .product(name: "Benchmark", package: "package-benchmark"),
+                "FoundationBenchmarkSupport",
             ],
             path: "Benchmarks/DataIO",
             plugins: [
@@ -72,6 +80,7 @@ let package = Package(
             dependencies: [
                 .product(name: "FoundationEssentials", package: "swift-foundation-local"),
                 .product(name: "Benchmark", package: "package-benchmark"),
+                "FoundationBenchmarkSupport",
             ],
             path: "Benchmarks/String",
             plugins: [

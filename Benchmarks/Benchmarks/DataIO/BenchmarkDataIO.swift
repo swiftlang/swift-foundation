@@ -16,7 +16,8 @@ import func Benchmark.blackHole
 #if FOUNDATION_FRAMEWORK
 import Foundation
 #else
-@testable import FoundationEssentials
+import FoundationEssentials
+import FoundationBenchmarkSupport
 #endif
 
 

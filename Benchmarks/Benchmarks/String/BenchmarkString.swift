@@ -17,6 +17,13 @@ import func Benchmark.blackHole
 import Foundation
 #else
 import FoundationEssentials
+import FoundationBenchmarkSupport
+#endif
+
+#if FOUNDATION_FRAMEWORK
+private typealias Encoding = String.Encoding
+#else
+private typealias Encoding = FoundationEssentialsStringEncoding
 #endif
 
 let benchmarks = {
@@ -85,21 +92,21 @@ let benchmarks = {
     Benchmark("utf16-decode", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
-                blackHole(String(bytes: asciiSmallStrDataUTF16BE, encoding: .utf16BigEndian))
-                blackHole(String(bytes: nonAsciiSmallStrDataUTF16BE, encoding: .utf16BigEndian))
+                blackHole(String(bytes: asciiSmallStrDataUTF16BE, encoding: Encoding.utf16BigEndian))
+                blackHole(String(bytes: nonAsciiSmallStrDataUTF16BE, encoding: Encoding.utf16BigEndian))
 
-                blackHole(String(bytes: asciiLargeStrDataUTF16BE, encoding: .utf16BigEndian))
-                blackHole(String(bytes: nonAsciiLargeStrDataUTF16BE, encoding: .utf16BigEndian))
+                blackHole(String(bytes: asciiLargeStrDataUTF16BE, encoding: Encoding.utf16BigEndian))
+                blackHole(String(bytes: nonAsciiLargeStrDataUTF16BE, encoding: Encoding.utf16BigEndian))
 
-                blackHole(String(bytes: asciiSmallStrDataUTF16LE, encoding: .utf16LittleEndian))
-                blackHole(String(bytes: nonAsciiSmallStrDataUTF16LE, encoding: .utf16LittleEndian))
+                blackHole(String(bytes: asciiSmallStrDataUTF16LE, encoding: Encoding.utf16LittleEndian))
+                blackHole(String(bytes: nonAsciiSmallStrDataUTF16LE, encoding: Encoding.utf16LittleEndian))
 
-                blackHole(String(bytes: asciiLargeStrDataUTF16LE, encoding: .utf16LittleEndian))
-                blackHole(String(bytes: nonAsciiLargeStrDataUTF16LE, encoding: .utf16LittleEndian))
+                blackHole(String(bytes: asciiLargeStrDataUTF16LE, encoding: Encoding.utf16LittleEndian))
+                blackHole(String(bytes: nonAsciiLargeStrDataUTF16LE, encoding: Encoding.utf16LittleEndian))
 
                 // Use big endian input data with plain utf16 to get a valid string.
-                blackHole(String(bytes: asciiLargeStrDataUTF16BE, encoding: .utf16))
-                blackHole(String(bytes: nonAsciiLargeStrDataUTF16BE, encoding: .utf16))
+                blackHole(String(bytes: asciiLargeStrDataUTF16BE, encoding: Encoding.utf16))
+                blackHole(String(bytes: nonAsciiLargeStrDataUTF16BE, encoding: Encoding.utf16))
             }
         }
     }
@@ -130,21 +137,21 @@ let benchmarks = {
     Benchmark("utf32-decode", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
-                blackHole(String(bytes: asciiSmallStrDataUTF32BE, encoding: .utf32BigEndian))
-                blackHole(String(bytes: nonAsciiSmallStrDataUTF32BE, encoding: .utf32BigEndian))
+                blackHole(String(bytes: asciiSmallStrDataUTF32BE, encoding: Encoding.utf32BigEndian))
+                blackHole(String(bytes: nonAsciiSmallStrDataUTF32BE, encoding: Encoding.utf32BigEndian))
 
-                blackHole(String(bytes: asciiLargeStrDataUTF32BE, encoding: .utf32BigEndian))
-                blackHole(String(bytes: nonAsciiLargeStrDataUTF32BE, encoding: .utf32BigEndian))
+                blackHole(String(bytes: asciiLargeStrDataUTF32BE, encoding: Encoding.utf32BigEndian))
+                blackHole(String(bytes: nonAsciiLargeStrDataUTF32BE, encoding: Encoding.utf32BigEndian))
 
-                blackHole(String(bytes: asciiSmallStrDataUTF32LE, encoding: .utf32LittleEndian))
-                blackHole(String(bytes: nonAsciiSmallStrDataUTF32LE, encoding: .utf32LittleEndian))
+                blackHole(String(bytes: asciiSmallStrDataUTF32LE, encoding: Encoding.utf32LittleEndian))
+                blackHole(String(bytes: nonAsciiSmallStrDataUTF32LE, encoding: Encoding.utf32LittleEndian))
 
-                blackHole(String(bytes: asciiLargeStrDataUTF32LE, encoding: .utf32LittleEndian))
-                blackHole(String(bytes: nonAsciiLargeStrDataUTF32LE, encoding: .utf32LittleEndian))
+                blackHole(String(bytes: asciiLargeStrDataUTF32LE, encoding: Encoding.utf32LittleEndian))
+                blackHole(String(bytes: nonAsciiLargeStrDataUTF32LE, encoding: Encoding.utf32LittleEndian))
 
                 // Use big endian input data with plain UTF32 to get a valid string.
-                blackHole(String(bytes: asciiLargeStrDataUTF32BE, encoding: .utf32))
-                blackHole(String(bytes: nonAsciiLargeStrDataUTF32BE, encoding: .utf32))
+                blackHole(String(bytes: asciiLargeStrDataUTF32BE, encoding: Encoding.utf32))
+                blackHole(String(bytes: nonAsciiLargeStrDataUTF32BE, encoding: Encoding.utf32))
             }
         }
     }
