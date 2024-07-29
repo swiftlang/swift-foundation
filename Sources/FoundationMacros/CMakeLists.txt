@@ -43,8 +43,9 @@ target_link_libraries(FoundationMacros PUBLIC
     SwiftSyntax::SwiftSyntaxBuilder
 )
 
+# The macro is installed into lib/swift/host/plugins, but needs to load libraries from lib/swift/host and lib/swift/${SWIFT_SYSTEM_NAME}
 set_target_properties(FoundationMacros PROPERTIES
-    INSTALL_RPATH "$ORIGIN"
+    INSTALL_RPATH "$ORIGIN/../../../swift/${SWIFT_SYSTEM_NAME}:$ORIGIN/.."
     INSTALL_REMOVE_ENVIRONMENT_RPATH ON)
 
 target_compile_options(FoundationMacros PRIVATE -parse-as-library)
