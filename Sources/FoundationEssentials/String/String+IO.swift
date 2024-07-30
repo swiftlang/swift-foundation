@@ -112,7 +112,17 @@ extension String {
                 self = string
             } else {
                 // String is not valid UTF8
+#if FOUNDATION_FRAMEWORK && os(macOS)
+                // Allow for invalid UTF8 to be repaired in compatibility cases
+                if Self.compatibiltity2 {
+                    self = String(decoding: Array(bytes), as: UTF8.self)
+                } else {
+                    return nil
+                }
+
+#else
                 return nil
+#endif
             }
         case .utf16BigEndian, .utf16LittleEndian, .utf16:
             // See also the package extension String?(_utf16:), which does something similar to this without the swapping of big/little.
