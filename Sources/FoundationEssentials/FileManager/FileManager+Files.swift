@@ -905,8 +905,11 @@ extension _FileManagerImpl {
             let group = attributes[.groupOwnerAccountName] as? String
             let groupID = _readFileAttributePrimitive(attributes[.groupOwnerAccountID], as: UInt.self)
             
-            #if !os(WASI) // WASI does not have the concept of users or groups
             if user != nil || userID != nil || group != nil || groupID != nil {
+                #if os(WASI)
+                // WASI does not have the concept of users or groups
+                throw CocoaError.errorWithFilePath(.featureUnsupported, path)
+                #else
                 // Bias toward userID & groupID - try to prevent round trips to getpwnam if possible.
                 var leaveUnchanged: UInt32 { UInt32(bitPattern: -1) }
                 let rawUserID = userID.flatMap(uid_t.init) ?? user.flatMap(Self._userAccountNameToNumber) ?? leaveUnchanged
@@ -914,8 +917,8 @@ extension _FileManagerImpl {
                 if chown(fileSystemRepresentation, rawUserID, rawGroupID) != 0 {
                     throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
                 }
+                #endif
             }
-            #endif
             
             try Self._setCatInfoAttributes(attributes, path: path)
             
