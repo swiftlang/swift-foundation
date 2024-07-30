@@ -13,12 +13,15 @@
 import Benchmark
 import func Benchmark.blackHole
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
+#if os(macOS) && USE_PACKAGE
+import FoundationEssentials
 #else
-@testable import FoundationEssentials
+import Foundation
 #endif
 
+#if !FOUNDATION_FRAMEWORK
+private func autoreleasepool<T>(_ block: () -> T) -> T { block() }
+#endif
 
 #if canImport(Glibc)
 import Glibc
@@ -27,16 +30,13 @@ import Glibc
 import Darwin
 #endif
 
-#if !FOUNDATION_FRAMEWORK
-func testPath() -> String {
-    // Generate a random file name
-    FileManager.default.temporaryDirectory.path.appendingPathComponent("testfile-\(UUID().uuidString)")
-}
-#else
 func testPath() -> URL {
+    #if compiler(>=6)
     FileManager.default.temporaryDirectory.appending(path: "testfile-\(UUID().uuidString)", directoryHint: .notDirectory)
+    #else
+    FileManager.default.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
+    #endif
 }
-#endif
 
 func generateTestData(count: Int) -> Data {
     let memory = malloc(count)!
@@ -51,17 +51,10 @@ func generateTestData(count: Int) -> Data {
     return Data(bytesNoCopy: ptr, count: count, deallocator: .free)
 }
 
-#if !FOUNDATION_FRAMEWORK
-func cleanup(at path: String) {
-    try? FileManager.default.removeItem(atPath: path)
-    // Ignore any errors
-}
-#else
 func cleanup(at path: URL) {
     try? FileManager.default.removeItem(at: path)
     // Ignore any errors
 }
-#endif
 
 // 16 MB file, big enough to trigger things like chunking
 let data = generateTestData(count: 1 << 24)
@@ -74,7 +67,13 @@ let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
+    #if os(macOS)
+    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput, .syscalls]
+    #elseif os(Linux)
+    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput, .readSyscalls, .writeSyscalls]
+    #else
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput]
+    #endif
 
     Benchmark("read-write-emptyFile") { benchmark in
         let path = testPath()
@@ -118,7 +117,10 @@ let benchmarks = {
     
     // MARK: base64
         
-    Benchmark("base64-encode", configuration: .init(scalingFactor: .kilo)) { benchmark in
+    Benchmark("base64-encode", configuration: .init(
+        metrics: [.cpuTotal, .mallocCountTotal, .peakMemoryResident, .throughput],
+        scalingFactor: .kilo)
+    ) { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
                 blackHole(base64Data.base64EncodedString())
@@ -127,7 +129,10 @@ let benchmarks = {
     }
     
     
-    Benchmark("base64-decode", configuration: .init(scalingFactor: .kilo)) { benchmark in
+    Benchmark("base64-decode", configuration: .init(
+        metrics: [.cpuTotal, .mallocCountTotal, .peakMemoryResident, .throughput],
+        scalingFactor: .kilo)
+    ) { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
                 blackHole(Data(base64Encoded: base64DataString))

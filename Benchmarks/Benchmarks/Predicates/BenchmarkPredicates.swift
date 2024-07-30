@@ -13,10 +13,10 @@
 import Benchmark
 import func Benchmark.blackHole
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
+#if os(macOS) && USE_PACKAGE
 import FoundationEssentials
+#else
+import Foundation
 #endif
 
 let monster = Monster(name: "Orc", level: 80, hp: 100, mana: 0, weapon: .sword(Sword(p1: 1, p2: 2, p3: 3, p4: 4, p5: 5)))
@@ -67,6 +67,8 @@ func registerPredicateTests_disabled() {
 #endif
 
 func registerPredicateTests() {
+    // Temporarily disabled due to link issue
+    #if FOUNDATION_FRAMEWORK
     if #available(macOS 14, *) {
 
         var predicateTests : [(String, Predicate<Monster>)] = []
@@ -103,6 +105,8 @@ func registerPredicateTests() {
             }
         }
     }
+
+    #endif // FOUNDATION_FRAMEWORK
 }
 
 let benchmarks : () -> Void = {
@@ -113,3 +117,4 @@ let benchmarks : () -> Void = {
 
     registerPredicateTests()
 }
+

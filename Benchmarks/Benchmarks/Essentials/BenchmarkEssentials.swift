@@ -13,10 +13,10 @@
 import Benchmark
 import func Benchmark.blackHole
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
+#if os(macOS) && USE_PACKAGE
 import FoundationEssentials
+#else
+import Foundation
 #endif
 
 let benchmarks = {

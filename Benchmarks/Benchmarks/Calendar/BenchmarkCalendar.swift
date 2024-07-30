@@ -13,18 +13,18 @@
 import Benchmark
 import func Benchmark.blackHole
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
+#if os(macOS) && USE_PACKAGE
 import FoundationEssentials
 import FoundationInternationalization
+#else
+import Foundation
 #endif
 
 let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
-    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput]
+    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .mallocCountTotal, .throughput]
     
     let thanksgivingComponents = DateComponents(month: 11, weekday: 5, weekdayOrdinal: 4)
     let cal = Calendar(identifier: .gregorian)
@@ -42,6 +42,7 @@ let benchmarks = {
             }
         }
     }
+
     Benchmark("nextThousandThanksgivings") { benchmark in
         var count = 1000
         cal.enumerateDates(startingAfter: thanksgivingStart, matching: thanksgivingComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
@@ -51,26 +52,34 @@ let benchmarks = {
             }
         }
     }
-    Benchmark("nextThousandThanksgivingsSequence") { benchmark in
-        var count = 1000
-        for _ in cal.dates(byMatching: thanksgivingComponents, startingAt: thanksgivingStart, matchingPolicy: .nextTime) {
-            count -= 1
-            if count == 0 {
-                break
+
+    // Only available in Swift 6 for non-Darwin platforms, macOS 15 for Darwin
+    #if swift(>=6.0)
+    if #available(macOS 15, *) {
+        Benchmark("nextThousandThanksgivingsSequence") { benchmark in
+            var count = 1000
+            for _ in cal.dates(byMatching: thanksgivingComponents, startingAt: thanksgivingStart, matchingPolicy: .nextTime) {
+                count -= 1
+                if count == 0 {
+                    break
+                }
             }
         }
-    }
-    Benchmark("nextThousandThanksgivingsUsingRecurrenceRule") { benchmark in
-        var rule = Calendar.RecurrenceRule(calendar: cal, frequency: .yearly, end: .afterOccurrences(1000))
-        rule.months = [11]
-        rule.weekdays = [.nth(4, .thursday)]
-        rule.matchingPolicy = .nextTime
-        var count = 0
-        for _ in rule.recurrences(of: thanksgivingStart) {
-            count += 1
+
+        Benchmark("nextThousandThanksgivingsUsingRecurrenceRule") { benchmark in
+            var rule = Calendar.RecurrenceRule(calendar: cal, frequency: .yearly, end: .afterOccurrences(1000))
+            rule.months = [11]
+            rule.weekdays = [.nth(4, .thursday)]
+            rule.matchingPolicy = .nextTime
+            var count = 0
+            for _ in rule.recurrences(of: thanksgivingStart) {
+                count += 1
+            }
+            assert(count == 1000)
         }
-        assert(count == 1000)
-    }
+    } // #available(macOS 15, *)
+    #endif // swift(>=6.0)
+
     Benchmark("CurrentDateComponentsFromThanksgivings") { benchmark in
         var count = 1000
         currentCalendar.enumerateDates(startingAfter: thanksgivingStart, matching: thanksgivingComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
@@ -82,9 +91,17 @@ let benchmarks = {
         }
     }
 
+    // MARK: - Allocations
+
     let reference = Date(timeIntervalSinceReferenceDate: 496359355.795410) //2016-09-23T14:35:55-0700
     
-    Benchmark("allocationsForFixedCalendars", configuration: .init(scalingFactor: .mega)) { benchmark in
+    let allocationsConfiguration = Benchmark.Configuration(
+        metrics: [.cpuTotal, .mallocCountTotal, .peakMemoryResident, .throughput],
+        timeUnits: .nanoseconds,
+        scalingFactor: .mega
+    )
+
+    Benchmark("allocationsForFixedCalendars", configuration: allocationsConfiguration) { benchmark in
         for _ in benchmark.scaledIterations {
             // Fixed calendar
             let cal = Calendar(identifier: .gregorian)
@@ -93,7 +110,7 @@ let benchmarks = {
         }
     }
     
-    Benchmark("allocationsForCurrentCalendar", configuration: .init(scalingFactor: .mega)) { benchmark in
+    Benchmark("allocationsForCurrentCalendar", configuration: allocationsConfiguration) { benchmark in
         for _ in benchmark.scaledIterations {
             // Current calendar
             let cal = Calendar.current
@@ -102,7 +119,7 @@ let benchmarks = {
         }
     }
     
-    Benchmark("allocationsForAutoupdatingCurrentCalendar", configuration: .init(scalingFactor: .mega)) { benchmark in
+    Benchmark("allocationsForAutoupdatingCurrentCalendar", configuration: allocationsConfiguration) { benchmark in
         for _ in benchmark.scaledIterations {
             // Autoupdating current calendar
             let cal = Calendar.autoupdatingCurrent
@@ -111,7 +128,7 @@ let benchmarks = {
         }
     }
     
-    Benchmark("copyOnWritePerformance", configuration: .init(scalingFactor: .mega)) { benchmark in
+    Benchmark("copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
         var cal = Calendar(identifier: .gregorian)
         for i in benchmark.scaledIterations {
             cal.firstWeekday = i % 2
@@ -119,7 +136,7 @@ let benchmarks = {
         }
     }
     
-    Benchmark("copyOnWritePerformanceNoDiff", configuration: .init(scalingFactor: .mega)) { benchmark in
+    Benchmark("copyOnWritePerformanceNoDiff", configuration: allocationsConfiguration) { benchmark in
         var cal = Calendar(identifier: .gregorian)
         let tz = TimeZone(secondsFromGMT: 1800)!
         for _ in benchmark.scaledIterations {
@@ -127,7 +144,7 @@ let benchmarks = {
         }
     }
     
-    Benchmark("allocationsForFixedLocale", configuration: .init(scalingFactor: .mega)) { benchmark in
+    Benchmark("allocationsForFixedLocale", configuration: allocationsConfiguration) { benchmark in
         // Fixed locale
         for _ in benchmark.scaledIterations {
             let loc = Locale(identifier: "en_US")
@@ -136,7 +153,7 @@ let benchmarks = {
         }
     }
     
-    Benchmark("allocationsForCurrentLocale", configuration: .init(scalingFactor: .mega)) { benchmark in
+    Benchmark("allocationsForCurrentLocale", configuration: allocationsConfiguration) { benchmark in
         // Current locale
         for _ in benchmark.scaledIterations {
             let loc = Locale.current
@@ -145,7 +162,7 @@ let benchmarks = {
         }
     }
     
-    Benchmark("allocationsForAutoupdatingCurrentLocale", configuration: .init(scalingFactor: .mega)) { benchmark in
+    Benchmark("allocationsForAutoupdatingCurrentLocale", configuration: allocationsConfiguration) { benchmark in
         // Autoupdating current locale
         for _ in benchmark.scaledIterations {
             let loc = Locale.autoupdatingCurrent
@@ -153,7 +170,9 @@ let benchmarks = {
             assert(identifier == "en_US")
         }
     }
-        
+
+    // MARK: - Identifiers
+
     Benchmark("identifierFromComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
         let c1 = ["kCFLocaleLanguageCodeKey" : "en"]
         let c2 = ["kCFLocaleLanguageCodeKey" : "zh",
