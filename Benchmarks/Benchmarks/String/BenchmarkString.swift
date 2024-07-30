@@ -26,7 +26,7 @@ let benchmarks = {
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
     
     // MARK: Encoding strings
-    let asciiSmallStr = "abcdefghijklmnopqrtuvwxyz"
+    let asciiSmallStr = "abcdefghijklmnopqrstuvwxyz"
     let nonAsciiSmallStr = "🛬x𝄞𝄢y👽"
     
     var asciiLargeStr = ""
