@@ -51,6 +51,9 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt16.self, min: "0", max: "65535")
         check(type: UInt32.self, min: "0", max: "4294967295")
         check(type: UInt64.self, min: "0", max: "18446744073709551615")
+        if @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+            check(type: UInt128.self, min: "0", max: "340282366920938463463374607431768211455")
+        }
     }
 
     func testNumericStringRepresentation_builtinIntegersAroundDecimalMagnitude() throws {
