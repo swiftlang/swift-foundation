@@ -612,7 +612,7 @@ final class JSONEncoderTests : XCTestCase {
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt16], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt32], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt64], as: [Bool].self)
-        if #available(macOS 15.0, *) {
+        if @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
           _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt128], as: [Bool].self)
         }
         _testRoundTripTypeCoercionFailure(of: [0.0, 1.0] as [Float], as: [Bool].self)
