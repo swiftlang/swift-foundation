@@ -43,7 +43,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: Int16.self, min: "-32768", max: "32767")
         check(type: Int32.self, min: "-2147483648", max: "2147483647")
         check(type: Int64.self, min: "-9223372036854775808", max: "9223372036854775807")
-        if @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
             check(type: Int128.self, min: "-170141183460469231731687303715884105728", max: "170141183460469231731687303715884105727")
         }
 
@@ -51,7 +51,7 @@ final class BinaryIntegerFormatStyleTests: XCTestCase {
         check(type: UInt16.self, min: "0", max: "65535")
         check(type: UInt32.self, min: "0", max: "4294967295")
         check(type: UInt64.self, min: "0", max: "18446744073709551615")
-        if @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
             check(type: UInt128.self, min: "0", max: "340282366920938463463374607431768211455")
         }
     }
