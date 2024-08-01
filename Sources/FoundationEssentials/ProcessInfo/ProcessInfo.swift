@@ -389,7 +389,7 @@ extension _ProcessInfo {
             patch: Int(osVersionInfo.dwBuildNumber)
         )
 #else
-        return OperatingSystemVersion(majorVersion: -1, minorVersion: 0, patchVersion: 0)
+        return (major: -1, minor: 0, patch: 0)
 #endif
     }
 
