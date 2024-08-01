@@ -30,6 +30,8 @@ struct _ThreadLocal {
     fileprivate typealias PlatformKey = tss_t
 #elseif canImport(WinSDK)
     fileprivate typealias PlatformKey = DWORD
+#elseif os(WASI)
+    fileprivate typealias PlatformKey = UnsafeMutablePointer<UnsafeMutableRawPointer?>
 #endif
     
     struct Key<Value> {
@@ -46,6 +48,8 @@ struct _ThreadLocal {
             self.key = key
 #elseif canImport(WinSDK)
             key = FlsAlloc(nil)
+#elseif os(WASI)
+            key = UnsafeMutablePointer<UnsafeMutableRawPointer?>.allocate(capacity: 1)
 #endif
         }
     }
@@ -58,6 +62,8 @@ struct _ThreadLocal {
             tss_get(key)
 #elseif canImport(WinSDK)
             FlsGetValue(key)
+#elseif os(WASI)
+            key.pointee
 #endif
         }
         
@@ -68,6 +74,8 @@ struct _ThreadLocal {
             tss_set(key, newValue)
 #elseif canImport(WinSDK)
             FlsSetValue(key, newValue)
+#elseif os(WASI)
+            key.pointee = newValue
 #endif
         }
     }
