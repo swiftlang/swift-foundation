@@ -27,19 +27,19 @@ extern char **environ;
 
 #if __has_include(<libc_private.h>)
 #import <libc_private.h>
-void _platform_shims_lock_environ() {
+void _platform_shims_lock_environ(void) {
     environ_lock_np();
 }
 
-void _platform_shims_unlock_environ() {
+void _platform_shims_unlock_environ(void) {
     environ_unlock_np();
 }
 #else
-void _platform_shims_lock_environ() { /* noop */ }
-void _platform_shims_unlock_environ() { /* noop */ }
+void _platform_shims_lock_environ(void) { /* noop */ }
+void _platform_shims_unlock_environ(void) { /* noop */ }
 #endif
 
-char ** _platform_shims_get_environ() {
+char ** _platform_shims_get_environ(void) {
 #if __has_include(<crt_externs.h>)
     return *_NSGetEnviron();
 #elif defined(_WIN32)
@@ -52,20 +52,20 @@ char ** _platform_shims_get_environ() {
 }
 
 #if __has_include(<libkern/OSThermalNotification.h>)
-const char * _platform_shims_kOSThermalNotificationPressureLevelName() {
+const char * _platform_shims_kOSThermalNotificationPressureLevelName(void) {
     return kOSThermalNotificationPressureLevelName;
 }
 #endif
 
 #if __has_include(<mach/vm_page_size.h>)
-vm_size_t _platform_shims_vm_size() {
+vm_size_t _platform_shims_vm_size(void) {
     // This shim exists because vm_page_size is not marked const, and therefore looks like global mutable state to Swift.
     return vm_page_size;
 }
 #endif
 
 #if __has_include(<mach/mach.h>)
-mach_port_t _platform_mach_task_self() {
+mach_port_t _platform_mach_task_self(void) {
     // This shim exists because mach_task_self_ is not marked const, and therefore looks like global mutable state to Swift.
     return mach_task_self();
 }
