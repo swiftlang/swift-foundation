@@ -519,6 +519,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
                 
                 cleanupTemporaryDirectory(at: temporaryDirectoryPath)
                 
+#if !os(WASI) // WASI does not support fchmod for now
                 if let mode {
                     // Try to change the mode if the path has not changed. Do our best, but don't report an error.
 #if FOUNDATION_FRAMEWORK
@@ -542,6 +543,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
                     fchmod(fd, mode)
 #endif
                 }
+#endif // os(WASI)
             }
         }
     }

@@ -450,6 +450,7 @@ extension String {
             return envVar.standardizingPath
         }
         
+        #if !os(WASI) // WASI does not have user concept
         // Next, attempt to find the home directory via getpwnam/getpwuid
         var pass: UnsafeMutablePointer<passwd>?
         if let user {
@@ -463,6 +464,7 @@ extension String {
         if let dir = pass?.pointee.pw_dir {
             return String(cString: dir).standardizingPath
         }
+        #endif
         
         // Fallback to HOME for the current user if possible
         if user == nil, let home = getenv("HOME") {

@@ -271,7 +271,7 @@ extension _FileManagerImpl {
     }
     #endif
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
     static func _userAccountNameToNumber(_ name: String) -> uid_t? {
         name.withCString { ptr in
             getpwnam(ptr)?.pointee.pw_uid
