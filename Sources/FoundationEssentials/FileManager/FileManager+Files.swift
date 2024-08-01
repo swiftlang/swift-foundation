@@ -461,7 +461,7 @@ extension _FileManagerImpl {
             parent = fileManager.currentDirectoryPath
         }
 
-#if os(Windows)
+#if os(Windows) || os(WASI)
         return fileManager.isWritableFile(atPath: parent) && fileManager.isWritableFile(atPath: path)
 #else
         guard fileManager.isWritableFile(atPath: parent),
