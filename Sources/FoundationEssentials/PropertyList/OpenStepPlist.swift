@@ -16,6 +16,8 @@ import Darwin
 import Bionic
 #elseif canImport(Glibc)
 import Glibc
+#elseif os(WASI)
+import WASILibc
 #endif
 
 #if canImport(CRT)

@@ -18,6 +18,8 @@ import Android
 import Glibc
 #elseif os(Windows)
 import WinSDK
+#elseif os(WASI)
+import WASILibc
 #endif
 
 internal import _FoundationCShims
