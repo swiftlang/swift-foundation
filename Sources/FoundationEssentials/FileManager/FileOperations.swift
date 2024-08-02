@@ -855,12 +855,14 @@ enum _FileOperations {
         }
         defer { close(dstfd) }
 
+        #if !os(WASI) // WASI doesn't have fchmod for now
         // Set the file permissions using fchmod() instead of when open()ing to avoid umask() issues
         let permissions = fileInfo.st_mode & ~S_IFMT
         guard fchmod(dstfd, permissions) == 0 else {
             try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
             return
         }
+        #endif
 
         if fileInfo.st_size == 0 {
             // no copying required
@@ -871,12 +873,31 @@ enum _FileOperations {
         let chunkSize: Int = Int(fileInfo.st_blksize)
         var current: off_t = 0
         
+        #if os(WASI)
+        // WASI doesn't have sendfile, so we need to do it in user space with read/write
+        try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: chunkSize) { buffer in
+            while current < total {
+                let readSize = Swift.min(total - Int(current), chunkSize)
+                let bytesRead = read(srcfd, buffer.baseAddress, readSize)
+                guard bytesRead >= 0 else {
+                    try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
+                    return
+                }
+                guard write(dstfd, buffer.baseAddress, bytesRead) == bytesRead else {
+                    try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
+                    return
+                }
+                current += off_t(bytesRead)
+            }
+        }
+        #else
         while current < total {
             guard sendfile(dstfd, srcfd, &current, Swift.min(total - Int(current), chunkSize)) != -1 else {
                 try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
                 return
             }
         }
+        #endif
     }
     #endif
 

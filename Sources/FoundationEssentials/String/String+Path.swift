@@ -374,7 +374,7 @@ extension String {
                     guard GetEnvironmentVariableW(pwszVariable, $0.baseAddress, dwLength) == dwLength - 1 else {
                         return nil
                     }
-                    return String(decoding: $0, as: UTF16.self)
+                    return String(decodingCString: $0.baseAddress!, as: UTF16.self)
                 }
             }
         }
@@ -436,7 +436,7 @@ extension String {
             guard GetUserProfileDirectoryW(hToken, $0.baseAddress, &dwcchSize) else {
                 fatalError("unable to query user profile directory")
             }
-            return String(decoding: $0, as: UTF16.self)
+            return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
 #else
         #if targetEnvironment(simulator)
@@ -450,6 +450,7 @@ extension String {
             return envVar.standardizingPath
         }
         
+        #if !os(WASI) // WASI does not have user concept
         // Next, attempt to find the home directory via getpwnam/getpwuid
         var pass: UnsafeMutablePointer<passwd>?
         if let user {
@@ -463,6 +464,7 @@ extension String {
         if let dir = pass?.pointee.pw_dir {
             return String(cString: dir).standardizingPath
         }
+        #endif
         
         // Fallback to HOME for the current user if possible
         if user == nil, let home = getenv("HOME") {

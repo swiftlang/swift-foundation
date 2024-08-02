@@ -595,11 +595,17 @@ final class JSONEncoderTests : XCTestCase {
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int16].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int32].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int64].self)
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+            _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int128].self)
+        }
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt8].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt16].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt32].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt64].self)
+         if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+            _testRoundTripTypeCoercionFailure(of: [false, true], as: [UInt128].self)
+        }
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Float].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Double].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int], as: [Bool].self)
@@ -607,12 +613,15 @@ final class JSONEncoderTests : XCTestCase {
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int16], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int32], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int64], as: [Bool].self)
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+          _testRoundTripTypeCoercionFailure(of: [0, 1] as [Int128], as: [Bool].self)
+        }
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt8], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt16], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt32], as: [Bool].self)
         _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt64], as: [Bool].self)
-        if #available(macOS 15.0, *) {
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
           _testRoundTripTypeCoercionFailure(of: [0, 1] as [UInt128], as: [Bool].self)
         }
         _testRoundTripTypeCoercionFailure(of: [0.0, 1.0] as [Float], as: [Bool].self)

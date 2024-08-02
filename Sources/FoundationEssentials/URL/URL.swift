@@ -1324,7 +1324,7 @@ public struct URL: Equatable, Sendable, Hashable {
         if result.count > 1 && result.utf8.last == UInt8(ascii: "/") {
             _ = result.popLast()
         }
-        let charsToLeaveEncoded = Set([UInt8(ascii: "/")])
+        let charsToLeaveEncoded: Set<UInt8> = [._slash, 0]
         return Parser.percentDecode(result, excluding: charsToLeaveEncoded) ?? ""
     }
 
