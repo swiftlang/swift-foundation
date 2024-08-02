@@ -31,6 +31,8 @@ internal import _FoundationCShims
 #elseif os(Windows)
 import CRT
 import WinSDK
+#elseif os(WASI)
+import WASILibc
 #endif
 
 #if os(Windows)

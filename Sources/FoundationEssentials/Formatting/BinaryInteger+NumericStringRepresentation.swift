@@ -18,6 +18,8 @@ import Android
 import Glibc
 #elseif os(Windows)
 import CRT
+#elseif os(WASI)
+import WASILibc
 #endif
 
 // MARK: - BinaryInteger + Numeric string representation

@@ -18,6 +18,8 @@ import Android
 import Glibc
 #elseif canImport(CRT)
 import CRT
+#elseif os(WASI)
+import WASILibc
 #endif
 
 #if FOUNDATION_FRAMEWORK

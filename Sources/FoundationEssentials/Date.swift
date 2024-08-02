@@ -18,6 +18,8 @@ import Bionic
 import Glibc
 #elseif canImport(WinSDK)
 import WinSDK
+#elseif os(WASI)
+import WASILibc
 #endif
 
 #if !FOUNDATION_FRAMEWORK

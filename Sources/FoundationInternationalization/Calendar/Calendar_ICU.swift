@@ -22,6 +22,8 @@ import Glibc
 import CRT
 #elseif canImport(Darwin)
 import Darwin
+#elseif os(WASI)
+import WASILibc
 #endif
 
 internal import _FoundationICU
