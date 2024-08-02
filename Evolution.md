@@ -1,6 +1,6 @@
 # Foundation Evolution Process
 
-All new public types, functions, and other API must go through an API review process. Foundation uses an API process inspired by the [Swift Evolution review process](https://github.com/apple/swift-evolution/blob/main/process.md).
+All new public types, functions, and other APIs must go through an API review process. Foundation uses an API process inspired by the [Swift Evolution review process](https://github.com/apple/swift-evolution/blob/main/process.md).
 
 A group of core contributors and stakeholders form the _Foundation Workgroup_, which runs reviews for community API proposals and makes decisions about which to accept.
 
