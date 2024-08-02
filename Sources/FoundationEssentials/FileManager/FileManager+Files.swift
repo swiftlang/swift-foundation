@@ -123,8 +123,8 @@ public protocol _NSNumberInitializer {
 
 @_spi(SwiftCorelibsFoundation)
 dynamic public func _nsNumberInitializer() -> (any _NSNumberInitializer.Type)? {
-    // TODO: return nil here after swift-corelibs-foundation begins dynamically replacing this function
-    _typeByName("Foundation._FoundationNSNumberInitializer") as? any _NSNumberInitializer.Type
+    // Dynamically replaced by swift-corelibs-foundation
+    return nil
 }
 #endif
 
