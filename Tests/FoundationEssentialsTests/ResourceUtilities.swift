@@ -54,11 +54,11 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     return try? Data(contentsOf: essentialsURL)
 #else
     // swiftpm drops the resources next to the executable, at:
-    // ./FoundationPreview_FoundationEssentialsTests.resources/Resources/
+    // ./swift-foundation_FoundationEssentialsTests.resources/Resources/
     // Hard-coding the path is unfortunate, but a temporary need until we have a better way to handle this
     var path = URL(filePath: ProcessInfo.processInfo.arguments[0])
         .deletingLastPathComponent()
-        .appending(component: "FoundationPreview_FoundationEssentialsTests.resources", directoryHint: .isDirectory)
+        .appending(component: "swift-foundation_FoundationEssentialsTests.resources", directoryHint: .isDirectory)
         .appending(component: "Resources", directoryHint: .isDirectory)
     if let subdirectory {
         path.append(path: subdirectory, directoryHint: .isDirectory)
