@@ -67,8 +67,8 @@ func registerPredicateTests_disabled() {
 #endif
 
 func registerPredicateTests() {
-    // Temporarily disabled due to link issue
-    #if FOUNDATION_FRAMEWORK
+    // The macros are not yet present on Windows
+    #if USE_PACKAGE || !os(Windows)
     if #available(macOS 14, *) {
 
         var predicateTests : [(String, Predicate<Monster>)] = []
@@ -106,7 +106,7 @@ func registerPredicateTests() {
         }
     }
 
-    #endif // FOUNDATION_FRAMEWORK
+    #endif // USE_PACKAGE || !os(Windows)
 }
 
 let benchmarks : () -> Void = {

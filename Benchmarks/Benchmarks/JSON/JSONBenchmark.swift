@@ -87,22 +87,22 @@ let benchmarks = {
     let twitter = try! _JSONDecoder().decode(TwitterArchive.self, from: twitterData)
 
     Benchmark("Canada-decodeFromJSON") { benchmark in
-        let result = try! _JSONDecoder().decode(FeatureCollection.self, from: canadaData)
+        let result = try _JSONDecoder().decode(FeatureCollection.self, from: canadaData)
         blackHole(result)
     }
 
     Benchmark("Canada-encodeToJSON") { benchmark in
-        let data = try! _JSONEncoder().encode(canada)
+        let data = try _JSONEncoder().encode(canada)
         blackHole(data)
     }
 
     Benchmark("Twitter-decodeFromJSON") { benchmark in
-        let result = try! _JSONDecoder().decode(TwitterArchive.self, from: twitterData)
+        let result = try _JSONDecoder().decode(TwitterArchive.self, from: twitterData)
         blackHole(result)
     }
 
     Benchmark("Twitter-encodeToJSON") { benchmark in
-        let result = try! _JSONEncoder().encode(twitter)
+        let result = try _JSONEncoder().encode(twitter)
         blackHole(result)
     }
 }

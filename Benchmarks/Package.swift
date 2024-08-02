@@ -71,11 +71,11 @@ switch usePackage {
 
     case .useGitHubPackage:
         #if os(macOS)
-            packageDependency.append(.package(url: "https://github.com/apple/swift-foundation", revision: "8a44479120e4ae0ac8cdbf801943daa0d1e874ad"))
+            packageDependency.append(.package(url: "https://github.com/apple/swift-foundation", branch: "main"))
             targetDependency.append(.product(name: "FoundationEssentials", package: "swift-foundation"))
             targetDependency.append(.product(name: "FoundationInternationalization", package: "swift-foundation"))
         #else
-            packageDependency.append(.package(url: "https://github.com/apple/swift-corelibs-foundation", revision: "8e4ddae2400068ac620bee2bc9bc893f875ccf22"))
+            packageDependency.append(.package(url: "https://github.com/apple/swift-corelibs-foundation", branch: "main"))
             targetDependency.append(.product(name: "Foundation", package: "swift-corelibs-foundation"))
         #endif
 
