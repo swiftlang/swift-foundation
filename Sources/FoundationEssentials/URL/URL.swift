@@ -1040,7 +1040,7 @@ public struct URL: Equatable, Sendable, Hashable {
         return basePath.merging(relativePath: relativePath)
     }
 
-    /// Calculate the "merged" path that is resovled against the base URL
+    /// Calculate the "merged" path that is resolved against the base URL
     private var mergedPath: String {
         return mergedPath(for: relativePath())
     }
