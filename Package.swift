@@ -71,25 +71,14 @@ var dependencies: [Package.Dependency] {
 }
 
 let package = Package(
-    name: "FoundationPreview",
+    name: "swift-foundation",
     platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
     products: [
-        // Products define the executables and libraries a package produces, and make them visible to other packages.
-        .library(name: "FoundationPreview", targets: ["FoundationPreview"]),
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
     ],
     dependencies: dependencies,
     targets: [
-        // Foundation (umbrella)
-        .target(
-            name: "FoundationPreview",
-            dependencies: [
-                "FoundationEssentials",
-                "FoundationInternationalization",
-            ],
-            path: "Sources/Foundation"),
-
         // _FoundationCShims (Internal)
         .target(name: "_FoundationCShims",
                 cSettings: [.define("_CRT_SECURE_NO_WARNINGS",
