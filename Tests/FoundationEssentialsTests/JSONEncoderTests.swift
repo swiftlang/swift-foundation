@@ -1865,6 +1865,8 @@ final class JSONEncoderTests : XCTestCase {
             "+1e",
             "-1e ",
             "-1E ",
+            "1147e0286",
+            "1147e02864",
         ]
         for json in unsuccessfulIntegers {
             do {
