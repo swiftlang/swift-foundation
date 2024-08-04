@@ -986,6 +986,8 @@ extension JSONDecoderImpl: Decoder {
     }
 
     static private func _slowpath_unwrapFixedWidthInteger<T: FixedWidthInteger>(as type: T.Type, json5: Bool, numberBuffer: BufferView<UInt8>, fullSource: BufferView<UInt8>, digitBeginning: BufferViewIndex<UInt8>, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+        // Use this value to track whether any of the following conversions failed halfway.
+        var isDecodableAsAtLeastOneFallbackType = false
         // This is the slow path... If the fast path has failed. For example for "34.0" as an integer, we try to parse as either a Decimal or a Double and then convert back, losslessly.
         if let double = Double(prevalidatedBuffer: numberBuffer) {
             // The distance between Double(s) is >=2 from ±2^53.
@@ -996,20 +998,25 @@ extension JSONDecoderImpl: Decoder {
                 // T.init(exactly:) guards against non-integer Double(s), but the parser may
                 // have already transformed the non-integer "1.0000000000000001" into 1, etc.
                 // Proper lossless behavior should be implemented by the parser.
-                guard let value = T(exactly: double) else {
-                    throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+                if let value = T(exactly: double) {
+                    return value
                 }
-                return value
             }
+            isDecodableAsAtLeastOneFallbackType = true
         }
 
         let decimalParseResult = Decimal._decimal(from: numberBuffer, matchEntireString: true).asOptional
         if let decimal = decimalParseResult.result {
-            guard let value = T(decimal) else {
-                throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+            if let value = T(decimal) {
+                return value
             }
-            return value
+            isDecodableAsAtLeastOneFallbackType = true
         }
+        
+        if isDecodableAsAtLeastOneFallbackType {
+            throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+        }
+        
         // Maybe it was just an unreadable sequence?
         if json5 {
             throw JSON5Scanner.validateNumber(from: numberBuffer.suffix(from: digitBeginning), fullSource: fullSource)
