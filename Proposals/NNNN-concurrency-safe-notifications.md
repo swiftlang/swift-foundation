@@ -1,6 +1,6 @@
 # Concurrency-Safe Notifications
 
-* Proposal: FOU-NNNN
+* Proposal: SF-NNNN
 * Author(s): [Philippe Hausler](https://github.com/phausler), [Christopher Thielen](https://github.com/cthielen)
 * Review Manager: TBD
 * Status: **Draft**
