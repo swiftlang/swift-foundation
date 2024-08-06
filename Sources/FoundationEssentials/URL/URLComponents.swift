@@ -1141,15 +1141,19 @@ extension URLComponents: ReferenceConvertible, _ObjectiveCBridgeable {
     }
 
     public static func _conditionallyBridgeFromObjectiveC(_ x: NSURLComponents, result: inout URLComponents?) -> Bool {
+        if let swiftComp = x as? _NSSwiftURLComponents {
+            result = swiftComp.components
+            return true
+        }
         var comp = URLComponents()
         comp.scheme = x.scheme
-        comp.user = x.user
-        comp.password = x.password
-        comp.host = x.host
+        comp.percentEncodedUser = x.percentEncodedUser
+        comp.percentEncodedPassword = x.percentEncodedPassword
+        comp.encodedHost = x.encodedHost
         comp.port = x.port?.intValue
-        comp.path = x.path ?? ""
-        comp.query = x.query
-        comp.fragment = x.fragment
+        comp.percentEncodedPath = x.percentEncodedPath ?? ""
+        comp.percentEncodedQuery = x.percentEncodedQuery
+        comp.percentEncodedFragment = x.percentEncodedFragment
         result = comp
         return true
     }
