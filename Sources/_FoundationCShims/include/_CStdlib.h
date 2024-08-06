@@ -122,8 +122,14 @@
 #include <complex.h>
 #endif
 
+#if !defined(_WIN32)
+// On windows, atomic_signal_fence from clang headers is incompatible
+// with atomic_signal_fence definition from MSVC when C++ interop is enabled,
+// so drop the stdatomic include.
+// Works around: https://github.com/swiftlang/swift/issues/75720
 #if __has_include(<stdatomic.h>)
 #include <stdatomic.h>
+#endif
 #endif
 
 #if __has_include(<threads.h>)
