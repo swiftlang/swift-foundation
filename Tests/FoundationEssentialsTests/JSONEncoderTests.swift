@@ -1459,6 +1459,11 @@ final class JSONEncoderTests : XCTestCase {
         _testRoundTrip(of: testValue)
     }
 
+    func test_decodeLargeDoubleAsInteger() {
+        let data = try! JSONEncoder().encode(Double.greatestFiniteMagnitude)
+        XCTAssertThrowsError(try JSONDecoder().decode(UInt64.self, from: data))
+    }
+
     func test_localeDecimalPolicyIndependence() {
         var currentLocale: UnsafeMutablePointer<CChar>? = nil
         if let localePtr = setlocale(LC_ALL, nil) {
