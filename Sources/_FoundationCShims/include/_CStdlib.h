@@ -136,10 +136,6 @@
 #include <complex.h>
 #endif
 
-#if __has_include(<stdatomic.h>)
-#include <stdatomic.h>
-#endif
-
 #if __has_include(<threads.h>)
 #include <threads.h>
 #endif
