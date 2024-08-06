@@ -13,10 +13,14 @@
 import Benchmark
 import func Benchmark.blackHole
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
+#if os(macOS) && USE_PACKAGE
 import FoundationEssentials
+#else
+import Foundation
+#endif
+
+#if !os(macOS)
+private func autoreleasepool<T>(_ block: () -> T) -> T { block() }
 #endif
 
 let benchmarks = {
@@ -154,7 +158,11 @@ let benchmarks = {
 
     Benchmark("read-utf8", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
         let rootURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
+        #if compiler(>=6)
         let fileURL = rootURL.appending(path: "benchmark.txt", directoryHint: .notDirectory)
+        #else
+        let fileURL = rootURL.appendingPathComponent("benchmark.txt")
+        #endif
         try! FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
         defer {
             try? FileManager.default.removeItem(at: rootURL)
@@ -171,7 +179,11 @@ let benchmarks = {
 
     Benchmark("read-utf16", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
         let rootURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
+        #if compiler(>=6)
         let fileURL = rootURL.appending(path: "benchmark.txt", directoryHint: .notDirectory)
+        #else
+        let fileURL = rootURL.appendingPathComponent("benchmark.txt")
+        #endif
         try! FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
         defer {
             try? FileManager.default.removeItem(at: rootURL)

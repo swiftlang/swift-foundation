@@ -13,10 +13,10 @@
 import Benchmark
 import func Benchmark.blackHole
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
+#if os(macOS) && USE_PACKAGE
 import FoundationEssentials
+#else
+import Foundation
 #endif
 
 let benchmarks = {
@@ -26,6 +26,9 @@ let benchmarks = {
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
         
     let date = Date(timeIntervalSinceReferenceDate: 665076946.0)
+
+    // ISO8601FormatStyle is only available in Swift 6 or newer, macOS 12 or newer
+    #if compiler(>=6)
 
     let iso8601 = Date.ISO8601FormatStyle()
     let formats: [Date.ISO8601FormatStyle] = [
@@ -57,4 +60,6 @@ let benchmarks = {
             }
         }
     }
+
+    #endif // swift(>=6)
 }
