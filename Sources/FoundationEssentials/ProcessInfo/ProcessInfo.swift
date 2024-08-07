@@ -19,6 +19,8 @@ import Bionic
 import unistd
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif os(Windows)
 import WinSDK
 #endif
@@ -161,7 +163,7 @@ final class _ProcessInfo: Sendable {
     }
 
     var userName: String {
-#if canImport(Darwin) || os(Android) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
         // Darwin and Linux
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
@@ -196,7 +198,7 @@ final class _ProcessInfo: Sendable {
     }
 
     var fullUserName: String {
-#if canImport(Darwin) || os(Android) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
            let fullname = upwd.pointee.pw_gecos {

@@ -23,6 +23,8 @@ import Android
 import unistd
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK

@@ -22,6 +22,8 @@ import Darwin
 import Android
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
@@ -30,7 +32,7 @@ import WinSDK
 func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutableRawPointer!, _ size: Int, _ position: UInt32, _ options: Int32) -> Int {
 #if canImport(Darwin)
     return fgetxattr(fd, name, value, size, position, options)
-#elseif canImport(Glibc)
+#elseif canImport(Glibc) || canImport(Musl)
     return fgetxattr(fd, name, value, size)
 #else
     return -1
