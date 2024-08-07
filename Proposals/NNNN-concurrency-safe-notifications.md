@@ -222,7 +222,7 @@ Posting only requires passing an instance of the `NotificationCenter.Message`-co
 NotificationCenter.default.post(WillLaunchApplication(...))
 ```
 
-Like the existing `post()` methods, all observers will be called synchronously and in serial to ensure existing notification usage patterns like `will` / `did` are executed in order. This is possible because the isolation used to call `post()` will match the isolation defined by `NotificationCenter.Message`, and all observers will then be called from that same isolation.
+Like the existing `post()` methods, all observers will be called synchronously and serially to ensure existing notification usage patterns like `will` / `did` are executed in order. This is possible because the isolation used to call `post()` will match the isolation defined by `NotificationCenter.Message`, and all observers will then be called from that same isolation.
 
 Unlike the existing `post()`, these methods do not accept the `object` and `userInfo` parameters. Instead, clients should store their payloads in their `NotificationCenter.Message`-conforming types.
 
@@ -254,7 +254,7 @@ struct EventDidOccur: NotificationCenter.Message {
 
 These methods do not need to be implemented if all posters and observers are using `NotificationCenter.Message`.
 
-If `Notification` and `NotificationCenter.Message` posters and observers are mixed without implementing these methods, observers will be called but will not receive the associated payloads.
+If `Notification` and `NotificationCenter.Message` posters and observers are mixed without implementing these methods, observers for both types will be called but will not receive the associated payloads.
 
 ### Isolation from non-Swift Concurrency posters
 
@@ -268,7 +268,7 @@ The new `addObserver` methods will attempt to check isolation and may halt progr
 
 These changes are entirely additive but could impact existing code due to the ability to interoperate between `NotificationCenter.Message` and `Notification`.
 
-Specifically, if an observer for `NotificationCenter.Message` receives a message posted as a `Notification` which violates the isolation contract specified in `NotificationCenter.Message`, the correct fix may be to modify the existing `Notification` post to uphold that contract.
+Specifically, if an observer for `NotificationCenter.Message` receives a message posted as a `Notification` which violates the isolation contract specified in `NotificationCenter.Message`, the correct fix may be to modify the existing `Notification` `.post()` call to uphold that contract.
 
 ## Alternatives considered
 
@@ -287,4 +287,4 @@ While this design works, it encourages the use of the `object` and `userInfo` pa
 ### Require `NotificationCenter.Message` to conform to `Sendable`
 Conforming `NotificationCenter.Message` to `Sendable` is not necessary due to the `addObserver` and `post` methods enforcing the isolation specified by `NotificationCenter.Message`.
 
-Further, there may be cases where a non-`Sendable` `NotificationCenter.Message` is posted and observed from within the same isolation, which is a valid operation.
+Further, there may be cases where a non-`Sendable` `NotificationCenter.Message` is posted and observed from within the same isolation, which is a valid operation and should not be disallowed.
