@@ -243,7 +243,7 @@ struct EventDidOccur: NotificationCenter.Message {
 
     static func makeMessage(_ notification: Notification) -> Self? {
         guard let foo = notification.userInfo["foo"] as? Foo else { return nil }
-        self.foo = foo
+        return Self(foo: foo)
     }
     
     static func makeNotification(_ message: Self) -> Notification {
