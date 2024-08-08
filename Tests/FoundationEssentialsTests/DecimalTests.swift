@@ -1130,9 +1130,9 @@ final class DecimalTests : XCTestCase {
         var x = -42 as Decimal
         XCTAssertEqual(x.significand.sign, .plus)
         var y = Decimal(sign: .plus, exponent: 0, significand: x)
-        XCTAssertEqual(y, -42)
-        y = Decimal(sign: .minus, exponent: 0, significand: x)
         XCTAssertEqual(y, 42)
+        y = Decimal(sign: .minus, exponent: 0, significand: x)
+        XCTAssertEqual(y, -42)
 
         x = 42 as Decimal
         XCTAssertEqual(x.significand.sign, .plus)

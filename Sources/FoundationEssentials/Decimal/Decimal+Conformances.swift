@@ -251,8 +251,11 @@ extension Decimal /* : FloatingPoint */ {
                 self = .nan
             }
         }
-        if sign == .minus {
-            negate()
+
+        guard self._length != 0 else { return }
+        _isNegative = switch sign {
+        case .plus: 0
+        case .minus: 1
         }
     }
 
