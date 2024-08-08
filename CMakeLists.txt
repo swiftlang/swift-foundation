@@ -35,6 +35,13 @@ if(NOT SWIFT_SYSTEM_NAME)
   endif()
 endif()
 
+# Enable whole module optimization for release builds & incremental for debug builds
+if(POLICY CMP0157)
+    set(CMAKE_Swift_COMPILATION_MODE "$<IF:$<CONFIG:Release>,wholemodule,incremental>")
+else()
+    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:Swift>,$<IF:$<CONFIG:Release>>>:-wmo>)
+endif()
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -110,13 +117,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
     list(APPEND _SwiftFoundation_wasi_libc_flags
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_SIGNAL>"
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_MMAN>")
-endif()
-
-# Enable whole module optimization for release builds & incremental for debug builds
-if(POLICY CMP0157)
-    set(CMAKE_Swift_COMPILATION_MODE "$<IF:$<CONFIG:Release>,wholemodule,incremental>")
-else()
-    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:Swift>,$<IF:$<CONFIG:Release>>>:-wmo>)
 endif()
 
 include(GNUInstallDirs)
