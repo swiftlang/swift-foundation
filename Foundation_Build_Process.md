@@ -27,6 +27,8 @@ Each invididual project can be built via SwiftPM. This is useful when quickly it
 
 SwiftPM builds can be invoked via an IDE integration (such as building within Xcode), or by using the `swift build` and `swift test` command line tools.
 
+_Note: Subsequent SwiftPM builds will not automatically update to newer commits of downstream Foundation projects like swift-foundation-icu. If you encounter build failures after checking out a new branch or pulling from the remote repo, you can run `swift package update` to update your local dependency checkouts to match top-of-tree to ensure you have the required versions of dependencies._
+
 ### How are dependencies fetched?
 
 Dependencies are fetched via the SwiftPM dependency system. The required dependencies are specified in the `Package.swift` manifest and will be checked out and built automatically via SwiftPM.
