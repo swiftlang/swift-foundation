@@ -131,7 +131,7 @@ final class _ProcessInfo: Sendable {
 #else
         var ts: timespec = timespec()
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
-        let time: UInt64 = UInt64(ts.tv_sec * 1000000000 + ts.tv_nsec)
+        let time: UInt64 = UInt64(ts.tv_sec) * 1000000000 + UInt64(ts.tv_nsec)
 #endif
         let timeString = String(time, radix: 16, uppercase: true)
         let padding = String(repeating: "0", count: 16 - timeString.count)
