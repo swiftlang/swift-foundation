@@ -2077,6 +2077,14 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         public static let fileProtectionMask = WritingOptions(rawValue: 0xf0000000)
     }
 #endif
+    
+    #if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation)
+    public dynamic init(_contentsOfRemote url: URL, options: ReadingOptions = []) throws {
+        assert(!url.isFileURL)
+        throw CocoaError(.fileReadUnsupportedScheme)
+    }
+    #endif
 
     /// Initialize a `Data` with the contents of a `URL`.
     ///
@@ -2096,7 +2104,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             let d = try NSData(contentsOf: url, options: NSData.ReadingOptions(rawValue: options.rawValue))
             self.init(referencing: d)
             #else
-            throw CocoaError(.fileReadUnsupportedScheme)
+            try self.init(_contentsOfRemote: url, options: options)
             #endif
         }
 #endif
