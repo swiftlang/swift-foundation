@@ -872,7 +872,16 @@ enum _FileOperations {
         }
         
         let total: Int = Int(fileInfo.st_size)
-        let chunkSize: Int = Int(fileInfo.st_blksize)
+        // Respect the optimal block size for the file system if available
+        // Some platforms including WASI don't provide this information, so we
+        // fall back to the default chunk size 4KB, which is a common page size.
+        let defaultChunkSize = 1024 * 4 // 4KB
+        let chunkSize: Int
+        if fileInfo.st_blksize > 0 {
+            chunkSize = Int(fileInfo.st_blksize)
+        } else {
+            chunkSize = defaultChunkSize
+        }
         var current: off_t = 0
         
         #if os(WASI)
