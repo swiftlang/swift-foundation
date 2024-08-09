@@ -583,13 +583,7 @@ extension _ProcessInfo {
         guard let processPath = CommandLine.arguments.first else {
             return ""
         }
-
-        if let lastSlash = processPath.lastIndex(of: Platform.PATH_SEPARATOR) {
-            return String(processPath[
-                processPath.index(after: lastSlash) ..< processPath.endIndex])
-        }
-
-        return processPath
+        return processPath.lastPathComponent
     }
 
 #if os(macOS)
