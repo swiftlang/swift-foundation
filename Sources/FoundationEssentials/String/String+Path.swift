@@ -12,7 +12,7 @@
 
 #if canImport(Darwin)
 internal import os
-#elseif os(Android)
+#elseif canImport(Android)
 import Android
 #elseif canImport(Glibc)
 import Glibc

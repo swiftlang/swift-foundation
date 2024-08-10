@@ -15,8 +15,8 @@ import FoundationEssentials
 
 internal import _FoundationICU
 
-#if os(Android)
-import Android
+#if canImport(Bionic)
+import Bionic
 #elseif canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)

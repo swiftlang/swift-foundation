@@ -14,7 +14,7 @@
 import FoundationEssentials
 #endif
 
-#if os(Android)
+#if canImport(Android)
 import Android
 #elseif canImport(Glibc)
 import Glibc

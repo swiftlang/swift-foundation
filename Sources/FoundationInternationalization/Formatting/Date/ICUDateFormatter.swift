@@ -18,8 +18,8 @@ internal import _FoundationICU
 
 #if canImport(Darwin)
 import Darwin
-#elseif os(Android)
-import Android
+#elseif canImport(Bionic)
+import Bionic
 #elseif canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
