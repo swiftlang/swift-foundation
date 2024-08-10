@@ -118,8 +118,12 @@ endforeach()
 set(_SwiftFoundation_wasi_libc_flags)
 if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
     list(APPEND _SwiftFoundation_wasi_libc_flags
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_GETPID>"
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend wasi-emulated-getpid>"
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_SIGNAL>"
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_MMAN>")
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend wasi-emulated-signal>"
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_MMAN>"
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend wasi-emulated-mman>")
 endif()
 
 include(GNUInstallDirs)
