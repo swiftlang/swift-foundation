@@ -29,6 +29,7 @@ project(FoundationMacros
 # SwiftSyntax Dependency
 find_package(SwiftSyntax QUIET)
 if(NOT SwiftSyntax_FOUND)
+  message(STATUS "SwiftSyntax_DIR not provided, checking out local copy of swift-syntax")
     include(FetchContent)
 
     # If building at desk, check out and link against the SwiftSyntax repo's targets
@@ -37,16 +38,25 @@ if(NOT SwiftSyntax_FOUND)
         GIT_TAG 4c6cc0a3b9e8f14b3ae2307c5ccae4de6167ac2c) # 600.0.0-prerelease-2024-06-12
     FetchContent_MakeAvailable(SwiftSyntax)
 else()
-  message(STATUS "Using swift-syntax from ${SwiftSyntax_DIR}")
+  message(STATUS "SwiftSyntax_DIR provided, using swift-syntax from ${SwiftSyntax_DIR}")
 endif()
 
-add_library(FoundationMacros SHARED
+if(NOT FoundationMacros_BuildLocalExecutable)
+    add_library(FoundationMacros SHARED)
+    target_compile_definitions(FoundationMacros PRIVATE FOUNDATION_MACROS_LIBRARY)
+else()
+    add_executable(FoundationMacros)
+    target_link_libraries(FoundationMacros PUBLIC
+        SwiftSyntax::SwiftCompilerPlugin)
+endif()
+
+# Parse the module as a library, even if it's an executable, because it uses an `@main` type to define its entry point.
+target_compile_options(FoundationMacros PRIVATE -parse-as-library)
+
+target_sources(FoundationMacros PRIVATE
     FoundationMacros.swift
     PredicateMacro.swift)
 
-target_compile_definitions(FoundationMacros PRIVATE FOUNDATION_MACROS_LIBRARY)
-
-target_compile_options(FoundationMacros PRIVATE -parse-as-library)
 target_compile_options(FoundationMacros PRIVATE
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend AccessLevelOnImport>"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend StrictConcurrency>"
@@ -72,6 +82,8 @@ set_target_properties(FoundationMacros PROPERTIES
     INSTALL_RPATH "$ORIGIN/../../../swift/${SWIFT_SYSTEM_NAME}:$ORIGIN/.."
     INSTALL_REMOVE_ENVIRONMENT_RPATH ON)
 
-install(TARGETS FoundationMacros
-    LIBRARY DESTINATION lib/swift/host/plugins
-    RUNTIME DESTINATION bin)
+if(NOT FoundationMacros_BuildLocalExecutable)
+    install(TARGETS FoundationMacros
+        LIBRARY DESTINATION lib/swift/host/plugins
+        RUNTIME DESTINATION bin)
+endif()
