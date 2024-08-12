@@ -14,6 +14,7 @@
 
 add_library(FoundationEssentials
     _ThreadLocal.swift
+    Android+Extensions.swift
     Bundle+Stub.swift
     Codable.swift
     CodableUtilities.swift

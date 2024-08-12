@@ -175,7 +175,8 @@ extension stat {
     }
     
     fileprivate var fileAttributes: [FileAttributeKey : Any] {
-        let fileType = st_mode.fileType
+        // On 32 bit Android, st_mode is UInt32.
+        let fileType = mode_t(st_mode).fileType
         var result: [FileAttributeKey : Any] = [
             .size : _writeFileAttributePrimitive(st_size, as: UInt.self),
             .modificationDate : modificationDate,

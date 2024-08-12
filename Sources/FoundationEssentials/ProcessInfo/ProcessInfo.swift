@@ -198,7 +198,10 @@ final class _ProcessInfo: Sendable {
     }
 
     var fullUserName: String {
-#if canImport(Darwin) || os(Android) || canImport(Glibc)
+#if os(Android) && (arch(i386) || arch(arm))
+        // On LP32 Android, pw_gecos doesn't exist and is presumed to be NULL.
+        return ""
+#elseif canImport(Darwin) || os(Android) || canImport(Glibc)
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
            let fullname = upwd.pointee.pw_gecos {
