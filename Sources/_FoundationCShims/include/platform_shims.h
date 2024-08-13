@@ -79,6 +79,29 @@ static inline _Nonnull clockid_t _platform_shims_clock_monotonic(void) {
 static inline _Nonnull clockid_t _platform_shims_clock_realtime(void) {
     return CLOCK_REALTIME;
 }
+
+// Define dirent shims so that we can use them in Swift because wasi-libc defines
+// `d_name` as "flexible array member" which is not supported by ClangImporter yet.
+
+#include <dirent.h>
+
+static inline char * _Nonnull _platform_shims_dirent_d_name(struct dirent * _Nonnull entry) {
+    return entry->d_name;
+}
+
+// Define getter shims for constants because wasi-libc defines them as function-like macros
+// which are not supported by ClangImporter yet.
+
+#include <stdint.h>
+#include <fcntl.h>
+#include <dirent.h>
+
+static inline uint8_t _platform_shims_DT_DIR(void) { return DT_DIR; }
+static inline uint8_t _platform_shims_DT_UNKNOWN(void) { return DT_UNKNOWN; }
+static inline int32_t _platform_shims_O_CREAT(void) { return O_CREAT; }
+static inline int32_t _platform_shims_O_EXCL(void) { return O_EXCL; }
+static inline int32_t _platform_shims_O_TRUNC(void) { return O_TRUNC; }
+static inline int32_t _platform_shims_O_WRONLY(void) { return O_WRONLY; }
 #endif
 
 #endif /* CSHIMS_PLATFORM_SHIMS */
