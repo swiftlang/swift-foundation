@@ -52,7 +52,7 @@ internal struct BuiltInUnicodeScalarSet {
 
     // CFUniCharIsMemberOf
     func contains(_ scalar: Unicode.Scalar) -> Bool {
-        let planeNo = Int((scalar.value >> 16) & UInt32(0xFF))
+        let planeNo = Int((scalar.value >> 16) & 0xFF)
         let bitmp = _bitmapPtrForPlane(planeNo)
         return _isMemberOfBitmap(scalar, bitmp)
     }

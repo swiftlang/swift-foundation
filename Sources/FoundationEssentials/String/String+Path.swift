@@ -739,7 +739,7 @@ extension String {
                         if lstat(buffer.baseAddress!, &statBuf) < 0 {
                             return nil
                         }
-                        if statBuf.st_mode & S_IFMT == S_IFLNK {
+                        if mode_t(statBuf.st_mode) & S_IFMT == S_IFLNK {
                             /* Examples:
                              *   fspath == /foo/bar0baz/quux/froboz
                              *   linkx == /tic/tac/toe

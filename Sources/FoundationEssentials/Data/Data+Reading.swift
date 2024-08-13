@@ -325,7 +325,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     }
     
     let fileSize = min(Int(clamping: filestat.st_size), maxLength ?? Int.max)
-    let fileType = filestat.st_mode & S_IFMT
+    let fileType = mode_t(filestat.st_mode) & S_IFMT
 #if !NO_FILESYSTEM
     let shouldMap = shouldMapFileDescriptor(fd, path: inPath, options: options)
 #else

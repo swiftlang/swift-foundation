@@ -394,7 +394,7 @@ extension _FileManagerImpl {
             guard stat(rep, &fileInfo) == 0 else {
                 return (false, false)
             }
-            let isDir = (fileInfo.st_mode & S_IFMT) == S_IFDIR
+            let isDir = (mode_t(fileInfo.st_mode) & S_IFMT) == S_IFDIR
             return (true, isDir)
         }
 #endif
@@ -473,7 +473,7 @@ extension _FileManagerImpl {
             return false
         }
         
-        if ((dirInfo.st_mode & S_ISVTX) != 0) && fileManager.fileExists(atPath: path) {
+        if ((mode_t(dirInfo.st_mode) & S_ISVTX) != 0) && fileManager.fileExists(atPath: path) {
             // its sticky so verify that we own the file
             // otherwise we answer YES on the principle that if
             // we create files we can delete them
