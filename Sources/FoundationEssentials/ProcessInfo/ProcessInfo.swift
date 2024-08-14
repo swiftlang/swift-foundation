@@ -75,6 +75,16 @@ final class _ProcessInfo: Sendable {
             for env in environments {
                 let environmentString = String(cString: env)
 
+#if os(Windows)
+                // Windows GetEnvironmentStringsW API can return
+                // magic environment variables set by the cmd shell
+                // that starts with `=`
+                // We should exclude these values
+                if environmentString.utf8.first == ._equal {
+                    continue
+                }
+#endif // os(Windows)
+
                 guard let delimiter = environmentString.firstIndex(of: "=") else {
                     continue
                 }
