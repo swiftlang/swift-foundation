@@ -369,33 +369,27 @@ extension String {
     #if !NO_FILESYSTEM
     internal static func homeDirectoryPath(forUser user: String? = nil) -> String {
 #if os(Windows)
-        func GetUserProfile() -> String? {
-            return "USERPROFILE".withCString(encodedAs: UTF16.self) { pwszVariable in
-                let dwLength: DWORD = GetEnvironmentVariableW(pwszVariable, nil, 0)
-                // Ensure that `USERPROFILE` is defined.
-                if dwLength == 0 { return nil }
-                return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
-                    guard GetEnvironmentVariableW(pwszVariable, $0.baseAddress, dwLength) == dwLength - 1 else {
-                        return nil
-                    }
-                    return String(decodingCString: $0.baseAddress!, as: UTF16.self)
-                }
-            }
-        }
-
         if let user {
+            func fallbackUserDirectory() -> String {
+                guard let systemDrive = ProcessInfo.processInfo.environment["SystemDrive"] else {
+                    fatalError("Unable to evaluate %SystemDrive%")
+                }
+                
+                return "\(systemDrive)\\Users\\Public"
+            }
+            
             return user.withCString(encodedAs: UTF16.self) { pwszUserName in
                 var cbSID: DWORD = 0
                 var cchReferencedDomainName: DWORD = 0
                 var eUse: SID_NAME_USE = SidTypeUnknown
                 guard LookupAccountNameW(nil, pwszUserName, nil, &cbSID, nil, &cchReferencedDomainName, &eUse) else {
-                    fatalError("unable to lookup SID for user \(user)")
+                    return fallbackUserDirectory()
                 }
 
                 return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(cbSID)) { pSID in
                     return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(cchReferencedDomainName)) { pwszReferencedDomainName in
                         guard LookupAccountNameW(nil, pwszUserName, pSID.baseAddress, &cbSID, pwszReferencedDomainName.baseAddress, &cchReferencedDomainName, &eUse) else {
-                            fatalError("unable to lookup SID for user \(user)")
+                            return fallbackUserDirectory()
                         }
 
                         var pwszSID: LPWSTR? = nil
@@ -425,7 +419,7 @@ extension String {
 
         var hToken: HANDLE? = nil
         guard OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) else {
-            guard let UserProfile = GetUserProfile() else {
+            guard let UserProfile = ProcessInfo.processInfo.environment["UserProfile"] else {
                 fatalError("unable to evaluate `%UserProfile%`")
             }
             return UserProfile
