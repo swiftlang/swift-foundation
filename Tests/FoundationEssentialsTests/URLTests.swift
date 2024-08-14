@@ -571,6 +571,21 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(appended.relativePath, "relative/with:slash")
     }
 
+    func testURLFilePathDropsTrailingSlashes() throws {
+        var url = URL(filePath: "/path/slashes///")
+        XCTAssertEqual(url.path(), "/path/slashes///")
+        // TODO: Update this once .fileSystemPath uses backslashes for Windows
+        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+
+        url = URL(filePath: "/path/slashes/")
+        XCTAssertEqual(url.path(), "/path/slashes/")
+        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+
+        url = URL(filePath: "/path/slashes")
+        XCTAssertEqual(url.path(), "/path/slashes")
+        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+    }
+
     func testURLComponentsPercentEncodedUnencodedProperties() throws {
         var comp = URLComponents()
 
