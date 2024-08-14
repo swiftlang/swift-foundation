@@ -380,7 +380,7 @@ struct _POSIXDirectoryContentsSequence: Sequence {
                         let statDir = directoryPath + "/" + fileName
                         if stat(statDir, &statBuf) == 0 {
                             // #define S_ISDIR(m)      (((m) & S_IFMT) == S_IFDIR)
-                            if (statBuf.st_mode & S_IFMT) == S_IFDIR {
+                            if (mode_t(statBuf.st_mode) & S_IFMT) == S_IFDIR {
                                 isDirectory = true
                             }
                         }
