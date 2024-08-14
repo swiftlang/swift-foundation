@@ -19,6 +19,8 @@ import Bionic
 import unistd
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif os(Windows)
 import WinSDK
 #elseif os(WASI)
@@ -163,7 +165,7 @@ final class _ProcessInfo: Sendable {
     }
 
     var userName: String {
-#if canImport(Darwin) || os(Android) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
         // Darwin and Linux
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
@@ -201,7 +203,7 @@ final class _ProcessInfo: Sendable {
 #if os(Android) && (arch(i386) || arch(arm))
         // On LP32 Android, pw_gecos doesn't exist and is presumed to be NULL.
         return ""
-#elseif canImport(Darwin) || os(Android) || canImport(Glibc)
+#elseif canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
            let fullname = upwd.pointee.pw_gecos {

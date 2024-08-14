@@ -35,6 +35,9 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(Glibc)
 import Glibc
 fileprivate let _pageSize: Int = Int(getpagesize())
+#elseif canImport(Musl)
+import Musl
+fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(C)
 fileprivate let _pageSize: Int = Int(getpagesize())
 #endif // canImport(Darwin)

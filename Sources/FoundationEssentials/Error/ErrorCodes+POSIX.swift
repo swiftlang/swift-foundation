@@ -14,6 +14,8 @@
 @preconcurrency import Android
 #elseif canImport(Glibc)
 @preconcurrency import Glibc 
+#elseif canImport(Musl)
+@preconcurrency import Musl
 #elseif canImport(Darwin)
 @preconcurrency import Darwin
 #elseif os(Windows)
