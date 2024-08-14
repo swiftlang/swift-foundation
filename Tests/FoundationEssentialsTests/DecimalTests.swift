@@ -613,6 +613,32 @@ final class DecimalTests : XCTestCase {
         XCTAssertTrue(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
     }
 
+    func testCrashingDivision() throws {
+        // This test makes sure the following division
+        // does not crash
+        let first: Decimal = Decimal(1147858867)
+        let second: Decimal = Decimal(4294967295)
+        let result = first / second
+        let expected: Decimal = Decimal(
+            _exponent: -38,
+            _length: 8,
+            _isNegative: 0,
+            _isCompact: 1,
+            _reserved: 0,
+            _mantissa: (
+                58076,
+                13229,
+                12316,
+                25502,
+                15252,
+                32996,
+                11611,
+                5147
+            )
+        )
+        XCTAssertEqual(result, expected)
+    }
+
     func testPower() throws {
         var a = Decimal(1234)
         var result = try a._power(exponent: 0, roundingMode: .plain)
@@ -1272,5 +1298,4 @@ final class DecimalTests : XCTestCase {
         XCTAssertEqual(length, 3)
     }
     #endif
-
 }
