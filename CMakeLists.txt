@@ -36,7 +36,8 @@ if(NOT SWIFT_SYSTEM_NAME)
 endif()
 
 # Don't enable WMO on Windows due to linker failures
-if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+# Don't enable WMO on Android as swift's old driver has a bug with using it.
+if((NOT CMAKE_SYSTEM_NAME STREQUAL Windows) AND (NOT CMAKE_SYSTEM_NAME STREQUAL Android))
     # Enable whole module optimization for release builds & incremental for debug builds
     if(POLICY CMP0157)
         set(CMAKE_Swift_COMPILATION_MODE "$<IF:$<CONFIG:Release>,wholemodule,incremental>")
