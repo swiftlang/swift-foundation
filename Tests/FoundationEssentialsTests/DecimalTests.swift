@@ -613,6 +613,8 @@ final class DecimalTests : XCTestCase {
         XCTAssertTrue(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
     }
 
+#if _pointerBitWidth(_64)
+    // This test require Int to be Int64
     func testCrashingDivision() throws {
         // This test makes sure the following division
         // does not crash
@@ -638,6 +640,7 @@ final class DecimalTests : XCTestCase {
         )
         XCTAssertEqual(result, expected)
     }
+#endif
 
     func testPower() throws {
         var a = Decimal(1234)
