@@ -571,6 +571,9 @@ final class FileManagerTests : XCTestCase {
                 "bar"
             }
             "other"
+            SymbolicLink("link_to_file", destination: "other")
+            SymbolicLink("link_to_dir", destination: "dir")
+            SymbolicLink("link_to_nonexistent", destination: "does_not_exist")
         }.test {
             #if FOUNDATION_FRAMEWORK
             var isDir: ObjCBool = false
@@ -591,7 +594,12 @@ final class FileManagerTests : XCTestCase {
             XCTAssertTrue(isDirBool())
             XCTAssertTrue($0.fileExists(atPath: "other", isDirectory: &isDir))
             XCTAssertFalse(isDirBool())
+            XCTAssertTrue($0.fileExists(atPath: "link_to_file", isDirectory: &isDir))
+            XCTAssertFalse(isDirBool())
+            XCTAssertTrue($0.fileExists(atPath: "link_to_dir", isDirectory: &isDir))
+            XCTAssertTrue(isDirBool())
             XCTAssertFalse($0.fileExists(atPath: "does_not_exist"))
+            XCTAssertFalse($0.fileExists(atPath: "link_to_nonexistent"))
         }
     }
 
