@@ -78,14 +78,14 @@ internal struct _FileManagerImpl {
     ) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
-            let hLHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
+            let hLHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nil)
             if hLHS == INVALID_HANDLE_VALUE {
                 return false
             }
             defer { CloseHandle(hLHS) }
 
             return (try? other.withNTPathRepresentation {
-                let hRHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
+                let hRHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nil)
                 if hRHS == INVALID_HANDLE_VALUE {
                     return false
                 }
@@ -122,11 +122,19 @@ internal struct _FileManagerImpl {
                     return false
                 }
 
-                if fbiLHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT,
-                   fbiRHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                let lhsIsReparsePoint = fbiLHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT
+                let rhsIsReparsePoint = fbiRHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT
+                let lhsIsDirectory = fbiLHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
+                let rhsIsDirectory = fbiRHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
+                if lhsIsReparsePoint || rhsIsReparsePoint {
+                    guard lhsIsReparsePoint == rhsIsReparsePoint else {
+                        return false
+                    }
                     return (try? fileManager.destinationOfSymbolicLink(atPath: path) == fileManager.destinationOfSymbolicLink(atPath: other)) ?? false
-                } else if fbiLHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY,
-                          fbiRHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
+                } else if lhsIsDirectory || rhsIsDirectory {
+                    guard lhsIsDirectory == rhsIsDirectory else {
+                        return false
+                    }
                     guard let aLHSItems = try? fileManager.contentsOfDirectory(atPath: path),
                           let aRHSItems = try? fileManager.contentsOfDirectory(atPath: other),
                           aLHSItems == aRHSItems else {
