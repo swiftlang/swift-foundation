@@ -899,6 +899,9 @@ final class FileManagerTests : XCTestCase {
     }
     
     func testHomeDirectoryForNonExistantUser() throws {
+        #if canImport(Darwin) && !os(macOS)
+        throw XCTSkip("This test is not applicable on this platform")
+        #else
         #if os(Windows)
         let fallbackPath = URL(filePath: try XCTUnwrap(ProcessInfo.processInfo.environment["ALLUSERSPROFILE"]), directoryHint: .isDirectory)
         #else
@@ -907,5 +910,6 @@ final class FileManagerTests : XCTestCase {
         
         XCTAssertEqual(FileManager.default.homeDirectory(forUser: ""), fallbackPath)
         XCTAssertEqual(FileManager.default.homeDirectory(forUser: UUID().uuidString), fallbackPath)
+        #endif
     }
 }
