@@ -12,8 +12,8 @@
 
 #if canImport(os)
 internal import os
-#elseif os(Android)
-import Android
+#elseif canImport(Bionic)
+import Bionic
 #elseif canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)

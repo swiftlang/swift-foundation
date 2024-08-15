@@ -10,7 +10,7 @@
  //===----------------------------------------------------------------------===//
 
 // Import for POSIXErrorCode
-#if os(Android)
+#if canImport(Android)
 @preconcurrency import Android
 #elseif canImport(Glibc)
 @preconcurrency import Glibc 

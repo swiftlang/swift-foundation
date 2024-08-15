@@ -17,7 +17,7 @@
 @usableFromInline let memset = ucrt.memset
 @usableFromInline let memcpy = ucrt.memcpy
 @usableFromInline let memcmp = ucrt.memcmp
-#elseif os(Android)
+#elseif canImport(Bionic)
 import Bionic
 @usableFromInline let calloc = Bionic.calloc
 @usableFromInline let malloc = Bionic.malloc

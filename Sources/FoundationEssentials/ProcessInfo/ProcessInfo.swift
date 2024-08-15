@@ -14,7 +14,7 @@ internal import _FoundationCShims
 
 #if canImport(Darwin)
 import Darwin
-#elseif os(Android)
+#elseif canImport(Android)
 import Bionic
 import unistd
 #elseif canImport(Glibc)
@@ -175,7 +175,7 @@ final class _ProcessInfo: Sendable {
     }
 
     var userName: String {
-#if canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
+#if canImport(Darwin) || canImport(Android) || canImport(Glibc) || canImport(Musl)
         // Darwin and Linux
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
@@ -210,10 +210,10 @@ final class _ProcessInfo: Sendable {
     }
 
     var fullUserName: String {
-#if os(Android) && (arch(i386) || arch(arm))
+#if canImport(Android) && (arch(i386) || arch(arm))
         // On LP32 Android, pw_gecos doesn't exist and is presumed to be NULL.
         return ""
-#elseif canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
+#elseif canImport(Darwin) || canImport(Android) || canImport(Glibc) || canImport(Musl)
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
            let fullname = upwd.pointee.pw_gecos {
@@ -378,7 +378,7 @@ extension _ProcessInfo {
     }
 
     var operatingSystemVersion: (major: Int, minor: Int, patch: Int) {
-#if canImport(Darwin) || os(Linux) || os(FreeBSD) || os(OpenBSD) || os(Android)
+#if canImport(Darwin) || os(Linux) || os(FreeBSD) || os(OpenBSD) || canImport(Android)
         var uts: utsname = utsname()
         guard uname(&uts) == 0 else {
             return (major: -1, minor: 0, patch: 0)

@@ -17,7 +17,7 @@ internal import DarwinPrivate.sys.content_protection
 
 #if canImport(Darwin)
 import Darwin
-#elseif os(Android)
+#elseif canImport(Android)
 import Android
 import posix_filesystem
 #elseif canImport(Glibc)

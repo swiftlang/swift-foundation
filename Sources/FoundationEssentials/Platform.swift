@@ -28,7 +28,7 @@ fileprivate let _pageSize: Int = {
 #elseif os(WASI)
 // WebAssembly defines a fixed page size
 fileprivate let _pageSize: Int = 65_536
-#elseif os(Android)
+#elseif canImport(Android)
 import Bionic
 import unistd
 fileprivate let _pageSize: Int = Int(getpagesize())
@@ -175,7 +175,7 @@ extension Platform {
         // FIXME: bionic implements this as `return 0;` and does not expose the
         // function via headers. We should be able to shim this and use the call
         // if it is available.
-#if !os(Android) && !os(WASI)
+#if !canImport(Android) && !os(WASI)
         guard issetugid() == 0 else { return nil }
 #endif
         if let value = getenv(name) {

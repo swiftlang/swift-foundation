@@ -18,7 +18,7 @@ internal import _FoundationCShims
 
 #if canImport(Darwin)
 import Darwin
-#elseif os(Android)
+#elseif canImport(Android)
 import Android
 #elseif canImport(Glibc)
 import Glibc
@@ -377,7 +377,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         localProgress?.completedUnitCount = 1
     } else if shouldMap {
 #if !NO_FILESYSTEM
-#if os(Android)
+#if canImport(Android)
         let bytes = mmap(nil, Int(fileSize), PROT_READ, MAP_PRIVATE, fd, 0)
         if bytes == UnsafeMutableRawPointer(bitPattern: -1) {
             throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: true)
