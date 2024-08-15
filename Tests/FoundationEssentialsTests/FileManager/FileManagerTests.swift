@@ -900,9 +900,9 @@ final class FileManagerTests : XCTestCase {
     
     func testHomeDirectoryForNonExistantUser() throws {
         #if os(Windows)
-        let fallbackPath = URL(fileURLWithPath: try XCTUnwrap(ProcessInfo.processInfo.environment["ALLUSERSPROFILE"]))
+        let fallbackPath = URL(filePath: try XCTUnwrap(ProcessInfo.processInfo.environment["ALLUSERSPROFILE"]), directoryHint: .isDirectory)
         #else
-        let fallbackPath = URL(fileURLWithPath: "/var/empty")
+        let fallbackPath = URL(filePath: "/var/empty", directoryHint: .isDirectory)
         #endif
         
         XCTAssertEqual(FileManager.default.homeDirectory(forUser: ""), fallbackPath)
