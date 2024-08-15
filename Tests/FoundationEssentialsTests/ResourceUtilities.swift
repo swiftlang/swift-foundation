@@ -56,10 +56,23 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     // swiftpm drops the resources next to the executable, at:
     // ./swift-foundation_FoundationEssentialsTests.resources/Resources/
     // Hard-coding the path is unfortunate, but a temporary need until we have a better way to handle this
-    var path = URL(filePath: ProcessInfo.processInfo.arguments[0])
+
+    var toolsResourcesDir = URL(filePath: ProcessInfo.processInfo.arguments[0])
         .deletingLastPathComponent()
-        .appending(component: "swift-foundation_FoundationEssentialsTests.resources", directoryHint: .isDirectory)
-        .appending(component: "Resources", directoryHint: .isDirectory)
+        .appending(component: "swift-foundation_FoundationEssentialsTests-tool.resources", directoryHint: .isDirectory)
+
+    // On Linux the tests are built for the "host" because there are macro tests, on Windows
+    // the tests are only built for the "target" so we need to figure out whether `-tools`
+    // resources exist and if so, use them.
+    let resourcesDir = if FileManager.default.fileExists(atPath: toolsResourcesDir.path) {
+        toolsResourcesDir
+    } else {
+        URL(filePath: ProcessInfo.processInfo.arguments[0])
+            .deletingLastPathComponent()
+            .appending(component: "swift-foundation_FoundationEssentialsTests.resources", directoryHint: .isDirectory)
+    }
+
+    var path = resourcesDir.appending(component: "Resources", directoryHint: .isDirectory)
     if let subdirectory {
         path.append(path: subdirectory, directoryHint: .isDirectory)
     }
