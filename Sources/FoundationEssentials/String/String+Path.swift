@@ -371,11 +371,11 @@ extension String {
 #if os(Windows)
         if let user {
             func fallbackUserDirectory() -> String {
-                guard let systemDrive = ProcessInfo.processInfo.environment["SystemDrive"] else {
-                    fatalError("Unable to evaluate %SystemDrive%")
+                guard let fallback = ProcessInfo.processInfo.environment["ALLUSERSPROFILE"] else {
+                    fatalError("Unable to find home directory for user \(user) and ALLUSERSPROFILE environment variable is not set")
                 }
                 
-                return "\(systemDrive)\\Users\\Public"
+                return fallback
             }
             
             return user.withCString(encodedAs: UTF16.self) { pwszUserName in
