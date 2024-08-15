@@ -189,4 +189,14 @@ final class ProcessInfoTests : XCTestCase {
         processInfo.processName = originalProcessName
         XCTAssertEqual(processInfo.processName, originalProcessName)
     }
+
+    func testWindowsEnvironmentDoesNotContainMagicValues() {
+        // Windows GetEnvironmentStringsW API can return
+        // magic environment variables set by the cmd shell
+        // that starts with `=`
+        // This test makes sure we don't include these
+        // magic variables
+        let env = ProcessInfo.processInfo.environment
+        XCTAssertNil(env[""])
+    }
 }
