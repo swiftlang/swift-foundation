@@ -72,6 +72,7 @@ target_compile_options(FoundationEssentials PRIVATE -package-name "SwiftFoundati
 target_link_libraries(FoundationEssentials PUBLIC
     _FoundationCShims
     _FoundationCollections)
+target_link_libraries(FoundationEssentials PUBLIC ${_SwiftFoundation_wasi_libc_libraries})
 
 if(NOT BUILD_SHARED_LIBS)
     target_compile_options(FoundationEssentials PRIVATE
