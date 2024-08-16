@@ -817,7 +817,16 @@ enum _FileOperations {
             guard delegate.shouldPerformOnItemAtPath(src, to: dst) else { return }
 
             try dst.withNTPathRepresentation { pwszDestination in
-                if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
+                // Check for reparse points first because symlinks to directories are reported as both reparse points and directories, and we should copy the symlink not the contents of the linked directory
+                if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                    do {
+                        let linkDest = try fileManager.destinationOfSymbolicLink(atPath: src)
+                        try fileManager.createSymbolicLink(atPath: dst, withDestinationPath: linkDest)
+                    } catch {
+                        try delegate.throwIfNecessary(error, src, dst)
+                        return
+                    }
+                } else if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
                     do {
                         try fileManager.createDirectory(atPath: dst, withIntermediateDirectories: true)
                     } catch {
@@ -826,10 +835,10 @@ enum _FileOperations {
                     for item in _Win32DirectoryContentsSequence(path: src, appendSlashForDirectory: true) {
                         try linkOrCopyFile(src.appendingPathComponent(item.fileName), dst: dst.appendingPathComponent(item.fileName), with: fileManager, delegate: delegate)
                     }
-                } else if bCopyFile || faAttributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                } else if bCopyFile {
                     var ExtendedParameters: COPYFILE2_EXTENDED_PARAMETERS = .init()
                     ExtendedParameters.dwSize = DWORD(MemoryLayout<COPYFILE2_EXTENDED_PARAMETERS>.size)
-                    ExtendedParameters.dwCopyFlags = COPY_FILE_FAIL_IF_EXISTS | COPY_FILE_COPY_SYMLINK | COPY_FILE_NO_BUFFERING | COPY_FILE_OPEN_AND_COPY_REPARSE_POINT
+                    ExtendedParameters.dwCopyFlags = COPY_FILE_FAIL_IF_EXISTS | COPY_FILE_NO_BUFFERING
 
                     if FAILED(CopyFile2(pwszSource, pwszDestination, &ExtendedParameters)) {
                         try delegate.throwIfNecessary(GetLastError(), src, dst)

@@ -214,10 +214,20 @@ final class FileManagerTests : XCTestCase {
                     File("Baz", contents: randomData())
                 }
             }
+            Directory("symlinks") {
+                File("Foo", contents: randomData())
+                SymbolicLink("LinkToFoo", destination: "Foo")
+            }
+            Directory("EmptyDirectory") {}
+            "EmptyFile"
         }.test {
             XCTAssertTrue($0.contentsEqual(atPath: "dir1", andPath: "dir1_copy"))
             XCTAssertFalse($0.contentsEqual(atPath: "dir1/dir2", andPath: "dir1/dir3"))
             XCTAssertFalse($0.contentsEqual(atPath: "dir1", andPath: "dir1_diffdata"))
+            XCTAssertFalse($0.contentsEqual(atPath: "symlinks/LinkToFoo", andPath: "symlinks/Foo"), "Symbolic link should not be equal to its destination")
+            XCTAssertFalse($0.contentsEqual(atPath: "symlinks/LinkToFoo", andPath: "EmptyFile"), "Symbolic link should not be equal to an empty file")
+            XCTAssertFalse($0.contentsEqual(atPath: "symlinks/LinkToFoo", andPath: "EmptyDirectory"), "Symbolic link should not be equal to an empty directory")
+            XCTAssertFalse($0.contentsEqual(atPath: "symlinks/EmptyDirectory", andPath: "EmptyFile"), "Empty directory should not be equal to empty file")
         }
     }
     
@@ -253,21 +263,30 @@ final class FileManagerTests : XCTestCase {
                     "Baz"
                 }
             }
+            Directory("symlinks") {
+                "Foo"
+                SymbolicLink("Bar", destination: "Foo")
+                SymbolicLink("Parent", destination: "..")
+            }
         }.test {
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: "dir1").sorted(), ["dir2", "dir2/Bar", "dir2/Foo", "dir3", "dir3/Baz"])
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: "dir1/dir2").sorted(), ["Bar", "Foo"])
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: "dir1/dir3").sorted(), ["Baz"])
+            
+            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: "symlinks").sorted(), ["Bar", "Foo", "Parent"])
+            
             XCTAssertThrowsError(try $0.subpathsOfDirectory(atPath: "does_not_exist")) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
             }
             
-            let fullContents = ["dir1", "dir1/dir2", "dir1/dir2/Bar", "dir1/dir2/Foo", "dir1/dir3", "dir1/dir3/Baz"]
+            let fullContents = ["dir1", "dir1/dir2", "dir1/dir2/Bar", "dir1/dir2/Foo", "dir1/dir3", "dir1/dir3/Baz", "symlinks", "symlinks/Bar", "symlinks/Foo", "symlinks/Parent"]
             let cwd = $0.currentDirectoryPath
             XCTAssertNotEqual(cwd.last, "/")
             let paths = [cwd, "\(cwd)/", "\(cwd)//", ".", "./", ".//"]
             for path in paths {
                 XCTAssertEqual(try $0.subpathsOfDirectory(atPath: path).sorted(), fullContents)
             }
+            
         }
     }
     
@@ -344,6 +363,32 @@ final class FileManagerTests : XCTestCase {
             try $0.copyItem(atPath: "foo", toPath: "bar")
             XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("foo", "bar")])
             XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError, [.init("foo", "bar", code: .fileWriteFileExists)])
+        }
+        
+        try FileManagerPlayground {
+            "foo"
+            SymbolicLink("bar", destination: "foo")
+        }.test(captureDelegateCalls: true) {
+            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            try $0.copyItem(atPath: "bar", toPath: "copy")
+            XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("bar", "copy")])
+            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError, [])
+            let copyDestination = try $0.destinationOfSymbolicLink(atPath: "copy")
+            XCTAssertEqual(copyDestination.lastPathComponent, "foo", "Copied symbolic link points at \(copyDestination) instead of foo")
+        }
+
+        try FileManagerPlayground {
+            Directory("dir") {
+                "foo"
+            }
+            SymbolicLink("link", destination: "dir")
+        }.test(captureDelegateCalls: true) {
+            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            try $0.copyItem(atPath: "link", toPath: "copy")
+            XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("link", "copy")])
+            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterCopyError, [])
+            let copyDestination = try $0.destinationOfSymbolicLink(atPath: "copy")
+            XCTAssertEqual(copyDestination.lastPathComponent, "dir", "Copied symbolic link points at \(copyDestination) instead of foo")
         }
     }
     
