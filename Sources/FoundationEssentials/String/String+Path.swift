@@ -366,7 +366,7 @@ extension String {
         return String(cString: output)
     }
 
-    #if !NO_FILESYSTEM
+#if !NO_FILESYSTEM
     internal static func homeDirectoryPath(forUser user: String? = nil) -> String {
 #if os(Windows)
         if let user {
@@ -529,8 +529,10 @@ extension String {
 #else
         return "/tmp/"
 #endif
-#endif
+#endif // os(Windows)
     }
+#endif // !NO_FILESYSTEM
+
     /// Replaces any number of sequential `/`
     /// characters with /
     /// NOTE: Internal so it's testable
@@ -569,7 +571,7 @@ extension String {
         }
     }
 
-    private var _droppingTrailingSlashes: String {
+    internal var _droppingTrailingSlashes: String {
         guard !self.isEmpty else {
             return self
         }
@@ -579,7 +581,9 @@ extension String {
         }
         return String(self[...lastNonSlash])
     }
-    
+
+#if !NO_FILESYSTEM
+
     static var NETWORK_PREFIX: String { #"\\"# }
     
     private var _standardizingPath: String {
@@ -616,7 +620,8 @@ extension String {
     var standardizingPath: String {
         expandingTildeInPath._standardizingPath
     }
-    #endif // !NO_FILESYSTEM
+
+#endif // !NO_FILESYSTEM
     
     // _NSPathComponents
     var pathComponents: [String] {

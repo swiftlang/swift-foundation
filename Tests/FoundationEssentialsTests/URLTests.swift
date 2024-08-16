@@ -571,6 +571,21 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(appended.relativePath, "relative/with:slash")
     }
 
+    func testURLFilePathDropsTrailingSlashes() throws {
+        var url = URL(filePath: "/path/slashes///")
+        XCTAssertEqual(url.path(), "/path/slashes///")
+        // TODO: Update this once .fileSystemPath uses backslashes for Windows
+        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+
+        url = URL(filePath: "/path/slashes/")
+        XCTAssertEqual(url.path(), "/path/slashes/")
+        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+
+        url = URL(filePath: "/path/slashes")
+        XCTAssertEqual(url.path(), "/path/slashes")
+        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+    }
+
     func testURLHostRetainsIDNAEncoding() throws {
         let url = URL(string: "ftp://user:password@*.xn--poema-9qae5a.com.br:4343/cat.txt")!
         XCTAssertEqual(url.host, "*.xn--poema-9qae5a.com.br")
