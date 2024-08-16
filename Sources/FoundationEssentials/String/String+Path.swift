@@ -377,6 +377,10 @@ extension String {
                 
                 return fallback
             }
+
+            guard !user.isEmpty else {
+                return fallbackUserDirectory()
+            }
             
             return user.withCString(encodedAs: UTF16.self) { pwszUserName in
                 var cbSID: DWORD = 0
