@@ -917,6 +917,15 @@ final class FileManagerTests : XCTestCase {
             try $0.setAttributes(attrs, ofItemAtPath: "foo")
         }
     }
+
+    func testCurrentUserHomeDirectory() throws {
+        #if canImport(Darwin) && !os(macOS)
+        throw XCTSkip("This test is not applicable on this platform")
+        #else
+        let userName = ProcessInfo.processInfo.userName
+        XCTAssertEqual(FileManager.default.homeDirectory(forUser: userName), FileManager.default.homeDirectoryForCurrentUser)
+        #endif
+    }
     
     func testAttributesOfItemAtPath() throws {
         try FileManagerPlayground {
