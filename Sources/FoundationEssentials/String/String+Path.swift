@@ -382,7 +382,8 @@ extension String {
                 var cbSID: DWORD = 0
                 var cchReferencedDomainName: DWORD = 0
                 var eUse: SID_NAME_USE = SidTypeUnknown
-                guard LookupAccountNameW(nil, pwszUserName, nil, &cbSID, nil, &cchReferencedDomainName, &eUse) else {
+                LookupAccountNameW(nil, pwszUserName, nil, &cbSID, nil, &cchReferencedDomainName, &eUse)
+                guard cbSID > 0 else {
                     return fallbackUserDirectory()
                 }
 
@@ -397,10 +398,11 @@ extension String {
                             fatalError("unable to convert SID to string for user \(user)")
                         }
 
-                        return #"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\#\(String(decodingCString: pwszSID!, as: UTF16.self))"#.withCString(encodedAs: UTF16.self) { pwszKeyPath in
+                        return #"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\\#(String(decodingCString: pwszSID!, as: UTF16.self))"#.withCString(encodedAs: UTF16.self) { pwszKeyPath in
                             return "ProfileImagePath".withCString(encodedAs: UTF16.self) { pwszKey in
                                 var cbData: DWORD = 0
-                                guard RegGetValueW(HKEY_LOCAL_MACHINE, pwszKeyPath, pwszKey, RRF_RT_REG_SZ, nil, nil, &cbData) == ERROR_SUCCESS else {
+                                RegGetValueW(HKEY_LOCAL_MACHINE, pwszKeyPath, pwszKey, RRF_RT_REG_SZ, nil, nil, &cbData)
+                                guard cbData > 0 else {
                                     fatalError("unable to query ProfileImagePath for user \(user)")
                                 }
                                 return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(cbData)) { pwszData in
