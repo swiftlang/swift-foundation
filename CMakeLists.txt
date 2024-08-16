@@ -114,16 +114,25 @@ foreach(version ${_SwiftFoundation_versions})
     endforeach()
 endforeach()
 
-# wasi-libc emulation feature flags
+# wasi-libc emulation feature flags passed to the Swift compiler
 set(_SwiftFoundation_wasi_libc_flags)
+# wasi-libc emulation libraries to link against when building a shared library
+set(_SwiftFoundation_wasi_libc_libraries)
 if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
     list(APPEND _SwiftFoundation_wasi_libc_flags
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_GETPID>"
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend wasi-emulated-getpid>"
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_SIGNAL>"
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend wasi-emulated-signal>"
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_MMAN>"
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend wasi-emulated-mman>")
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_MMAN>")
+    if(BUILD_SHARED_LIBS)
+        # Link emulation libraries to the shared library directly when building a shared library
+        list(APPEND _SwiftFoundation_wasi_libc_libraries wasi-emulated-getpid wasi-emulated-signal wasi-emulated-mman)
+    else()
+        # Emit autolink entries to let clients to link against the emulation libraries
+        list(APPEND _SwiftFoundation_wasi_libc_flags
+            "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend wasi-emulated-getpid>"
+            "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend wasi-emulated-signal>"
+            "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -public-autolink-library -Xfrontend wasi-emulated-mman>")
+    endif()
 endif()
 
 include(GNUInstallDirs)
