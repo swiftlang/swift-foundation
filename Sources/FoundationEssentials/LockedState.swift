@@ -19,6 +19,8 @@ internal import C.os.lock
 import Bionic
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif canImport(WinSDK)
 import WinSDK
 #endif
@@ -29,7 +31,7 @@ package struct LockedState<State> {
     private struct _Lock {
 #if canImport(os)
         typealias Primitive = os_unfair_lock
-#elseif os(Android) || canImport(Glibc)
+#elseif os(Android) || canImport(Glibc) || canImport(Musl)
         typealias Primitive = pthread_mutex_t
 #elseif canImport(WinSDK)
         typealias Primitive = SRWLOCK
