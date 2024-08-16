@@ -278,6 +278,14 @@ final class FileManagerTests : XCTestCase {
             XCTAssertThrowsError(try $0.subpathsOfDirectory(atPath: "does_not_exist")) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
             }
+
+            XCTAssertThrowsError(try $0.subpathsOfDirectory(atPath: "")) {
+                #if os(Windows)
+                XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadInvalidFileName)
+                #else
+                XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
+                #endif
+            }
             
             let fullContents = ["dir1", "dir1/dir2", "dir1/dir2/Bar", "dir1/dir2/Foo", "dir1/dir3", "dir1/dir3/Baz", "symlinks", "symlinks/Bar", "symlinks/Foo", "symlinks/Parent"]
             let cwd = $0.currentDirectoryPath
