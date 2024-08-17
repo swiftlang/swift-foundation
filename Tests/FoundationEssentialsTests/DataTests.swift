@@ -1837,7 +1837,7 @@ extension DataTests {
     }
     
     func testEOPNOTSUPP() throws {
-        #if !canImport(Darwin) && !os(Linux)
+        #if !canImport(Darwin) && !os(Linux) && !os(Android)
         throw XCTSkip("POSIXError.Code is not supported on this platform")
         #else
         // Opening a socket via open(2) on Darwin can result in the EOPNOTSUPP error code

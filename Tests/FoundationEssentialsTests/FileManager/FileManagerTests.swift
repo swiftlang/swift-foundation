@@ -23,6 +23,10 @@ import TestSupport
 @testable import Foundation
 #endif
 
+#if canImport(Android)
+import Android
+#endif
+
 extension FileManager {
     fileprivate var delegateCaptures: DelegateCaptures {
         (self.delegate as! CapturingFileManagerDelegate).captures
@@ -337,8 +341,13 @@ final class FileManagerTests : XCTestCase {
             XCTAssertTrue($0.delegateCaptures.isEmpty)
             try $0.linkItem(atPath: "foo", toPath: "bar")
             XCTAssertEqual($0.delegateCaptures.shouldLink, [.init("foo", "bar")])
+            #if os(Android) // Hard links are not normally allowed on Android.
+            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterLinkError, [.init("foo", "bar", code: .fileWriteNoPermission)])
+            XCTAssertFalse($0.fileExists(atPath: "bar"))
+            #else
             XCTAssertEqual($0.delegateCaptures.shouldProceedAfterLinkError, [])
             XCTAssertTrue($0.fileExists(atPath: "bar"))
+            #endif
         }
         
         try FileManagerPlayground {
