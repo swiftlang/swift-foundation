@@ -55,10 +55,6 @@
 #include <math.h>
 #endif
 
-#if __has_include(<setjmp.h>)
-#include <setjmp.h>
-#endif
-
 #if __has_include(<signal.h>)
 /// Guard against including `signal.h` on WASI. The `signal.h` header file
 /// itself is available in wasi-libc, but it's just a stub that doesn't actually
