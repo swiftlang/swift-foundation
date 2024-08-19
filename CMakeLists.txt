@@ -60,18 +60,22 @@ set(SwiftFoundation_MACRO "" CACHE STRING "Path to Foundation macro plugin")
 # Make sure our dependencies exists
 include(FetchContent)
 if (_SwiftFoundationICU_SourceDIR)
+    message(STATUS "_SwiftFoundationICU_SourceDIR provided, using swift-foundation-icu checkout at ${_SwiftFoundationICU_SourceDIR}")
     FetchContent_Declare(SwiftFoundationICU
         SOURCE_DIR ${_SwiftFoundationICU_SourceDIR})
 else()
+    message(STATUS "_SwiftFoundationICU_SourceDIR not provided, checking out local copy of swift-foundation-icu")
     FetchContent_Declare(SwiftFoundationICU
         GIT_REPOSITORY https://github.com/apple/swift-foundation-icu.git
         GIT_TAG 0.0.9)
 endif()
 
 if (_SwiftCollections_SourceDIR)
+    message(STATUS "_SwiftCollections_SourceDIR provided, using swift-foundation-icu checkout at ${_SwiftCollections_SourceDIR}")
     FetchContent_Declare(SwiftCollections
         SOURCE_DIR ${_SwiftCollections_SourceDIR})
 else()
+    message(STATUS "_SwiftCollections_SourceDIR not provided, checking out local copy of swift-collections")
     FetchContent_Declare(SwiftCollections
         GIT_REPOSITORY https://github.com/apple/swift-collections.git
         GIT_TAG 1.1.2)
