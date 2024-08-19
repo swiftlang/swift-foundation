@@ -586,6 +586,42 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.fileSystemPath, "/path/slashes")
     }
 
+    func testURLNotDirectoryHintStripsTrailingSlash() throws {
+        // Supply a path with a trailing slash but say it's not a direcotry
+        var url = URL(filePath: "/path/", directoryHint: .notDirectory)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/path")
+
+        url = URL(fileURLWithPath: "/path/", isDirectory: false)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/path")
+
+        url = URL(filePath: "/path///", directoryHint: .notDirectory)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/path")
+
+        url = URL(fileURLWithPath: "/path///", isDirectory: false)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/path")
+
+        // With .checkFileSystem, don't modify the path for a non-existent file
+        url = URL(filePath: "/my/non/existent/path/", directoryHint: .checkFileSystem)
+        XCTAssertTrue(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/my/non/existent/path/")
+
+        url = URL(fileURLWithPath: "/my/non/existent/path/")
+        XCTAssertTrue(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/my/non/existent/path/")
+
+        url = URL(filePath: "/my/non/existent/path", directoryHint: .checkFileSystem)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/my/non/existent/path")
+
+        url = URL(fileURLWithPath: "/my/non/existent/path")
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/my/non/existent/path")
+    }
+
     func testURLHostRetainsIDNAEncoding() throws {
         let url = URL(string: "ftp://user:password@*.xn--poema-9qae5a.com.br:4343/cat.txt")!
         XCTAssertEqual(url.host, "*.xn--poema-9qae5a.com.br")
