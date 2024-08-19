@@ -2022,24 +2022,28 @@ extension URL {
 
 #if !NO_FILESYSTEM
     private static func isDirectory(_ path: String) -> Bool {
-#if !FOUNDATION_FRAMEWORK
+        #if os(Windows)
+        let path = path.replacing(._slash, with: ._backslash)
+        #endif
+        #if !FOUNDATION_FRAMEWORK
         var isDirectory: Bool = false
         _ = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
         return isDirectory
-#else
+        #else
         var isDirectory: ObjCBool = false
         _ = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
         return isDirectory.boolValue
-#endif
+        #endif
     }
 #endif // !NO_FILESYSTEM
 
     /// Checks if a file path is absolute and standardizes the inputted file path on Windows
+    /// Assumes the path only contains `/` as the path separator
     internal static func isAbsolute(standardizing filePath: inout String) -> Bool {
         #if os(Windows)
         var isAbsolute = false
         let utf8 = filePath.utf8
-        if utf8.first == ._backslash {
+        if utf8.first == ._slash {
             // Either an absolute path or a UNC path
             isAbsolute = true
         } else if utf8.count >= 3 {
@@ -2052,18 +2056,18 @@ extension URL {
             isAbsolute = (
                 first.isAlpha
                 && (second == ._colon || second == ._pipe)
-                && third == ._backslash
+                && third == ._slash
             )
 
             if isAbsolute {
-                // Standardize to "\[drive-letter]:\..."
+                // Standardize to "/[drive-letter]:/..."
                 if second == ._pipe {
                     var filePathArray = Array(utf8)
                     filePathArray[1] = ._colon
-                    filePathArray.insert(._backslash, at: 0)
+                    filePathArray.insert(._slash, at: 0)
                     filePath = String(decoding: filePathArray, as: UTF8.self)
                 } else {
-                    filePath = "\\" + filePath
+                    filePath = "/" + filePath
                 }
             }
         }
@@ -2107,10 +2111,9 @@ extension URL {
         }
 
         #if os(Windows)
-        let slash = UInt8(ascii: "\\")
-        var filePath = path.replacing(UInt8(ascii: "/"), with: slash)
+        // Convert any "\" to "/" before storing the URL parse info
+        var filePath = path.replacing(._backslash, with: ._slash)
         #else
-        let slash = UInt8(ascii: "/")
         var filePath = path
         #endif
 
@@ -2122,41 +2125,31 @@ extension URL {
         }
         #endif
 
-        func absoluteFilePath() -> String {
-            guard !isAbsolute, let baseURL else {
-                return filePath
-            }
-            let basePath = baseURL.path()
-            #if os(Windows)
-            let urlPath = filePath.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
-            return URL.fileSystemPath(for: basePath.merging(relativePath: urlPath)).replacing(UInt8(ascii: "/"), with: UInt8(ascii: "\\"))
-            #else
-            return URL.fileSystemPath(for: basePath.merging(relativePath: filePath))
-            #endif
-        }
-
         let isDirectory: Bool
         switch directoryHint {
         case .isDirectory:
             isDirectory = true
         case .notDirectory:
+            filePath = filePath._droppingTrailingSlashes
             isDirectory = false
         case .checkFileSystem:
             #if !NO_FILESYSTEM
+            func absoluteFilePath() -> String {
+                guard !isAbsolute, let baseURL else {
+                    return filePath
+                }
+                let absolutePath = baseURL.path().merging(relativePath: filePath)
+                return URL.fileSystemPath(for: absolutePath)
+            }
             isDirectory = URL.isDirectory(absoluteFilePath())
             #else
-            isDirectory = filePath.utf8.last == slash
+            isDirectory = filePath.utf8.last == ._slash
             #endif
         case .inferFromPath:
-            isDirectory = filePath.utf8.last == slash
+            isDirectory = filePath.utf8.last == ._slash
         }
 
-        #if os(Windows)
-        // Convert any "\" back to "/" before storing the URL parse info
-        filePath = filePath.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
-        #endif
-
-        if !filePath.isEmpty && filePath.utf8.last != UInt8(ascii: "/") && isDirectory {
+        if isDirectory && !filePath.isEmpty && filePath.utf8.last != ._slash {
             filePath += "/"
         }
         var components = URLComponents()
@@ -2434,6 +2427,9 @@ extension URL {
         guard var filePath = path else {
             return nil
         }
+        #if os(Windows)
+        filePath = filePath.replacing(._backslash, with: ._slash)
+        #endif
         guard URL.isAbsolute(standardizing: &filePath) else {
             return nil
         }
