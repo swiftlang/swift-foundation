@@ -33,6 +33,11 @@ struct _Win32DirectoryContentsSequence: Sequence {
         init(path: String, appendSlashForDirectory: Bool, prefix: [String]) {
             self.slash = appendSlashForDirectory
 
+            guard !path.isEmpty else {
+                self.error = CocoaError.errorWithFilePath(.fileReadInvalidFileName, path)
+                return
+            }
+
             do {
                 hFind = try "\(path)\\*".withNTPathRepresentation {
                     // We use `FindFirstFileExW` to avoid the lookup of the short name of the file. We never consult the field and this can speed up the file enumeration.
