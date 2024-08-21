@@ -8,6 +8,7 @@
 ## Revision history
 
 * **v1** Initial version
+* **v2** Remove `static` from `NotificationCenter.Message.isolation` to better support actor instances
 
 ## Introduction
 
@@ -49,7 +50,7 @@ By default, observers of types conforming to `NotificationCenter.Message` will b
 ```swift
 struct EventDidOccur: NotificationCenter.Message {
     static var name: Notification.Name { eventDidOccurNotification }
-    static var isolation: EventActor { EventActor.shared }
+    var isolation: EventActor { EventActor.shared }
 }
 ```
 
@@ -150,7 +151,7 @@ extension NotificationCenter {
         associatedtype Isolation: Actor
     
         static var name: Notification.Name { get }
-        static var isolation: Isolation { get }
+        var isolation: Isolation { get }
         
         static func makeMessage(_ notification: Notification) -> Self?
         static func makeNotification(_ message: Self) -> Notification
@@ -159,7 +160,7 @@ extension NotificationCenter {
 
 @available(FoundationPreview 0.5, *)
 extension NotificationCenter.Message where Isolation == MainActor {
-    public static var isolation: MainActor { .shared }
+    public var isolation: MainActor { .shared }
 }
 ```
 
@@ -209,17 +210,24 @@ Like the new `addObserver` overloads, the new `post` overloads allow for both an
 ```swift
 @available(FoundationPreview 0.5, *)
 public func post<MessageType: NotificationCenter.Message>(_ message: MessageType,
-                                                          isolation: isolated MessageType.Isolation = MessageType.isolation)
+                                                          isolation: isolated MessageType.Isolation)
 
 @available(FoundationPreview 0.5, *)
 @MainActor
 public func post<MessageType: NotificationCenter.Message>(_ message: MessageType) where MessageType.Isolation == MainActor
 ```
 
-Posting only requires passing an instance of the `NotificationCenter.Message`-conforming type:
+Posting requires passing an instance of the `NotificationCenter.Message`-conforming type and the desired isolation:
 
 ```swift
-NotificationCenter.default.post(WillLaunchApplication(...))
+let eventMessage = EventDidOccur()
+NotificationCenter.default.post(eventMessage, isolation: eventMessage.isolation)
+```
+
+Or just the instance for `MainActor`-bound types:
+
+```swift
+NotificationCenter.default.post(EventDidOccur(...))
 ```
 
 Like the existing `post()` methods, all observers will be called synchronously and serially to ensure existing notification usage patterns like `will` / `did` are executed in order. This is possible because the isolation used to call `post()` will match the isolation defined by `NotificationCenter.Message`, and all observers will then be called from that same isolation.
@@ -256,6 +264,13 @@ These methods do not need to be implemented if all posters and observers are usi
 
 If `Notification` and `NotificationCenter.Message` posters and observers are mixed without implementing these methods, observers for both types will be called but will not receive the associated payloads.
 
+See the table below for the effects of `makeMessage` / `makeNotification`:
+
+| Posting...    | Observing...    | Behavior |
+| ------------- | --------------- | ------------------------------------------ |
+| Message       | Notification    | Notification observers will receive the result of `makeNotification()` if available, else they will be called with a `nil` value for `userInfo` and `object` |
+| Notification  | Message         | Message observers will receive the result of `makeMessage()` if available, else the observer will not be called |
+
 ### Isolation from non-Swift Concurrency posters
 
 Observers called via the existing, pre-Swift Concurrency `.post()` methods are either called on the same thread as the poster, or called in an explicitly passed `OperationQueue`.
@@ -269,6 +284,17 @@ The new `addObserver` methods will attempt to check isolation and may halt progr
 These changes are entirely additive but could impact existing code due to the ability to interoperate between `NotificationCenter.Message` and `Notification`.
 
 Specifically, if an observer for `NotificationCenter.Message` receives a message posted as a `Notification` which violates the isolation contract specified in `NotificationCenter.Message`, the correct fix may be to modify the existing `Notification` `.post()` call to uphold that contract.
+
+## Future directions
+
+At the moment, the non-`MainActor` variant of post has a redundant `isolation` parameter:
+
+```swift
+public func post<MessageType: NotificationCenter.Message>(_ message: MessageType,
+                                                          isolation: isolated MessageType.Isolation)
+```
+
+The correct value of this parameter is always that of `message.isolation`, but we're unable to express this at the moment. In the future, we may be able to provide an overload which no longer requires the second parameter.
 
 ## Alternatives considered
 
