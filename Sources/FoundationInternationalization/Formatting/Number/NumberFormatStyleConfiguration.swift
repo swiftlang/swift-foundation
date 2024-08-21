@@ -88,7 +88,6 @@ public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
     }
 }
 
-@_nonSendable
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum NumberFormatStyleConfiguration {
     internal struct Collection : Codable, Hashable, Sendable {
@@ -305,7 +304,13 @@ public enum NumberFormatStyleConfiguration {
     }
 }
 
-@_nonSendable
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension NumberFormatStyleConfiguration : Sendable {}
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum CurrencyFormatStyleConfiguration {
     public typealias Grouping = NumberFormatStyleConfiguration.Grouping
@@ -377,7 +382,13 @@ public enum CurrencyFormatStyleConfiguration {
     }
 }
 
-@_nonSendable
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension CurrencyFormatStyleConfiguration : Sendable {}
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum DescriptiveNumberFormatConfiguration {
     public typealias CapitalizationContext = FormatStyleCapitalizationContext
@@ -427,6 +438,13 @@ public enum DescriptiveNumberFormatConfiguration {
         }
     }
 }
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension DescriptiveNumberFormatConfiguration : Sendable {}
 
 // MARK: - Codable
 

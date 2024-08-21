@@ -21,10 +21,12 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-@_nonSendable
 class Hello {
     var str: NSMutableString = "hi"
 }
+
+@available(*, unavailable)
+extension Hello : Sendable {}
 
 @available(FoundationPreview 0.1, *)
 final class SortDescriptorTests: XCTestCase {

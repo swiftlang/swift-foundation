@@ -133,7 +133,6 @@ extension AttributedStringKey {
 
 // MARK: Attribute Scopes
 
-@_nonSendable
 @dynamicMemberLookup @frozen
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public enum AttributeDynamicLookup {
@@ -141,6 +140,13 @@ public enum AttributeDynamicLookup {
         get { fatalError("Called outside of a dynamicMemberLookup subscript overload") }
     }
 }
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeDynamicLookup : Sendable {}
 
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
