@@ -34,103 +34,73 @@ func _calendarClass(identifier: Calendar.Identifier, useGregorian: Bool) -> _Cal
 }
 
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.
-struct CalendarCache : Sendable {
+struct CalendarCache : Sendable, ~Copyable {
     // MARK: - State
     
-    struct State : Sendable {
-        // If nil, the calendar has been invalidated and will be created next time State.current() is called
-        private var currentCalendar: (any _CalendarProtocol)?
-        private var autoupdatingCurrentCalendar: _CalendarAutoupdating?
-        private var fixedCalendars: [Calendar.Identifier: any _CalendarProtocol] = [:]
-
-        private var noteCount = -1
-        private var wasResetManually = false
-                
-        mutating func check() {
-#if FOUNDATION_FRAMEWORK
-            // On Darwin we listen for certain distributed notifications to reset the current Calendar.
-            let newNoteCount = _CFLocaleGetNoteCount() + _CFTimeZoneGetNoteCount() + Int(_CFCalendarGetMidnightNoteCount())
-#else
-            let newNoteCount = 1
-#endif
-            if newNoteCount != noteCount || wasResetManually {
-                // rdar://102017659
-                // Don't create `currentCalendar` here to avoid deadlocking when retrieving a fixed
-                // calendar. Creating the current calendar gets the current locale, decodes a plist
-                // from CFPreferences, and may call +[NSDate initialize] on a separate thread. This
-                // leads to a deadlock if we are also initializing a class on the current thread
-                currentCalendar = nil
-                fixedCalendars = [:]
-
-                noteCount = newNoteCount
-                wasResetManually = false
-            }
+    static let cache = CalendarCache()
+    
+    // The values stored in these two locks do not depend upon each other, so it is safe to access them with separate locks. This helps avoids contention on a single lock.
+    
+    private let _current = LockedState<(any _CalendarProtocol)?>(initialState: nil)
+    private let _fixed = LockedState<[Calendar.Identifier: any _CalendarProtocol]>(initialState: [:])
+    
+    fileprivate init() {
+    }
+    
+    var current: any _CalendarProtocol {
+        if let result = _current.withLock({ $0 }) {
+            return result
         }
-
-        mutating func current() -> any _CalendarProtocol {
-            check()
-            if let currentCalendar {
-                return currentCalendar
+                        
+        let id = Locale.current._calendarIdentifier
+        // If we cannot create the right kind of class, we fail immediately here
+        let calendarClass = _calendarClass(identifier: id, useGregorian: true)!
+        let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        
+        return _current.withLock {
+            if let current = $0 {
+                // Someone beat us to setting it - use the existing one
+                return current
             } else {
-                let id = Locale.current._calendarIdentifier
-                // If we cannot create the right kind of class, we fail immediately here
-                let calendarClass = _calendarClass(identifier: id, useGregorian: true)!
-                let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-                currentCalendar = calendar
+                $0 = calendar
                 return calendar
             }
+        }
+    }
+    
+    func reset() {
+        // rdar://102017659
+        // Don't create `currentCalendar` here to avoid deadlocking when retrieving a fixed
+        // calendar. Creating the current calendar gets the current locale, decodes a plist
+        // from CFPreferences, and may call +[NSDate initialize] on a separate thread. This
+        // leads to a deadlock if we are also initializing a class on the current thread
+        _current.withLock { $0 = nil }
+        _fixed.withLock { $0 = [:] }
+    }
+    
+    // MARK: Singletons
+    
+    static let autoupdatingCurrent = _CalendarAutoupdating()
+    
+    // MARK: -
+    
+    func fixed(_ id: Calendar.Identifier) -> any _CalendarProtocol {
+        if let existing = _fixed.withLock({ $0[id] }) {
+            return existing
         }
         
-        mutating func autoupdatingCurrent() -> any _CalendarProtocol {
-            if let autoupdatingCurrentCalendar {
-                return autoupdatingCurrentCalendar
+        // If we cannot create the right kind of class, we fail immediately here
+        let calendarClass = _calendarClass(identifier: id, useGregorian: true)!
+        let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        
+        return _fixed.withLock {
+            if let existing = $0[id] {
+                return existing
             } else {
-                let calendar = _CalendarAutoupdating()
-                autoupdatingCurrentCalendar = calendar
-                return calendar
-            }
-        }
-
-        mutating func fixed(_ id: Calendar.Identifier) -> any _CalendarProtocol {
-            check()
-            if let cached = fixedCalendars[id] {
-                return cached
-            } else {
-                // If we cannot create the right kind of class, we fail immediately here
-                let calendarClass = _calendarClass(identifier: id, useGregorian: true)!
-                let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-                fixedCalendars[id] = new
+                $0[id] = new
                 return new
             }
         }
-
-        mutating func reset() {
-            wasResetManually = true
-        }
-    }
-
-    let lock: LockedState<State>
-
-    static let cache = CalendarCache()
-
-    fileprivate init() {
-        lock = LockedState(initialState: State())
-    }
-
-    func reset() {
-        lock.withLock { $0.reset() }
-    }
-
-    var current: any _CalendarProtocol {
-        lock.withLock { $0.current() }
-    }
-    
-    var autoupdatingCurrent: any _CalendarProtocol {
-        lock.withLock { $0.autoupdatingCurrent() }
-    }
-    
-    func fixed(_ id: Calendar.Identifier) -> any _CalendarProtocol {
-        lock.withLock { $0.fixed(id) }
     }
     
     func fixed(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
