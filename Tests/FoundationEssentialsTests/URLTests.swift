@@ -1082,4 +1082,20 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(comp.percentEncodedPath, "/my%00path")
         XCTAssertEqual(comp.path, "/my\u{0}path")
     }
+
+#if FOUNDATION_FRAMEWORK
+    func testURLComponentsBridging() {
+        var nsURLComponents = NSURLComponents(
+            string: "https://example.com?url=https%3A%2F%2Fapple.com"
+        )!
+        var urlComponents = nsURLComponents as URLComponents
+        XCTAssertEqual(urlComponents.string, nsURLComponents.string)
+
+        urlComponents = URLComponents(
+            string: "https://example.com?url=https%3A%2F%2Fapple.com"
+        )!
+        nsURLComponents = urlComponents as NSURLComponents
+        XCTAssertEqual(urlComponents.string, nsURLComponents.string)
+    }
+#endif
 }
