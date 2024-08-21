@@ -1188,7 +1188,7 @@ public struct URL: Equatable, Sendable, Hashable {
             return _url.host
         }
         #endif
-        return host()
+        return host(percentEncoded: false)
     }
 
     /// Returns the host component of the URL if present, otherwise returns `nil`.
