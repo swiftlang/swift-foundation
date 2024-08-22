@@ -125,7 +125,7 @@ extension NSWorkspace {
 This notification could be observed by a client using:
 
 ```swift
-NotificationCenter.default.addObserver(WillLaunchApplication.self) { message in 
+NotificationCenter.default.addObserver(NSWorkspace.WillLaunchApplication.self) { message in 
     // Do something with message.runningApplication ...
 }
 ```
@@ -134,7 +134,7 @@ And it could be posted using:
 
 ```swift
 NotificationCenter.default.post(
-    WillLaunchApplication(workspace: someWorkspace, runningApplication: someRunningApplication)
+    NSWorkspace.WillLaunchApplication(workspace: someWorkspace, runningApplication: someRunningApplication)
 )
 ```
 
