@@ -197,7 +197,7 @@ They also return a new `ObservationToken`, which can be used with a new `removeO
 ```swift
 @available(FoundationPreview 0.5, *)
 extension NotificationCenter {
-	public struct ObservationToken: Hashable, Sendable
+	public struct ObservationToken: Hashable, Sendable { ... }
 	
 	public func removeObserver(_ token: ObservationToken)
 }
