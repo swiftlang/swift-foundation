@@ -259,6 +259,12 @@ class DataIOTests : XCTestCase {
         XCTAssertEqual("/a/b/c/".deletingLastPathComponent(), "/a/b")
         XCTAssertEqual("hello".deletingLastPathComponent(), "")
         XCTAssertEqual("hello/".deletingLastPathComponent(), "")
+        XCTAssertEqual("/hello/".deletingLastPathComponent(), "/")
+        XCTAssertEqual("hello///".deletingLastPathComponent(), "")
+        XCTAssertEqual("a/".deletingLastPathComponent(), "")
+        XCTAssertEqual("a/b".deletingLastPathComponent(), "a")
+        XCTAssertEqual("a/b/".deletingLastPathComponent(), "a")
+        XCTAssertEqual("a//b//".deletingLastPathComponent(), "a")
     }
     
     func testAppendingPathComponent() {
@@ -293,6 +299,8 @@ class DataIOTests : XCTestCase {
         XCTAssertEqual("/a/b/c/".lastPathComponent, "c")
         XCTAssertEqual("hello".lastPathComponent, "hello")
         XCTAssertEqual("hello/".lastPathComponent, "hello")
+        XCTAssertEqual("hello///".lastPathComponent, "hello")
+        XCTAssertEqual("//a//".lastPathComponent, "a")
     }
 }
 
