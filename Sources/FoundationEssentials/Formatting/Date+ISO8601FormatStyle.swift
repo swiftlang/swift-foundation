@@ -867,7 +867,7 @@ extension Date.ISO8601FormatStyle : ParseStrategy {
             }
             
             if let tz = comps.components.timeZone {
-                guard let date = _calendar.date(from: comps.components, inTimeZone: tz) else {
+                guard let date = try? _calendar.date(from: comps.components, inTimeZone: tz) else {
                     return nil
                 }
                                 

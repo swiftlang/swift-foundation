@@ -3257,10 +3257,10 @@ final class GregorianCalendarTests : XCTestCase {
         XCTAssertEqual(cal.range(of: .dayOfYear, in: .year, for: leapYearDate), 1..<367)
 
         // Addition
-        let d1 = cal.add(.dayOfYear, to: date, amount: 1, inTimeZone: .gmt)
+        let d1 = try? cal.add(.dayOfYear, to: date, amount: 1, inTimeZone: .gmt)
         XCTAssertEqual(d1, date + 86400)
 
-        let d2 = cal.addAndWrap(.dayOfYear, to: date, amount: 365, inTimeZone: .gmt)
+        let d2 = try? cal.addAndWrap(.dayOfYear, to: date, amount: 365, inTimeZone: .gmt)
         XCTAssertEqual(d2, date)
 
         // Conversion from DateComponents

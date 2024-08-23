@@ -1191,7 +1191,7 @@ final class CalendarTests : XCTestCase {
         try test(Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476))
     }
 
-#if !os(watchOS) // This test assumes Int is Int64
+#if _pointerBitWidth(_64) // These tests assumes Int is Int64
     func test_dateFromComponentsOverflow() {
         let calendar = Calendar(identifier: .gregorian)
 
@@ -1220,7 +1220,34 @@ final class CalendarTests : XCTestCase {
         }
 
     }
+
+    func test_addDateOverflow() throws {
+
+        do {
+            let date = Date(timeIntervalSinceReferenceDate: 964779243.351134)
+            let calendar = Calendar(identifier: .gregorian)
+            let components = DateComponents(year: 788960010015224562)
+            let added = calendar.date(byAdding: components, to: date)
+            XCTAssertNil(added)
+        }
+        
+        do {
+            let date = Date(timeIntervalSinceReferenceDate: 849248301.169329)
+            let calendar = Calendar(identifier: .gregorian)
+            let components = DateComponents(year: 9223372036854775556)
+            let added = calendar.date(byAdding: components, to: date)
+            XCTAssertNil(added)
+        }
+    }
+
+    func test_dateComponentsFromDateOverflow() {
+        let calendar = Calendar(identifier: .gregorian)
+        let dc = calendar.dateComponents([.year], from: Date(timeIntervalSinceReferenceDate: Double(Int64.max)))
+
+    }
+
 #endif
+
 }
 
 // MARK: - Bridging Tests
@@ -2220,7 +2247,7 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         XCTAssertEqual(newStart.timeIntervalSince1970, 983404800) // 2001-03-01 00:00:00 UTC
     }
 
-    func testAdd() {
+    func testAdd() throws {
         let timeZone = TimeZone(secondsFromGMT: -8*3600)!
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
@@ -2232,21 +2259,22 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
         XCTAssertEqual(old.timeIntervalSince1970, 983404800)
 
         let d1 = Date(timeIntervalSinceReferenceDate: 0)         // 2000-12-31 16:00:00 PT
-        let added = gregorianCalendar.add(.month, to: d1, amount: 2, inTimeZone: timeZone)
+        let added = try gregorianCalendar.add(.month, to: d1, amount: 2, inTimeZone: timeZone)
         let gregResult = gregorianCalendar.date(byAdding: .init(month: 2), to: d1, wrappingComponents: false)!
         let icuResult = icuCalendar.date(byAdding: .init(month: 2), to: d1, wrappingComponents: false)!
         XCTAssertEqual(gregResult, icuResult)
         XCTAssertEqual(added, icuResult)
         XCTAssertEqual(icuResult.timeIntervalSince1970, 983404800) // 2001-03-01 00:00:00 UTC, 2001-02-28 16:00:00 PT
     }
-    func testAdd_precision() {
+
+    func testAdd_precision() throws {
         let timeZone = TimeZone.gmt
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
 
 
         let d1 = Date(timeIntervalSinceReferenceDate: 729900523.547439)
-        let added = gregorianCalendar.add(.month, to: d1, amount: -277, inTimeZone: timeZone)
+        let added = try gregorianCalendar.add(.month, to: d1, amount: -277, inTimeZone: timeZone)
         var gregResult: Date
         var icuResult: Date
 
