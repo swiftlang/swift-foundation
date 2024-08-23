@@ -41,7 +41,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     // Single-optional values are caches where the result may not be nil. If the value is nil, the result has not yet been calculated.
     struct State: Hashable, Sendable {
         var languageComponents: Locale.Language.Components?
-        var calendarId: Calendar.Identifier?
         var collation: Locale.Collation?
         var currency: Locale.Currency??
         var numberingSystem: Locale.NumberingSystem?
@@ -56,7 +55,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         var subdivision: Locale.Subdivision??
         var timeZone: TimeZone??
         var variant: Locale.Variant??
-        var identifierCapturingPreferences: String?
 
         // If the key is present, the value has been calculated (and the result may or may not be nil).
         var identifierDisplayNames: [String : String?] = [:]
@@ -131,6 +129,8 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     // MARK: - ivar
 
     let identifier: String
+    let identifierCapturingPreferences: String
+    let calendarIdentifier: Calendar.Identifier
     
     let doesNotRequireSpecialCaseHandling: Bool
     
@@ -159,6 +159,8 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         self.identifier = Locale._canonicalLocaleIdentifier(from: identifier)
         doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
+        calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
+        identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
         lock = LockedState(initialState: State())
     }
 
@@ -166,12 +168,12 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         self.identifier = components.icuIdentifier
         doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         prefs = nil
+        calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
+        identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
 
         // Copy over the component values into our internal state - if they are set
         var state = State()
         state.languageComponents = components.languageComponents
-        if let v = components.calendar { state.calendarId = v }
-        if let v = components.calendar { state.calendarId = v }
         if let v = components.collation { state.collation = v }
         if let v = components.currency { state.currency = v }
         if let v = components.numberingSystem { state.numberingSystem = v }
@@ -284,6 +286,8 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         self.identifier = Locale._canonicalLocaleIdentifier(from: fixedIdent)
         doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
+        calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
+        identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
         lock = LockedState(initialState: State())
     }
     
@@ -432,42 +436,33 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     //
     // Intentionally ignore `prefs.country`: Locale identifier should already contain
     // that information. Do not override it.
-    var identifierCapturingPreferences: String {
-        lock.withLock { state in
-            if let result = state.identifierCapturingPreferences {
-                return result
-            }
-
-            guard let prefs else {
-                state.identifierCapturingPreferences = identifier
-                return identifier
-            }
-
-            var components = Locale.Components(identifier: identifier)
-
-            if let id = prefs.collationOrder {
-                components.collation = .init(id)
-            }
-
-            if let firstWeekdayPrefs = prefs.firstWeekday {
-                let calendarID = _lockedCalendarIdentifier(&state)
-                if let weekdayNumber = firstWeekdayPrefs[calendarID], let weekday = Locale.Weekday(Int32(weekdayNumber)) {
-                    components.firstDayOfWeek = weekday
-                }
-            }
-
-            if let measurementSystem = prefs.measurementSystem {
-                components.measurementSystem = measurementSystem
-            }
-
-            if let hourCycle = prefs.hourCycle {
-                components.hourCycle = hourCycle
-            }
-
-            let completeID = components.icuIdentifier
-            state.identifierCapturingPreferences = completeID
-            return completeID
+    static func _identifierCapturingPreferences(forIdentifier identifier: String, calendarIdentifier: Calendar.Identifier, preferences prefs: LocalePreferences?) -> String {
+        guard let prefs else {
+            return identifier
         }
+        
+        var components = Locale.Components(identifier: identifier)
+        
+        if let id = prefs.collationOrder {
+            components.collation = .init(id)
+        }
+        
+        if let firstWeekdayPrefs = prefs.firstWeekday {
+            let calendarID = calendarIdentifier
+            if let weekdayNumber = firstWeekdayPrefs[calendarID], let weekday = Locale.Weekday(Int32(weekdayNumber)) {
+                components.firstDayOfWeek = weekday
+            }
+        }
+        
+        if let measurementSystem = prefs.measurementSystem {
+            components.measurementSystem = measurementSystem
+        }
+        
+        if let hourCycle = prefs.hourCycle {
+            components.hourCycle = hourCycle
+        }
+        
+        return components.icuIdentifier
     }
 
     // MARK: - Language Code
@@ -720,46 +715,31 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     // MARK: - LocaleCalendarIdentifier
 
-    private func _lockedCalendarIdentifier(_ state: inout State) -> Calendar.Identifier {
-        if let calendarId = state.calendarId {
-            return calendarId
-        } else {
-            var calendarIDString = Locale.keywordValue(identifier: identifier, key: "calendar")
-            if calendarIDString == nil {
-                // Try again
-                var status = U_ZERO_ERROR
-                let e = ucal_getKeywordValuesForLocale("calendar", identifier, UBool.true, &status)
-                defer { uenum_close(e) }
-                guard let e, status.isSuccess else {
-                    state.calendarId = .gregorian
-                    return .gregorian
-                }
-                // Just get the first value
-                var resultLength = Int32(0)
-                let result = uenum_next(e, &resultLength, &status)
-                guard status.isSuccess, let result else {
-                    state.calendarId = .gregorian
-                    return .gregorian
-                }
-                calendarIDString = String(cString: result)
-            }
-
-            guard let calendarIDString else {
-                // Fallback value
-                state.calendarId = .gregorian
+    private static func _calendarIdentifier(forIdentifier identifier: String) -> Calendar.Identifier {
+        var calendarIDString = Locale.keywordValue(identifier: identifier, key: "calendar")
+        if calendarIDString == nil {
+            // Try again
+            var status = U_ZERO_ERROR
+            let e = ucal_getKeywordValuesForLocale("calendar", identifier, UBool.true, &status)
+            defer { uenum_close(e) }
+            guard let e, status.isSuccess else {
                 return .gregorian
             }
-
-            let id = Calendar.Identifier(identifierString: calendarIDString) ?? .gregorian
-            state.calendarId = id
-            return id
+            // Just get the first value
+            var resultLength = Int32(0)
+            let result = uenum_next(e, &resultLength, &status)
+            guard status.isSuccess, let result else {
+                return .gregorian
+            }
+            calendarIDString = String(cString: result)
         }
-    }
-
-    var calendarIdentifier: Calendar.Identifier {
-        lock.withLock { state in
-            _lockedCalendarIdentifier(&state)
+        
+        guard let calendarIDString else {
+            // Fallback value
+            return .gregorian
         }
+
+        return Calendar.Identifier(identifierString: calendarIDString) ?? .gregorian
     }
 
     func calendarIdentifierDisplayName(for value: Calendar.Identifier) -> String? {
@@ -780,20 +760,17 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     // MARK: - LocaleCalendar
 
     var calendar: Calendar {
-        lock.withLock { state in
-            let id = _lockedCalendarIdentifier(&state)
-            var calendar = Calendar(identifier: id)
-
-            if let prefs {
-                let firstWeekday = prefs.firstWeekday?[id]
-                let minDaysInFirstWeek = prefs.minDaysInFirstWeek?[id]
-                if let firstWeekday { calendar.firstWeekday = firstWeekday }
-                if let minDaysInFirstWeek { calendar.minimumDaysInFirstWeek = minDaysInFirstWeek }
-            }
-
-            // In order to avoid a retain cycle (Calendar has a Locale, Locale has a Calendar), we do not keep a reference to the Calendar in Locale but create one each time. Most of the time the value of `Calendar(identifier:)` will return a cached value in any case.
-            return calendar
+        var calendar = Calendar(identifier: calendarIdentifier)
+        
+        if let prefs {
+            let firstWeekday = prefs.firstWeekday?[calendarIdentifier]
+            let minDaysInFirstWeek = prefs.minDaysInFirstWeek?[calendarIdentifier]
+            if let firstWeekday { calendar.firstWeekday = firstWeekday }
+            if let minDaysInFirstWeek { calendar.minimumDaysInFirstWeek = minDaysInFirstWeek }
         }
+        
+        // In order to avoid a retain cycle (Calendar has a Locale, Locale has a Calendar), we do not keep a reference to the Calendar in Locale but create one each time. Most of the time the value of `Calendar(identifier:)` will return a cached value in any case.
+        return calendar
     }
 
     var timeZone: TimeZone? {
@@ -1185,7 +1162,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                     return hourCycle
                 }
 
-                let calendarId = _lockedCalendarIdentifier(&state)
+                let calendarId = calendarIdentifier
                 let rootHourCycle = Locale.HourCycle.zeroToTwentyThree
                 if let regionOverride = _lockedRegion(&state)?.identifier {
                     // Use the "rg" override in the identifier if there's one
@@ -1239,8 +1216,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
                 // Check prefs
                 if let firstWeekdayPref = prefs?.firstWeekday {
-                    // `_lockedCalendarIdentifier` isn't cheap. Only call it when we already know there is `prefs` to read from
-                    let calendarId = _lockedCalendarIdentifier(&state)
+                    let calendarId = calendarIdentifier
                     if let first = forceFirstWeekday(calendarId) {
                         state.firstDayOfWeek = first
                         return first
@@ -1398,7 +1374,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             // Check prefs
             if prefs != nil {
                 // `_lockedCalendarIdentifier` isn't cheap. Only call it when we already know there is `prefs` to read from
-                let calendarId = _lockedCalendarIdentifier(&state)
+                let calendarId = calendarIdentifier
                 if let minDays = forceMinDaysInFirstWeek(calendarId) {
                     state.minimalDaysInFirstWeek = minDays
                     return minDays

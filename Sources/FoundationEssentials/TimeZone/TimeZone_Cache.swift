@@ -51,14 +51,19 @@ dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
 #endif
 
 /// Singleton which listens for notifications about preference changes for TimeZone and holds cached values for current, fixed time zones, etc.
-struct TimeZoneCache : Sendable {
+struct TimeZoneCache : Sendable, ~Copyable {
     // MARK: - State
     
     struct State {
+        
+        init() {
+#if FOUNDATION_FRAMEWORK
+            // On Darwin we listen for certain distributed notifications to reset the current TimeZone.
+            _CFNotificationCenterInitializeDependentNotificationIfNecessary(CFNotificationName.cfTimeZoneSystemTimeZoneDidChange!.rawValue)
+#endif
+        }
         // a.k.a. `systemTimeZone`
-        private var currentTimeZone: TimeZone!
-
-        private var autoupdatingCurrentTimeZone: _TimeZoneAutoupdating!
+        private var currentTimeZone: TimeZone?
         
         // If this is not set, the behavior is to fall back to the current time zone
         private var defaultTimeZone: TimeZone?
@@ -69,44 +74,24 @@ struct TimeZoneCache : Sendable {
         // This cache holds offset-specified time zones, but only a subset of the universe of possible values. See the implementation below for the policy.
         private var offsetTimeZones: [Int: any _TimeZoneProtocol] = [:]
 
-        private var noteCount = -1
         private var identifiers: [String]?
         private var abbreviations: [String : String]?
 
 #if FOUNDATION_FRAMEWORK
         // These are caches of the NSTimeZone subclasses for use from Objective-C (without allocating each time)
-        private var bridgedCurrentTimeZone: _NSSwiftTimeZone!
-        private var bridgedAutoupdatingCurrentTimeZone: _NSSwiftTimeZone!
+        private var bridgedCurrentTimeZone: _NSSwiftTimeZone?
         private var bridgedDefaultTimeZone: _NSSwiftTimeZone?
         private var bridgedFixedTimeZones: [String : _NSSwiftTimeZone] = [:]
         private var bridgedOffsetTimeZones: [Int : _NSSwiftTimeZone] = [:]
 #endif // FOUNDATION_FRAMEWORK
-
-        mutating func check() {
-#if FOUNDATION_FRAMEWORK
-            // On Darwin we listen for certain distributed notifications to reset the current TimeZone.
-            let newNoteCount = _CFLocaleGetNoteCount() + _CFTimeZoneGetNoteCount() + Int(_CFCalendarGetMidnightNoteCount())
-#else
-            let newNoteCount = 1
-#endif // FOUNDATION_FRAMEWORK
-
-            if newNoteCount != noteCount {
-                currentTimeZone = findCurrentTimeZone()
-                noteCount = newNoteCount
-#if FOUNDATION_FRAMEWORK
-                bridgedCurrentTimeZone = _NSSwiftTimeZone(timeZone: currentTimeZone)
-                _CFNotificationCenterInitializeDependentNotificationIfNecessary(CFNotificationName.cfTimeZoneSystemTimeZoneDidChange!.rawValue)
-#endif // FOUNDATION_FRAMEWORK
-            }
-        }
         
         mutating func reset() -> TimeZone? {
             let oldTimeZone = currentTimeZone
 
-            // Ensure we do not reuse the existing time zone
-            noteCount = -1
-            check()
-
+            currentTimeZone = nil
+#if FOUNDATION_FRAMEWORK
+            bridgedCurrentTimeZone = nil
+#endif
             return oldTimeZone
         }
 
@@ -194,23 +179,24 @@ struct TimeZoneCache : Sendable {
         }
 
         mutating func current() -> TimeZone {
-            check()
-            return currentTimeZone
-        }
-
-        mutating func `default`() -> TimeZone {
-            check()
-            if let manuallySetDefault = defaultTimeZone {
-                return manuallySetDefault
-            } else {
+            if let currentTimeZone {
                 return currentTimeZone
+            } else {
+                let newCurrent = findCurrentTimeZone()
+                currentTimeZone = newCurrent
+                return newCurrent
             }
         }
 
-        mutating func setDefaultTimeZone(_ tz: TimeZone?) -> TimeZone? {
-            // Ensure we are listening for notifications from here on out
-            check()
-            let old = defaultTimeZone
+        mutating func `default`() -> TimeZone {
+            if let manuallySetDefault = defaultTimeZone {
+                return manuallySetDefault
+            } else {
+                return current()
+            }
+        }
+
+        mutating func setDefaultTimeZone(_ tz: TimeZone?) {
             defaultTimeZone = tz
 #if FOUNDATION_FRAMEWORK
             if let tz {
@@ -219,7 +205,6 @@ struct TimeZoneCache : Sendable {
                 bridgedDefaultTimeZone = nil
             }
 #endif // FOUNDATION_FRAMEWORK
-            return old
         }
         
         mutating func fixed(_ identifier: String) -> (any _TimeZoneProtocol)? {
@@ -255,15 +240,6 @@ struct TimeZoneCache : Sendable {
             }
         }
         
-        mutating func autoupdatingCurrent() -> _TimeZoneAutoupdating {
-            if let cached = autoupdatingCurrentTimeZone {
-                return cached
-            } else {
-                autoupdatingCurrentTimeZone = _TimeZoneAutoupdating()
-                return autoupdatingCurrentTimeZone
-            }
-        }
-
         mutating func timeZoneAbbreviations() -> [String : String] {
             if abbreviations == nil {
                 abbreviations = defaultAbbreviations
@@ -332,28 +308,20 @@ struct TimeZoneCache : Sendable {
 // MARK: - State Bridging
 #if FOUNDATION_FRAMEWORK
         mutating func bridgedCurrent() -> _NSSwiftTimeZone {
-            check()
-            return bridgedCurrentTimeZone
-        }
-
-        mutating func bridgedAutoupdatingCurrent() -> _NSSwiftTimeZone {
-            if let autoupdating = bridgedAutoupdatingCurrentTimeZone {
-                return autoupdating
+            if let bridgedCurrentTimeZone {
+                return bridgedCurrentTimeZone
             } else {
-                // Do not call TimeZone.autoupdatingCurrent, as it will recursively lock.
-                let tz = TimeZone(inner: autoupdatingCurrent())
-                let result = _NSSwiftTimeZone(timeZone: tz)
-                bridgedAutoupdatingCurrentTimeZone = result
-                return result
+                let newBridged = _NSSwiftTimeZone(timeZone: current())
+                bridgedCurrentTimeZone = newBridged
+                return newBridged
             }
         }
 
         mutating func bridgedDefault() -> _NSSwiftTimeZone {
-            check()
             if let manuallySetDefault = bridgedDefaultTimeZone {
                 return manuallySetDefault
             } else {
-                return bridgedCurrentTimeZone
+                return bridgedCurrent()
             }
         }
 
@@ -433,19 +401,10 @@ struct TimeZoneCache : Sendable {
     }
 
     func setDefault(_ tz: TimeZone?) {
-        let oldDefaultTimeZone = lock.withLock {
-            return $0.setDefaultTimeZone(tz)
-        }
+        lock.withLock { $0.setDefaultTimeZone(tz) }
 
-        CalendarCache.cache.reset()
-#if FOUNDATION_FRAMEWORK
-        if let oldDefaultTimeZone {
-            let noteName = CFNotificationName(rawValue: "kCFTimeZoneSystemTimeZoneDidChangeNotification-2" as CFString)
-            let oldAsNS = oldDefaultTimeZone as NSTimeZone
-            let unmanaged = Unmanaged.passRetained(oldAsNS).autorelease()
-            CFNotificationCenterPostNotification(CFNotificationCenterGetLocalCenter(), noteName, unmanaged.toOpaque(), nil, true)
-        }
-#endif // FOUNDATION_FRAMEWORK
+        // Reset any 'current' locales, calendars, time zones
+        LocaleNotifications.cache.reset()
     }
 
     func fixed(_ identifier: String) -> _TimeZoneProtocol? {
@@ -456,8 +415,9 @@ struct TimeZoneCache : Sendable {
         lock.withLock { $0.offsetFixed(seconds) }
     }
     
-    func autoupdatingCurrent() -> _TimeZoneAutoupdating {
-        lock.withLock { $0.autoupdatingCurrent() }
+    private static let _autoupdatingCurrentCache = _TimeZoneAutoupdating()
+    var autoupdatingCurrent: _TimeZoneAutoupdating {
+        return Self._autoupdatingCurrentCache
     }
 
     func timeZoneAbbreviations() -> [String : String] {
@@ -474,8 +434,9 @@ struct TimeZoneCache : Sendable {
         lock.withLock { $0.bridgedCurrent() }
     }
 
+    private static let _bridgedAutoupdatingCurrent = _NSSwiftTimeZone(timeZone: TimeZone(inner: TimeZoneCache.cache.autoupdatingCurrent))
     var bridgedAutoupdatingCurrent: _NSSwiftTimeZone {
-        lock.withLock { $0.bridgedAutoupdatingCurrent() }
+        Self._bridgedAutoupdatingCurrent
     }
 
     var bridgedDefault: _NSSwiftTimeZone {

@@ -263,7 +263,7 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
     }
     
     func bridgeToNSLocale() -> NSLocale {
-        LocaleCache.cache.autoupdatingCurrentNSLocale()
+        LocaleCache.autoupdatingCurrentNSLocale
     }
 #endif
 

@@ -27,7 +27,7 @@ internal import Foundation_Private.NSLocale
 extension NSLocale {
     @objc
     static var _autoupdatingCurrent: NSLocale {
-        LocaleCache.cache.autoupdatingCurrentNSLocale()
+        LocaleCache.autoupdatingCurrentNSLocale
     }
 
     @objc
@@ -37,7 +37,7 @@ extension NSLocale {
 
     @objc
     static var _system: NSLocale {
-        LocaleCache.cache.systemNSLocale()
+        LocaleCache.systemNSLocale
     }
 
     @objc
@@ -65,7 +65,7 @@ extension NSLocale {
 
     @objc
     private class func _resetCurrent() {
-        LocaleCache.cache.reset()
+        LocaleNotifications.cache.reset()
     }
 
     @objc

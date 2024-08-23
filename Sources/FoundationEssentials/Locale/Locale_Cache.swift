@@ -32,19 +32,22 @@ dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
 #endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
-struct LocaleCache : Sendable {
+struct LocaleCache : Sendable, ~Copyable {
     // MARK: - State
     
     struct State {
-        private var cachedCurrentLocale: (any _LocaleProtocol)!
-        private var cachedSystemLocale: (any _LocaleProtocol)!
+        
+        init() {
+#if FOUNDATION_FRAMEWORK
+            // For Foundation.framework, we listen for system notifications about the system Locale changing from the Darwin notification center.
+            _CFNotificationCenterInitializeDependentNotificationIfNecessary(CFNotificationName.cfLocaleCurrentLocaleDidChange!.rawValue)
+#endif
+        }
+        
         private var cachedFixedLocales: [String : any _LocaleProtocol] = [:]
         private var cachedFixedComponentsLocales: [Locale.Components : any _LocaleProtocol] = [:]
 
 #if FOUNDATION_FRAMEWORK
-        private var cachedCurrentNSLocale: _NSSwiftLocale!
-        private var cachedAutoupdatingNSLocale: _NSSwiftLocale!
-        private var cachedSystemNSLocale: _NSSwiftLocale!
         private var cachedFixedIdentifierToNSLocales: [String : _NSSwiftLocale] = [:]
         
         struct IdentifierAndPrefs : Hashable {
@@ -54,66 +57,7 @@ struct LocaleCache : Sendable {
         
         private var cachedFixedLocaleToNSLocales: [IdentifierAndPrefs : _NSSwiftLocale] = [:]
 #endif
-
-        private var cachedAutoupdatingLocale: _LocaleAutoupdating!
-        
-        private var noteCount = -1
-        private var wasResetManually = false
-
-        /// Clears the cached `Locale` values, if they need to be recalculated.
-        mutating func resetCurrentIfNeeded() {
-#if FOUNDATION_FRAMEWORK
-            let newNoteCount = _CFLocaleGetNoteCount() + _CFTimeZoneGetNoteCount() + Int(_CFCalendarGetMidnightNoteCount())
-#else
-            let newNoteCount = 1
-#endif
-
-            if newNoteCount != noteCount || wasResetManually {
-                cachedCurrentLocale = nil
-                noteCount = newNoteCount
-                wasResetManually = false
-
-#if FOUNDATION_FRAMEWORK
-                cachedCurrentNSLocale = nil
-                // For Foundation.framework, we listen for system notifications about the system Locale changing from the Darwin notification center.
-                _CFNotificationCenterInitializeDependentNotificationIfNecessary(CFNotificationName.cfLocaleCurrentLocaleDidChange!.rawValue)
-#endif
-            }
-        }
-
-        /// Get or create the current locale.
-        /// `disableBundleMatching` should normally be disabled (`false`). The only reason to turn it on (`true`) is if we are attempting to create a testing scenario that does not use the main bundle's languages.
-        mutating func current(preferences: LocalePreferences?, cache: Bool, disableBundleMatching: Bool) -> (any _LocaleProtocol)? {
-            resetCurrentIfNeeded()
-
-            if let cachedCurrentLocale {
-                return cachedCurrentLocale
-            }
-            
-            // At this point we know we need to create, or re-create, the Locale instance.
-            // If we do not have a set of preferences to use, we have to return nil.
-            guard let preferences else {
-                return nil
-            }
-
-            let locale = _localeICUClass().init(name: nil, prefs: preferences, disableBundleMatching: disableBundleMatching)
-            if cache {
-                // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
-                self.cachedCurrentLocale = locale
-            }
-
-            return locale
-        }
-        
-        mutating func autoupdatingCurrent() -> _LocaleAutoupdating {
-            if let cached = cachedAutoupdatingLocale {
-                return cached
-            } else {
-                cachedAutoupdatingLocale = _LocaleAutoupdating()
-                return cachedAutoupdatingLocale
-            }
-        }
-
+                
         mutating func fixed(_ id: String) -> any _LocaleProtocol {
             // Note: Even if the currentLocale's identifier is the same, currentLocale may have preference overrides which are not reflected in the identifier itself.
             if let locale = cachedFixedLocales[id] {
@@ -153,65 +97,14 @@ struct LocaleCache : Sendable {
         }
 #endif
 
-        mutating func currentNSLocale(preferences: LocalePreferences?, cache: Bool) -> _NSSwiftLocale? {
-            resetCurrentIfNeeded()
-
-            if let currentNSLocale = cachedCurrentNSLocale {
-                return currentNSLocale
-            } else if let current = cachedCurrentLocale {
-                // We have a cached Swift Locale but not an NSLocale, yet
-                let nsLocale = _NSSwiftLocale(Locale(inner: current))
-                cachedCurrentNSLocale = nsLocale
-                return nsLocale
-            }
-            
-            // At this point we know we need to create, or re-create, the Locale instance.
-            
-            // If we do not have a set of preferences to use, we have to return nil.
-            guard let preferences else {
-                return nil
-            }
-
-#if canImport(_FoundationICU)
-            // We have neither a Swift Locale nor an NSLocale. Recalculate and set both.
-            let locale = _LocaleICU(name: nil, prefs: preferences, disableBundleMatching: false)
-#else
-            let locale = _LocaleUnlocalized(name: nil, prefs: preferences, disableBundleMatching: false)
-#endif
-            let nsLocale = _NSSwiftLocale(Locale(inner: locale))
-            
-            if cache {
-                // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
-                self.cachedCurrentLocale = locale
-                cachedCurrentNSLocale = nsLocale
-            }
-
-            return nsLocale
-        }
-
-        mutating func autoupdatingNSLocale() -> _NSSwiftLocale {
-            if let result = cachedAutoupdatingNSLocale {
-                return result
-            }
-
-            // Don't call Locale.autoupdatingCurrent directly to avoid a recursive lock
-            cachedAutoupdatingNSLocale = _NSSwiftLocale(Locale(inner: autoupdatingCurrent()))
-            return cachedAutoupdatingNSLocale
-        }
-
-        mutating func systemNSLocale() -> _NSSwiftLocale {
-            if let result = cachedSystemNSLocale {
-                return result
-            }
-
-            let inner = Locale(inner: system())
-            cachedSystemNSLocale = _NSSwiftLocale(inner)
-            return cachedSystemNSLocale
-        }
 #endif // FOUNDATION_FRAMEWORK
 
-        mutating func fixedComponents(_ comps: Locale.Components) -> any _LocaleProtocol {
-            if let l = cachedFixedComponentsLocales[comps] {
+        func fixedComponents(_ comps: Locale.Components) -> (any _LocaleProtocol)? {
+            cachedFixedComponentsLocales[comps]
+        }
+        
+        mutating func fixedComponentsWithCache(_ comps: Locale.Components) -> any _LocaleProtocol {
+            if let l = fixedComponents(comps) {
                 return l
             } else {
                 let new = _localeICUClass().init(components: comps)
@@ -220,81 +113,95 @@ struct LocaleCache : Sendable {
                 return new
             }
         }
-
-        mutating func system() -> any _LocaleProtocol {
-            if let locale = cachedSystemLocale {
-                return locale
-            }
-
-            let locale = _localeICUClass().init(identifier: "", prefs: nil)
-            cachedSystemLocale = locale
-            return locale
-        }
-
-        mutating func reset() {
-            wasResetManually = true
-        }
     }
 
     let lock: LockedState<State>
-
+    
     static let cache = LocaleCache()
-
+    private let _currentCache = LockedState<(any _LocaleProtocol)?>(initialState: nil)
+    
+#if FOUNDATION_FRAMEWORK
+    private var _currentNSCache = LockedState<_NSSwiftLocale?>(initialState: nil)
+#endif
+    
     fileprivate init() {
         lock = LockedState(initialState: State())
     }
 
-    func reset() {
-        lock.withLock { $0.reset() }
-    }
-
+    
     /// For testing of `autoupdatingCurrent` only. If you want to test `current`, create a custom `Locale` with the appropriate settings using `localeAsIfCurrent(name:overrides:disableBundleMatching:)` and use that instead.
     /// This mutates global state of the current locale, so it is not safe to use in concurrent testing.
     func resetCurrent(to preferences: LocalePreferences) {
-        lock.withLock {
-            $0.reset()
-            // Disable bundle matching so we can emulate a non-English main bundle during test
-            let _ = $0.current(preferences: preferences, cache: true, disableBundleMatching: true)
+        // Disable bundle matching so we can emulate a non-English main bundle during test
+        let newLocale = _localeICUClass().init(name: nil, prefs: preferences, disableBundleMatching: true)
+        _currentCache.withLock {
+            $0 = newLocale
         }
+#if FOUNDATION_FRAMEWORK
+        _currentNSCache.withLock { $0 = nil }
+#endif
+    }
+
+    func reset() {
+        _currentCache.withLock { $0 = nil }
+#if FOUNDATION_FRAMEWORK
+        _currentNSCache.withLock { $0 = nil }
+#endif
     }
 
     var current: any _LocaleProtocol {
-        var result = lock.withLock {
-            $0.current(preferences: nil, cache: false, disableBundleMatching: false)
+        if let result = _currentCache.withLock({ $0 }) {
+            return result
         }
-        
-        if let result { return result }
         
         // We need to fetch prefs and try again
-        let (prefs, doCache) = preferences()
+        let (preferences, doCache) = preferences()
+        let locale = _localeICUClass().init(name: nil, prefs: preferences, disableBundleMatching: false)
         
-        result = lock.withLock {
-            $0.current(preferences: prefs, cache: doCache, disableBundleMatching: false)
+        // It's possible this was an 'incomplete locale', in which case we will want to calculate it again later.
+        if doCache {
+            return _currentCache.withLock {
+                if let current = $0 {
+                    // Someone beat us to setting it - use existing one
+                    return current
+                } else {
+                    $0 = locale
+                    return locale
+                }
+            }
         }
         
-        guard let result else {
-            fatalError("Nil result getting current Locale with preferences")
-        }
-        
-        return result
+        return locale
     }
     
-    /// This value is immutable, so we can share one instance for the whole process.
-    private static let _unlocalizedCache = _LocaleUnlocalized(identifier: "en_001")
-    var unlocalized: _LocaleUnlocalized {
-        Self._unlocalizedCache
-    }
+    // MARK: Singletons
     
-    var autoupdatingCurrent: _LocaleAutoupdating {
-        lock.withLock { $0.autoupdatingCurrent() }
-    }
+    // This value is immutable, so we can share one instance for the whole process.
+    static let unlocalized = _LocaleUnlocalized(identifier: "en_001")
 
-    var system: any _LocaleProtocol {
-        lock.withLock { $0.system() }
-    }
+    // This value is immutable, so we can share one instance for the whole process.
+    static let autoupdatingCurrent = _LocaleAutoupdating()
 
+    static let system : any _LocaleProtocol = {
+        _localeICUClass().init(identifier: "", prefs: nil)
+    }()
+    
+#if FOUNDATION_FRAMEWORK
+    static let autoupdatingCurrentNSLocale : _NSSwiftLocale = {
+        _NSSwiftLocale(Locale(inner: autoupdatingCurrent))
+    }()
+    
+    static let systemNSLocale : _NSSwiftLocale = {
+        _NSSwiftLocale(Locale(inner: system))
+    }()
+#endif
+    
+    // MARK: -
+    
     func fixed(_ id: String) -> any _LocaleProtocol {
-        lock.withLock { $0.fixed(id) }
+        lock.withLock {
+            $0.fixed(id)
+        }
     }
 
 #if FOUNDATION_FRAMEWORK
@@ -308,38 +215,30 @@ struct LocaleCache : Sendable {
     }
 #endif
 
-    func autoupdatingCurrentNSLocale() -> _NSSwiftLocale {
-        lock.withLock { $0.autoupdatingNSLocale() }
-    }
-
     func currentNSLocale() -> _NSSwiftLocale {
-        var result = lock.withLock {
-            $0.currentNSLocale(preferences: nil, cache: false)
+        if let result = _currentNSCache.withLock({ $0 }) {
+            return result
         }
         
-        if let result { return result }
-        
-        // We need to fetch prefs and try again. Don't do this inside a lock (106190030). On Darwin it is possible to get a KVO callout from fetching the preferences, which could ask for the current Locale, which could cause a reentrant lock.
-        let (prefs, doCache) = preferences()
-        
-        result = lock.withLock {
-            $0.currentNSLocale(preferences: prefs, cache: doCache)
+        // Create the current _NSSwiftLocale, based on the current Swift Locale.
+        let nsLocale = _NSSwiftLocale(Locale(inner: current))
+            
+        // TODO: The current locale has an idea of not caching, which we have never honored here in the NSLocale cache
+        return _currentNSCache.withLock {
+            if let current = $0 {
+                // Someone beat us to setting it, use that one
+                return current
+            } else {
+                $0 = nsLocale
+                return nsLocale
+            }
         }
-        
-        guard let result else {
-            fatalError("Nil result getting current NSLocale with preferences")
-        }
-        
-        return result
     }
 
-    func systemNSLocale() -> _NSSwiftLocale {
-        lock.withLock { $0.systemNSLocale() }
-    }
 #endif // FOUNDATION_FRAMEWORK
 
     func fixedComponents(_ comps: Locale.Components) -> any _LocaleProtocol {
-        lock.withLock { $0.fixedComponents(comps) }
+        lock.withLock { $0.fixedComponentsWithCache(comps) }
     }
     
 #if FOUNDATION_FRAMEWORK && !NO_CFPREFERENCES
