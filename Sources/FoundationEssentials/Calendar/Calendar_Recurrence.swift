@@ -335,7 +335,7 @@ extension Calendar {
                 
                 dates = dates.filter { $0 >= self.start }
                 
-                if let limit = recurrence.end.until {
+                if let limit = recurrence.end.date {
                     let hadDates = !dates.isEmpty
                     dates = dates.filter { $0 <= limit }
                     if hadDates && dates.isEmpty {
@@ -363,7 +363,7 @@ extension Calendar {
             
             mutating func next() -> Element? {
                 guard !finished else { return nil }
-                if let limit = recurrence.end.count, resultsFound >= limit {
+                if let limit = recurrence.end.occurrences, resultsFound >= limit {
                     finished = true
                     return nil
                 }
@@ -371,7 +371,7 @@ extension Calendar {
                 while !finished {
                     if let date = currentGroup.popLast() {
                         resultsFound += 1
-                        if let limit = recurrence.end.until, date > limit {
+                        if let limit = recurrence.end.date, date > limit {
                             finished = true
                             return nil
                         }

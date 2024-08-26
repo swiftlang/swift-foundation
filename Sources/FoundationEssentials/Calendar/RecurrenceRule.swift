@@ -135,16 +135,23 @@ extension Calendar {
             public static var never: Self {
                 .init(_guts: .never)
             }
-            
-            internal var until: Date? {
+
+            /// At most many times the event may occur
+            /// This value is set when the struct was initialized with `.afterOccurrences()`
+            @available(FoundationPreview 6.0.2, *)
+            public var occurrences: Int? {
                 switch _guts {
-                    case let .afterDate(date): date
+                    case let .afterOccurrences(count): count
                     default: nil
                 }
             }
-            internal var count: Int? {
+
+            /// The latest date when the event may occur
+            /// This value is set when the struct was initialized with `.afterDate()`
+            @available(FoundationPreview 6.0.2, *)
+            public var date: Date? {
                 switch _guts {
-                    case let .afterOccurrences(count): count
+                    case let .afterDate(date): date
                     default: nil
                 }
             }
@@ -438,5 +445,16 @@ extension Calendar.RecurrenceRule: Codable {
         try container.encode(minutes, forKey: .minutes)
         try container.encode(seconds, forKey: .seconds)
         try container.encode(setPositions, forKey: .setPositions)
+    }
+}
+
+@available(FoundationPreview 6.0.2, *)
+extension Calendar.RecurrenceRule.End: CustomStringConvertible {
+    public var description: String {
+        switch self._guts {
+            case .never: "Never"
+            case .afterDate(let date): "After \(date)"
+            case .afterOccurrences(let n): "After \(n) occurrence(s)"
+        }
     }
 }

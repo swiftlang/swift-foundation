@@ -11,7 +11,7 @@ let availabilityTags: [_Availability] = [
     _Availability("FoundationPredicate", availability: .macOS14_0), // Predicate relies on pack parameter runtime support
     _Availability("FoundationPredicateRegex", availability: .macOS15_0) // Predicate regexes rely on new stdlib APIs
 ]
-let versionNumbers = ["0.1", "0.2", "0.3", "0.4"]
+let versionNumbers = ["0.1", "0.2", "0.3", "0.4", "6.0.2"]
 
 // Availability Macro Utilities
 
