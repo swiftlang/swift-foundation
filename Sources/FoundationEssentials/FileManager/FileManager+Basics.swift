@@ -16,6 +16,8 @@ import Darwin
 import Android
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
@@ -85,14 +87,14 @@ internal struct _FileManagerImpl {
     ) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
-            let hLHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
+            let hLHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nil)
             if hLHS == INVALID_HANDLE_VALUE {
                 return false
             }
             defer { CloseHandle(hLHS) }
 
             return (try? other.withNTPathRepresentation {
-                let hRHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
+                let hRHS = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nil)
                 if hRHS == INVALID_HANDLE_VALUE {
                     return false
                 }
@@ -129,11 +131,21 @@ internal struct _FileManagerImpl {
                     return false
                 }
 
-                if fbiLHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT,
-                   fbiRHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
+                let lhsIsReparsePoint = fbiLHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT
+                let rhsIsReparsePoint = fbiRHS.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT
+                let lhsIsDirectory = fbiLHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
+                let rhsIsDirectory = fbiRHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
+                
+                guard lhsIsReparsePoint == rhsIsReparsePoint, lhsIsDirectory == rhsIsDirectory else {
+                    // If they aren't the same "type", then they cannot be equivalent
+                    return false
+                }
+                
+                if lhsIsReparsePoint {
+                    // Both are symbolic links, so they are equivalent if their destinations are equivalent
                     return (try? fileManager.destinationOfSymbolicLink(atPath: path) == fileManager.destinationOfSymbolicLink(atPath: other)) ?? false
-                } else if fbiLHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY,
-                          fbiRHS.FileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
+                } else if lhsIsDirectory {
+                    // Both are directories, so recursively compare the directories
                     guard let aLHSItems = try? fileManager.contentsOfDirectory(atPath: path),
                           let aRHSItems = try? fileManager.contentsOfDirectory(atPath: other),
                           aLHSItems == aRHSItems else {
@@ -160,6 +172,7 @@ internal struct _FileManagerImpl {
 
                     return true
                 } else {
+                    // Both must be standard files, so binary compare the contents of the files
                     var liLHSSize: LARGE_INTEGER = .init()
                     var liRHSSize: LARGE_INTEGER = .init()
                     guard GetFileSizeEx(hLHS, &liLHSSize), GetFileSizeEx(hRHS, &liRHSSize), LARGE_INTEGER._equals(liLHSSize, liRHSSize) else {

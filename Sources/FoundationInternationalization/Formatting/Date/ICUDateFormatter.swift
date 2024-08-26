@@ -22,6 +22,8 @@ import Darwin
 import Android
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #endif
 
 typealias UChar = UInt16

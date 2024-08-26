@@ -18,6 +18,8 @@ import Bionic
 import Glibc
 #elseif os(WASI)
 import WASILibc
+#elseif canImport(Musl)
+import Musl
 #endif
 
 #if canImport(CRT)

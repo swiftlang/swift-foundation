@@ -115,6 +115,9 @@ import posix_filesystem.dirent
 #elseif canImport(Glibc)
 import Glibc
 internal import _FoundationCShims
+#elseif canImport(Musl)
+import Musl
+internal import _FoundationCShims
 #endif
 
 // MARK: Directory Iteration
@@ -318,7 +321,7 @@ extension Sequence<_FTSSequence.Element> {
 struct _POSIXDirectoryContentsSequence: Sequence {
     #if canImport(Darwin)
     typealias DirectoryEntryPtr = UnsafeMutablePointer<DIR>
-    #elseif os(Android) || canImport(Glibc)
+    #elseif os(Android) || canImport(Glibc) || canImport(Musl)
     typealias DirectoryEntryPtr = OpaquePointer
     #endif
     

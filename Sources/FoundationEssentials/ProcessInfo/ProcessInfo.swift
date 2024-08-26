@@ -19,6 +19,8 @@ import Bionic
 import unistd
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif os(Windows)
 import WinSDK
 #elseif os(WASI)
@@ -163,7 +165,7 @@ final class _ProcessInfo: Sendable {
     }
 
     var userName: String {
-#if canImport(Darwin) || os(Android) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
         // Darwin and Linux
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
@@ -198,7 +200,7 @@ final class _ProcessInfo: Sendable {
     }
 
     var fullUserName: String {
-#if canImport(Darwin) || os(Android) || canImport(Glibc)
+#if canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
         let (euid, _) = Platform.getUGIDs()
         if let upwd = getpwuid(euid),
            let fullname = upwd.pointee.pw_gecos {
@@ -583,13 +585,7 @@ extension _ProcessInfo {
         guard let processPath = CommandLine.arguments.first else {
             return ""
         }
-
-        if let lastSlash = processPath.lastIndex(of: Platform.PATH_SEPARATOR) {
-            return String(processPath[
-                processPath.index(after: lastSlash) ..< processPath.endIndex])
-        }
-
-        return processPath
+        return processPath.lastPathComponent
     }
 
 #if os(macOS)

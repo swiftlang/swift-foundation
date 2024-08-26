@@ -28,6 +28,9 @@ import Android
 #elseif canImport(Glibc)
 import Glibc
 internal import _FoundationCShims
+#elseif canImport(Musl)
+import Musl
+internal import _FoundationCShims
 #elseif os(Windows)
 import CRT
 import WinSDK

@@ -35,6 +35,9 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(Glibc)
 import Glibc
 fileprivate let _pageSize: Int = Int(getpagesize())
+#elseif canImport(Musl)
+import Musl
+fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(C)
 fileprivate let _pageSize: Int = Int(getpagesize())
 #endif // canImport(Darwin)
@@ -49,8 +52,6 @@ package struct Platform {
         _pageSize
     }
 
-    // FIXME: Windows SEPARATOR
-    static let PATH_SEPARATOR: Character = "/"
     static let MAX_HOSTNAME_LENGTH = 1024
 
     static func roundDownToMultipleOfPageSize(_ size: Int) -> Int {

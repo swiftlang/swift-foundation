@@ -16,6 +16,8 @@ import Darwin
 import Android
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif canImport(CRT)
 import CRT
 #elseif os(WASI)
@@ -947,7 +949,7 @@ extension Decimal {
 
         // D1: Normalize
         // Calculate d such that `d*highest_dight_of_divisor >= b/2 (0x8000)
-        let d = (1 << 16) / UInt32(divisor[divisor.count - 1] + 1)
+        let d: UInt32 = (1 << 16) / (UInt32(divisor[divisor.count - 1]) + 1)
         // This is to make the whole algorithm work and
         // (dividend * d) / (divisor * d) == dividend / divisor
         var normalizedDividend = try self._integerMultiplyByShort(

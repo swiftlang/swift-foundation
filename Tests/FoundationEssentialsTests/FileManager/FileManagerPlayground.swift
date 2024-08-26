@@ -46,6 +46,22 @@ struct File : ExpressibleByStringLiteral, Buildable {
     }
 }
 
+struct SymbolicLink : Buildable {
+    fileprivate let name: String
+    private let destination: String
+    
+    init(_ name: String, destination: String) {
+        self.name = name
+        self.destination = destination
+    }
+    
+    fileprivate func build(in path: String, using fileManager: FileManager) throws {
+        let linkPath = path.appendingPathComponent(name)
+        let destPath = path.appendingPathComponent(destination)
+        try fileManager.createSymbolicLink(atPath: linkPath, withDestinationPath: destPath)
+    }
+}
+
 struct Directory : Buildable {
     fileprivate let name: String
     private let attributes: [FileAttributeKey : Any]?
@@ -70,11 +86,13 @@ struct FileManagerPlayground {
     enum Item : Buildable {
         case file(File)
         case directory(Directory)
+        case symbolicLink(SymbolicLink)
         
         fileprivate func build(in path: String, using fileManager: FileManager) throws {
             switch self {
             case let .file(file): try file.build(in: path, using: fileManager)
             case let .directory(dir): try dir.build(in: path, using: fileManager)
+            case let .symbolicLink(symlink): try symlink.build(in: path, using: fileManager)
             }
         }
     }
@@ -91,6 +109,10 @@ struct FileManagerPlayground {
         
         static func buildExpression(_ expression: Directory) -> Item {
             .directory(expression)
+        }
+        
+        static func buildExpression(_ expression: SymbolicLink) -> Item {
+            .symbolicLink(expression)
         }
     }
     

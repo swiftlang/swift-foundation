@@ -13,11 +13,5 @@
 ##===----------------------------------------------------------------------===##
 
 add_subdirectory(_FoundationCShims)
-
-# Disable the macro build on Windows until we can correctly build it for the host architecture
-if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
-	add_subdirectory(FoundationMacros)
-endif()
-
 add_subdirectory(FoundationEssentials)
 add_subdirectory(FoundationInternationalization)

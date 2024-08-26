@@ -23,6 +23,9 @@ import posix_filesystem
 #elseif canImport(Glibc)
 import Glibc
 internal import _FoundationCShims
+#elseif canImport(Musl)
+import Musl
+internal import _FoundationCShims
 #elseif os(Windows)
 import CRT
 import WinSDK
@@ -123,8 +126,8 @@ public protocol _NSNumberInitializer {
 
 @_spi(SwiftCorelibsFoundation)
 dynamic public func _nsNumberInitializer() -> (any _NSNumberInitializer.Type)? {
-    // TODO: return nil here after swift-corelibs-foundation begins dynamically replacing this function
-    _typeByName("Foundation._FoundationNSNumberInitializer") as? any _NSNumberInitializer.Type
+    // Dynamically replaced by swift-corelibs-foundation
+    return nil
 }
 #endif
 
@@ -376,12 +379,19 @@ extension _FileManagerImpl {
     private func _fileExists(_ path: String) -> (exists: Bool, isDirectory: Bool) {
 #if os(Windows)
         guard !path.isEmpty else { return (false, false) }
-        return (try? path.withNTPathRepresentation {
-            var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
-            guard GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes) else {
+        return (try? path.withNTPathRepresentation { pwszPath in
+            let handle = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
+            if handle == INVALID_HANDLE_VALUE {
                 return (false, false)
             }
-            return (true, faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY)
+            defer { CloseHandle(handle) }
+
+            var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
+            guard GetFileInformationByHandle(handle, &info) else {
+                return (false, false)
+            }
+
+            return (true, info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY)
         }) ?? (false, false)
 #else
         path.withFileSystemRepresentation { rep -> (Bool, Bool) in
