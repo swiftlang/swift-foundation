@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 // MARK: - Exported Types
-@available(macOS 10.0, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
 #if FOUNDATION_FRAMEWORK
     public typealias CompareOptions = NSString.CompareOptions
