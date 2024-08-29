@@ -60,7 +60,21 @@
 #endif
 
 #if __has_include(<signal.h>)
-#include <signal.h>
+/// Guard against including `signal.h` on WASI. The `signal.h` header file
+/// itself is available in wasi-libc, but it's just a stub that doesn't actually
+/// do anything. And also including it requires a special macro definition
+/// (`_WASI_EMULATED_SIGNAL`) and it causes compilation errors without the macro.
+# if !TARGET_OS_WASI || defined(_WASI_EMULATED_SIGNAL)
+#  include <signal.h>
+# endif
+#endif
+
+#if __has_include(<sys/mman.h>)
+/// Similar to `signal.h`, guard against including `sys/mman.h` on WASI unless
+/// `_WASI_EMULATED_MMAN` is enabled.
+# if !TARGET_OS_WASI || defined(_WASI_EMULATED_MMAN)
+#  include <sys/mman.h>
+# endif
 #endif
 
 #if __has_include(<stdalign.h>)

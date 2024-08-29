@@ -114,7 +114,7 @@ private let _cachedUGIDs: (uid_t, gid_t) = {
 }()
 #endif
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
 extension Platform {
     private static var ROOT_USER: UInt32 { 0 }
     static func getUGIDs(allowEffectiveRootUID: Bool = true) -> (uid: UInt32, gid: UInt32) {
@@ -175,7 +175,7 @@ extension Platform {
         // FIXME: bionic implements this as `return 0;` and does not expose the
         // function via headers. We should be able to shim this and use the call
         // if it is available.
-#if !os(Android)
+#if !os(Android) && !os(WASI)
         guard issetugid() == 0 else { return nil }
 #endif
         if let value = getenv(name) {

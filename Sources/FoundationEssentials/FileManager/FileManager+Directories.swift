@@ -28,6 +28,8 @@ import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
+#elseif os(WASI)
+import WASILibc
 #endif
 
 internal import _FoundationCShims

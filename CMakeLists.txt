@@ -116,6 +116,14 @@ foreach(version ${_SwiftFoundation_versions})
     endforeach()
 endforeach()
 
+# wasi-libc emulation feature flags
+set(_SwiftFoundation_wasi_libc_flags)
+if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
+    list(APPEND _SwiftFoundation_wasi_libc_flags
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_SIGNAL>"
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xcc -D_WASI_EMULATED_MMAN>")
+endif()
+
 include(GNUInstallDirs)
 include(SwiftFoundationSwiftSupport)
 

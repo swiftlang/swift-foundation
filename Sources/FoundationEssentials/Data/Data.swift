@@ -76,6 +76,8 @@ import Glibc
 import Musl
 #elseif canImport(ucrt)
 import ucrt
+#elseif canImport(WASILibc)
+import WASILibc
 #endif
 
 #if os(Windows)
@@ -580,11 +582,11 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     @usableFromInline
     @frozen
     internal struct InlineData : Sendable {
-#if arch(x86_64) || arch(arm64) || arch(s390x) || arch(powerpc64) || arch(powerpc64le)
+#if _pointerBitWidth(_64)
         @usableFromInline typealias Buffer = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
                                               UInt8, UInt8, UInt8, UInt8, UInt8, UInt8) //len  //enum
         @usableFromInline var bytes: Buffer
-#elseif arch(i386) || arch(arm) || arch(arm64_32)
+#elseif _pointerBitWidth(_32)
         @usableFromInline typealias Buffer = (UInt8, UInt8, UInt8, UInt8,
                                               UInt8, UInt8) //len  //enum
         @usableFromInline var bytes: Buffer
@@ -615,9 +617,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         @inlinable // This is @inlinable as a trivial initializer.
         init(count: Int = 0) {
             assert(count <= MemoryLayout<Buffer>.size)
-#if arch(x86_64) || arch(arm64) || arch(s390x) || arch(powerpc64) || arch(powerpc64le)
+#if _pointerBitWidth(_64)
             bytes = (UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0))
-#elseif arch(i386) || arch(arm) || arch(arm64_32)
+#elseif _pointerBitWidth(_32)
             bytes = (UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0))
 #else
     #error ("Unsupported architecture: initialization for Buffer is required for this architecture")
@@ -802,9 +804,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
-#if arch(x86_64) || arch(arm64) || arch(s390x) || arch(powerpc64) || arch(powerpc64le)
+#if _pointerBitWidth(_64)
     @usableFromInline internal typealias HalfInt = Int32
-#elseif arch(i386) || arch(arm) || arch(arm64_32)
+#elseif _pointerBitWidth(_32)
     @usableFromInline internal typealias HalfInt = Int16
 #else
     #error ("Unsupported architecture: a definition of half of the pointer sized Int needs to be defined for this architecture")

@@ -34,6 +34,8 @@ internal import _FoundationCShims
 #elseif os(Windows)
 import CRT
 import WinSDK
+#elseif os(WASI)
+import WASILibc
 #endif
 
 #if os(Windows)
@@ -176,7 +178,7 @@ extension _FileManagerImpl {
         #endif
     }
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
     static func _setAttribute(_ key: UnsafePointer<CChar>, value: Data, at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
         try value.withUnsafeBytes { buffer in
             #if canImport(Darwin)
@@ -274,7 +276,7 @@ extension _FileManagerImpl {
     }
     #endif
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
     static func _userAccountNameToNumber(_ name: String) -> uid_t? {
         name.withCString { ptr in
             getpwnam(ptr)?.pointee.pw_uid

@@ -23,6 +23,8 @@ import Musl
 import CRT
 import WinSDK
 internal import _FoundationCShims
+#elseif os(WASI)
+import WASILibc
 #endif
 
 extension _FileManagerImpl {
