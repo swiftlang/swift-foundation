@@ -278,14 +278,14 @@ final class DateFormatStyleTests : XCTestCase {
         XCTAssertEqual(date.formatted(style.weekday(.short)), "Th")
 
         XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .omitted))), "12")
-        XCTAssertEqualIgnoreSeparator(date.formatted(style.hour(.defaultDigits(amPM: .narrow))), "12 a")
-        XCTAssertEqualIgnoreSeparator(date.formatted(style.hour(.defaultDigits(amPM: .abbreviated))), "12 AM")
-        XCTAssertEqualIgnoreSeparator(date.formatted(style.hour(.defaultDigits(amPM: .wide))), "12 AM")
+        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .narrow))), "12 a")
+        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .abbreviated))), "12 AM")
+        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .wide))), "12 AM")
 
         XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .omitted))), "12")
-        XCTAssertEqualIgnoreSeparator(date.formatted(style.hour(.twoDigits(amPM: .narrow))), "12 a")
-        XCTAssertEqualIgnoreSeparator(date.formatted(style.hour(.twoDigits(amPM: .abbreviated))), "12 AM")
-        XCTAssertEqualIgnoreSeparator(date.formatted(style.hour(.twoDigits(amPM: .wide))), "12 AM")
+        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .narrow))), "12 a")
+        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .abbreviated))), "12 AM")
+        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .wide))), "12 AM")
     }
 
     func testFormattingWithHourCycleOverrides() throws {
@@ -294,12 +294,12 @@ final class DateFormatStyleTests : XCTestCase {
         let esES = "es_ES"
 
         let style = Date.FormatStyle(date: .omitted, time: .standard, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
-        XCTAssertEqualIgnoreSeparator(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init()))), "4:00:00 PM")
-        XCTAssertEqualIgnoreSeparator(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force12Hour: true)))), "4:00:00 PM")
+        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init()))), "4:00:00 PM")
+        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force12Hour: true)))), "4:00:00 PM")
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force24Hour: true)))), "16:00:00")
 
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init()))), "16:00:00")
-        XCTAssertEqualIgnoreSeparator(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force12Hour: true)))), "4:00:00 p. m.")
+        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force12Hour: true)))), "4:00:00 p. m.")
         XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force24Hour: true)))), "16:00:00")
     }
 
@@ -422,7 +422,7 @@ final class DateFormatStyleTests : XCTestCase {
         func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let fmt = format.locale(locale)
             let formatted = fmt.format(date)
-            XCTAssertEqualIgnoreSeparator(formatted, expected, file: file, line: line)
+            XCTAssertEqual(formatted, expected, file: file, line: line)
         }
 
         do {
@@ -575,12 +575,12 @@ final class DateFormatStyleTests : XCTestCase {
         do {
             locale = Locale(identifier: "en_TW")
             format = .init(timeZone: .gmt).hour(.twoDigits(amPM: .wide)).minute().second()
-            verifyWithFormat(middleOfNight, expected: "03:50:00 AM")
-            verifyWithFormat(earlyMorning, expected: "06:50:00 AM")
-            verifyWithFormat(morning, expected: "09:50:00 AM")
-            verifyWithFormat(noon, expected: "12:50:00 PM")
-            verifyWithFormat(afternoon, expected: "03:50:00 PM")
-            verifyWithFormat(evening, expected: "09:50:00 PM")
+            verifyWithFormat(middleOfNight, expected: "03:50:00 AM")
+            verifyWithFormat(earlyMorning, expected: "06:50:00 AM")
+            verifyWithFormat(morning, expected: "09:50:00 AM")
+            verifyWithFormat(noon, expected: "12:50:00 PM")
+            verifyWithFormat(afternoon, expected: "03:50:00 PM")
+            verifyWithFormat(evening, expected: "09:50:00 PM")
         }
     }
 
@@ -589,22 +589,22 @@ final class DateFormatStyleTests : XCTestCase {
         var format: Date.FormatStyle = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
         func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #filePath, line: UInt = #line) {
             let formatted = format.format(date)
-            XCTAssertEqualIgnoreSeparator(formatted, expected, file: file, line: line)
+            XCTAssertEqual(formatted, expected, file: file, line: line)
         }
 
         let date = Date(timeIntervalSince1970: 0)
 
-        verifyWithFormat(date, expected: "1/1/1970, 12:00 AM")
+        verifyWithFormat(date, expected: "1/1/1970, 12:00 AM")
         format = format.day(.omitted)
-        verifyWithFormat(date, expected: "1/1970, 12:00 AM")
+        verifyWithFormat(date, expected: "1/1970, 12:00 AM")
         format = format.day(.defaultDigits)
-        verifyWithFormat(date, expected: "1/1/1970, 12:00 AM")
+        verifyWithFormat(date, expected: "1/1/1970, 12:00 AM")
         format = format.minute()
-        verifyWithFormat(date, expected: "1/1/1970, 12:00 AM")
+        verifyWithFormat(date, expected: "1/1/1970, 12:00 AM")
         format = format.minute(.omitted)
-        verifyWithFormat(date, expected: "1/1/1970, 12 AM")
+        verifyWithFormat(date, expected: "1/1/1970, 12 AM")
         format = format.day(.omitted)
-        verifyWithFormat(date, expected: "1/1970, 12 AM")
+        verifyWithFormat(date, expected: "1/1970, 12 AM")
 
         format = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
         format = format.day()
@@ -639,13 +639,13 @@ final class DateAttributedFormatStyleTests : XCTestCase {
                                                       ("3", .hour),
                                                       (":", nil),
                                                       ("04", .minute),
-                                                      (" ", nil),
+                                                      (" ", nil),
                                                       ("PM", .amPM)],
         ]
 
         for (style, expectation) in expectations {
             let formatted = style.attributed.format(date)
-            XCTAssertEqualIgnoreSeparator(formatted, expectation.attributedString)
+            XCTAssertEqual(formatted, expectation.attributedString)
         }
     }
     func testIndividualFields() throws {
@@ -662,7 +662,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             baseStyle.day(): [ ("12", .day) ],
             baseStyle.dayOfYear(): [ ("102", .dayOfYear) ],
             baseStyle.weekday(): [ ("Mon", .weekday) ],
-            baseStyle.hour(): [ ("3", .hour), (" ", nil), ("PM", .amPM) ],
+            baseStyle.hour(): [ ("3", .hour), (" ", nil), ("PM", .amPM) ],
             baseStyle.minute(): [ ("4", .minute) ],
             baseStyle.second(): [ ("32", .second) ],
             baseStyle.timeZone(): [ ("GMT", .timeZone) ],
@@ -670,7 +670,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
 
         for (style, expectation) in expectations {
             let formatted = style.attributed.format(date)
-            XCTAssertEqualIgnoreSeparator(formatted, expectation.attributedString)
+            XCTAssertEqual(formatted, expectation.attributedString)
         }
     }
 
@@ -715,7 +715,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: [Segment], file: StaticString = #filePath, line: UInt = #line) {
             let locale = Locale.localeAsIfCurrent(name: enUS, overrides: .init(dateFormats: dateFormatOverride))
             let style = Date.FormatStyle(date: dateStyle, time: timeStyle, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone).attributed
-            XCTAssertEqualIgnoreSeparator(style.format(date), expected.attributedString, file: file, line: line)
+            XCTAssertEqual(style.format(date), expected.attributedString, file: file, line: line)
         }
 
         let dateFormatOverride: [Date.FormatStyle.DateStyle: String] = [
@@ -735,7 +735,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             ("4", .hour),
             (":", nil),
             ("00", .minute),
-            (" ", nil),
+            (" ", nil),
             ("PM", .amPM),
         ]) // Ignoring override since there's no match for the specific style
 
@@ -781,7 +781,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             ("00", .minute),
             (":", nil),
             ("00", .second),
-            (" ", nil),
+            (" ", nil),
             ("PM", .amPM),
             (" ", nil),
             ("PST", .timeZone),
@@ -800,7 +800,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             ("00", .minute),
             (":", nil),
             ("00", .second),
-            (" ", nil),
+            (" ", nil),
             ("PM", .amPM),
             (" ", nil),
             ("PST", .timeZone),
@@ -819,7 +819,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             ("00", .minute),
             (":", nil),
             ("00", .second),
-            (" ", nil),
+            (" ", nil),
             ("PM", .amPM),
             (" ", nil),
             ("PST", .timeZone),
@@ -838,7 +838,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             ("00", .minute),
             (":", nil),
             ("00", .second),
-            (" ", nil),
+            (" ", nil),
             ("PM", .amPM),
             (" ", nil),
             ("PST", .timeZone),
@@ -857,7 +857,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
             ("00", .minute),
             (":", nil),
             ("00", .second),
-            (" ", nil),
+            (" ", nil),
             ("PM", .amPM),
             (" ", nil),
             ("PST", .timeZone),
@@ -950,10 +950,10 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
         // Weekday: standalone
         verify("\(weekday: .abbreviated)", localeID: "en_GB", calendarID: .gregorian, expectedString: "Thu")
 
-#if FIXED_ICU_74_DAYPERIOD
         // Day period: formatting
-        verify("\(hour: .twoDigits(clock: .twelveHour, hourCycle: .zeroBased)) \(dayPeriod: .standard(.abbreviated))", localeID: "en_GB", calendarID: .gregorian, expectedString: "00 am")
-#endif
+#if FIXED_ICU_74_DAYPERIOD
+        verify("\(hour: .twoDigits(clock: .twelveHour, hourCycle: .zeroBased)) \(dayPeriod: .standard(.abbreviated))", localeID: "en_GB", calendarID: .gregorian, expectedString: "00 AM")
+#endif // FIXED_ICU_74_DAYPERIOD
     }
 
     func test_95845290() throws {
@@ -1404,7 +1404,7 @@ final class TestDateStyleDiscreteConformance : XCTestCase {
                     } else {
                         return bound
                     }
-                }.lazy.map(\.output).map { $0.normalizingICUSeparator() },
+                }.lazy.map(\.output),
                 contains: expectedExcerpts,
                 "(lowerbound to upperbound)",
                 file: file,
@@ -1417,7 +1417,7 @@ final class TestDateStyleDiscreteConformance : XCTestCase {
                     } else {
                         return bound
                     }
-                }.lazy.map(\.output).map { $0.normalizingICUSeparator() },
+                }.lazy.map(\.output),
                 contains: expectedExcerpts
                     .reversed()
                     .map { $0.reversed() },
@@ -1432,53 +1432,53 @@ final class TestDateStyleDiscreteConformance : XCTestCase {
             of: .init(date: .complete, time: .complete).secondFraction(.fractional(2)),
             in: (now - 0.1)...(now + 0.1),
             includes: [
-                "Monday, May 15, 2023 at 8:47:19.90 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19.91 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19.92 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19.93 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19.94 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19.95 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19.96 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19.97 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19.98 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19.99 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.00 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.01 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.02 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.03 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.04 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.05 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.06 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.07 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.08 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.09 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20.10 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.90 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.91 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.92 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.93 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.94 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.95 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.96 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.97 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.98 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19.99 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.00 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.01 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.02 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.03 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.04 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.05 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.06 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.07 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.08 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.09 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20.10 AM GMT",
             ])
 
         assertEvaluation(
             of: .init(date: .complete, time: .complete),
             in: (now - 3)...(now + 3),
             includes: [
-                "Monday, May 15, 2023 at 8:47:17 AM GMT",
-                "Monday, May 15, 2023 at 8:47:18 AM GMT",
-                "Monday, May 15, 2023 at 8:47:19 AM GMT",
-                "Monday, May 15, 2023 at 8:47:20 AM GMT",
-                "Monday, May 15, 2023 at 8:47:21 AM GMT",
-                "Monday, May 15, 2023 at 8:47:22 AM GMT",
-                "Monday, May 15, 2023 at 8:47:23 AM GMT",
+                "Monday, May 15, 2023 at 8:47:17 AM GMT",
+                "Monday, May 15, 2023 at 8:47:18 AM GMT",
+                "Monday, May 15, 2023 at 8:47:19 AM GMT",
+                "Monday, May 15, 2023 at 8:47:20 AM GMT",
+                "Monday, May 15, 2023 at 8:47:21 AM GMT",
+                "Monday, May 15, 2023 at 8:47:22 AM GMT",
+                "Monday, May 15, 2023 at 8:47:23 AM GMT",
             ])
 
         assertEvaluation(
             of: .init().hour(.twoDigits(amPM: .abbreviated)).minute(),
             in: (now - 180)...(now + 180),
             includes: [
-                "08:44 AM",
-                "08:45 AM",
-                "08:46 AM",
-                "08:47 AM",
-                "08:48 AM",
-                "08:49 AM",
-                "08:50 AM",
+                "08:44 AM",
+                "08:45 AM",
+                "08:46 AM",
+                "08:47 AM",
+                "08:48 AM",
+                "08:49 AM",
+                "08:50 AM",
             ])
 
         assertEvaluation(
