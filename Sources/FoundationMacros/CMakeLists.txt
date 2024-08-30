@@ -26,6 +26,9 @@ endif()
 project(FoundationMacros
   LANGUAGES Swift)
 
+option(SwiftFoundation_BUILD_EXECUTABLE_MACROS
+  "Build the FoundationMacros as an executable" NO)
+
 # SwiftSyntax Dependency
 find_package(SwiftSyntax QUIET)
 if(NOT SwiftSyntax_FOUND)
@@ -41,13 +44,13 @@ else()
   message(STATUS "SwiftSyntax_DIR provided, using swift-syntax from ${SwiftSyntax_DIR}")
 endif()
 
-if(NOT FoundationMacros_BuildLocalExecutable)
-    add_library(FoundationMacros SHARED)
-    target_compile_definitions(FoundationMacros PRIVATE FOUNDATION_MACROS_LIBRARY)
-else()
+if(SwiftFoundation_BUILD_EXECUTABLE_MACROS)
     add_executable(FoundationMacros)
     target_link_libraries(FoundationMacros PUBLIC
         SwiftSyntax::SwiftCompilerPlugin)
+else()
+    add_library(FoundationMacros SHARED)
+    target_compile_definitions(FoundationMacros PRIVATE FOUNDATION_MACROS_LIBRARY)
 endif()
 
 # Parse the module as a library, even if it's an executable, because it uses an `@main` type to define its entry point.
@@ -82,8 +85,6 @@ set_target_properties(FoundationMacros PROPERTIES
     INSTALL_RPATH "$ORIGIN/../../../swift/${SWIFT_SYSTEM_NAME}:$ORIGIN/.."
     INSTALL_REMOVE_ENVIRONMENT_RPATH ON)
 
-if(NOT FoundationMacros_BuildLocalExecutable)
-    install(TARGETS FoundationMacros
-        LIBRARY DESTINATION lib/swift/host/plugins
-        RUNTIME DESTINATION bin)
-endif()
+install(TARGETS FoundationMacros
+    LIBRARY DESTINATION lib/swift/host/plugins
+    RUNTIME DESTINATION bin)

@@ -49,29 +49,6 @@ add_subdirectory(String)
 add_subdirectory(TimeZone)
 add_subdirectory(URL)
 
-if(SwiftFoundation_MACRO)
-    message(STATUS "SwiftFoundation_MACRO provided, using macros in ${SwiftFoundation_MACRO}")
-    # A path to Foundation macros was provided, so we use that path
-    target_compile_options(FoundationEssentials PRIVATE
-        "SHELL:-plugin-path ${SwiftFoundation_MACRO}")
-else()
-    message(STATUS "SwiftFoundation_MACRO not provided, building Foundation macros locally for host")
-    # No path to Foundation macros was provided, so we must build it ourselves
-    set(FoundationMacros_BuildLocalExecutable YES)
-    FetchContent_Declare(FoundationMacros
-        SOURCE_DIR ${CMAKE_SOURCE_DIR}/Sources/FoundationMacros)
-    FetchContent_MakeAvailable(FoundationMacros)
-    add_dependencies(FoundationEssentials FoundationMacros)
-    get_target_property(MacroDIR FoundationMacros RUNTIME_OUTPUT_DIRECTORY)
-    if(CMAKE_SYSTEM_NAME STREQUAL Windows)
-        set(MacroExecutable "${MacroDIR}/FoundationMacros.exe#FoundationMacros")
-    else()
-        set(MacroExecutable "${MacroDIR}/FoundationMacros#FoundationMacros")
-    endif()
-    target_compile_options(FoundationEssentials PUBLIC
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-load-plugin-executable ${MacroExecutable}>")
-endif()
-
 if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Android)
     target_compile_options(FoundationEssentials PRIVATE
         "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -Xcc -Xfrontend -D_GNU_SOURCE>")
@@ -88,6 +65,7 @@ target_compile_options(FoundationEssentials PRIVATE ${_SwiftFoundation_wasi_libc
 target_compile_options(FoundationEssentials PRIVATE -package-name "SwiftFoundation")
 
 target_link_libraries(FoundationEssentials PUBLIC
+    FoundationBuildMacros
     _FoundationCShims
     _FoundationCollections)
 target_link_libraries(FoundationEssentials PUBLIC ${_SwiftFoundation_wasi_libc_libraries})
