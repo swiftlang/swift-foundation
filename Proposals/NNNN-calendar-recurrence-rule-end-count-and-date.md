@@ -12,6 +12,7 @@
 ## Revision history
 
 * **v1** Initial version
+* **v2** Added `CustomStringConvertible` conformance to `Calendar.RecurrenceRule.End`.
 
 ## Introduction
 
@@ -37,6 +38,8 @@ public struct End: Sendable, Equatable {
 
 This is de-facto an enum, but it was declared as struct to be future-proof. However, the original API only allowed construction of the recurrence rule end, but does not allow any introspection afterwards. This proposal adds a few properties to `Calendar.RecurrenceRule.End` to remedy this.
 
+Additionally, we add `CustomStringConvertible` conformance to the struct. Previously, implementation details would be leaked when printing (`End(_guts: Foundation.Calendar.RecurrenceRule.End.(unknown context at $1a0a00afc)._End.never)`).
+
 ## Detailed design
 
 ```swift
@@ -50,6 +53,17 @@ public extension Calendar.RecurrenceRule.End {
     /// This value is set when the struct was initialized with `.afterDate()`
     @available(FoundationPreview 6.0.2, *)
     public var date: Date? { get }
+}
+
+@available(FoundationPreview 6.0.2, *)
+public extension Calendar.RecurrenceRule.End: CustomStringConvertible {
+    public var description: String {
+        switch self._guts {
+            case .never: "Never"
+            case .afterDate(let date): "After \(date)"
+            case .afterOccurrences(let n): "After \(n) occurrences"
+        }
+    }
 }
 ```
 
