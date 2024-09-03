@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_nonSendable
 @available(FoundationPredicate 0.1, *)
 public struct PredicateBindings {
     // Store as a values as an array instead of a dictionary (since it is almost always very few elements, this reduces heap allocation and hashing overhead)
@@ -53,3 +52,10 @@ public struct PredicateBindings {
         return mutable
     }
 }
+
+@available(macOS, unavailable, introduced: 14.0)
+@available(iOS, unavailable, introduced: 17.0)
+@available(tvOS, unavailable, introduced: 17.0)
+@available(watchOS, unavailable, introduced: 10.0)
+@available(*, unavailable)
+extension PredicateBindings : Sendable {}

@@ -22,7 +22,6 @@ internal import CoreFoundation_Private.CFURL
 /// Note that not all property values will exist for all file system URLs. For example, if a file is located on a volume that does not support creation dates, it is valid to request the creation date property, but the returned value will be nil, and no error will be generated.
 ///
 /// Only the fields requested by the keys you pass into the `URL` function to receive this value will be populated. The others will return `nil` regardless of the underlying property on the file system. As a convenience, volume resource values can be requested from any file system URL. The value returned will reflect the property value for the volume on which the resource is located.
-@_nonSendable
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URLResourceValues {
 
@@ -596,6 +595,13 @@ public struct URLResourceValues {
 
 #endif // !NO_FILESYSTEM
 }
+
+@available(macOS, unavailable, introduced: 10.10)
+@available(iOS, unavailable, introduced: 8.0)
+@available(tvOS, unavailable, introduced: 9.0)
+@available(watchOS, unavailable, introduced: 2.0)
+@available(*, unavailable)
+extension URLResourceValues : Sendable {}
 #endif // FOUNDATION_FRAMEWORK
 
 #if FOUNDATION_FRAMEWORK_NSURL

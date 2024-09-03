@@ -1844,7 +1844,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     // A standard or custom deallocator for `Data`.
     ///
     /// When creating a `Data` with the no-copy initializer, you may specify a `Data.Deallocator` to customize the behavior of how the backing store is deallocated.
-    @_nonSendable
     public enum Deallocator {
         /// Use a virtual memory deallocator.
 #if canImport(Darwin)
@@ -2687,6 +2686,13 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         return true
     }
 }
+
+@available(macOS, unavailable, introduced: 10.10)
+@available(iOS, unavailable, introduced: 8.0)
+@available(tvOS, unavailable, introduced: 9.0)
+@available(watchOS, unavailable, introduced: 2.0)
+@available(*, unavailable)
+extension Data.Deallocator : Sendable {}
 
 #if !FOUNDATION_FRAMEWORK
 // MARK: Exported Types

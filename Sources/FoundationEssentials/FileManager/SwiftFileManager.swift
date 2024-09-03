@@ -176,7 +176,6 @@ extension FileManager {
     }
 }
 
-@_nonSendable
 open class FileManager : @unchecked Sendable {
     // Sendable note: _impl may only be mutated in `init`
     private var _impl: _FileManagerImpl

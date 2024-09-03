@@ -20,7 +20,6 @@ internal import Foundation_Private.NSAttributedString
 extension AttributeScopes {
     public var foundation: FoundationAttributes.Type { FoundationAttributes.self }
     
-    @_nonSendable
     public struct FoundationAttributes : AttributeScope {
         public let link: LinkAttribute
         public let languageIdentifier: LanguageIdentifierAttribute
@@ -65,6 +64,14 @@ extension AttributeScopes {
     }
 }
 
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes : Sendable {}
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeDynamicLookup {
     public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.FoundationAttributes, T>) -> T {
@@ -92,7 +99,6 @@ extension AttributeDynamicLookup {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScopes.FoundationAttributes {
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum LinkAttribute : CodableAttributedStringKey {
         public typealias Value = URL
@@ -106,7 +112,7 @@ extension AttributeScopes.FoundationAttributes {
     
 #if FOUNDATION_FRAMEWORK
     
-    @frozen @_nonSendable
+    @frozen
     @available(FoundationPreview 0.1, *)
     public enum ReferentConceptAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
@@ -114,7 +120,7 @@ extension AttributeScopes.FoundationAttributes {
         public static let markdownName = "referentConcept"
     }
 
-    @frozen @_nonSendable
+    @frozen
     @available(FoundationPreview 0.1, *)
     public enum AgreementConceptAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
@@ -122,7 +128,7 @@ extension AttributeScopes.FoundationAttributes {
         public static let markdownName = "agreeWithConcept"
     }
     
-    @frozen @_nonSendable
+    @frozen
     @available(FoundationPreview 0.1, *)
     public enum AgreementArgumentAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Int
@@ -131,7 +137,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum MorphologyAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = Morphology
@@ -140,7 +145,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum InflectionRuleAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public typealias Value = InflectionRule
@@ -149,7 +153,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @_spi(AutomaticGrammaticalAgreement)
     public enum AssumedFallbackInflectionAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
@@ -159,7 +162,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(FoundationPreview 0.4, *)
     public enum LocalizedNumberFormatAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey {
         public struct Value: Equatable, Hashable, Codable, Sendable {
@@ -194,7 +196,6 @@ extension AttributeScopes.FoundationAttributes {
 #endif // FOUNDATION_FRAMEWORK
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum LanguageIdentifierAttribute : CodableAttributedStringKey {
         public typealias Value = String
@@ -202,7 +203,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum PersonNameComponentAttribute : CodableAttributedStringKey {
         public typealias Value = Component
@@ -213,14 +213,12 @@ extension AttributeScopes.FoundationAttributes {
         }
     }
     
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public struct NumberFormatAttributes: AttributeScope {
         public let numberSymbol: SymbolAttribute
         public let numberPart: NumberPartAttribute
         
         @frozen
-        @_nonSendable
         public enum NumberPartAttribute : CodableAttributedStringKey {
             public enum NumberPart : Int, Codable, Sendable {
                 case integer
@@ -232,7 +230,6 @@ extension AttributeScopes.FoundationAttributes {
         }
         
         @frozen
-        @_nonSendable
         public enum SymbolAttribute : CodableAttributedStringKey {
             public enum Symbol : Int, Codable, Sendable {
                 case groupingSeparator
@@ -248,7 +245,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum DateFieldAttribute : CodableAttributedStringKey {
         public enum Field : Hashable, Codable, Sendable {
@@ -381,7 +377,6 @@ extension AttributeScopes.FoundationAttributes {
 #if FOUNDATION_FRAMEWORK
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum InflectionAlternativeAttribute : CodableAttributedStringKey, MarkdownDecodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
         public typealias Value = AttributedString
@@ -409,7 +404,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
 	@frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum InlinePresentationIntentAttribute : CodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
         public typealias Value = InlinePresentationIntent
@@ -426,7 +420,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum PresentationIntentAttribute : CodableAttributedStringKey {
         public typealias Value = PresentationIntent
@@ -434,7 +427,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public enum MarkdownSourcePositionAttribute: CodableAttributedStringKey {
         public static let name = NSAttributedString.Key.markdownSourcePosition.rawValue
@@ -444,7 +436,6 @@ extension AttributeScopes.FoundationAttributes {
 #endif // FOUNDATION_FRAMEWORK
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum AlternateDescriptionAttribute : CodableAttributedStringKey {
         public typealias Value = String
@@ -452,7 +443,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum ImageURLAttribute : CodableAttributedStringKey {
         public typealias Value = URL
@@ -460,14 +450,12 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum ReplacementIndexAttribute : CodableAttributedStringKey {
         public typealias Value = Int
         public static let name = "NSReplacementIndex"
     }
     
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public struct MeasurementAttribute : CodableAttributedStringKey {
         public typealias Value = Component
@@ -479,7 +467,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
     @frozen
-    @_nonSendable
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public enum ByteCountAttribute : CodableAttributedStringKey {
         public typealias Value = Component
@@ -505,7 +492,6 @@ extension AttributeScopes.FoundationAttributes {
     }
 
     @frozen
-    @_nonSendable
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public enum DurationFieldAttribute : CodableAttributedStringKey {
         public typealias Value = Field
@@ -523,7 +509,6 @@ extension AttributeScopes.FoundationAttributes {
     }
     
 #if FOUNDATION_FRAMEWORK
-    @_nonSendable
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct LocalizedStringArgumentAttributes {
     
@@ -535,7 +520,6 @@ extension AttributeScopes.FoundationAttributes {
         public let localizedURLArgument: LocalizedURLArgumentAttribute
         
         @frozen
-        @_nonSendable
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public enum LocalizedNumericArgumentAttribute : CodableAttributedStringKey {
             public static let name = "Foundation.LocalizedNumericArgumentAttribute"
@@ -548,7 +532,6 @@ extension AttributeScopes.FoundationAttributes {
         }
         
         @frozen
-        @_nonSendable
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public enum LocalizedDateArgumentAttribute : CodableAttributedStringKey {
             public typealias Value = Date
@@ -556,7 +539,6 @@ extension AttributeScopes.FoundationAttributes {
         }
         
         @frozen
-        @_nonSendable
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public enum LocalizedDateIntervalArgumentAttribute : CodableAttributedStringKey {
             public typealias Value = Range<Date>
@@ -564,7 +546,6 @@ extension AttributeScopes.FoundationAttributes {
         }
         
         @frozen
-        @_nonSendable
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public enum LocalizedURLArgumentAttribute : CodableAttributedStringKey {
             public typealias Value = URL
@@ -574,7 +555,212 @@ extension AttributeScopes.FoundationAttributes {
 #endif // FOUNDATION_FRAMEWORK
 }
 
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.LinkAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.LanguageIdentifierAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.PersonNameComponentAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.NumberFormatAttributes : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.DateFieldAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.AlternateDescriptionAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.ImageURLAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.ReplacementIndexAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.MeasurementAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.ByteCountAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 13.0)
+@available(iOS, unavailable, introduced: 16.0)
+@available(tvOS, unavailable, introduced: 16.0)
+@available(watchOS, unavailable, introduced: 9.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.DurationFieldAttribute : Sendable {}
+
 #if FOUNDATION_FRAMEWORK
+
+@available(macOS, unavailable, introduced: 14.0)
+@available(iOS, unavailable, introduced: 17.0)
+@available(tvOS, unavailable, introduced: 17.0)
+@available(watchOS, unavailable, introduced: 10.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.ReferentConceptAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 14.0)
+@available(iOS, unavailable, introduced: 17.0)
+@available(tvOS, unavailable, introduced: 17.0)
+@available(watchOS, unavailable, introduced: 10.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.AgreementConceptAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 14.0)
+@available(iOS, unavailable, introduced: 17.0)
+@available(tvOS, unavailable, introduced: 17.0)
+@available(watchOS, unavailable, introduced: 10.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.AgreementArgumentAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.MorphologyAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.InflectionRuleAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 13.0)
+@available(iOS, unavailable, introduced: 16.0)
+@available(tvOS, unavailable, introduced: 16.0)
+@available(watchOS, unavailable, introduced: 9.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.AssumedFallbackInflectionAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 15.0)
+@available(iOS, unavailable, introduced: 18.0)
+@available(tvOS, unavailable, introduced: 18.0)
+@available(watchOS, unavailable, introduced: 11.0)
+@available(visionOS, unavailable, introduced: 2.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.LocalizedNumberFormatAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.InflectionAlternativeAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 12.0)
+@available(iOS, unavailable, introduced: 15.0)
+@available(tvOS, unavailable, introduced: 15.0)
+@available(watchOS, unavailable, introduced: 8.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.PresentationIntentAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 13.0)
+@available(iOS, unavailable, introduced: 16.0)
+@available(tvOS, unavailable, introduced: 16.0)
+@available(watchOS, unavailable, introduced: 9.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.MarkdownSourcePositionAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 13.0)
+@available(iOS, unavailable, introduced: 16.0)
+@available(tvOS, unavailable, introduced: 16.0)
+@available(watchOS, unavailable, introduced: 9.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.LocalizedStringArgumentAttributes : Sendable {}
+
+@available(macOS, unavailable, introduced: 13.0)
+@available(iOS, unavailable, introduced: 16.0)
+@available(tvOS, unavailable, introduced: 16.0)
+@available(watchOS, unavailable, introduced: 9.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.LocalizedStringArgumentAttributes.LocalizedNumericArgumentAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 13.0)
+@available(iOS, unavailable, introduced: 16.0)
+@available(tvOS, unavailable, introduced: 16.0)
+@available(watchOS, unavailable, introduced: 9.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.LocalizedStringArgumentAttributes.LocalizedURLArgumentAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 13.0)
+@available(iOS, unavailable, introduced: 16.0)
+@available(tvOS, unavailable, introduced: 16.0)
+@available(watchOS, unavailable, introduced: 9.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.LocalizedStringArgumentAttributes.LocalizedDateArgumentAttribute : Sendable {}
+
+@available(macOS, unavailable, introduced: 13.0)
+@available(iOS, unavailable, introduced: 16.0)
+@available(tvOS, unavailable, introduced: 16.0)
+@available(watchOS, unavailable, introduced: 9.0)
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.LocalizedStringArgumentAttributes.LocalizedDateIntervalArgumentAttribute : Sendable {}
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScopes.FoundationAttributes.LinkAttribute : ObjectiveCConvertibleAttributedStringKey {

@@ -16,7 +16,6 @@ import FoundationEssentials
 
 /// Compares elements using a `KeyPath`, and a `SortComparator` which compares
 /// elements of the `KeyPath`s `Value` type.
-@_nonSendable
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 public struct KeyPathComparator<Compared>: SortComparator {
     /// The key path to the property to be used for comparisons.

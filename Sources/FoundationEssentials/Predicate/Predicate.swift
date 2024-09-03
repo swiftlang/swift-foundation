@@ -50,7 +50,14 @@ extension Predicate {
 
 // Namespace for operator expressions
 @available(FoundationPredicate 0.1, *)
-@frozen @_nonSendable public enum PredicateExpressions {}
+@frozen public enum PredicateExpressions {}
+
+@available(macOS, unavailable, introduced: 14.0)
+@available(iOS, unavailable, introduced: 17.0)
+@available(tvOS, unavailable, introduced: 17.0)
+@available(watchOS, unavailable, introduced: 10.0)
+@available(*, unavailable)
+extension PredicateExpressions : Sendable {}
 
 @available(FoundationPredicate 0.1, *)
 extension Sequence {
