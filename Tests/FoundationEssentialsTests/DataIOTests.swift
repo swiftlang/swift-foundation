@@ -255,6 +255,7 @@ class DataIOTests : XCTestCase {
         XCTAssertEqual("/".deletingLastPathComponent(), "/")
         XCTAssertEqual("q".deletingLastPathComponent(), "")
         XCTAssertEqual("/aaa".deletingLastPathComponent(), "/")
+        XCTAssertEqual("/aaa/".deletingLastPathComponent(), "/")
         XCTAssertEqual("/a/b/c/".deletingLastPathComponent(), "/a/b")
         XCTAssertEqual("hello".deletingLastPathComponent(), "")
         XCTAssertEqual("hello/".deletingLastPathComponent(), "")
