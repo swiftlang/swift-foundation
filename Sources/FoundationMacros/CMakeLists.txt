@@ -26,6 +26,14 @@ endif()
 project(FoundationMacros
   LANGUAGES Swift)
 
+if(NOT SWIFT_SYSTEM_NAME)
+  if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+    set(SWIFT_SYSTEM_NAME macosx)
+  else()
+    set(SWIFT_SYSTEM_NAME "$<LOWER_CASE:${CMAKE_SYSTEM_NAME}>")
+  endif()
+endif()
+
 # SwiftSyntax Dependency
 find_package(SwiftSyntax QUIET)
 if(NOT SwiftSyntax_FOUND)
