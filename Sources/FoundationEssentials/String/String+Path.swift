@@ -63,7 +63,12 @@ extension String {
             // This is a trailing slash. Ignore it.
             let beforeLastSlash = self[startIndex..<lastSlash].lastIndex { $0 == "/" }
             if let beforeLastSlash {
-                return String(self[startIndex..<beforeLastSlash])
+                if beforeLastSlash == startIndex {
+                    // Only the first slash remains, return a bare slash.
+                    return "/"
+                } else {
+                    return String(self[startIndex..<beforeLastSlash])
+                }
             } else {
                 // No other slash. Return empty string.
                 return ""
