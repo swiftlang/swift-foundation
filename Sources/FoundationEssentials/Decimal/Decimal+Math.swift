@@ -367,7 +367,7 @@ extension Decimal {
     }
 
     internal func _power(
-        exponent: UInt, roundingMode: RoundingMode
+        exponent: Int, roundingMode: RoundingMode
     ) throws -> Decimal {
         if self.isNaN {
             throw _CalculationError.overflow
@@ -375,7 +375,11 @@ extension Decimal {
         if exponent == 0 {
             return Decimal(1)
         }
-        var power = exponent
+        if self == .zero {
+            // Technically 0^-n is undefined, return NaN
+            return exponent > 0 ? Decimal(0) : .nan
+        }
+        var power = abs(exponent)
         var result = self
         var temporary = Decimal(1)
         while power > 1 {
@@ -395,6 +399,14 @@ extension Decimal {
         result = try temporary._multiply(
             by: result, roundingMode: roundingMode
         )
+        // Negative Exponent Rule
+        // x^-n = 1/(x^n)
+        if exponent < 0 {
+            result = try Decimal(1)._divide(
+                by: result,
+                roundingMode: roundingMode
+            )
+        }
         return result
     }
 

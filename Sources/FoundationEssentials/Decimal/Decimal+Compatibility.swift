@@ -84,7 +84,7 @@ extension Decimal : _ObjectiveCBridgeable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public func pow(_ x: Decimal, _ y: Int) -> Decimal {
     let result = try? x._power(
-        exponent: UInt(y), roundingMode: .plain
+        exponent: y, roundingMode: .plain
     )
     return result ?? .nan
 }
@@ -92,7 +92,7 @@ public func pow(_ x: Decimal, _ y: Int) -> Decimal {
 @_spi(SwiftCorelibsFoundation)
 public func _pow(_ x: Decimal, _ y: Int) -> Decimal {
     let result = try? x._power(
-        exponent: UInt(y), roundingMode: .plain
+        exponent: y, roundingMode: .plain
     )
     return result ?? .nan
 }
@@ -233,7 +233,9 @@ private func __NSDecimalPower(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let power = try decimal.pointee._power(exponent: UInt(exponent), roundingMode: roundingMode)
+        let power = try decimal.pointee._power(
+            exponent: exponent, roundingMode: roundingMode
+        )
         result.pointee = power
         return .noError
     } catch {

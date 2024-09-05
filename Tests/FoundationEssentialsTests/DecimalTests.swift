@@ -657,20 +657,20 @@ final class DecimalTests : XCTestCase {
         // Positive base
         let six = Decimal(6)
         for exponent in 1 ..< 10 {
-            result = try six._power(exponent: UInt(exponent), roundingMode: .plain)
+            result = try six._power(exponent: exponent, roundingMode: .plain)
             XCTAssertEqual(result.doubleValue, pow(6.0, Double(exponent)))
         }
         // Negative base
         let negativeSix = Decimal(-6)
         for exponent in 1 ..< 10 {
-            result = try negativeSix._power(exponent: UInt(exponent), roundingMode: .plain)
+            result = try negativeSix._power(exponent: exponent, roundingMode: .plain)
             XCTAssertEqual(result.doubleValue, pow(-6.0, Double(exponent)))
         }
         for i in -2 ... 10 {
             for j in 0 ... 5 {
                 let actual = Decimal(i)
                 let result = try actual._power(
-                    exponent: UInt(j), roundingMode: .plain
+                    exponent: j, roundingMode: .plain
                 )
                 let expected = Decimal(pow(Double(i), Double(j)))
                 XCTAssertEqual(expected, result, "\(result) == \(i)^\(j)")
@@ -1008,10 +1008,10 @@ final class DecimalTests : XCTestCase {
         for i in -2...10 {
             for j in 0...5 {
                 let power = Decimal(i)
-                let actual = try power._power(exponent: UInt(j), roundingMode: .plain)
+                let actual = try power._power(exponent: j, roundingMode: .plain)
                 let expected = Decimal(pow(Double(i), Double(j)))
                 XCTAssertEqual(expected, actual, "\(actual) == \(i)^\(j)")
-                XCTAssertEqual(expected, try power._power(exponent: UInt(j), roundingMode: .plain))
+                XCTAssertEqual(expected, try power._power(exponent: j, roundingMode: .plain))
             }
         }
 
@@ -1301,4 +1301,40 @@ final class DecimalTests : XCTestCase {
         XCTAssertEqual(length, 3)
     }
     #endif
+
+    func testNegativePower() {
+        func test(withBase base: Decimal, power: Int) {
+            XCTAssertEqual(
+                try base._power(exponent: -power, roundingMode: .plain),
+                try Decimal(1)/base._power(exponent: power, roundingMode: .plain),
+                "Base: \(base), Power: \(power)"
+            )
+        }
+        // Negative Exponent Rule
+        // x^-n = 1/(x^n)
+        for power in 2 ..< 10 {
+            // Positive Integer base
+            test(withBase: Decimal(Int.random(in: 1 ..< 10)), power: power)
+
+            // Negative Integer base
+            test(withBase: Decimal(Int.random(in: -10 ..< -1)), power: power)
+
+            // Postive Double base
+            test(withBase: Decimal(Double.random(in: 0 ..< 1.0)), power: power)
+
+            // Negative Double base
+            test(withBase: Decimal(Double.random(in: -1.0 ..< 0.0)), power: power)
+
+            // For zero base: 0^n = 0; 0^(-n) = nan
+            XCTAssertEqual(
+                try Decimal(0)._power(exponent: power, roundingMode: .plain),
+                Decimal(0)
+            )
+            XCTAssertEqual(
+                try Decimal(0)._power(exponent: -power, roundingMode: .plain),
+                Decimal.nan
+            )
+        }
+
+    }
 }
