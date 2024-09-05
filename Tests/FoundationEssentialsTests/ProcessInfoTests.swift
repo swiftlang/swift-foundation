@@ -138,7 +138,7 @@ final class ProcessInfoTests : XCTestCase {
                 OperatingSystemVersion(majorVersion: 1, minorVersion: 0, patchVersion: 0)
             ),
         "ProcessInfo thinks we are on watchOS 1")
-        #elseif os(macOS) || os(iOS)
+        #elseif os(macOS) || (os(iOS) && !os(visionOS))
         XCTAssertTrue(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
                 OperatingSystemVersion(majorVersion: 6, minorVersion: 12, patchVersion: 0)
