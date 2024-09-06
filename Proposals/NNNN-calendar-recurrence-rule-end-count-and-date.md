@@ -13,6 +13,7 @@
 
 * **v1** Initial version
 * **v2** Added `CustomStringConvertible` conformance to `Calendar.RecurrenceRule.End`.
+* **v3** Renamed `count` to `occurrences`
 
 ## Introduction
 
@@ -47,7 +48,7 @@ public extension Calendar.RecurrenceRule.End {
     /// At most many times the event may occur
     /// This value is set when the struct was initialized with `.afterOccurrences()`
     @available(FoundationPreview 6.0.2, *)
-    public var count: Int? { get }
+    public var occurrences: Int? { get }
 
     /// The latest date when the event may occur
     /// This value is set when the struct was initialized with `.afterDate()`
