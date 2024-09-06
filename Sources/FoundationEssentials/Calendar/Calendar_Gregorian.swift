@@ -884,7 +884,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     // move date to target day of week
-    func dateAfterDateWithTargetDoW(_ start: Date, _ targetDoW: Int) throws -> (Date, daysAdded: Int) {
+    func dateAfterDateWithTargetDoW(_ start: Date, _ targetDoW: Int) throws (GregorianCalendarError) -> (Date, daysAdded: Int) {
         var daysAdded = 0
         var weekday = dateComponent(.weekday, from: start)
         var work = start
@@ -892,7 +892,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         while weekday != targetDoW {
             work = try self.add(.day, to: work, amount: 1, inTimeZone: timeZone)
             guard prev < work else {
-                throw GregorianCalendarError.notAdvancing(work, prev)
+                throw .notAdvancing(work, prev)
             }
             weekday = dateComponent(.weekday, from: work)
             daysAdded += 1
@@ -906,7 +906,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let result: Int?
         do {
             result = try _ordinality(of: smaller, in: larger, for: date)
-        } catch let error as GregorianCalendarError {
+        } catch {
 #if canImport(os)
             switch error {
             case .overflow(_, _, _):
@@ -916,14 +916,12 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             }
 #endif
             result = nil
-        } catch {
-            preconditionFailure("Unrecognized calendar error")
         }
 
         return result
     }
 
-    func _ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) throws -> Int? {
+    func _ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) throws (GregorianCalendarError) -> Int? {
 
         switch larger {
         case .era:
@@ -1501,7 +1499,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 upperBound = start
             }
 
-        } catch let error {
+        } catch {
             switch error {
             case .overflow(_, _, _):
                 // We are at the limit.
@@ -1921,7 +1919,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return date < gregorianStartDate
     }
 
-    func dayOfYear(fromYear year: Int, month: Int, day: Int) throws -> Int {
+    func dayOfYear(fromYear year: Int, month: Int, day: Int) throws (GregorianCalendarError) -> Int {
         let daysBeforeMonthNonLeap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
         let daysBeforeMonthLeap =    [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
 
@@ -2045,7 +2043,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
             weekOfMonth = weekNumber(desiredDay: day, dayOfPeriod: day, weekday: weekday)
             weekdayOrdinal = (day - 1) / 7 + 1
-        } catch let error {
+        } catch {
             year = .max
             month = .max
             day = .max
@@ -2270,7 +2268,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 guard !overflow else {
                     throw .overflow(field, date, nil)
                 }
-                dc.yearForWeekOfYear = res
+                dc.year = res
+            } else {
+                dc.year = amount
             }
 
             capDay(in: &dc)
@@ -2386,7 +2386,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return newValue
     }
 
-    func addAndWrap(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) throws -> Date {
+    func addAndWrap(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) throws (GregorianCalendarError) -> Date {
 
         guard amount != 0 else {
             return date
@@ -2700,7 +2700,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
 
-    internal func date(byAddingAndWrapping components: DateComponents, to date: Date) throws -> Date {
+    internal func date(byAddingAndWrapping components: DateComponents, to date: Date) throws (GregorianCalendarError) -> Date {
         let timeZone = components.timeZone ?? self.timeZone
         var result = date
 
@@ -2838,7 +2838,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             } else {
                 return try self.date(byAddingAndCarryingOverComponents: components, to: date)
             }
-        } catch let error {
+        } catch {
             return nil
         }
     }
@@ -2873,7 +2873,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             do {
                 let advanced = try add(component, to: start, amount: diff, inTimeZone: timeZone)
                 return (diff, advanced)
-            } catch let error {
+            } catch {
                 throw .overflow(component, start, end)
             }
 
@@ -3022,7 +3022,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                     } else {
                         dc.setValue(diff, for: component)
                     }
-                } catch let error {
+                } catch {
 #if canImport(os)
                     switch error {
                     case .overflow(_, _, _):
