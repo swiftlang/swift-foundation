@@ -146,6 +146,15 @@ let package = Package(
             ]
         ),
         .executableTarget(
+            name: "AttributedStringBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/AttributedString",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
             name: "JSONBenchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/JSON",

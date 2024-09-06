@@ -65,7 +65,7 @@ let benchmarks = {
 
     // MARK: - UTF16
     
-    Benchmark("utf16-encode", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+    Benchmark("utf16-encode") { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
                 blackHole(asciiSmallStr.data(using: .utf16BigEndian))
@@ -86,7 +86,7 @@ let benchmarks = {
         }
     }
     
-    Benchmark("utf16-decode", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+    Benchmark("utf16-decode") { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
                 blackHole(String(bytes: asciiSmallStrDataUTF16BE, encoding: .utf16BigEndian))
@@ -110,7 +110,7 @@ let benchmarks = {
         
     // MARK: - UTF32
 
-    Benchmark("utf32-encode", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+    Benchmark("utf32-encode") { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
                 blackHole(asciiSmallStr.data(using: .utf32BigEndian))
@@ -131,7 +131,7 @@ let benchmarks = {
         }
     }
     
-    Benchmark("utf32-decode", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+    Benchmark("utf32-decode") { benchmark in
         for _ in benchmark.scaledIterations {
             autoreleasepool {
                 blackHole(String(bytes: asciiSmallStrDataUTF32BE, encoding: .utf32BigEndian))
@@ -156,7 +156,7 @@ let benchmarks = {
     // MARK: - I/O
     let str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
-    Benchmark("read-utf8", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+    Benchmark("read-utf8") { benchmark in
         let rootURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
         #if compiler(>=6)
         let fileURL = rootURL.appending(path: "benchmark.txt", directoryHint: .notDirectory)
@@ -177,7 +177,7 @@ let benchmarks = {
         }
     }
 
-    Benchmark("read-utf16", configuration: .init(warmupIterations: 1, scalingFactor: .kilo)) { benchmark in
+    Benchmark("read-utf16") { benchmark in
         let rootURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
         #if compiler(>=6)
         let fileURL = rootURL.appending(path: "benchmark.txt", directoryHint: .notDirectory)
