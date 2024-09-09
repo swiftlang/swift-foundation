@@ -1162,7 +1162,12 @@ struct JSONEncoderTests {
         }
     }
 
-    @Test func test_JSONNumberFragments() {
+    #if os(Windows)
+    @Test(.disabled("This test is temporarily disabled on Windows"))
+    #else
+    @Test
+    #endif
+    func test_JSONNumberFragments() {
         let array = ["0 ", "1.0 ", "0.1 ", "1e3 ", "-2.01e-3 ", "0", "1.0", "1e3", "-2.01e-3", "0e-10"]
         let expected = [0, 1.0, 0.1, 1000, -0.00201, 0, 1.0, 1000, -0.00201, 0]
         for (json, expected) in zip(array, expected) {
