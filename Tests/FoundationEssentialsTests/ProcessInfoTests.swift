@@ -200,3 +200,20 @@ final class ProcessInfoTests : XCTestCase {
         XCTAssertNil(env[""])
     }
 }
+
+// MARK: - ThermalState and PowerState tests
+#if FOUNDATION_FRAMEWORK
+extension ProcessInfoTests {
+    func testThermalPowerState() {
+        // This test simply makes sure we can deliver the correct
+        // thermal and power state for all platforms.
+        // Fake a new value
+        _NSSwiftProcessInfo._globalState.withLock {
+            $0.thermalState = .critical
+            $0.powerState = .restricted
+        }
+        XCTAssertEqual(ProcessInfo.processInfo.thermalState, .critical)
+        XCTAssertEqual(ProcessInfo.processInfo.isLowPowerModeEnabled, true)
+    }
+}
+#endif // FOUDATION_FRAMEWORK
