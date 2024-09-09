@@ -59,7 +59,7 @@ else()
     # No path to Foundation macros was provided, so we must build it ourselves
     set(FoundationMacros_BuildLocalExecutable YES)
     FetchContent_Declare(FoundationMacros
-        SOURCE_DIR ${CMAKE_SOURCE_DIR}/Sources/FoundationMacros)
+        SOURCE_DIR ${SwiftFoundation_SOURCE_DIR}/Sources/FoundationMacros)
     FetchContent_MakeAvailable(FoundationMacros)
     add_dependencies(FoundationEssentials FoundationMacros)
     get_target_property(MacroDIR FoundationMacros RUNTIME_OUTPUT_DIRECTORY)
