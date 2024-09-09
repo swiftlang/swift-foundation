@@ -10,12 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+import Testing
+
+#if canImport(FoundationInternationalization)
+import FoundationEssentials
+import FoundationInternationalization
+#elseif FOUNDATION_FRAMEWORK
+import Foundation
 #endif
 
-@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-final class PredicateInternationalizationTests: XCTestCase {
+struct PredicateInternationalizationTests {
     
     struct Object {
         var string: String = ""
@@ -23,43 +27,28 @@ final class PredicateInternationalizationTests: XCTestCase {
     
     #if FOUNDATION_FRAMEWORK
     
-    func testLocalizedCompare() throws {
-        let predicate = Predicate<String, String, ComparisonResult> {
-            // $0.localizedCompare($1) == $2
-            PredicateExpressions.build_Equal(
-                lhs: PredicateExpressions.build_localizedCompare(
-                    PredicateExpressions.build_Arg($0),
-                    PredicateExpressions.build_Arg($1)
-                ),
-                rhs: PredicateExpressions.build_Arg($2)
-            )
+    @Test(arguments: [
+        ("ABC", "ABC", ComparisonResult.orderedSame),
+        ("ABC", "abc", .orderedDescending),
+        ("abc", "ABC", .orderedAscending),
+        ("ABC", "ÁḄÇ", .orderedAscending)
+    ])
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    func testLocalizedCompare(input: (String, String, ComparisonResult)) throws {
+        let predicate = #Predicate<String, String, ComparisonResult> {
+            $0.localizedCompare($1) == $2
         }
-        let tests: [(String, String, ComparisonResult)] = [
-            ("ABC", "ABC", .orderedSame),
-            ("ABC", "abc", .orderedDescending),
-            ("abc", "ABC", .orderedAscending),
-            ("ABC", "ÁḄÇ", .orderedAscending)
-        ]
         
-        for test in tests {
-            XCTAssertTrue(try predicate.evaluate(test.0, test.1, test.2), "Comparison failed for inputs '\(test.0)', '\(test.1)' - expected \(test.2.rawValue)")
-        }
+        #expect(try predicate.evaluate(input.0, input.1, input.2), "Comparison failed for inputs '\(input.0)', '\(input.1)' - expected \(input.2.rawValue)")
     }
     
-    func testLocalizedStandardContains() throws {
-        let predicate = Predicate<Object> {
-            // $0.string.localizedStandardContains("ABC")
-            PredicateExpressions.build_localizedStandardContains(
-                PredicateExpressions.build_KeyPath(
-                    root: PredicateExpressions.build_Arg($0),
-                    keyPath: \.string
-                ),
-                PredicateExpressions.build_Arg("ABC")
-            )
+    @Test(arguments: ["ABCDEF", "abcdef", "ÁḄÇDEF"])
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    func testLocalizedStandardContains(value: String) throws {
+        let predicate = #Predicate<Object> {
+            $0.string.localizedStandardContains("ABC")
         }
-        XCTAssertTrue(try predicate.evaluate(Object(string: "ABCDEF")))
-        XCTAssertTrue(try predicate.evaluate(Object(string: "abcdef")))
-        XCTAssertTrue(try predicate.evaluate(Object(string: "ÁḄÇDEF")))
+        #expect(try predicate.evaluate(Object(string: value)))
     }
     
     #endif

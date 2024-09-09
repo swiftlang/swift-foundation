@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -118,11 +116,12 @@ struct FileManagerPlayground {
     
     private let directory: Directory
     
-    init(@DirectoryBuilder _ contentsClosure: () -> [Item]) {
+    // Note: do not initialize the playground directly. Create a sub-suite of FilePlaygroundTests and call `self.playground`
+    fileprivate init(@DirectoryBuilder _ contentsClosure: () -> [Item]) {
         self.directory = Directory("FileManagerPlayground_\(UUID().uuidString)", contentsClosure)
     }
     
-    func test(captureDelegateCalls: Bool = false, file: StaticString = #filePath, line: UInt = #line, _ tester: (FileManager) throws -> Void) throws {
+    func test(captureDelegateCalls: Bool = false, sourceLocation: SourceLocation = #_sourceLocation, _ tester: (FileManager) throws -> Void) throws {
         let capturingDelegate = CapturingFileManagerDelegate()
         try withExtendedLifetime(capturingDelegate) {
             let fileManager = FileManager()
@@ -134,10 +133,19 @@ struct FileManagerPlayground {
                 fileManager.delegate = capturingDelegate
             }
             let createdDir = tempDir.appendingPathComponent(directory.name)
-            XCTAssertTrue(fileManager.changeCurrentDirectoryPath(createdDir), "Failed to change CWD to the newly created playground directory", file: file, line: line)
+            try #require(fileManager.changeCurrentDirectoryPath(createdDir), "Failed to change CWD to the newly created playground directory", sourceLocation: sourceLocation)
             try tester(fileManager)
-            XCTAssertTrue(fileManager.changeCurrentDirectoryPath(previousCWD), "Failed to change CWD back to the original directory", file: file, line: line)
+            try #require(fileManager.changeCurrentDirectoryPath(previousCWD), "Failed to change CWD back to the original directory", sourceLocation: sourceLocation)
             try fileManager.removeItem(atPath: createdDir)
         }
+    }
+}
+
+// File playground tests change the CWD, so they need to be serialized
+@Suite(.serialized)
+struct FilePlaygroundTests {
+    // An entry point for sub-suites to create a playground. This should not be called from outside the FilePlaygroundTests suite or nested suites
+    static func playground(@FileManagerPlayground.DirectoryBuilder _ contentsClosure: () -> [FileManagerPlayground.Item]) -> FileManagerPlayground {
+        FileManagerPlayground(contentsClosure)
     }
 }

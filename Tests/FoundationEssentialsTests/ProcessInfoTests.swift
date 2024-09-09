@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
@@ -24,18 +22,23 @@ import TestSupport
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(WASI)
+import WASILibc
+#elseif os(Windows)
+import CRT
 #endif
 
 /// Since we can't really mock system settings like OS name,
 /// these tests simply check that the values returned are not empty
-final class ProcessInfoTests : XCTestCase {
-    func testArguments() {
+struct ProcessInfoTests {
+    @Test func testArguments() {
         let args = ProcessInfo.processInfo.arguments
-        XCTAssertTrue(
-            !args.isEmpty,"arguments should not have been empty")
+        #expect(!args.isEmpty, "arguments should not have been empty")
     }
 
-    func testEnvironment() {
+    @Test func testEnvironment() {
 #if os(Windows)
         func setenv(_ key: String, _ value: String, _ overwrite: Int) -> Int32 {
           assert(overwrite == 1)
@@ -47,66 +50,57 @@ final class ProcessInfoTests : XCTestCase {
         }
 #endif
         let env = ProcessInfo.processInfo.environment
-        XCTAssertTrue(
-            !env.isEmpty, "environment should not have been empty")
+        #expect(!env.isEmpty, "environment should not have been empty")
         
-        let preset = ProcessInfo.processInfo.environment["test"]
+        #expect(ProcessInfo.processInfo.environment["test"] == nil)
         setenv("test", "worked", 1)
-        let postset = ProcessInfo.processInfo.environment["test"]
-        XCTAssertNil(preset)
-        XCTAssertEqual(postset, "worked")
+        #expect(ProcessInfo.processInfo.environment["test"] == "worked")
     }
 
-    func testProcessIdentifier() {
+    @Test func testProcessIdentifier() {
         let pid = ProcessInfo.processInfo.processIdentifier
-        XCTAssertEqual(
-            pid, getpid(), "ProcessInfo disagrees with getpid()")
+        #expect(pid == getpid(), "ProcessInfo disagrees with getpid()")
     }
 
-    func testGlobalUniqueString() {
-        let unique = ProcessInfo.processInfo.globallyUniqueString
-        XCTAssertNotEqual(
-            unique,
-            ProcessInfo.processInfo.globallyUniqueString,
-            "globallyUniqueString should never return the same string twice")
+    @Test func testGlobalUniqueString() {
+        let a = ProcessInfo.processInfo.globallyUniqueString
+        let b = ProcessInfo.processInfo.globallyUniqueString
+        #expect(a != b, "globallyUniqueString should never return the same string twice")
     }
 
-    func testOperatingSystemVersionString() {
+    @Test func testOperatingSystemVersionString() {
         let version = ProcessInfo.processInfo.operatingSystemVersionString
-        XCTAssertFalse(version.isEmpty, "ProcessInfo returned empty string for operation system version")
+        #expect(!version.isEmpty, "ProcessInfo returned empty string for operation system version")
         #if os(Windows)
-        XCTAssertTrue(version.starts(with: "Windows"), "'\(version)' did not start with 'Windows'")
+        #expect(version.starts(with: "Windows"), "'\(version)' did not start with 'Windows'")
         #endif
     }
 
-    func testProcessorCount() {
+    @Test func testProcessorCount() {
         let count = ProcessInfo.processInfo.processorCount
-        XCTAssertTrue(count > 0, "ProcessInfo doesn't think we have any processors")
+        #expect(count > 0, "ProcessInfo doesn't think we have any processors")
     }
 
-    func testActiveProcessorCount() {
+    @Test func testActiveProcessorCount() {
         let count = ProcessInfo.processInfo.activeProcessorCount
-        XCTAssertTrue(count > 0, "ProcessInfo doesn't think we have any active processors")
+        #expect(count > 0, "ProcessInfo doesn't think we have any active processors")
     }
 
-    func testPhysicalMemory() {
+    @Test func testPhysicalMemory() {
         let memory = ProcessInfo.processInfo.physicalMemory
-        XCTAssertTrue(memory > 0, "ProcessInfo doesn't think we have any memory")
+        #expect(memory > 0, "ProcessInfo doesn't think we have any memory")
     }
 
-    func testSystemUpTime() async throws {
+    @Test func testSystemUpTime() async throws {
         let now = ProcessInfo.processInfo.systemUptime
-        XCTAssertTrue(
-            now > 1, "ProcessInfo returned an unrealistically low system uptime")
+        #expect(now > 1, "ProcessInfo returned an unrealistically low system uptime")
         // Sleep for 0.1s
         try await Task.sleep(for: .milliseconds(100))
-        XCTAssertTrue(
-            ProcessInfo.processInfo.systemUptime > now,
-            "ProcessInfo returned the same system uptime with 400")
+        #expect(ProcessInfo.processInfo.systemUptime > now, "ProcessInfo returned the same system uptime with 400")
 
     }
 
-    func testOperatingSystemVersion() throws {
+    @Test func testOperatingSystemVersion() throws {
         #if canImport(Darwin)
         let version = ProcessInfo.processInfo.operatingSystemVersion
         #if os(visionOS)
@@ -114,61 +108,57 @@ final class ProcessInfoTests : XCTestCase {
         #else
         let expectedMinMajorVersion = 2
         #endif
-        XCTAssertGreaterThanOrEqual(version.majorVersion, expectedMinMajorVersion, "Unrealistic major system version")
+        #expect(version.majorVersion >= expectedMinMajorVersion, "Unrealistic major system version")
         #elseif os(Windows) || os(Linux)
         let minVersion = OperatingSystemVersion(majorVersion: 1, minorVersion: 0, patchVersion: 0)
-        XCTAssertTrue(ProcessInfo.processInfo.isOperatingSystemAtLeast(minVersion))
-        #else
-        throw XCTSkip("This test is not supported on this platform")
+        #expect(ProcessInfo.processInfo.isOperatingSystemAtLeast(minVersion))
         #endif
     }
 
-    func testOperatingSystemIsAtLeastVersion() throws {
-        #if !canImport(Darwin)
-        throw XCTSkip("This test is not supported on this platform")
-        #else
+    #if canImport(Darwin)
+    @Test func testOperatingSystemIsAtLeastVersion() throws {
         #if os(watchOS)
-        XCTAssertTrue(ProcessInfo.processInfo
+        #expect(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
                 OperatingSystemVersion(majorVersion: 1, minorVersion: 12, patchVersion: 0)
             ),
         "ProcessInfo thinks 1.12 is > than 2.something")
-        XCTAssertTrue(ProcessInfo.processInfo
+        #expect(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
                 OperatingSystemVersion(majorVersion: 1, minorVersion: 0, patchVersion: 0)
             ),
         "ProcessInfo thinks we are on watchOS 1")
         #elseif os(macOS) || (os(iOS) && !os(visionOS))
-        XCTAssertTrue(ProcessInfo.processInfo
+        #expect(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
                 OperatingSystemVersion(majorVersion: 6, minorVersion: 12, patchVersion: 0)
             ),
         "ProcessInfo thinks 6.12 is > than 10.something")
-        XCTAssertTrue(ProcessInfo.processInfo
+        #expect(ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
                 OperatingSystemVersion(majorVersion: 6, minorVersion: 0, patchVersion: 0)
             ),
         "ProcessInfo thinks we are on System 5")
         #endif
-        XCTAssertFalse(ProcessInfo.processInfo
+        #expect(!ProcessInfo.processInfo
             .isOperatingSystemAtLeast(
                 OperatingSystemVersion(majorVersion: 70, minorVersion: 0, patchVersion: 0)
             ),
         "ProcessInfo thinks we are on System 70")
-        #endif
     }
+    #endif
 
 #if os(macOS)
-    func testUserName() {
-        XCTAssertFalse(ProcessInfo.processInfo.userName.isEmpty)
+    @Test func testUserName() {
+        #expect(!ProcessInfo.processInfo.userName.isEmpty)
     }
 
-    func testFullUserName() {
-        XCTAssertFalse(ProcessInfo.processInfo.fullUserName.isEmpty)
+    @Test func testFullUserName() {
+        #expect(!ProcessInfo.processInfo.fullUserName.isEmpty)
     }
 #endif
     
-    func testProcessName() {
+    @Test func testProcessName() {
 #if FOUNDATION_FRAMEWORK
         let targetName = "TestHost"
 #elseif os(Linux) || os(Windows)
@@ -178,26 +168,26 @@ final class ProcessInfoTests : XCTestCase {
 #endif
         let processInfo = ProcessInfo.processInfo
         let originalProcessName = processInfo.processName
-        XCTAssertEqual(originalProcessName, targetName)
+        #expect(originalProcessName == targetName)
         
         // Try assigning a new process name.
         let newProcessName = "TestProcessName"
         processInfo.processName = newProcessName
-        XCTAssertEqual(processInfo.processName, newProcessName)
+        #expect(processInfo.processName == newProcessName)
         
         // Assign back to the original process name.
         processInfo.processName = originalProcessName
-        XCTAssertEqual(processInfo.processName, originalProcessName)
+        #expect(processInfo.processName == originalProcessName)
     }
 
-    func testWindowsEnvironmentDoesNotContainMagicValues() {
+    @Test func testWindowsEnvironmentDoesNotContainMagicValues() {
         // Windows GetEnvironmentStringsW API can return
         // magic environment variables set by the cmd shell
         // that starts with `=`
         // This test makes sure we don't include these
         // magic variables
         let env = ProcessInfo.processInfo.environment
-        XCTAssertNil(env[""])
+        #expect(env[""] == nil)
     }
 }
 

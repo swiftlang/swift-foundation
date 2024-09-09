@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -22,72 +20,72 @@ import TestSupport
 
 #if FOUNDATION_FRAMEWORK
 
-/// Tests interop with Objective-C `NSSortDescriptor`.
-class SortDescriptorConversionTests: XCTestCase {
-    @objcMembers class Root: NSObject {
-        let word: String
-        let number: Int
-        let double: Double
-        let float: Float
-        let int16: Int16
-        let int32: Int32
-        let int64: Int64
-        let uInt8: UInt8
-        let uInt16: UInt16
-        let uInt32: UInt32
-        let uInt64: UInt64
-        let uInt: UInt
-        let data: Data
-
-        init(
-            word: String = "wow",
-            number: Int = 1,
-            double: Double = 1,
-            float: Float = 1,
-            int16: Int16 = 1,
-            int32: Int32 = 1,
-            int64: Int64 = 1,
-            uInt8: UInt8 = 1,
-            uInt16: UInt16 = 1,
-            uInt32: UInt32 = 1,
-            uInt64: UInt64 = 1,
-            uInt: UInt = 1,
-            data: Data = Data()
-        ) {
-            self.word = word
-            self.number = number
-            self.double = double
-            self.float = float
-            self.int16 = int16
-            self.int32 = int32
-            self.int64 = int64
-            self.uInt8 = uInt8
-            self.uInt16 = uInt16
-            self.uInt32 = uInt32
-            self.uInt64 = uInt64
-            self.uInt = uInt
-            self.data = data
-        }
-
-        override func isEqual(_ object: Any?) -> Bool {
-            guard let other = object as? Root else { return false }
-            return self == other
-        }
-
-        static func ==(_ lhs: Root, _ rhs: Root) -> Bool {
-            return lhs.word == rhs.word &&
-                lhs.number == rhs.number &&
-                lhs.double == rhs.double &&
-                lhs.float == rhs.float &&
-                lhs.int16 == rhs.int16 &&
-                lhs.int32 == rhs.int32 &&
-                lhs.int64 == rhs.int64 &&
-                lhs.uInt == rhs.uInt &&
-                lhs.data == rhs.data
-        }
+@objcMembers private class Root: NSObject {
+    let word: String
+    let number: Int
+    let double: Double
+    let float: Float
+    let int16: Int16
+    let int32: Int32
+    let int64: Int64
+    let uInt8: UInt8
+    let uInt16: UInt16
+    let uInt32: UInt32
+    let uInt64: UInt64
+    let uInt: UInt
+    let data: Data
+    
+    init(
+        word: String = "wow",
+        number: Int = 1,
+        double: Double = 1,
+        float: Float = 1,
+        int16: Int16 = 1,
+        int32: Int32 = 1,
+        int64: Int64 = 1,
+        uInt8: UInt8 = 1,
+        uInt16: UInt16 = 1,
+        uInt32: UInt32 = 1,
+        uInt64: UInt64 = 1,
+        uInt: UInt = 1,
+        data: Data = Data()
+    ) {
+        self.word = word
+        self.number = number
+        self.double = double
+        self.float = float
+        self.int16 = int16
+        self.int32 = int32
+        self.int64 = int64
+        self.uInt8 = uInt8
+        self.uInt16 = uInt16
+        self.uInt32 = uInt32
+        self.uInt64 = uInt64
+        self.uInt = uInt
+        self.data = data
     }
+    
+    override func isEqual(_ object: Any?) -> Bool {
+        guard let other = object as? Root else { return false }
+        return self == other
+    }
+    
+    static func ==(_ lhs: Root, _ rhs: Root) -> Bool {
+        return lhs.word == rhs.word &&
+        lhs.number == rhs.number &&
+        lhs.double == rhs.double &&
+        lhs.float == rhs.float &&
+        lhs.int16 == rhs.int16 &&
+        lhs.int32 == rhs.int32 &&
+        lhs.int64 == rhs.int64 &&
+        lhs.uInt == rhs.uInt &&
+        lhs.data == rhs.data
+    }
+}
 
-    func test_sortdescriptor_to_nssortdescriptor_selector_conversion() {
+/// Tests interop with Objective-C `NSSortDescriptor`.
+struct SortDescriptorConversionTests {
+    @Test func test_sortdescriptor_to_nssortdescriptor_selector_conversion() throws {
         let localizedStandard = SortDescriptor(\Root.word, comparator: .localizedStandard)
         let localized = SortDescriptor(\Root.word, comparator: .localized)
         let lexical = SortDescriptor(\Root.word, comparator: .lexical)
@@ -95,12 +93,18 @@ class SortDescriptorConversionTests: XCTestCase {
         let nsLocalized = NSSortDescriptor(localized)
         let nsLexical = NSSortDescriptor(lexical)
         
-        XCTAssert(nsLocalizedStandard.selector != nil)
-        XCTAssertEqual(NSStringFromSelector(nsLocalizedStandard.selector!), "localizedStandardCompare:")
-        XCTAssert(nsLocalized.selector != nil)
-        XCTAssertEqual(NSStringFromSelector(nsLocalized.selector!), "localizedCompare:")
-        XCTAssert(nsLexical.selector != nil)
-        XCTAssertEqual(NSStringFromSelector(nsLexical.selector!), "compare:")
+        do {
+            let selector = try #require(nsLocalizedStandard.selector)
+            #expect(NSStringFromSelector(selector) == "localizedStandardCompare:")
+        }
+        do {
+            let selector = try #require(nsLocalized.selector)
+            #expect(NSStringFromSelector(selector) == "localizedCompare:")
+        }
+        do {
+            let selector = try #require(nsLexical.selector)
+            #expect(NSStringFromSelector(selector) == "compare:")
+        }
 
         let compareBased: [SortDescriptor<Root>] = [
             .init(\.word, comparator: .lexical),
@@ -118,123 +122,116 @@ class SortDescriptorConversionTests: XCTestCase {
 
         for descriptor in compareBased {
             let nsDescriptor = NSSortDescriptor(descriptor)
-            XCTAssert(nsDescriptor.selector != nil)
-            XCTAssertEqual(NSStringFromSelector(nsDescriptor.selector!), "compare:")
+            let selector = try #require(nsDescriptor.selector)
+            #expect(NSStringFromSelector(selector) == "compare:")
         }
     }
 
-    func test_sortdescriptor_to_nssortdescriptor_order_conversion() {
+    @Test func test_sortdescriptor_to_nssortdescriptor_order_conversion() {
         let forward = SortDescriptor(\Root.number, order: .forward)
         let reverse = SortDescriptor(\Root.number, order: .reverse)
         let nsAscending = NSSortDescriptor(forward)
         let nsDescending = NSSortDescriptor(reverse)
-        XCTAssert(nsAscending.ascending)
-        XCTAssertFalse(nsDescending.ascending)
+        #expect(nsAscending.ascending)
+        #expect(!nsDescending.ascending)
     }
 
-    func test_nssortdescriptor_to_sortdescriptor_conversion() {
+    @Test func test_nssortdescriptor_to_sortdescriptor_conversion() {
         let intDescriptor = NSSortDescriptor(keyPath: \Root.number, ascending: true)
-        XCTAssertEqual(SortDescriptor(intDescriptor, comparing: Root.self), SortDescriptor(\Root.number))
+        #expect(SortDescriptor(intDescriptor, comparing: Root.self) == SortDescriptor(\Root.number))
 
         let stringDescriptor = NSSortDescriptor(keyPath: \Root.word, ascending: true)
-        XCTAssertEqual(SortDescriptor(stringDescriptor, comparing: Root.self), SortDescriptor(\Root.word, comparator: .lexical))
+        #expect(SortDescriptor(stringDescriptor, comparing: Root.self) == SortDescriptor(\Root.word, comparator: .lexical))
 
         // test custom string selector conversion
         let localizedStandard = NSSortDescriptor(key: "word", ascending: true, selector: #selector(NSString.localizedStandardCompare))
-        XCTAssertEqual(SortDescriptor(localizedStandard, comparing: Root.self), SortDescriptor(\Root.word))
+        #expect(SortDescriptor(localizedStandard, comparing: Root.self) == SortDescriptor(\Root.word))
 
         let localized = NSSortDescriptor(key: "word", ascending: true, selector: #selector(NSString.localizedCompare))
-        XCTAssertEqual(SortDescriptor(localized, comparing: Root.self), SortDescriptor(\Root.word, comparator: .localized))
+        #expect(SortDescriptor(localized, comparing: Root.self) == SortDescriptor(\Root.word, comparator: .localized))
     }
 
-    func test_nssortdescriptor_to_sortdescriptor_conversion_failure() {
+    @Test func test_nssortdescriptor_to_sortdescriptor_conversion_failure() throws {
         let ascending = NSSortDescriptor(keyPath: \Root.word, ascending: true)
         let descending = NSSortDescriptor(keyPath: \Root.word, ascending: false)
-        guard let forward = SortDescriptor(ascending, comparing: Root.self) else {
-            XCTFail()
-            return
-        }
+        let forward = try #require(SortDescriptor(ascending, comparing: Root.self))
+        let reverse = try #require(SortDescriptor(descending, comparing: Root.self))
         
-        guard let reverse = SortDescriptor(descending, comparing: Root.self) else {
-            XCTFail()
-            return
-        }
-        
-        XCTAssertEqual(forward.order, .forward)
-        XCTAssertEqual(reverse.order, .reverse)
+        #expect(forward.order == .forward)
+        #expect(reverse.order == .reverse)
     }
     
-    func test_conversion_from_uninitializable_descriptor() throws {
+    @Test func test_conversion_from_uninitializable_descriptor() throws {
         let nsDesc = NSSortDescriptor(key: "data", ascending: true)
-        let desc = try XCTUnwrap(SortDescriptor(nsDesc, comparing: Root.self))
+        let desc = try #require(SortDescriptor(nsDesc, comparing: Root.self))
 
         //` NSSortDescriptor`s pointing to `Data` support equality, but not
         // full comparison so we should be able to get a same result. Anything
         // else will crash.
         let compareResult = desc.compare(Root(), Root())
-        XCTAssertEqual(compareResult, .orderedSame)
+        #expect(compareResult == .orderedSame)
     }
     
-    func test_conversion_from_invalid_descriptor() throws {
+    @Test func test_conversion_from_invalid_descriptor() throws {
         let localizedCaseInsensitive = NSSortDescriptor(key: "word", ascending: true, selector: #selector(NSString.localizedCaseInsensitiveCompare))
         let caseInsensitive = NSSortDescriptor(key: "word", ascending: true, selector: #selector(NSString.caseInsensitiveCompare))
         let caseInsensitiveNumeric = NSSortDescriptor(key: "word", ascending: true, selector: Selector(("_caseInsensitiveNumericCompare:")))
-        XCTAssertNil(SortDescriptor(localizedCaseInsensitive, comparing: Root.self))
-        XCTAssertNil(SortDescriptor(caseInsensitive, comparing: Root.self))
-        XCTAssertNil(SortDescriptor(caseInsensitiveNumeric, comparing: Root.self))
+        #expect(SortDescriptor(localizedCaseInsensitive, comparing: Root.self) == nil)
+        #expect(SortDescriptor(caseInsensitive, comparing: Root.self) == nil)
+        #expect(SortDescriptor(caseInsensitiveNumeric, comparing: Root.self) == nil)
     }
     
-    func test_key_path_optionality() {
-        XCTAssertNotNil(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.word).keyPath)
-        XCTAssertNotNil(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.maybeWord).keyPath)
-        XCTAssertNotNil(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.gadget).keyPath)
-        XCTAssertNotNil(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.maybeGadget).keyPath)
+    @Test func test_key_path_optionality() throws {
+        #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.word).keyPath != nil)
+        #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.maybeWord).keyPath != nil)
+        #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.gadget).keyPath != nil)
+        #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.maybeGadget).keyPath != nil)
 
-        XCTAssertNil(SortDescriptor(\Root.word).keyPath)
-        XCTAssertNil(SortDescriptor(\Root.number).keyPath)
+        #expect(SortDescriptor(\Root.word).keyPath == nil)
+        #expect(SortDescriptor(\Root.number).keyPath == nil)
 
         let ns = NSSortDescriptor(key: "number", ascending: true)
-        XCTAssertNil(SortDescriptor(ns, comparing: Root.self)!.keyPath)
+        #expect(try #require(SortDescriptor(ns, comparing: Root.self)).keyPath == nil)
     }
 
-    func test_string_comparator_optionality() {
-        XCTAssertNotNil(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.word).stringComparator)
-        XCTAssertNotNil(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.maybeWord).stringComparator)
-        XCTAssertNil(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.gadget).stringComparator)
-        XCTAssertNil(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.maybeGadget).stringComparator)
+    @Test func test_string_comparator_optionality() throws {
+        #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.word).stringComparator != nil)
+        #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.maybeWord).stringComparator != nil)
+        #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.gadget).stringComparator == nil)
+        #expect(SortDescriptor(\SortDescriptorTests.NonNSObjectRoot.maybeGadget).stringComparator == nil)
 
-        XCTAssertNotNil(SortDescriptor(\Root.word).stringComparator)
-        XCTAssertNil(SortDescriptor(\Root.number).stringComparator)
+        #expect(SortDescriptor(\Root.word).stringComparator != nil)
+        #expect(SortDescriptor(\Root.number).stringComparator == nil)
 
         let ns = NSSortDescriptor(key: "word", ascending: true)
-        XCTAssertNil(SortDescriptor(ns, comparing: Root.self)!.stringComparator)
+        #expect(try #require(SortDescriptor(ns, comparing: Root.self)).stringComparator == nil)
     }
     
-    func test_ordering() {
+    @Test func test_ordering() {
         let forwardInt = SortDescriptor(\Root.number)
-        XCTAssertEqual(forwardInt.compare(Root(number: 3), Root(number: 4)), ComparisonResult.orderedAscending)
-        XCTAssertEqual(forwardInt.compare(Root(number: 4), Root(number: 3)), .orderedDescending)
+        #expect(forwardInt.compare(Root(number: 3), Root(number: 4)) == ComparisonResult.orderedAscending)
+        #expect(forwardInt.compare(Root(number: 4), Root(number: 3)) == .orderedDescending)
         let reverseInt = SortDescriptor(\Root.number, order: .reverse)
-        XCTAssertEqual(reverseInt.compare(Root(number: 3), Root(number: 4)), .orderedDescending)
-        XCTAssertEqual(reverseInt.compare(Root(number: 4), Root(number: 3)), .orderedAscending)
+        #expect(reverseInt.compare(Root(number: 3), Root(number: 4)) == .orderedDescending)
+        #expect(reverseInt.compare(Root(number: 4), Root(number: 3)) == .orderedAscending)
     }
 
-    func test_mutable_order() {
+    @Test func test_mutable_order() {
         var intComparator = SortDescriptor(\Root.number)
-        XCTAssertEqual(intComparator.compare(Root(number: 3), Root(number: 4)), .orderedAscending)
+        #expect(intComparator.compare(Root(number: 3), Root(number: 4)) == .orderedAscending)
         intComparator.order = .reverse
-        XCTAssertEqual(intComparator.compare(Root(number: 3), Root(number: 4)), .orderedDescending)
+        #expect(intComparator.compare(Root(number: 3), Root(number: 4)) == .orderedDescending)
     }
 
-    func test_default_comparator() {
+    @Test func test_default_comparator() {
         let stringComparator = SortDescriptor(\Root.word)
-        XCTAssertEqual(stringComparator.comparison, .compareString(.localizedStandard))
+        #expect(stringComparator.comparison == .compareString(.localizedStandard))
         let intDescriptor = SortDescriptor(\Root.number)
         let intCompare = intDescriptor.comparison
-        XCTAssertEqual(intCompare, .compare)
+        #expect(intCompare == .compare)
     }
 
-    func test_sorting_by_keypath_comparator() {
+    @Test func test_sorting_by_keypath_comparator() {
         let a = SortDescriptor(\Root.word)
         let b = SortDescriptor(\Root.number)
         let c = SortDescriptor(\Root.float, order: .reverse)
@@ -279,113 +276,112 @@ class SortDescriptorConversionTests: XCTestCase {
             Root(word: "d", number: 20),
         ]
 
-        XCTAssertEqual(items.sorted(using: a), expectedA)
-        XCTAssertEqual(items.sorted(using: [a, b]), expectedAB)
-        XCTAssertEqual(items.sorted(using: [a, b, c]), expectedABC)
+        #expect(items.sorted(using: a) == expectedA)
+        #expect(items.sorted(using: [a, b]) == expectedAB)
+        #expect(items.sorted(using: [a, b, c]) == expectedABC)
     }
 
-    func test_codability() throws {
+    @Test func test_codability() throws {
         let descriptor = SortDescriptor(\Root.word, comparator: .localizedStandard)
         let encoder = JSONEncoder()
         let encoded = try encoder.encode(descriptor)
         let decoder = JSONDecoder()
         let reconstructed = try decoder.decode(SortDescriptor<Root>.self, from: encoded)
-        XCTAssertEqual(descriptor, reconstructed)
+        #expect(descriptor == reconstructed)
 
         // ensure the comparison still works after reconstruction
-        XCTAssertEqual(reconstructed.compare(Root(word: "a"), Root(word: "b")), .orderedAscending)
-    }
-
-    func test_decoding_dissallow_invaled() throws {
-        var otherLocale: Locale {
-            let attempt = Locale(identifier: "ta")
-            if Locale.current == attempt {
-                return Locale(identifier: "en_US")
-            }
-            return attempt
-        }
-
-        let encoder = JSONEncoder()
-        let localeStr = String(data: try encoder.encode(Locale.current), encoding: .utf8)!
-        let otherLocaleStr = String(data: try encoder.encode(otherLocale), encoding: .utf8)!
-
-        let invalidRawValue = """
-        {
-            "order": true,
-            "keyString": "word",
-            "comparison": {
-                "rawValue": 2131,
-                "stringComparator": {
-                    "options": 1,
-                    "locale": \(localeStr),
-                    "order": true
-                }
-            }
-        }
-        """.data(using: .utf8)!
-
-        let nonStandardComparator = """
-        {
-            "order": true,
-            "keyString": "word",
-            "comparison": {
-                "rawValue": 13,
-                "stringComparator": {
-                    "options": 8,
-                    "locale": \(localeStr),
-                    "order": true
-                }
-            }
-        }
-        """.data(using: .utf8)!
-
-        let nonStandardLocale = """
-        {
-            "order": true,
-            "keyString": "word",
-            "comparison": {
-                "rawValue": 13,
-                "stringComparator": {
-                    "options": 8,
-                    "locale": \(otherLocaleStr),
-                    "order": true
-                }
-            }
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-
-        do {
-            let _ = try decoder.decode(SortDescriptor<Root>.self, from: invalidRawValue)
-            XCTFail()
-        } catch {}
-
-        do {
-            let _ = try decoder.decode(SortDescriptor<Root>.self, from: nonStandardComparator)
-            XCTFail()
-        } catch {}
-
-        do {
-            let _ = try decoder.decode(SortDescriptor<Root>.self, from: nonStandardLocale)
-            XCTFail()
-        } catch {}
+        #expect(reconstructed.compare(Root(word: "a"), Root(word: "b")) == .orderedAscending)
     }
     
-    func test_string_comparator_property_polarity() {
+    @Test func test_string_comparator_property_polarity() {
         // `.stringComparator?.order` should always be `.forward` regardless
         // of the value of `SortDescriptor().order`
-        XCTAssertEqual(
-            SortDescriptor(\Root.word).stringComparator?.order,
-            .forward
+        #expect(
+            SortDescriptor(\Root.word).stringComparator?.order == .forward
         )
         
-        XCTAssertEqual(
-            SortDescriptor(\Root.word, order: .reverse).stringComparator?.order,
-            .forward
+        #expect(
+            SortDescriptor(\Root.word, order: .reverse).stringComparator?.order == .forward
         )
     }
 
+}
+
+extension CurrentLocaleTimeZoneCalendarDependentTests {
+    struct SortDescriptorConversionTests {
+        @Test func test_decoding_dissallow_invaled() throws {
+            var otherLocale: Locale {
+                let attempt = Locale(identifier: "ta")
+                if Locale.current == attempt {
+                    return Locale(identifier: "en_US")
+                }
+                return attempt
+            }
+            
+            let encoder = JSONEncoder()
+            let localeStr = String(data: try encoder.encode(Locale.current), encoding: .utf8)!
+            let otherLocaleStr = String(data: try encoder.encode(otherLocale), encoding: .utf8)!
+            
+            let invalidRawValue = """
+            {
+                "order": true,
+                "keyString": "word",
+                "comparison": {
+                    "rawValue": 2131,
+                    "stringComparator": {
+                        "options": 1,
+                        "locale": \(localeStr),
+                        "order": true
+                    }
+                }
+            }
+            """.data(using: .utf8)!
+            
+            let nonStandardComparator = """
+            {
+                "order": true,
+                "keyString": "word",
+                "comparison": {
+                    "rawValue": 13,
+                    "stringComparator": {
+                        "options": 8,
+                        "locale": \(localeStr),
+                        "order": true
+                    }
+                }
+            }
+            """.data(using: .utf8)!
+            
+            let nonStandardLocale = """
+            {
+                "order": true,
+                "keyString": "word",
+                "comparison": {
+                    "rawValue": 13,
+                    "stringComparator": {
+                        "options": 8,
+                        "locale": \(otherLocaleStr),
+                        "order": true
+                    }
+                }
+            }
+            """.data(using: .utf8)!
+            
+            let decoder = JSONDecoder()
+            
+            #expect(throws: (any Error).self) {
+                try decoder.decode(SortDescriptor<Root>.self, from: invalidRawValue)
+            }
+            
+            #expect(throws: (any Error).self) {
+                try decoder.decode(SortDescriptor<Root>.self, from: nonStandardComparator)
+            }
+            
+            #expect(throws: (any Error).self) {
+                let _ = try decoder.decode(SortDescriptor<Root>.self, from: nonStandardLocale)
+            }
+        }
+    }
 }
 
 #endif // FOUNDATION_FRAMEWORK

@@ -10,98 +10,110 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#if canImport(TestSupport)
-import TestSupport
-#endif // canImport(TestSupport)
+import Testing
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
-final class URLTests : XCTestCase {
+private func combinations<C1: Collection, C2: Collection, C3: Collection>(_ c1: C1, _ c2: C2, _ c3: C3) -> some Collection<(C1.Element, C2.Element, C3.Element)> & Sendable where C1.Element: Sendable, C2.Element: Sendable, C3.Element: Sendable {
+    c1.lazy.flatMap { a in
+        c2.lazy.flatMap { b in
+            c3.lazy.map { c in
+                (a, b, c)
+            }
+        }
+    }
+}
 
-    func testURLBasics() throws {
-        let string = "https://username:password@example.com:80/path/path?query=value&q=v#fragment"
-        let url = try XCTUnwrap(URL(string: string))
-
-        XCTAssertEqual(url.scheme, "https")
-        XCTAssertEqual(url.user(), "username")
-        XCTAssertEqual(url.password(), "password")
-        XCTAssertEqual(url.host(), "example.com")
-        XCTAssertEqual(url.port, 80)
-        XCTAssertEqual(url.path(), "/path/path")
-        XCTAssertEqual(url.relativePath, "/path/path")
-        XCTAssertEqual(url.query(), "query=value&q=v")
-        XCTAssertEqual(url.fragment(), "fragment")
-        XCTAssertEqual(url.absoluteString, string)
-        XCTAssertEqual(url.absoluteURL, url)
-        XCTAssertEqual(url.relativeString, string)
-        XCTAssertNil(url.baseURL)
-
-        let baseString = "https://user:pass@base.example.com:8080/base/"
-        let baseURL = try XCTUnwrap(URL(string: baseString))
-        let absoluteURLWithBase = try XCTUnwrap(URL(string: string, relativeTo: baseURL))
-
-        // The URL is already absolute, so .baseURL is nil, and the components are unchanged
-        XCTAssertEqual(absoluteURLWithBase.scheme, "https")
-        XCTAssertEqual(absoluteURLWithBase.user(), "username")
-        XCTAssertEqual(absoluteURLWithBase.password(), "password")
-        XCTAssertEqual(absoluteURLWithBase.host(), "example.com")
-        XCTAssertEqual(absoluteURLWithBase.port, 80)
-        XCTAssertEqual(absoluteURLWithBase.path(), "/path/path")
-        XCTAssertEqual(absoluteURLWithBase.relativePath, "/path/path")
-        XCTAssertEqual(absoluteURLWithBase.query(), "query=value&q=v")
-        XCTAssertEqual(absoluteURLWithBase.fragment(), "fragment")
-        XCTAssertEqual(absoluteURLWithBase.absoluteString, string)
-        XCTAssertEqual(absoluteURLWithBase.absoluteURL, url)
-        XCTAssertEqual(absoluteURLWithBase.relativeString, string)
-        XCTAssertNil(absoluteURLWithBase.baseURL)
-        XCTAssertEqual(absoluteURLWithBase.absoluteURL, url)
-
-        let relativeString = "relative/path?query#fragment"
-        let relativeURL = try XCTUnwrap(URL(string: relativeString))
-
-        XCTAssertNil(relativeURL.scheme)
-        XCTAssertNil(relativeURL.user())
-        XCTAssertNil(relativeURL.password())
-        XCTAssertNil(relativeURL.host())
-        XCTAssertNil(relativeURL.port)
-        XCTAssertEqual(relativeURL.path(), "relative/path")
-        XCTAssertEqual(relativeURL.relativePath, "relative/path")
-        XCTAssertEqual(relativeURL.query(), "query")
-        XCTAssertEqual(relativeURL.fragment(), "fragment")
-        XCTAssertEqual(relativeURL.absoluteString, relativeString)
-        XCTAssertEqual(relativeURL.absoluteURL, relativeURL)
-        XCTAssertEqual(relativeURL.relativeString, relativeString)
-        XCTAssertNil(relativeURL.baseURL)
-
-        let relativeURLWithBase = try XCTUnwrap(URL(string: relativeString, relativeTo: baseURL))
-
-        XCTAssertEqual(relativeURLWithBase.scheme, baseURL.scheme)
-        XCTAssertEqual(relativeURLWithBase.user(), baseURL.user())
-        XCTAssertEqual(relativeURLWithBase.password(), baseURL.password())
-        XCTAssertEqual(relativeURLWithBase.host(), baseURL.host())
-        XCTAssertEqual(relativeURLWithBase.port, baseURL.port)
-        #if !FOUNDATION_FRAMEWORK_NSURL
-        XCTAssertEqual(relativeURLWithBase.path(), "/base/relative/path")
+struct URLTests {
+    static var foundationFrameworkNSURL: Bool {
+        #if FOUNDATION_FRAMEWORK_NSURL
+        true
         #else
-        XCTAssertEqual(relativeURLWithBase.path(), "relative/path")
+        false
         #endif
-        XCTAssertEqual(relativeURLWithBase.relativePath, "relative/path")
-        XCTAssertEqual(relativeURLWithBase.query(), "query")
-        XCTAssertEqual(relativeURLWithBase.fragment(), "fragment")
-        XCTAssertEqual(relativeURLWithBase.absoluteString, "https://user:pass@base.example.com:8080/base/relative/path?query#fragment")
-        XCTAssertEqual(relativeURLWithBase.absoluteURL, URL(string: "https://user:pass@base.example.com:8080/base/relative/path?query#fragment"))
-        XCTAssertEqual(relativeURLWithBase.relativeString, relativeString)
-        XCTAssertEqual(relativeURLWithBase.baseURL, baseURL)
     }
 
-    func testURLResolvingAgainstBase() throws {
+    @Test func testURLBasics() throws {
+        let string = "https://username:password@example.com:80/path/path?query=value&q=v#fragment"
+        let url = try #require(URL(string: string))
+
+        #expect(url.scheme == "https")
+        #expect(url.user() == "username")
+        #expect(url.password() == "password")
+        #expect(url.host() == "example.com")
+        #expect(url.port == 80)
+        #expect(url.path() == "/path/path")
+        #expect(url.relativePath == "/path/path")
+        #expect(url.query() == "query=value&q=v")
+        #expect(url.fragment() == "fragment")
+        #expect(url.absoluteString == string)
+        #expect(url.absoluteURL == url)
+        #expect(url.relativeString == string)
+        #expect(url.baseURL == nil)
+
+        let baseString = "https://user:pass@base.example.com:8080/base/"
+        let baseURL = try #require(URL(string: baseString))
+        let absoluteURLWithBase = try #require(URL(string: string, relativeTo: baseURL))
+
+        // The URL is already absolute, so .baseURL is nil, and the components are unchanged
+        #expect(absoluteURLWithBase.scheme == "https")
+        #expect(absoluteURLWithBase.user() == "username")
+        #expect(absoluteURLWithBase.password() == "password")
+        #expect(absoluteURLWithBase.host() == "example.com")
+        #expect(absoluteURLWithBase.port == 80)
+        #expect(absoluteURLWithBase.path() == "/path/path")
+        #expect(absoluteURLWithBase.relativePath == "/path/path")
+        #expect(absoluteURLWithBase.query() == "query=value&q=v")
+        #expect(absoluteURLWithBase.fragment() == "fragment")
+        #expect(absoluteURLWithBase.absoluteString == string)
+        #expect(absoluteURLWithBase.absoluteURL == url)
+        #expect(absoluteURLWithBase.relativeString == string)
+        #expect(absoluteURLWithBase.baseURL == nil)
+        #expect(absoluteURLWithBase.absoluteURL == url)
+
+        let relativeString = "relative/path?query#fragment"
+        let relativeURL = try #require(URL(string: relativeString))
+
+        #expect(relativeURL.scheme == nil)
+        #expect(relativeURL.user() == nil)
+        #expect(relativeURL.password() == nil)
+        #expect(relativeURL.host() == nil)
+        #expect(relativeURL.port == nil)
+        #expect(relativeURL.path() == "relative/path")
+        #expect(relativeURL.relativePath == "relative/path")
+        #expect(relativeURL.query() == "query")
+        #expect(relativeURL.fragment() == "fragment")
+        #expect(relativeURL.absoluteString == relativeString)
+        #expect(relativeURL.absoluteURL == relativeURL)
+        #expect(relativeURL.relativeString == relativeString)
+        #expect(relativeURL.baseURL == nil)
+
+        let relativeURLWithBase = try #require(URL(string: relativeString, relativeTo: baseURL))
+
+        #expect(relativeURLWithBase.scheme == baseURL.scheme)
+        #expect(relativeURLWithBase.user() == baseURL.user())
+        #expect(relativeURLWithBase.password() == baseURL.password())
+        #expect(relativeURLWithBase.host() == baseURL.host())
+        #expect(relativeURLWithBase.port == baseURL.port)
+        #if !FOUNDATION_FRAMEWORK_NSURL
+        #expect(relativeURLWithBase.path() == "/base/relative/path")
+        #else
+        #expect(relativeURLWithBase.path() == "relative/path")
+        #endif
+        #expect(relativeURLWithBase.relativePath == "relative/path")
+        #expect(relativeURLWithBase.query() == "query")
+        #expect(relativeURLWithBase.fragment() == "fragment")
+        #expect(relativeURLWithBase.absoluteString == "https://user:pass@base.example.com:8080/base/relative/path?query#fragment")
+        #expect(relativeURLWithBase.absoluteURL == URL(string: "https://user:pass@base.example.com:8080/base/relative/path?query#fragment"))
+        #expect(relativeURLWithBase.relativeString == relativeString)
+        #expect(relativeURLWithBase.baseURL == baseURL)
+    }
+
+    @Test func testURLResolvingAgainstBase() throws {
         let base = URL(string: "http://a/b/c/d;p?q")
         let tests = [
             // RFC 3986 5.4.1. Normal Examples
@@ -172,15 +184,12 @@ final class URLTests : XCTestCase {
             #endif
 
             let url = URL(string: test.key, relativeTo: base)
-            XCTAssertNotNil(url, "Got nil url for string: \(test.key)")
-            XCTAssertEqual(url?.absoluteString, test.value, "Failed test for string: \(test.key)")
+            #expect(url?.absoluteString == test.value, "Failed test for string: \(test.key)")
         }
     }
 
+    @Test(.disabled(if: foundationFrameworkNSURL))
     func testURLPathAPIsResolveAgainstBase() throws {
-        #if FOUNDATION_FRAMEWORK_NSURL
-        try XCTSkipIf(true)
-        #endif
         // Borrowing the same test cases from RFC 3986, but checking paths
         let base = URL(string: "http://a/b/c/d;p?q")
         let tests = [
@@ -235,165 +244,126 @@ final class URLTests : XCTestCase {
         ]
         for test in tests {
             let url = URL(string: test.key, relativeTo: base)!
-            XCTAssertEqual(url.path(), test.value)
+            #expect(url.path() == test.value)
             if (url.hasDirectoryPath && url.path().count > 1) {
                 // The trailing slash is stripped in .path for file system compatibility
-                XCTAssertEqual(String(url.path().dropLast()), url.path)
+                #expect(String(url.path().dropLast()) == url.path)
             } else {
-                XCTAssertEqual(url.path(), url.path)
+                #expect(url.path() == url.path)
             }
         }
     }
 
+    @Test(.disabled(if: foundationFrameworkNSURL))
     func testURLPathComponentsPercentEncodedSlash() throws {
-        #if FOUNDATION_FRAMEWORK_NSURL
-        try XCTSkipIf(true)
-        #endif
+        var url = try #require(URL(string: "https://example.com/https%3A%2F%2Fexample.com"))
+        #expect(url.pathComponents == ["/", "https://example.com"])
 
-        var url = try XCTUnwrap(URL(string: "https://example.com/https%3A%2F%2Fexample.com"))
-        XCTAssertEqual(url.pathComponents, ["/", "https://example.com"])
+        url = try #require(URL(string: "https://example.com/https:%2f%2fexample.com"))
+        #expect(url.pathComponents == ["/", "https://example.com"])
 
-        url = try XCTUnwrap(URL(string: "https://example.com/https:%2f%2fexample.com"))
-        XCTAssertEqual(url.pathComponents, ["/", "https://example.com"])
+        url = try #require(URL(string: "https://example.com/https:%2F%2Fexample.com%2Fpath"))
+        #expect(url.pathComponents == ["/", "https://example.com/path"])
 
-        url = try XCTUnwrap(URL(string: "https://example.com/https:%2F%2Fexample.com%2Fpath"))
-        XCTAssertEqual(url.pathComponents, ["/", "https://example.com/path"])
+        url = try #require(URL(string: "https://example.com/https:%2F%2Fexample.com/path"))
+        #expect(url.pathComponents == ["/", "https://example.com", "path"])
 
-        url = try XCTUnwrap(URL(string: "https://example.com/https:%2F%2Fexample.com/path"))
-        XCTAssertEqual(url.pathComponents, ["/", "https://example.com", "path"])
+        url = try #require(URL(string: "https://example.com/https%3A%2F%2Fexample.com%2Fpath%3Fquery%23fragment"))
+        #expect(url.pathComponents == ["/", "https://example.com/path?query#fragment"])
 
-        url = try XCTUnwrap(URL(string: "https://example.com/https%3A%2F%2Fexample.com%2Fpath%3Fquery%23fragment"))
-        XCTAssertEqual(url.pathComponents, ["/", "https://example.com/path?query#fragment"])
-
-        url = try XCTUnwrap(URL(string: "https://example.com/https%3A%2F%2Fexample.com%2Fpath?query#fragment"))
-        XCTAssertEqual(url.pathComponents, ["/", "https://example.com/path"])
+        url = try #require(URL(string: "https://example.com/https%3A%2F%2Fexample.com%2Fpath?query#fragment"))
+        #expect(url.pathComponents == ["/", "https://example.com/path"])
     }
 
-    func testURLRootlessPath() throws {
-        #if FOUNDATION_FRAMEWORK_NSURL
-        try XCTSkipIf(true)
-        #endif
-
-        let paths = ["", "path"]
-        let queries = [nil, "query"]
-        let fragments = [nil, "fragment"]
-
-        for path in paths {
-            for query in queries {
-                for fragment in fragments {
-                    let queryString = query != nil ? "?\(query!)" : ""
-                    let fragmentString = fragment != nil ? "#\(fragment!)" : ""
-                    let urlString = "scheme:\(path)\(queryString)\(fragmentString)"
-                    let url = try XCTUnwrap(URL(string: urlString))
-                    XCTAssertEqual(url.absoluteString, urlString)
-                    XCTAssertEqual(url.scheme, "scheme")
-                    XCTAssertNil(url.host())
-                    XCTAssertEqual(url.path(), path)
-                    XCTAssertEqual(url.query(), query)
-                    XCTAssertEqual(url.fragment(), fragment)
-                }
-            }
-        }
+    @Test(
+        .disabled(if: foundationFrameworkNSURL),
+        arguments: combinations(["", "path"], [nil, "query"], [nil, "fragment"])
+    )
+    func testURLRootlessPath(path: String, query: String?, fragment: String?) throws {
+        let queryString = query != nil ? "?\(query!)" : ""
+        let fragmentString = fragment != nil ? "#\(fragment!)" : ""
+        let urlString = "scheme:\(path)\(queryString)\(fragmentString)"
+        let url = try #require(URL(string: urlString))
+        #expect(url.absoluteString == urlString)
+        #expect(url.scheme == "scheme")
+        #expect(url.host() == nil)
+        #expect(url.path() == path)
+        #expect(url.query() == query)
+        #expect(url.fragment() == fragment)
     }
 
-    func testURLNonSequentialIPLiteralAndPort() {
+    @Test func testURLNonSequentialIPLiteralAndPort() {
         let urlString = "https://[fe80::3221:5634:6544]invalid:433/"
         let url = URL(string: urlString)
-        XCTAssertNil(url)
+        #expect(url == nil)
     }
 
-    func testURLFilePathInitializer() throws {
+    @Test func testURLFilePathInitializer() throws {
         let directory = URL(filePath: "/some/directory", directoryHint: .isDirectory)
-        XCTAssertTrue(directory.hasDirectoryPath)
+        #expect(directory.hasDirectoryPath)
 
         let notDirectory = URL(filePath: "/some/file", directoryHint: .notDirectory)
-        XCTAssertFalse(notDirectory.hasDirectoryPath)
+        #expect(!notDirectory.hasDirectoryPath)
 
         // directoryHint defaults to .inferFromPath
         let directoryAgain = URL(filePath: "/some/directory.framework/")
-        XCTAssertTrue(directoryAgain.hasDirectoryPath)
+        #expect(directoryAgain.hasDirectoryPath)
 
         let notDirectoryAgain = URL(filePath: "/some/file")
-        XCTAssertFalse(notDirectoryAgain.hasDirectoryPath)
+        #expect(!notDirectoryAgain.hasDirectoryPath)
 
         // Test .checkFileSystem by creating a directory
         let tempDirectory = URL.temporaryDirectory
         let urlBeforeCreation = URL(filePath: "\(tempDirectory.path)/tmp-dir", directoryHint: .checkFileSystem)
-        XCTAssertFalse(urlBeforeCreation.hasDirectoryPath)
+        #expect(!urlBeforeCreation.hasDirectoryPath)
 
         try FileManager.default.createDirectory(
             at: URL(filePath: "\(tempDirectory.path)/tmp-dir"),
             withIntermediateDirectories: true
         )
         let urlAfterCreation = URL(filePath: "\(tempDirectory.path)/tmp-dir", directoryHint: .checkFileSystem)
-        XCTAssertTrue(urlAfterCreation.hasDirectoryPath)
+        #expect(urlAfterCreation.hasDirectoryPath)
         try FileManager.default.removeItem(at: URL(filePath: "\(tempDirectory.path)/tmp-dir"))
     }
 
-    func testURLFilePathRelativeToBase() throws {
-        try FileManagerPlayground {
-            Directory("dir") {
-                "Foo"
-                "Bar"
-            }
-        }.test {
-            let currentDirectoryPath = $0.currentDirectoryPath
-            let baseURL = URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
-            let relativePath = "dir"
-
-            let url1 = URL(filePath: relativePath, directoryHint: .isDirectory, relativeTo: baseURL)
-
-            let url2 = URL(filePath: relativePath, directoryHint: .checkFileSystem, relativeTo: baseURL)
-            XCTAssertEqual(url1, url2, "\(url1) was not equal to \(url2)")
-
-            // directoryHint is `.inferFromPath` by default
-            let url3 = URL(filePath: relativePath + "/", relativeTo: baseURL)
-            XCTAssertEqual(url1, url3, "\(url1) was not equal to \(url3)")
-        }
-    }
-
-    func testURLRelativeDotDotResolution() throws {
+    @Test func testURLRelativeDotDotResolution() throws {
         let baseURL = URL(filePath: "/docs/src/")
         var result = URL(filePath: "../images/foo.png", relativeTo: baseURL)
         #if FOUNDATION_FRAMEWORK_NSURL
-        XCTAssertEqual(result.path, "/docs/images/foo.png")
+        #expect(result.path == "/docs/images/foo.png")
         #else
-        XCTAssertEqual(result.path(), "/docs/images/foo.png")
+        #expect(result.path() == "/docs/images/foo.png")
         #endif
 
         result = URL(filePath: "/../images/foo.png", relativeTo: baseURL)
         #if FOUNDATION_FRAMEWORK_NSURL
-        XCTAssertEqual(result.path, "/../images/foo.png")
+        #expect(result.path == "/../images/foo.png")
         #else
-        XCTAssertEqual(result.path(), "/../images/foo.png")
+        #expect(result.path() == "/../images/foo.png")
         #endif
     }
 
-    func testAppendFamily() throws {
+    @Test func testAppendFamily() throws {
         let base = URL(string: "https://www.example.com")!
 
         // Appending path
-        XCTAssertEqual(
-            base.appending(path: "/api/v2").absoluteString,
-            "https://www.example.com/api/v2"
+        #expect(
+            base.appending(path: "/api/v2").absoluteString == "https://www.example.com/api/v2"
         )
         var testAppendPath = base
         testAppendPath.append(path: "/api/v3")
-        XCTAssertEqual(
-            testAppendPath.absoluteString,
-            "https://www.example.com/api/v3"
+        #expect(
+            testAppendPath.absoluteString == "https://www.example.com/api/v3"
         )
 
         // Appending component
-        XCTAssertEqual(
-            base.appending(component: "AC/DC").absoluteString,
-            "https://www.example.com/AC%2FDC"
+        #expect(
+            base.appending(component: "AC/DC").absoluteString == "https://www.example.com/AC%2FDC"
         )
         var testAppendComponent = base
         testAppendComponent.append(component: "AC/DC")
-        XCTAssertEqual(
-            testAppendComponent.absoluteString,
-            "https://www.example.com/AC%2FDC"
+        #expect(
+            testAppendComponent.absoluteString == "https://www.example.com/AC%2FDC"
         )
 
         // Append queryItems
@@ -401,27 +371,23 @@ final class URLTests : XCTestCase {
             URLQueryItem(name: "id", value: "42"),
             URLQueryItem(name: "color", value: "blue")
         ]
-        XCTAssertEqual(
-            base.appending(queryItems: queryItems).absoluteString,
-            "https://www.example.com?id=42&color=blue"
+        #expect(
+            base.appending(queryItems: queryItems).absoluteString == "https://www.example.com?id=42&color=blue"
         )
         var testAppendQueryItems = base
         testAppendQueryItems.append(queryItems: queryItems)
-        XCTAssertEqual(
-            testAppendQueryItems.absoluteString,
-            "https://www.example.com?id=42&color=blue"
+        #expect(
+            testAppendQueryItems.absoluteString == "https://www.example.com?id=42&color=blue"
         )
 
         // Appending components
-        XCTAssertEqual(
-            base.appending(components: "api", "artist", "AC/DC").absoluteString,
-            "https://www.example.com/api/artist/AC%2FDC"
+        #expect(
+            base.appending(components: "api", "artist", "AC/DC").absoluteString == "https://www.example.com/api/artist/AC%2FDC"
         )
         var testAppendComponents = base
         testAppendComponents.append(components: "api", "artist", "AC/DC")
-        XCTAssertEqual(
-            testAppendComponents.absoluteString,
-            "https://www.example.com/api/artist/AC%2FDC"
+        #expect(
+            testAppendComponents.absoluteString == "https://www.example.com/api/artist/AC%2FDC"
         )
 
         // Chaining various appends
@@ -432,28 +398,27 @@ final class URLTests : XCTestCase {
                 URLQueryItem(name: "color", value: "blue")
             ])
             .appending(components: "get", "products")
-        XCTAssertEqual(
-            chained.absoluteString,
-            "https://www.example.com/api/v2/get/products?magic=42&color=blue"
+        #expect(
+            chained.absoluteString == "https://www.example.com/api/v2/get/products?magic=42&color=blue"
         )
     }
 
-    func testAppendFamilyDirectoryHint() throws {
+    @Test func testAppendFamilyDirectoryHint() throws {
         // Make sure directoryHint values are propagated correctly
         let base = URL(string: "file:///var/mobile")!
 
         // Appending path
         var url = base.appending(path: "/folder/item", directoryHint: .isDirectory)
-        XCTAssertTrue(url.hasDirectoryPath)
+        #expect(url.hasDirectoryPath)
 
         url = base.appending(path: "folder/item", directoryHint: .notDirectory)
-        XCTAssertFalse(url.hasDirectoryPath)
+        #expect(!url.hasDirectoryPath)
 
         url = base.appending(path: "/folder/item.framework/")
-        XCTAssertTrue(url.hasDirectoryPath)
+        #expect(url.hasDirectoryPath)
 
         url = base.appending(path: "/folder/item")
-        XCTAssertFalse(url.hasDirectoryPath)
+        #expect(!url.hasDirectoryPath)
 
         try runDirectoryHintCheckFilesystemTest {
             $0.appending(path: "/folder/item", directoryHint: .checkFileSystem)
@@ -461,16 +426,16 @@ final class URLTests : XCTestCase {
 
         // Appending component
         url = base.appending(component: "AC/DC", directoryHint: .isDirectory)
-        XCTAssertTrue(url.hasDirectoryPath)
+        #expect(url.hasDirectoryPath)
 
         url = base.appending(component: "AC/DC", directoryHint: .notDirectory)
-        XCTAssertFalse(url.hasDirectoryPath)
+        #expect(!url.hasDirectoryPath)
 
         url = base.appending(component: "AC/DC/", directoryHint: .isDirectory)
-        XCTAssertTrue(url.hasDirectoryPath)
+        #expect(url.hasDirectoryPath)
 
         url = base.appending(component: "AC/DC")
-        XCTAssertFalse(url.hasDirectoryPath)
+        #expect(!url.hasDirectoryPath)
 
         try runDirectoryHintCheckFilesystemTest {
             $0.appending(component: "AC/DC", directoryHint: .checkFileSystem)
@@ -478,16 +443,16 @@ final class URLTests : XCTestCase {
 
         // Appending components
         url = base.appending(components: "api", "v2", "AC/DC", directoryHint: .isDirectory)
-        XCTAssertTrue(url.hasDirectoryPath)
+        #expect(url.hasDirectoryPath)
 
         url = base.appending(components: "api", "v2", "AC/DC", directoryHint: .notDirectory)
-        XCTAssertFalse(url.hasDirectoryPath)
+        #expect(!url.hasDirectoryPath)
 
         url = base.appending(components: "api", "v2", "AC/DC/", directoryHint: .isDirectory)
-        XCTAssertTrue(url.hasDirectoryPath)
+        #expect(url.hasDirectoryPath)
 
         url = base.appending(components: "api", "v2", "AC/DC")
-        XCTAssertFalse(url.hasDirectoryPath)
+        #expect(!url.hasDirectoryPath)
 
         try runDirectoryHintCheckFilesystemTest {
             $0.appending(components: "api", "v2", "AC/DC", directoryHint: .checkFileSystem)
@@ -497,41 +462,39 @@ final class URLTests : XCTestCase {
     private func runDirectoryHintCheckFilesystemTest(_ builder: (URL) -> URL) throws {
         let tempDirectory = URL.temporaryDirectory
         // We should not have directory path before it's created
-        XCTAssertFalse(builder(tempDirectory).hasDirectoryPath)
+        #expect(!builder(tempDirectory).hasDirectoryPath)
         // Create the folder
         try FileManager.default.createDirectory(
             at: builder(tempDirectory),
             withIntermediateDirectories: true
         )
-        XCTAssertTrue(builder(tempDirectory).hasDirectoryPath)
+        #expect(builder(tempDirectory).hasDirectoryPath)
         try FileManager.default.removeItem(at: builder(tempDirectory))
     }
 
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
-    func testURLEncodingInvalidCharacters() throws {
-        let urlStrings = [
-            " ",
-            "path space",
-            "/absolute path space",
-            "scheme:path space",
-            "scheme://host/path space",
-            "scheme://host/path space?query space#fragment space",
-            "scheme://user space:pass space@host/",
-            "unsafe\"<>%{}\\|^~[]`##",
-            "http://example.com/unsafe\"<>%{}\\|^~[]`##",
-            "mailto:\"Your Name\" <you@example.com>",
-            "[This is not a valid URL without encoding.]",
-            "Encoding a relative path! 😎",
-        ]
-        for urlString in urlStrings {
-            var url = URL(string: urlString, encodingInvalidCharacters: true)
-            XCTAssertNotNil(url, "Expected a percent-encoded url for string \(urlString)")
-            url = URL(string: urlString, encodingInvalidCharacters: false)
-            XCTAssertNil(url, "Expected to fail strict url parsing for string \(urlString)")
-        }
+    @Test(arguments: [
+        " ",
+        "path space",
+        "/absolute path space",
+        "scheme:path space",
+        "scheme://host/path space",
+        "scheme://host/path space?query space#fragment space",
+        "scheme://user space:pass space@host/",
+        "unsafe\"<>%{}\\|^~[]`##",
+        "http://example.com/unsafe\"<>%{}\\|^~[]`##",
+        "mailto:\"Your Name\" <you@example.com>",
+        "[This is not a valid URL without encoding.]",
+        "Encoding a relative path! 😎",
+    ])
+    func testURLEncodingInvalidCharacters(urlString: String) throws {
+        var url = URL(string: urlString, encodingInvalidCharacters: true)
+        #expect(url != nil, "Expected a percent-encoded url for string \(urlString)")
+        url = URL(string: urlString, encodingInvalidCharacters: false)
+        #expect(url == nil, "Expected to fail strict url parsing for string \(urlString)")
     }
 
-    func testURLAppendingPathDoesNotEncodeColon() throws {
+    @Test func testURLAppendingPathDoesNotEncodeColon() throws {
         let baseURL = URL(string: "file:///var/mobile/")!
         let url = URL(string: "relative", relativeTo: baseURL)!
         let component = "no:slash"
@@ -539,173 +502,173 @@ final class URLTests : XCTestCase {
 
         // Make sure we don't encode ":" since `component` is not the first path segment
         var appended = url.appending(path: component, directoryHint: .notDirectory)
-        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
-        XCTAssertEqual(appended.relativePath, "relative/no:slash")
+        #expect(appended.absoluteString == "file:///var/mobile/relative/no:slash")
+        #expect(appended.relativePath == "relative/no:slash")
 
         appended = url.appending(path: slashComponent, directoryHint: .notDirectory)
-        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/with:slash")
-        XCTAssertEqual(appended.relativePath, "relative/with:slash")
+        #expect(appended.absoluteString == "file:///var/mobile/relative/with:slash")
+        #expect(appended.relativePath == "relative/with:slash")
 
         appended = url.appending(component: component, directoryHint: .notDirectory)
-        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
-        XCTAssertEqual(appended.relativePath, "relative/no:slash")
+        #expect(appended.absoluteString == "file:///var/mobile/relative/no:slash")
+        #expect(appended.relativePath == "relative/no:slash")
 
         // `appending(component:)` should explicitly treat `component` as a single
         // path component, meaning "/" should be encoded to "%2F" before appending
         appended = url.appending(component: slashComponent, directoryHint: .notDirectory)
         #if FOUNDATION_FRAMEWORK_NSURL
-        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/with:slash")
-        XCTAssertEqual(appended.relativePath, "relative/with:slash")
+        #expect(appended.absoluteString == "file:///var/mobile/relative/with:slash")
+        #expect(appended.relativePath == "relative/with:slash")
         #else
-        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/%2Fwith:slash")
-        XCTAssertEqual(appended.relativePath, "relative/%2Fwith:slash")
+        #expect(appended.absoluteString == "file:///var/mobile/relative/%2Fwith:slash")
+        #expect(appended.relativePath == "relative/%2Fwith:slash")
         #endif
 
         appended = url.appendingPathComponent(component, isDirectory: false)
-        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
-        XCTAssertEqual(appended.relativePath, "relative/no:slash")
+        #expect(appended.absoluteString == "file:///var/mobile/relative/no:slash")
+        #expect(appended.relativePath == "relative/no:slash")
 
         // Test deprecated API, which acts like `appending(path:)`
         appended = url.appendingPathComponent(slashComponent, isDirectory: false)
-        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/with:slash")
-        XCTAssertEqual(appended.relativePath, "relative/with:slash")
+        #expect(appended.absoluteString == "file:///var/mobile/relative/with:slash")
+        #expect(appended.relativePath == "relative/with:slash")
     }
 
-    func testURLFilePathDropsTrailingSlashes() throws {
+    @Test func testURLFilePathDropsTrailingSlashes() throws {
         var url = URL(filePath: "/path/slashes///")
-        XCTAssertEqual(url.path(), "/path/slashes///")
+        #expect(url.path() == "/path/slashes///")
         // TODO: Update this once .fileSystemPath uses backslashes for Windows
-        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+        #expect(url.fileSystemPath == "/path/slashes")
 
         url = URL(filePath: "/path/slashes/")
-        XCTAssertEqual(url.path(), "/path/slashes/")
-        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+        #expect(url.path() == "/path/slashes/")
+        #expect(url.fileSystemPath == "/path/slashes")
 
         url = URL(filePath: "/path/slashes")
-        XCTAssertEqual(url.path(), "/path/slashes")
-        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+        #expect(url.path() == "/path/slashes")
+        #expect(url.fileSystemPath == "/path/slashes")
     }
 
-    func testURLNotDirectoryHintStripsTrailingSlash() throws {
+    @Test func testURLNotDirectoryHintStripsTrailingSlash() throws {
         // Supply a path with a trailing slash but say it's not a direcotry
         var url = URL(filePath: "/path/", directoryHint: .notDirectory)
-        XCTAssertFalse(url.hasDirectoryPath)
-        XCTAssertEqual(url.path(), "/path")
+        #expect(!url.hasDirectoryPath)
+        #expect(url.path() == "/path")
 
         url = URL(fileURLWithPath: "/path/", isDirectory: false)
-        XCTAssertFalse(url.hasDirectoryPath)
-        XCTAssertEqual(url.path(), "/path")
+        #expect(!url.hasDirectoryPath)
+        #expect(url.path() == "/path")
 
         url = URL(filePath: "/path///", directoryHint: .notDirectory)
-        XCTAssertFalse(url.hasDirectoryPath)
-        XCTAssertEqual(url.path(), "/path")
+        #expect(!url.hasDirectoryPath)
+        #expect(url.path() == "/path")
 
         url = URL(fileURLWithPath: "/path///", isDirectory: false)
-        XCTAssertFalse(url.hasDirectoryPath)
-        XCTAssertEqual(url.path(), "/path")
+        #expect(!url.hasDirectoryPath)
+        #expect(url.path() == "/path")
 
         // With .checkFileSystem, don't modify the path for a non-existent file
         url = URL(filePath: "/my/non/existent/path/", directoryHint: .checkFileSystem)
-        XCTAssertTrue(url.hasDirectoryPath)
-        XCTAssertEqual(url.path(), "/my/non/existent/path/")
+        #expect(url.hasDirectoryPath)
+        #expect(url.path() == "/my/non/existent/path/")
 
         url = URL(fileURLWithPath: "/my/non/existent/path/")
-        XCTAssertTrue(url.hasDirectoryPath)
-        XCTAssertEqual(url.path(), "/my/non/existent/path/")
+        #expect(url.hasDirectoryPath)
+        #expect(url.path() == "/my/non/existent/path/")
 
         url = URL(filePath: "/my/non/existent/path", directoryHint: .checkFileSystem)
-        XCTAssertFalse(url.hasDirectoryPath)
-        XCTAssertEqual(url.path(), "/my/non/existent/path")
+        #expect(!url.hasDirectoryPath)
+        #expect(url.path() == "/my/non/existent/path")
 
         url = URL(fileURLWithPath: "/my/non/existent/path")
-        XCTAssertFalse(url.hasDirectoryPath)
-        XCTAssertEqual(url.path(), "/my/non/existent/path")
+        #expect(!url.hasDirectoryPath)
+        #expect(url.path() == "/my/non/existent/path")
     }
 
-    func testURLHostRetainsIDNAEncoding() throws {
+    @Test func testURLHostRetainsIDNAEncoding() throws {
         let url = URL(string: "ftp://user:password@*.xn--poema-9qae5a.com.br:4343/cat.txt")!
-        XCTAssertEqual(url.host, "*.xn--poema-9qae5a.com.br")
+        #expect(url.host == "*.xn--poema-9qae5a.com.br")
     }
 
-    func testURLComponentsPercentEncodedUnencodedProperties() throws {
+    @Test func testURLComponentsPercentEncodedUnencodedProperties() throws {
         var comp = URLComponents()
 
         comp.user = "%25"
-        XCTAssertEqual(comp.user, "%25")
-        XCTAssertEqual(comp.percentEncodedUser, "%2525")
+        #expect(comp.user == "%25")
+        #expect(comp.percentEncodedUser == "%2525")
 
         comp.password = "%25"
-        XCTAssertEqual(comp.password, "%25")
-        XCTAssertEqual(comp.percentEncodedPassword, "%2525")
+        #expect(comp.password == "%25")
+        #expect(comp.percentEncodedPassword == "%2525")
 
         // Host behavior differs since the addition of IDNA-encoding
         comp.host = "%25"
-        XCTAssertEqual(comp.host, "%")
-        XCTAssertEqual(comp.percentEncodedHost, "%25")
+        #expect(comp.host == "%")
+        #expect(comp.percentEncodedHost == "%25")
 
         comp.path = "%25"
-        XCTAssertEqual(comp.path, "%25")
-        XCTAssertEqual(comp.percentEncodedPath, "%2525")
+        #expect(comp.path == "%25")
+        #expect(comp.percentEncodedPath == "%2525")
 
         comp.query = "%25"
-        XCTAssertEqual(comp.query, "%25")
-        XCTAssertEqual(comp.percentEncodedQuery, "%2525")
+        #expect(comp.query == "%25")
+        #expect(comp.percentEncodedQuery == "%2525")
 
         comp.fragment = "%25"
-        XCTAssertEqual(comp.fragment, "%25")
-        XCTAssertEqual(comp.percentEncodedFragment, "%2525")
+        #expect(comp.fragment == "%25")
+        #expect(comp.percentEncodedFragment == "%2525")
 
         comp.queryItems = [URLQueryItem(name: "name", value: "a%25b")]
-        XCTAssertEqual(comp.queryItems, [URLQueryItem(name: "name", value: "a%25b")])
-        XCTAssertEqual(comp.percentEncodedQueryItems, [URLQueryItem(name: "name", value: "a%2525b")])
-        XCTAssertEqual(comp.query, "name=a%25b")
-        XCTAssertEqual(comp.percentEncodedQuery, "name=a%2525b")
+        #expect(comp.queryItems == [URLQueryItem(name: "name", value: "a%25b")])
+        #expect(comp.percentEncodedQueryItems == [URLQueryItem(name: "name", value: "a%2525b")])
+        #expect(comp.query == "name=a%25b")
+        #expect(comp.percentEncodedQuery == "name=a%2525b")
     }
 
-    func testURLPercentEncodedProperties() throws {
+    @Test func testURLPercentEncodedProperties() throws {
         var url = URL(string: "https://%3Auser:%3Apassword@%3A.com/%3Apath?%3Aquery=%3A#%3Afragment")!
 
-        XCTAssertEqual(url.user(), "%3Auser")
-        XCTAssertEqual(url.user(percentEncoded: false), ":user")
+        #expect(url.user() == "%3Auser")
+        #expect(url.user(percentEncoded: false) == ":user")
 
-        XCTAssertEqual(url.password(), "%3Apassword")
-        XCTAssertEqual(url.password(percentEncoded: false), ":password")
+        #expect(url.password() == "%3Apassword")
+        #expect(url.password(percentEncoded: false) == ":password")
 
-        XCTAssertEqual(url.host(), "%3A.com")
-        XCTAssertEqual(url.host(percentEncoded: false), ":.com")
+        #expect(url.host() == "%3A.com")
+        #expect(url.host(percentEncoded: false) == ":.com")
 
-        XCTAssertEqual(url.path(), "/%3Apath")
-        XCTAssertEqual(url.path(percentEncoded: false), "/:path")
+        #expect(url.path() == "/%3Apath")
+        #expect(url.path(percentEncoded: false) == "/:path")
 
-        XCTAssertEqual(url.query(), "%3Aquery=%3A")
-        XCTAssertEqual(url.query(percentEncoded: false), ":query=:")
+        #expect(url.query() == "%3Aquery=%3A")
+        #expect(url.query(percentEncoded: false) == ":query=:")
 
-        XCTAssertEqual(url.fragment(), "%3Afragment")
-        XCTAssertEqual(url.fragment(percentEncoded: false), ":fragment")
+        #expect(url.fragment() == "%3Afragment")
+        #expect(url.fragment(percentEncoded: false) == ":fragment")
 
         // Lowercase input
         url = URL(string: "https://%3auser:%3apassword@%3a.com/%3apath?%3aquery=%3a#%3afragment")!
 
-        XCTAssertEqual(url.user(), "%3auser")
-        XCTAssertEqual(url.user(percentEncoded: false), ":user")
+        #expect(url.user() == "%3auser")
+        #expect(url.user(percentEncoded: false) == ":user")
 
-        XCTAssertEqual(url.password(), "%3apassword")
-        XCTAssertEqual(url.password(percentEncoded: false), ":password")
+        #expect(url.password() == "%3apassword")
+        #expect(url.password(percentEncoded: false) == ":password")
 
-        XCTAssertEqual(url.host(), "%3a.com")
-        XCTAssertEqual(url.host(percentEncoded: false), ":.com")
+        #expect(url.host() == "%3a.com")
+        #expect(url.host(percentEncoded: false) == ":.com")
 
-        XCTAssertEqual(url.path(), "/%3apath")
-        XCTAssertEqual(url.path(percentEncoded: false), "/:path")
+        #expect(url.path() == "/%3apath")
+        #expect(url.path(percentEncoded: false) == "/:path")
 
-        XCTAssertEqual(url.query(), "%3aquery=%3a")
-        XCTAssertEqual(url.query(percentEncoded: false), ":query=:")
+        #expect(url.query() == "%3aquery=%3a")
+        #expect(url.query(percentEncoded: false) == ":query=:")
 
-        XCTAssertEqual(url.fragment(), "%3afragment")
-        XCTAssertEqual(url.fragment(percentEncoded: false), ":fragment")
+        #expect(url.fragment() == "%3afragment")
+        #expect(url.fragment(percentEncoded: false) == ":fragment")
     }
 
-    func testURLComponentsUppercasePercentEncoding() throws {
+    @Test func testURLComponentsUppercasePercentEncoding() throws {
         // Always use uppercase percent-encoding when unencoded components are assigned
         var comp = URLComponents()
         comp.scheme = "https"
@@ -714,18 +677,15 @@ final class URLTests : XCTestCase {
         comp.path = "?path"
         comp.query = "#query"
         comp.fragment = "#fragment"
-        XCTAssertEqual(comp.percentEncodedUser, "%3Fuser")
-        XCTAssertEqual(comp.percentEncodedPassword, "%3Fpassword")
-        XCTAssertEqual(comp.percentEncodedPath, "%3Fpath")
-        XCTAssertEqual(comp.percentEncodedQuery, "%23query")
-        XCTAssertEqual(comp.percentEncodedFragment, "%23fragment")
+        #expect(comp.percentEncodedUser == "%3Fuser")
+        #expect(comp.percentEncodedPassword == "%3Fpassword")
+        #expect(comp.percentEncodedPath == "%3Fpath")
+        #expect(comp.percentEncodedQuery == "%23query")
+        #expect(comp.percentEncodedFragment == "%23fragment")
     }
 
+    @Test(.disabled("This brute forces many combinations and takes a long time. Skip this for automated testing purposes and test manually when needed."))
     func testURLComponentsRangeCombinations() throws {
-        // This brute forces many combinations and takes a long time.
-        // Skip this for automated testing purposes and test manually when needed.
-        try XCTSkipIf(true)
-
         let schemes = [nil, "a", "aa"]
         let users = [nil, "b", "bb"]
         let passwords = [nil, "c", "cc"]
@@ -734,18 +694,16 @@ final class URLTests : XCTestCase {
         let paths = ["", "/e", "/e/e"]
         let queries = [nil, "f=f", "hh=hh"]
         let fragments = [nil, "j", "jj"]
-
-        func forAll(_ block: (String?, String?, String?, String?, Int?, String, String?, String?) throws -> ()) rethrows {
-            for scheme in schemes {
-                for user in users {
-                    for password in passwords {
-                        for host in hosts {
-                            for port in ports {
-                                for path in paths {
-                                    for query in queries {
-                                        for fragment in fragments {
-                                            try block(scheme, user, password, host, port, path, query, fragment)
-                                        }
+        
+        for scheme in schemes {
+            for user in users {
+                for password in passwords {
+                    for host in hosts {
+                        for port in ports {
+                            for path in paths {
+                                for query in queries {
+                                    for fragment in fragments {
+                                        try testURLComponentsRangeCombinations(scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
                                     }
                                 }
                             }
@@ -754,18 +712,21 @@ final class URLTests : XCTestCase {
                 }
             }
         }
-
-        func validateRanges(_ comp: URLComponents, scheme: String?, user: String?, password: String?, host: String?, port: Int?, path: String, query: String?, fragment: String?) throws {
-            let string = try XCTUnwrap(comp.string)
+    }
+    
+    
+    func testURLComponentsRangeCombinations(scheme: String?, user: String?, password: String?, host: String?, port: Int?, path: String, query: String?, fragment: String?) throws {
+        func validateRanges(_ comp: URLComponents, scheme: String?, user: String?, password: String?, host: String?, port: Int?, path: String, query: String?, fragment: String?, sourceLocation: SourceLocation = #_sourceLocation) throws {
+            let string = try #require(comp.string, sourceLocation: sourceLocation)
             if let scheme {
-                let range = try XCTUnwrap(comp.rangeOfScheme)
-                XCTAssertTrue(string[range] == scheme)
+                let range = try #require(comp.rangeOfScheme, sourceLocation: sourceLocation)
+                #expect(string[range] == scheme)
             } else {
-                XCTAssertNil(comp.rangeOfScheme)
+                #expect(comp.rangeOfScheme == nil, sourceLocation: sourceLocation)
             }
             if let user {
-                let range = try XCTUnwrap(comp.rangeOfUser)
-                XCTAssertTrue(string[range] == user)
+                let range = try #require(comp.rangeOfUser, sourceLocation: sourceLocation)
+                #expect(string[range] == user, sourceLocation: sourceLocation)
             } else {
                 // Even if we set comp.user = nil, a non-nil password
                 // implies that user exists as the empty string.
@@ -774,17 +735,17 @@ final class URLTests : XCTestCase {
                     comp.rangeOfUser?.isEmpty ?? false &&
                     comp.password != nil
                 )
-                XCTAssertTrue(comp.rangeOfUser == nil || isEmptyUserWithPassword)
+                #expect(comp.rangeOfUser == nil || isEmptyUserWithPassword, sourceLocation: sourceLocation)
             }
             if let password {
-                let range = try XCTUnwrap(comp.rangeOfPassword)
-                XCTAssertTrue(string[range] == password)
+                let range = try #require(comp.rangeOfPassword, sourceLocation: sourceLocation)
+                #expect(string[range] == password, sourceLocation: sourceLocation)
             } else {
-                XCTAssertNil(comp.rangeOfPassword)
+                #expect(comp.rangeOfPassword == nil, sourceLocation: sourceLocation)
             }
             if let host {
-                let range = try XCTUnwrap(comp.rangeOfHost)
-                XCTAssertTrue(string[range] == host)
+                let range = try #require(comp.rangeOfHost, sourceLocation: sourceLocation)
+                #expect(string[range] == host, sourceLocation: sourceLocation)
             } else {
                 // Even if we set comp.host = nil, any non-nil authority component
                 // implies that host exists as the empty string.
@@ -793,314 +754,299 @@ final class URLTests : XCTestCase {
                     comp.rangeOfHost?.isEmpty ?? false &&
                     (user != nil || password != nil || port != nil)
                 )
-                XCTAssertTrue(comp.rangeOfHost == nil || isEmptyHostWithAuthorityComponent)
+                #expect(comp.rangeOfHost == nil || isEmptyHostWithAuthorityComponent, sourceLocation: sourceLocation)
             }
             if let port {
-                let range = try XCTUnwrap(comp.rangeOfPort)
-                XCTAssertTrue(string[range] == String(port))
+                let range = try #require(comp.rangeOfPort, sourceLocation: sourceLocation)
+                #expect(string[range] == String(port), sourceLocation: sourceLocation)
             } else {
-                XCTAssertNil(comp.rangeOfPort)
+                #expect(comp.rangeOfPort == nil, sourceLocation: sourceLocation)
             }
             // rangeOfPath should never be nil.
-            let pathRange = try XCTUnwrap(comp.rangeOfPath)
-            XCTAssertTrue(string[pathRange] == path)
+            let pathRange = try #require(comp.rangeOfPath, sourceLocation: sourceLocation)
+            #expect(string[pathRange] == path, sourceLocation: sourceLocation)
             if let query {
-                let range = try XCTUnwrap(comp.rangeOfQuery)
-                XCTAssertTrue(string[range] == query)
+                let range = try #require(comp.rangeOfQuery, sourceLocation: sourceLocation)
+                #expect(string[range] == query, sourceLocation: sourceLocation)
             } else {
-                XCTAssertNil(comp.rangeOfQuery)
+                #expect(comp.rangeOfQuery == nil, sourceLocation: sourceLocation)
             }
             if let fragment {
-                let range = try XCTUnwrap(comp.rangeOfFragment)
-                XCTAssertTrue(string[range] == fragment)
+                let range = try #require(comp.rangeOfFragment, sourceLocation: sourceLocation)
+                #expect(string[range] == fragment, sourceLocation: sourceLocation)
             } else {
-                XCTAssertNil(comp.rangeOfFragment)
+                #expect(comp.rangeOfFragment == nil, sourceLocation: sourceLocation)
             }
         }
-
-        try forAll { scheme, user, password, host, port, path, query, fragment in
-
-            // Assign all components then get the ranges
-
-            var comp = URLComponents()
-            comp.scheme = scheme
-            comp.user = user
-            comp.password = password
-            comp.host = host
-            comp.port = port
-            comp.path = path
-            comp.query = query
-            comp.fragment = fragment
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            let string = try XCTUnwrap(comp.string)
-            let fullComponents = URLComponents(string: string)!
-
-            // Get the ranges directly from URLParseInfo
-
-            comp = fullComponents
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            // Set components after parsing, which invalidates the URLParseInfo ranges
-
-            comp = fullComponents
-            comp.scheme = scheme
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.user = user
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.password = password
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.host = host
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.port = port
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.path = path
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.query = query
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.fragment = fragment
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            // Remove components from the string, set them back, and validate ranges
-
-            comp = fullComponents
-            comp.scheme = nil
-            try validateRanges(comp, scheme: nil, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            let stringWithoutScheme = try XCTUnwrap(comp.string)
-            comp = URLComponents(string: stringWithoutScheme)!
-            comp.scheme = scheme
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            var expectedHost = host
-            if user != nil && host == nil {
-                // We parsed a string with a non-nil user, so expect host to
-                // be the empty string, even after we set comp.user = nil.
-                expectedHost = ""
-            }
-            comp.user = nil
-            try validateRanges(comp, scheme: scheme, user: nil, password: password, host: expectedHost, port: port, path: path, query: query, fragment: fragment)
-
-            let stringWithoutUser = try XCTUnwrap(comp.string)
-            comp = URLComponents(string: stringWithoutUser)!
-            comp.user = user
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            var expectedUser = user
-            if password != nil && user == nil {
-                // We parsed a string with a non-nil password, so expect user to
-                // be the empty string, even after we set comp.password = nil.
-                expectedUser = ""
-            }
-            comp.password = nil
-            try validateRanges(comp, scheme: scheme, user: expectedUser, password: nil, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            let stringWithoutPassword = try XCTUnwrap(comp.string)
-            comp = URLComponents(string: stringWithoutPassword)!
-            comp.password = password
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.host = nil
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: nil, port: port, path: path, query: query, fragment: fragment)
-
-            let stringWithoutHost = try XCTUnwrap(comp.string)
-            comp = URLComponents(string: stringWithoutHost)!
-            comp.host = host
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            expectedHost = host
-            if port != nil && host == nil {
-                // We parsed a string with a non-nil port, so expect host to
-                // be the empty string, even after we set comp.port = nil.
-                expectedHost = ""
-            }
-            comp.port = nil
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: expectedHost, port: nil, path: path, query: query, fragment: fragment)
-
-            let stringWithoutPort = try XCTUnwrap(comp.string)
-            comp = URLComponents(string: stringWithoutPort)!
-            comp.port = port
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.path = ""
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: "", query: query, fragment: fragment)
-
-            let stringWithoutPath = try XCTUnwrap(comp.string)
-            comp = URLComponents(string: stringWithoutPath)!
-            comp.path = path
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.query = nil
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: nil, fragment: fragment)
-
-            let stringWithoutQuery = try XCTUnwrap(comp.string)
-            comp = URLComponents(string: stringWithoutQuery)!
-            comp.query = query
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
-
-            comp = fullComponents
-            comp.fragment = nil
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: nil)
-
-            let stringWithoutFragment = try XCTUnwrap(comp.string)
-            comp = URLComponents(string: stringWithoutFragment)!
-            comp.fragment = fragment
-            try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        // Assign all components then get the ranges
+        
+        var comp = URLComponents()
+        comp.scheme = scheme
+        comp.user = user
+        comp.password = password
+        comp.host = host
+        comp.port = port
+        comp.path = path
+        comp.query = query
+        comp.fragment = fragment
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        let string = try #require(comp.string)
+        let fullComponents = URLComponents(string: string)!
+        
+        // Get the ranges directly from URLParseInfo
+        
+        comp = fullComponents
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        // Set components after parsing, which invalidates the URLParseInfo ranges
+        
+        comp = fullComponents
+        comp.scheme = scheme
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.user = user
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.password = password
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.host = host
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.port = port
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.path = path
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.query = query
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.fragment = fragment
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        // Remove components from the string, set them back, and validate ranges
+        
+        comp = fullComponents
+        comp.scheme = nil
+        try validateRanges(comp, scheme: nil, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        let stringWithoutScheme = try #require(comp.string)
+        comp = URLComponents(string: stringWithoutScheme)!
+        comp.scheme = scheme
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        var expectedHost = host
+        if user != nil && host == nil {
+            // We parsed a string with a non-nil user, so expect host to
+            // be the empty string, even after we set comp.user = nil.
+            expectedHost = ""
         }
+        comp.user = nil
+        try validateRanges(comp, scheme: scheme, user: nil, password: password, host: expectedHost, port: port, path: path, query: query, fragment: fragment)
+        
+        let stringWithoutUser = try #require(comp.string)
+        comp = URLComponents(string: stringWithoutUser)!
+        comp.user = user
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        var expectedUser = user
+        if password != nil && user == nil {
+            // We parsed a string with a non-nil password, so expect user to
+            // be the empty string, even after we set comp.password = nil.
+            expectedUser = ""
+        }
+        comp.password = nil
+        try validateRanges(comp, scheme: scheme, user: expectedUser, password: nil, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        let stringWithoutPassword = try #require(comp.string)
+        comp = URLComponents(string: stringWithoutPassword)!
+        comp.password = password
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.host = nil
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: nil, port: port, path: path, query: query, fragment: fragment)
+        
+        let stringWithoutHost = try #require(comp.string)
+        comp = URLComponents(string: stringWithoutHost)!
+        comp.host = host
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        expectedHost = host
+        if port != nil && host == nil {
+            // We parsed a string with a non-nil port, so expect host to
+            // be the empty string, even after we set comp.port = nil.
+            expectedHost = ""
+        }
+        comp.port = nil
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: expectedHost, port: nil, path: path, query: query, fragment: fragment)
+        
+        let stringWithoutPort = try #require(comp.string)
+        comp = URLComponents(string: stringWithoutPort)!
+        comp.port = port
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.path = ""
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: "", query: query, fragment: fragment)
+        
+        let stringWithoutPath = try #require(comp.string)
+        comp = URLComponents(string: stringWithoutPath)!
+        comp.path = path
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.query = nil
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: nil, fragment: fragment)
+        
+        let stringWithoutQuery = try #require(comp.string)
+        comp = URLComponents(string: stringWithoutQuery)!
+        comp.query = query
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
+        
+        comp = fullComponents
+        comp.fragment = nil
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: nil)
+        
+        let stringWithoutFragment = try #require(comp.string)
+        comp = URLComponents(string: stringWithoutFragment)!
+        comp.fragment = fragment
+        try validateRanges(comp, scheme: scheme, user: user, password: password, host: host, port: port, path: path, query: query, fragment: fragment)
     }
 
-    func testURLComponentsEncodesFirstPathColon() throws {
+    @Test func testURLComponentsEncodesFirstPathColon() throws {
         let path = "first:segment:with:colons/second:segment:with:colons"
         var comp = URLComponents()
         comp.path = path
-        guard let compString = comp.string else {
-            XCTFail("compString was nil")
-            return
-        }
-        guard let slashIndex = compString.firstIndex(of: "/") else {
-            XCTFail("Could not find slashIndex")
-            return
-        }
+        let compString = try #require(comp.string)
+        let slashIndex = try #require(compString.firstIndex(of: "/"))
         let firstSegment = compString[..<slashIndex]
         let secondSegment = compString[slashIndex...]
-        XCTAssertNil(firstSegment.firstIndex(of: ":"), "There should not be colons in the first path segment")
-        XCTAssertNotNil(secondSegment.firstIndex(of: ":"), "Colons should be allowed in subsequent path segments")
+        #expect(firstSegment.firstIndex(of: ":") == nil, "There should not be colons in the first path segment")
+        #expect(secondSegment.firstIndex(of: ":") != nil, "Colons should be allowed in subsequent path segments")
 
         comp = URLComponents()
         comp.path = path
-        guard let compString2 = comp.string else {
-            XCTFail("compString2 was nil")
-            return
-        }
-        guard let slashIndex2 = compString2.firstIndex(of: "/") else {
-            XCTFail("Could not find slashIndex2")
-            return
-        }
+        let compString2 = try #require(comp.string)
+        let slashIndex2 = try #require(compString2.firstIndex(of: "/"))
         let firstSegment2 = compString2[..<slashIndex2]
         let secondSegment2 = compString2[slashIndex2...]
-        XCTAssertNil(firstSegment2.firstIndex(of: ":"), "There should not be colons in the first path segment")
-        XCTAssertNotNil(secondSegment2.firstIndex(of: ":"), "Colons should be allowed in subsequent path segments")
+        #expect(firstSegment2.firstIndex(of: ":") == nil, "There should not be colons in the first path segment")
+        #expect(secondSegment2.firstIndex(of: ":") != nil, "Colons should be allowed in subsequent path segments")
 
         // Colons are allowed in the first segment if there is a scheme.
 
         let colonFirstPath = "playlist:37i9dQZF1E35u89RYOJJV6"
         let legalURLString = "spotify:\(colonFirstPath)"
-        comp = try XCTUnwrap(URLComponents(string: legalURLString))
-        XCTAssertEqual(comp.string, legalURLString)
-        XCTAssertEqual(comp.percentEncodedPath, colonFirstPath)
+        comp = try #require(URLComponents(string: legalURLString))
+        #expect(comp.string == legalURLString)
+        #expect(comp.percentEncodedPath == colonFirstPath)
     }
 
-    func testURLComponentsInvalidPaths() {
+    @Test func testURLComponentsInvalidPaths() {
         var comp = URLComponents()
 
         // Path must start with a slash if there's an authority component.
         comp.path = "does/not/start/with/slash"
-        XCTAssertNotNil(comp.string)
+        #expect(comp.string != nil)
 
         comp.user = "user"
-        XCTAssertNil(comp.string)
+        #expect(comp.string == nil)
         comp.user = nil
 
         comp.password = "password"
-        XCTAssertNil(comp.string)
+        #expect(comp.string == nil)
         comp.password = nil
 
         comp.host = "example.com"
-        XCTAssertNil(comp.string)
+        #expect(comp.string == nil)
         comp.host = nil
 
         comp.port = 80
-        XCTAssertNil(comp.string)
+        #expect(comp.string == nil)
         comp.port = nil
 
         comp = URLComponents()
 
         // If there's no authority, path cannot start with "//".
         comp.path = "//starts/with/two/slashes"
-        XCTAssertNil(comp.string)
+        #expect(comp.string == nil)
 
         // If there's an authority, it's okay.
         comp.user = "user"
-        XCTAssertNotNil(comp.string)
+        #expect(comp.string != nil)
         comp.user = nil
 
         comp.password = "password"
-        XCTAssertNotNil(comp.string)
+        #expect(comp.string != nil)
         comp.password = nil
 
         comp.host = "example.com"
-        XCTAssertNotNil(comp.string)
+        #expect(comp.string != nil)
         comp.host = nil
 
         comp.port = 80
-        XCTAssertNotNil(comp.string)
+        #expect(comp.string != nil)
         comp.port = nil
     }
 
-    func testURLComponentsAllowsEqualSignInQueryItemValue() {
+    @Test func testURLComponentsAllowsEqualSignInQueryItemValue() {
         var comp = URLComponents(string: "http://example.com/path?item=value==&q==val")!
         var expected = [URLQueryItem(name: "item", value: "value=="), URLQueryItem(name: "q", value: "=val")]
-        XCTAssertEqual(comp.percentEncodedQueryItems, expected)
-        XCTAssertEqual(comp.queryItems, expected)
+        #expect(comp.percentEncodedQueryItems == expected)
+        #expect(comp.queryItems == expected)
 
         expected = [URLQueryItem(name: "new", value: "=value="), URLQueryItem(name: "name", value: "=")]
         comp.percentEncodedQueryItems = expected
-        XCTAssertEqual(comp.percentEncodedQueryItems, expected)
-        XCTAssertEqual(comp.queryItems, expected)
+        #expect(comp.percentEncodedQueryItems == expected)
+        #expect(comp.queryItems == expected)
     }
 
-    func testURLComponentsLookalikeIPLiteral() {
+    @Test func testURLComponentsLookalikeIPLiteral() {
         // We should consider a lookalike IP literal invalid (note accent on the first bracket)
         let fakeIPLiteral = "[́::1]"
         let fakeURLString = "http://\(fakeIPLiteral):80/"
 
         let comp = URLComponents(string: fakeURLString)
-        XCTAssertNil(comp)
+        #expect(comp == nil)
 
         var comp2 = URLComponents()
         comp2.host = fakeIPLiteral
-        XCTAssertNil(comp2.string)
+        #expect(comp2.string == nil)
     }
 
-    func testURLComponentsDecodingNULL() {
+    @Test func testURLComponentsDecodingNULL() {
         let comp = URLComponents(string: "http://example.com/my\u{0}path")!
-        XCTAssertEqual(comp.percentEncodedPath, "/my%00path")
-        XCTAssertEqual(comp.path, "/my\u{0}path")
+        #expect(comp.percentEncodedPath == "/my%00path")
+        #expect(comp.path == "/my\u{0}path")
     }
 
 #if FOUNDATION_FRAMEWORK
-    func testURLComponentsBridging() {
-        var nsURLComponents = NSURLComponents(
+    @Test func testURLComponentsBridging() throws {
+        var nsURLComponents = try #require(NSURLComponents(
             string: "https://example.com?url=https%3A%2F%2Fapple.com"
-        )!
+        ))
         var urlComponents = nsURLComponents as URLComponents
-        XCTAssertEqual(urlComponents.string, nsURLComponents.string)
+        #expect(urlComponents.string == nsURLComponents.string)
 
-        urlComponents = URLComponents(
+        urlComponents = try #require(URLComponents(
             string: "https://example.com?url=https%3A%2F%2Fapple.com"
-        )!
+        ))
         nsURLComponents = urlComponents as NSURLComponents
-        XCTAssertEqual(urlComponents.string, nsURLComponents.string)
+        #expect(urlComponents.string == nsURLComponents.string)
     }
 #endif
 
@@ -1109,32 +1055,58 @@ final class URLTests : XCTestCase {
         comp.scheme = "http+unix"
         comp.host = "/path/to/socket"
         comp.path = "/info"
-        XCTAssertEqual(comp.string, "http+unix://%2Fpath%2Fto%2Fsocket/info")
+        #expect(comp.string == "http+unix://%2Fpath%2Fto%2Fsocket/info")
 
         comp.scheme = "https+unix"
-        XCTAssertEqual(comp.string, "https+unix://%2Fpath%2Fto%2Fsocket/info")
+        #expect(comp.string == "https+unix://%2Fpath%2Fto%2Fsocket/info")
 
         comp.encodedHost = "%2Fpath%2Fto%2Fsocket"
-        XCTAssertEqual(comp.string, "https+unix://%2Fpath%2Fto%2Fsocket/info")
-        XCTAssertEqual(comp.encodedHost, "%2Fpath%2Fto%2Fsocket")
-        XCTAssertEqual(comp.host, "/path/to/socket")
-        XCTAssertEqual(comp.path, "/info")
+        #expect(comp.string == "https+unix://%2Fpath%2Fto%2Fsocket/info")
+        #expect(comp.encodedHost == "%2Fpath%2Fto%2Fsocket")
+        #expect(comp.host == "/path/to/socket")
+        #expect(comp.path == "/info")
 
         // "/path/to/socket" is not a valid host for schemes
         // that IDNA-encode hosts instead of percent-encoding
         comp.scheme = "http"
-        XCTAssertNil(comp.string)
+        #expect(comp.string == nil)
 
         comp.scheme = "https"
-        XCTAssertNil(comp.string)
+        #expect(comp.string == nil)
 
         comp.scheme = "https+unix"
-        XCTAssertEqual(comp.string, "https+unix://%2Fpath%2Fto%2Fsocket/info")
+        #expect(comp.string == "https+unix://%2Fpath%2Fto%2Fsocket/info")
 
         // Check that we can parse a percent-encoded http+unix URL string
         comp = URLComponents(string: "http+unix://%2Fpath%2Fto%2Fsocket/info")!
-        XCTAssertEqual(comp.encodedHost, "%2Fpath%2Fto%2Fsocket")
-        XCTAssertEqual(comp.host, "/path/to/socket")
-        XCTAssertEqual(comp.path, "/info")
+        #expect(comp.encodedHost == "%2Fpath%2Fto%2Fsocket")
+        #expect(comp.host == "/path/to/socket")
+        #expect(comp.path == "/info")
+    }
+}
+
+extension FilePlaygroundTests {
+    struct URLTests {
+        @Test func testURLFilePathRelativeToBase() throws {
+            try playground {
+                Directory("dir") {
+                    "Foo"
+                    "Bar"
+                }
+            }.test {
+                let currentDirectoryPath = $0.currentDirectoryPath
+                let baseURL = URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
+                let relativePath = "dir"
+                
+                let url1 = URL(filePath: relativePath, directoryHint: .isDirectory, relativeTo: baseURL)
+                
+                let url2 = URL(filePath: relativePath, directoryHint: .checkFileSystem, relativeTo: baseURL)
+                #expect(url1 == url2, "\(url1) was not equal to \(url2)")
+                
+                // directoryHint is `.inferFromPath` by default
+                let url3 = URL(filePath: relativePath + "/", relativeTo: baseURL)
+                #expect(url1 == url3, "\(url1) was not equal to \(url3)")
+            }
+        }
     }
 }

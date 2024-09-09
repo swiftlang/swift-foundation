@@ -10,12 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+import Testing
+
+#if canImport(FoundationInternationalization)
+import FoundationEssentials
+import FoundationInternationalization
+#elseif FOUNDATION_FRAMEWORK
+import Foundation
 #endif
 
 // TODO: Reenable these tests once DateFormatStyle has been ported
-final class DateLocaleTests : XCTestCase {
+struct DateLocaleTests {
 #if FOUNDATION_FRAMEWORK
     func dateWithString(_ str: String) -> Date {
         let formatter = DateFormatter()
@@ -26,42 +31,42 @@ final class DateLocaleTests : XCTestCase {
         return formatter.date(from: str)! as Date
     }
 
-    func testEquality() {
+    @Test func testEquality() {
         let date = dateWithString("2010-05-17 14:49:47 -0700")
         let sameDate = dateWithString("2010-05-17 14:49:47 -0700")
-        XCTAssertEqual(date, sameDate)
-        XCTAssertEqual(sameDate, date)
+        #expect(date == sameDate)
+        #expect(sameDate == date)
 
         let differentDate = dateWithString("2010-05-17 14:49:46 -0700")
-        XCTAssertNotEqual(date, differentDate)
-        XCTAssertNotEqual(differentDate, date)
+        #expect(date != differentDate)
+        #expect(differentDate != date)
 
         let sameDateByTimeZone = dateWithString("2010-05-17 13:49:47 -0800")
-        XCTAssertEqual(date, sameDateByTimeZone)
-        XCTAssertEqual(sameDateByTimeZone, date)
+        #expect(date == sameDateByTimeZone)
+        #expect(sameDateByTimeZone == date)
 
         let differentDateByTimeZone = dateWithString("2010-05-17 14:49:47 -0800")
-        XCTAssertNotEqual(date, differentDateByTimeZone)
-        XCTAssertNotEqual(differentDateByTimeZone, date)
+        #expect(date != differentDateByTimeZone)
+        #expect(differentDateByTimeZone != date)
     }
 
-    func testTimeIntervalSinceDate() {
+    @Test func testTimeIntervalSinceDate() {
         let referenceDate = dateWithString("1900-01-01 00:00:00 +0000")
         let sameDate = dateWithString("1900-01-01 00:00:00 +0000")
         let laterDate = dateWithString("2010-05-17 14:49:47 -0700")
         let earlierDate = dateWithString("1810-05-17 14:49:47 -0700")
 
         let laterSeconds = laterDate.timeIntervalSince(referenceDate)
-        XCTAssertEqual(laterSeconds, 3483121787.0)
+        #expect(laterSeconds == 3483121787.0)
 
         let earlierSeconds = earlierDate.timeIntervalSince(referenceDate)
-        XCTAssertEqual(earlierSeconds, -2828311813.0)
+        #expect(earlierSeconds == -2828311813.0)
 
         let sameSeconds = sameDate.timeIntervalSince(referenceDate)
-        XCTAssertEqual(sameSeconds, 0.0)
+        #expect(sameSeconds == 0.0)
     }
 
-    func test_DateHashing() {
+    @Test func test_DateHashing() {
         let values: [Date] = [
             dateWithString("2010-05-17 14:49:47 -0700"),
             dateWithString("2011-05-17 14:49:47 -0700"),
@@ -74,18 +79,18 @@ final class DateLocaleTests : XCTestCase {
         checkHashable(values, equalityOracle: { $0 == $1 })
     }
 
-    func test_AnyHashableContainingDate() {
+    @Test func test_AnyHashableContainingDate() {
         let values: [Date] = [
             dateWithString("2016-05-17 14:49:47 -0700"),
             dateWithString("2010-05-17 14:49:47 -0700"),
             dateWithString("2010-05-17 14:49:47 -0700"),
         ]
         let anyHashables = values.map(AnyHashable.init)
-        expectEqual(Date.self, type(of: anyHashables[0].base))
-        expectEqual(Date.self, type(of: anyHashables[1].base))
-        expectEqual(Date.self, type(of: anyHashables[2].base))
-        XCTAssertNotEqual(anyHashables[0], anyHashables[1])
-        XCTAssertEqual(anyHashables[1], anyHashables[2])
+        #expect(Date.self == type(of: anyHashables[0].base))
+        #expect(Date.self == type(of: anyHashables[1].base))
+        #expect(Date.self == type(of: anyHashables[2].base))
+        #expect(anyHashables[0] != anyHashables[1])
+        #expect(anyHashables[1] == anyHashables[2])
     }
 #endif
 }

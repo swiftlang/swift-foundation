@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -21,20 +19,20 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-final class LocaleLanguageComponentsTests : XCTestCase {
+struct LocaleLanguageComponentsTests {
 
     func verifyComponents(_ identifier: String,
                           expectedLanguageCode: String?,
                           expectedScriptCode: String?,
                           expectedRegionCode: String?,
-                          file: StaticString = #filePath, line: UInt = #line) {
+                          sourceLocation: SourceLocation = #_sourceLocation) {
         let comp = Locale.Language.Components(identifier: identifier)
-        XCTAssertEqual(comp.languageCode?.identifier, expectedLanguageCode, file: file, line: line)
-        XCTAssertEqual(comp.script?.identifier, expectedScriptCode, file: file, line: line)
-        XCTAssertEqual(comp.region?.identifier, expectedRegionCode, file: file, line: line)
+        #expect(comp.languageCode?.identifier == expectedLanguageCode, sourceLocation: sourceLocation)
+        #expect(comp.script?.identifier == expectedScriptCode, sourceLocation: sourceLocation)
+        #expect(comp.region?.identifier == expectedRegionCode, sourceLocation: sourceLocation)
     }
 
-    func testCreateFromIdentifier() {
+    @Test func testCreateFromIdentifier() {
         verifyComponents("en-US", expectedLanguageCode: "en", expectedScriptCode: nil, expectedRegionCode: "US")
         verifyComponents("en_US", expectedLanguageCode: "en", expectedScriptCode: nil, expectedRegionCode: "US")
         verifyComponents("en_US@rg=GBzzzz", expectedLanguageCode: "en", expectedScriptCode: nil, expectedRegionCode: "US")
@@ -43,36 +41,36 @@ final class LocaleLanguageComponentsTests : XCTestCase {
         verifyComponents("hans-cn", expectedLanguageCode: "hans", expectedScriptCode: nil, expectedRegionCode: "CN")
     }
 
-    func testCreateFromInvalidIdentifier() {
+    @Test func testCreateFromInvalidIdentifier() {
         verifyComponents("HANS", expectedLanguageCode: "hans", expectedScriptCode: nil, expectedRegionCode: nil)
         verifyComponents("zh-CN-Hant", expectedLanguageCode: "zh", expectedScriptCode: nil, expectedRegionCode: "CN")
         verifyComponents("bleh", expectedLanguageCode: "bleh", expectedScriptCode: nil, expectedRegionCode: nil)
     }
 
     // The internal identifier uses the ICU-style identifier
-    func testInternalIdentifier() {
-        XCTAssertEqual(Locale.Language.Components(languageCode: "en", script: "Hant", region: "US").identifier, "en-Hant_US")
-        XCTAssertEqual(Locale.Language.Components(languageCode: "en", script: nil, region: "US").identifier, "en_US")
-        XCTAssertEqual(Locale.Language.Components(languageCode: "EN", script: nil, region: "us").identifier, "en_US")
-        XCTAssertEqual(Locale.Language.Components(languageCode: "EN", script: "Latn").identifier, "en-Latn")
+    @Test func testInternalIdentifier() {
+        #expect(Locale.Language.Components(languageCode: "en", script: "Hant", region: "US").identifier == "en-Hant_US")
+        #expect(Locale.Language.Components(languageCode: "en", script: nil, region: "US").identifier == "en_US")
+        #expect(Locale.Language.Components(languageCode: "EN", script: nil, region: "us").identifier == "en_US")
+        #expect(Locale.Language.Components(languageCode: "EN", script: "Latn").identifier == "en-Latn")
     }
 }
 
-class LocaleLanguageTests: XCTestCase {
+struct LocaleLanguageTests {
 
-    func verify(_ identifier: String, expectedParent: Locale.Language, minBCP47: String, maxBCP47: String, langCode: Locale.LanguageCode?, script: Locale.Script?, region: Locale.Region?, lineDirection: Locale.LanguageDirection, characterDirection: Locale.LanguageDirection, file: StaticString = #filePath, line: UInt = #line) {
+    func verify(_ identifier: String, expectedParent: Locale.Language, minBCP47: String, maxBCP47: String, langCode: Locale.LanguageCode?, script: Locale.Script?, region: Locale.Region?, lineDirection: Locale.LanguageDirection, characterDirection: Locale.LanguageDirection, sourceLocation: SourceLocation = #_sourceLocation) {
         let lan = Locale.Language(identifier: identifier)
-        XCTAssertEqual(lan.parent, expectedParent, "Parents should be equal", file: file, line: line)
-        XCTAssertEqual(lan.minimalIdentifier, minBCP47, "minimalIdentifiers should be equal", file: file, line: line)
-        XCTAssertEqual(lan.maximalIdentifier, maxBCP47, "maximalIdentifiers should be equal", file: file, line: line)
-        XCTAssertEqual(lan.languageCode, langCode, "languageCodes should be equal", file: file, line: line)
-        XCTAssertEqual(lan.script, script, "languageCodes should be equal", file: file, line: line)
-        XCTAssertEqual(lan.region, region, "regions should be equal", file: file, line: line)
-        XCTAssertEqual(lan.lineLayoutDirection, lineDirection, "lineDirection should be equal", file: file, line: line)
-        XCTAssertEqual(lan.characterDirection, characterDirection, "characterDirection should be equal", file: file, line: line)
+        #expect(lan.parent == expectedParent, "Parents should be equal", sourceLocation: sourceLocation)
+        #expect(lan.minimalIdentifier == minBCP47, "minimalIdentifiers should be equal", sourceLocation: sourceLocation)
+        #expect(lan.maximalIdentifier == maxBCP47, "maximalIdentifiers should be equal", sourceLocation: sourceLocation)
+        #expect(lan.languageCode == langCode, "languageCodes should be equal", sourceLocation: sourceLocation)
+        #expect(lan.script == script, "languageCodes should be equal", sourceLocation: sourceLocation)
+        #expect(lan.region == region, "regions should be equal", sourceLocation: sourceLocation)
+        #expect(lan.lineLayoutDirection == lineDirection, "lineDirection should be equal", sourceLocation: sourceLocation)
+        #expect(lan.characterDirection == characterDirection, "characterDirection should be equal", sourceLocation: sourceLocation)
     }
 
-    func testProperties() {
+    @Test func testProperties() {
         verify("en-US", expectedParent: .init(identifier: "en"), minBCP47: "en", maxBCP47: "en-Latn-US", langCode: "en", script: "Latn", region: "US", lineDirection: .topToBottom, characterDirection: .leftToRight)
         verify("de-DE", expectedParent: .init(identifier: "de"), minBCP47: "de", maxBCP47: "de-Latn-DE", langCode: "de", script: "Latn", region: "DE", lineDirection: .topToBottom, characterDirection: .leftToRight)
         verify("en-Kore-US", expectedParent: .init(identifier: "en-Kore"), minBCP47: "en-Kore", maxBCP47: "en-Kore-US", langCode: "en", script: "Kore", region: "US", lineDirection: .topToBottom, characterDirection: .leftToRight)
@@ -85,13 +83,13 @@ class LocaleLanguageTests: XCTestCase {
         verify("root", expectedParent: .init(identifier: "root"), minBCP47: "root", maxBCP47: "root", langCode: "root", script: nil, region: nil, lineDirection: .topToBottom, characterDirection: .leftToRight)
     }
 
-    func testEquivalent() {
-        func verify(lang1: String, lang2: String, isEqual: Bool, file: StaticString = #filePath, line: UInt = #line) {
+    @Test func testEquivalent() {
+        func verify(lang1: String, lang2: String, isEqual: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
             let language1 = Locale.Language(identifier: lang1)
             let language2 = Locale.Language(identifier: lang2)
 
-            XCTAssert(language1.isEquivalent(to: language2) == isEqual, file: file, line: line)
-            XCTAssert(language2.isEquivalent(to: language1) == isEqual, file: file, line: line)
+            #expect(language1.isEquivalent(to: language2) == isEqual, sourceLocation: sourceLocation)
+            #expect(language2.isEquivalent(to: language1) == isEqual, sourceLocation: sourceLocation)
         }
 
         verify(lang1: "en", lang2: "en-Latn", isEqual: true)

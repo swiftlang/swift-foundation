@@ -5,25 +5,17 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
-// REQUIRES: objc_interop
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationInternationalization)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
-final class FormatterCacheTests: XCTestCase {
+struct FormatterCacheTests {
 
     final class TestCacheItem: Equatable, Sendable {
         static func == (lhs: FormatterCacheTests.TestCacheItem, rhs: FormatterCacheTests.TestCacheItem) -> Bool {
@@ -43,7 +35,7 @@ final class FormatterCacheTests: XCTestCase {
     }
 
 
-    func testCreateItem() {
+    @Test func testCreateItem() {
         let cache = FormatterCache<Int, Int>()
 
         var initializerBlockInvocationCount = 0
@@ -54,20 +46,20 @@ final class FormatterCacheTests: XCTestCase {
                 initializerBlockInvocationCount += 1
                 return -i
             }
-            XCTAssertEqual(item, -i)
+            #expect(item == -i)
         }
 
         // `creator` block has been called 101 times
-        XCTAssertEqual(initializerBlockInvocationCount, cache.countLimit + 1)
+        #expect(initializerBlockInvocationCount == cache.countLimit + 1)
 
         // `creator` block does not get executed when the key exists
         for i in 0..<initializerBlockInvocationCount {
             let item = cache.formatter(for: i) {
-                XCTFail()
+                Issue.record("Creator block should not be executed when key exists in cache")
                 return Int.max
             }
 
-            XCTAssertEqual(item, -i)
+            #expect(item == -i)
         }
 
         // Fill one more to exceed cache's limit
@@ -78,38 +70,35 @@ final class FormatterCacheTests: XCTestCase {
 
         // cache has been cleared out; only the one we just filled in is present
         for i in 0..<cache.countLimit {
-            XCTAssertNil(cache[i])
+            #expect(cache[i] == nil)
         }
-        XCTAssertEqual(cache[1000], item)
+        #expect(cache[1000] == item)
     }
 
-#if FOUNDATION_FRAMEWORK
-    func testSynchronouslyClearingCache() {
+    @Test(.timeLimit(.minutes(1)))
+    @available(macOS 14, iOS 17, watchOS 10, tvOS 18, *)
+    func testSynchronouslyClearingCache() async {
         let cache = FormatterCache<Int, TestCacheItem>()
-        let group = DispatchGroup()
-        let queue = DispatchQueue(label: "formatter cache test", qos: .default, attributes: .concurrent)
 
-
-        for i in 0 ..< 5 {
-            queue.async(group: group) {
-                let cached = cache.formatter(for: i) {
-                    return .init(value: -i, deinitBlock: {
-                        // Test that `removeAllObjects` beneath does not trigger `deinit` of the removed objects in the locked scope.
-                        // If it does cause the deinitialization of this instance where this block is run, we would deadlock here because the subscript getter is performed in the same locked scope as the enclosing `formatter(for:creator:)`.
-                        _ = cache[i]
-                    })
+        await withDiscardingTaskGroup { group in
+            for i in 0 ..< 5 {
+                group.addTask {
+                    let cached = cache.formatter(for: i) {
+                        return .init(value: -i, deinitBlock: {
+                            // Test that `removeAllObjects` beneath does not trigger `deinit` of the removed objects in the locked scope.
+                            // If it does cause the deinitialization of this instance where this block is run, we would deadlock here because the subscript getter is performed in the same locked scope as the enclosing `formatter(for:creator:)`.
+                            _ = cache[i]
+                        })
+                    }
+                    #expect(cached.value == -i)
                 }
-                XCTAssertEqual(cached.value, -i)
-            }
-
-            queue.async(group: group) {
-                cache.removeAllObjects()
+                
+                group.addTask {
+                    cache.removeAllObjects()
+                }
             }
         }
-
-        XCTAssertEqual(group.wait(timeout: .now().advanced(by: .seconds(3))), .success)
     }
-#endif // FOUNDATION_FRAMEWORK
 }
 
 

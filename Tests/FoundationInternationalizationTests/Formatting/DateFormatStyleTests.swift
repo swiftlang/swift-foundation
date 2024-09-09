@@ -5,65 +5,55 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
-// REQUIRES: objc_interop
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-final class DateFormatStyleTests : XCTestCase {
+struct DateFormatStyleTests {
     let referenceDate = Date(timeIntervalSinceReferenceDate: 0)
 
-    func test_constructorSyntax() {
+    @Test func test_constructorSyntax() {
         let style = Date.FormatStyle(locale: .init(identifier: "en_US"), calendar: .init(identifier: .gregorian), timeZone: TimeZone(identifier: "America/Los_Angeles")!)
             .year(.defaultDigits)
             .month(.abbreviated)
             .day(.twoDigits)
             .hour(.twoDigits(amPM: .omitted))
             .minute(.defaultDigits)
-        XCTAssertEqual(referenceDate.formatted(style), "Dec 31, 2000 at 04:00")
+        #expect(referenceDate.formatted(style) == "Dec 31, 2000 at 04:00")
     }
 
-    func test_era() {
+    @Test func test_era() {
         let abbreviatedStyle = Date.FormatStyle(locale: .init(identifier: "en_US"), calendar: .init(identifier: .gregorian), timeZone: TimeZone(identifier: "America/Los_Angeles")!)
             .era(.abbreviated)
-        XCTAssertEqual(referenceDate.formatted(abbreviatedStyle), "AD")
+        #expect(referenceDate.formatted(abbreviatedStyle) == "AD")
 
         let narrowStyle = Date.FormatStyle(locale: .init(identifier: "en_US"), calendar: .init(identifier: .gregorian), timeZone: TimeZone(identifier: "America/Los_Angeles")!)
             .era(.narrow)
-        XCTAssertEqual(referenceDate.formatted(narrowStyle), "A")
+        #expect(referenceDate.formatted(narrowStyle) == "A")
 
         let wideStyle = Date.FormatStyle(locale: .init(identifier: "en_US"), calendar: .init(identifier: .gregorian), timeZone: TimeZone(identifier: "America/Los_Angeles")!)
             .era(.wide)
-        XCTAssertEqual(referenceDate.formatted(wideStyle), "Anno Domini")
+        #expect(referenceDate.formatted(wideStyle) == "Anno Domini")
     }
 
-    func test_dateFormatString() {
+    @Test func test_dateFormatString() {
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
 
-        func _verify(_ format: Date.FormatString, rawExpectation: String, formattedExpectation: String, line: UInt = #line) {
-            XCTAssertEqual(format.rawFormat, rawExpectation, "raw expectation failed", line: line)
-            XCTAssertEqual(
+        func _verify(_ format: Date.FormatString, rawExpectation: String, formattedExpectation: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(format.rawFormat == rawExpectation, "raw expectation failed", sourceLocation: sourceLocation)
+            #expect(
                 Date.VerbatimFormatStyle(format: format, timeZone: .gmt, calendar: .init(identifier: .gregorian))
                     .locale(.init(identifier: "en_US"))
-                    .format(date),
-                formattedExpectation,
+                    .format(date) == formattedExpectation,
                 "formatted expectation failed",
-                line: line
+                sourceLocation: sourceLocation
             )
         }
 
@@ -89,24 +79,23 @@ final class DateFormatStyleTests : XCTestCase {
         _verify("Day:\(day: .defaultDigits) Month:\(month: .abbreviated) Year:\(year: .padded(4))", rawExpectation: "'Day:'d' Month:'MMM' Year:'yyyy", formattedExpectation: "Day:12 Month:Apr Year:2021")
     }
 
-    func test_parsingThrows() {
+    @Test(arguments: [
+        ("ddMMyy", "010599"),
+        ("dd/MM/yy", "01/05/99"),
+        ("d/MMM/yyyy", "1/Sep/1999"),
+    ])
+    func test_parsingThrows(format: Date.FormatString, dateString: String) {
         // Literal symbols are treated as literals, so they won't parse when parsing strictly
-        let invalidFormats: [(Date.FormatString, String)] = [
-            ("ddMMyy", "010599"),
-            ("dd/MM/yy", "01/05/99"),
-            ("d/MMM/yyyy", "1/Sep/1999"),
-        ]
-
         let locale = Locale(identifier: "en_US")
         let timeZone = TimeZone(secondsFromGMT: 0)!
 
-        for (format, dateString) in invalidFormats {
-            let parseStrategy = Date.ParseStrategy(format: format, locale: locale, timeZone: timeZone, isLenient: false)
-            XCTAssertThrowsError(try parseStrategy.parse(dateString), "Date string: \(dateString); Format: \(format.rawFormat)")
+        let parseStrategy = Date.ParseStrategy(format: format, locale: locale, timeZone: timeZone, isLenient: false)
+        #expect(throws: (any Error).self) {
+            try parseStrategy.parse(dateString)
         }
     }
 
-    func test_codable() {
+    @Test func test_codable() throws {
         let style = Date.FormatStyle(date: .long, time: .complete, capitalizationContext: .unknown)
             .era()
             .year()
@@ -122,18 +111,17 @@ final class DateFormatStyleTests : XCTestCase {
             .secondFraction(.milliseconds(2))
             .timeZone()
         let jsonEncoder = JSONEncoder()
-        let encodedStyle = try? jsonEncoder.encode(style)
-        XCTAssertNotNil(encodedStyle)
+        let encodedStyle = try jsonEncoder.encode(style)
         let jsonDecoder = JSONDecoder()
-        let decodedStyle = try? jsonDecoder.decode(Date.FormatStyle.self, from: encodedStyle!)
-        XCTAssertNotNil(decodedStyle)
+        let decodedStyle = try jsonDecoder.decode(Date.FormatStyle.self, from: encodedStyle)
 
-        XCTAssert(referenceDate.formatted(decodedStyle!) == referenceDate.formatted(style), "\(referenceDate.formatted(decodedStyle!)) should be \(referenceDate.formatted(style))")
+        #expect(referenceDate.formatted(decodedStyle) == referenceDate.formatted(style), "\(referenceDate.formatted(decodedStyle)) should be \(referenceDate.formatted(style))")
 
     }
 
-    func test_createFormatStyleMultithread() {
-        let group = DispatchGroup()
+    @Test(.timeLimit(.minutes(2)))
+    @available(macOS 14, iOS 17, watchOS 10, tvOS 18, *)
+    func test_createFormatStyleMultithread() async throws {
         let testLocales: [String] = [ "en_US", "en_US", "en_GB", "es_SP", "zh_TW", "fr_FR", "en_US", "en_GB", "fr_FR"]
         let expectations: [String : String] = [
             "en_US": "Dec 31, 1969",
@@ -144,30 +132,26 @@ final class DateFormatStyleTests : XCTestCase {
         ]
         let date = Date(timeIntervalSince1970: 0)
 
-        for localeIdentifier in testLocales {
-            DispatchQueue.global(qos: .userInitiated).async(group:group) {
-                let locale = Locale(identifier: localeIdentifier)
-                XCTAssertNotNil(locale)
-                let timeZone = TimeZone(secondsFromGMT: -3600)!
-
-                let formatStyle = Date.FormatStyle(date: .abbreviated, locale: locale, timeZone: timeZone)
-                guard let formatterFromCache = ICUDateFormatter.cachedFormatter(for: formatStyle) else {
-                    XCTFail("Unexpected nil formatter")
-                    return
+        try await withThrowingDiscardingTaskGroup { group in
+            for localeIdentifier in testLocales {
+                group.addTask {
+                    let locale = Locale(identifier: localeIdentifier)
+                    let timeZone = try #require(TimeZone(secondsFromGMT: -3600))
+                    
+                    let formatStyle = Date.FormatStyle(date: .abbreviated, locale: locale, timeZone: timeZone)
+                    let formatterFromCache = try #require(ICUDateFormatter.cachedFormatter(for: formatStyle))
+                    
+                    let expected = try #require(expectations[localeIdentifier])
+                    let result = formatterFromCache.format(date)
+                    #expect(result == expected)
                 }
-
-                let expected = expectations[localeIdentifier]!
-                let result = formatterFromCache.format(date)
-                XCTAssertEqual(result, expected)
             }
         }
-
-        let result = group.wait(timeout: DispatchTime.now() + DispatchTimeInterval.seconds(105))
-        XCTAssertEqual(result, .success)
     }
 
-    func test_createPatternMultithread() {
-        let group = DispatchGroup()
+    @Test(.timeLimit(.minutes(2)))
+    @available(macOS 14, iOS 17, watchOS 10, tvOS 18, *)
+    func test_createPatternMultithread() async {
         let testLocales = [ "en_US", "en_US", "en_GB", "es_SP", "zh_TW", "fr_FR", "en_US", "en_GB", "fr_FR"].map { Locale(identifier: $0) }
         let expectations: [String : String] = [
             "en_US": "MMM d, y",
@@ -179,38 +163,36 @@ final class DateFormatStyleTests : XCTestCase {
 
         let gregorian = Calendar(identifier: .gregorian)
         let symbols = Date.FormatStyle.DateFieldCollection(year: .defaultDigits, month: .abbreviated, day: .defaultDigits)
-        for testLocale in testLocales {
-            DispatchQueue.global(qos: .userInitiated).async(group:group) {
-                let pattern = ICUPatternGenerator.localizedPattern(symbols: symbols, locale: testLocale, calendar: gregorian)
-
-                let expected = expectations[testLocale.identifier]
-                XCTAssertEqual(pattern, expected)
+        await withDiscardingTaskGroup { group in
+            for testLocale in testLocales {
+                group.addTask {
+                    let pattern = ICUPatternGenerator.localizedPattern(symbols: symbols, locale: testLocale, calendar: gregorian)
+                    
+                    let expected = expectations[testLocale.identifier]
+                    #expect(pattern == expected)
+                }
             }
         }
-
-        let result = group.wait(timeout: DispatchTime.now() + DispatchTimeInterval.seconds(105))
-        XCTAssertEqual(result, .success)
     }
 
-    func test_roundtrip() {
+    @Test func test_roundtrip() throws {
         let date = Date.now
         let style = Date.FormatStyle(date: .numeric, time: .shortened)
         let format = date.formatted(style)
-        let parsed = try? Date(format, strategy: style.parseStrategy)
-        XCTAssertNotNil(parsed)
-        XCTAssertEqual(parsed?.formatted(style), format)
+        let parsed = try Date(format, strategy: style.parseStrategy)
+        #expect(parsed.formatted(style) == format)
     }
 
-    func testLeadingDotSyntax() {
+    @Test func testLeadingDotSyntax() {
         let date = Date.now
-        XCTAssertEqual(date.formatted(date: .long, time: .complete), date.formatted(Date.FormatStyle(date: .long, time: .complete)))
-        XCTAssertEqual(
+        #expect(date.formatted(date: .long, time: .complete) == date.formatted(Date.FormatStyle(date: .long, time: .complete)))
+        #expect(
             date.formatted(
                 .dateTime
                     .day()
                     .month()
                     .year()
-            ),
+            ) ==
             date.formatted(
                 Date.FormatStyle()
                     .day()
@@ -220,128 +202,104 @@ final class DateFormatStyleTests : XCTestCase {
         )
     }
 
-    func testDateFormatStyleIndividualFields() {
+    @Test func testDateFormatStyleIndividualFields() {
         let date = Date(timeIntervalSince1970: 0)
 
         let style = Date.FormatStyle(date: nil, time: nil, locale: Locale(identifier: "en_US"), calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(abbreviation: "UTC")!, capitalizationContext: .unknown)
 
-        XCTAssertEqual(date.formatted(style.era(.abbreviated)), "AD")
-        XCTAssertEqual(date.formatted(style.era(.wide)), "Anno Domini")
-        XCTAssertEqual(date.formatted(style.era(.narrow)), "A")
+        #expect(date.formatted(style.era(.abbreviated)) == "AD")
+        #expect(date.formatted(style.era(.wide)) == "Anno Domini")
+        #expect(date.formatted(style.era(.narrow)) == "A")
 
-        XCTAssertEqual(date.formatted(style.year(.defaultDigits)), "1970")
-        XCTAssertEqual(date.formatted(style.year(.twoDigits)), "70")
-        XCTAssertEqual(date.formatted(style.year(.padded(0))), "1970")
-        XCTAssertEqual(date.formatted(style.year(.padded(1))), "1970")
-        XCTAssertEqual(date.formatted(style.year(.padded(2))), "70")
-        XCTAssertEqual(date.formatted(style.year(.padded(3))), "1970")
-        XCTAssertEqual(date.formatted(style.year(.padded(999))), "0000001970")
+        #expect(date.formatted(style.year(.defaultDigits)) == "1970")
+        #expect(date.formatted(style.year(.twoDigits)) == "70")
+        #expect(date.formatted(style.year(.padded(0))) == "1970")
+        #expect(date.formatted(style.year(.padded(1))) == "1970")
+        #expect(date.formatted(style.year(.padded(2))) == "70")
+        #expect(date.formatted(style.year(.padded(3))) == "1970")
+        #expect(date.formatted(style.year(.padded(999))) == "0000001970")
 
-        XCTAssertEqual(date.formatted(style.year(.relatedGregorian(minimumLength: 0))), "1970")
-        XCTAssertEqual(date.formatted(style.year(.relatedGregorian(minimumLength: 999))), "0000001970")
+        #expect(date.formatted(style.year(.relatedGregorian(minimumLength: 0))) == "1970")
+        #expect(date.formatted(style.year(.relatedGregorian(minimumLength: 999))) == "0000001970")
 
-        XCTAssertEqual(date.formatted(style.year(.extended(minimumLength: 0))), "1970")
-        XCTAssertEqual(date.formatted(style.year(.extended(minimumLength: 999))), "0000001970")
+        #expect(date.formatted(style.year(.extended(minimumLength: 0))) == "1970")
+        #expect(date.formatted(style.year(.extended(minimumLength: 999))) == "0000001970")
 
-        XCTAssertEqual(date.formatted(style.quarter(.oneDigit)), "1")
-        XCTAssertEqual(date.formatted(style.quarter(.twoDigits)), "01")
-        XCTAssertEqual(date.formatted(style.quarter(.abbreviated)), "Q1")
-        XCTAssertEqual(date.formatted(style.quarter(.wide)), "1st quarter")
-        XCTAssertEqual(date.formatted(style.quarter(.narrow)), "1")
+        #expect(date.formatted(style.quarter(.oneDigit)) == "1")
+        #expect(date.formatted(style.quarter(.twoDigits)) == "01")
+        #expect(date.formatted(style.quarter(.abbreviated)) == "Q1")
+        #expect(date.formatted(style.quarter(.wide)) == "1st quarter")
+        #expect(date.formatted(style.quarter(.narrow)) == "1")
 
-        XCTAssertEqual(date.formatted(style.month(.defaultDigits)), "1")
-        XCTAssertEqual(date.formatted(style.month(.twoDigits)), "01")
-        XCTAssertEqual(date.formatted(style.month(.abbreviated)), "Jan")
-        XCTAssertEqual(date.formatted(style.month(.wide)), "January")
-        XCTAssertEqual(date.formatted(style.month(.narrow)), "J")
+        #expect(date.formatted(style.month(.defaultDigits)) == "1")
+        #expect(date.formatted(style.month(.twoDigits)) == "01")
+        #expect(date.formatted(style.month(.abbreviated)) == "Jan")
+        #expect(date.formatted(style.month(.wide)) == "January")
+        #expect(date.formatted(style.month(.narrow)) == "J")
 
-        XCTAssertEqual(date.formatted(style.week(.defaultDigits)), "1")
-        XCTAssertEqual(date.formatted(style.week(.twoDigits)), "01")
-        XCTAssertEqual(date.formatted(style.week(.weekOfMonth)), "1")
+        #expect(date.formatted(style.week(.defaultDigits)) == "1")
+        #expect(date.formatted(style.week(.twoDigits)) == "01")
+        #expect(date.formatted(style.week(.weekOfMonth)) == "1")
 
-        XCTAssertEqual(date.formatted(style.day(.defaultDigits)), "1")
-        XCTAssertEqual(date.formatted(style.day(.twoDigits)), "01")
-        XCTAssertEqual(date.formatted(style.day(.ordinalOfDayInMonth)), "1")
+        #expect(date.formatted(style.day(.defaultDigits)) == "1")
+        #expect(date.formatted(style.day(.twoDigits)) == "01")
+        #expect(date.formatted(style.day(.ordinalOfDayInMonth)) == "1")
 
-        XCTAssertEqual(date.formatted(style.day(.julianModified(minimumLength: 0))), "2440588")
-        XCTAssertEqual(date.formatted(style.day(.julianModified(minimumLength: 999))), "0002440588")
+        #expect(date.formatted(style.day(.julianModified(minimumLength: 0))) == "2440588")
+        #expect(date.formatted(style.day(.julianModified(minimumLength: 999))) == "0002440588")
 
-        XCTAssertEqual(date.formatted(style.dayOfYear(.defaultDigits)), "1")
-        XCTAssertEqual(date.formatted(style.dayOfYear(.twoDigits)), "01")
-        XCTAssertEqual(date.formatted(style.dayOfYear(.threeDigits)), "001")
+        #expect(date.formatted(style.dayOfYear(.defaultDigits)) == "1")
+        #expect(date.formatted(style.dayOfYear(.twoDigits)) == "01")
+        #expect(date.formatted(style.dayOfYear(.threeDigits)) == "001")
 
-        XCTAssertEqual(date.formatted(style.weekday(.oneDigit)), "5")
-        XCTAssertEqual(date.formatted(style.weekday(.twoDigits)), "5") // This is an ICU bug
-        XCTAssertEqual(date.formatted(style.weekday(.abbreviated)), "Thu")
-        XCTAssertEqual(date.formatted(style.weekday(.wide)), "Thursday")
-        XCTAssertEqual(date.formatted(style.weekday(.narrow)), "T")
-        XCTAssertEqual(date.formatted(style.weekday(.short)), "Th")
+        #expect(date.formatted(style.weekday(.oneDigit)) == "5")
+        #expect(date.formatted(style.weekday(.twoDigits)) == "5") // This is an ICU bug
+        #expect(date.formatted(style.weekday(.abbreviated)) == "Thu")
+        #expect(date.formatted(style.weekday(.wide)) == "Thursday")
+        #expect(date.formatted(style.weekday(.narrow)) == "T")
+        #expect(date.formatted(style.weekday(.short)) == "Th")
 
-        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .omitted))), "12")
-        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .narrow))), "12 a")
-        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .abbreviated))), "12 AM")
-        XCTAssertEqual(date.formatted(style.hour(.defaultDigits(amPM: .wide))), "12 AM")
+        #expect(date.formatted(style.hour(.defaultDigits(amPM: .omitted))) == "12")
+        #expect(date.formatted(style.hour(.defaultDigits(amPM: .narrow))) == "12 a")
+        #expect(date.formatted(style.hour(.defaultDigits(amPM: .abbreviated))) == "12 AM")
+        #expect(date.formatted(style.hour(.defaultDigits(amPM: .wide))) == "12 AM")
 
-        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .omitted))), "12")
-        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .narrow))), "12 a")
-        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .abbreviated))), "12 AM")
-        XCTAssertEqual(date.formatted(style.hour(.twoDigits(amPM: .wide))), "12 AM")
+        #expect(date.formatted(style.hour(.twoDigits(amPM: .omitted))) == "12")
+        #expect(date.formatted(style.hour(.twoDigits(amPM: .narrow))) == "12 a")
+        #expect(date.formatted(style.hour(.twoDigits(amPM: .abbreviated))) == "12 AM")
+        #expect(date.formatted(style.hour(.twoDigits(amPM: .wide))) == "12 AM")
     }
 
-    func testFormattingWithHourCycleOverrides() throws {
+    @Test func testFormattingWithHourCycleOverrides() throws {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
         let esES = "es_ES"
 
         let style = Date.FormatStyle(date: .omitted, time: .standard, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
-        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init()))), "4:00:00 PM")
-        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force12Hour: true)))), "4:00:00 PM")
-        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force24Hour: true)))), "16:00:00")
+        #expect(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init()))) == "4:00:00 PM")
+        #expect(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force12Hour: true)))) == "4:00:00 PM")
+        #expect(date.formatted(style.locale(Locale.localeAsIfCurrent(name: enUS, overrides: .init(force24Hour: true)))) == "16:00:00")
 
-        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init()))), "16:00:00")
-        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force12Hour: true)))), "4:00:00 p. m.")
-        XCTAssertEqual(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force24Hour: true)))), "16:00:00")
+        #expect(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init()))) == "16:00:00")
+        #expect(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force12Hour: true)))) == "4:00:00 p. m.")
+        #expect(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force24Hour: true)))) == "16:00:00")
     }
-
-#if !os(watchOS) // 99504292
-    func testNSICUDateFormatterCache() throws {
-        guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
-            throw XCTSkip("This test can only be run with the system set to the en_US language")
-        }
-
-        let fixedTimeZone = TimeZone(identifier: TimeZone.current.identifier)!
-        let fixedCalendar = Calendar(identifier: Calendar.current.identifier)
-
-        let dateStyle = Date.FormatStyle.DateStyle.complete
-        let timeStyle = Date.FormatStyle.TimeStyle.standard
-
-        let style = Date.FormatStyle(date: dateStyle, time: timeStyle)
-        let styleUsingFixedTimeZone = Date.FormatStyle(date: dateStyle, time: timeStyle, timeZone: fixedTimeZone)
-        let styleUsingFixedCalendar = Date.FormatStyle(date: dateStyle, time: timeStyle, calendar: fixedCalendar)
-
-        XCTAssertTrue(ICUDateFormatter.cachedFormatter(for: style) === ICUDateFormatter.cachedFormatter(for: styleUsingFixedTimeZone))
-        XCTAssertTrue(ICUDateFormatter.cachedFormatter(for: style) === ICUDateFormatter.cachedFormatter(for: styleUsingFixedCalendar))
-    }
-#endif
 
 // Only Foundation framework supports the DateStyle override
 #if FOUNDATION_FRAMEWORK
-    func testFormattingWithPrefsOverride() {
+    @Test func testFormattingWithPrefsOverride() throws {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
 
-        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: String, file: StaticString = #filePath, line: UInt = #line) {
+        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: String, sourceLocation: SourceLocation = #_sourceLocation) throws {
             let locale = Locale.localeAsIfCurrent(name: enUS, overrides: .init(dateFormats: dateFormatOverride))
             let style = Date.FormatStyle(date: dateStyle, time: timeStyle, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
             let formatted = style.format(date)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
 
-            guard let parsed = try? Date(formatted, strategy: style) else {
-                XCTFail("Parsing failed", file: file, line: line)
-                return
-            }
+            let parsed = try Date(formatted, strategy: style)
             let parsedStr = style.format(parsed)
-            XCTAssertEqual(parsedStr, expected, "round trip formatting failed", file: file, line: line)
+            #expect(parsedStr == expected, "round trip formatting failed", sourceLocation: sourceLocation)
         }
 
         let dateFormatOverride: [Date.FormatStyle.DateStyle: String] = [
@@ -359,70 +317,65 @@ final class DateFormatStyleTests : XCTestCase {
         let expectedShortTimeString = "4:00 PM"
 #endif
 
-        test(dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "12/31/1969, \(expectedShortTimeString)") // Ignoring override since there's no match for the specific style
-        test(dateStyle: .abbreviated, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<short> 1969-Dec-31")
-        test(dateStyle: .numeric, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<numeric> 1969-Dec-31")
-        test(dateStyle: .long, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<long> 1969-Dec-31")
-        test(dateStyle: .complete, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<complete> 1969-Dec-31")
+        try test(dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "12/31/1969, \(expectedShortTimeString)") // Ignoring override since there's no match for the specific style
+        try test(dateStyle: .abbreviated, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<short> 1969-Dec-31")
+        try test(dateStyle: .numeric, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<numeric> 1969-Dec-31")
+        try test(dateStyle: .long, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<long> 1969-Dec-31")
+        try test(dateStyle: .complete, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<complete> 1969-Dec-31")
 
-        test(dateStyle: .omitted, timeStyle: .standard, dateFormatOverride: dateFormatOverride, expected: expectTimeString)
-        test(dateStyle: .abbreviated, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<short> 1969-Dec-31 at \(expectTimeString) PST")
-        test(dateStyle: .numeric, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<numeric> 1969-Dec-31, \(expectTimeString) PST")
-        test(dateStyle: .long, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<long> 1969-Dec-31 at \(expectTimeString) PST")
-        test(dateStyle: .complete, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<complete> 1969-Dec-31 at \(expectTimeString) PST")
+        try test(dateStyle: .omitted, timeStyle: .standard, dateFormatOverride: dateFormatOverride, expected: expectTimeString)
+        try test(dateStyle: .abbreviated, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<short> 1969-Dec-31 at \(expectTimeString) PST")
+        try test(dateStyle: .numeric, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<numeric> 1969-Dec-31, \(expectTimeString) PST")
+        try test(dateStyle: .long, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<long> 1969-Dec-31 at \(expectTimeString) PST")
+        try test(dateStyle: .complete, timeStyle: .complete, dateFormatOverride: dateFormatOverride, expected: "<complete> 1969-Dec-31 at \(expectTimeString) PST")
 
     }
 #endif
 
-    func testFormattingWithPrefsOverride_firstweekday() {
+    @Test func testFormattingWithPrefsOverride_firstweekday() {
         let date = Date(timeIntervalSince1970: 0)
         let locale = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(firstWeekday: [.gregorian : 5]))
         let style = Date.FormatStyle(date: .complete, time: .omitted, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone).week()
-        XCTAssertEqual(style.format(date), "Wednesday, December 31, 1969 (week: 53)") // First day is Thursday, so `date`, which is Wednesday, falls into the 53th week of the previous year.
+        #expect(style.format(date) == "Wednesday, December 31, 1969 (week: 53)") // First day is Thursday, so `date`, which is Wednesday, falls into the 53th week of the previous year.
     }
 
 #if FOUNDATION_FRAMEWORK
-    func testEncodingDecodingWithPrefsOverride() {
+    @Test func testEncodingDecodingWithPrefsOverride() throws {
         let date = Date(timeIntervalSince1970: 0)
         let dateFormatOverride: [Date.FormatStyle.DateStyle: String] = [
             .complete: "'<complete>' yyyy-MMM-dd"
         ]
 
         let localeWithOverride = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(dateFormats: dateFormatOverride))
-        let style = Date.FormatStyle(date: .complete, time: .omitted, locale: localeWithOverride, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
-        XCTAssertEqual(style.format(date), "<complete> 1969-Dec-31")
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "PST")!
+        let style = Date.FormatStyle(date: .complete, time: .omitted, locale: localeWithOverride, calendar: calendar, timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone)
+        #expect(style.format(date) == "<complete> 1969-Dec-31")
 
-        guard let encoded = try? JSONEncoder().encode(style) else {
-            XCTFail("Encoding Date.FormatStyle failed")
-            return
-        }
+        let encoded = try JSONEncoder().encode(style)
+        var decoded = try JSONDecoder().decode(Date.FormatStyle.self, from: encoded)
 
-        guard var decoded = try? JSONDecoder().decode(Date.FormatStyle.self, from: encoded) else {
-            XCTFail("Decoding failed")
-            return
-        }
-
-        XCTAssertEqual(decoded._dateStyle, .complete)
+        #expect(decoded._dateStyle == .complete)
 
         decoded.locale = localeWithOverride
-        XCTAssertEqual(decoded.format(date), "<complete> 1969-Dec-31")
+        #expect(decoded.format(date) == "<complete> 1969-Dec-31")
     }
 #endif
 
-    func testConversationalDayPeriodsOverride() {
-        let middleOfNight = try! Date("2001-01-01T03:50:00Z", strategy: .iso8601)
-        let earlyMorning = try! Date("2001-01-01T06:50:00Z", strategy: .iso8601)
-        let morning = try! Date("2001-01-01T09:50:00Z", strategy: .iso8601)
-        let noon = try! Date("2001-01-01T12:50:00Z", strategy: .iso8601)
-        let afternoon = try! Date("2001-01-01T15:50:00Z", strategy: .iso8601)
-        let evening = try! Date("2001-01-01T21:50:00Z", strategy: .iso8601)
+    @Test func testConversationalDayPeriodsOverride() throws {
+        let middleOfNight = try Date("2001-01-01T03:50:00Z", strategy: .iso8601)
+        let earlyMorning = try Date("2001-01-01T06:50:00Z", strategy: .iso8601)
+        let morning = try Date("2001-01-01T09:50:00Z", strategy: .iso8601)
+        let noon = try Date("2001-01-01T12:50:00Z", strategy: .iso8601)
+        let afternoon = try Date("2001-01-01T15:50:00Z", strategy: .iso8601)
+        let evening = try Date("2001-01-01T21:50:00Z", strategy: .iso8601)
 
         var locale: Locale
         var format: Date.FormatStyle
-        func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #filePath, line: UInt = #line) {
+        func verifyWithFormat(_ date: Date, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let fmt = format.locale(locale)
             let formatted = fmt.format(date)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
         }
 
         do {
@@ -585,11 +538,11 @@ final class DateFormatStyleTests : XCTestCase {
     }
 
     @available(FoundationPreview 0.4, *)
-    func testRemovingFields() {
+    @Test func testRemovingFields() {
         var format: Date.FormatStyle = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
-        func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #filePath, line: UInt = #line) {
+        func verifyWithFormat(_ date: Date, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let formatted = format.format(date)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
         }
 
         let date = Date(timeIntervalSince1970: 0)
@@ -613,6 +566,28 @@ final class DateFormatStyleTests : XCTestCase {
     }
 }
 
+extension CurrentLocaleTimeZoneCalendarDependentTests {
+    struct DateFormatStyleTests {
+#if !os(watchOS) // 99504292
+        @Test(.enabled(if: Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")), "This test can only be run with the system set to the en_US language"))
+        func testNSICUDateFormatterCache() throws {
+            let fixedTimeZone = TimeZone(identifier: TimeZone.current.identifier)!
+            let fixedCalendar = Calendar(identifier: Calendar.current.identifier)
+            
+            let dateStyle = Date.FormatStyle.DateStyle.complete
+            let timeStyle = Date.FormatStyle.TimeStyle.standard
+            
+            let style = Date.FormatStyle(date: dateStyle, time: timeStyle)
+            let styleUsingFixedTimeZone = Date.FormatStyle(date: dateStyle, time: timeStyle, timeZone: fixedTimeZone)
+            let styleUsingFixedCalendar = Date.FormatStyle(date: dateStyle, time: timeStyle, calendar: fixedCalendar)
+            
+            #expect(ICUDateFormatter.cachedFormatter(for: style) === ICUDateFormatter.cachedFormatter(for: styleUsingFixedTimeZone))
+            #expect(ICUDateFormatter.cachedFormatter(for: style) === ICUDateFormatter.cachedFormatter(for: styleUsingFixedCalendar))
+        }
+#endif
+    }
+}
+
 extension Sequence where Element == (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?) {
     var attributedString: AttributedString {
         self.map { pair in
@@ -621,12 +596,12 @@ extension Sequence where Element == (String, AttributeScopes.FoundationAttribute
     }
 }
 
-final class DateAttributedFormatStyleTests : XCTestCase {
+struct DateAttributedFormatStyleTests {
     var enUSLocale = Locale(identifier: "en_US")
     var gmtTimeZone = TimeZone(secondsFromGMT: 0)!
 
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?)
-    func testAttributedFormatStyle() throws {
+    @Test func testAttributedFormatStyle() throws {
         let baseStyle = Date.FormatStyle(locale: enUSLocale, timeZone: gmtTimeZone)
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
@@ -645,10 +620,10 @@ final class DateAttributedFormatStyleTests : XCTestCase {
 
         for (style, expectation) in expectations {
             let formatted = style.attributed.format(date)
-            XCTAssertEqual(formatted, expectation.attributedString)
+            #expect(formatted == expectation.attributedString)
         }
     }
-    func testIndividualFields() throws {
+    @Test func testIndividualFields() throws {
         let baseStyle = Date.FormatStyle(locale: enUSLocale, timeZone: gmtTimeZone)
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
@@ -670,31 +645,30 @@ final class DateAttributedFormatStyleTests : XCTestCase {
 
         for (style, expectation) in expectations {
             let formatted = style.attributed.format(date)
-            XCTAssertEqual(formatted, expectation.attributedString)
+            #expect(formatted == expectation.attributedString)
         }
     }
 
-    func testCodable() throws {
+    @Test func testCodable() throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
 
         let fields: [AttributeScopes.FoundationAttributes.DateFieldAttribute.Field] = [.era, .year, .relatedGregorianYear, .quarter, .month, .weekOfYear, .weekOfMonth, .weekday, .weekdayOrdinal, .day, .dayOfYear, .amPM, .hour, .minute, .second, .secondFraction, .timeZone]
         for field in fields {
-            let encoded = try? encoder.encode(field)
-            XCTAssertNotNil(encoded)
+            let encoded = try encoder.encode(field)
 
-            let decoded = try? decoder.decode(AttributeScopes.FoundationAttributes.DateFieldAttribute.Field.self, from: encoded!)
-            XCTAssertEqual(decoded, field)
+            let decoded = try decoder.decode(AttributeScopes.FoundationAttributes.DateFieldAttribute.Field.self, from: encoded)
+            #expect(decoded == field)
         }
     }
 
-    func testSettingLocale() throws {
+    @Test func testSettingLocale() throws {
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
         let zhTW = Locale(identifier: "zh_TW")
 
-        func test(_ attributedResult: AttributedString, _ expected: [Segment], file: StaticString = #filePath, line: UInt = #line) {
-            XCTAssertEqual(attributedResult, expected.attributedString, file: file, line: line)
+        func test(_ attributedResult: AttributedString, _ expected: [Segment], sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(attributedResult == expected.attributedString, sourceLocation: sourceLocation)
         }
 
         var format = Date.FormatStyle.dateTime
@@ -708,14 +682,14 @@ final class DateAttributedFormatStyleTests : XCTestCase {
     }
 
 #if FOUNDATION_FRAMEWORK
-    func testFormattingWithPrefsOverride() {
+    @Test func testFormattingWithPrefsOverride() {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
 
-        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: [Segment], file: StaticString = #filePath, line: UInt = #line) {
+        func test(dateStyle: Date.FormatStyle.DateStyle, timeStyle: Date.FormatStyle.TimeStyle, dateFormatOverride: [Date.FormatStyle.DateStyle: String], expected: [Segment], sourceLocation: SourceLocation = #_sourceLocation) {
             let locale = Locale.localeAsIfCurrent(name: enUS, overrides: .init(dateFormats: dateFormatOverride))
             let style = Date.FormatStyle(date: dateStyle, time: timeStyle, locale: locale, calendar: Calendar(identifier: .gregorian), timeZone: TimeZone(identifier: "PST")!, capitalizationContext: .standalone).attributed
-            XCTAssertEqual(style.format(date), expected.attributedString, file: file, line: line)
+            #expect(style.format(date) == expected.attributedString, sourceLocation: sourceLocation)
         }
 
         let dateFormatOverride: [Date.FormatStyle.DateStyle: String] = [
@@ -866,16 +840,16 @@ final class DateAttributedFormatStyleTests : XCTestCase {
 #endif
 }
 
-final class DateVerbatimFormatStyleTests : XCTestCase {
+struct DateVerbatimFormatStyleTests {
     var utcTimeZone = TimeZone(identifier: "UTC")!
 
-    func testFormats() throws {
+    @Test func testFormats() throws {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
 
-        func verify(_ f: Date.FormatString, expected: String, file: StaticString = #filePath, line: UInt = #line) {
+        func verify(_ f: Date.FormatString, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)))
-            XCTAssertEqual(s, expected, file: file, line: line)
+            #expect(s == expected, sourceLocation: sourceLocation)
         }
         verify("\(month: .wide)", expected: "M01")
         verify("\(month: .narrow)", expected: "1")
@@ -891,42 +865,41 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
         verify("\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)) heures et \(minute: .twoDigits) minutes", expected: "2 heures et 51 minutes")
     }
 
-    func testParseable() throws {
+    @Test func testParseable() throws {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
-        func verify(_ f: Date.FormatString, expectedString: String, expectedDate: Date, file: StaticString = #filePath, line: UInt = #line) {
+        func verify(_ f: Date.FormatString, expectedString: String, expectedDate: Date, sourceLocation: SourceLocation = #_sourceLocation) throws {
             let style = Date.VerbatimFormatStyle.verbatim(f, timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian))
             let s = date.formatted(style)
-            XCTAssertEqual(s, expectedString)
+            #expect(s == expectedString)
 
-            let d = try? Date(s, strategy: style.parseStrategy)
-            XCTAssertNotNil(d)
-            XCTAssertEqual(d, expectedDate)
+            let d = try Date(s, strategy: style.parseStrategy)
+            #expect(d == expectedDate)
         }
 
         // dateFormatter.date(from: "2021-01-23 00:00:00")!
-        verify("\(year: .twoDigits)_\(month: .defaultDigits)_\(day: .defaultDigits)", expectedString: "21_1_23", expectedDate: Date(timeIntervalSinceReferenceDate: 633052800.0))
+        try verify("\(year: .twoDigits)_\(month: .defaultDigits)_\(day: .defaultDigits)", expectedString: "21_1_23", expectedDate: Date(timeIntervalSinceReferenceDate: 633052800.0))
         // dateFormatter.date(from: "2021-01-23 02:00:00")!
-        verify("\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)) o'clock", expectedString: "2021_1_23 at 2 o'clock", expectedDate: Date(timeIntervalSinceReferenceDate: 633060000.0))
+        try verify("\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)) o'clock", expectedString: "2021_1_23 at 2 o'clock", expectedDate: Date(timeIntervalSinceReferenceDate: 633060000.0))
         // dateFormatter.date(from: "2021-01-23 14:00:00")!
-        verify("\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twentyFourHour, hourCycle: .zeroBased))", expectedString: "2021_1_23 at 14", expectedDate: Date(timeIntervalSinceReferenceDate: 633103200.0))
+        try verify("\(year: .defaultDigits)_\(month: .defaultDigits)_\(day: .defaultDigits) at \(hour: .defaultDigits(clock: .twentyFourHour, hourCycle: .zeroBased))", expectedString: "2021_1_23 at 14", expectedDate: Date(timeIntervalSinceReferenceDate: 633103200.0))
     }
 
     // Test parsing strings containing `abbreviated` names
-    func testNonLenientParsingAbbreviatedNames() throws {
+    @Test func testNonLenientParsingAbbreviatedNames() throws {
 
         // dateFormatter.date(from: "1970-01-01 00:00:00")!
         let date = Date(timeIntervalSinceReferenceDate: -978307200.0)
-        func verify(_ f: Date.FormatString, localeID: String, calendarID: Calendar.Identifier, expectedString: String, file: StaticString = #filePath, line: UInt = #line) {
+        func verify(_ f: Date.FormatString, localeID: String, calendarID: Calendar.Identifier, expectedString: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let style = Date.VerbatimFormatStyle.verbatim(f, locale: Locale(identifier: localeID), timeZone: .gmt, calendar: Calendar(identifier: calendarID))
 
             let s = date.formatted(style)
-            XCTAssertEqual(s, expectedString, file: file, line: line)
+            #expect(s == expectedString, sourceLocation: sourceLocation)
 
             var strategy = style.parseStrategy
             strategy.isLenient = false
             let parsed = try? Date(s, strategy: strategy)
-            XCTAssertEqual(parsed, date, file: file, line: line)
+            #expect(parsed == date, sourceLocation: sourceLocation)
         }
 
         // Era: formatting
@@ -956,7 +929,7 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
 #endif // FIXED_ICU_74_DAYPERIOD
     }
 
-    func test_95845290() throws {
+    @Test func test_95845290() throws {
         let formatString: Date.FormatString = "\(weekday: .abbreviated) \(month: .abbreviated) \(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) \(timeZone: .iso8601(.short)) \(year: .defaultDigits)"
         let enGB = Locale(identifier: "en_GB")
         let verbatim = Date.VerbatimFormatStyle(format: formatString, locale: enGB, timeZone: .init(secondsFromGMT: .zero)!, calendar: Calendar(identifier: .gregorian))
@@ -964,24 +937,24 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
         do {
             let date = try Date("Sat Jun 18 16:10:00 +0000 2022", strategy: verbatim.parseStrategy)
             // dateFormatter.date(from: "2022-06-18 16:10:00")!
-            XCTAssertEqual(date, Date(timeIntervalSinceReferenceDate: 677261400.0))
+            #expect(date == Date(timeIntervalSinceReferenceDate: 677261400.0))
         }
 
         do {
             let date = try Date("Sat Jun 18 16:10:00 +0000 2022", strategy: .fixed(format: formatString, timeZone: .gmt,  locale: enGB))
             // dateFormatter.date(from: "2022-06-18 16:10:00")!
-            XCTAssertEqual(date, Date(timeIntervalSinceReferenceDate: 677261400.0))
+            #expect(date == Date(timeIntervalSinceReferenceDate: 677261400.0))
         }
     }
 
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?)
 
-    func testAttributedString() throws {
+    @Test func testAttributedString() throws {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
-        func verify(_ f: Date.FormatString, expected: [Segment], file: StaticString = #filePath, line: UInt = #line) {
+        func verify(_ f: Date.FormatString, expected: [Segment], sourceLocation: SourceLocation = #_sourceLocation) {
             let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale:Locale(identifier: "en_US"), timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)).attributed)
-            XCTAssertEqual(s, expected.attributedString, file: file, line: line)
+            #expect(s == expected.attributedString, sourceLocation: sourceLocation)
         }
         verify("\(year: .twoDigits)_\(month: .defaultDigits)_\(day: .defaultDigits)", expected:
                 [("21", .year),
@@ -999,21 +972,21 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
                  ("20", .second)])
     }
 
-    func test_storedVar() {
+    @Test func test_storedVar() {
         _ = Date.FormatStyle.dateTime
         _ = Date.ISO8601FormatStyle.iso8601
     }
 
-    func testAllIndividualFields() {
+    @Test func testAllIndividualFields() {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
 
         let gregorian = Calendar(identifier: .gregorian)
         let enUS = Locale(identifier: "en_US")
 
-        func _verify(_ f: Date.FormatString, expected: String, file: StaticString = #filePath, line: UInt = #line) {
+        func _verify(_ f: Date.FormatString, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale: enUS, timeZone: utcTimeZone, calendar: gregorian))
-            XCTAssertEqual(s, expected, file: file, line: line)
+            #expect(s == expected, sourceLocation: sourceLocation)
         }
 
         _verify("\(era: .abbreviated)", expected: "AD")
@@ -1068,21 +1041,20 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
     }
 }
 
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-final class MatchConsumerAndSearcherTests : XCTestCase {
+struct MatchConsumerAndSearcherTests {
 
     let enUS = Locale(identifier: "en_US")
     let utcTimeZone = TimeZone(identifier: "UTC")!
     let gregorian = Calendar(identifier: .gregorian)
 
-    func _verifyUTF16String(_ string: String, matches format: Date.FormatString, in range: Range<Int>, expectedUpperBound: Int?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
+    func _verifyUTF16String(_ string: String, matches format: Date.FormatString, in range: Range<Int>, expectedUpperBound: Int?, expectedDate: Date?, sourceLocation: SourceLocation = #_sourceLocation) {
         let lower = string.index(string.startIndex, offsetBy: range.lowerBound)
         let upper = string.index(string.startIndex, offsetBy: range.upperBound)
 
-        _verifyString(string, matches: format, start: lower, in: lower..<upper, expectedUpperBound: (expectedUpperBound != nil) ? string.index(string.startIndex, offsetBy: expectedUpperBound!) : nil, expectedDate: expectedDate, file: file, line: line)
+        _verifyString(string, matches: format, start: lower, in: lower..<upper, expectedUpperBound: (expectedUpperBound != nil) ? string.index(string.startIndex, offsetBy: expectedUpperBound!) : nil, expectedDate: expectedDate, sourceLocation: sourceLocation)
     }
 
-    func _verifyString(_ string: String, matches format: Date.FormatString, start: String.Index, in range: Range<String.Index>, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
+    func _verifyString(_ string: String, matches format: Date.FormatString, start: String.Index, in range: Range<String.Index>, expectedUpperBound: String.Index?, expectedDate: Date?, sourceLocation: SourceLocation = #_sourceLocation) {
         let style = Date.VerbatimFormatStyle(format: format, locale: enUS, timeZone: utcTimeZone, calendar: gregorian)
 
         let m = try? style.consuming(string, startingAt: start, in: range)
@@ -1091,14 +1063,14 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
 
         let upperBoundDescription = matchedUpper?.utf16Offset(in: string)
         let expectedUpperBoundDescription = expectedUpperBound?.utf16Offset(in: string)
-        XCTAssertEqual(matchedUpper, expectedUpperBound, "matched upperBound: \(String(describing: upperBoundDescription)), expected: \(String(describing: expectedUpperBoundDescription))", file: file, line: line)
-        XCTAssertEqual(match, expectedDate, file: file, line: line)
+        #expect(matchedUpper == expectedUpperBound, "matched upperBound: \(String(describing: upperBoundDescription)), expected: \(String(describing: expectedUpperBoundDescription))", sourceLocation: sourceLocation)
+        #expect(match == expectedDate, sourceLocation: sourceLocation)
     }
 
-    func testMatchFullRanges() {
-        func verify(_ string: String, matches format: Date.FormatString, expectedDate: TimeInterval?, file: StaticString = #filePath, line: UInt = #line) {
+    @Test func testMatchFullRanges() {
+        func verify(_ string: String, matches format: Date.FormatString, expectedDate: TimeInterval?, sourceLocation: SourceLocation = #_sourceLocation) {
             let targetDate: Date? = (expectedDate != nil) ? Date(timeIntervalSinceReferenceDate: expectedDate!) : nil
-            _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: (expectedDate != nil) ? string.endIndex: nil, expectedDate: targetDate, file: file, line: line)
+            _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: (expectedDate != nil) ? string.endIndex: nil, expectedDate: targetDate, sourceLocation: sourceLocation)
         }
 
 
@@ -1141,10 +1113,10 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
 
 #if FOUNDATION_FRAMEWORK
     // Disabled in package because _range is imported twice, once from Essentials, once from Internationalization
-    func testMatchPartialRangesFromBeginning() {
-        func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, file: StaticString = #filePath, line: UInt = #line) {
+    @Test func testMatchPartialRangesFromBeginning() {
+        func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) {
             let occurrenceRange = string._range(of: expectedMatch, anchored: false, backwards: false)!
-            _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), file: file, line: line)
+            _verifyString(string, matches: format, start: string.startIndex, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), sourceLocation: sourceLocation)
         }
 
         verify("2022/2/28(some_other_texts)", matches: "\(year: .defaultDigits)/\(month: .defaultDigits)/\(day: .defaultDigits)", expectedMatch: "2022/2/28", expectedDate: 667699200.0) // "2022-02-28 00:00:00"
@@ -1157,9 +1129,9 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
     }
 #endif
 
-    func testMatchPartialRangesWithinLegitimateString() {
-        func verify(_ string: String, in range: Range<Int>,  matches format: Date.FormatString, expectedDate: TimeInterval, file: StaticString = #filePath, line: UInt = #line) {
-            _verifyUTF16String(string, matches: format, in: range, expectedUpperBound: range.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), file: file, line: line)
+    @Test func testMatchPartialRangesWithinLegitimateString() {
+        func verify(_ string: String, in range: Range<Int>,  matches format: Date.FormatString, expectedDate: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) {
+            _verifyUTF16String(string, matches: format, in: range, expectedUpperBound: range.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), sourceLocation: sourceLocation)
         }
 
         // Match only up to "2022-2-1" though "2022-2-12" is also a legitimate date
@@ -1168,10 +1140,10 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
         verify("2020218", in: 0..<6, matches: "\(year: .padded(4))\(month: .defaultDigits)\(day: .defaultDigits)", expectedDate: 602208000.0) // "2020-02-01 00:00:00"
     }
 
-    func testDateFormatStyleMatchRoundtrip() {
+    @Test func testDateFormatStyleMatchRoundtrip() {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
-        func verify(_ formatStyle: Date.FormatStyle, file: StaticString = #filePath, line: UInt = #line) {
+        func verify(_ formatStyle: Date.FormatStyle, sourceLocation: SourceLocation = #_sourceLocation) {
             var format = formatStyle
             format.calendar = gregorian
             format.timeZone = utcTimeZone
@@ -1188,8 +1160,8 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
                 let foundUpperBound = m?.upperBound
                 let match = m?.output
                 let expectedUpperBound = embeddedDate.range(of: formattedDate)?.upperBound
-                XCTAssertEqual(foundUpperBound, expectedUpperBound, "cannot find match in: <\(embeddedDate)>", file: file, line: line)
-                XCTAssertEqual(match, date, "cannot find match in: <\(embeddedDate)>", file: file, line: line)
+                #expect(foundUpperBound == expectedUpperBound, "cannot find match in: <\(embeddedDate)>", sourceLocation: sourceLocation)
+                #expect(match == date, "cannot find match in: <\(embeddedDate)>", sourceLocation: sourceLocation)
             }
 
 
@@ -1205,22 +1177,21 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
                 let foundUpperBound = m?.upperBound
                 let match = m?.output
                 let expectedUpperBound = embeddedDate.range(of: formattedDate)?.upperBound
-                XCTAssertEqual(foundUpperBound, expectedUpperBound, "cannot find match in: <\(embeddedDate)>", file: file, line: line)
-                XCTAssertEqual(match, date, "cannot find match in: <\(embeddedDate)>", file: file, line: line)
+                #expect(foundUpperBound == expectedUpperBound, "cannot find match in: <\(embeddedDate)>", sourceLocation: sourceLocation)
+                #expect(match == date, "cannot find match in: <\(embeddedDate)>", sourceLocation: sourceLocation)
             }
         }
 
-        verify(Date.FormatStyle(date: .complete, time: .standard))
-        verify(Date.FormatStyle(date: .complete, time: .complete))
+        verify(Date.FormatStyle(date: .complete, time: .standard, locale: Locale(identifier: "zh_TW")))
         verify(Date.FormatStyle(date: .complete, time: .complete, locale: Locale(identifier: "zh_TW")))
         verify(Date.FormatStyle(date: .omitted, time: .complete, locale: enUS).year().month(.abbreviated).day(.twoDigits))
         verify(Date.FormatStyle(date: .omitted, time: .complete).year().month(.wide).day(.twoDigits).locale(Locale(identifier: "zh_TW")))
     }
 
-    func testMatchPartialRangesFromMiddle() {
-        func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, file: StaticString = #filePath, line: UInt = #line) {
+    @Test func testMatchPartialRangesFromMiddle() {
+        func verify(_ string: String, matches format: Date.FormatString, expectedMatch: String, expectedDate: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) {
             let occurrenceRange = string.range(of: expectedMatch)!
-            _verifyString(string, matches: format, start: occurrenceRange.lowerBound, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), file: file, line: line)
+            _verifyString(string, matches: format, start: occurrenceRange.lowerBound, in: string.startIndex..<string.endIndex, expectedUpperBound: occurrenceRange.upperBound, expectedDate: Date(timeIntervalSinceReferenceDate: expectedDate), sourceLocation: sourceLocation)
         }
 
         verify("(some_other_texts)2022/2/28(some_other_texts)", matches: "\(year: .defaultDigits)/\(month: .defaultDigits)/\(day: .defaultDigits)", expectedMatch: "2022/2/28", expectedDate: 667699200.0) // "2022-02-28 00:00:00"
@@ -1236,38 +1207,38 @@ final class MatchConsumerAndSearcherTests : XCTestCase {
 // MARK: - FoundationPreview Disabled Tests
 #if FOUNDATION_FRAMEWORK
 extension DateFormatStyleTests {
-    func test_dateFormatPresets() {
+    @Test func test_dateFormatPresets() {
         let locale = Locale(identifier: "en_US")
         let timezone = TimeZone(identifier: "America/Los_Angeles")!
         let dateFormatter = DateFormatter()
         dateFormatter.locale = locale
         dateFormatter.timeZone = timezone
         dateFormatter.setLocalizedDateFormatFromTemplate("yMd")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(date: .numeric, time: .omitted, locale: locale, timeZone: timezone)), dateFormatter.string(from: referenceDate))
+        #expect(referenceDate.formatted(Date.FormatStyle(date: .numeric, time: .omitted, locale: locale, timeZone: timezone)) == dateFormatter.string(from: referenceDate))
 
         dateFormatter.setLocalizedDateFormatFromTemplate("yMMMd")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: timezone)), dateFormatter.string(from: referenceDate))
+        #expect(referenceDate.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: timezone)) == dateFormatter.string(from: referenceDate))
 
         dateFormatter.setLocalizedDateFormatFromTemplate("yMMMMd")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(date: .long, time: .omitted, locale: locale, timeZone: timezone)), dateFormatter.string(from: referenceDate))
+        #expect(referenceDate.formatted(Date.FormatStyle(date: .long, time: .omitted, locale: locale, timeZone: timezone)) == dateFormatter.string(from: referenceDate))
 
         dateFormatter.setLocalizedDateFormatFromTemplate("yMMMMEEEEd")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(date: .complete, time: .omitted, locale: locale, timeZone: timezone)), dateFormatter.string(from: referenceDate))
+        #expect(referenceDate.formatted(Date.FormatStyle(date: .complete, time: .omitted, locale: locale, timeZone: timezone)) == dateFormatter.string(from: referenceDate))
 
         dateFormatter.setLocalizedDateFormatFromTemplate("jmm")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, timeZone: timezone)), dateFormatter.string(from: referenceDate))
+        #expect(referenceDate.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, timeZone: timezone)) == dateFormatter.string(from: referenceDate))
 
         dateFormatter.setLocalizedDateFormatFromTemplate("jmmss")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(date: .omitted, time: .standard, locale: locale, timeZone: timezone)), dateFormatter.string(from: referenceDate))
+        #expect(referenceDate.formatted(Date.FormatStyle(date: .omitted, time: .standard, locale: locale, timeZone: timezone)) == dateFormatter.string(from: referenceDate))
 
         dateFormatter.setLocalizedDateFormatFromTemplate("jmmssz")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(date: .omitted, time: .complete, locale: locale, timeZone: timezone)), dateFormatter.string(from: referenceDate))
+        #expect(referenceDate.formatted(Date.FormatStyle(date: .omitted, time: .complete, locale: locale, timeZone: timezone)) == dateFormatter.string(from: referenceDate))
 
         dateFormatter.setLocalizedDateFormatFromTemplate("yMdjmm")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(date: .numeric, time: .shortened, locale: locale, timeZone: timezone)), dateFormatter.string(from: referenceDate))
+        #expect(referenceDate.formatted(Date.FormatStyle(date: .numeric, time: .shortened, locale: locale, timeZone: timezone)) == dateFormatter.string(from: referenceDate))
     }
 
-    func test_customParsing() {
+    @Test func test_customParsing() throws {
         let expectedFormats: [(Date.FormatString, String, String)] = [
             ("\(day: .twoDigits)/\(month: .twoDigits)/\(year: .twoDigits)", "dd/MM/yy", "01/05/99"),
             ("\(day: .twoDigits)-\(month: .twoDigits)-\(year: .twoDigits)", "dd-MM-yy", "01-05-99"),
@@ -1296,37 +1267,36 @@ extension DateFormatStyleTests {
         for (format, dfFormat, dateString) in expectedFormats {
             let parseStrategy = Date.ParseStrategy(format: format, locale: locale, timeZone: timeZone)
             dateFormatter.dateFormat = dfFormat
-            let parsed = try? Date(dateString, strategy: parseStrategy)
-            XCTAssertNotNil(parsed)
+            let parsed = try Date(dateString, strategy: parseStrategy)
             if let oldParsed = dateFormatter.date(from: dateString) {
-                XCTAssertEqual(parsed!, oldParsed, "Format: \(format); Raw format: \(format.rawFormat); Date string: \(dateString)")
+                #expect(parsed == oldParsed, "Format: \(format); Raw format: \(format.rawFormat); Date string: \(dateString)")
             }
         }
     }
 
-    func test_presetModifierCombination() {
+    @Test func test_presetModifierCombination() {
         let locale = Locale(identifier: "en_US")
         let timezone = TimeZone(identifier: "America/Los_Angeles")!
         let dateFormatter = DateFormatter()
         dateFormatter.locale = locale
         dateFormatter.timeZone = timezone
         dateFormatter.setLocalizedDateFormatFromTemplate("yyyyMMMddjmm")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(time: .shortened, locale: locale, timeZone: timezone)
+        #expect(referenceDate.formatted(Date.FormatStyle(time: .shortened, locale: locale, timeZone: timezone)
                                                 .year(.padded(4))
                                                 .month(.abbreviated)
-                                                .day(.twoDigits)),
+                                                .day(.twoDigits)) ==
                        dateFormatter.string(from: referenceDate))
 
         dateFormatter.setLocalizedDateFormatFromTemplate("yyyyyyMMMMd")
-        XCTAssertEqual(referenceDate.formatted(Date.FormatStyle(date: .numeric, locale: locale, timeZone: timezone)
+        #expect(referenceDate.formatted(Date.FormatStyle(date: .numeric, locale: locale, timeZone: timezone)
                                                 .year(.padded(6))
-                                                .month(.wide)),
+                                                .month(.wide)) ==
                        dateFormatter.string(from: referenceDate))
 
 
     }
 
-    func _verify(_ style: Date.FormatStyle, expectedFormat: String, locale: Locale, file: StaticString = #filePath, line: UInt = #line) {
+    func _verify(_ style: Date.FormatStyle, expectedFormat: String, locale: Locale, sourceLocation: SourceLocation = #_sourceLocation) {
         var style = style
         let timeZone = TimeZone(secondsFromGMT: -3600)!
         style.timeZone = timeZone
@@ -1334,10 +1304,10 @@ extension DateFormatStyleTests {
         dateFormatter.locale = locale
         dateFormatter.timeZone = timeZone
         dateFormatter.dateFormat = expectedFormat
-        XCTAssertEqual(referenceDate.formatted(style.locale(locale)), dateFormatter.string(from: referenceDate), file: file, line: line)
+        #expect(referenceDate.formatted(style.locale(locale)) == dateFormatter.string(from: referenceDate), sourceLocation: sourceLocation)
     }
 
-    func test_hourSymbols() {
+    @Test func test_hourSymbols() {
 
         let enUS = Locale(identifier: "en_US")
         _verify(.dateTime.hour(.defaultDigits(amPM: .abbreviated)), expectedFormat: "h\u{202f}a", locale: enUS)
@@ -1358,41 +1328,41 @@ extension DateFormatStyleTests {
 
 // MARK: DiscreteFormatStyle conformance test
 
-@available(FoundationPreview 0.4, *)
-final class TestDateStyleDiscreteConformance : XCTestCase {
+struct TestDateStyleDiscreteConformance {
     let enUSLocale = Locale(identifier: "en_US")
-    var calendar = Calendar(identifier: .gregorian)
+    let calendar: Calendar
 
-    override func setUp() {
-        calendar.timeZone = TimeZone(abbreviation: "GMT")!
+    init() {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(abbreviation: "GMT")!
+        self.calendar = c
     }
 
     func date(_ string: String) -> Date {
         try! Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZoneSeparator: .omitted, timeZone: .gmt).locale(enUSLocale).parse(string)
     }
 
-    func testBasics() throws {
+    @Test func testBasics() throws {
         let style = Date.FormatStyle(date: .complete, time: .complete)
         let date = date("2021-05-05 16:00:00Z")
 
-        XCTAssertEqual(style.discreteInput(after: date + 1), (date + 2))
-        XCTAssertEqual(style.discreteInput(before: date + 1), (date + 1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date + 0.5), (date + 1))
-        XCTAssertEqual(style.discreteInput(before: date + 0.5), (date + 0).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date + 0), (date + 1))
-        XCTAssertEqual(style.discreteInput(before: date + 0), (date + 0).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date + -0.5), (date + 0))
-        XCTAssertEqual(style.discreteInput(before: date + -0.5), (date + -1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date + -1), (date + 0))
-        XCTAssertEqual(style.discreteInput(before: date + -1), (date + -1).nextDown)
+        #expect(style.discreteInput(after: date + 1) == (date + 2))
+        #expect(style.discreteInput(before: date + 1) == (date + 1).nextDown)
+        #expect(style.discreteInput(after: date + 0.5) == (date + 1))
+        #expect(style.discreteInput(before: date + 0.5) == (date + 0).nextDown)
+        #expect(style.discreteInput(after: date + 0) == (date + 1))
+        #expect(style.discreteInput(before: date + 0) == (date + 0).nextDown)
+        #expect(style.discreteInput(after: date + -0.5) == (date + 0))
+        #expect(style.discreteInput(before: date + -0.5) == (date + -1).nextDown)
+        #expect(style.discreteInput(after: date + -1) == (date + 0))
+        #expect(style.discreteInput(before: date + -1) == (date + -1).nextDown)
     }
 
-    func testEvaluation() {
+    @Test func testEvaluation() {
         func assertEvaluation(of style: Date.FormatStyle,
                               in range: ClosedRange<Date>,
                               includes expectedExcerpts: [String]...,
-                              file: StaticString = #filePath,
-                              line: UInt = #line) {
+                              sourceLocation: SourceLocation = #_sourceLocation) {
             var style = style.locale(Locale(identifier: "en_US"))
             style.calendar = calendar
             style.timeZone = calendar.timeZone
@@ -1407,8 +1377,7 @@ final class TestDateStyleDiscreteConformance : XCTestCase {
                 }.lazy.map(\.output),
                 contains: expectedExcerpts,
                 "(lowerbound to upperbound)",
-                file: file,
-                line: line)
+                sourceLocation: sourceLocation)
 
             verify(
                 sequence: style.evaluate(from: range.upperBound, to: range.lowerBound) { prev, bound in
@@ -1422,8 +1391,7 @@ final class TestDateStyleDiscreteConformance : XCTestCase {
                     .reversed()
                     .map { $0.reversed() },
                 "(upperbound to lowerbound)",
-                file: file,
-                line: line)
+                sourceLocation: sourceLocation)
         }
 
         let now = date("2023-05-15 08:47:20Z")
@@ -1561,84 +1529,90 @@ final class TestDateStyleDiscreteConformance : XCTestCase {
             ])
     }
 
-    func testRegressions() throws {
+    @Test func testRegressions() throws {
         var style: Date.FormatStyle
 
         style = .init(date: .complete, time: .complete).secondFraction(.fractional(2))
         style.timeZone = .gmt
-        XCTAssertLessThan(try XCTUnwrap(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 15538915.899999967))), Date(timeIntervalSinceReferenceDate: 15538915.899999967))
+        #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 15538915.899999967))) < Date(timeIntervalSinceReferenceDate: 15538915.899999967))
 
         style = .init(date: .complete, time: .complete).secondFraction(.fractional(2))
         style.timeZone = .gmt
-        XCTAssertNotNil(style.input(after: Date(timeIntervalSinceReferenceDate: 1205656112.7299998)))
+        #expect(style.input(after: Date(timeIntervalSinceReferenceDate: 1205656112.7299998)) != nil)
     }
 
-    func testRandomSamples() throws {
+    @Test func testRandomSamples() throws {
         var style: Date.FormatStyle
 
         style = .init(date: .complete, time: .complete).secondFraction(.fractional(3))
         style.timeZone = .gmt
+        style.locale = .init(identifier: "en_US")
         try verifyDiscreteFormatStyleConformance(style, samples: 100)
 
         style = .init(date: .complete, time: .complete).secondFraction(.fractional(2))
         style.timeZone = .gmt
+        style.locale = .init(identifier: "en_US")
         try verifyDiscreteFormatStyleConformance(style, samples: 100)
 
         style = .init(date: .complete, time: .complete)
         style.timeZone = .gmt
+        style.locale = .init(identifier: "en_US")
         try verifyDiscreteFormatStyleConformance(style, samples: 100)
 
         style = .init().hour(.twoDigits(amPM: .abbreviated)).minute()
         style.timeZone = .gmt
+        style.locale = .init(identifier: "en_US")
         try verifyDiscreteFormatStyleConformance(style, samples: 100)
 
         style = .init(date: .omitted, time: .omitted).year().month()
         style.timeZone = .gmt
+        style.locale = .init(identifier: "en_US")
         try verifyDiscreteFormatStyleConformance(style, samples: 100)
 
         style = .init(date: .omitted, time: .omitted).year().month().era()
         style.timeZone = .gmt
+        style.locale = .init(identifier: "en_US")
         try verifyDiscreteFormatStyleConformance(style, samples: 100)
     }
 }
 
-@available(FoundationPreview 0.4, *)
-final class TestDateVerbatimStyleDiscreteConformance : XCTestCase {
+struct TestDateVerbatimStyleDiscreteConformance {
     let enUSLocale = Locale(identifier: "en_US")
-    var calendar = Calendar(identifier: .gregorian)
+    let calendar: Calendar
 
-    override func setUp() {
-        calendar.timeZone = TimeZone(abbreviation: "GMT")!
+    init() {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(abbreviation: "GMT")!
+        self.calendar = c
     }
 
     func date(_ string: String) -> Date {
         try! Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZoneSeparator: .omitted, timeZone: .gmt).locale(enUSLocale).parse(string)
     }
 
-    func testExamples() throws {
+    @Test func testExamples() throws {
         let style = Date.VerbatimFormatStyle(
             format: "\(year: .extended())-\(month: .twoDigits)-\(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .oneBased)):\(minute: .twoDigits):\(second: .twoDigits)",
             timeZone: Calendar.current.timeZone, calendar: .current)
         let date = date("2021-05-05 16:00:00Z")
 
-        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(1)), date.addingTimeInterval(2))
-        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(1)), date.addingTimeInterval(1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(0.5)), date.addingTimeInterval(1))
-        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(0.5)), date.addingTimeInterval(0).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(0)), date.addingTimeInterval(1))
-        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(0)), date.addingTimeInterval(0).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(-0.5)), date.addingTimeInterval(0))
-        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(-0.5)), date.addingTimeInterval(-1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date.addingTimeInterval(-1)), date.addingTimeInterval(0))
-        XCTAssertEqual(style.discreteInput(before: date.addingTimeInterval(-1)), date.addingTimeInterval(-1).nextDown)
+        #expect(style.discreteInput(after: date.addingTimeInterval(1)) == date.addingTimeInterval(2))
+        #expect(style.discreteInput(before: date.addingTimeInterval(1)) == date.addingTimeInterval(1).nextDown)
+        #expect(style.discreteInput(after: date.addingTimeInterval(0.5)) == date.addingTimeInterval(1))
+        #expect(style.discreteInput(before: date.addingTimeInterval(0.5)) == date.addingTimeInterval(0).nextDown)
+        #expect(style.discreteInput(after: date.addingTimeInterval(0)) == date.addingTimeInterval(1))
+        #expect(style.discreteInput(before: date.addingTimeInterval(0)) == date.addingTimeInterval(0).nextDown)
+        #expect(style.discreteInput(after: date.addingTimeInterval(-0.5)) == date.addingTimeInterval(0))
+        #expect(style.discreteInput(before: date.addingTimeInterval(-0.5)) == date.addingTimeInterval(-1).nextDown)
+        #expect(style.discreteInput(after: date.addingTimeInterval(-1)) == date.addingTimeInterval(0))
+        #expect(style.discreteInput(before: date.addingTimeInterval(-1)) == date.addingTimeInterval(-1).nextDown)
     }
 
-    func testCounting() {
+    @Test func testCounting() {
         func assertEvaluation(of style: Date.VerbatimFormatStyle,
                               in range: ClosedRange<Date>,
                               includes expectedExcerpts: [String]...,
-                              file: StaticString = #filePath,
-                              line: UInt = #line) {
+                              sourceLocation: SourceLocation = #_sourceLocation) {
             var style = style.locale(enUSLocale)
             style.calendar = calendar
             style.timeZone = calendar.timeZone
@@ -1653,8 +1627,7 @@ final class TestDateVerbatimStyleDiscreteConformance : XCTestCase {
                 }.lazy.map(\.output),
                 contains: expectedExcerpts,
                 "(lowerbound to upperbound)",
-                file: file,
-                line: line)
+                sourceLocation: sourceLocation)
 
             verify(
                 sequence: style.evaluate(from: range.upperBound, to: range.lowerBound) { prev, bound in
@@ -1668,8 +1641,7 @@ final class TestDateVerbatimStyleDiscreteConformance : XCTestCase {
                     .reversed()
                     .map { $0.reversed() },
                 "(upperbound to lowerbound)",
-                file: file,
-                line: line)
+                sourceLocation: sourceLocation)
         }
 
         let now = date("2023-05-15 08:47:20Z")

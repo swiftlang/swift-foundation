@@ -12,12 +12,12 @@
 
 #if FOUNDATION_FRAMEWORK
 
-import XCTest
+import Testing
+import Foundation
 
 // MARK: - Stubs
 
 @inline(never)
-@available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
 fileprivate func _blackHole<T>(_ t: T) {}
 
 @inline(never)
@@ -26,9 +26,9 @@ fileprivate func _blackHoleExplicitInput(_ predicate: Predicate<Int>) {}
 
 // MARK: - Tests
 
-@available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
-final class PredicateMacroUsageTests: XCTestCase {
-    func testUsage() {
+struct PredicateMacroUsageTests {
+    @available(macOS 14, iOS 17, watchOS 10, tvOS 17, *)
+    @Test func testUsage() {
         _blackHole(#Predicate<Bool> {
             return $0
         })

@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -21,15 +19,7 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-class Hello {
-    var str: NSMutableString = "hi"
-}
-
-@available(*, unavailable)
-extension Hello : Sendable {}
-
-@available(FoundationPreview 0.1, *)
-final class SortDescriptorTests: XCTestCase {
+struct SortDescriptorTests {
     struct NonNSObjectRoot {
         enum Gadget: Int, Comparable {
             case foo = 0
@@ -41,7 +31,6 @@ final class SortDescriptorTests: XCTestCase {
             }
         }
 
-        var o = Hello()
         let number: Int
         let word: String
         let maybeWord: String?
@@ -57,176 +46,149 @@ final class SortDescriptorTests: XCTestCase {
         }
     }
 
-    func test_none_nsobject_comparable() {
+    @Test func test_none_nsobject_comparable() {
         let forwardComparator = SortDescriptor(\NonNSObjectRoot.gadget)
         let reverseComparator = SortDescriptor(\NonNSObjectRoot.gadget, order: .reverse)
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(gadget: .foo), NonNSObjectRoot(gadget: .bar)),
-            .orderedAscending
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(gadget: .foo), NonNSObjectRoot(gadget: .bar)) == .orderedAscending
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(gadget: .foo), NonNSObjectRoot(gadget: .bar)),
-            .orderedDescending
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(gadget: .foo), NonNSObjectRoot(gadget: .bar)) == .orderedDescending
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(gadget: .bar), NonNSObjectRoot(gadget: .baz)),
-            .orderedDescending
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(gadget: .bar), NonNSObjectRoot(gadget: .baz)) == .orderedDescending
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(gadget: .bar), NonNSObjectRoot(gadget: .baz)),
-            .orderedAscending
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(gadget: .bar), NonNSObjectRoot(gadget: .baz)) == .orderedAscending
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(gadget: .baz), NonNSObjectRoot(gadget: .baz)),
-            .orderedSame
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(gadget: .baz), NonNSObjectRoot(gadget: .baz)) == .orderedSame
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(gadget: .baz), NonNSObjectRoot(gadget: .baz)),
-            .orderedSame
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(gadget: .baz), NonNSObjectRoot(gadget: .baz)) == .orderedSame
         )
     }
 
-    func test_none_nsobject_optional_comparable() {
+    @Test func test_none_nsobject_optional_comparable() {
         let forwardComparator = SortDescriptor(\NonNSObjectRoot.maybeGadget)
         let reverseComparator = SortDescriptor(
             \NonNSObjectRoot.maybeGadget, order: .reverse)
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeGadget: .foo), NonNSObjectRoot(maybeGadget: .bar)),
-            .orderedAscending
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeGadget: .foo), NonNSObjectRoot(maybeGadget: .bar)) == .orderedAscending
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeGadget: .foo), NonNSObjectRoot(maybeGadget: .bar)),
-            .orderedDescending
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeGadget: .foo), NonNSObjectRoot(maybeGadget: .bar)) == .orderedDescending
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeGadget: nil), NonNSObjectRoot(maybeGadget: .bar)),
-            .orderedAscending
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeGadget: nil), NonNSObjectRoot(maybeGadget: .bar)) == .orderedAscending
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeGadget: nil), NonNSObjectRoot(maybeGadget: .bar)),
-            .orderedDescending
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeGadget: nil), NonNSObjectRoot(maybeGadget: .bar)) == .orderedDescending
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeGadget: .bar), NonNSObjectRoot(maybeGadget: .baz)),
-            .orderedDescending
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeGadget: .bar), NonNSObjectRoot(maybeGadget: .baz)) == .orderedDescending
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeGadget: .bar), NonNSObjectRoot(maybeGadget: .baz)),
-            .orderedAscending
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeGadget: .bar), NonNSObjectRoot(maybeGadget: .baz)) == .orderedAscending
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeGadget: .bar), NonNSObjectRoot(maybeGadget: nil)),
-            .orderedDescending
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeGadget: .bar), NonNSObjectRoot(maybeGadget: nil)) == .orderedDescending
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeGadget: .bar), NonNSObjectRoot(maybeGadget: nil)),
-            .orderedAscending
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeGadget: .bar), NonNSObjectRoot(maybeGadget: nil)) == .orderedAscending
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeGadget: .baz), NonNSObjectRoot(maybeGadget: .baz)),
-            .orderedSame
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeGadget: .baz), NonNSObjectRoot(maybeGadget: .baz)) == .orderedSame
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeGadget: .baz), NonNSObjectRoot(maybeGadget: .baz)),
-            .orderedSame
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeGadget: .baz), NonNSObjectRoot(maybeGadget: .baz)) == .orderedSame
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeGadget: nil), NonNSObjectRoot(maybeGadget: nil)),
-            .orderedSame
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeGadget: nil), NonNSObjectRoot(maybeGadget: nil)) == .orderedSame
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeGadget: nil), NonNSObjectRoot(maybeGadget: nil)),
-            .orderedSame
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeGadget: nil), NonNSObjectRoot(maybeGadget: nil)) == .orderedSame
         )
     }
 
-    func test_none_nsobject_optional_string_comparable() {
+    @Test func test_none_nsobject_optional_string_comparable() {
         let forwardComparator = SortDescriptor(\NonNSObjectRoot.maybeWord)
         let reverseComparator = SortDescriptor(\NonNSObjectRoot.maybeWord, order: .reverse)
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeWord: "a"), NonNSObjectRoot(maybeWord: "b")),
-            .orderedAscending
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeWord: "a"), NonNSObjectRoot(maybeWord: "b")) == .orderedAscending
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeWord: "a"), NonNSObjectRoot(maybeWord: "b")),
-            .orderedDescending
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeWord: "a"), NonNSObjectRoot(maybeWord: "b")) == .orderedDescending
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeWord: nil), NonNSObjectRoot(maybeWord: "b")),
-            .orderedAscending
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeWord: nil), NonNSObjectRoot(maybeWord: "b")) == .orderedAscending
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeWord: nil), NonNSObjectRoot(maybeWord: "b")),
-            .orderedDescending
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeWord: nil), NonNSObjectRoot(maybeWord: "b")) == .orderedDescending
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeWord: "a"), NonNSObjectRoot(maybeWord: nil)),
-            .orderedDescending
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeWord: "a"), NonNSObjectRoot(maybeWord: nil)) == .orderedDescending
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeWord: "a"), NonNSObjectRoot(maybeWord: nil)),
-            .orderedAscending
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeWord: "a"), NonNSObjectRoot(maybeWord: nil)) == .orderedAscending
         )
 
-        XCTAssertEqual(
-            forwardComparator.compare(NonNSObjectRoot(maybeWord: nil), NonNSObjectRoot(maybeWord: nil)),
-            .orderedSame
+        #expect(
+            forwardComparator.compare(NonNSObjectRoot(maybeWord: nil), NonNSObjectRoot(maybeWord: nil)) == .orderedSame
         )
 
-        XCTAssertEqual(
-            reverseComparator.compare(NonNSObjectRoot(maybeWord: nil), NonNSObjectRoot(maybeWord: nil)),
-            .orderedSame
+        #expect(
+            reverseComparator.compare(NonNSObjectRoot(maybeWord: nil), NonNSObjectRoot(maybeWord: nil)) == .orderedSame
         )
     }
 
-    func test_none_nsobject_string_comparison() {
+    @Test func test_none_nsobject_string_comparison() {
         let forwardComparator = SortDescriptor(\NonNSObjectRoot.word)
         let reverseComparator = SortDescriptor(\NonNSObjectRoot.word, order: .reverse)
 
-        XCTAssert(
+        #expect(
             forwardComparator.compare(NonNSObjectRoot(word: "a"), NonNSObjectRoot(word: "b")) == .orderedAscending
         )
 
-        XCTAssert(
+        #expect(
             reverseComparator.compare(NonNSObjectRoot(word: "a"), NonNSObjectRoot(word: "b")) == .orderedDescending
         )
     }
 
-    func test_encoding_comparable_throws() {
-        let descriptors : [SortDescriptor<SortDescriptorTests.NonNSObjectRoot>] = [
-            SortDescriptor(\NonNSObjectRoot.word),
-            SortDescriptor(\NonNSObjectRoot.maybeWord),
-            SortDescriptor(\NonNSObjectRoot.gadget),
-            SortDescriptor(\NonNSObjectRoot.maybeGadget),
-        ]
-
-        for descriptor in descriptors {
-            let encoder = JSONEncoder()
-            XCTAssertThrowsError(try encoder.encode(descriptor))
+    @Test(arguments: [
+        SortDescriptor(\NonNSObjectRoot.word),
+        SortDescriptor(\NonNSObjectRoot.maybeWord),
+        SortDescriptor(\NonNSObjectRoot.gadget),
+        SortDescriptor(\NonNSObjectRoot.maybeGadget),
+    ])
+    func test_encoding_comparable_throws(descriptor: SortDescriptor<NonNSObjectRoot>) {
+        let encoder = JSONEncoder()
+        #expect(throws: (any Error).self) {
+            try encoder.encode(descriptor)
         }
     }
 
@@ -234,82 +196,69 @@ final class SortDescriptorTests: XCTestCase {
     // TODO: When String.compare(_:options:locale:) is available in FoundationInternationalization, enable these tests
     // https://github.com/apple/swift-foundation/issues/284
     
-    func test_string_comparator_order() {
+    @Test func test_string_comparator_order() {
         let reverseComparator = {
             var comparator = String.StandardComparator.localized
             comparator.order = .reverse
             return comparator
         }()
 
-        XCTAssertEqual(SortDescriptor(\NonNSObjectRoot.word).order, .forward)
+        #expect(SortDescriptor(\NonNSObjectRoot.word).order == .forward)
 
-        XCTAssertEqual(SortDescriptor(\NonNSObjectRoot.maybeWord).order, .forward)
+        #expect(SortDescriptor(\NonNSObjectRoot.maybeWord).order == .forward)
 
-        XCTAssertEqual(SortDescriptor(\NonNSObjectRoot.word, comparator: .localized).order, .forward)
+        #expect(SortDescriptor(\NonNSObjectRoot.word, comparator: .localized).order == .forward)
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: .localized).order,
-            .forward
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: .localized).order == .forward
         )
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.word, comparator: reverseComparator).order,
-            .reverse
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.word, comparator: reverseComparator).order == .reverse
         )
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: reverseComparator).order,
-            .reverse
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: reverseComparator).order == .reverse
         )
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.word, comparator: .localized, order: .forward).order,
-            .forward
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.word, comparator: .localized, order: .forward).order == .forward
         )
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: .localized, order: .forward).order,
-            .forward
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: .localized, order: .forward).order == .forward
         )
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.word, comparator: reverseComparator, order: .forward).order,
-            .forward
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.word, comparator: reverseComparator, order: .forward).order == .forward
         )
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: reverseComparator, order: .forward).order,
-            .forward
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: reverseComparator, order: .forward).order == .forward
         )
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.word, comparator: .localized, order: .reverse).order,
-            .reverse
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.word, comparator: .localized, order: .reverse).order == .reverse
         )
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: .localized, order: .reverse).order,
-            .reverse
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.maybeWord, comparator: .localized, order: .reverse).order == .reverse
         )
     }
     
-    func test_string_comparator_property_polarity() {
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.word).stringComparator?.order,
-            .forward
+    @Test func test_string_comparator_property_polarity() {
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.word).stringComparator?.order == .forward
         )
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.maybeWord).stringComparator?.order,
-            .forward
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.maybeWord).stringComparator?.order == .forward
         )
 
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.word, order: .reverse).stringComparator?.order,
-            .forward
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.word, order: .reverse).stringComparator?.order == .forward
         )
-        XCTAssertEqual(
-            SortDescriptor(\NonNSObjectRoot.maybeWord, order: .reverse).stringComparator?.order,
-            .forward
+        #expect(
+            SortDescriptor(\NonNSObjectRoot.maybeWord, order: .reverse).stringComparator?.order == .forward
         )
     }
 #endif

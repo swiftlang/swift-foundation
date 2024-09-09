@@ -9,117 +9,119 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
-// REQUIRES: objc_interop
-// REQUIRES: rdar49634697
-// REQUIRES: rdar55727144
 
-#if canImport(TestSupport)
-import TestSupport
-#endif // canImport(TestSupport)
+import Testing
 
 #if canImport(FoundationEssentials)
 @_spi(SwiftCorelibsFoundation)
 @testable import FoundationEssentials
+#elseif FOUNDATION_FRAMEWORK
+@testable import Foundation
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(WASI)
+import WASILibc
+#elseif os(Windows)
+import CRT
 #endif
 
 // MARK: - Test Suite
 
-final class JSONEncoderTests : XCTestCase {
+struct JSONEncoderTests {
     // MARK: - Encoding Top-Level Empty Types
-    func testEncodingTopLevelEmptyStruct() {
+    @Test func testEncodingTopLevelEmptyStruct() {
         let empty = EmptyStruct()
         _testRoundTrip(of: empty, expectedJSON: _jsonEmptyDictionary)
     }
 
-    func testEncodingTopLevelEmptyClass() {
+    @Test func testEncodingTopLevelEmptyClass() {
         let empty = EmptyClass()
         _testRoundTrip(of: empty, expectedJSON: _jsonEmptyDictionary)
     }
 
     // MARK: - Encoding Top-Level Single-Value Types
-    func testEncodingTopLevelSingleValueEnum() {
+    @Test func testEncodingTopLevelSingleValueEnum() {
         _testRoundTrip(of: Switch.off)
         _testRoundTrip(of: Switch.on)
     }
 
-    func testEncodingTopLevelSingleValueStruct() {
+    @Test func testEncodingTopLevelSingleValueStruct() {
         _testRoundTrip(of: Timestamp(3141592653))
     }
 
-    func testEncodingTopLevelSingleValueClass() {
+    @Test func testEncodingTopLevelSingleValueClass() {
         _testRoundTrip(of: Counter())
     }
 
     // MARK: - Encoding Top-Level Structured Types
-    func testEncodingTopLevelStructuredStruct() {
+    @Test func testEncodingTopLevelStructuredStruct() {
         // Address is a struct type with multiple fields.
         let address = Address.testValue
         _testRoundTrip(of: address)
     }
 
-    func testEncodingTopLevelStructuredSingleStruct() {
+    @Test func testEncodingTopLevelStructuredSingleStruct() {
         // Numbers is a struct which encodes as an array through a single value container.
         let numbers = Numbers.testValue
         _testRoundTrip(of: numbers)
     }
 
-    func testEncodingTopLevelStructuredSingleClass() {
+    @Test func testEncodingTopLevelStructuredSingleClass() {
         // Mapping is a class which encodes as a dictionary through a single value container.
         let mapping = Mapping.testValue
         _testRoundTrip(of: mapping)
     }
 
-    func testEncodingTopLevelDeepStructuredType() {
+    @Test func testEncodingTopLevelDeepStructuredType() {
         // Company is a type with fields which are Codable themselves.
         let company = Company.testValue
         _testRoundTrip(of: company)
     }
 
-    func testEncodingClassWhichSharesEncoderWithSuper() {
+    @Test func testEncodingClassWhichSharesEncoderWithSuper() {
         // Employee is a type which shares its encoder & decoder with its superclass, Person.
         let employee = Employee.testValue
         _testRoundTrip(of: employee)
     }
 
-    func testEncodingTopLevelNullableType() {
+    @Test func testEncodingTopLevelNullableType() {
         // EnhancedBool is a type which encodes either as a Bool or as nil.
         _testRoundTrip(of: EnhancedBool.true, expectedJSON: "true".data(using: String._Encoding.utf8)!)
         _testRoundTrip(of: EnhancedBool.false, expectedJSON: "false".data(using: String._Encoding.utf8)!)
         _testRoundTrip(of: EnhancedBool.fileNotFound, expectedJSON: "null".data(using: String._Encoding.utf8)!)
     }
     
-    func testEncodingTopLevelArrayOfInt() {
+    @Test func testEncodingTopLevelArrayOfInt() {
         let a = [1,2,3]
         let result1 = String(data: try! JSONEncoder().encode(a), encoding: String._Encoding.utf8)
-        XCTAssertEqual(result1, "[1,2,3]")
+        #expect(result1 == "[1,2,3]")
         
         let b : [Int] = []
         let result2 = String(data: try! JSONEncoder().encode(b), encoding: String._Encoding.utf8)
-        XCTAssertEqual(result2, "[]")
+        #expect(result2 == "[]")
     }
     
     @available(FoundationPreview 0.1, *)
-    func testEncodingTopLevelWithConfiguration() throws {
+    @Test func testEncodingTopLevelWithConfiguration() throws {
         // CodableTypeWithConfiguration is a struct that conforms to CodableWithConfiguration
         let value = CodableTypeWithConfiguration.testValue
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
         
         var decoded = try decoder.decode(CodableTypeWithConfiguration.self, from: try encoder.encode(value, configuration: .init(1)), configuration: .init(1))
-        XCTAssertEqual(decoded, value)
+        #expect(decoded == value)
         decoded = try decoder.decode(CodableTypeWithConfiguration.self, from: try encoder.encode(value, configuration: CodableTypeWithConfiguration.ConfigProviding.self), configuration: CodableTypeWithConfiguration.ConfigProviding.self)
-        XCTAssertEqual(decoded, value)
+        #expect(decoded == value)
     }
 
 #if false // FIXME: XCTest doesn't support crash tests yet rdar://20195010&22387653
-    func testEncodingConflictedTypeNestedContainersWithTheSameTopLevelKey() {
+    @Test func testEncodingConflictedTypeNestedContainersWithTheSameTopLevelKey() {
         struct Model : Encodable, Equatable {
             let first: String
 
@@ -159,7 +161,7 @@ final class JSONEncoderTests : XCTestCase {
 
     // MARK: - Date Strategy Tests
 
-    func testEncodingDateSecondsSince1970() {
+    @Test func testEncodingDateSecondsSince1970() {
         // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
         let seconds = 1000.0
         let expectedJSON = "1000".data(using: String._Encoding.utf8)!
@@ -176,7 +178,7 @@ final class JSONEncoderTests : XCTestCase {
                        dateDecodingStrategy: .secondsSince1970)
     }
 
-    func testEncodingDateMillisecondsSince1970() {
+    @Test func testEncodingDateMillisecondsSince1970() {
         // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
         let seconds = 1000.0
         let expectedJSON = "1000000".data(using: String._Encoding.utf8)!
@@ -193,7 +195,7 @@ final class JSONEncoderTests : XCTestCase {
                        dateDecodingStrategy: .millisecondsSince1970)
     }
 
-    func testEncodingDateCustom() {
+    @Test func testEncodingDateCustom() {
         let timestamp = Date()
 
         // We'll encode a number instead of a date.
@@ -216,7 +218,7 @@ final class JSONEncoderTests : XCTestCase {
                        dateDecodingStrategy: .custom(decode))
     }
 
-    func testEncodingDateCustomEmpty() {
+    @Test func testEncodingDateCustomEmpty() {
         let timestamp = Date()
 
         // Encoding nothing should encode an empty keyed container ({}).
@@ -237,7 +239,7 @@ final class JSONEncoderTests : XCTestCase {
     }
 
     // MARK: - Data Strategy Tests
-    func testEncodingData() {
+    @Test func testEncodingData() {
         let data = Data([0xDE, 0xAD, 0xBE, 0xEF])
 
         let expectedJSON = "[222,173,190,239]".data(using: String._Encoding.utf8)!
@@ -253,7 +255,7 @@ final class JSONEncoderTests : XCTestCase {
                        dataDecodingStrategy: .deferredToData)
     }
 
-    func testEncodingDataCustom() {
+    @Test func testEncodingDataCustom() {
         // We'll encode a number instead of data.
         let encode = { @Sendable (_ data: Data, _ encoder: Encoder) throws -> Void in
             var container = encoder.singleValueContainer()
@@ -274,7 +276,7 @@ final class JSONEncoderTests : XCTestCase {
                        dataDecodingStrategy: .custom(decode))
     }
 
-    func testEncodingDataCustomEmpty() {
+    @Test func testEncodingDataCustomEmpty() {
         // Encoding nothing should encode an empty keyed container ({}).
         let encode = { @Sendable (_: Data, _: Encoder) throws -> Void in }
         let decode = { @Sendable (_: Decoder) throws -> Data in return Data() }
@@ -293,7 +295,7 @@ final class JSONEncoderTests : XCTestCase {
     }
 
     // MARK: - Non-Conforming Floating Point Strategy Tests
-    func testEncodingNonConformingFloats() {
+    @Test func testEncodingNonConformingFloats() {
         _testEncodeFailure(of: Float.infinity)
         _testEncodeFailure(of: Float.infinity)
         _testEncodeFailure(of: -Float.infinity)
@@ -313,7 +315,7 @@ final class JSONEncoderTests : XCTestCase {
         _testEncodeFailure(of: Double.nan)
     }
 
-    func testEncodingNonConformingFloatStrings() {
+    @Test func testEncodingNonConformingFloatStrings() {
         let encodingStrategy: JSONEncoder.NonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "INF", negativeInfinity: "-INF", nan: "NaN")
         let decodingStrategy: JSONDecoder.NonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "INF", negativeInfinity: "-INF", nan: "NaN")
 
@@ -375,7 +377,7 @@ final class JSONEncoderTests : XCTestCase {
         }
     }
 
-    func testEncodingKeyStrategyCustom() {
+    @Test func testEncodingKeyStrategyCustom() {
         let expected = "{\"QQQhello\":\"test\"}"
         let encoded = EncodeMe(keyName: "hello")
 
@@ -388,7 +390,7 @@ final class JSONEncoderTests : XCTestCase {
         let resultData = try! encoder.encode(encoded)
         let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
 
-        XCTAssertEqual(expected, resultString)
+        #expect(expected == resultString)
     }
 
     private struct EncodeFailure : Encodable {
@@ -407,7 +409,7 @@ final class JSONEncoderTests : XCTestCase {
         let outerValue: EncodeNested
     }
 
-    func testEncodingKeyStrategyPath() {
+    @Test func testEncodingKeyStrategyPath() {
         // Make sure a more complex path shows up the way we want
         // Make sure the path reflects keys in the Swift, not the resulting ones in the JSON
         let expected = "{\"QQQouterValue\":{\"QQQnestedValue\":{\"QQQhelloWorld\":\"test\"}}}"
@@ -425,15 +427,15 @@ final class JSONEncoderTests : XCTestCase {
             callCount = callCount + 1
 
             if path.count == 0 {
-                XCTFail("The path should always have at least one entry")
+                Issue.record("The path should always have at least one entry")
             } else if path.count == 1 {
-                XCTAssertEqual(["outerValue"], path.map { $0.stringValue })
+                #expect(["outerValue"] == path.map { $0.stringValue })
             } else if path.count == 2 {
-                XCTAssertEqual(["outerValue", "nestedValue"], path.map { $0.stringValue })
+                #expect(["outerValue", "nestedValue"] == path.map { $0.stringValue })
             } else if path.count == 3 {
-                XCTAssertEqual(["outerValue", "nestedValue", "helloWorld"], path.map { $0.stringValue })
+                #expect(["outerValue", "nestedValue", "helloWorld"] == path.map { $0.stringValue })
             } else {
-                XCTFail("The path mysteriously had more entries")
+                Issue.record("The path mysteriously had more entries")
             }
 
             let key = _TestKey(stringValue: "QQQ" + path.last!.stringValue)!
@@ -443,8 +445,8 @@ final class JSONEncoderTests : XCTestCase {
         let resultData = try! encoder.encode(encoded)
         let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
 
-        XCTAssertEqual(expected, resultString)
-        XCTAssertEqual(3, callCount)
+        #expect(expected == resultString)
+        #expect(3 == callCount)
     }
 
     private struct DecodeMe : Decodable {
@@ -461,7 +463,7 @@ final class JSONEncoderTests : XCTestCase {
 
     private struct DecodeMe2 : Decodable { var hello: String }
 
-    func testDecodingKeyStrategyCustom() {
+    @Test func testDecodingKeyStrategyCustom() {
         let input = "{\"----hello\":\"test\"}".data(using: String._Encoding.utf8)!
         let decoder = JSONDecoder()
         let customKeyConversion = { @Sendable (_ path: [CodingKey]) -> CodingKey in
@@ -474,29 +476,29 @@ final class JSONEncoderTests : XCTestCase {
         decoder.keyDecodingStrategy = .custom(customKeyConversion)
         let result = try! decoder.decode(DecodeMe2.self, from: input)
 
-        XCTAssertEqual("test", result.hello)
+        #expect("test" == result.hello)
     }
 
-    func testDecodingDictionaryStringKeyConversionUntouched() {
+    @Test func testDecodingDictionaryStringKeyConversionUntouched() {
         let input = "{\"leave_me_alone\":\"test\"}".data(using: String._Encoding.utf8)!
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         let result = try! decoder.decode([String: String].self, from: input)
 
-        XCTAssertEqual(["leave_me_alone": "test"], result)
+        #expect(["leave_me_alone": "test"] == result)
     }
 
-    func testDecodingDictionaryFailureKeyPath() {
+    @Test func testDecodingDictionaryFailureKeyPath() {
         let input = "{\"leave_me_alone\":\"test\"}".data(using: String._Encoding.utf8)!
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        do {
+        #expect {
             _ = try decoder.decode([String: Int].self, from: input)
-        } catch DecodingError.typeMismatch(_, let context) {
-            XCTAssertEqual(1, context.codingPath.count)
-            XCTAssertEqual("leave_me_alone", context.codingPath[0].stringValue)
-        } catch {
-            XCTFail("Unexpected error: \(String(describing: error))")
+        } throws: {
+            guard let decodingError = $0 as? DecodingError, case .typeMismatch(_, let context) = decodingError else {
+                return false
+            }
+            return context.codingPath.map(\.stringValue) == ["leave_me_alone"]
         }
     }
 
@@ -512,7 +514,7 @@ final class JSONEncoderTests : XCTestCase {
         var thisIsCamelCase : String
     }
 
-    func testKeyStrategyDuplicateKeys() {
+    @Test func testKeyStrategyDuplicateKeys() {
         // This test is mostly to make sure we don't assert on duplicate keys
         struct DecodeMe5 : Codable {
             var oneTwo : String
@@ -554,9 +556,9 @@ final class JSONEncoderTests : XCTestCase {
 
         let decodingResult = try! decoder.decode(DecodeMe5.self, from: input)
         // There will be only one result for oneTwo.
-        XCTAssertEqual(1, decodingResult.numberOfKeys)
+        #expect(1 == decodingResult.numberOfKeys)
         // While the order in which these values should be taken is NOT defined by the JSON spec in any way, the historical behavior has been to select the *first* value for a given key.
-        XCTAssertEqual(decodingResult.oneTwo, "test1")
+        #expect(decodingResult.oneTwo == "test1")
 
         // Encoding
         let encoded = DecodeMe5()
@@ -566,30 +568,26 @@ final class JSONEncoderTests : XCTestCase {
         let decodingResultString = String(bytes: decodingResultData, encoding: String._Encoding.utf8)
 
         // There will be only one value in the result (the second one encoded)
-        XCTAssertEqual("{\"oneTwo\":\"test2\"}", decodingResultString)
+        #expect("{\"oneTwo\":\"test2\"}" == decodingResultString)
     }
 
     // MARK: - Encoder Features
-    func testNestedContainerCodingPaths() {
+    @Test func testNestedContainerCodingPaths() {
         let encoder = JSONEncoder()
-        do {
+        #expect(throws: Never.self, "Caught error during encoding nested container types") {
             let _ = try encoder.encode(NestedContainersTestType())
-        } catch let error as NSError {
-            XCTFail("Caught error during encoding nested container types: \(error)")
         }
     }
 
-    func testSuperEncoderCodingPaths() {
+    @Test func testSuperEncoderCodingPaths() {
         let encoder = JSONEncoder()
-        do {
+        #expect(throws: Never.self, "Caught error during encoding nested container types") {
             let _ = try encoder.encode(NestedContainersTestType(testSuperEncoder: true))
-        } catch let error as NSError {
-            XCTFail("Caught error during encoding nested container types: \(error)")
         }
     }
 
     // MARK: - Type coercion
-    func testTypeCoercion() {
+    @Test func testTypeCoercion() {
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int8].self)
         _testRoundTripTypeCoercionFailure(of: [false, true], as: [Int16].self)
@@ -628,25 +626,19 @@ final class JSONEncoderTests : XCTestCase {
         _testRoundTripTypeCoercionFailure(of: [0.0, 1.0] as [Double], as: [Bool].self)
     }
 
-    func testDecodingConcreteTypeParameter() {
+    @Test func testDecodingConcreteTypeParameter() throws {
         let encoder = JSONEncoder()
-        guard let json = try? encoder.encode(Employee.testValue) else {
-            XCTFail("Unable to encode Employee.")
-            return
-        }
+        let json = try encoder.encode(Employee.testValue)
 
         let decoder = JSONDecoder()
-        guard let decoded = try? decoder.decode(Employee.self as Person.Type, from: json) else {
-            XCTFail("Failed to decode Employee as Person from JSON.")
-            return
-        }
+        let decoded = try decoder.decode(Employee.self as Person.Type, from: json)
 
-        expectEqual(type(of: decoded), Employee.self, "Expected decoded value to be of type Employee; got \(type(of: decoded)) instead.")
+        #expect(type(of: decoded) == Employee.self, "Expected decoded value to be of type Employee")
     }
 
     // MARK: - Encoder State
     // SR-6078
-    func testEncoderStateThrowOnEncode() {
+    @Test func testEncoderStateThrowOnEncode() {
         struct ReferencingEncoderWrapper<T : Encodable> : Encodable {
             let value: T
             init(_ value: T) { self.value = value }
@@ -675,7 +667,7 @@ final class JSONEncoderTests : XCTestCase {
         _ = try? JSONEncoder().encode(ReferencingEncoderWrapper([Float.infinity]))
     }
 
-    func testEncoderStateThrowOnEncodeCustomDate() {
+    @Test func testEncoderStateThrowOnEncodeCustomDate() {
         // This test is identical to testEncoderStateThrowOnEncode, except throwing via a custom Date closure.
         struct ReferencingEncoderWrapper<T : Encodable> : Encodable {
             let value: T
@@ -699,7 +691,7 @@ final class JSONEncoderTests : XCTestCase {
         _ = try? encoder.encode(ReferencingEncoderWrapper(Date()))
     }
 
-    func testEncoderStateThrowOnEncodeCustomData() {
+    @Test func testEncoderStateThrowOnEncodeCustomData() {
         // This test is identical to testEncoderStateThrowOnEncode, except throwing via a custom Data closure.
         struct ReferencingEncoderWrapper<T : Encodable> : Encodable {
             let value: T
@@ -723,7 +715,7 @@ final class JSONEncoderTests : XCTestCase {
         _ = try? encoder.encode(ReferencingEncoderWrapper(Data()))
     }
 
-    func test_106506794() throws {
+    @Test func test_106506794() throws {
         struct Level1: Codable, Equatable {
             let level2: Level2
 
@@ -755,25 +747,23 @@ final class JSONEncoderTests : XCTestCase {
         let value = Level1.init(level2: .init(name: "level2"))
         let data = try JSONEncoder().encode(value)
 
-        do {
-            let decodedValue = try JSONDecoder().decode(Level1.self, from: data)
-            XCTAssertEqual(value, decodedValue)
-        } catch {
-            XCTFail("Decode should not have failed with error: \(error))")
-        }
+        let decodedValue = try JSONDecoder().decode(Level1.self, from: data)
+        #expect(value == decodedValue)
     }
 
     // MARK: - Decoder State
     // SR-6048
-    func testDecoderStateThrowOnDecode() {
+    @Test func testDecoderStateThrowOnDecode() {
         // The container stack here starts as [[1,2,3]]. Attempting to decode as [String] matches the outer layer (Array), and begins decoding the array.
         // Once Array decoding begins, 1 is pushed onto the container stack ([[1,2,3], 1]), and 1 is attempted to be decoded as String. This throws a .typeMismatch, but the container is not popped off the stack.
         // When attempting to decode [Int], the container stack is still ([[1,2,3], 1]), and 1 fails to decode as [Int].
         let json = "[1,2,3]".data(using: String._Encoding.utf8)!
-        let _ = try! JSONDecoder().decode(EitherDecodable<[String], [Int]>.self, from: json)
+        #expect(throws: Never.self) {
+            let _ = try JSONDecoder().decode(EitherDecodable<[String], [Int]>.self, from: json)
+        }
     }
 
-    func testDecoderStateThrowOnDecodeCustomDate() {
+    @Test func testDecoderStateThrowOnDecodeCustomDate() throws {
         // This test is identical to testDecoderStateThrowOnDecode, except we're going to fail because our closure throws an error, not because we hit a type mismatch.
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom({ decoder in
@@ -781,11 +771,13 @@ final class JSONEncoderTests : XCTestCase {
             throw CustomError.foo
         })
 
-        let json = "1".data(using: String._Encoding.utf8)!
-        let _ = try! decoder.decode(EitherDecodable<Date, Int>.self, from: json)
+        let json = try #require("1".data(using: String._Encoding.utf8))
+        #expect(throws: Never.self) {
+            let _ = try decoder.decode(EitherDecodable<Date, Int>.self, from: json)
+        }
     }
 
-    func testDecoderStateThrowOnDecodeCustomData() {
+    @Test func testDecoderStateThrowOnDecodeCustomData() throws {
         // This test is identical to testDecoderStateThrowOnDecode, except we're going to fail because our closure throws an error, not because we hit a type mismatch.
         let decoder = JSONDecoder()
         decoder.dataDecodingStrategy = .custom({ decoder in
@@ -793,12 +785,14 @@ final class JSONEncoderTests : XCTestCase {
             throw CustomError.foo
         })
 
-        let json = "1".data(using: String._Encoding.utf8)!
-        let _ = try! decoder.decode(EitherDecodable<Data, Int>.self, from: json)
+        let json = try #require("1".data(using: String._Encoding.utf8))
+        #expect(throws: Never.self) {
+            let _ = try decoder.decode(EitherDecodable<Data, Int>.self, from: json)
+        }
     }
 
 
-    func testDecodingFailure() {
+    @Test func testDecodingFailure() {
         struct DecodeFailure : Decodable {
             var invalid: String
         }
@@ -806,7 +800,7 @@ final class JSONEncoderTests : XCTestCase {
         _testDecodeFailure(of: DecodeFailure.self, data: toDecode.data(using: String._Encoding.utf8)!)
     }
 
-    func testDecodingFailureThrowInInitKeyedContainer() {
+    @Test func testDecodingFailureThrowInInitKeyedContainer() {
         struct DecodeFailure : Decodable {
             private enum CodingKeys: String, CodingKey {
                 case checkedString
@@ -831,7 +825,7 @@ final class JSONEncoderTests : XCTestCase {
         _testDecodeFailure(of: DecodeFailure.self, data: toDecode.data(using: String._Encoding.utf8)!)
     }
 
-    func testDecodingFailureThrowInInitSingleContainer() {
+    @Test func testDecodingFailureThrowInInitSingleContainer() {
         struct DecodeFailure : Decodable {
             private enum Error: Swift.Error {
                 case expectedError
@@ -852,7 +846,7 @@ final class JSONEncoderTests : XCTestCase {
         _testDecodeFailure(of: DecodeFailure.self, data: toDecode.data(using: String._Encoding.utf8)!)
     }
 
-    func testInvalidFragment() {
+    @Test func testInvalidFragment() {
         struct DecodeFailure: Decodable {
             var foo: String
         }
@@ -860,7 +854,7 @@ final class JSONEncoderTests : XCTestCase {
         _testDecodeFailure(of: DecodeFailure.self, data: toDecode.data(using: String._Encoding.utf8)!)
     }
 
-    func testRepeatedFailedNilChecks() {
+    @Test func testRepeatedFailedNilChecks() {
         struct RepeatNilCheckDecodable : Decodable {
             enum Failure : Error {
                 case badNil
@@ -905,10 +899,12 @@ final class JSONEncoderTests : XCTestCase {
             }
         }
         let json = "[1, 2, 3]".data(using: String._Encoding.utf8)!
-        XCTAssertNoThrow(try JSONDecoder().decode(RepeatNilCheckDecodable.self, from: json))
+        #expect(throws: Never.self) {
+            try JSONDecoder().decode(RepeatNilCheckDecodable.self, from: json)
+        }
     }
 
-    func testDelayedDecoding() throws {
+    @Test func testDelayedDecoding() throws {
 
         // One variation is deferring the use of a container.
         struct DelayedDecodable_ContainerVersion : Codable {
@@ -942,7 +938,9 @@ final class JSONEncoderTests : XCTestCase {
         let data = try JSONEncoder().encode(before)
 
         let decoded = try JSONDecoder().decode(DelayedDecodable_ContainerVersion.self, from: data)
-        XCTAssertNoThrow(try decoded.i)
+        #expect(throws: Never.self) {
+            try decoded.i
+        }
 
         // The other variant is deferring the use of the *top-level* decoder. This does NOT work for non-top level decoders.
         struct DelayedDecodable_DecoderVersion : Codable {
@@ -973,7 +971,9 @@ final class JSONEncoderTests : XCTestCase {
         }
         // Reuse the same data.
         let decoded2 = try JSONDecoder().decode(DelayedDecodable_DecoderVersion.self, from: data)
-        XCTAssertNoThrow(try decoded2.i)
+        #expect(throws: Never.self) {
+            try decoded2.i
+        }
     }
 
     // MARK: - Helper Functions
@@ -981,21 +981,15 @@ final class JSONEncoderTests : XCTestCase {
         return "{}".data(using: String._Encoding.utf8)!
     }
 
-    private func _testEncodeFailure<T : Encodable>(of value: T) {
-        do {
+    private func _testEncodeFailure<T : Encodable>(of value: T, sourceLocation: SourceLocation = #_sourceLocation) {
+        #expect(throws: (any Error).self, "Encode of top-level \(T.self) was expected to fail.", sourceLocation: sourceLocation) {
             let _ = try JSONEncoder().encode(value)
-            XCTFail("Encode of top-level \(T.self) was expected to fail.")
-        } catch {
-            XCTAssertNotNil(error);
         }
     }
 
-    private func _testDecodeFailure<T: Decodable>(of value: T.Type, data: Data) {
-        do {
+    private func _testDecodeFailure<T: Decodable>(of value: T.Type, data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
+        #expect(throws: (any Error).self, "Decode of top-level \(value) was expected to fail.", sourceLocation: sourceLocation) {
             let _ = try JSONDecoder().decode(value, from: data)
-            XCTFail("Decode of top-level \(value) was expected to fail.")
-        } catch {
-            XCTAssertNotNil(error);
         }
     }
 
@@ -1009,9 +1003,11 @@ final class JSONEncoderTests : XCTestCase {
                                    keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
                                    keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys,
                                    nonConformingFloatEncodingStrategy: JSONEncoder.NonConformingFloatEncodingStrategy = .throw,
-                                   nonConformingFloatDecodingStrategy: JSONDecoder.NonConformingFloatDecodingStrategy = .throw) where T : Codable, T : Equatable {
-        var payload: Data! = nil
-        do {
+                                   nonConformingFloatDecodingStrategy: JSONDecoder.NonConformingFloatDecodingStrategy = .throw,
+                                   sourceLocation: SourceLocation = #_sourceLocation
+    ) where T : Codable, T : Equatable {
+        var payload: Data? = nil
+        #expect(throws: Never.self, "Failed to encode \(T.self) to JSON", sourceLocation: sourceLocation) {
             let encoder = JSONEncoder()
             encoder.outputFormatting = outputFormatting
             encoder.dateEncodingStrategy = dateEncodingStrategy
@@ -1019,71 +1015,59 @@ final class JSONEncoderTests : XCTestCase {
             encoder.nonConformingFloatEncodingStrategy = nonConformingFloatEncodingStrategy
             encoder.keyEncodingStrategy = keyEncodingStrategy
             payload = try encoder.encode(value)
-        } catch {
-            XCTFail("Failed to encode \(T.self) to JSON: \(error)")
         }
+        
+        guard let payload else { return }
 
         if let expectedJSON = json {
             let expected = String(data: expectedJSON, encoding: .utf8)!
             let actual = String(data: payload, encoding: .utf8)!
-            XCTAssertEqual(expected, actual, "Produced JSON not identical to expected JSON.")
+            #expect(expected == actual, "Produced JSON not identical to expected JSON.", sourceLocation: sourceLocation)
         }
 
-        do {
+        #expect(throws: Never.self, "Failed to decode \(T.self) from JSON", sourceLocation: sourceLocation) {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = dateDecodingStrategy
             decoder.dataDecodingStrategy = dataDecodingStrategy
             decoder.nonConformingFloatDecodingStrategy = nonConformingFloatDecodingStrategy
             decoder.keyDecodingStrategy = keyDecodingStrategy
             let decoded = try decoder.decode(T.self, from: payload)
-            XCTAssertEqual(decoded, value, "\(T.self) did not round-trip to an equal value.")
-        } catch {
-            XCTFail("Failed to decode \(T.self) from JSON: \(error)")
+            #expect(decoded == value, "\(T.self) did not round-trip to an equal value.")
         }
     }
 
-    private func _testRoundTripTypeCoercionFailure<T,U>(of value: T, as type: U.Type) where T : Codable, U : Codable {
-        do {
+    private func _testRoundTripTypeCoercionFailure<T,U>(of value: T, as type: U.Type, sourceLocation: SourceLocation = #_sourceLocation) where T : Codable, U : Codable {
+        #expect(throws: (any Error).self, "Coercion from \(T.self) to \(U.self) was expected to fail.", sourceLocation: sourceLocation) {
             let data = try JSONEncoder().encode(value)
             let _ = try JSONDecoder().decode(U.self, from: data)
-            XCTFail("Coercion from \(T.self) to \(U.self) was expected to fail.")
-        } catch {}
+        }
     }
 
-    private func _test<T : Equatable & Decodable>(JSONString: String, to object: T) {
-#if FOUNDATION_FRAMEWORK
+    private func _test<T : Equatable & Decodable>(JSONString: String, to object: T, sourceLocation: SourceLocation = #_sourceLocation) {
         let encs : [String._Encoding] = [.utf8, .utf16BigEndian, .utf16LittleEndian, .utf32BigEndian, .utf32LittleEndian]
-#else
-        // TODO: Reenable other encoding once string.data(using:) is fully implemented.
-        let encs : [String._Encoding] = [.utf8, .utf16BigEndian, .utf16LittleEndian]
-#endif
         let decoder = JSONDecoder()
         for enc in encs {
             let data = JSONString.data(using: enc)!
-            let parsed : T
-            do {
-                parsed = try decoder.decode(T.self, from: data)
-            } catch {
-                XCTFail("Failed to decode \(JSONString) with encoding \(enc): Error: \(error)")
-                continue
+            #expect(throws: Never.self, "Failed to decode \(JSONString) with encoding \(enc)", sourceLocation: sourceLocation) {
+                let parsed = try decoder.decode(T.self, from: data)
+                #expect(object == parsed, sourceLocation: sourceLocation)
             }
-            XCTAssertEqual(object, parsed)
         }
     }
 
-    func test_JSONEscapedSlashes() {
+    @Test func test_JSONEscapedSlashes() {
         _test(JSONString: "\"\\/test\\/path\"", to: "/test/path")
         _test(JSONString: "\"\\\\/test\\\\/path\"", to: "\\/test\\/path")
     }
 
-    func test_JSONEscapedForwardSlashes() {
+    @Test func test_JSONEscapedForwardSlashes() {
         _testRoundTrip(of: ["/":1], expectedJSON:
 """
 {"\\/":1}
 """.data(using: String._Encoding.utf8)!)
     }
 
-    func test_JSONUnicodeCharacters() {
+    @Test func test_JSONUnicodeCharacters() {
         // UTF8:
         // E9 96 86 E5 B4 AC EB B0 BA EB 80 AB E9 A2 92
         // 閆崬밺뀫颒
@@ -1091,7 +1075,7 @@ final class JSONEncoderTests : XCTestCase {
         _test(JSONString: "[\"本日\"]", to: ["本日"])
     }
 
-    func test_JSONUnicodeEscapes() throws {
+    @Test func test_JSONUnicodeEscapes() throws {
         let testCases = [
             // e-acute and greater-than-or-equal-to
             "\"\\u00e9\\u2265\"" : "é≥",
@@ -1110,58 +1094,58 @@ final class JSONEncoderTests : XCTestCase {
         }
     }
 
-    func test_JSONBadUnicodeEscapes() {
+    @Test func test_JSONBadUnicodeEscapes() throws {
         let badCases = ["\\uD834", "\\uD834hello", "hello\\uD834", "\\uD834\\u1221", "\\uD8", "\\uD834x\\uDD1E"]
         for str in badCases {
-            let data = str.data(using: String._Encoding.utf8)!
-            XCTAssertThrowsError(try JSONDecoder().decode(String.self, from: data))
+            let data = try #require(str.data(using: String._Encoding.utf8))
+            #expect(throws: (any Error).self) {
+                try JSONDecoder().decode(String.self, from: data)
+            }
         }
     }
     
-    func test_nullByte() throws {
+    @Test func test_nullByte() throws {
         let string = "abc\u{0000}def"
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
         
         let data = try encoder.encode([string])
         let decoded = try decoder.decode([String].self, from: data)
-        XCTAssertEqual([string], decoded)
+        #expect([string] == decoded)
         
         let data2 = try encoder.encode([string:string])
         let decoded2 = try decoder.decode([String:String].self, from: data2)
-        XCTAssertEqual([string:string], decoded2)
+        #expect([string:string] == decoded2)
         
         struct Container: Codable {
             let s: String
         }
         let data3 = try encoder.encode(Container(s: string))
         let decoded3 = try decoder.decode(Container.self, from: data3)
-        XCTAssertEqual(decoded3.s, string)
+        #expect(decoded3.s == string)
     }
 
-    func test_superfluouslyEscapedCharacters() {
+    @Test func test_superfluouslyEscapedCharacters() {
         let json = "[\"\\h\\e\\l\\l\\o\"]"
-        XCTAssertThrowsError(try JSONDecoder().decode([String].self, from: json.data(using: String._Encoding.utf8)!))
+        #expect(throws: (any Error).self) {
+            try JSONDecoder().decode([String].self, from: json.data(using: String._Encoding.utf8)!)
+        }
     }
 
-    func test_equivalentUTF8Sequences() {
-        let json =
+    @Test func test_equivalentUTF8Sequences() throws {
+        let json = try #require(
 """
 {
   "caf\\u00e9" : true,
   "cafe\\u0301" : false
 }
-""".data(using: String._Encoding.utf8)!
+""".data(using: String._Encoding.utf8))
 
-        do {
-            let dict = try JSONDecoder().decode([String:Bool].self, from: json)
-            XCTAssertEqual(dict.count, 1)
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
+        let dict = try JSONDecoder().decode([String:Bool].self, from: json)
+        #expect(dict.count == 1)
     }
 
-    func test_JSONControlCharacters() {
+    @Test func test_JSONControlCharacters() {
         let array = [
             "\\u0000", "\\u0001", "\\u0002", "\\u0003", "\\u0004",
             "\\u0005", "\\u0006", "\\u0007", "\\b",     "\\t",
@@ -1178,7 +1162,7 @@ final class JSONEncoderTests : XCTestCase {
         }
     }
 
-    func test_JSONNumberFragments() {
+    @Test func test_JSONNumberFragments() {
         let array = ["0 ", "1.0 ", "0.1 ", "1e3 ", "-2.01e-3 ", "0", "1.0", "1e3", "-2.01e-3", "0e-10"]
         let expected = [0, 1.0, 0.1, 1000, -0.00201, 0, 1.0, 1000, -0.00201, 0]
         for (json, expected) in zip(array, expected) {
@@ -1186,33 +1170,33 @@ final class JSONEncoderTests : XCTestCase {
         }
     }
 
-    func test_invalidJSONNumbersFailAsExpected() {
+    @Test func test_invalidJSONNumbersFailAsExpected() {
         let array = ["0.", "1e ", "-2.01e- ", "+", "2.01e-1234", "+2.0q", "2s", "NaN", "nan", "Infinity", "inf", "-", "0x42", "1.e2"]
         for json in array {
             let data = json.data(using: String._Encoding.utf8)!
-            XCTAssertThrowsError(try JSONDecoder().decode(Float.self, from: data), "Expected error for input \"\(json)\"")
-        }
-    }
-
-    func _checkExpectedThrownDataCorruptionUnderlyingError(contains substring: String, closure: () throws -> Void) {
-        do {
-            try closure()
-            XCTFail("Expected failure containing string: \"\(substring)\"")
-        } catch let error as DecodingError {
-            guard case let .dataCorrupted(context) = error else {
-                XCTFail("Unexpected DecodingError type: \(error)")
-                return
+            #expect(throws: (any Error).self, "Expected error for input \"\(json)\"") {
+                try JSONDecoder().decode(Float.self, from: data)
             }
-#if FOUNDATION_FRAMEWORK
-            let nsError = context.underlyingError! as NSError
-            XCTAssertTrue(nsError.debugDescription.contains(substring), "Description \"\(nsError.debugDescription)\" doesn't contain substring \"\(substring)\"")
-#endif
-        } catch {
-            XCTFail("Unexpected error type: \(error)")
         }
     }
 
-    func test_topLevelFragmentsWithGarbage() {
+    func _checkExpectedThrownDataCorruptionUnderlyingError(contains substring: String, sourceLocation: SourceLocation = #_sourceLocation, closure: () throws -> Void) {
+        #expect("Expected failure containing string: \"\(substring)\"", sourceLocation: sourceLocation) {
+            try closure()
+        } throws: { error in
+            guard let decodingError = error as? DecodingError,
+                  case let .dataCorrupted(context) = decodingError else {
+                return false
+            }
+            #if FOUNDATION_FRAMEWORK
+            return (context.underlyingError as? NSError).debugDescription.contains(substring)
+            #else
+            return true
+            #endif
+        }
+    }
+
+    @Test func test_topLevelFragmentsWithGarbage() {
         _checkExpectedThrownDataCorruptionUnderlyingError(contains: "Unexpected character") {
             let _ = try JSONDecoder().decode(Bool.self, from: "tru_".data(using: String._Encoding.utf8)!)
             let _ = try json5Decoder.decode(Bool.self, from: "tru_".data(using: String._Encoding.utf8)!)
@@ -1227,13 +1211,14 @@ final class JSONEncoderTests : XCTestCase {
         }
     }
 
-    func test_topLevelNumberFragmentsWithJunkDigitCharacters() {
+    @Test func test_topLevelNumberFragmentsWithJunkDigitCharacters() throws {
         let fullData = "3.141596".data(using: String._Encoding.utf8)!
         let partialData = fullData[0..<4]
 
-        XCTAssertEqual(3.14, try JSONDecoder().decode(Double.self, from: partialData))
+        #expect(try 3.14 == JSONDecoder().decode(Double.self, from: partialData))
     }
 
+    @Test(.disabled("This test can reach the stack limit in some environments, so it is disabled in automated testing but can be enabled manually for local testing"))
     func test_depthTraversal() {
         struct SuperNestedArray : Decodable {
             init(from decoder: Decoder) throws {
@@ -1248,44 +1233,49 @@ final class JSONEncoderTests : XCTestCase {
         let jsonGood = String(repeating: "[", count: MAX_DEPTH / 2) + String(repeating: "]", count: MAX_DEPTH / 2)
         let jsonBad = String(repeating: "[", count: MAX_DEPTH + 1) + String(repeating: "]", count: MAX_DEPTH + 1)
 
-        XCTAssertNoThrow(try JSONDecoder().decode(SuperNestedArray.self, from: jsonGood.data(using: String._Encoding.utf8)!))
-        XCTAssertThrowsError(try JSONDecoder().decode(SuperNestedArray.self, from: jsonBad.data(using: String._Encoding.utf8)!))
+        #expect(throws: Never.self) {
+            try JSONDecoder().decode(SuperNestedArray.self, from: jsonGood.data(using: String._Encoding.utf8)!)
+        }
+        #expect(throws: (any Error).self) {
+            try JSONDecoder().decode(SuperNestedArray.self, from: jsonBad.data(using: String._Encoding.utf8)!)
+        }
 
     }
 
-    func test_JSONPermitsTrailingCommas() {
+    @Test func test_JSONPermitsTrailingCommas() throws {
         // Trailing commas aren't valid JSON and should never be emitted, but are syntactically unambiguous and are allowed by
         // most parsers for ease of use.
         let json = "{\"key\" : [ true, ],}"
         let data = json.data(using: String._Encoding.utf8)!
 
-        let result = try! JSONDecoder().decode([String:[Bool]].self, from: data)
+        let result = try JSONDecoder().decode([String:[Bool]].self, from: data)
         let expected = ["key" : [true]]
-        XCTAssertEqual(result, expected)
+        #expect(result == expected)
     }
 
-    func test_whitespaceOnlyData() {
+    @Test func test_whitespaceOnlyData() {
         let data = " ".data(using: String._Encoding.utf8)!
-        XCTAssertThrowsError(try JSONDecoder().decode(Int.self, from: data))
+        #expect(throws: (any Error).self) {
+            try JSONDecoder().decode(Int.self, from: data)
+        }
     }
 
-    func test_smallFloatNumber() {
+    @Test func test_smallFloatNumber() {
         _testRoundTrip(of: [["magic_number" : 7.45673334164903e-115]])
     }
 
-    func test_largeIntegerNumber() {
+    @Test func test_largeIntegerNumber() throws {
         let num : UInt64 = 6032314514195021674
         let json = "{\"a\":\(num)}"
         let data = json.data(using: String._Encoding.utf8)!
 
-        let result = try! JSONDecoder().decode([String:UInt64].self, from: data)
-        let number = result["a"]!
-        XCTAssertEqual(number, num)
+        let result = try JSONDecoder().decode([String:UInt64].self, from: data)
+        #expect(result["a"] == num)
     }
     
-    func test_largeIntegerNumberIsNotRoundedToNearestDoubleWhenDecodingAsAnInteger() {
-        XCTAssertEqual(Double(sign: .plus, exponent: 63, significand: 1).ulp, 2048)
-        XCTAssertEqual(Double(sign: .plus, exponent: 64, significand: 1).ulp, 4096)
+    @Test func test_largeIntegerNumberIsNotRoundedToNearestDoubleWhenDecodingAsAnInteger() {
+        #expect(Double(sign: .plus, exponent: 63, significand: 1).ulp == 2048)
+        #expect(Double(sign: .plus, exponent: 64, significand: 1).ulp == 4096)
         
         let int64s: [(String, Int64?)] = [
             ("-9223372036854776833", nil),            // -2^63 - 1025 (Double: -2^63 - 2048)
@@ -1317,17 +1307,17 @@ final class JSONEncoderTests : XCTestCase {
             
             for (json, value) in int64s {
                 let result = try? decoder.decode(Int64.self, from: json.data(using: String._Encoding.utf8)!)
-                XCTAssertEqual(result, value, "Unexpected \(decoder) result for input \"\(json)\"")
+                #expect(result == value, "Unexpected \(decoder) result for input \"\(json)\"")
             }
             
             for (json, value) in uint64s {
                 let result = try? decoder.decode(UInt64.self, from: json.data(using: String._Encoding.utf8)!)
-                XCTAssertEqual(result, value, "Unexpected \(decoder) result for input \"\(json)\"")
+                #expect(result == value, "Unexpected \(decoder) result for input \"\(json)\"")
             }
         }
     }
 
-    func test_roundTrippingExtremeValues() {
+    @Test func test_roundTrippingExtremeValues() {
         struct Numbers : Codable, Equatable {
             let floats : [Float]
             let doubles : [Double]
@@ -1336,95 +1326,95 @@ final class JSONEncoderTests : XCTestCase {
         _testRoundTrip(of: testValue)
     }
   
-    func test_roundTrippingInt128() {
-        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
-            let values = [
-                Int128.min,
-                Int128.min + 1,
-                -0x1_0000_0000_0000_0000,
-                0x0_8000_0000_0000_0000,
-                -1,
-                0,
-                0x7fff_ffff_ffff_ffff,
-                0x8000_0000_0000_0000,
-                0xffff_ffff_ffff_ffff,
-                0x1_0000_0000_0000_0000,
-                .max
-            ]
-            for i128 in values {
-                _testRoundTrip(of: i128)
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    @Test func test_roundTrippingInt128() {
+        let values = [
+            Int128.min,
+            Int128.min + 1,
+            -0x1_0000_0000_0000_0000,
+            0x0_8000_0000_0000_0000,
+            -1,
+            0,
+            0x7fff_ffff_ffff_ffff,
+            0x8000_0000_0000_0000,
+            0xffff_ffff_ffff_ffff,
+            0x1_0000_0000_0000_0000,
+            .max
+        ]
+        for i128 in values {
+            _testRoundTrip(of: i128)
+        }
+    }
+    
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    @Test func test_Int128SlowPath() throws {
+        let decoder = JSONDecoder()
+        let work: [Int128] = [18446744073709551615, -18446744073709551615]
+        for value in work {
+            // force the slow-path by appending ".0"
+            let json = "\(value).0".data(using: String._Encoding.utf8)!
+            #expect(try value == decoder.decode(Int128.self, from: json))
+        }
+        // These should work, but making them do so probably requires
+        // rewriting the slow path to use a dedicated parser. For now,
+        // we ensure that they throw instead of returning some bogus
+        // result.
+        let shouldWorkButDontYet: [Int128] = [
+            .min, -18446744073709551616, 18446744073709551616, .max
+        ]
+        for value in shouldWorkButDontYet {
+            // force the slow-path by appending ".0"
+            let json = "\(value).0".data(using: String._Encoding.utf8)!
+            #expect(throws: (any Error).self) {
+                try decoder.decode(Int128.self, from: json)
             }
         }
     }
     
-    func test_Int128SlowPath() {
-        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
-            let decoder = JSONDecoder()
-            let work: [Int128] = [18446744073709551615, -18446744073709551615]
-            for value in work {
-                // force the slow-path by appending ".0"
-                let json = "\(value).0".data(using: String._Encoding.utf8)!
-                XCTAssertEqual(value, try? decoder.decode(Int128.self, from: json))
-            }
-            // These should work, but making them do so probably requires
-            // rewriting the slow path to use a dedicated parser. For now,
-            // we ensure that they throw instead of returning some bogus
-            // result.
-            let shouldWorkButDontYet: [Int128] = [
-                .min, -18446744073709551616, 18446744073709551616, .max
-            ]
-            for value in shouldWorkButDontYet {
-                // force the slow-path by appending ".0"
-                let json = "\(value).0".data(using: String._Encoding.utf8)!
-                XCTAssertThrowsError(try decoder.decode(Int128.self, from: json))
-            }
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    @Test func test_roundTrippingUInt128() {
+        let values = [
+            UInt128.zero,
+            1,
+            0x0000_0000_0000_0000_7fff_ffff_ffff_ffff,
+            0x0000_0000_0000_0000_8000_0000_0000_0000,
+            0x0000_0000_0000_0000_ffff_ffff_ffff_ffff,
+            0x0000_0000_0000_0001_0000_0000_0000_0000,
+            0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff,
+            0x8000_0000_0000_0000_0000_0000_0000_0000,
+            .max
+        ]
+        for u128 in values {
+            _testRoundTrip(of: u128)
         }
     }
     
-    func test_roundTrippingUInt128() {
-        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
-            let values = [
-                UInt128.zero,
-                1,
-                0x0000_0000_0000_0000_7fff_ffff_ffff_ffff,
-                0x0000_0000_0000_0000_8000_0000_0000_0000,
-                0x0000_0000_0000_0000_ffff_ffff_ffff_ffff,
-                0x0000_0000_0000_0001_0000_0000_0000_0000,
-                0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff,
-                0x8000_0000_0000_0000_0000_0000_0000_0000,
-                .max
-            ]
-            for u128 in values {
-                _testRoundTrip(of: u128)
-            }
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
+    @Test func test_UInt128SlowPath() throws {
+        let decoder = JSONDecoder()
+        let work: [UInt128] = [18446744073709551615]
+        for value in work {
+            // force the slow-path by appending ".0"
+            let json = "\(value).0".data(using: String._Encoding.utf8)!
+            #expect(try value == decoder.decode(UInt128.self, from: json))
         }
-    }
-    
-    func test_UInt128SlowPath() {
-        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
-            let decoder = JSONDecoder()
-            let work: [UInt128] = [18446744073709551615]
-            for value in work {
-                // force the slow-path by appending ".0"
-                let json = "\(value).0".data(using: String._Encoding.utf8)!
-                XCTAssertEqual(value, try? decoder.decode(UInt128.self, from: json))
-            }
-            // These should work, but making them do so probably requires
-            // rewriting the slow path to use a dedicated parser. For now,
-            // we ensure that they throw instead of returning some bogus
-            // result.
-            let shouldWorkButDontYet: [UInt128] = [
-                18446744073709551616, .max
-            ]
-            for value in shouldWorkButDontYet {
-                // force the slow-path by appending ".0"
-                let json = "\(value).0".data(using: String._Encoding.utf8)!
-                XCTAssertThrowsError(try decoder.decode(UInt128.self, from: json))
+        // These should work, but making them do so probably requires
+        // rewriting the slow path to use a dedicated parser. For now,
+        // we ensure that they throw instead of returning some bogus
+        // result.
+        let shouldWorkButDontYet: [UInt128] = [
+            18446744073709551616, .max
+        ]
+        for value in shouldWorkButDontYet {
+            // force the slow-path by appending ".0"
+            let json = "\(value).0".data(using: String._Encoding.utf8)!
+            #expect(throws: (any Error).self) {
+                try decoder.decode(UInt128.self, from: json)
             }
         }
     }
 
-    func test_roundTrippingDoubleValues() {
+    @Test func test_roundTrippingDoubleValues() {
         struct Numbers : Codable, Equatable {
             let doubles : [String:Double]
             let decimals : [String:Decimal]
@@ -1459,12 +1449,14 @@ final class JSONEncoderTests : XCTestCase {
         _testRoundTrip(of: testValue)
     }
 
-    func test_decodeLargeDoubleAsInteger() {
-        let data = try! JSONEncoder().encode(Double.greatestFiniteMagnitude)
-        XCTAssertThrowsError(try JSONDecoder().decode(UInt64.self, from: data))
+    @Test func test_decodeLargeDoubleAsInteger() throws {
+        let data = try JSONEncoder().encode(Double.greatestFiniteMagnitude)
+        #expect(throws: (any Error).self) {
+            try JSONDecoder().decode(UInt64.self, from: data)
+        }
     }
 
-    func test_localeDecimalPolicyIndependence() {
+    @Test func test_localeDecimalPolicyIndependence() throws {
         var currentLocale: UnsafeMutablePointer<CChar>? = nil
         if let localePtr = setlocale(LC_ALL, nil) {
             currentLocale = strdup(localePtr)
@@ -1479,24 +1471,20 @@ final class JSONEncoderTests : XCTestCase {
 
         let orig = ["decimalValue" : 1.1]
 
-        do {
-            setlocale(LC_ALL, "fr_FR")
-            let data = try JSONEncoder().encode(orig)
+        setlocale(LC_ALL, "fr_FR")
+        let data = try JSONEncoder().encode(orig)
 
 #if os(Windows)
-            setlocale(LC_ALL, "en_US")
+        setlocale(LC_ALL, "en_US")
 #else
-            setlocale(LC_ALL, "en_US_POSIX")
+        setlocale(LC_ALL, "en_US_POSIX")
 #endif
-            let decoded = try JSONDecoder().decode(type(of: orig).self, from: data)
+        let decoded = try JSONDecoder().decode(type(of: orig).self, from: data)
 
-            XCTAssertEqual(orig, decoded)
-        } catch {
-            XCTFail("Error: \(error)")
-        }
+        #expect(orig == decoded)
     }
 
-    func test_whitespace() {
+    @Test func test_whitespace() throws {
         let tests : [(json: String, expected: [String:Bool])] = [
             ("{\"v\"\n : true}",   ["v":true]),
             ("{\"v\"\r\n : true}", ["v":true]),
@@ -1504,79 +1492,76 @@ final class JSONEncoderTests : XCTestCase {
         ]
         for test in tests {
             let data = test.json.data(using: String._Encoding.utf8)!
-            let decoded = try! JSONDecoder().decode([String:Bool].self, from: data)
-            XCTAssertEqual(test.expected, decoded)
+            let decoded = try JSONDecoder().decode([String:Bool].self, from: data)
+            #expect(test.expected == decoded)
         }
     }
 
-    func test_assumesTopLevelDictionary() {
+    @Test func test_assumesTopLevelDictionary() throws {
         let decoder = JSONDecoder()
         decoder.assumesTopLevelDictionary = true
 
         let json = "\"x\" : 42"
-        do {
-            let result = try decoder.decode([String:Int].self, from: json.data(using: String._Encoding.utf8)!)
-            XCTAssertEqual(result, ["x" : 42])
-        } catch {
-            XCTFail("Error thrown while decoding assumed top-level dictionary: \(error)")
-        }
+        var result = try decoder.decode([String:Int].self, from: json.data(using: String._Encoding.utf8)!)
+        #expect(result == ["x" : 42])
 
         let jsonWithBraces = "{\"x\" : 42}"
-        do {
-            let result = try decoder.decode([String:Int].self, from: jsonWithBraces.data(using: String._Encoding.utf8)!)
-            XCTAssertEqual(result, ["x" : 42])
-        } catch {
-            XCTFail("Error thrown while decoding assumed top-level dictionary: \(error)")
-        }
+        result = try decoder.decode([String:Int].self, from: jsonWithBraces.data(using: String._Encoding.utf8)!)
+        #expect(result == ["x" : 42])
 
-        do {
-            let result = try decoder.decode([String:Int].self, from: Data())
-            XCTAssertEqual(result, [:])
-        } catch {
-            XCTFail("Error thrown while decoding empty assumed top-level dictionary: \(error)")
-        }
+        result = try decoder.decode([String:Int].self, from: Data())
+        #expect(result == [:])
 
         let jsonWithEndBraceOnly = "\"x\" : 42}"
-        XCTAssertThrowsError(try decoder.decode([String:Int].self, from: jsonWithEndBraceOnly.data(using: String._Encoding.utf8)!))
+        #expect(throws: (any Error).self) {
+            try decoder.decode([String:Int].self, from: jsonWithEndBraceOnly.data(using: String._Encoding.utf8)!)
+        }
 
         let jsonWithStartBraceOnly = "{\"x\" : 42"
-        XCTAssertThrowsError(try decoder.decode([String:Int].self, from: jsonWithStartBraceOnly.data(using: String._Encoding.utf8)!))
-
+        #expect(throws: (any Error).self) {
+            try decoder.decode([String:Int].self, from: jsonWithStartBraceOnly.data(using: String._Encoding.utf8)!)
+        }
     }
 
-    func test_BOMPrefixes() {
+    @Test func test_BOMPrefixes() throws {
         let json = "\"👍🏻\""
         let decoder = JSONDecoder()
 
         // UTF-8 BOM
         let utf8_BOM = Data([0xEF, 0xBB, 0xBF])
-        XCTAssertEqual("👍🏻", try decoder.decode(String.self, from: utf8_BOM + json.data(using: String._Encoding.utf8)!))
+        #expect(try "👍🏻" == decoder.decode(String.self, from: utf8_BOM + json.data(using: String._Encoding.utf8)!))
 
         // UTF-16 BE
         let utf16_BE_BOM = Data([0xFE, 0xFF])
-        XCTAssertEqual("👍🏻", try decoder.decode(String.self, from: utf16_BE_BOM + json.data(using: String._Encoding.utf16BigEndian)!))
+        #expect(try "👍🏻" == decoder.decode(String.self, from: utf16_BE_BOM + json.data(using: String._Encoding.utf16BigEndian)!))
 
         // UTF-16 LE
         let utf16_LE_BOM = Data([0xFF, 0xFE])
-        XCTAssertEqual("👍🏻", try decoder.decode(String.self, from: utf16_LE_BOM + json.data(using: String._Encoding.utf16LittleEndian)!))
+        #expect(try "👍🏻" == decoder.decode(String.self, from: utf16_LE_BOM + json.data(using: String._Encoding.utf16LittleEndian)!))
 
         // UTF-32 BE
         let utf32_BE_BOM = Data([0x0, 0x0, 0xFE, 0xFF])
-        XCTAssertEqual("👍🏻", try decoder.decode(String.self, from: utf32_BE_BOM + json.data(using: String._Encoding.utf32BigEndian)!))
+        #expect(try "👍🏻" == decoder.decode(String.self, from: utf32_BE_BOM + json.data(using: String._Encoding.utf32BigEndian)!))
 
         // UTF-32 LE
         let utf32_LE_BOM = Data([0xFE, 0xFF, 0, 0])
-        XCTAssertEqual("👍🏻", try decoder.decode(String.self, from: utf32_LE_BOM + json.data(using: String._Encoding.utf32LittleEndian)!))
+        #expect(try "👍🏻" == decoder.decode(String.self, from: utf32_LE_BOM + json.data(using: String._Encoding.utf32LittleEndian)!))
 
         // Try some mismatched BOMs
-        XCTAssertThrowsError(try decoder.decode(String.self, from: utf32_LE_BOM + json.data(using: String._Encoding.utf32BigEndian)!))
+        #expect(throws: (any Error).self) {
+            try decoder.decode(String.self, from: utf32_LE_BOM + json.data(using: String._Encoding.utf32BigEndian)!)
+        }
         
-        XCTAssertThrowsError(try decoder.decode(String.self, from: utf16_BE_BOM + json.data(using: String._Encoding.utf32LittleEndian)!))
+        #expect(throws: (any Error).self) {
+            try decoder.decode(String.self, from: utf16_BE_BOM + json.data(using: String._Encoding.utf32LittleEndian)!)
+        }
         
-        XCTAssertThrowsError(try decoder.decode(String.self, from: utf8_BOM + json.data(using: String._Encoding.utf16BigEndian)!))
+        #expect(throws: (any Error).self) {
+            try decoder.decode(String.self, from: utf8_BOM + json.data(using: String._Encoding.utf16BigEndian)!)
+        }
     }
 
-    func test_valueNotFoundError() {
+    @Test func test_valueNotFoundError() {
         struct ValueNotFound : Decodable {
             let a: Bool
             let nope: String?
@@ -1601,25 +1586,24 @@ final class JSONEncoderTests : XCTestCase {
         let json = "{\"a\":true}".data(using: String._Encoding.utf8)!
 
         // The expected valueNotFound error is swalled by the init(from:) implementation.
-        XCTAssertNoThrow(try JSONDecoder().decode(ValueNotFound.self, from: json))
+        #expect(throws: Never.self) {
+            try JSONDecoder().decode(ValueNotFound.self, from: json)
+        }
     }
 
-    func test_infiniteDate() {
+    @Test(arguments: [JSONEncoder.DateEncodingStrategy.deferredToDate, .secondsSince1970, .millisecondsSince1970])
+    func test_infiniteDate(strategy: JSONEncoder.DateEncodingStrategy) {
         let date = Date(timeIntervalSince1970: .infinity)
 
         let encoder = JSONEncoder()
-
-        encoder.dateEncodingStrategy = .deferredToDate
-        XCTAssertThrowsError(try encoder.encode([date]))
-
-        encoder.dateEncodingStrategy = .secondsSince1970
-        XCTAssertThrowsError(try encoder.encode([date]))
-
-        encoder.dateEncodingStrategy = .millisecondsSince1970
-        XCTAssertThrowsError(try encoder.encode([date]))
+        encoder.dateEncodingStrategy = strategy
+        
+        #expect(throws: (any Error).self) {
+            try encoder.encode([date])
+        }
     }
 
-    func test_typeEncodesNothing() {
+    @Test func test_typeEncodesNothing() throws {
         struct EncodesNothing : Encodable {
             func encode(to encoder: Encoder) throws {
                 // Intentionally nothing.
@@ -1627,18 +1611,20 @@ final class JSONEncoderTests : XCTestCase {
         }
         let enc = JSONEncoder()
 
-        XCTAssertThrowsError(try enc.encode(EncodesNothing()))
+        #expect(throws: (any Error).self) {
+            try enc.encode(EncodesNothing())
+        }
 
         // Unknown if the following behavior is strictly correct, but it's what the prior implementation does, so this test exists to make sure we maintain compatibility.
 
-        let arrayData = try! enc.encode([EncodesNothing()])
-        XCTAssertEqual("[{}]", String(data: arrayData, encoding: .utf8))
+        let arrayData = try enc.encode([EncodesNothing()])
+        #expect("[{}]" == String(data: arrayData, encoding: .utf8))
 
-        let objectData = try! enc.encode(["test" : EncodesNothing()])
-        XCTAssertEqual("{\"test\":{}}", String(data: objectData, encoding: .utf8))
+        let objectData = try enc.encode(["test" : EncodesNothing()])
+        #expect("{\"test\":{}}" == String(data: objectData, encoding: .utf8))
     }
 
-    func test_superEncoders() {
+    @Test func test_superEncoders() throws {
         struct SuperEncoding : Encodable {
             enum CodingKeys: String, CodingKey {
                 case firstSuper
@@ -1668,15 +1654,15 @@ final class JSONEncoderTests : XCTestCase {
                 // NOTE!!! At present, the order in which the values in the unkeyed container's superEncoders above get inserted into the resulting array depends on the order in which the superEncoders are deinit'd!! This can result in some very unexpected results, and this pattern is not recommended. This test exists just to verify compatibility.
             }
         }
-        let data = try! JSONEncoder().encode(SuperEncoding())
-        let string = String(data: data, encoding: .utf8)!
+        let data = try JSONEncoder().encode(SuperEncoding())
+        let string = try #require(String(data: data, encoding: .utf8))
 
-        XCTAssertTrue(string.contains("\"firstSuper\":\"First\""))
-        XCTAssertTrue(string.contains("\"secondSuper\":\"Second\""))
-        XCTAssertTrue(string.contains("[0,\"First\",\"Second\",42]"))
+        #expect(string.contains("\"firstSuper\":\"First\""))
+        #expect(string.contains("\"secondSuper\":\"Second\""))
+        #expect(string.contains("[0,\"First\",\"Second\",42]"))
     }
 
-    func testRedundantKeys() {
+    @Test func testRedundantKeys() throws {
         // Last encoded key wins.
 
         struct RedundantEncoding : Encodable {
@@ -1709,23 +1695,23 @@ final class JSONEncoderTests : XCTestCase {
                 }
             }
         }
-        var data = try! JSONEncoder().encode(RedundantEncoding(replacedType: .value, useSuperEncoder: false))
-        XCTAssertEqual(String(data: data, encoding: .utf8), ("{\"key\":42}"))
+        var data = try JSONEncoder().encode(RedundantEncoding(replacedType: .value, useSuperEncoder: false))
+        #expect(String(data: data, encoding: .utf8) == ("{\"key\":42}"))
 
-        data = try! JSONEncoder().encode(RedundantEncoding(replacedType: .value, useSuperEncoder: true))
-        XCTAssertEqual(String(data: data, encoding: .utf8), ("{\"key\":42}"))
+        data = try JSONEncoder().encode(RedundantEncoding(replacedType: .value, useSuperEncoder: true))
+        #expect(String(data: data,  encoding: .utf8) == ("{\"key\":42}"))
 
-        data = try! JSONEncoder().encode(RedundantEncoding(replacedType: .keyedContainer, useSuperEncoder: false))
-        XCTAssertEqual(String(data: data, encoding: .utf8), ("{\"key\":42}"))
+        data = try JSONEncoder().encode(RedundantEncoding(replacedType: .keyedContainer, useSuperEncoder: false))
+        #expect(String(data: data,  encoding: .utf8) == ("{\"key\":42}"))
 
-        data = try! JSONEncoder().encode(RedundantEncoding(replacedType: .keyedContainer, useSuperEncoder: true))
-        XCTAssertEqual(String(data: data, encoding: .utf8), ("{\"key\":42}"))
+        data = try JSONEncoder().encode(RedundantEncoding(replacedType: .keyedContainer, useSuperEncoder: true))
+        #expect(String(data: data,  encoding: .utf8) == ("{\"key\":42}"))
 
-        data = try! JSONEncoder().encode(RedundantEncoding(replacedType: .unkeyedContainer, useSuperEncoder: false))
-        XCTAssertEqual(String(data: data, encoding: .utf8), ("{\"key\":42}"))
+        data = try JSONEncoder().encode(RedundantEncoding(replacedType: .unkeyedContainer, useSuperEncoder: false))
+        #expect(String(data: data,  encoding: .utf8) == ("{\"key\":42}"))
 
-        data = try! JSONEncoder().encode(RedundantEncoding(replacedType: .unkeyedContainer, useSuperEncoder: true))
-        XCTAssertEqual(String(data: data, encoding: .utf8), ("{\"key\":42}"))
+        data = try JSONEncoder().encode(RedundantEncoding(replacedType: .unkeyedContainer, useSuperEncoder: true))
+        #expect(String(data: data,  encoding: .utf8) == ("{\"key\":42}"))
     }
 
     // None of these tests can be run in our automatic test suites right now, because they are expected to hit a preconditionFailure. They can only be verified manually.
@@ -1763,10 +1749,12 @@ final class JSONEncoderTests : XCTestCase {
                 }
             }
         }
-        let _ = try! JSONEncoder().encode(RedundantEncoding(subcase: .replaceValueWithKeyedContainer))
-//        let _ = try! JSONEncoder().encode(RedundantEncoding(subcase: .replaceValueWithUnkeyedContainer))
-//        let _ = try! JSONEncoder().encode(RedundantEncoding(subcase: .replaceKeyedContainerWithUnkeyed))
-//        let _ = try! JSONEncoder().encode(RedundantEncoding(subcase: .replaceUnkeyedContainerWithKeyed))
+        #expect(throws: Never.self) {
+            let _ = try JSONEncoder().encode(RedundantEncoding(subcase: .replaceValueWithKeyedContainer))
+//          let _ = try JSONEncoder().encode(RedundantEncoding(subcase: .replaceValueWithUnkeyedContainer))
+//          let _ = try JSONEncoder().encode(RedundantEncoding(subcase: .replaceKeyedContainerWithUnkeyed))
+//          let _ = try JSONEncoder().encode(RedundantEncoding(subcase: .replaceUnkeyedContainerWithKeyed))
+        }
     }
 
     var json5Decoder: JSONDecoder {
@@ -1775,7 +1763,7 @@ final class JSONEncoderTests : XCTestCase {
         return decoder
     }
 
-    func test_json5Numbers() {
+    @Test func test_json5Numbers() {
         let decoder = json5Decoder
 
         let successfulIntegers: [(String,Int)] = [
@@ -1803,11 +1791,9 @@ final class JSONEncoderTests : XCTestCase {
             ("1E+02", 100),
         ]
         for (json, expected) in successfulIntegers {
-            do {
+            #expect(throws: Never.self, "Error when parsing input \"\(json)\"") {
                 let val = try decoder.decode(Int.self, from: json.data(using: String._Encoding.utf8)!)
-                XCTAssertEqual(val, expected, "Wrong value parsed from input \"\(json)\"")
-            } catch {
-                XCTFail("Error when parsing input \"\(json)\": \(error)")
+                #expect(val == expected, "Wrong value parsed from input \"\(json)\"")
             }
         }
 
@@ -1847,15 +1833,13 @@ final class JSONEncoderTests : XCTestCase {
             ("+0X1f", Double(+0x1f)),
         ]
         for (json, expected) in successfulDoubles {
-            do {
+            #expect(throws: Never.self, "Error when parsing input \"\(json)\"") {
                 let val = try decoder.decode(Double.self, from: json.data(using: String._Encoding.utf8)!)
                 if expected.isNaN {
-                    XCTAssertTrue(val.isNaN, "Wrong value \(val) parsed from input \"\(json)\"")
+                    #expect(val.isNaN, "Wrong value \(val) parsed from input \"\(json)\"")
                 } else {
-                    XCTAssertEqual(val, expected, "Wrong value parsed from input \"\(json)\"")
+                    #expect(val == expected, "Wrong value parsed from input \"\(json)\"")
                 }
-            } catch {
-                XCTFail("Error when parsing input \"\(json)\": \(error)")
             }
         }
 
@@ -1881,10 +1865,9 @@ final class JSONEncoderTests : XCTestCase {
             "-1E ",
         ]
         for json in unsuccessfulIntegers {
-            do {
+            #expect(throws: (any Error).self) {
                 let _ = try decoder.decode(Int.self, from: json.data(using: String._Encoding.utf8)!)
-                XCTFail("Expected failure for input \"\(json)\"")
-            } catch { }
+            }
         }
 
         let unsuccessfulDoubles = [
@@ -1912,14 +1895,13 @@ final class JSONEncoderTests : XCTestCase {
             "0xFFFFFFFFFFFFFFFFFFFFFF",
         ];
         for json in unsuccessfulDoubles {
-            do {
+            #expect(throws: (any Error).self) {
                 let _ = try decoder.decode(Double.self, from: json.data(using: String._Encoding.utf8)!)
-                XCTFail("Expected failure for input \"\(json)\"")
-            } catch { }
+            }
         }
     }
 
-    func test_json5Null() {
+    @Test func test_json5Null() {
         let validJSON = "null"
         let invalidJSON = [
             "Null",
@@ -1930,14 +1912,18 @@ final class JSONEncoderTests : XCTestCase {
             "nu   "
         ]
 
-        XCTAssertNoThrow(try json5Decoder.decode(NullReader.self, from: validJSON.data(using: String._Encoding.utf8)!))
+        #expect(throws: Never.self) {
+            try json5Decoder.decode(NullReader.self, from: validJSON.data(using: String._Encoding.utf8)!)
+        }
 
         for json in invalidJSON {
-            XCTAssertThrowsError(try json5Decoder.decode(NullReader.self, from: json.data(using: String._Encoding.utf8)!), "Expected failure while decoding input \"\(json)\"")
+            #expect(throws: (any Error).self, "Expected failure while decoding input \"\(json)\"") {
+                try json5Decoder.decode(NullReader.self, from: json.data(using: String._Encoding.utf8)!)
+            }
         }
     }
 
-    func test_json5EsotericErrors() {
+    @Test func test_json5EsotericErrors() {
         // All of the following should fail
         let arrayStrings = [
             "[",
@@ -1966,17 +1952,23 @@ final class JSONEncoderTests : XCTestCase {
             [.init(ascii: "{"), 0xf0, 0x80, 0x80],  // Invalid UTF-8: Initial byte of 3-byte sequence with only one continuation
         ]
         for json in arrayStrings {
-            XCTAssertThrowsError(try json5Decoder.decode([String].self, from: json.data(using: String._Encoding.utf8)!), "Expected error for input \"\(json)\"")
+            #expect(throws: (any Error).self, "Expected error for input \"\(json)\"") {
+                try json5Decoder.decode([String].self, from: json.data(using: String._Encoding.utf8)!)
+            }
         }
         for json in objectStrings {
-            XCTAssertThrowsError(try json5Decoder.decode([String:Bool].self, from: json.data(using: String._Encoding.utf8)!), "Expected error for input \(json)")
+            #expect(throws: (any Error).self, "Expected error for input \"\(json)\"") {
+                try json5Decoder.decode([String:Bool].self, from: json.data(using: String._Encoding.utf8)!)
+            }
         }
         for json in objectCharacterArrays {
-            XCTAssertThrowsError(try json5Decoder.decode([String:Bool].self, from: Data(json)), "Expected error for input \(json)")
+            #expect(throws: (any Error).self, "Expected error for input \"\(json)\"") {
+                try json5Decoder.decode([String:Bool].self, from: Data(json))
+            }
         }
     }
 
-    func test_json5Strings() {
+    @Test func test_json5Strings() throws {
         let stringsToTrues = [
             "{v\n : true}",
             "{v \n : true}",
@@ -2017,21 +2009,23 @@ final class JSONEncoderTests : XCTestCase {
         ]
 
         for json in stringsToTrues {
-            XCTAssertNoThrow(try json5Decoder.decode([String:Bool].self, from: json.data(using: String._Encoding.utf8)!), "Failed to parse \"\(json)\"")
+            #expect(throws: Never.self, "Failed to parse \"\(json)\"") {
+                try json5Decoder.decode([String:Bool].self, from: json.data(using: String._Encoding.utf8)!)
+            }
         }
         for (json, expected) in stringsToStrings {
             do {
                 let decoded = try json5Decoder.decode([String:String].self, from: json.data(using: String._Encoding.utf8)!)
-                XCTAssertEqual(expected, decoded["v"])
+                #expect(expected == decoded["v"])
             } catch {
                 if let expected {
-                    XCTFail("Expected \(expected) for input \"\(json)\", but failed with \(error)")
+                    Issue.record("Expected \(expected) for input \"\(json)\", but failed with \(error)")
                 }
             }
         }
     }
 
-    func test_json5AssumedDictionary() {
+    @Test func test_json5AssumedDictionary() {
         let decoder = json5Decoder
         decoder.assumesTopLevelDictionary = true
 
@@ -2061,10 +2055,10 @@ final class JSONEncoderTests : XCTestCase {
         for (json, expected) in stringsToString {
             do {
                 let decoded = try decoder.decode([String:String].self, from: json.data(using: String._Encoding.utf8)!)
-                XCTAssertEqual(expected, decoded)
+                #expect(expected == decoded)
             } catch {
                 if let expected {
-                    XCTFail("Expected \(expected) for input \"\(json)\", but failed with \(error)")
+                    Issue.record("Expected \(expected) for input \"\(json)\", but failed with \(error)")
                 }
             }
         }
@@ -2084,20 +2078,26 @@ final class JSONEncoderTests : XCTestCase {
         for json in stringsToNestedDictionary {
             do {
                 let decoded = try decoder.decode(HelloGoodbye.self, from: json.data(using: String._Encoding.utf8)!)
-                XCTAssertEqual(helloGoodbyeExpectedValue, decoded)
+                #expect(helloGoodbyeExpectedValue == decoded)
             } catch {
-                XCTFail("Expected \(helloGoodbyeExpectedValue) for input \"\(json)\", but failed with \(error)")
+                Issue.record("Expected \(helloGoodbyeExpectedValue) for input \"\(json)\", but failed with \(error)")
             }
         }
 
         let arrayJSON = "[1,2,3]".data(using: String._Encoding.utf8)! // Assumed dictionary can't be an array
-        XCTAssertThrowsError(try decoder.decode([Int].self, from: arrayJSON))
+        #expect(throws: (any Error).self) {
+            try decoder.decode([Int].self, from: arrayJSON)
+        }
 
         let strFragmentJSON = "fragment".data(using: String._Encoding.utf8)! // Assumed dictionary can't be a fragment
-        XCTAssertThrowsError(try decoder.decode(String.self, from: strFragmentJSON))
+        #expect(throws: (any Error).self) {
+            try decoder.decode(String.self, from: strFragmentJSON)
+        }
 
         let numFragmentJSON = "42".data(using: String._Encoding.utf8)! // Assumed dictionary can't be a fragment
-        XCTAssertThrowsError(try decoder.decode(Int.self, from: numFragmentJSON))
+        #expect(throws: (any Error).self) {
+            try decoder.decode(Int.self, from: numFragmentJSON)
+        }
     }
 
     enum JSON5SpecTestType {
@@ -2121,7 +2121,7 @@ final class JSONEncoderTests : XCTestCase {
 
 // MARK: - SnakeCase Tests
 extension JSONEncoderTests {
-    func testDecodingKeyStrategyCamel() {
+    @Test func testDecodingKeyStrategyCamel() throws {
         let fromSnakeCaseTests = [
             ("", ""), // don't die on empty string
             ("a", "a"), // single character
@@ -2165,25 +2165,25 @@ extension JSONEncoderTests {
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
 
-            let result = try! decoder.decode(DecodeMe.self, from: input)
+            let result = try decoder.decode(DecodeMe.self, from: input)
 
-            XCTAssertTrue(result.found)
+            #expect(result.found)
         }
     }
 
-    func testEncodingDictionaryStringKeyConversionUntouched() {
+    @Test func testEncodingDictionaryStringKeyConversionUntouched() throws {
         let expected = "{\"leaveMeAlone\":\"test\"}"
         let toEncode: [String: String] = ["leaveMeAlone": "test"]
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
-        let resultData = try! encoder.encode(toEncode)
+        let resultData = try encoder.encode(toEncode)
         let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
 
-        XCTAssertEqual(expected, resultString)
+        #expect(expected == resultString)
     }
 
-    func testKeyStrategySnakeGeneratedAndCustom() {
+    @Test func testKeyStrategySnakeGeneratedAndCustom() throws {
         // Test that this works with a struct that has automatically generated keys
         struct DecodeMe4 : Codable {
             var thisIsCamelCase : String
@@ -2198,103 +2198,97 @@ extension JSONEncoderTests {
         let input = "{\"foo_bar\":\"test\",\"this_is_camel_case_too\":\"test2\"}".data(using: String._Encoding.utf8)!
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let decodingResult = try! decoder.decode(DecodeMe4.self, from: input)
+        let decodingResult = try decoder.decode(DecodeMe4.self, from: input)
 
-        XCTAssertEqual("test", decodingResult.thisIsCamelCase)
-        XCTAssertEqual("test2", decodingResult.thisIsCamelCaseToo)
+        #expect("test" == decodingResult.thisIsCamelCase)
+        #expect("test2" == decodingResult.thisIsCamelCaseToo)
 
         // Encoding
         let encoded = DecodeMe4(thisIsCamelCase: "test", thisIsCamelCaseToo: "test2")
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
-        let encodingResultData = try! encoder.encode(encoded)
-        let encodingResultString = String(bytes: encodingResultData, encoding: String._Encoding.utf8)
-        XCTAssertTrue(encodingResultString!.contains("foo_bar"))
-        XCTAssertTrue(encodingResultString!.contains("this_is_camel_case_too"))
+        let encodingResultData = try encoder.encode(encoded)
+        let encodingResultString = try #require(String(bytes: encodingResultData, encoding: String._Encoding.utf8))
+        #expect(encodingResultString.contains("foo_bar"))
+        #expect(encodingResultString.contains("this_is_camel_case_too"))
     }
 
-    func testDecodingDictionaryFailureKeyPathNested() {
+    @Test func testDecodingDictionaryFailureKeyPathNested() {
         let input = "{\"top_level\": {\"sub_level\": {\"nested_value\": {\"int_value\": \"not_an_int\"}}}}".data(using: String._Encoding.utf8)!
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        do {
+        #expect {
             _ = try decoder.decode([String: [String : DecodeFailureNested]].self, from: input)
-        } catch DecodingError.typeMismatch(_, let context) {
-            XCTAssertEqual(4, context.codingPath.count)
-            XCTAssertEqual("top_level", context.codingPath[0].stringValue)
-            XCTAssertEqual("sub_level", context.codingPath[1].stringValue)
-            XCTAssertEqual("nestedValue", context.codingPath[2].stringValue)
-            XCTAssertEqual("intValue", context.codingPath[3].stringValue)
-        } catch {
-            XCTFail("Unexpected error: \(String(describing: error))")
+        } throws: {
+            guard let decodingError = $0 as? DecodingError, case .typeMismatch(_, let context) = decodingError else {
+                return false
+            }
+            return context.codingPath.map(\.stringValue) == ["top_level", "sub_level", "nestedValue", "intValue"]
         }
     }
 
-    func testDecodingKeyStrategyCamelGenerated() {
+    @Test func testDecodingKeyStrategyCamelGenerated() throws {
         let encoded = DecodeMe3(thisIsCamelCase: "test")
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
-        let resultData = try! encoder.encode(encoded)
+        let resultData = try encoder.encode(encoded)
         let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
-        XCTAssertEqual("{\"this_is_camel_case\":\"test\"}", resultString)
+        #expect("{\"this_is_camel_case\":\"test\"}" == resultString)
     }
 
-    func testDecodingStringExpectedType() {
+    @Test func testDecodingStringExpectedType() {
         let input = #"{"thisIsCamelCase": null}"#.data(using: String._Encoding.utf8)!
-        do {
+        #expect {
             _ = try JSONDecoder().decode(DecodeMe3.self, from: input)
-        } catch DecodingError.valueNotFound(let expected, _) {
-            XCTAssertTrue(expected == String.self)
-        } catch {
-            XCTFail("Unexpected error: \(String(describing: error))")
+        } throws: {
+            guard let decodingError = $0 as? DecodingError, case .valueNotFound(let expected, _) = decodingError else {
+                return false
+            }
+            return expected == String.self
         }
     }
 
-    func testEncodingKeyStrategySnakeGenerated() {
+    @Test func testEncodingKeyStrategySnakeGenerated() throws {
         // Test that this works with a struct that has automatically generated keys
         let input = "{\"this_is_camel_case\":\"test\"}".data(using: String._Encoding.utf8)!
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let result = try! decoder.decode(DecodeMe3.self, from: input)
+        let result = try decoder.decode(DecodeMe3.self, from: input)
 
-        XCTAssertEqual("test", result.thisIsCamelCase)
+        #expect("test" == result.thisIsCamelCase)
     }
 
-    func testEncodingDictionaryFailureKeyPath() {
+    @Test func testEncodingDictionaryFailureKeyPath() {
         let toEncode: [String: EncodeFailure] = ["key": EncodeFailure(someValue: Double.nan)]
-
+        
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
-        do {
+        #expect {
             _ = try encoder.encode(toEncode)
-        } catch EncodingError.invalidValue(_, let context) {
-            XCTAssertEqual(2, context.codingPath.count)
-            XCTAssertEqual("key", context.codingPath[0].stringValue)
-            XCTAssertEqual("someValue", context.codingPath[1].stringValue)
-        } catch {
-            XCTFail("Unexpected error: \(String(describing: error))")
+        } throws: {
+            guard let encodingError = $0 as? EncodingError, case .invalidValue(_, let context) = encodingError else {
+                return false
+            }
+            return context.codingPath.map(\.stringValue) == ["key", "someValue"]
         }
     }
 
-    func testEncodingDictionaryFailureKeyPathNested() {
+    @Test func testEncodingDictionaryFailureKeyPathNested() {
         let toEncode: [String: [String: EncodeFailureNested]] = ["key": ["sub_key": EncodeFailureNested(nestedValue: EncodeFailure(someValue: Double.nan))]]
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
-        do {
+        #expect {
             _ = try encoder.encode(toEncode)
-        } catch EncodingError.invalidValue(_, let context) {
-            XCTAssertEqual(4, context.codingPath.count)
-            XCTAssertEqual("key", context.codingPath[0].stringValue)
-            XCTAssertEqual("sub_key", context.codingPath[1].stringValue)
-            XCTAssertEqual("nestedValue", context.codingPath[2].stringValue)
-            XCTAssertEqual("someValue", context.codingPath[3].stringValue)
-        } catch {
-            XCTFail("Unexpected error: \(String(describing: error))")
+        } throws: {
+            guard let decodingError = $0 as? EncodingError, case .invalidValue(_, let context) = decodingError else {
+                return false
+            }
+            return context.codingPath.map(\.stringValue) == ["key", "sub_key", "nestedValue", "someValue"]
         }
     }
 
-    func testEncodingKeyStrategySnake() {
+    @Test func testEncodingKeyStrategySnake() throws {
         let toSnakeCaseTests = [
             ("simpleOneTwo", "simple_one_two"),
             ("myURL", "my_url"),
@@ -2333,316 +2327,313 @@ extension JSONEncoderTests {
 
             let encoder = JSONEncoder()
             encoder.keyEncodingStrategy = .convertToSnakeCase
-            let resultData = try! encoder.encode(encoded)
+            let resultData = try encoder.encode(encoded)
             let resultString = String(bytes: resultData, encoding: String._Encoding.utf8)
 
-            XCTAssertEqual(expected, resultString)
+            #expect(expected == resultString)
         }
     }
     
-    func test_twoByteUTF16Inputs() {
+    @Test func test_twoByteUTF16Inputs() throws {
         let json = "7"
         let decoder = JSONDecoder()
 
-        XCTAssertEqual(7, try decoder.decode(Int.self, from: json.data(using: .utf16BigEndian)!))
-        XCTAssertEqual(7, try decoder.decode(Int.self, from: json.data(using: .utf16LittleEndian)!))
+        #expect(try 7 == decoder.decode(Int.self, from: json.data(using: .utf16BigEndian)!))
+        #expect(try 7 == decoder.decode(Int.self, from: json.data(using: .utf16LittleEndian)!))
     }
     
-    private func _run_passTest<T:Codable & Equatable>(name: String, json5: Bool = false, type: T.Type) {
-        let jsonData = testData(forResource: name, withExtension: json5 ? "json5" : "json" , subdirectory: json5 ? "JSON5/pass" : "JSON/pass")!
+    private func _run_passTest<T:Codable & Equatable>(name: String, json5: Bool = false, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) throws {
+        let jsonData = try testData(forResource: name, withExtension: json5 ? "json5" : "json" , subdirectory: json5 ? "JSON5/pass" : "JSON/pass")
 
-        let plistData = testData(forResource: name, withExtension: "plist", subdirectory: "JSON/pass")
+        let plistData = try? testData(forResource: name, withExtension: "plist", subdirectory: "JSON/pass")
         let decoder = json5Decoder
 
-        let decoded: T
-        do {
+        var decoded: T?
+        #expect(throws: Never.self, "Pass test \"\(name)\" failed to decode", sourceLocation: sourceLocation) {
             decoded = try decoder.decode(T.self, from: jsonData)
-        } catch {
-            XCTFail("Pass test \"\(name)\" failed with error: \(error)")
-            return
         }
+        guard let decoded else { return }
 
         let prettyPrintEncoder = JSONEncoder()
         prettyPrintEncoder.outputFormatting = .prettyPrinted
 
         for encoder in [JSONEncoder(), prettyPrintEncoder] {
-            let reencodedData = try! encoder.encode(decoded)
-            let redecodedObjects = try! decoder.decode(T.self, from: reencodedData)
-            XCTAssertEqual(decoded, redecodedObjects)
-
-            if let plistData {
-                let decodedPlistObjects = try! PropertyListDecoder().decode(T.self, from: plistData)
-                XCTAssertEqual(decoded, decodedPlistObjects)
+            #expect(throws: Never.self, "Pass test \"\(name)\" failed to round trip", sourceLocation: sourceLocation) {
+                let reencodedData = try encoder.encode(decoded)
+                let redecodedObjects = try decoder.decode(T.self, from: reencodedData)
+                #expect(decoded == redecodedObjects, sourceLocation: sourceLocation)
+                
+                if let plistData {
+                    let decodedPlistObjects = try PropertyListDecoder().decode(T.self, from: plistData)
+                    #expect(decoded == decodedPlistObjects, sourceLocation: sourceLocation)
+                }
             }
         }
     }
 
-    func test_JSONPassTests() {
-        _run_passTest(name: "pass1-utf8", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass1-utf16be", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass1-utf16le", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass1-utf32be", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass1-utf32le", type: JSONPass.Test1.self)
-        _run_passTest(name: "pass2", type: JSONPass.Test2.self)
-        _run_passTest(name: "pass3", type: JSONPass.Test3.self)
-        _run_passTest(name: "pass4", type: JSONPass.Test4.self)
-        _run_passTest(name: "pass5", type: JSONPass.Test5.self)
-        _run_passTest(name: "pass6", type: JSONPass.Test6.self)
-        _run_passTest(name: "pass7", type: JSONPass.Test7.self)
-        _run_passTest(name: "pass8", type: JSONPass.Test8.self)
-        _run_passTest(name: "pass9", type: JSONPass.Test9.self)
-        _run_passTest(name: "pass10", type: JSONPass.Test10.self)
-        _run_passTest(name: "pass11", type: JSONPass.Test11.self)
-        _run_passTest(name: "pass12", type: JSONPass.Test12.self)
-        _run_passTest(name: "pass13", type: JSONPass.Test13.self)
-        _run_passTest(name: "pass14", type: JSONPass.Test14.self)
-        _run_passTest(name: "pass15", type: JSONPass.Test15.self)
+    @Test func test_JSONPassTests() throws {
+        try _run_passTest(name: "pass1-utf8", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass1-utf16be", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass1-utf16le", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass1-utf32be", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass1-utf32le", type: JSONPass.Test1.self)
+        try _run_passTest(name: "pass2", type: JSONPass.Test2.self)
+        try _run_passTest(name: "pass3", type: JSONPass.Test3.self)
+        try _run_passTest(name: "pass4", type: JSONPass.Test4.self)
+        try _run_passTest(name: "pass5", type: JSONPass.Test5.self)
+        try _run_passTest(name: "pass6", type: JSONPass.Test6.self)
+        try _run_passTest(name: "pass7", type: JSONPass.Test7.self)
+        try _run_passTest(name: "pass8", type: JSONPass.Test8.self)
+        try _run_passTest(name: "pass9", type: JSONPass.Test9.self)
+        try _run_passTest(name: "pass10", type: JSONPass.Test10.self)
+        try _run_passTest(name: "pass11", type: JSONPass.Test11.self)
+        try _run_passTest(name: "pass12", type: JSONPass.Test12.self)
+        try _run_passTest(name: "pass13", type: JSONPass.Test13.self)
+        try _run_passTest(name: "pass14", type: JSONPass.Test14.self)
+        try _run_passTest(name: "pass15", type: JSONPass.Test15.self)
+    }
+    
+    @Test func test_json5PassJSONFiles() throws {
+        try _run_passTest(name: "example", json5: true, type: JSON5Pass.Example.self)
+        try _run_passTest(name: "hex", json5: true, type: JSON5Pass.Hex.self)
+        try _run_passTest(name: "numbers", json5: true, type: JSON5Pass.Numbers.self)
+        try _run_passTest(name: "strings", json5: true, type: JSON5Pass.Strings.self)
+        try _run_passTest(name: "whitespace", json5: true, type: JSON5Pass.Whitespace.self)
     }
 
-    func test_json5PassJSONFiles() {
-        _run_passTest(name: "example", json5: true, type: JSON5Pass.Example.self)
-        _run_passTest(name: "hex", json5: true, type: JSON5Pass.Hex.self)
-        _run_passTest(name: "numbers", json5: true, type: JSON5Pass.Numbers.self)
-        _run_passTest(name: "strings", json5: true, type: JSON5Pass.Strings.self)
-        _run_passTest(name: "whitespace", json5: true, type: JSON5Pass.Whitespace.self)
-    }
-
-    private func _run_failTest<T:Decodable>(name: String, type: T.Type) {
-        let jsonData = testData(forResource: name, withExtension: "json", subdirectory: "JSON/fail")!
+    private func _run_failTest<T:Decodable>(name: String, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) throws {
+        let jsonData = try testData(forResource: name, withExtension: "json", subdirectory: "JSON/fail")
 
         let decoder = JSONDecoder()
         decoder.assumesTopLevelDictionary = true
-        do {
-            let _ = try decoder.decode(T.self, from: jsonData)
-            XCTFail("Decoding should have failed for invalid JSON data (test name: \(name))")
-        } catch {
-            print(error as NSError)
+        #expect(throws: (any Error).self, "Decoding should have failed for invalid JSON data (test name: \(name))", sourceLocation: sourceLocation) {
+            try decoder.decode(T.self, from: jsonData)
         }
     }
 
-    func test_JSONFailTests() {
-        _run_failTest(name: "fail1", type: JSONFail.Test1.self)
-        _run_failTest(name: "fail2", type: JSONFail.Test2.self)
-        _run_failTest(name: "fail3", type: JSONFail.Test3.self)
-        _run_failTest(name: "fail4", type: JSONFail.Test4.self)
-        _run_failTest(name: "fail5", type: JSONFail.Test5.self)
-        _run_failTest(name: "fail6", type: JSONFail.Test6.self)
-        _run_failTest(name: "fail7", type: JSONFail.Test7.self)
-        _run_failTest(name: "fail8", type: JSONFail.Test8.self)
-        _run_failTest(name: "fail9", type: JSONFail.Test9.self)
-        _run_failTest(name: "fail10", type: JSONFail.Test10.self)
-        _run_failTest(name: "fail11", type: JSONFail.Test11.self)
-        _run_failTest(name: "fail12", type: JSONFail.Test12.self)
-        _run_failTest(name: "fail13", type: JSONFail.Test13.self)
-        _run_failTest(name: "fail14", type: JSONFail.Test14.self)
-        _run_failTest(name: "fail15", type: JSONFail.Test15.self)
-        _run_failTest(name: "fail16", type: JSONFail.Test16.self)
-        _run_failTest(name: "fail17", type: JSONFail.Test17.self)
-        _run_failTest(name: "fail18", type: JSONFail.Test18.self)
-        _run_failTest(name: "fail19", type: JSONFail.Test19.self)
-        _run_failTest(name: "fail21", type: JSONFail.Test21.self)
-        _run_failTest(name: "fail22", type: JSONFail.Test22.self)
-        _run_failTest(name: "fail23", type: JSONFail.Test23.self)
-        _run_failTest(name: "fail24", type: JSONFail.Test24.self)
-        _run_failTest(name: "fail25", type: JSONFail.Test25.self)
-        _run_failTest(name: "fail26", type: JSONFail.Test26.self)
-        _run_failTest(name: "fail27", type: JSONFail.Test27.self)
-        _run_failTest(name: "fail28", type: JSONFail.Test28.self)
-        _run_failTest(name: "fail29", type: JSONFail.Test29.self)
-        _run_failTest(name: "fail30", type: JSONFail.Test30.self)
-        _run_failTest(name: "fail31", type: JSONFail.Test31.self)
-        _run_failTest(name: "fail32", type: JSONFail.Test32.self)
-        _run_failTest(name: "fail33", type: JSONFail.Test33.self)
-        _run_failTest(name: "fail34", type: JSONFail.Test34.self)
-        _run_failTest(name: "fail35", type: JSONFail.Test35.self)
-        _run_failTest(name: "fail36", type: JSONFail.Test36.self)
-        _run_failTest(name: "fail37", type: JSONFail.Test37.self)
-        _run_failTest(name: "fail38", type: JSONFail.Test38.self)
-        _run_failTest(name: "fail39", type: JSONFail.Test39.self)
-        _run_failTest(name: "fail40", type: JSONFail.Test40.self)
-        _run_failTest(name: "fail41", type: JSONFail.Test41.self)
+    @Test func test_JSONFailTests() throws {
+        try _run_failTest(name: "fail1", type: JSONFail.Test1.self)
+        try _run_failTest(name: "fail2", type: JSONFail.Test2.self)
+        try _run_failTest(name: "fail3", type: JSONFail.Test3.self)
+        try _run_failTest(name: "fail4", type: JSONFail.Test4.self)
+        try _run_failTest(name: "fail5", type: JSONFail.Test5.self)
+        try _run_failTest(name: "fail6", type: JSONFail.Test6.self)
+        try _run_failTest(name: "fail7", type: JSONFail.Test7.self)
+        try _run_failTest(name: "fail8", type: JSONFail.Test8.self)
+        try _run_failTest(name: "fail9", type: JSONFail.Test9.self)
+        try _run_failTest(name: "fail10", type: JSONFail.Test10.self)
+        try _run_failTest(name: "fail11", type: JSONFail.Test11.self)
+        try _run_failTest(name: "fail12", type: JSONFail.Test12.self)
+        try _run_failTest(name: "fail13", type: JSONFail.Test13.self)
+        try _run_failTest(name: "fail14", type: JSONFail.Test14.self)
+        try _run_failTest(name: "fail15", type: JSONFail.Test15.self)
+        try _run_failTest(name: "fail16", type: JSONFail.Test16.self)
+        try _run_failTest(name: "fail17", type: JSONFail.Test17.self)
+        try _run_failTest(name: "fail18", type: JSONFail.Test18.self)
+        try _run_failTest(name: "fail19", type: JSONFail.Test19.self)
+        try _run_failTest(name: "fail21", type: JSONFail.Test21.self)
+        try _run_failTest(name: "fail22", type: JSONFail.Test22.self)
+        try _run_failTest(name: "fail23", type: JSONFail.Test23.self)
+        try _run_failTest(name: "fail24", type: JSONFail.Test24.self)
+        try _run_failTest(name: "fail25", type: JSONFail.Test25.self)
+        try _run_failTest(name: "fail26", type: JSONFail.Test26.self)
+        try _run_failTest(name: "fail27", type: JSONFail.Test27.self)
+        try _run_failTest(name: "fail28", type: JSONFail.Test28.self)
+        try _run_failTest(name: "fail29", type: JSONFail.Test29.self)
+        try _run_failTest(name: "fail30", type: JSONFail.Test30.self)
+        try _run_failTest(name: "fail31", type: JSONFail.Test31.self)
+        try _run_failTest(name: "fail32", type: JSONFail.Test32.self)
+        try _run_failTest(name: "fail33", type: JSONFail.Test33.self)
+        try _run_failTest(name: "fail34", type: JSONFail.Test34.self)
+        try _run_failTest(name: "fail35", type: JSONFail.Test35.self)
+        try _run_failTest(name: "fail36", type: JSONFail.Test36.self)
+        try _run_failTest(name: "fail37", type: JSONFail.Test37.self)
+        try _run_failTest(name: "fail38", type: JSONFail.Test38.self)
+        try _run_failTest(name: "fail39", type: JSONFail.Test39.self)
+        try _run_failTest(name: "fail40", type: JSONFail.Test40.self)
+        try _run_failTest(name: "fail41", type: JSONFail.Test41.self)
 
     }
 
-    func _run_json5SpecTest<T:Decodable>(_ category: String, _ name: String, testType: JSON5SpecTestType, type: T.Type) {
+    func _run_json5SpecTest<T:Decodable>(_ category: String, _ name: String, testType: JSON5SpecTestType, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) throws {
         let subdirectory = "/JSON5/spec/\(category)"
         let ext = testType.fileExtension
-        let jsonData = testData(forResource: name, withExtension: ext, subdirectory: subdirectory)!
+        let jsonData = try testData(forResource: name, withExtension: ext, subdirectory: subdirectory)
 
         let json5 = json5Decoder
         let json = JSONDecoder()
 
         switch testType {
         case .json, .json5_foundationPermissiveJSON:
-            // Valid JSON should remain valid JSON5
-            XCTAssertNoThrow(try json5.decode(type, from: jsonData))
+            #expect(throws: Never.self, "Valid JSON should remain valid JSON5", sourceLocation: sourceLocation) {
+                try json5.decode(type, from: jsonData)
+            }
 
             // Repeat with non-JSON5-compliant decoder.
-            XCTAssertNoThrow(try json.decode(type, from: jsonData))
+            
+            #expect(throws: Never.self, "Repeating with non-JSON5-compliant decoder should not fail", sourceLocation: sourceLocation) {
+                try json.decode(type, from: jsonData)
+            }
         case .json5:
-            XCTAssertNoThrow(try json5.decode(type, from: jsonData))
+            #expect(throws: Never.self, "Valid JSON should remain valid JSON5", sourceLocation: sourceLocation) {
+                try json5.decode(type, from: jsonData)
+            }
 
-            // Regular JSON decoder should throw.
-            do {
-                let val = try json.decode(type, from: jsonData)
-                XCTFail("Expected decode failure (original JSON)for test \(name).\(ext), but got: \(val)")
-            } catch { }
+            #expect(throws: (any Error).self, "Expected decode failure (original JSON) for test \(name).\(ext)", sourceLocation: sourceLocation) {
+                _ = try json.decode(type, from: jsonData)
+            }
         case .js:
             // Valid ES5 that's explicitly disallowed by JSON5 is also invalid JSON.
-            do {
-                let val = try json5.decode(type, from: jsonData)
-                XCTFail("Expected decode failure (JSON5) for test \(name).\(ext), but got: \(val)")
-            } catch { }
+            #expect(throws: (any Error).self, "Expected decode failure (JSON5) for test \(name).\(ext)", sourceLocation: sourceLocation) {
+                _ = try json5.decode(type, from: jsonData)
+            }
 
             // Regular JSON decoder should also throw.
-            do {
-                let val = try json.decode(type, from: jsonData)
-                XCTFail("Expected decode failure (original JSON) for test \(name).\(ext), but got: \(val)")
-            } catch { }
+            #expect(throws: (any Error).self, "Expected decode failure (original JSON) for test \(name).\(ext)", sourceLocation: sourceLocation) {
+                _ = try json.decode(type, from: jsonData)
+            }
         case .malformed:
             // Invalid ES5 should remain invalid JSON5
-            do {
-                let val = try json5.decode(type, from: jsonData)
-                XCTFail("Expected decode failure (JSON5) for test \(name).\(ext), but got: \(val)")
-            } catch { }
+            #expect(throws: (any Error).self, "Expected decode failure (JSON5) for test \(name).\(ext)", sourceLocation: sourceLocation) {
+                _ = try json5.decode(type, from: jsonData)
+            }
 
             // Regular JSON decoder should also throw.
-            do {
-                let val = try json.decode(type, from: jsonData)
-                XCTFail("Expected decode failure (original JSON) for test \(name).\(ext), but got: \(val)")
-            } catch { }
+            #expect(throws: (any Error).self, "Expected decode failure (original JSON) for test \(name).\(ext)", sourceLocation: sourceLocation) {
+                _ = try json.decode(type, from: jsonData)
+            }
         }
     }
 
     // Also tests non-JSON5 decoder against the non-JSON5 tests in this test suite.
-    func test_json5Spec() {
+    @Test func test_json5Spec() throws {
         // Expected successes:
-        _run_json5SpecTest("arrays", "empty-array", testType: .json, type: [Bool].self)
-        _run_json5SpecTest("arrays", "regular-array", testType: .json, type: [Bool?].self)
-        _run_json5SpecTest("arrays", "trailing-comma-array", testType: .json5_foundationPermissiveJSON, type: [NullReader].self)
+        try _run_json5SpecTest("arrays", "empty-array", testType: .json, type: [Bool].self)
+        try _run_json5SpecTest("arrays", "regular-array", testType: .json, type: [Bool?].self)
+        try _run_json5SpecTest("arrays", "trailing-comma-array", testType: .json5_foundationPermissiveJSON, type: [NullReader].self)
 
-        _run_json5SpecTest("comments", "block-comment-following-array-element", testType: .json5, type: [Bool].self)
-        _run_json5SpecTest("comments", "block-comment-following-top-level-value", testType: .json5, type: NullReader.self)
-        _run_json5SpecTest("comments", "block-comment-in-string", testType: .json, type: String.self)
-        _run_json5SpecTest("comments", "block-comment-preceding-top-level-value", testType: .json5, type: NullReader.self)
-        _run_json5SpecTest("comments", "block-comment-with-asterisks", testType: .json5, type: Bool.self)
-        _run_json5SpecTest("comments", "inline-comment-following-array-element", testType: .json5, type: [Bool].self)
-        _run_json5SpecTest("comments", "inline-comment-following-top-level-value", testType: .json5, type: NullReader.self)
-        _run_json5SpecTest("comments", "inline-comment-in-string", testType: .json, type: String.self)
-        _run_json5SpecTest("comments", "inline-comment-preceding-top-level-value", testType: .json5, type: NullReader.self)
+        try _run_json5SpecTest("comments", "block-comment-following-array-element", testType: .json5, type: [Bool].self)
+        try _run_json5SpecTest("comments", "block-comment-following-top-level-value", testType: .json5, type: NullReader.self)
+        try _run_json5SpecTest("comments", "block-comment-in-string", testType: .json, type: String.self)
+        try _run_json5SpecTest("comments", "block-comment-preceding-top-level-value", testType: .json5, type: NullReader.self)
+        try _run_json5SpecTest("comments", "block-comment-with-asterisks", testType: .json5, type: Bool.self)
+        try _run_json5SpecTest("comments", "inline-comment-following-array-element", testType: .json5, type: [Bool].self)
+        try _run_json5SpecTest("comments", "inline-comment-following-top-level-value", testType: .json5, type: NullReader.self)
+        try _run_json5SpecTest("comments", "inline-comment-in-string", testType: .json, type: String.self)
+        try _run_json5SpecTest("comments", "inline-comment-preceding-top-level-value", testType: .json5, type: NullReader.self)
 
-        _run_json5SpecTest("misc", "npm-package", testType: .json, type: JSON5Spec.NPMPackage.self)
-        _run_json5SpecTest("misc", "npm-package", testType: .json5, type: JSON5Spec.NPMPackage.self)
-        _run_json5SpecTest("misc", "readme-example", testType: .json5, type: JSON5Spec.ReadmeExample.self)
-        _run_json5SpecTest("misc", "valid-whitespace", testType: .json5, type: [String:Bool].self)
+        try _run_json5SpecTest("misc", "npm-package", testType: .json, type: JSON5Spec.NPMPackage.self)
+        try _run_json5SpecTest("misc", "npm-package", testType: .json5, type: JSON5Spec.NPMPackage.self)
+        try _run_json5SpecTest("misc", "readme-example", testType: .json5, type: JSON5Spec.ReadmeExample.self)
+        try _run_json5SpecTest("misc", "valid-whitespace", testType: .json5, type: [String:Bool].self)
 
-        _run_json5SpecTest("new-lines", "comment-cr", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "comment-crlf", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "comment-lf", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "escaped-cr", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "escaped-crlf", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("new-lines", "escaped-lf", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "comment-cr", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "comment-crlf", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "comment-lf", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "escaped-cr", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "escaped-crlf", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("new-lines", "escaped-lf", testType: .json5, type: [String:String].self)
 
-        _run_json5SpecTest("numbers", "float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "float-leading-zero", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "float-trailing-decimal-point-with-integer-exponent", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "float-with-integer-exponent", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "float", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "hexadecimal-lowercase-letter", testType: .json5, type: UInt.self)
-        _run_json5SpecTest("numbers", "hexadecimal-uppercase-x", testType: .json5, type: UInt.self)
-        _run_json5SpecTest("numbers", "hexadecimal-with-integer-exponent", testType: .json5, type: UInt.self)
-        _run_json5SpecTest("numbers", "hexadecimal", testType: .json5, type: UInt.self)
-        _run_json5SpecTest("numbers", "infinity", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-integer-exponent", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-negative-integer-exponent", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-negative-zero-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "integer-with-positive-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "integer-with-positive-zero-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "integer-with-zero-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "integer", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "nan", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-float-leading-zero", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-float", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-hexadecimal", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "negative-infinity", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-integer", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "negative-zero-float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-zero-hexadecimal", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "negative-zero-integer", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-integer", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-zero-float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "positive-zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "positive-zero-float", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "positive-zero-hexadecimal", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-zero-integer", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "zero-float-leading-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
-        _run_json5SpecTest("numbers", "zero-float", testType: .json, type: Double.self)
-        _run_json5SpecTest("numbers", "zero-hexadecimal", testType: .json5, type: Int.self)
-        _run_json5SpecTest("numbers", "zero-integer-with-integer-exponent", testType: .json, type: Int.self)
-        _run_json5SpecTest("numbers", "zero-integer", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "float-leading-zero", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "float-trailing-decimal-point-with-integer-exponent", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "float-with-integer-exponent", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "float", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "hexadecimal-lowercase-letter", testType: .json5, type: UInt.self)
+        try _run_json5SpecTest("numbers", "hexadecimal-uppercase-x", testType: .json5, type: UInt.self)
+        try _run_json5SpecTest("numbers", "hexadecimal-with-integer-exponent", testType: .json5, type: UInt.self)
+        try _run_json5SpecTest("numbers", "hexadecimal", testType: .json5, type: UInt.self)
+        try _run_json5SpecTest("numbers", "infinity", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-integer-exponent", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-negative-integer-exponent", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-negative-zero-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "integer-with-positive-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "integer-with-positive-zero-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "integer-with-zero-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "integer", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "nan", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-float-leading-zero", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-float", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-hexadecimal", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "negative-infinity", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-integer", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "negative-zero-float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-zero-hexadecimal", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "negative-zero-integer", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-integer", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-zero-float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "positive-zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "positive-zero-float", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "positive-zero-hexadecimal", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-zero-integer", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "zero-float-leading-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "zero-float-trailing-decimal-point", testType: .json5, type: Double.self)
+        try _run_json5SpecTest("numbers", "zero-float", testType: .json, type: Double.self)
+        try _run_json5SpecTest("numbers", "zero-hexadecimal", testType: .json5, type: Int.self)
+        try _run_json5SpecTest("numbers", "zero-integer-with-integer-exponent", testType: .json, type: Int.self)
+        try _run_json5SpecTest("numbers", "zero-integer", testType: .json, type: Int.self)
 
-        _run_json5SpecTest("objects", "duplicate-keys", testType: .json, type: [String:Bool].self)
-        _run_json5SpecTest("objects", "empty-object", testType: .json, type: [String:Bool].self)
-        _run_json5SpecTest("objects", "reserved-unquoted-key", testType: .json5, type: [String:Bool].self)
-        _run_json5SpecTest("objects", "single-quoted-key", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("objects", "trailing-comma-object", testType: .json5_foundationPermissiveJSON, type: [String:String].self)
-        _run_json5SpecTest("objects", "unquoted-keys", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("objects", "duplicate-keys", testType: .json, type: [String:Bool].self)
+        try _run_json5SpecTest("objects", "empty-object", testType: .json, type: [String:Bool].self)
+        try _run_json5SpecTest("objects", "reserved-unquoted-key", testType: .json5, type: [String:Bool].self)
+        try _run_json5SpecTest("objects", "single-quoted-key", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("objects", "trailing-comma-object", testType: .json5_foundationPermissiveJSON, type: [String:String].self)
+        try _run_json5SpecTest("objects", "unquoted-keys", testType: .json5, type: [String:String].self)
 
-        _run_json5SpecTest("strings", "escaped-single-quoted-string", testType: .json5, type: String.self)
-        _run_json5SpecTest("strings", "multi-line-string", testType: .json5, type: String.self)
-        _run_json5SpecTest("strings", "single-quoted-string", testType: .json5, type: String.self)
+        try _run_json5SpecTest("strings", "escaped-single-quoted-string", testType: .json5, type: String.self)
+        try _run_json5SpecTest("strings", "multi-line-string", testType: .json5, type: String.self)
+        try _run_json5SpecTest("strings", "single-quoted-string", testType: .json5, type: String.self)
 
-        _run_json5SpecTest("todo", "unicode-escaped-unquoted-key", testType: .json5, type: [String:String].self)
-        _run_json5SpecTest("todo", "unicode-unquoted-key", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("todo", "unicode-escaped-unquoted-key", testType: .json5, type: [String:String].self)
+        try _run_json5SpecTest("todo", "unicode-unquoted-key", testType: .json5, type: [String:String].self)
 
         // Expected failures:
-        _run_json5SpecTest("arrays", "leading-comma-array", testType: .js, type: [Bool].self)
-        _run_json5SpecTest("arrays", "lone-trailing-comma-array", testType: .js, type: [Bool].self)
-        _run_json5SpecTest("arrays", "no-comma-array", testType: .malformed, type: [Bool].self)
+        try _run_json5SpecTest("arrays", "leading-comma-array", testType: .js, type: [Bool].self)
+        try _run_json5SpecTest("arrays", "lone-trailing-comma-array", testType: .js, type: [Bool].self)
+        try _run_json5SpecTest("arrays", "no-comma-array", testType: .malformed, type: [Bool].self)
 
-        _run_json5SpecTest("comments", "top-level-block-comment", testType: .malformed, type: Bool.self)
-        _run_json5SpecTest("comments", "top-level-inline-comment", testType: .malformed, type: Bool.self)
-        _run_json5SpecTest("comments", "unterminated-block-comment", testType: .malformed, type: Bool.self)
+        try _run_json5SpecTest("comments", "top-level-block-comment", testType: .malformed, type: Bool.self)
+        try _run_json5SpecTest("comments", "top-level-inline-comment", testType: .malformed, type: Bool.self)
+        try _run_json5SpecTest("comments", "unterminated-block-comment", testType: .malformed, type: Bool.self)
 
-        _run_json5SpecTest("misc", "empty", testType: .malformed, type: Bool.self)
+        try _run_json5SpecTest("misc", "empty", testType: .malformed, type: Bool.self)
 
-        _run_json5SpecTest("numbers", "hexadecimal-empty", testType: .malformed, type: UInt.self)
-        _run_json5SpecTest("numbers", "integer-with-float-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-hexadecimal-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-negative-float-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-negative-hexadecimal-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-positive-float-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "integer-with-positive-hexadecimal-exponent", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "lone-decimal-point", testType: .malformed, type: Double.self)
-        _run_json5SpecTest("numbers", "negative-noctal", testType: .js, type: Int.self)
-        _run_json5SpecTest("numbers", "negative-octal", testType: .malformed, type: Int.self)
-        _run_json5SpecTest("numbers", "noctal-with-leading-octal-digit", testType: .js, type: Int.self)
-        _run_json5SpecTest("numbers", "noctal", testType: .js, type: Int.self)
-        _run_json5SpecTest("numbers", "octal", testType: .malformed, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-noctal", testType: .js, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-octal", testType: .malformed, type: Int.self)
-        _run_json5SpecTest("numbers", "positive-zero-octal", testType: .malformed, type: Int.self)
-        _run_json5SpecTest("numbers", "zero-octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "hexadecimal-empty", testType: .malformed, type: UInt.self)
+        try _run_json5SpecTest("numbers", "integer-with-float-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-hexadecimal-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-negative-float-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-negative-hexadecimal-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-positive-float-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "integer-with-positive-hexadecimal-exponent", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "lone-decimal-point", testType: .malformed, type: Double.self)
+        try _run_json5SpecTest("numbers", "negative-noctal", testType: .js, type: Int.self)
+        try _run_json5SpecTest("numbers", "negative-octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "noctal-with-leading-octal-digit", testType: .js, type: Int.self)
+        try _run_json5SpecTest("numbers", "noctal", testType: .js, type: Int.self)
+        try _run_json5SpecTest("numbers", "octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-noctal", testType: .js, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "positive-zero-octal", testType: .malformed, type: Int.self)
+        try _run_json5SpecTest("numbers", "zero-octal", testType: .malformed, type: Int.self)
 
-        _run_json5SpecTest("objects", "illegal-unquoted-key-number", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "illegal-unquoted-key-number", testType: .malformed, type: [String:String].self)
 
         // The spec test disallows this case, but historically NSJSONSerialization has allowed it. Our new implementation is more up-to-spec.
-        _run_json5SpecTest("objects", "illegal-unquoted-key-symbol", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "illegal-unquoted-key-symbol", testType: .malformed, type: [String:String].self)
 
-        _run_json5SpecTest("objects", "leading-comma-object", testType: .malformed, type: [String:String].self)
-        _run_json5SpecTest("objects", "lone-trailing-comma-object", testType: .malformed, type: [String:String].self)
-        _run_json5SpecTest("objects", "no-comma-object", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "leading-comma-object", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "lone-trailing-comma-object", testType: .malformed, type: [String:String].self)
+        try _run_json5SpecTest("objects", "no-comma-object", testType: .malformed, type: [String:String].self)
 
-        _run_json5SpecTest("strings", "unescaped-multi-line-string", testType: .malformed, type: String.self)
+        try _run_json5SpecTest("strings", "unescaped-multi-line-string", testType: .malformed, type: String.self)
 
     }
 
-    func testEncodingDateISO8601() {
+    @Test func testEncodingDateISO8601() {
         let timestamp = Date(timeIntervalSince1970: 1000)
         let expectedJSON = "\"\(timestamp.formatted(.iso8601))\"".data(using: String._Encoding.utf8)!
   
@@ -2659,7 +2650,7 @@ extension JSONEncoderTests {
                        dateDecodingStrategy: .iso8601)
     }
     
-    func testEncodingDataBase64() {
+    @Test func testEncodingDataBase64() {
         let data = Data([0xDE, 0xAD, 0xBE, 0xEF])
 
         let expectedJSON = "\"3q2+7w==\"".data(using: String._Encoding.utf8)!
@@ -2672,7 +2663,7 @@ extension JSONEncoderTests {
 
 // MARK: - Decimal Tests
 extension JSONEncoderTests {
-    func testInterceptDecimal() {
+    @Test func testInterceptDecimal() {
         let expectedJSON = "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000".data(using: String._Encoding.utf8)!
 
         // Want to make sure we write out a JSON number, not the keyed encoding here.
@@ -2684,16 +2675,16 @@ extension JSONEncoderTests {
         _testRoundTrip(of: Optional(decimal), expectedJSON: expectedJSON)
     }
 
-    func test_hugeNumbers() {
+    @Test func test_hugeNumbers() throws {
         let json = "23456789012000000000000000000000000000000000000000000000000000000000000000000 "
         let data = json.data(using: String._Encoding.utf8)!
 
-        let decimal = try! JSONDecoder().decode(Decimal.self, from: data)
+        let decimal = try JSONDecoder().decode(Decimal.self, from: data)
         let expected = Decimal(string: json)
-        XCTAssertEqual(decimal, expected)
+        #expect(decimal == expected)
     }
 
-    func testInterceptLargeDecimal() {
+    @Test func testInterceptLargeDecimal() {
         struct TestBigDecimal: Codable, Equatable {
             var uint64Max: Decimal = Decimal(UInt64.max)
             var unit64MaxPlus1: Decimal = Decimal(
@@ -2719,9 +2710,11 @@ extension JSONEncoderTests {
         _testRoundTrip(of: testBigDecimal)
     }
 
-    func testOverlargeDecimal() {
+    @Test func testOverlargeDecimal() {
         // Check value too large fails to decode.
-        XCTAssertThrowsError(try JSONDecoder().decode(Decimal.self, from: "100e200".data(using: .utf8)!))
+        #expect(throws: (any Error).self) {
+            try JSONDecoder().decode(Decimal.self, from: "100e200".data(using: .utf8)!)
+        }
     }
 }
 
@@ -2730,7 +2723,7 @@ extension JSONEncoderTests {
 #if FOUNDATION_FRAMEWORK
 extension JSONEncoderTests {
     // This will remain a framework-only test due to dependence on `DateFormatter`.
-    func testEncodingDateFormatted() {
+    @Test func testEncodingDateFormatted() {
         let formatter = DateFormatter()
         formatter.dateStyle = .full
         formatter.timeStyle = .full
@@ -2754,26 +2747,26 @@ extension JSONEncoderTests {
 
 // MARK: - .sortedKeys Tests
 extension JSONEncoderTests {
-    func testEncodingTopLevelStructuredClass() {
+    @Test func testEncodingTopLevelStructuredClass() {
         // Person is a class with multiple fields.
         let expectedJSON = "{\"email\":\"appleseed@apple.com\",\"name\":\"Johnny Appleseed\"}".data(using: String._Encoding.utf8)!
         let person = Person.testValue
         _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.sortedKeys])
     }
 
-    func testEncodingOutputFormattingSortedKeys() {
+    @Test func testEncodingOutputFormattingSortedKeys() {
         let expectedJSON = "{\"email\":\"appleseed@apple.com\",\"name\":\"Johnny Appleseed\"}".data(using: String._Encoding.utf8)!
         let person = Person.testValue
         _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.sortedKeys])
     }
 
-    func testEncodingOutputFormattingPrettyPrintedSortedKeys() {
+    @Test func testEncodingOutputFormattingPrettyPrintedSortedKeys() {
         let expectedJSON = "{\n  \"email\" : \"appleseed@apple.com\",\n  \"name\" : \"Johnny Appleseed\"\n}".data(using: String._Encoding.utf8)!
         let person = Person.testValue
         _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.prettyPrinted, .sortedKeys])
     }
 
-    func testEncodingSortedKeys() {
+    @Test func testEncodingSortedKeys() {
         // When requesting sorted keys, dictionary keys are sorted prior to being written out.
         // This sort should be stable, numeric, and follow human-readable sorting rules as defined by the system locale.
         let dict = [
@@ -2798,7 +2791,7 @@ extension JSONEncoderTests {
         _testRoundTrip(of: dict, expectedJSON: #"{"FOO":2,"Foo":1,"Foo11":8,"Foo2":5,"bar":10,"foo":3,"foo1":4,"foo12":7,"foo3":6,"føo":9}"#.data(using: String._Encoding.utf8)!, outputFormatting: [.sortedKeys])
     }
 
-    func testEncodingSortedKeysStableOrdering() {
+    @Test func testEncodingSortedKeysStableOrdering() {
         // We want to make sure that keys of different length (but with identical prefixes) always sort in a stable way, regardless of their hash ordering.
         var dict = ["AAA" : 1, "AAAAAAB" : 2]
         var expectedJSONString = "{\"AAA\":1,\"AAAAAAB\":2}"
@@ -2830,7 +2823,7 @@ extension JSONEncoderTests {
         _testRoundTrip(of: dict, expectedJSON: expectedJSONString.data(using: String._Encoding.utf8)!, outputFormatting: [.sortedKeys])
     }
 
-    func testEncodingMultipleNestedContainersWithTheSameTopLevelKey() {
+    @Test func testEncodingMultipleNestedContainersWithTheSameTopLevelKey() {
         struct Model : Codable, Equatable {
             let first: String
             let second: String
@@ -2882,7 +2875,7 @@ extension JSONEncoderTests {
         _testRoundTrip(of: model, expectedJSON: expectedJSON, outputFormatting: [.sortedKeys])
     }
 
-    func test_redundantKeyedContainer() {
+    @Test func test_redundantKeyedContainer() throws {
         struct EncodesTwice: Encodable {
             enum CodingKeys: String, CodingKey {
                 case container
@@ -2908,13 +2901,13 @@ extension JSONEncoderTests {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
-        let data = try! encoder.encode(EncodesTwice())
+        let data = try encoder.encode(EncodesTwice())
         let string = String(data: data, encoding: .utf8)!
 
-        XCTAssertEqual(string, "{\"container\":{\"foo\":\"Test\",\"somethingElse\":\"SecondAgain\"},\"somethingElse\":\"Foo\"}")
+        #expect(string == "{\"container\":{\"foo\":\"Test\",\"somethingElse\":\"SecondAgain\"},\"somethingElse\":\"Foo\"}")
     }
 
-    func test_singleValueDictionaryAmendedByContainer() {
+    @Test func test_singleValueDictionaryAmendedByContainer() throws {
         struct Test: Encodable {
             enum CodingKeys: String, CodingKey {
                 case a
@@ -2930,16 +2923,16 @@ extension JSONEncoderTests {
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
-        let data = try! encoder.encode(Test())
+        let data = try encoder.encode(Test())
         let string = String(data: data, encoding: .utf8)!
 
-        XCTAssertEqual(string, "{\"a\":\"c\",\"other\":\"foo\"}")
+        #expect(string == "{\"a\":\"c\",\"other\":\"foo\"}")
     }
 }
 
 // MARK: - URL Tests
 extension JSONEncoderTests {
-    func testInterceptURL() {
+    @Test func testInterceptURL() {
         // Want to make sure JSONEncoder writes out single-value URLs, not the keyed encoding.
         let expectedJSON = "\"http:\\/\\/swift.org\"".data(using: String._Encoding.utf8)!
         let url = URL(string: "http://swift.org")!
@@ -2949,7 +2942,7 @@ extension JSONEncoderTests {
         _testRoundTrip(of: Optional(url), expectedJSON: expectedJSON)
     }
 
-    func testInterceptURLWithoutEscapingOption() {
+    @Test func testInterceptURLWithoutEscapingOption() {
         // Want to make sure JSONEncoder writes out single-value URLs, not the keyed encoding.
         let expectedJSON = "\"http://swift.org\"".data(using: String._Encoding.utf8)!
         let url = URL(string: "http://swift.org")!
@@ -2960,534 +2953,7 @@ extension JSONEncoderTests {
     }
 }
 
-// MARK: - Helper Global Functions
-func expectEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String) {
-  if lhs.count != rhs.count {
-    XCTFail("\(prefix) [CodingKey].count mismatch: \(lhs.count) != \(rhs.count)")
-    return
-  }
-
-  for (key1, key2) in zip(lhs, rhs) {
-    switch (key1.intValue, key2.intValue) {
-    case (.none, .none): break
-    case (.some(let i1), .none):
-      XCTFail("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != nil")
-      return
-    case (.none, .some(let i2)):
-      XCTFail("\(prefix) CodingKey.intValue mismatch: nil != \(type(of: key2))(\(i2))")
-      return
-    case (.some(let i1), .some(let i2)):
-        guard i1 == i2 else {
-            XCTFail("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != \(type(of: key2))(\(i2))")
-            return
-        }
-    }
-
-    XCTAssertEqual(key1.stringValue, key2.stringValue, "\(prefix) CodingKey.stringValue mismatch: \(type(of: key1))('\(key1.stringValue)') != \(type(of: key2))('\(key2.stringValue)')")
-  }
-}
-
-// MARK: - Test Types
-/* FIXME: Import from %S/Inputs/Coding/SharedTypes.swift somehow. */
-
-// MARK: - Empty Types
-fileprivate struct EmptyStruct : Codable, Equatable {
-  static func ==(_ lhs: EmptyStruct, _ rhs: EmptyStruct) -> Bool {
-    return true
-  }
-}
-
-fileprivate class EmptyClass : Codable, Equatable {
-  static func ==(_ lhs: EmptyClass, _ rhs: EmptyClass) -> Bool {
-    return true
-  }
-}
-
-// MARK: - Single-Value Types
-/// A simple on-off switch type that encodes as a single Bool value.
-fileprivate enum Switch : Codable {
-  case off
-  case on
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    switch try container.decode(Bool.self) {
-    case false: self = .off
-    case true:  self = .on
-    }
-  }
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    switch self {
-    case .off: try container.encode(false)
-    case .on:  try container.encode(true)
-    }
-  }
-}
-
-/// A simple timestamp type that encodes as a single Double value.
-fileprivate struct Timestamp : Codable, Equatable {
-  let value: Double
-
-  init(_ value: Double) {
-    self.value = value
-  }
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    value = try container.decode(Double.self)
-  }
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    try container.encode(self.value)
-  }
-
-  static func ==(_ lhs: Timestamp, _ rhs: Timestamp) -> Bool {
-    return lhs.value == rhs.value
-  }
-}
-
-/// A simple referential counter type that encodes as a single Int value.
-fileprivate final class Counter : Codable, Equatable {
-  var count: Int = 0
-
-  init() {}
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    count = try container.decode(Int.self)
-  }
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    try container.encode(self.count)
-  }
-
-  static func ==(_ lhs: Counter, _ rhs: Counter) -> Bool {
-    return lhs === rhs || lhs.count == rhs.count
-  }
-}
-
-// MARK: - Structured Types
-/// A simple address type that encodes as a dictionary of values.
-fileprivate struct Address : Codable, Equatable {
-  let street: String
-  let city: String
-  let state: String
-  let zipCode: Int
-  let country: String
-
-  init(street: String, city: String, state: String, zipCode: Int, country: String) {
-    self.street = street
-    self.city = city
-    self.state = state
-    self.zipCode = zipCode
-    self.country = country
-  }
-
-  static func ==(_ lhs: Address, _ rhs: Address) -> Bool {
-    return lhs.street == rhs.street &&
-           lhs.city == rhs.city &&
-           lhs.state == rhs.state &&
-           lhs.zipCode == rhs.zipCode &&
-           lhs.country == rhs.country
-  }
-
-  static var testValue: Address {
-    return Address(street: "1 Infinite Loop",
-                   city: "Cupertino",
-                   state: "CA",
-                   zipCode: 95014,
-                   country: "United States")
-  }
-}
-
-/// A simple person class that encodes as a dictionary of values.
-fileprivate class Person : Codable, Equatable {
-  let name: String
-  let email: String
-  let website: URL?
-
-
-  init(name: String, email: String, website: URL? = nil) {
-    self.name = name
-    self.email = email
-    self.website = website
-  }
-
-  func isEqual(_ other: Person) -> Bool {
-    return self.name == other.name &&
-           self.email == other.email &&
-           self.website == other.website
-  }
-
-  static func ==(_ lhs: Person, _ rhs: Person) -> Bool {
-    return lhs.isEqual(rhs)
-  }
-
-  class var testValue: Person {
-    return Person(name: "Johnny Appleseed", email: "appleseed@apple.com")
-  }
-}
-
-/// A class which shares its encoder and decoder with its superclass.
-fileprivate class Employee : Person {
-  let id: Int
-
-  init(name: String, email: String, website: URL? = nil, id: Int) {
-    self.id = id
-    super.init(name: name, email: email, website: website)
-  }
-
-  enum CodingKeys : String, CodingKey {
-    case id
-  }
-
-  required init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    id = try container.decode(Int.self, forKey: .id)
-    try super.init(from: decoder)
-  }
-
-  override func encode(to encoder: Encoder) throws {
-    var container = encoder.container(keyedBy: CodingKeys.self)
-    try container.encode(id, forKey: .id)
-    try super.encode(to: encoder)
-  }
-
-  override func isEqual(_ other: Person) -> Bool {
-    if let employee = other as? Employee {
-      guard self.id == employee.id else { return false }
-    }
-
-    return super.isEqual(other)
-  }
-
-  override class var testValue: Employee {
-    return Employee(name: "Johnny Appleseed", email: "appleseed@apple.com", id: 42)
-  }
-}
-
-/// A simple company struct which encodes as a dictionary of nested values.
-fileprivate struct Company : Codable, Equatable {
-  let address: Address
-  var employees: [Employee]
-
-  init(address: Address, employees: [Employee]) {
-    self.address = address
-    self.employees = employees
-  }
-
-  static func ==(_ lhs: Company, _ rhs: Company) -> Bool {
-    return lhs.address == rhs.address && lhs.employees == rhs.employees
-  }
-
-  static var testValue: Company {
-    return Company(address: Address.testValue, employees: [Employee.testValue])
-  }
-}
-
-/// An enum type which decodes from Bool?.
-fileprivate enum EnhancedBool : Codable {
-  case `true`
-  case `false`
-  case fileNotFound
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    if container.decodeNil() {
-      self = .fileNotFound
-    } else {
-      let value = try container.decode(Bool.self)
-      self = value ? .true : .false
-    }
-  }
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    switch self {
-    case .true: try container.encode(true)
-    case .false: try container.encode(false)
-    case .fileNotFound: try container.encodeNil()
-    }
-  }
-}
-
-/// A type which encodes as an array directly through a single value container.
-private struct Numbers : Codable, Equatable {
-  let values = [4, 8, 15, 16, 23, 42]
-
-  init() {}
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    let decodedValues = try container.decode([Int].self)
-    guard decodedValues == values else {
-      throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "The Numbers are wrong!"))
-    }
-  }
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    try container.encode(values)
-  }
-
-  static func ==(_ lhs: Numbers, _ rhs: Numbers) -> Bool {
-    return lhs.values == rhs.values
-  }
-
-  static var testValue: Numbers {
-    return Numbers()
-  }
-}
-
-/// A type which encodes as a dictionary directly through a single value container.
-fileprivate final class Mapping : Codable, Equatable {
-  let values: [String : Int]
-
-  init(values: [String : Int]) {
-    self.values = values
-  }
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    values = try container.decode([String : Int].self)
-  }
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    try container.encode(values)
-  }
-
-  static func ==(_ lhs: Mapping, _ rhs: Mapping) -> Bool {
-    return lhs === rhs || lhs.values == rhs.values
-  }
-
-  static var testValue: Mapping {
-    return Mapping(values: ["Apple": 42,
-                            "localhost": 127])
-  }
-}
-
-private struct NestedContainersTestType : Encodable {
-  let testSuperEncoder: Bool
-
-  init(testSuperEncoder: Bool = false) {
-    self.testSuperEncoder = testSuperEncoder
-  }
-
-  enum TopLevelCodingKeys : Int, CodingKey {
-    case a
-    case b
-    case c
-  }
-
-  enum IntermediateCodingKeys : Int, CodingKey {
-      case one
-      case two
-  }
-
-  func encode(to encoder: Encoder) throws {
-    if self.testSuperEncoder {
-      var topLevelContainer = encoder.container(keyedBy: TopLevelCodingKeys.self)
-      expectEqualPaths(encoder.codingPath, [], "Top-level Encoder's codingPath changed.")
-      expectEqualPaths(topLevelContainer.codingPath, [], "New first-level keyed container has non-empty codingPath.")
-
-      let superEncoder = topLevelContainer.superEncoder(forKey: .a)
-      expectEqualPaths(encoder.codingPath, [], "Top-level Encoder's codingPath changed.")
-      expectEqualPaths(topLevelContainer.codingPath, [], "First-level keyed container's codingPath changed.")
-      expectEqualPaths(superEncoder.codingPath, [TopLevelCodingKeys.a], "New superEncoder had unexpected codingPath.")
-      _testNestedContainers(in: superEncoder, baseCodingPath: [TopLevelCodingKeys.a])
-    } else {
-      _testNestedContainers(in: encoder, baseCodingPath: [])
-    }
-  }
-
-  func _testNestedContainers(in encoder: Encoder, baseCodingPath: [CodingKey]) {
-    expectEqualPaths(encoder.codingPath, baseCodingPath, "New encoder has non-empty codingPath.")
-
-    // codingPath should not change upon fetching a non-nested container.
-    var firstLevelContainer = encoder.container(keyedBy: TopLevelCodingKeys.self)
-    expectEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-    expectEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "New first-level keyed container has non-empty codingPath.")
-
-    // Nested Keyed Container
-    do {
-      // Nested container for key should have a new key pushed on.
-      var secondLevelContainer = firstLevelContainer.nestedContainer(keyedBy: IntermediateCodingKeys.self, forKey: .a)
-      expectEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-      expectEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-      expectEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.a], "New second-level keyed container had unexpected codingPath.")
-
-      // Inserting a keyed container should not change existing coding paths.
-      let thirdLevelContainerKeyed = secondLevelContainer.nestedContainer(keyedBy: IntermediateCodingKeys.self, forKey: .one)
-      expectEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-      expectEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-      expectEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.a], "Second-level keyed container's codingPath changed.")
-      expectEqualPaths(thirdLevelContainerKeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.a, IntermediateCodingKeys.one], "New third-level keyed container had unexpected codingPath.")
-
-      // Inserting an unkeyed container should not change existing coding paths.
-      let thirdLevelContainerUnkeyed = secondLevelContainer.nestedUnkeyedContainer(forKey: .two)
-      expectEqualPaths(encoder.codingPath, baseCodingPath + [], "Top-level Encoder's codingPath changed.")
-      expectEqualPaths(firstLevelContainer.codingPath, baseCodingPath + [], "First-level keyed container's codingPath changed.")
-      expectEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.a], "Second-level keyed container's codingPath changed.")
-      expectEqualPaths(thirdLevelContainerUnkeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.a, IntermediateCodingKeys.two], "New third-level unkeyed container had unexpected codingPath.")
-    }
-
-    // Nested Unkeyed Container
-    do {
-      // Nested container for key should have a new key pushed on.
-      var secondLevelContainer = firstLevelContainer.nestedUnkeyedContainer(forKey: .b)
-      expectEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-      expectEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-      expectEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "New second-level keyed container had unexpected codingPath.")
-
-      // Appending a keyed container should not change existing coding paths.
-      let thirdLevelContainerKeyed = secondLevelContainer.nestedContainer(keyedBy: IntermediateCodingKeys.self)
-      expectEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-      expectEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-      expectEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "Second-level unkeyed container's codingPath changed.")
-      expectEqualPaths(thirdLevelContainerKeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 0)], "New third-level keyed container had unexpected codingPath.")
-
-      // Appending an unkeyed container should not change existing coding paths.
-      let thirdLevelContainerUnkeyed = secondLevelContainer.nestedUnkeyedContainer()
-      expectEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
-      expectEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
-      expectEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "Second-level unkeyed container's codingPath changed.")
-      expectEqualPaths(thirdLevelContainerUnkeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 1)], "New third-level unkeyed container had unexpected codingPath.")
-    }
-  }
-}
-
-private struct CodableTypeWithConfiguration : CodableWithConfiguration, Equatable {
-    struct Config {
-        let num: Int
-        
-        init(_ num: Int) {
-            self.num = num
-        }
-    }
-    
-    struct ConfigProviding : EncodingConfigurationProviding, DecodingConfigurationProviding {
-        static var encodingConfiguration: Config { Config(2) }
-        static var decodingConfiguration: Config { Config(2) }
-    }
-    
-    typealias EncodingConfiguration = Config
-    typealias DecodingConfiguration = Config
-    
-    static let testValue = Self(3)
-    
-    let num: Int
-    
-    init(_ num: Int) {
-        self.num = num
-    }
-    
-    func encode(to encoder: Encoder, configuration: Config) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(num + configuration.num)
-    }
-    
-    init(from decoder: Decoder, configuration: Config) throws {
-        let container = try decoder.singleValueContainer()
-        num = try container.decode(Int.self) - configuration.num
-    }
-}
-
 // MARK: - Helper Types
-
-/// A key type which can take on any string or integer value.
-/// This needs to mirror _CodingKey.
-fileprivate struct _TestKey : CodingKey {
-  var stringValue: String
-  var intValue: Int?
-
-  init?(stringValue: String) {
-    self.stringValue = stringValue
-    self.intValue = nil
-  }
-
-  init?(intValue: Int) {
-    self.stringValue = "\(intValue)"
-    self.intValue = intValue
-  }
-
-  init(index: Int) {
-    self.stringValue = "Index \(index)"
-    self.intValue = index
-  }
-}
-
-fileprivate struct FloatNaNPlaceholder : Codable, Equatable {
-  init() {}
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    try container.encode(Float.nan)
-  }
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    let float = try container.decode(Float.self)
-    if !float.isNaN {
-      throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Couldn't decode NaN."))
-    }
-  }
-
-  static func ==(_ lhs: FloatNaNPlaceholder, _ rhs: FloatNaNPlaceholder) -> Bool {
-    return true
-  }
-}
-
-fileprivate struct DoubleNaNPlaceholder : Codable, Equatable {
-  init() {}
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    try container.encode(Double.nan)
-  }
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    let double = try container.decode(Double.self)
-    if !double.isNaN {
-      throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Couldn't decode NaN."))
-    }
-  }
-
-  static func ==(_ lhs: DoubleNaNPlaceholder, _ rhs: DoubleNaNPlaceholder) -> Bool {
-    return true
-  }
-}
-
-fileprivate enum EitherDecodable<T : Decodable, U : Decodable> : Decodable {
-  case t(T)
-  case u(U)
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    do {
-      self = .t(try container.decode(T.self))
-    } catch {
-      self = .u(try container.decode(U.self))
-    }
-  }
-}
-
-struct NullReader : Decodable, Equatable {
-    enum NullError : String, Error {
-        case expectedNull = "Expected a null value"
-    }
-    init(from decoder: Decoder) throws {
-        let c = try decoder.singleValueContainer()
-        guard c.decodeNil() else {
-            throw NullError.expectedNull
-        }
-    }
-}
 
 enum JSONPass { }
 

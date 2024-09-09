@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -21,8 +19,7 @@ import TestSupport
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-@available(FoundationPreview 0.4, *)
-final class CalendarRecurrenceRuleTests: XCTestCase {
+struct CalendarRecurrenceRuleTests {
     /// A Gregorian calendar with a time zone set to California
     var gregorian: Calendar = {
         var gregorian = Calendar(identifier: .gregorian)
@@ -30,7 +27,8 @@ final class CalendarRecurrenceRuleTests: XCTestCase {
         return gregorian
     }()
     
-    func testYearlyRecurrenceInLunarCalendar() {
+    @available(FoundationPreview 0.4, *)
+    @Test func testYearlyRecurrenceInLunarCalendar() {
         // Find the first day of the lunar new year
         let start = Date(timeIntervalSince1970: 1726876800.0) // 2024-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1855699200.0) // 2028-10-21T00:00:00-0000
@@ -51,10 +49,11 @@ final class CalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1832508000.0), // 2028-01-26T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testDaylightSavingsRepeatedTimePolicyFirst() {
+    @available(FoundationPreview 0.4, *)
+    @Test func testDaylightSavingsRepeatedTimePolicyFirst() {
         let start = Date(timeIntervalSince1970: 1730535600.0) // 2024-11-02T01:20:00-0700
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily)
         rule.repeatedTimePolicy = .first
@@ -67,10 +66,11 @@ final class CalendarRecurrenceRuleTests: XCTestCase {
             ///    02:00 PDT)
             Date(timeIntervalSince1970: 1730712000.0), // 2024-11-04T01:20:00-0800
         ]
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
    }
    
-   func testDaylightSavingsRepeatedTimePolicyLast() {
+    @available(FoundationPreview 0.4, *)
+    @Test func testDaylightSavingsRepeatedTimePolicyLast() {
         let start = Date(timeIntervalSince1970: 1730535600.0) // 2024-11-02T01:20:00-0700
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily)
         rule.repeatedTimePolicy = .last
@@ -83,6 +83,6 @@ final class CalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1730625600.0), // 2024-11-03T01:20:00-0800
             Date(timeIntervalSince1970: 1730712000.0), // 2024-11-04T01:20:00-0800
         ]
-        XCTAssertEqual(results, expectedResults)
-   }
+        #expect(results == expectedResults)
+    }
 }

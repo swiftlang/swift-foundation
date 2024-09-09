@@ -9,16 +9,8 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %empty-directory(%t)
-//
-// RUN: %target-clang %S/Inputs/FoundationBridge/FoundationBridge.m -c -o %t/FoundationBridgeObjC.o -g
-// RUN: %target-build-swift %s -I %S/Inputs/FoundationBridge/ -Xlinker %t/FoundationBridgeObjC.o -o %t/TestLocale
-// RUN: %target-codesign %t/TestLocale
 
-// RUN: %target-run %t/TestLocale > %t.txt
-// REQUIRES: executable_test
-// REQUIRES: objc_interop
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -27,43 +19,39 @@
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+struct LocaleTests {
 
-final class LocaleTests : XCTestCase {
-
-    func test_equality() {
+    @Test func test_equality() {
         let autoupdating = Locale.autoupdatingCurrent
         let autoupdating2 = Locale.autoupdatingCurrent
 
-        XCTAssertEqual(autoupdating, autoupdating2)
+        #expect(autoupdating == autoupdating2)
 
         let current = Locale.current
 
-        XCTAssertNotEqual(autoupdating, current)
+        #expect(autoupdating != current)
     }
 
-    func test_localizedStringFunctions() {
+    @Test func test_localizedStringFunctions() {
         let locale = Locale(identifier: "en")
 
-        XCTAssertEqual("English", locale.localizedString(forIdentifier: "en"))
-        XCTAssertEqual("France", locale.localizedString(forRegionCode: "fr"))
-        XCTAssertEqual("Spanish", locale.localizedString(forLanguageCode: "es"))
-        XCTAssertEqual("Simplified Han", locale.localizedString(forScriptCode: "Hans"))
-        XCTAssertEqual("Computer", locale.localizedString(forVariantCode: "POSIX"))
-        XCTAssertEqual("Buddhist Calendar", locale.localizedString(for: .buddhist))
-        XCTAssertEqual("US Dollar", locale.localizedString(forCurrencyCode: "USD"))
-        XCTAssertEqual("Phonebook Sort Order", locale.localizedString(forCollationIdentifier: "phonebook"))
+        #expect("English" == locale.localizedString(forIdentifier: "en"))
+        #expect("France" == locale.localizedString(forRegionCode: "fr"))
+        #expect("Spanish" == locale.localizedString(forLanguageCode: "es"))
+        #expect("Simplified Han" == locale.localizedString(forScriptCode: "Hans"))
+        #expect("Computer" == locale.localizedString(forVariantCode: "POSIX"))
+        #expect("Buddhist Calendar" == locale.localizedString(for: .buddhist))
+        #expect("US Dollar" == locale.localizedString(forCurrencyCode: "USD"))
+        #expect("Phonebook Sort Order" == locale.localizedString(forCollationIdentifier: "phonebook"))
         // Need to find a good test case for collator identifier
-        // XCTAssertEqual("something", locale.localizedString(forCollatorIdentifier: "en"))
+        // #expect("something" == locale.localizedString(forCollatorIdentifier: "en"))
     }
 
     @available(macOS, deprecated: 13)
     @available(iOS, deprecated: 16)
     @available(tvOS, deprecated: 16)
     @available(watchOS, deprecated: 9)
-    func test_properties_complexIdentifiers() {
+    @Test func test_properties_complexIdentifiers() {
         struct S {
             var identifier: String
             var countryCode: String?
@@ -83,64 +71,42 @@ final class LocaleTests : XCTestCase {
 
         for t in tests {
             let l = Locale(identifier: t.identifier)
-            XCTAssertEqual(t.countryCode, l.regionCode, "Failure for id \(t.identifier)")
-            XCTAssertEqual(t.languageCode, l.languageCode, "Failure for id \(t.identifier)")
-            XCTAssertEqual(t.script, l.scriptCode, "Failure for id \(t.identifier)")
-            XCTAssertEqual(t.calendar, l.calendar.identifier, "Failure for id \(t.identifier)")
-            XCTAssertEqual(t.currency, l.currency, "Failure for id \(t.identifier)")
-            XCTAssertEqual(t.collation, l.collation, "Failure for id \(t.identifier)")
+            #expect(t.countryCode == l.regionCode, "Failure for id \(t.identifier)")
+            #expect(t.languageCode == l.languageCode, "Failure for id \(t.identifier)")
+            #expect(t.script == l.scriptCode, "Failure for id \(t.identifier)")
+            #expect(t.calendar == l.calendar.identifier, "Failure for id \(t.identifier)")
+            #expect(t.currency == l.currency, "Failure for id \(t.identifier)")
+            #expect(t.collation == l.collation, "Failure for id \(t.identifier)")
         }
     }
 
-    func test_AnyHashableContainingLocale() {
+    @Test func test_AnyHashableContainingLocale() {
         let values: [Locale] = [
             Locale(identifier: "en"),
             Locale(identifier: "uk"),
             Locale(identifier: "uk"),
         ]
         let anyHashables = values.map(AnyHashable.init)
-        expectEqual(Locale.self, type(of: anyHashables[0].base))
-        expectEqual(Locale.self, type(of: anyHashables[1].base))
-        expectEqual(Locale.self, type(of: anyHashables[2].base))
-        XCTAssertNotEqual(anyHashables[0], anyHashables[1])
-        XCTAssertEqual(anyHashables[1], anyHashables[2])
+        #expect(Locale.self == type(of: anyHashables[0].base))
+        #expect(Locale.self == type(of: anyHashables[1].base))
+        #expect(Locale.self == type(of: anyHashables[2].base))
+        #expect(anyHashables[0] != anyHashables[1])
+        #expect(anyHashables[1] == anyHashables[2])
     }
 
-    func decodeHelper(_ l: Locale) -> Locale {
-        let je = JSONEncoder()
-        let data = try! je.encode(l)
-        let jd = JSONDecoder()
-        return try! jd.decode(Locale.self, from: data)
+    @Test func test_identifierWithCalendar() throws {
+        #expect(Calendar.localeIdentifierWithCalendar(localeIdentifier: "en_US", calendarIdentifier: .islamicTabular) == "en_US@calendar=islamic-tbla")
+        #expect(Calendar.localeIdentifierWithCalendar(localeIdentifier: "zh-Hant-TW@calendar=japanese;collation=pinyin;numbers=arab", calendarIdentifier: .islamicTabular) == "zh-Hant_TW@calendar=islamic-tbla;collation=pinyin;numbers=arab")
     }
 
-    func test_serializationOfCurrent() {
-        let current = Locale.current
-        let decodedCurrent = decodeHelper(current)
-        XCTAssertEqual(decodedCurrent, current)
+    @Test func test_identifierTypesFromComponents() throws {
 
-        let autoupdatingCurrent = Locale.autoupdatingCurrent
-        let decodedAutoupdatingCurrent = decodeHelper(autoupdatingCurrent)
-        XCTAssertEqual(decodedAutoupdatingCurrent, autoupdatingCurrent)
-
-        XCTAssertNotEqual(decodedCurrent, decodedAutoupdatingCurrent)
-        XCTAssertNotEqual(current, autoupdatingCurrent)
-        XCTAssertNotEqual(decodedCurrent, autoupdatingCurrent)
-        XCTAssertNotEqual(current, decodedAutoupdatingCurrent)
-    }
-
-    func test_identifierWithCalendar() throws {
-        XCTAssertEqual(Calendar.localeIdentifierWithCalendar(localeIdentifier: "en_US", calendarIdentifier: .islamicTabular), "en_US@calendar=islamic-tbla")
-        XCTAssertEqual(Calendar.localeIdentifierWithCalendar(localeIdentifier: "zh-Hant-TW@calendar=japanese;collation=pinyin;numbers=arab", calendarIdentifier: .islamicTabular), "zh-Hant_TW@calendar=islamic-tbla;collation=pinyin;numbers=arab")
-    }
-
-    func test_identifierTypesFromComponents() throws {
-
-        func verify(cldr: String, bcp47: String, icu: String, file: StaticString = #filePath, line: UInt = #line, _ components: () -> Locale.Components) {
+        func verify(cldr: String, bcp47: String, icu: String, sourceLocation: SourceLocation = #_sourceLocation, _ components: () -> Locale.Components) {
             let loc = Locale(components: components())
             let types: [Locale.IdentifierType] = [.cldr, .bcp47, .icu]
             let expected = [cldr, bcp47, icu]
             for (idx, type) in types.enumerated() {
-                XCTAssertEqual(loc.identifier(type), expected[idx], "type: \(type)", file: file, line: line)
+                #expect(loc.identifier(type) == expected[idx], "type: \(type)", sourceLocation: sourceLocation)
             }
         }
 
@@ -238,12 +204,12 @@ final class LocaleTests : XCTestCase {
         }
     }
 
-    func verify(_ locID: String, cldr: String, bcp47: String, icu: String, file: StaticString = #filePath, line: UInt = #line) {
+    func verify(_ locID: String, cldr: String, bcp47: String, icu: String, sourceLocation: SourceLocation = #_sourceLocation) {
         let loc = Locale(identifier: locID)
         let types: [Locale.IdentifierType] = [.cldr, .bcp47, .icu]
         let expected = [cldr, bcp47, icu]
         for (idx, type) in types.enumerated() {
-            XCTAssertEqual(loc.identifier(type), expected[idx], "type: \(type)", file: file, line: line)
+            #expect(loc.identifier(type) == expected[idx], "type: \(type)", sourceLocation: sourceLocation)
         }
     }
     
@@ -256,89 +222,90 @@ final class LocaleTests : XCTestCase {
         return result
     }
 
-    func test_identifierFromComponents() {
+    @Test func test_identifierFromComponents() {
         var c: [String: String] = [:]
         
         c = comps(language: "zh", script: "Hans", country: "TW")
-        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW")
+        #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW")
         
         // Set some keywords
         c["CuRrEnCy"] = "qqq"
-        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@currency=qqq")
+        #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@currency=qqq")
 
         // Set some more keywords, check order
         c["d"] = "d"
         c["0"] = "0"
-        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d")
+        #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d")
         
         // Add some non-ASCII keywords
         c["ê"] = "ê"
-        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d")
+        #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d")
         
         // And some non-ASCII values
         c["n"] = "ñ"
-        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d")
+        #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d")
         
         // And some values with other letters
         c["z"] = "Ab09_-+/"
-        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
+        #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
 
         // And some really short keys
         c[""] = "hi"
-        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
+        #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
 
         // And some really short values
         c["q"] = ""
-        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
+        #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
         
         // All the valid stuff
         c["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+/"
-        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz0123456789=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+/;currency=qqq;d=d;z=Ab09_-+/")
+        #expect(Locale.identifier(fromComponents: c) == "zh_Hans_TW@0=0;abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz0123456789=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+/;currency=qqq;d=d;z=Ab09_-+/")
         
         // POSIX
         let p = comps(language: "en", script: nil, country: "US", variant: "POSIX")
-        XCTAssertEqual(Locale.identifier(fromComponents: p), "en_US_POSIX")
+        #expect(Locale.identifier(fromComponents: p) == "en_US_POSIX")
         
         // Odd combos
-        XCTAssertEqual(Locale.identifier(fromComponents: comps(language: "en", variant: "POSIX")), "en__POSIX")
+        #expect(Locale.identifier(fromComponents: comps(language: "en", variant: "POSIX")) == "en__POSIX")
 
-        XCTAssertEqual(Locale.identifier(fromComponents: comps(variant: "POSIX")), "__POSIX")
+        #expect(Locale.identifier(fromComponents: comps(variant: "POSIX")) == "__POSIX")
 
-        XCTAssertEqual(Locale.identifier(fromComponents: comps(language: "en", script: "Hans", country: "US", variant: "POSIX")), "en_Hans_US_POSIX")
+        #expect(Locale.identifier(fromComponents: comps(language: "en", script: "Hans", country: "US", variant: "POSIX")) == "en_Hans_US_POSIX")
 
-        XCTAssertEqual(Locale.identifier(fromComponents: comps(language: "en")), "en")
-        XCTAssertEqual(Locale.identifier(fromComponents: comps(country: "US", variant: "POSIX")), "_US_POSIX")
+        #expect(Locale.identifier(fromComponents: comps(language: "en")) == "en")
+        #expect(Locale.identifier(fromComponents: comps(country: "US", variant: "POSIX")) == "_US_POSIX")
     }
     
     #if FOUNDATION_FRAMEWORK
-    func test_identifierFromAnyComponents() {
+    @Test func test_identifierFromAnyComponents() {
         // This internal Foundation-specific version allows for a Calendar entry
         let comps = comps(language: "zh", script: "Hans", country: "TW")
-        XCTAssertEqual(Locale.identifier(fromComponents: comps), "zh_Hans_TW")
+        #expect(Locale.identifier(fromComponents: comps) == "zh_Hans_TW")
 
         var anyComps : [String : Any] = [:]
         anyComps.merge(comps) { a, b in a }
         
         anyComps["kCFLocaleCalendarKey"] = Calendar(identifier: .gregorian)
-        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@calendar=gregorian")
+        #expect(Locale.identifier(fromAnyComponents: anyComps) == "zh_Hans_TW@calendar=gregorian")
 
         // Verify what happens if we have the key in here under two different (but equivalent) names
         anyComps["calendar"] = "buddhist"
-        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@calendar=gregorian")
+        #expect(Locale.identifier(fromAnyComponents: anyComps) == "zh_Hans_TW@calendar=gregorian")
 
         anyComps["currency"] = "xyz"
-        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@calendar=gregorian;currency=xyz")
+        #expect(Locale.identifier(fromAnyComponents: anyComps) == "zh_Hans_TW@calendar=gregorian;currency=xyz")
         
         anyComps["AaA"] = "bBb"
-        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@aaa=bBb;calendar=gregorian;currency=xyz")
+        #expect(Locale.identifier(fromAnyComponents: anyComps) == "zh_Hans_TW@aaa=bBb;calendar=gregorian;currency=xyz")
     }
     #endif
 
+    @Test(.enabled(if: Locale.localeAsIfCurrent(name: "en_US", overrides: nil).identifierCapturingPreferences == "en_US", "This test requires that no additional Locale preferences be set for the current locale"))
     func test_identifierCapturingPreferences() {
-        func expectIdentifier(_ localeIdentifier: String, preferences: LocalePreferences, expectedFullIdentifier: String, file: StaticString = #filePath, line: UInt = #line) {
+        func expectIdentifier(_ localeIdentifier: String, preferences: LocalePreferences, expectedFullIdentifier: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let locale = Locale.localeAsIfCurrent(name: localeIdentifier, overrides: preferences)
-            XCTAssertEqual(locale.identifier, localeIdentifier, file: file, line: line)
-            XCTAssertEqual(locale.identifierCapturingPreferences, expectedFullIdentifier, file: file, line: line)
+            #expect(locale.identifier == localeIdentifier, sourceLocation: sourceLocation)
+            #expect(locale.identifierCapturingPreferences == expectedFullIdentifier, sourceLocation: sourceLocation)
         }
 
         expectIdentifier("en_US", preferences: .init(metricUnits: true, measurementUnits: .centimeters), expectedFullIdentifier: "en_US@measure=metric")
@@ -365,42 +332,42 @@ final class LocaleTests : XCTestCase {
 #endif
     }
     
-    func test_badWindowsLocaleID() {
+    @Test func test_badWindowsLocaleID() {
         // Negative values are invalid
         let result = Locale.identifier(fromWindowsLocaleCode: -1)
-        XCTAssertNil(result)
+        #expect(result == nil)
     }
 }
 
-final class LocalePropertiesTests : XCTestCase {
+struct LocalePropertiesTests {
 
-    func _verify(locale: Locale, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertEqual(locale.language.languageCode, language, "languageCode should be equal", file: file, line: line)
-        XCTAssertEqual(locale.language.script, script, "script should be equal", file: file, line: line)
-        XCTAssertEqual(locale.language.region, languageRegion, "language region should be equal", file: file, line: line)
-        XCTAssertEqual(locale.region, region, "region should be equal", file: file, line: line)
-        XCTAssertEqual(locale.subdivision, subdivision, "subdivision should be equal", file: file, line: line)
-        XCTAssertEqual(locale.measurementSystem, measurementSystem, "measurementSystem should be equal", file: file, line: line)
-        XCTAssertEqual(locale.calendar.identifier, calendar, "calendar.identifier should be equal", file: file, line: line)
-        XCTAssertEqual(locale.hourCycle, hourCycle, "hourCycle should be equal", file: file, line: line)
-        XCTAssertEqual(locale.currency, currency, "currency should be equal", file: file, line: line)
-        XCTAssertEqual(locale.numberingSystem, numberingSystem, "numberingSystem should be equal", file: file, line: line)
-        XCTAssertEqual(Set(locale.availableNumberingSystems), numberingSystems, "availableNumberingSystems should be equal", file: file, line: line)
-        XCTAssertEqual(locale.firstDayOfWeek, firstDayOfWeek, "firstDayOfWeek should be equal", file: file, line: line)
-        XCTAssertEqual(locale.collation, collation, "collation should be equal", file: file, line: line)
-        XCTAssertEqual(locale.variant, variant, "variant should be equal", file: file, line: line)
+    func _verify(locale: Locale, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
+        #expect(locale.language.languageCode == language, "languageCode should be equal", sourceLocation: sourceLocation)
+        #expect(locale.language.script == script, "script should be equal", sourceLocation: sourceLocation)
+        #expect(locale.language.region == languageRegion, "language region should be equal", sourceLocation: sourceLocation)
+        #expect(locale.region == region, "region should be equal", sourceLocation: sourceLocation)
+        #expect(locale.subdivision == subdivision, "subdivision should be equal", sourceLocation: sourceLocation)
+        #expect(locale.measurementSystem == measurementSystem, "measurementSystem should be equal", sourceLocation: sourceLocation)
+        #expect(locale.calendar.identifier == calendar, "calendar.identifier should be equal", sourceLocation: sourceLocation)
+        #expect(locale.hourCycle == hourCycle, "hourCycle should be equal", sourceLocation: sourceLocation)
+        #expect(locale.currency == currency, "currency should be equal", sourceLocation: sourceLocation)
+        #expect(locale.numberingSystem == numberingSystem, "numberingSystem should be equal", sourceLocation: sourceLocation)
+        #expect(Set(locale.availableNumberingSystems) == numberingSystems, "availableNumberingSystems should be equal", sourceLocation: sourceLocation)
+        #expect(locale.firstDayOfWeek == firstDayOfWeek, "firstDayOfWeek should be equal", sourceLocation: sourceLocation)
+        #expect(locale.collation == collation, "collation should be equal", sourceLocation: sourceLocation)
+        #expect(locale.variant == variant, "variant should be equal", sourceLocation: sourceLocation)
     }
 
-    func verify(_ identifier: String, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, file: StaticString = #filePath, line: UInt = #line) {
+    func verify(_ identifier: String, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
         let loc = Locale(identifier: identifier)
-        _verify(locale: loc, expectedLanguage: language, script: script, languageRegion: languageRegion, region: region, subdivision: subdivision, measurementSystem: measurementSystem, calendar: calendar, hourCycle: hourCycle, currency: currency, numberingSystem: numberingSystem, numberingSystems: numberingSystems, firstDayOfWeek: firstDayOfWeek, collation: collation, variant: variant, file: file, line: line)
+        _verify(locale: loc, expectedLanguage: language, script: script, languageRegion: languageRegion, region: region, subdivision: subdivision, measurementSystem: measurementSystem, calendar: calendar, hourCycle: hourCycle, currency: currency, numberingSystem: numberingSystem, numberingSystems: numberingSystems, firstDayOfWeek: firstDayOfWeek, collation: collation, variant: variant, sourceLocation: sourceLocation)
     }
 
-    func test_localeComponentsAndLocale() {
-        func verify(components: Locale.Components, identifier: String, file: StaticString = #filePath, line: UInt = #line) {
+    @Test func test_localeComponentsAndLocale() {
+        func verify(components: Locale.Components, identifier: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let locFromComponents = Locale(components: components)
             let locFromIdentifier = Locale(identifier: identifier)
-            _verify(locale: locFromComponents, expectedLanguage: locFromIdentifier.language.languageCode, script: locFromIdentifier.language.script, languageRegion: locFromIdentifier.language.region, region: locFromIdentifier.region, measurementSystem: locFromIdentifier.measurementSystem, calendar: locFromIdentifier.calendar.identifier, hourCycle: locFromIdentifier.hourCycle, currency: locFromIdentifier.currency, numberingSystem: locFromIdentifier.numberingSystem, numberingSystems: Set(locFromIdentifier.availableNumberingSystems), firstDayOfWeek: locFromIdentifier.firstDayOfWeek, collation: locFromIdentifier.collation, variant: locFromIdentifier.variant, file: file, line: line)
+            _verify(locale: locFromComponents, expectedLanguage: locFromIdentifier.language.languageCode, script: locFromIdentifier.language.script, languageRegion: locFromIdentifier.language.region, region: locFromIdentifier.region, measurementSystem: locFromIdentifier.measurementSystem, calendar: locFromIdentifier.calendar.identifier, hourCycle: locFromIdentifier.hourCycle, currency: locFromIdentifier.currency, numberingSystem: locFromIdentifier.numberingSystem, numberingSystems: Set(locFromIdentifier.availableNumberingSystems), firstDayOfWeek: locFromIdentifier.firstDayOfWeek, collation: locFromIdentifier.collation, variant: locFromIdentifier.variant, sourceLocation: sourceLocation)
         }
 
 
@@ -432,19 +399,19 @@ final class LocalePropertiesTests : XCTestCase {
     }
 
     // Test retrieving user's preference values as set in the system settings
-    func test_userPreferenceOverride_hourCycle() {
-        func verifyHourCycle(_ localeID: String, _ expectDefault: Locale.HourCycle, shouldRespectUserPref: Bool, file: StaticString = #filePath, line: UInt = #line) {
+    @Test func test_userPreferenceOverride_hourCycle() {
+        func verifyHourCycle(_ localeID: String, _ expectDefault: Locale.HourCycle, shouldRespectUserPref: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
             let loc = Locale(identifier: localeID)
-            XCTAssertEqual(loc.hourCycle, expectDefault,  "default did not match", file: file, line: line)
+            #expect(loc.hourCycle == expectDefault,  "default did not match", sourceLocation: sourceLocation)
 
             let defaultLoc = Locale.localeAsIfCurrent(name: localeID, overrides: .init())
-            XCTAssertEqual(defaultLoc.hourCycle, expectDefault, "explicit no override did not match", file: file, line: line)
+            #expect(defaultLoc.hourCycle == expectDefault, "explicit no override did not match", sourceLocation: sourceLocation)
 
             let force24 = Locale.localeAsIfCurrent(name: localeID, overrides: .init(force24Hour: true))
-            XCTAssertEqual(force24.hourCycle, shouldRespectUserPref ? .zeroToTwentyThree : expectDefault, "force 24-hr did not match", file: file, line: line)
+            #expect(force24.hourCycle == (shouldRespectUserPref ? .zeroToTwentyThree : expectDefault), "force 24-hr did not match", sourceLocation: sourceLocation)
 
             let force12 = Locale.localeAsIfCurrent(name: localeID, overrides: .init(force12Hour: true))
-            XCTAssertEqual(force12.hourCycle, shouldRespectUserPref ? .oneToTwelve : expectDefault, "force 12-hr did not match", file: file, line: line)
+            #expect(force12.hourCycle == (shouldRespectUserPref ? .oneToTwelve : expectDefault), "force 12-hr did not match", sourceLocation: sourceLocation)
         }
 
 
@@ -465,19 +432,19 @@ final class LocalePropertiesTests : XCTestCase {
         verifyHourCycle("en_US@hours=h25", .oneToTwelve, shouldRespectUserPref: true) // Incorrect keyword value for "hour cycle" is ignored; correct is "hours=h23"
     }
 
-    func test_userPreferenceOverride_measurementSystem() {
-        func verify(_ localeID: String, _ expected: Locale.MeasurementSystem, shouldRespectUserPref: Bool, file: StaticString = #filePath, line: UInt = #line) {
+    @Test func test_userPreferenceOverride_measurementSystem() {
+        func verify(_ localeID: String, _ expected: Locale.MeasurementSystem, shouldRespectUserPref: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
             let localeNoPref = Locale.localeAsIfCurrent(name: localeID, overrides: .init())
-            XCTAssertEqual(localeNoPref.measurementSystem, expected, file: file, line: line)
+            #expect(localeNoPref.measurementSystem == expected, sourceLocation: sourceLocation)
 
             let fakeCurrentMetric = Locale.localeAsIfCurrent(name: localeID, overrides: .init(metricUnits: true, measurementUnits: .centimeters))
-            XCTAssertEqual(fakeCurrentMetric.measurementSystem, shouldRespectUserPref ? .metric : expected, file: file, line: line)
+            #expect(fakeCurrentMetric.measurementSystem == (shouldRespectUserPref ? .metric : expected), sourceLocation: sourceLocation)
 
             let fakeCurrentUS = Locale.localeAsIfCurrent(name: localeID, overrides: .init(metricUnits: false, measurementUnits: .inches))
-            XCTAssertEqual(fakeCurrentUS.measurementSystem, shouldRespectUserPref ? .us : expected, file: file, line: line)
+            #expect(fakeCurrentUS.measurementSystem == (shouldRespectUserPref ? .us : expected), sourceLocation: sourceLocation)
 
             let fakeCurrentUK = Locale.localeAsIfCurrent(name: localeID, overrides: .init(metricUnits: true, measurementUnits: .inches))
-            XCTAssertEqual(fakeCurrentUK.measurementSystem, shouldRespectUserPref ? .uk : expected, file: file, line: line)
+            #expect(fakeCurrentUK.measurementSystem == (shouldRespectUserPref ? .uk : expected), sourceLocation: sourceLocation)
         }
 
         verify("en_US", .us, shouldRespectUserPref: true)
@@ -499,62 +466,62 @@ final class LocalePropertiesTests : XCTestCase {
     @available(iOS, deprecated: 16)
     @available(tvOS, deprecated: 16)
     @available(watchOS, deprecated: 9)
-    func test_properties() {
+    @Test func test_properties() {
         let locale = Locale(identifier: "zh-Hant-HK")
 
-        XCTAssertEqual("zh-Hant-HK", locale.identifier)
-        XCTAssertEqual("zh", locale.languageCode)
-        XCTAssertEqual("HK", locale.regionCode)
-        XCTAssertEqual("Hant", locale.scriptCode)
-        XCTAssertEqual("POSIX", Locale(identifier: "en_POSIX").variantCode)
+        #expect("zh-Hant-HK" == locale.identifier)
+        #expect("zh" == locale.languageCode)
+        #expect("HK" == locale.regionCode)
+        #expect("Hant" == locale.scriptCode)
+        #expect("POSIX" == Locale(identifier: "en_POSIX").variantCode)
 #if FOUNDATION_FRAMEWORK
-        XCTAssertTrue(locale.exemplarCharacterSet != nil)
+        #expect(locale.exemplarCharacterSet != nil)
 #endif
         // The calendar we get back from Locale has the locale set, but not the one we create with Calendar(identifier:). So we configure our comparison calendar first.
         var c = Calendar(identifier: .gregorian)
         c.locale = Locale(identifier: "en_US")
-        XCTAssertEqual(c, Locale(identifier: "en_US").calendar)
+        #expect(c == Locale(identifier: "en_US").calendar)
         let localeCalendar = Locale(identifier: "en_US").calendar
-        XCTAssertEqual(c, localeCalendar)
-        XCTAssertEqual(c.identifier, localeCalendar.identifier)
-        XCTAssertEqual(c.locale, localeCalendar.locale)
-        XCTAssertEqual(c.timeZone, localeCalendar.timeZone)
-        XCTAssertEqual(c.firstWeekday, localeCalendar.firstWeekday)
-        XCTAssertEqual(c.minimumDaysInFirstWeek, localeCalendar.minimumDaysInFirstWeek)
+        #expect(c == localeCalendar)
+        #expect(c.identifier == localeCalendar.identifier)
+        #expect(c.locale == localeCalendar.locale)
+        #expect(c.timeZone == localeCalendar.timeZone)
+        #expect(c.firstWeekday == localeCalendar.firstWeekday)
+        #expect(c.minimumDaysInFirstWeek == localeCalendar.minimumDaysInFirstWeek)
 
-        XCTAssertEqual("「", locale.quotationBeginDelimiter)
-        XCTAssertEqual("」", locale.quotationEndDelimiter)
-        XCTAssertEqual("『", locale.alternateQuotationBeginDelimiter)
-        XCTAssertEqual("』", locale.alternateQuotationEndDelimiter)
-        XCTAssertEqual("phonebook", Locale(identifier: "en_US@collation=phonebook").collationIdentifier)
-        XCTAssertEqual(".", locale.decimalSeparator)
+        #expect("「" == locale.quotationBeginDelimiter)
+        #expect("」" == locale.quotationEndDelimiter)
+        #expect("『" == locale.alternateQuotationBeginDelimiter)
+        #expect("』" == locale.alternateQuotationEndDelimiter)
+        #expect("phonebook" == Locale(identifier: "en_US@collation=phonebook").collationIdentifier)
+        #expect("." == locale.decimalSeparator)
 
 
-        XCTAssertEqual(".", locale.decimalSeparator)
-        XCTAssertEqual(",", locale.groupingSeparator)
-        XCTAssertEqual("HK$", locale.currencySymbol)
-        XCTAssertEqual("HKD", locale.currencyCode)
+        #expect("." == locale.decimalSeparator)
+        #expect("," == locale.groupingSeparator)
+        #expect("HK$" == locale.currencySymbol)
+        #expect("HKD" == locale.currencyCode)
 
-        XCTAssertTrue(Locale.availableIdentifiers.count > 0)
-        XCTAssertTrue(Locale.LanguageCode._isoLanguageCodeStrings.count > 0)
-        XCTAssertTrue(Locale.Region.isoCountries.count > 0)
-        XCTAssertTrue(Locale.Currency.isoCurrencies.map { $0.identifier }.count > 0)
-        XCTAssertTrue(Locale.commonISOCurrencyCodes.count > 0)
+        #expect(Locale.availableIdentifiers.count > 0)
+        #expect(Locale.LanguageCode._isoLanguageCodeStrings.count > 0)
+        #expect(Locale.Region.isoCountries.count > 0)
+        #expect(Locale.Currency.isoCurrencies.map { $0.identifier }.count > 0)
+        #expect(Locale.commonISOCurrencyCodes.count > 0)
 
-        XCTAssertTrue(Locale.preferredLanguages.count > 0)
+        #expect(Locale.preferredLanguages.count > 0)
 
         // Need to find a good test case for collator identifier
-        // XCTAssertEqual("something", locale.collatorIdentifier)
+        // #expect("something" == locale.collatorIdentifier)
     }
     
-    func test_customizedProperties() {
+    @Test func test_customizedProperties() {
         let localePrefs = LocalePreferences(numberSymbols: [0 : "*", 1: "-"])
         let customizedLocale = Locale.localeAsIfCurrent(name: "en_US", overrides: localePrefs)
-        XCTAssertEqual(customizedLocale.decimalSeparator, "*")
-        XCTAssertEqual(customizedLocale.groupingSeparator, "-")
+        #expect(customizedLocale.decimalSeparator == "*")
+        #expect(customizedLocale.groupingSeparator == "-")
     }
 
-    func test_defaultValue() {
+    @Test func test_defaultValue() {
         verify("en_US", expectedLanguage: "en", script: "Latn", languageRegion: "US", region: "US", measurementSystem: .us, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "USD", numberingSystem: "latn", numberingSystems: [ "latn" ], firstDayOfWeek: .sunday, collation: .standard, variant: nil)
 
         verify("en_GB", expectedLanguage: "en", script: "Latn", languageRegion: "GB", region: "GB", measurementSystem: .uk, calendar: .gregorian, hourCycle: .zeroToTwentyThree, currency: "GBP", numberingSystem: "latn", numberingSystems: [ "latn" ], firstDayOfWeek: .monday, collation: .standard, variant: nil)
@@ -564,7 +531,7 @@ final class LocalePropertiesTests : XCTestCase {
         verify("ar_EG", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "EG", measurementSystem: .metric, calendar: .gregorian, hourCycle: .oneToTwelve, currency: "EGP", numberingSystem: "arab", numberingSystems: [ "latn", "arab" ], firstDayOfWeek: .saturday, collation: .standard, variant: nil)
     }
 
-    func test_keywordOverrides() {
+    @Test func test_keywordOverrides() {
 
         verify("ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: nil, measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: [ "traditio", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dict")
 
@@ -576,94 +543,94 @@ final class LocalePropertiesTests : XCTestCase {
         verify("ar_EG@calendar=ethioaa;collation=dict;currency=frf;fw=fri;hours=h11;measure=uksystem;numbers=traditio;rg=uszzzz;sd=usca", expectedLanguage: "ar", script: "arab", languageRegion: "EG", region: "us", subdivision: "usca", measurementSystem: .uk, calendar: .ethiopicAmeteAlem, hourCycle: .zeroToEleven, currency: "FRF", numberingSystem: "traditio", numberingSystems: [ "traditio", "latn", "arab" ], firstDayOfWeek: .friday, collation: "dict")
     }
 
-    func test_longLocaleKeywordValues() {
+    @Test func test_longLocaleKeywordValues() {
         let x = Locale.keywordValue(identifier: "ar_EG@vt=kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", key: "vt")
-        XCTAssertEqual(x, "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
+        #expect(x == "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
     }
 }
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
 
-final class LocaleBridgingTests : XCTestCase {
+struct LocaleBridgingTests {
     
     @available(macOS, deprecated: 13)
     @available(iOS, deprecated: 16)
     @available(tvOS, deprecated: 16)
     @available(watchOS, deprecated: 9)
-    func test_getACustomLocale() {
+    @Test func test_getACustomLocale() {
         let loc = getACustomLocale("en_US")
         let objCLoc = loc as! CustomNSLocaleSubclass
 
         // Verify that accessing the properties of `l` calls back into ObjC
-        XCTAssertEqual(loc.identifier, "en_US")
-        XCTAssertEqual(objCLoc.last, "localeIdentifier")
+        #expect(loc.identifier == "en_US")
+        #expect(objCLoc.last == "localeIdentifier")
 
-        XCTAssertEqual(loc.currencyCode, "USD")
-        XCTAssertEqual(objCLoc.last, "objectForKey:") // Everything funnels through the primitives
+        #expect(loc.currencyCode == "USD")
+        #expect(objCLoc.last == "objectForKey:") // Everything funnels through the primitives
 
-        XCTAssertEqual(loc.regionCode, "US")
-        XCTAssertEqual(objCLoc.countryCode, "US")
+        #expect(loc.regionCode == "US")
+        #expect(objCLoc.countryCode == "US")
     }
 
     @available(macOS, deprecated: 13)
     @available(iOS, deprecated: 16)
     @available(tvOS, deprecated: 16)
     @available(watchOS, deprecated: 9)
-    func test_customLocaleCountryCode() {
+    @Test func test_customLocaleCountryCode() {
         let loc = getACustomLocale("en_US@rg=gbzzzz")
         let objCLoc = loc as! CustomNSLocaleSubclass
 
-        XCTAssertEqual(loc.identifier, "en_US@rg=gbzzzz")
-        XCTAssertEqual(objCLoc.last, "localeIdentifier")
+        #expect(loc.identifier == "en_US@rg=gbzzzz")
+        #expect(objCLoc.last == "localeIdentifier")
 
-        XCTAssertEqual(loc.currencyCode, "GBP")
-        XCTAssertEqual(objCLoc.last, "objectForKey:") // Everything funnels through the primitives
+        #expect(loc.currencyCode == "GBP")
+        #expect(objCLoc.last == "objectForKey:") // Everything funnels through the primitives
 
-        XCTAssertEqual(loc.regionCode, "GB")
-        XCTAssertEqual(objCLoc.countryCode, "GB")
+        #expect(loc.regionCode == "GB")
+        #expect(objCLoc.countryCode == "GB")
     }
 
-    func test_AnyHashableCreatedFromNSLocale() {
+    @Test func test_AnyHashableCreatedFromNSLocale() {
         let values: [NSLocale] = [
             NSLocale(localeIdentifier: "en"),
             NSLocale(localeIdentifier: "uk"),
             NSLocale(localeIdentifier: "uk"),
         ]
         let anyHashables = values.map(AnyHashable.init)
-        expectEqual(Locale.self, type(of: anyHashables[0].base))
-        expectEqual(Locale.self, type(of: anyHashables[1].base))
-        expectEqual(Locale.self, type(of: anyHashables[2].base))
-        XCTAssertNotEqual(anyHashables[0], anyHashables[1])
-        XCTAssertEqual(anyHashables[1], anyHashables[2])
+        #expect(Locale.self == type(of: anyHashables[0].base))
+        #expect(Locale.self == type(of: anyHashables[1].base))
+        #expect(Locale.self == type(of: anyHashables[2].base))
+        #expect(anyHashables[0] != anyHashables[1])
+        #expect(anyHashables[1] == anyHashables[2])
     }
     
-    func test_autoupdatingBridge() {
+    @Test func test_autoupdatingBridge() {
         let s1 = Locale.autoupdatingCurrent
         let s2 = Locale.autoupdatingCurrent
         let ns1 = s1 as NSLocale
         let ns2 = s2 as NSLocale
         // Verify that we don't create a new instance each time this is converted to NSLocale
-        XCTAssertTrue(ns1 === ns2)
+        #expect(ns1 === ns2)
     }
     
-    func test_bridgingTwice() {
+    @Test func test_bridgingTwice() {
         let s1 = NSLocale.system
         let l1 = s1 as Locale
         let s2 = NSLocale.system
         let l2 = s2 as Locale
-        XCTAssertTrue(l1 as NSLocale === l2 as NSLocale)
+        #expect((l1 as NSLocale) === (l2 as NSLocale))
     }
     
-    func test_bridgingFixedTwice() {
+    @Test func test_bridgingFixedTwice() {
         let s1 = Locale(identifier: "en_US")
         let ns1 = s1 as NSLocale
         let s2 = Locale(identifier: "en_US")
         let ns2 = s2 as NSLocale
-        XCTAssertTrue(ns1 === ns2)
+        #expect(ns1 === ns2)
     }
     
-    func test_bridgingCurrentWithPrefs() {
+    @Test func test_bridgingCurrentWithPrefs() {
         // Verify that 'current with prefs' locales (which have identical identifiers but differing prefs) are correctly cached
         let s1 = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(metricUnits: true), disableBundleMatching: false)
         let ns1 = s1 as NSLocale
@@ -672,9 +639,9 @@ final class LocaleBridgingTests : XCTestCase {
         let s3 = Locale.localeAsIfCurrent(name: "en_US", overrides: .init(measurementUnits: .centimeters), disableBundleMatching: false)
         let ns3 = s3 as NSLocale
         
-        XCTAssertTrue(ns1 === ns2)
-        XCTAssertTrue(ns1 !== ns3)
-        XCTAssertTrue(ns2 !== ns3)
+        #expect(ns1 === ns2)
+        #expect(ns1 !== ns3)
+        #expect(ns2 !== ns3)
     }
 }
 
@@ -683,16 +650,16 @@ final class LocaleBridgingTests : XCTestCase {
 // MARK: - FoundationPreview Disabled Tests
 #if FOUNDATION_FRAMEWORK
 extension LocaleTests {
-    func test_userPreferenceOverride_firstWeekday() {
-        func verify(_ localeID: String, _ expected: Locale.Weekday, shouldRespectUserPrefForGregorian: Bool, shouldRespectUserPrefForIslamic: Bool, file: StaticString = #filePath, line: UInt = #line) {
+    @Test func test_userPreferenceOverride_firstWeekday() {
+        func verify(_ localeID: String, _ expected: Locale.Weekday, shouldRespectUserPrefForGregorian: Bool, shouldRespectUserPrefForIslamic: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
             let localeNoPref = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [:]))
-            XCTAssertEqual(localeNoPref.firstDayOfWeek, expected, file: file, line: line)
+            #expect(localeNoPref.firstDayOfWeek == expected, sourceLocation: sourceLocation)
 
             let wed = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.gregorian : 4]))
-            XCTAssertEqual(wed.firstDayOfWeek, shouldRespectUserPrefForGregorian ? .wednesday : expected, file: file, line: line)
+            #expect(wed.firstDayOfWeek == (shouldRespectUserPrefForGregorian ? .wednesday : expected), sourceLocation: sourceLocation)
 
             let fri_islamic = Locale.localeAsIfCurrent(name: localeID, overrides: .init(firstWeekday: [.islamic : 6]))
-            XCTAssertEqual(fri_islamic.firstDayOfWeek, shouldRespectUserPrefForIslamic ? .friday : expected, file: file, line: line)
+            #expect(fri_islamic.firstDayOfWeek == (shouldRespectUserPrefForIslamic ? .friday : expected), sourceLocation: sourceLocation)
         }
 
         verify("en_US", .sunday, shouldRespectUserPrefForGregorian: true, shouldRespectUserPrefForIslamic: false)
@@ -714,7 +681,7 @@ extension LocaleTests {
     }
 
     // TODO: Reenable once (Locale.canonicalIdentifier) is implemented
-    func test_identifierTypesFromICUIdentifier() throws {
+    @Test func test_identifierTypesFromICUIdentifier() throws {
         verify("und_ZZ", cldr: "und_ZZ", bcp47: "und-ZZ", icu: "und_ZZ")
 
         verify("@calendar=gregorian", cldr: "und_u_ca_gregory", bcp47: "und-u-ca-gregory", icu: "@calendar=gregorian")
@@ -736,7 +703,7 @@ extension LocaleTests {
     }
 
     // TODO: Reenable once (Locale.canonicalIdentifier) is implemented
-    func test_identifierTypesFromBCP47Identifier() throws {
+    @Test func test_identifierTypesFromBCP47Identifier() throws {
 
         verify("fr-FR-1606nict-u-ca-gregory-x-test", cldr: "fr_FR_1606nict_u_ca_gregory_x_test", bcp47: "fr-FR-1606nict-u-ca-gregory-x-test", icu: "fr_FR_1606NICT@calendar=gregorian;x=test")
 
@@ -750,7 +717,7 @@ extension LocaleTests {
     }
 
     // TODO: Reenable once (Locale.canonicalIdentifier) is implemented
-    func test_identifierTypesFromSpecialIdentifier() throws {
+    @Test func test_identifierTypesFromSpecialIdentifier() throws {
         verify("", cldr: "root", bcp47: "und", icu: "")
         verify("root", cldr: "root", bcp47: "root", icu: "root")
         verify("und", cldr: "root", bcp47: "und", icu: "und")
@@ -781,13 +748,13 @@ extension LocaleTests {
         verify("Hant", cldr: "hant", bcp47: "hant", icu: "hant")
     }
 
-    func test_asIfCurrentWithBundleLocalizations() {
+    @Test func test_asIfCurrentWithBundleLocalizations() {
         let currentLanguage = Locale.current.language.languageCode!
         var localizations = Set([ "zh", "fr", "en" ])
         localizations.insert(currentLanguage.identifier) // We're not sure what the current locale is when test runs. Ensure that it's always in the list of available localizations
         // Foundation framework-only test
         let fakeCurrent = Locale.localeAsIfCurrentWithBundleLocalizations(Array(localizations), allowsMixedLocalizations: false)
-        XCTAssertEqual(fakeCurrent?.language.languageCode, currentLanguage)
+        #expect(fakeCurrent?.language.languageCode == currentLanguage)
     }
 }
 
@@ -965,4 +932,32 @@ extension LocaleTests {
 
 #endif
      */
+}
+
+// Tests nested within this suite depend on some form of the current/autoupdatingCurrent/default Calendar, TimeZone, or Locale. These tests must be serialized to ensure that tests that change the value of these globals do not run while other tests are using them. As Calendar.current depends on TimeZone.default and Locale.current, we cannot split these into separate parallel groups
+@Suite(.serialized)
+struct CurrentLocaleTimeZoneCalendarDependentTests {
+    struct LocaleTests {
+        func decodeHelper(_ l: Locale) throws -> Locale {
+            let je = JSONEncoder()
+            let data = try je.encode(l)
+            let jd = JSONDecoder()
+            return try jd.decode(Locale.self, from: data)
+        }
+        
+        @Test func test_serializationOfCurrent() throws {
+            let current = Locale.current
+            let decodedCurrent = try decodeHelper(current)
+            #expect(decodedCurrent == current)
+            
+            let autoupdatingCurrent = Locale.autoupdatingCurrent
+            let decodedAutoupdatingCurrent = try decodeHelper(autoupdatingCurrent)
+            #expect(decodedAutoupdatingCurrent == autoupdatingCurrent)
+            
+            #expect(decodedCurrent != decodedAutoupdatingCurrent)
+            #expect(current != autoupdatingCurrent)
+            #expect(decodedCurrent != autoupdatingCurrent)
+            #expect(current != decodedAutoupdatingCurrent)
+        }
+    }
 }

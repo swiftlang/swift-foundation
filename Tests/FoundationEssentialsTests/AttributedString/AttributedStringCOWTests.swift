@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -27,7 +25,7 @@ extension AttributedStringProtocol {
 }
 
 /// Tests for `AttributedString` to confirm expected CoW behavior
-final class TestAttributedStringCOW: XCTestCase {
+struct TestAttributedStringCOW {
     
     // MARK: - Utility Functions
     
@@ -38,45 +36,45 @@ final class TestAttributedStringCOW: XCTestCase {
         return str
     }
     
-    func assertCOWCopy(file: StaticString = #filePath, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
+    func assertCOWCopy(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         let str = createAttributedString()
         var copy = str
         operation(&copy)
-        XCTAssertNotEqual(str, copy, "Mutation operation did not copy when multiple references exist", file: file, line: line)
+        #expect(str != copy, "Mutation operation did not copy when multiple references exist", sourceLocation: sourceLocation)
     }
     
-    func assertCOWNoCopy(file: StaticString = #filePath, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
+    func assertCOWNoCopy(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         var str = createAttributedString()
         let gutsPtr = Unmanaged.passUnretained(str._guts)
         operation(&str)
         let newGutsPtr = Unmanaged.passUnretained(str._guts)
-        XCTAssertEqual(gutsPtr.toOpaque(), newGutsPtr.toOpaque(), "Mutation operation copied when only one reference exists", file: file, line: line)
+        #expect(gutsPtr.toOpaque() == newGutsPtr.toOpaque(), "Mutation operation copied when only one reference exists", sourceLocation: sourceLocation)
     }
     
-    func assertCOWBehavior(file: StaticString = #filePath, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
-        assertCOWCopy(file: file, line: line, operation)
-        assertCOWNoCopy(file: file, line: line, operation)
+    func assertCOWBehavior(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
+        assertCOWCopy(sourceLocation: sourceLocation, operation)
+        assertCOWNoCopy(sourceLocation: sourceLocation, operation)
     }
     
     func makeSubrange(_ str: AttributedString) -> Range<AttributedString.Index> {
         return str.characters.index(str.startIndex, offsetBy: 2)..<str.characters.index(str.endIndex, offsetBy: -2)
     }
     
-    lazy var container: AttributeContainer = {
+    var container: AttributeContainer {
         var container = AttributeContainer()
         container.testInt = 2
         return container
-    }()
+    }
     
-    lazy var containerB: AttributeContainer = {
+    var containerB: AttributeContainer {
         var container = AttributeContainer()
         container.testBool = true
         return container
-    }()
+    }
     
     // MARK: - Tests
     
-    func testTopLevelType() {
+    @Test func testTopLevelType() {
         assertCOWBehavior { (str) in
             str.setAttributes(container)
         }
@@ -109,7 +107,7 @@ final class TestAttributedStringCOW: XCTestCase {
         }
     }
     
-    func testSubstring() {
+    @Test func testSubstring() {
         assertCOWBehavior { (str) in
             str[makeSubrange(str)].setAttributes(container)
         }
@@ -130,7 +128,7 @@ final class TestAttributedStringCOW: XCTestCase {
         }
     }
     
-    func testCharacters() {
+    @Test func testCharacters() {
         let char: Character = "a"
         
         assertCOWBehavior { (str) in
@@ -153,7 +151,7 @@ final class TestAttributedStringCOW: XCTestCase {
         }
     }
     
-    func testUnicodeScalars() {
+    @Test func testUnicodeScalars() {
         let scalar: UnicodeScalar = "a"
         
         assertCOWBehavior { (str) in
@@ -161,7 +159,7 @@ final class TestAttributedStringCOW: XCTestCase {
         }
     }
     
-    func testGenericProtocol() {
+    @Test func testGenericProtocol() {
         assertCOWBehavior {
             $0.genericSetAttribute()
         }

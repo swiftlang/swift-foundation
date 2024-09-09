@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Testing
 
-final class PredicateMacroLanguageTokenTests: XCTestCase {
-    func testConditional() {
+struct PredicateMacroLanguageTokenTests {
+    @Test func testConditional() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object, Object> { inputA, inputB, inputC in
@@ -32,7 +32,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
         )
     }
     
-    func testTypeCheck() {
+    @Test func testTypeCheck() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -49,7 +49,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
         )
     }
     
-    func testConditionalCast() {
+    @Test func testConditionalCast() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -105,7 +105,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
         )
     }
     
-    func testIfExpressions() {
+    @Test func testIfExpressions() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -381,7 +381,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
         )
     }
     
-    func testNilLiterals() {
+    @Test func testNilLiterals() {
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { input in
@@ -399,7 +399,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
         )
     }
     
-    func testDiagnoseDeclarations() {
+    @Test func testDiagnoseDeclarations() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -461,7 +461,7 @@ final class PredicateMacroLanguageTokenTests: XCTestCase {
         )
     }
     
-    func testDiagnoseMiscellaneousStatements() {
+    @Test func testDiagnoseMiscellaneousStatements() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in

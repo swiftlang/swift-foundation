@@ -10,8 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#elseif FOUNDATION_FRAMEWORK
+import Foundation
 #endif
 
 #if FOUNDATION_FRAMEWORK

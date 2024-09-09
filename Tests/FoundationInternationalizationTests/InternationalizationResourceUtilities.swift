@@ -11,32 +11,27 @@
 //===----------------------------------------------------------------------===//
 //
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+#if !FOUNDATION_FRAMEWORK
 
-#if canImport(Glibc)
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(WASI)
+import WASILibc
+#elseif os(Windows)
+import CRT
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#else
+#if os(macOS)
+import class Foundation.Bundle
+#endif
+
 @testable import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
 
-#if FOUNDATION_FRAMEWORK
-// Always compiled into the Tests project
-final internal class Canary { }
-#endif
-
-func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) -> Data? {
-#if FOUNDATION_FRAMEWORK
-    guard let url = Bundle(for: Canary.self).url(forResource: resource, withExtension: ext, subdirectory: subdirectory) else {
-        return nil
-    }
-    return try? Data(contentsOf: url)
-#else
+func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) throws -> Data {
 #if os(macOS)
     let subdir: String
     if let subdirectory {
@@ -46,12 +41,13 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     }
 
     guard let url = Bundle.module.url(forResource: resource, withExtension: ext, subdirectory: subdir) else {
-        return nil
+        throw CocoaError(.fileReadNoSuchFile)
     }
     
+    // Convert from Foundation.URL to FoundationEssentials.URL
     let essentialsURL = FoundationEssentials.URL(filePath: url.path)
 
-    return try? Data(contentsOf: essentialsURL)
+    return try Data(contentsOf: essentialsURL)
 #else
     // swiftpm drops the resources next to the executable, at:
     // ./swift-foundation_FoundationEssentialsTests.resources/Resources/
@@ -59,7 +55,7 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
 
     var toolsResourcesDir = URL(filePath: ProcessInfo.processInfo.arguments[0])
         .deletingLastPathComponent()
-        .appending(component: "swift-foundation_FoundationEssentialsTests-tool.resources", directoryHint: .isDirectory)
+        .appending(component: "swift-foundation_FoundationInternationalizationTests-tool.resources", directoryHint: .isDirectory)
 
     // On Linux the tests are built for the "host" because there are macro tests, on Windows
     // the tests are only built for the "target" so we need to figure out whether `-tools`
@@ -69,7 +65,7 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     } else {
         URL(filePath: ProcessInfo.processInfo.arguments[0])
             .deletingLastPathComponent()
-            .appending(component: "swift-foundation_FoundationEssentialsTests.resources", directoryHint: .isDirectory)
+            .appending(component: "swift-foundation_FoundationInternationalizationTests.resources", directoryHint: .isDirectory)
     }
 
     var path = resourcesDir.appending(component: "Resources", directoryHint: .isDirectory)
@@ -77,7 +73,8 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
         path.append(path: subdirectory, directoryHint: .isDirectory)
     }
     path.append(component: resource + "." + ext, directoryHint: .notDirectory)
-    return try? Data(contentsOf: path)
-#endif
+    return try Data(contentsOf: path)
 #endif
 }
+
+#endif
