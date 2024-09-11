@@ -1356,19 +1356,27 @@ extension String: _JSONSimpleValueArrayElement {
 }
 extension Float: _JSONSimpleValueArrayElement {
     fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Int {
-        guard case let .number(string) = try _JSONEncoderValue.number(from: self, encoder: encoder, additionalKey) else {
-            preconditionFailure()
+        switch try _JSONEncoderValue.number(from: self, encoder: encoder, additionalKey) {
+        case .number(let string):
+            return writer.serializeSimpleStringContents(string)
+        case .string(let string):
+            return writer.serializeSimpleString(string)
+        default:
+            fatalError("Impossible JSON value type coming from number formatting")
         }
-        return writer.serializeSimpleStringContents(string)
     }
 }
 
 extension Double: _JSONSimpleValueArrayElement {
     fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Int {
-        guard case let .number(string) = try _JSONEncoderValue.number(from: self, encoder: encoder, additionalKey) else {
-            preconditionFailure()
+        switch try _JSONEncoderValue.number(from: self, encoder: encoder, additionalKey) {
+        case .number(let string):
+            return writer.serializeSimpleStringContents(string)
+        case .string(let string):
+            return writer.serializeSimpleString(string)
+        default:
+            fatalError("Impossible JSON value type coming from number formatting")
         }
-        return writer.serializeSimpleStringContents(string)
     }
 }
 

@@ -128,7 +128,16 @@ internal struct JSONWriter {
         }
         let length = stringStart.distance(to: self.bytes.endIndex)
         return length
+    }
 
+    // Shortcut for strings known not to require escapes, like numbers.
+    @inline(__always)
+    mutating func serializeSimpleString(_ str: String) -> Int {
+        writer(ascii: ._quote)
+        defer {
+            writer(ascii: ._quote)
+        }
+        return self.serializeSimpleStringContents(str) + 2 // +2 for quotes.
     }
 
     @inline(__always)
