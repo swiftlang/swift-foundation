@@ -1203,6 +1203,7 @@ private extension __JSONEncoder {
             if let takenEncoder = sharedSubEncoder {
                 self.sharedSubEncoder = nil
                 takenEncoder.codingKey = additionalKey
+                takenEncoder.ownerEncoder = self
                 return takenEncoder
             }
             return __JSONEncoder(options: self.options, ownerEncoder: self, codingKey: additionalKey)
@@ -1213,8 +1214,9 @@ private extension __JSONEncoder {
 
     @inline(__always)
     func returnEncoder(_ encoder: inout __JSONEncoder) {
-        if sharedSubEncoder == nil, isKnownUniquelyReferenced(&encoder) {
+        if encoder !== self, sharedSubEncoder == nil, isKnownUniquelyReferenced(&encoder) {
             encoder.codingKey = nil
+            encoder.ownerEncoder = nil // Prevent retain cycle.
             sharedSubEncoder = encoder
         }
     }
