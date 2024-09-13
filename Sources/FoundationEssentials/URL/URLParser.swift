@@ -224,6 +224,8 @@ internal struct RFC3986Parser: URLParserProtocol {
         "phasset",
         "http+unix",
         "https+unix",
+        "ws+unix",
+        "wss+unix",
     ])
 
     private static func looksLikeIPLiteral(_ host: some StringProtocol) -> Bool {
