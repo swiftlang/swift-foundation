@@ -404,3 +404,778 @@ extension String.Encoding {
         }
     }
 }
+
+// Here are temporary extensions.
+// Context: `range(of:options:)` and  `caseInsensitiveCompare()` are not
+//          defined in `StringProtocol` at this point.
+
+private extension Unicode.Scalar {
+  func _asciiCaseInsensitiveEqual(_ other: Unicode.Scalar) -> Bool {
+      if self == other {
+          return true
+      }
+      switch self.value {
+      case 0x41...0x5A:
+          return self.value + 0x20 == other.value
+      case 0x61...0x7A:
+          return self.value - 0x20 == other.value
+      default:
+          return false
+      }
+  }
+}
+
+private extension StringProtocol {
+    func _endIndexOfASCIICaseInsensitivePrefix<S>(_ prefix: S) -> Index? where S: StringProtocol {
+        let myScalars = self.unicodeScalars
+        let prefixScalars = prefix.unicodeScalars
+
+        var myIndex = myScalars.startIndex
+        var prefixIndex = prefixScalars.startIndex
+        while myIndex < myScalars.endIndex && prefixIndex < prefixScalars.endIndex {
+            let myScalar = myScalars[myIndex]
+            let prefixScalar = prefixScalars[prefixIndex]
+            guard myScalar._asciiCaseInsensitiveEqual(prefixScalar) else {
+                return nil
+            }
+            myScalars.formIndex(after: &myIndex)
+            prefixScalars.formIndex(after: &prefixIndex)
+        }
+        guard prefixIndex == prefixScalars.endIndex else {
+            return nil
+        }
+        return myIndex
+    }
+
+    func _asciiCaseInsensitiveMatch(_ candidates: String...) -> Bool {
+        for candidate in candidates {
+            if self._endIndexOfASCIICaseInsensitivePrefix(candidate) == self.endIndex {
+                return true
+            }
+        }
+        return false
+    }
+}
+
+extension String.Encoding {
+    /// Creates an instance representing string encoding that is the closest mapping to a given
+    /// IANA registry “charset” name.
+    public init?(ianaCharacterSetName name: String) {
+        if let prefixEndIndex = name._endIndexOfASCIICaseInsensitivePrefix("utf-") {
+            let suffix = name[prefixEndIndex...]
+            if suffix._asciiCaseInsensitiveMatch("8") {
+                self = .utf8
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("16") {
+                self = .unicode
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("7") {
+                self = .utf7
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("32") {
+                self = .utf32
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("16be") {
+                self = .utf16BigEndian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("16le") {
+                self = .utf16LittleEndian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("32be") {
+                self = .utf32BigEndian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("32le") {
+                self = .utf32LittleEndian
+                return
+            }
+        }  // END OF utf-
+        if let prefixEndIndex = name._endIndexOfASCIICaseInsensitivePrefix("cp") {
+            let suffix = name[prefixEndIndex...]
+            if suffix._asciiCaseInsensitiveMatch("367") {
+                self = .ascii
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("51932") {
+                self = .japaneseEUC
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("819") {
+                self = .isoLatin1
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("932") {
+                self = .shiftJIS
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("437") {
+                self = .dosLatinUS
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("737") {
+                self = .dosGreek
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("775") {
+                self = .dosBalticRim
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("850") {
+                self = .dosLatin1
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("851") {
+                self = .dosGreek1
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("852") {
+                self = .dosLatin2
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("855") {
+                self = .dosCyrillic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("857") {
+                self = .dosTurkish
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("860") {
+                self = .dosPortuguese
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("-is", "861") {
+                self = .dosIcelandic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("862") {
+                self = .dosHebrew
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("863") {
+                self = .dosCanadianFrench
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("864") {
+                self = .dosArabic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("865") {
+                self = .dosNordic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("866") {
+                self = .dosRussian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("-gr", "869") {
+                self = .dosGreek2
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("874") {
+                self = .dosThai
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("936") {
+                self = .dosSimplifiedChinese
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("949") {
+                self = .dosKorean
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("950") {
+                self = .dosTraditionalChinese
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("037") {
+                self = .ebcdicCP037
+                return
+            }
+        }  // END OF cp
+        if let prefixEndIndex = name._endIndexOfASCIICaseInsensitivePrefix("iso-8859-") {
+            let suffix = name[prefixEndIndex...]
+            if suffix._asciiCaseInsensitiveMatch("1", "1-windows-3.0-latin-1", "1-windows-3.1-latin-1") {
+                self = .isoLatin1
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("2", "2-windows-latin-2") {
+                self = .isoLatin2
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("3") {
+                self = .isoLatin3
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("4") {
+                self = .isoLatin4
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("5") {
+                self = .isoLatinCyrillic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("6", "6-e", "6-i") {
+                self = .isoLatinArabic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("7") {
+                self = .isoLatinGreek
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("8", "8-e", "8-i") {
+                self = .isoLatinHebrew
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("9", "9-windows-latin-5") {
+                self = .isoLatin5
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("10") {
+                self = .isoLatin6
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("11") {
+                self = .isoLatinThai
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("13") {
+                self = .isoLatin7
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("14") {
+                self = .isoLatin8
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("15") {
+                self = .isoLatin9
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("16") {
+                self = .isoLatin10
+                return
+            }
+        }  // END OF iso-8859-
+        if let prefixEndIndex = name._endIndexOfASCIICaseInsensitivePrefix("x-mac-") {
+            let suffix = name[prefixEndIndex...]
+            if suffix._asciiCaseInsensitiveMatch("symbol") {
+                self = .symbol
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("japanese") {
+                self = .macOSJapanese
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("trad-chinese") {
+                self = .macOSChineseTrad
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("korean") {
+                self = .macOSKorean
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("arabic") {
+                self = .macOSArabic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("hebrew") {
+                self = .macOSHebrew
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("greek") {
+                self = .macOSGreek
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("cyrillic") {
+                self = .macOSCyrillic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("devanagari") {
+                self = .macOSDevanagari
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("gurmukhi") {
+                self = .macOSGurmukhi
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("gujarati") {
+                self = .macOSGujarati
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("oriya") {
+                self = .macOSOriya
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("bengali") {
+                self = .macOSBengali
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("tamil") {
+                self = .macOSTamil
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("telugu") {
+                self = .macOSTelugu
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("kannada") {
+                self = .macOSKannada
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("malayalam") {
+                self = .macOSMalayalam
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("sinhalese") {
+                self = .macOSSinhalese
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("burmese") {
+                self = .macOSBurmese
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("khmer") {
+                self = .macOSKhmer
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("thai") {
+                self = .macOSThai
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("laotian") {
+                self = .macOSLaotian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("georgian") {
+                self = .macOSGeorgian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("armenian") {
+                self = .macOSArmenian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("simp-chinese") {
+                self = .macOSChineseSimp
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("tibetan") {
+                self = .macOSTibetan
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("mongolian") {
+                self = .macOSMongolian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("ethiopic") {
+                self = .macOSEthiopic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("centraleurroman") {
+                self = .macOSCentralEurRoman
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("vietnamese") {
+                self = .macOSVietnamese
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("dingbats") {
+                self = .macOSDingbats
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("turkish") {
+                self = .macOSTurkish
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("croatian") {
+                self = .macOSCroatian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("icelandic") {
+                self = .macOSIcelandic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("romanian") {
+                self = .macOSRomanian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("celtic") {
+                self = .macOSCeltic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("gaelic") {
+                self = .macOSGaelic
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("farsi") {
+                self = .macOSFarsi
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("ukrainian") {
+                self = .macOSUkrainian
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("inuit") {
+                self = .macOSInuit
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("roman-latin1") {
+                self = .macOSRomanLatin1
+                return
+            }
+        }  // END OF x-mac-
+        if let prefixEndIndex = name._endIndexOfASCIICaseInsensitivePrefix("windows-") {
+            let suffix = name[prefixEndIndex...]
+            if suffix._asciiCaseInsensitiveMatch("31j") {
+                self = .shiftJIS
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1251") {
+                self = .windowsCP1251
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1252") {
+                self = .windowsCP1252
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1253") {
+                self = .windowsCP1253
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1254") {
+                self = .windowsCP1254
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1250") {
+                self = .windowsCP1250
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("874") {
+                self = .dosThai
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("936") {
+                self = .dosSimplifiedChinese
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1255") {
+                self = .windowsCP1255
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1256") {
+                self = .windowsCP1256
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1257") {
+                self = .windowsCP1257
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1258") {
+                self = .windowsCP1258
+                return
+            }
+            if suffix._asciiCaseInsensitiveMatch("1361") {
+                self = .windowsCP1361
+                return
+            }
+        }  // END OF windows-
+        if name._asciiCaseInsensitiveMatch("ansi_x3.4-1968", "ansi_x3.4-1986", "csascii", "ibm367", "iso-ir-6", "iso646-us", "iso_646.irv:1983", "iso_646.irv:1991", "us", "us-ascii") {
+            self = .ascii
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("x-nextstep") {
+            self = .nextstep
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("cscp51932", "cseucpkdfmtjapanese", "euc-jp", "extended_unix_code_packed_format_for_japanese") {
+            self = .japaneseEUC
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csisolatin1", "ibm819", "iso-ir-100", "iso_8859-1", "iso_8859-1:1987", "l1", "latin1") {
+            self = .isoLatin1
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("adobe-symbol-encoding") {
+            self = .symbol
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csshiftjis", "cswindows31j", "ms_kanji") {
+            self = .shiftJIS
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csisolatin2", "iso-ir-101", "iso_8859-2", "iso_8859-2:1987", "l2", "latin2") {
+            self = .isoLatin2
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csunicode", "csunicode11", "iso-10646-ucs-2", "unicode-1-1") {
+            self = .unicode
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("cswindows31latin1") {
+            self = .windowsCP1252
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("cswindows31latin5") {
+            self = .windowsCP1254
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("cswindows31latin2") {
+            self = .windowsCP1250
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csiso2022jp", "iso-2022-jp") {
+            self = .iso2022JP
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csmacintosh", "mac", "macintosh") {
+            self = .macOSRoman
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("korean") {
+            self = .macOSKorean
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("arabic") {
+            self = .macOSArabic
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("hebrew") {
+            self = .macOSHebrew
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("greek") {
+            self = .macOSGreek
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("cyrillic") {
+            self = .macOSCyrillic
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csisolatin3", "iso-ir-109", "iso_8859-3", "iso_8859-3:1988", "l3", "latin3") {
+            self = .isoLatin3
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csisolatin4", "iso-ir-110", "iso_8859-4", "iso_8859-4:1988", "l4", "latin4") {
+            self = .isoLatin4
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csisolatincyrillic", "iso-ir-144", "iso_8859-5", "iso_8859-5:1988") {
+            self = .isoLatinCyrillic
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("asmo-708", "csiso88596e", "csiso88596i", "csisolatinarabic", "ecma-114", "iso-ir-127", "iso_8859-6", "iso_8859-6-e", "iso_8859-6-i", "iso_8859-6:1987") {
+            self = .isoLatinArabic
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csisolatingreek", "ecma-118", "elot_928", "greek8", "iso-ir-126", "iso_8859-7", "iso_8859-7:1987") {
+            self = .isoLatinGreek
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csiso88598e", "csiso88598i", "csisolatinhebrew", "iso-ir-138", "iso_8859-8", "iso_8859-8-e", "iso_8859-8-i", "iso_8859-8:1988") {
+            self = .isoLatinHebrew
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csisolatin5", "iso-ir-148", "iso_8859-9", "iso_8859-9:1989", "l5", "latin5") {
+            self = .isoLatin5
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csisolatin6", "iso-ir-157", "iso_8859-10:1992", "l6", "latin6") {
+            self = .isoLatin6
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("iso_8859-15", "latin-9") {
+            self = .isoLatin9
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("iso-ir-226", "iso_8859-16", "iso_8859-16:2001", "l10", "latin10") {
+            self = .isoLatin10
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("437", "cspc8codepage437", "ibm437") {
+            self = .dosLatinUS
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("cspc775baltic", "ibm775") {
+            self = .dosBalticRim
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("850", "cspc850multilingual", "ibm850") {
+            self = .dosLatin1
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("851", "ibm851") {
+            self = .dosGreek1
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("852", "cspcp852", "ibm852") {
+            self = .dosLatin2
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("855", "csibm855", "ibm855") {
+            self = .dosCyrillic
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("857", "csibm857", "ibm857") {
+            self = .dosTurkish
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("860", "csibm860", "ibm860") {
+            self = .dosPortuguese
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("861", "csibm861", "ibm861") {
+            self = .dosIcelandic
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("862", "cspc862latinhebrew", "ibm862") {
+            self = .dosHebrew
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("863", "csibm863", "ibm863") {
+            self = .dosCanadianFrench
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csibm864", "ibm864") {
+            self = .dosArabic
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("865", "csibm865", "ibm865") {
+            self = .dosNordic
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("866", "csibm866", "ibm866") {
+            self = .dosRussian
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("869", "csibm869", "ibm869") {
+            self = .dosGreek2
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("tis-620") {
+            self = .dosThai
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("ms936") {
+            self = .dosSimplifiedChinese
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csksc56011987", "iso-ir-149", "ks_c_5601-1987", "ks_c_5601-1989", "ksc_5601") {
+            self = .dosKorean
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csbig5") {
+            self = .dosTraditionalChinese
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("cshalfwidthkatakana", "jis_x0201", "x0201") {
+            self = .jisX0201_76
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csiso87jisx0208", "jis_c6226-1983", "jis_x0208-1983", "x0208") {
+            self = .jisX0208_90
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csiso159jisx02121990", "iso-ir-159", "jis_x0212-1990", "x0212") {
+            self = .jisX0212_90
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csiso42jisc62261978", "iso-ir-42", "jis_c6226-1978") {
+            self = .jisC6226_78
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("gbk") {
+            self = .gbk95
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("gb18030") {
+            self = .gb18030_2000
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csiso2022jp2", "iso-2022-jp-2") {
+            self = .iso2022JP2
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csjisencoding", "iso-2022-jp-1", "jis_encoding") {
+            self = .iso2022JP1
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("iso-2022-jp-3") {
+            self = .iso2022JP3
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csiso2022cn", "iso-2022-cn") {
+            self = .iso2022CN
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("iso-2022-cn-ext") {
+            self = .iso2022CN_EXT
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csiso2022kr", "iso-2022-kr") {
+            self = .iso2022KR
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("chinese", "csgb2312", "csiso58gb231280", "gb2312", "gb_2312-80", "iso-ir-58") {
+            self = .simplifiedChineseEUC
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("euc-tw") {
+            self = .traditionalChineseEUC
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("cseuckr", "euc-kr") {
+            self = .koreanEUC
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("shift_jis") {
+            self = .plainShiftJIS
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("cskoi8r", "koi8-r") {
+            self = .koi8R
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("big5") {
+            self = .big5
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("hz-gb-2312") {
+            self = .hzGB2312
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("big5-hkscs") {
+            self = .big5HKSCS1999
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csviscii", "viscii") {
+            self = .viscii
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("koi8-u") {
+            self = .koi8U
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("utf7-imap") {
+            self = .utf7IMAP
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csibm037", "ebcdic-cp-ca", "ebcdic-cp-nl", "ebcdic-cp-us", "ebcdic-cp-wt", "ibm037") {
+            self = .ebcdicCP037
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csunicode11utf7", "unicode-1-1-utf-7") {
+            self = .utf7
+            return
+        }
+        if name._asciiCaseInsensitiveMatch("csucs4", "iso-10646-ucs-4") {
+            self = .utf32
+            return
+        }
+        return nil
+    }
+}
