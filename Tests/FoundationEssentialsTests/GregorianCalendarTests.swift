@@ -3223,7 +3223,7 @@ final class GregorianCalendarTests : XCTestCase {
     }
 
     // MARK: - Day Of Year
-    func test_dayOfYear() {
+    func test_dayOfYear() throws {
         // An arbitrary date, for which we know the answers
         let date = Date(timeIntervalSinceReferenceDate: 682898558) // 2022-08-22 22:02:38 UTC, day 234
         let leapYearDate = Date(timeIntervalSinceReferenceDate: 745891200) // 2024-08-21 00:00:00 UTC, day 234
@@ -3257,10 +3257,10 @@ final class GregorianCalendarTests : XCTestCase {
         XCTAssertEqual(cal.range(of: .dayOfYear, in: .year, for: leapYearDate), 1..<367)
 
         // Addition
-        let d1 = try? cal.add(.dayOfYear, to: date, amount: 1, inTimeZone: .gmt)
+        let d1 = try cal.add(.dayOfYear, to: date, amount: 1, inTimeZone: .gmt)
         XCTAssertEqual(d1, date + 86400)
 
-        let d2 = try? cal.addAndWrap(.dayOfYear, to: date, amount: 365, inTimeZone: .gmt)
+        let d2 = try cal.addAndWrap(.dayOfYear, to: date, amount: 365, inTimeZone: .gmt)
         XCTAssertEqual(d2, date)
 
         // Conversion from DateComponents

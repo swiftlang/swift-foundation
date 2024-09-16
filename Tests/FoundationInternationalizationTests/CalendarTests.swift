@@ -1242,8 +1242,15 @@ final class CalendarTests : XCTestCase {
 
     func test_dateComponentsFromDateOverflow() {
         let calendar = Calendar(identifier: .gregorian)
-        let dc = calendar.dateComponents([.year], from: Date(timeIntervalSinceReferenceDate: Double(Int64.max)))
+        do {
+            let dc = calendar.dateComponents([.year], from: Date(timeIntervalSinceReferenceDate: Double(Int64.max)))
+            _ = calendar.date(from: dc)
+        }
 
+        do {
+            let dc = calendar.dateComponents([.yearForWeekOfYear], from: Date(timeIntervalSinceReferenceDate: Double(Int64.max)))
+            _ = calendar.date(from: dc)
+        }
     }
 
 #endif
