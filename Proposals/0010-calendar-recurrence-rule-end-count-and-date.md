@@ -1,10 +1,10 @@
 # Extending `Calendar.RecurrenceRule.End`
 
 
-* Proposal: SF-NNNN
+* Proposal: SF-0010
 * Author(s): Hristo Staykov <hstaykov@apple.com>
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Active review**
+* Status: **Implemented**
 * Bugs: <rdar://134294130>
 * Implementation: [apple/swift-foundation#888](https://github.com/apple/swift-foundation/pull/888)
 * Previous Proposal: [SF-0009](0009-calendar-recurrence-rule.md)
