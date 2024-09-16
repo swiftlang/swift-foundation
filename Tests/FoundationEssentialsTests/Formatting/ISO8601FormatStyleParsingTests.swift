@@ -6,53 +6,49 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
-final class ISO8601FormatStyleParsingTests: XCTestCase {
+struct ISO8601FormatStyleParsingTests {
 
     /// See also the format-only tests in DateISO8601FormatStyleEssentialsTests
-    func test_ISO8601Parse() throws {
+    @Test func test_ISO8601Parse() throws {
         let iso8601 = Date.ISO8601FormatStyle()
 
         // Date is: "2022-01-28 15:35:46"
-        XCTAssertEqual(try? iso8601.parse("2022-01-28T15:35:46Z"), Date(timeIntervalSinceReferenceDate: 665076946.0))
+        #expect(try iso8601.parse("2022-01-28T15:35:46Z") == Date(timeIntervalSinceReferenceDate: 665076946.0))
 
         var iso8601Pacific = iso8601
         iso8601Pacific.timeZone = TimeZone(secondsFromGMT: -3600 * 8)!
-        XCTAssertEqual(try? iso8601Pacific.timeSeparator(.omitted).parse("2022-01-28T073546-0800"), Date(timeIntervalSinceReferenceDate: 665076946.0))
+        #expect(try iso8601Pacific.timeSeparator(.omitted).parse("2022-01-28T073546-0800") == Date(timeIntervalSinceReferenceDate: 665076946.0))
 
         // Day-only results: the default time is midnight for parsed date when the time piece is missing
         // Date is: "2022-01-28 00:00:00"
-        XCTAssertEqual(try? iso8601.year().month().day().dateSeparator(.dash).parse("2022-01-28"), Date(timeIntervalSinceReferenceDate: 665020800.0))
+        #expect(try iso8601.year().month().day().dateSeparator(.dash).parse("2022-01-28") == Date(timeIntervalSinceReferenceDate: 665020800.0))
         // Date is: "2022-01-28 00:00:00"
-        XCTAssertEqual(try? iso8601.year().month().day().dateSeparator(.omitted).parse("20220128"), Date(timeIntervalSinceReferenceDate: 665020800.0))
+        #expect(try iso8601.year().month().day().dateSeparator(.omitted).parse("20220128") == Date(timeIntervalSinceReferenceDate: 665020800.0))
 
         // Time-only results: we use the default date of the format style, 1970-01-01, to supplement the parsed date without year, month or day
         // Date is: "1970-01-23 00:00:00"
-        XCTAssertEqual(try? iso8601.weekOfYear().day().dateSeparator(.dash).parse("W04-05"), Date(timeIntervalSinceReferenceDate: -976406400.0))
+        #expect(try iso8601.weekOfYear().day().dateSeparator(.dash).parse("W04-05") == Date(timeIntervalSinceReferenceDate: -976406400.0))
         // Date is: "1970-01-28 15:35:46"
-        XCTAssertEqual(try? iso8601.day().time(includingFractionalSeconds: false).timeSeparator(.colon).parse("028T15:35:46"), Date(timeIntervalSinceReferenceDate: -975918254.0))
+        #expect(try iso8601.day().time(includingFractionalSeconds: false).timeSeparator(.colon).parse("028T15:35:46") == Date(timeIntervalSinceReferenceDate: -975918254.0))
         // Date is: "1970-01-01 15:35:46"
-        XCTAssertEqual(try? iso8601.time(includingFractionalSeconds: false).timeSeparator(.colon).parse("15:35:46"), Date(timeIntervalSinceReferenceDate: -978251054.0))
+        #expect(try iso8601.time(includingFractionalSeconds: false).timeSeparator(.colon).parse("15:35:46") == Date(timeIntervalSinceReferenceDate: -978251054.0))
         // Date is: "1970-01-01 15:35:46"
-        XCTAssertEqual(try? iso8601.time(includingFractionalSeconds: false).timeZone(separator: .omitted).parse("15:35:46Z"), Date(timeIntervalSinceReferenceDate: -978251054.0))
+        #expect(try iso8601.time(includingFractionalSeconds: false).timeZone(separator: .omitted).parse("15:35:46Z") == Date(timeIntervalSinceReferenceDate: -978251054.0))
         // Date is: "1970-01-01 15:35:46"
-        XCTAssertEqual(try? iso8601.time(includingFractionalSeconds: false).timeZone(separator: .colon).parse("15:35:46Z"), Date(timeIntervalSinceReferenceDate: -978251054.0))
+        #expect(try iso8601.time(includingFractionalSeconds: false).timeZone(separator: .colon).parse("15:35:46Z") == Date(timeIntervalSinceReferenceDate: -978251054.0))
         // Date is: "1970-01-01 15:35:46"
-        XCTAssertEqual(try? iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon).parse("15:35:46Z"), Date(timeIntervalSinceReferenceDate: -978251054.0))
+        #expect(try iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon).parse("15:35:46Z") == Date(timeIntervalSinceReferenceDate: -978251054.0))
     }
     
-    func test_weekOfYear() throws {
+    @Test func test_weekOfYear() throws {
         let iso8601 = Date.ISO8601FormatStyle()
 
         // Test some dates around the 2019 - 2020 end of year, and 2026 which has W53
@@ -75,27 +71,27 @@ final class ISO8601FormatStyleParsingTests: XCTestCase {
         for d in dates {
             let parsedWoY = try iso8601.year().weekOfYear().day().parse(d.0)
             let parsedY = try iso8601.year().month().day().parse(d.1)
-            XCTAssertEqual(parsedWoY, parsedY)
+            #expect(parsedWoY == parsedY)
         }
     }
     
-    func test_zeroLeadingDigits() {
+    @Test func test_zeroLeadingDigits() throws {
         // The parser allows for an arbitrary number of 0 pads in digits, including none.
         let iso8601 = Date.ISO8601FormatStyle()
 
         // Date is: "2022-01-28 15:35:46"
-        XCTAssertEqual(try? iso8601.parse("2022-01-28T15:35:46Z"), Date(timeIntervalSinceReferenceDate: 665076946.0))
-        XCTAssertEqual(try? iso8601.parse("002022-01-28T15:35:46Z"), Date(timeIntervalSinceReferenceDate: 665076946.0))
-        XCTAssertEqual(try? iso8601.parse("2022-0001-28T15:35:46Z"), Date(timeIntervalSinceReferenceDate: 665076946.0))
-        XCTAssertEqual(try? iso8601.parse("2022-01-0028T15:35:46Z"), Date(timeIntervalSinceReferenceDate: 665076946.0))
-        XCTAssertEqual(try? iso8601.parse("2022-1-28T15:35:46Z"), Date(timeIntervalSinceReferenceDate: 665076946.0))
-        XCTAssertEqual(try? iso8601.parse("2022-01-28T15:35:06Z"), Date(timeIntervalSinceReferenceDate: 665076906.0))
-        XCTAssertEqual(try? iso8601.parse("2022-01-28T15:35:6Z"), Date(timeIntervalSinceReferenceDate: 665076906.0))
-        XCTAssertEqual(try? iso8601.parse("2022-01-28T15:05:46Z"), Date(timeIntervalSinceReferenceDate: 665075146.0))
-        XCTAssertEqual(try? iso8601.parse("2022-01-28T15:5:46Z"), Date(timeIntervalSinceReferenceDate: 665075146.0))
+        #expect(try iso8601.parse("2022-01-28T15:35:46Z") == Date(timeIntervalSinceReferenceDate: 665076946.0))
+        #expect(try iso8601.parse("002022-01-28T15:35:46Z") == Date(timeIntervalSinceReferenceDate: 665076946.0))
+        #expect(try iso8601.parse("2022-0001-28T15:35:46Z") == Date(timeIntervalSinceReferenceDate: 665076946.0))
+        #expect(try iso8601.parse("2022-01-0028T15:35:46Z") == Date(timeIntervalSinceReferenceDate: 665076946.0))
+        #expect(try iso8601.parse("2022-1-28T15:35:46Z") == Date(timeIntervalSinceReferenceDate: 665076946.0))
+        #expect(try iso8601.parse("2022-01-28T15:35:06Z") == Date(timeIntervalSinceReferenceDate: 665076906.0))
+        #expect(try iso8601.parse("2022-01-28T15:35:6Z") == Date(timeIntervalSinceReferenceDate: 665076906.0))
+        #expect(try iso8601.parse("2022-01-28T15:05:46Z") == Date(timeIntervalSinceReferenceDate: 665075146.0))
+        #expect(try iso8601.parse("2022-01-28T15:5:46Z") == Date(timeIntervalSinceReferenceDate: 665075146.0))
     }
     
-    func test_timeZones() {
+    @Test func test_timeZones() throws {
         let iso8601 = Date.ISO8601FormatStyle()
         let date = Date(timeIntervalSinceReferenceDate: 665076946.0)
         
@@ -106,34 +102,34 @@ final class ISO8601FormatStyleParsingTests: XCTestCase {
         var iso8601PacificIsh = iso8601
         iso8601PacificIsh.timeZone = TimeZone(secondsFromGMT: -3600 * 8 - 30)!
         
-        XCTAssertEqual(try? iso8601Pacific.timeSeparator(.omitted).parse("2022-01-28T073546-0800"), date)
-        XCTAssertEqual(try? iso8601Pacific.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T073546-08:00"), date)
+        #expect(try iso8601Pacific.timeSeparator(.omitted).parse("2022-01-28T073546-0800") == date)
+        #expect(try iso8601Pacific.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T073546-08:00") == date)
 
-        XCTAssertEqual(try? iso8601PacificIsh.timeSeparator(.omitted).parse("2022-01-28T073516-080030"), date)
-        XCTAssertEqual(try? iso8601PacificIsh.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T073516-08:00:30"), date)
+        #expect(try iso8601PacificIsh.timeSeparator(.omitted).parse("2022-01-28T073516-080030") == date)
+        #expect(try iso8601PacificIsh.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T073516-08:00:30") == date)
         
         var iso8601gmtP1 = iso8601
         iso8601gmtP1.timeZone = TimeZone(secondsFromGMT: 3600)!
-        XCTAssertEqual(try? iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+0100"), date)
-        XCTAssertEqual(try? iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+010000"), date)
-        XCTAssertEqual(try? iso8601gmtP1.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T163546+01:00"), date)
-        XCTAssertEqual(try? iso8601gmtP1.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T163546+01:00:00"), date)
+        #expect(try iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+0100") == date)
+        #expect(try iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+010000") == date)
+        #expect(try iso8601gmtP1.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T163546+01:00") == date)
+        #expect(try iso8601gmtP1.timeSeparator(.omitted).timeZoneSeparator(.colon).parse("2022-01-28T163546+01:00:00") == date)
 
         // Due to a quirk of the original implementation, colons are allowed to be present in the time zone even if the time zone separator is omitted
-        XCTAssertEqual(try? iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+01:00"), date)
-        XCTAssertEqual(try? iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+01:00:00"), date)
+        #expect(try iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+01:00") == date)
+        #expect(try iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+01:00:00") == date)
     }
     
-    func test_fractionalSeconds() {
+    @Test func test_fractionalSeconds() throws {
         let expectedDate = Date(timeIntervalSinceReferenceDate: 646876592.34567)
         var iso8601 = Date.ISO8601FormatStyle().year().month().day().time(includingFractionalSeconds: true)
         iso8601.timeZone = .gmt
 
-        XCTAssertEqual(try? iso8601.parse("2021-07-01T23:56:32.34567"), expectedDate)
+        #expect(try iso8601.parse("2021-07-01T23:56:32.34567") == expectedDate)
     }
     
-    func test_specialTimeZonesAndSpaces() {
-        let reference = try! Date("2020-03-05T12:00:00+00:00", strategy: .iso8601)
+    @Test func test_specialTimeZonesAndSpaces() throws {
+        let reference = try Date("2020-03-05T12:00:00+00:00", strategy: .iso8601)
 
         let tests : [(String, Date.ISO8601FormatStyle)] = [
             ("2020-03-05T12:00:00+00:00", Date.ISO8601FormatStyle()),
@@ -164,35 +160,24 @@ final class ISO8601FormatStyleParsingTests: XCTestCase {
         ]
 
         for (parseMe, style) in tests {
-            let parsed = try? style.parse(parseMe)
-            XCTAssertEqual(parsed, reference, """
+            let parsed = try style.parse(parseMe)
+            #expect(parsed == reference, """
 
 parsing : \(parseMe)
 expected: \(reference) \(reference.timeIntervalSinceReferenceDate)
-result  : \(parsed != nil ? parsed!.debugDescription : "nil") \(parsed != nil ? parsed!.timeIntervalSinceReferenceDate : 0)
+result  : \(parsed.debugDescription) \(parsed.timeIntervalSinceReferenceDate)
 """)
         }
     }
-        
-#if canImport(FoundationInternationalization) || FOUNDATION_FRAMEWORK
-    func test_chileTimeZone() {
-        var iso8601Chile = Date.ISO8601FormatStyle().year().month().day()
-        iso8601Chile.timeZone = TimeZone(name: "America/Santiago")!
-        
-        let date = try? iso8601Chile.parse("2023-09-03")
-        XCTAssertNotNil(date)
-    }
-#endif
 }
 
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
+struct DateISO8601FormatStylePatternMatchingTests {
 
-    func _matchFullRange(_ str: String, formatStyle: Date.ISO8601FormatStyle, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
-        _matchRange(str, formatStyle: formatStyle, range: nil, expectedUpperBound: expectedUpperBound, expectedDate: expectedDate, file: file, line: line)
+    func _matchFullRange(_ str: String, formatStyle: Date.ISO8601FormatStyle, expectedUpperBound: String.Index?, expectedDate: Date?, sourceLocation: SourceLocation = #_sourceLocation) {
+        _matchRange(str, formatStyle: formatStyle, range: nil, expectedUpperBound: expectedUpperBound, expectedDate: expectedDate, sourceLocation: sourceLocation)
     }
 
-    func _matchRange(_ str: String, formatStyle: Date.ISO8601FormatStyle, range: Range<String.Index>?, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
+    func _matchRange(_ str: String, formatStyle: Date.ISO8601FormatStyle, range: Range<String.Index>?, expectedUpperBound: String.Index?, expectedDate: Date?, sourceLocation: SourceLocation = #_sourceLocation) {
         // FIXME: Need tests that starts from somewhere else
         let m = try? formatStyle.consuming(str, startingAt: str.startIndex, in: range ?? str.startIndex..<str.endIndex)
         let upperBound = m?.upperBound
@@ -200,23 +185,20 @@ final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
 
         let upperBoundDescription = upperBound?.utf16Offset(in: str)
         let expectedUpperBoundDescription = expectedUpperBound?.utf16Offset(in: str)
-        XCTAssertEqual(upperBound, expectedUpperBound, "found upperBound: \(String(describing: upperBoundDescription)); expected: \(String(describing: expectedUpperBoundDescription))", file: file, line: line)
+        #expect(upperBound == expectedUpperBound, "found upperBound: \(String(describing: upperBoundDescription)); expected: \(String(describing: expectedUpperBoundDescription))", sourceLocation: sourceLocation)
         if let match, let expectedDate {
-            XCTAssertEqual(
-                match.timeIntervalSinceReferenceDate,
-                expectedDate.timeIntervalSinceReferenceDate,
-                accuracy: 0.001,
-                file: file,
-                line: line
+            #expect(
+                abs(match.timeIntervalSinceReferenceDate - expectedDate.timeIntervalSinceReferenceDate) <= 0.001,
+                sourceLocation: sourceLocation
             )
         }
     }
 
-    func testMatchDefaultISO8601Style() throws {
+    @Test func testMatchDefaultISO8601Style() throws {
 
         let iso8601FormatStyle = Date.ISO8601FormatStyle()
-        func verify(_ str: String, expectedUpperBound: String.Index?, expectedDate: Date?, file: StaticString = #filePath, line: UInt = #line) {
-            _matchFullRange(str, formatStyle: iso8601FormatStyle, expectedUpperBound: expectedUpperBound, expectedDate: expectedDate, file: file, line: line)
+        func verify(_ str: String, expectedUpperBound: String.Index?, expectedDate: Date?, sourceLocation: SourceLocation = #_sourceLocation) {
+            _matchFullRange(str, formatStyle: iso8601FormatStyle, expectedUpperBound: expectedUpperBound, expectedDate: expectedDate, sourceLocation: sourceLocation)
         }
 
         // dateFormatter.date(from: "2021-07-01 15:56:32")!
@@ -230,12 +212,12 @@ final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
         verify("9999-37-40T35:70:99Z", expectedUpperBound: nil, expectedDate: nil) // This is not a valid date
     }
 
-    func testPartialMatchISO8601() throws {
+    @Test func testPartialMatchISO8601() throws {
         var expectedDate: Date?
         var expectedLength: Int?
-        func verify(_ str: String, _ style: Date.ISO8601FormatStyle,  file: StaticString = #filePath, line: UInt = #line) {
+        func verify(_ str: String, _ style: Date.ISO8601FormatStyle, sourceLocation: SourceLocation = #_sourceLocation) {
             let expectedUpperBoundStrIndx = (expectedLength != nil) ? str.index(str.startIndex, offsetBy: expectedLength!) : nil
-            _matchFullRange(str, formatStyle: style, expectedUpperBound: expectedUpperBoundStrIndx, expectedDate: expectedDate, file: file, line: line)
+            _matchFullRange(str, formatStyle: style, expectedUpperBound: expectedUpperBoundStrIndx, expectedDate: expectedDate, sourceLocation: sourceLocation)
         }
 
         let gmt = TimeZone(secondsFromGMT: 0)!
@@ -302,11 +284,11 @@ final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
         }
     }
 
-    func testFullMatch() {
+    @Test func testFullMatch() {
 
         var expectedDate: Date
-        func verify(_ str: String, _ style: Date.ISO8601FormatStyle, file: StaticString = #filePath, line: UInt = #line) {
-            _matchFullRange(str, formatStyle: style, expectedUpperBound: str.endIndex, expectedDate: expectedDate, file: file, line: line)
+        func verify(_ str: String, _ style: Date.ISO8601FormatStyle, sourceLocation: SourceLocation = #_sourceLocation) {
+            _matchFullRange(str, formatStyle: style, expectedUpperBound: str.endIndex, expectedDate: expectedDate, sourceLocation: sourceLocation)
         }
 
         do {

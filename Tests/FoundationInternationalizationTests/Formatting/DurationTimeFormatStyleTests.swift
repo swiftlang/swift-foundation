@@ -10,16 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationInternationalization)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
@@ -32,14 +28,14 @@ extension Duration {
     }
 }
 
-final class DurationToMeasurementAdditionTests : XCTestCase {
+struct DurationToMeasurementAdditionTests {
     typealias Unit = Duration._UnitsFormatStyle.Unit
-    func assertEqualDurationUnitValues(_ duration: Duration, units: [Unit], rounding: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalLength: Int = .max, roundingIncrement: Double? = nil, expectation values: [Double], file: StaticString = #filePath, line: UInt = #line) {
+    func assertEqualDurationUnitValues(_ duration: Duration, units: [Unit], rounding: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalLength: Int = .max, roundingIncrement: Double? = nil, expectation values: [Double], sourceLocation: SourceLocation = #_sourceLocation) {
         let result = duration.valuesForUnits(units, trailingFractionalLength: trailingFractionalLength, smallestUnitRounding: rounding, roundingIncrement: roundingIncrement)
-        XCTAssertEqual(result, values, file: file, line: line)
+        #expect(result == values, sourceLocation: sourceLocation)
     }
 
-    func testDurationToMeasurements() {
+    @Test func testDurationToMeasurements() {
         let hmsn : [Unit] = [ .hours, .minutes, .seconds, .nanoseconds]
         assertEqualDurationUnitValues(.seconds(0), units: hmsn, expectation: [0, 0, 0, 0])
         assertEqualDurationUnitValues(.seconds(35), units: hmsn, expectation: [0, 0, 35, 0])
@@ -66,10 +62,12 @@ final class DurationToMeasurementAdditionTests : XCTestCase {
         assertEqualDurationUnitValues(.seconds(3600 + 60 + 30), units: hm, trailingFractionalLength: 1, expectation: [1, 1.5])
     }
 
-    func testDurationRounding() {
-        func test(_ duration: Duration, units: [Unit], trailingFractionalLength: Int = 0, _ tests: (rounding: FloatingPointRoundingRule, expected: [Double])..., file: StaticString = #filePath, line: UInt = #line) {
+    @Test func testDurationRounding() {
+        func test(_ duration: Duration, units: [Unit], trailingFractionalLength: Int = 0, _ tests: (rounding: FloatingPointRoundingRule, expected: [Double])..., sourceLocation: SourceLocation = #_sourceLocation) {
             for (i, (rounding, expected)) in tests.enumerated() {
-                assertEqualDurationUnitValues(duration, units: units, rounding: rounding, trailingFractionalLength: trailingFractionalLength, expectation: expected, file: file, line: line + UInt(i) + 1)
+                var loc = sourceLocation
+                loc.line += i + 1
+                assertEqualDurationUnitValues(duration, units: units, rounding: rounding, trailingFractionalLength: trailingFractionalLength, expectation: expected, sourceLocation: loc)
 
                 let equivalentRoundingForNegativeValue: FloatingPointRoundingRule
                 switch rounding {
@@ -81,7 +79,7 @@ final class DurationToMeasurementAdditionTests : XCTestCase {
                     equivalentRoundingForNegativeValue = rounding
                 }
 
-                assertEqualDurationUnitValues(.zero - duration, units: units, rounding: equivalentRoundingForNegativeValue, trailingFractionalLength: trailingFractionalLength, expectation: expected.map { -$0 }, file: file, line: line + UInt(i) + 1)
+                assertEqualDurationUnitValues(.zero - duration, units: units, rounding: equivalentRoundingForNegativeValue, trailingFractionalLength: trailingFractionalLength, expectation: expected.map { -$0 }, sourceLocation: loc)
             }
         }
         // [.nanoseconds]
@@ -295,18 +293,18 @@ final class DurationToMeasurementAdditionTests : XCTestCase {
     }
 }
 
-final class TestDurationTimeFormatStyle : XCTestCase {
+struct TestDurationTimeFormatStyle {
     let enUS = Locale(identifier: "en_US")
 
-    func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, grouping: NumberFormatStyleConfiguration.Grouping? = nil, expected: String, file: StaticString = #filePath, line: UInt = #line) {
-        var style = Duration.TimeFormatStyle(pattern: pattern).locale(enUS)
+    func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, grouping: NumberFormatStyleConfiguration.Grouping? = nil, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+        var style = Duration._TimeFormatStyle(pattern: pattern).locale(enUS)
         if let grouping {
             style.grouping = grouping
         }
-        XCTAssertEqual(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(style), expected, file: file, line: line)
+        #expect(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(style) == expected, sourceLocation: sourceLocation)
     }
 
-    func testDurationPatternStyle() {
+    @Test func testDurationPatternStyle() {
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinute, expected: "1:02")
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinute(padHourToLength: 1, roundSeconds: .down), expected: "1:01")
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinuteSecond, expected: "1:01:35")
@@ -318,20 +316,20 @@ final class TestDurationTimeFormatStyle : XCTestCase {
         assertFormattedWithPattern(seconds: 3695, milliseconds: 350, pattern: .minuteSecond(padMinuteToLength: 2, fractionalSecondsLength: 2), expected: "61:35.35")
     }
 
-    func testDurationPatternPadding() {
+    @Test func testDurationPatternPadding() {
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinute(padHourToLength: 2), expected: "01:02")
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinuteSecond(padHourToLength: 2), expected: "01:01:35")
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2), expected: "01:01:35.00")
         assertFormattedWithPattern(seconds: 3695, milliseconds: 500, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2), expected: "01:01:35.50")
     }
 
-    func testDurationPatternGrouping() {
+    @Test func testDurationPatternGrouping() {
         assertFormattedWithPattern(seconds: 36950000, pattern: .hourMinute(padHourToLength: 2), grouping: nil, expected: "10,263:53")
         assertFormattedWithPattern(seconds: 36950000, pattern: .hourMinute(padHourToLength: 2), grouping: .automatic, expected: "10,263:53")
         assertFormattedWithPattern(seconds: 36950000, pattern: .hourMinute(padHourToLength: 2), grouping: .never, expected: "10263:53")
     }
 
-    func testNoFractionParts() {
+    @Test func testNoFractionParts() {
 
         // minutes, seconds
 
@@ -401,7 +399,7 @@ final class TestDurationTimeFormatStyle : XCTestCase {
         assertFormattedWithPattern(seconds: 5399, milliseconds: 500, pattern: .hourMinute, expected: "1:30")
     }
 
-    func testShowFractionalSeconds() {
+    @Test func testShowFractionalSeconds() {
 
         // minutes, seconds
 
@@ -445,7 +443,7 @@ final class TestDurationTimeFormatStyle : XCTestCase {
         assertFormattedWithPattern(seconds: 7199, milliseconds: 995, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2), expected: "02:00:00.00")
     }
 
-    func testNegativeValues() {
+    @Test func testNegativeValues() {
         assertFormattedWithPattern(seconds: 0, milliseconds: -499, pattern: .hourMinuteSecond, expected: "0:00:00")
         assertFormattedWithPattern(seconds: 0, milliseconds: -500, pattern: .hourMinuteSecond, expected: "0:00:00")
         assertFormattedWithPattern(seconds: 0, milliseconds: -501, pattern: .hourMinuteSecond, expected: "-0:00:01")
@@ -484,16 +482,16 @@ extension Sequence where Element == DurationTimeAttributedStyleTests.Segment {
     }
 }
 
-final class DurationTimeAttributedStyleTests : XCTestCase {
+struct DurationTimeAttributedStyleTests {
 
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DurationFieldAttribute.Field?)
     let enUS = Locale(identifier: "en_US")
 
-    func assertWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, expected: [Segment], locale: Locale = Locale(identifier: "en_US"), file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertEqual(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(.time(pattern: pattern).locale(locale).attributed), expected.attributedString, file: file, line: line)
+    func assertWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, expected: [Segment], locale: Locale = Locale(identifier: "en_US"), sourceLocation: SourceLocation = #_sourceLocation) {
+        #expect(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(.time(pattern: pattern).locale(locale).attributed) == expected.attributedString, sourceLocation: sourceLocation)
     }
 
-    func testAttributedStyle_enUS() {
+    @Test func testAttributedStyle_enUS() {
         assertWithPattern(seconds: 3695, pattern: .hourMinute, expected: [
             ("1", .hours),
             (":", nil),
@@ -555,109 +553,106 @@ final class DurationTimeAttributedStyleTests : XCTestCase {
 
 // MARK: DiscreteFormatStyle conformance test
 
-@available(FoundationPreview 0.4, *)
-final class TestDurationTimeDiscreteConformance : XCTestCase {
-    func testBasics() throws {
+struct TestDurationTimeDiscreteConformance {
+    @Test func testBasics() throws {
         var style: Duration._TimeFormatStyle
         style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .down)).locale(Locale(identifier: "en_US"))
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(2))
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero.nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .zero.nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .zero)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-1).nextDown)
+        #expect(style.discreteInput(after: .seconds(1)) == .seconds(2))
+        #expect(style.discreteInput(before: .seconds(1)) == .seconds(1).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(500)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(500)) == .zero.nextDown)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(0)) == .zero.nextDown)
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .zero)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .seconds(-1).nextDown)
+        #expect(style.discreteInput(after: .seconds(-1)) == .zero)
+        #expect(style.discreteInput(before: .seconds(-1)) == .seconds(-1).nextDown)
 
 
         style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .up))
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(0))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .zero.nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero.nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .seconds(-1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-2))
+        #expect(style.discreteInput(after: .seconds(1)) == .seconds(1).nextUp)
+        #expect(style.discreteInput(before: .seconds(1)) == .seconds(0))
+        #expect(style.discreteInput(after: .milliseconds(500)) == .seconds(1).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(500)) == .zero)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .zero.nextUp)
+        #expect(style.discreteInput(before: .milliseconds(0)) == .seconds(-1))
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .zero.nextUp)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .seconds(-1))
+        #expect(style.discreteInput(after: .seconds(-1)) == .seconds(-1).nextUp)
+        #expect(style.discreteInput(before: .seconds(-1)) == .seconds(-2))
 
 
         style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .towardZero))
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(2))
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .seconds(-1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-2))
+        #expect(style.discreteInput(after: .seconds(1)) == .seconds(2))
+        #expect(style.discreteInput(before: .seconds(1)) == .seconds(1).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(500)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(500)) == .seconds(-1))
+        #expect(style.discreteInput(after: .milliseconds(0)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(0)) == .seconds(-1))
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .seconds(-1))
+        #expect(style.discreteInput(after: .seconds(-1)) == .seconds(-1).nextUp)
+        #expect(style.discreteInput(before: .seconds(-1)) == .seconds(-2))
 
         style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .awayFromZero))
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(0))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .zero.nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .zero.nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .zero)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-1).nextDown)
+        #expect(style.discreteInput(after: .seconds(1)) == .seconds(1).nextUp)
+        #expect(style.discreteInput(before: .seconds(1)) == .seconds(0))
+        #expect(style.discreteInput(after: .milliseconds(500)) == .seconds(1).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(500)) == .zero)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .zero.nextUp)
+        #expect(style.discreteInput(before: .milliseconds(0)) == .zero.nextDown)
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .zero)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .seconds(-1).nextDown)
+        #expect(style.discreteInput(after: .seconds(-1)) == .zero)
+        #expect(style.discreteInput(before: .seconds(-1)) == .seconds(-1).nextDown)
 
 
         style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .toNearestOrAwayFromZero))
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .milliseconds(1500))
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .milliseconds(500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .milliseconds(1500))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .milliseconds(500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .milliseconds(500))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .milliseconds(-500))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .milliseconds(-500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .milliseconds(-1500))
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .milliseconds(-500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .milliseconds(-1500))
+        #expect(style.discreteInput(after: .seconds(1)) == .milliseconds(1500))
+        #expect(style.discreteInput(before: .seconds(1)) == .milliseconds(500).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(500)) == .milliseconds(1500))
+        #expect(style.discreteInput(before: .milliseconds(500)) == .milliseconds(500).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .milliseconds(500))
+        #expect(style.discreteInput(before: .milliseconds(0)) == .milliseconds(-500))
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .milliseconds(-500).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .milliseconds(-1500))
+        #expect(style.discreteInput(after: .seconds(-1)) == .milliseconds(-500).nextUp)
+        #expect(style.discreteInput(before: .seconds(-1)) == .milliseconds(-1500))
 
         style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .toNearestOrEven))
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .milliseconds(1500))
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .milliseconds(500))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .milliseconds(500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .milliseconds(-500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .milliseconds(500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .milliseconds(-500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .milliseconds(500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .milliseconds(-500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .milliseconds(-500))
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .milliseconds(-1500))
+        #expect(style.discreteInput(after: .seconds(1)) == .milliseconds(1500))
+        #expect(style.discreteInput(before: .seconds(1)) == .milliseconds(500))
+        #expect(style.discreteInput(after: .milliseconds(500)) == .milliseconds(500).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(500)) == .milliseconds(-500).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .milliseconds(500).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(0)) == .milliseconds(-500).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .milliseconds(500).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .milliseconds(-500).nextDown)
+        #expect(style.discreteInput(after: .seconds(-1)) == .milliseconds(-500))
+        #expect(style.discreteInput(before: .seconds(-1)) == .milliseconds(-1500))
     }
 
-    func testRegressions() throws {
+    @Test func testRegressions() throws {
         var style: Duration._TimeFormatStyle
 
         style = .init(pattern: .hourMinute(padHourToLength: 0, roundSeconds: .toNearestOrAwayFromZero))
 
-        XCTAssertLessThanOrEqual(try XCTUnwrap(style.discreteInput(after: Duration(secondsComponent: -8, attosecondsComponent: -531546586433266880))), Duration(secondsComponent: 30, attosecondsComponent: 0))
+        #expect(try #require(style.discreteInput(after: Duration(secondsComponent: -8, attosecondsComponent: -531546586433266880))) <= Duration(secondsComponent: 30, attosecondsComponent: 0))
     }
 
-    func testRandomSamples() throws {
-        let styles: [Duration._TimeFormatStyle] = [FloatingPointRoundingRule.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven].flatMap { roundingRule in
-            [
-                .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: roundingRule)),
-                .init(pattern: .minuteSecond(padMinuteToLength: 0, fractionalSecondsLength: 2, roundFractionalSeconds: roundingRule)),
-                .init(pattern: .hourMinute(padHourToLength: 0, roundSeconds: roundingRule))
-            ]
-        }
-
+    @Test(arguments: [FloatingPointRoundingRule.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven])
+    func testRandomSamples(roundingRule: FloatingPointRoundingRule) throws {
+        let styles: [Duration._TimeFormatStyle] = [
+            .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: roundingRule), locale: .init(identifier: "en_US")),
+            .init(pattern: .minuteSecond(padMinuteToLength: 0, fractionalSecondsLength: 2, roundFractionalSeconds: roundingRule), locale: .init(identifier: "en_US")),
+            .init(pattern: .hourMinute(padHourToLength: 0, roundSeconds: roundingRule), locale: .init(identifier: "en_US"))
+        ]
 
         for style in styles {
             try verifyDiscreteFormatStyleConformance(style, samples: 100, "\(style)")

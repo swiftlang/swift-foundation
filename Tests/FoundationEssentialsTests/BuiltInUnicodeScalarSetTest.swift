@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -20,12 +18,11 @@ import TestSupport
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-final class BuiltInUnicodeScalarSetTest: XCTestCase {
+struct BuiltInUnicodeScalarSetTest {
 
-    func testMembership() {
-        func setContainsScalar(_ set: BuiltInUnicodeScalarSet, _ scalar: Unicode.Scalar, _ expect: Bool, file: StaticString = #filePath, line: UInt = #line) {
-            let actual = set.contains(scalar)
-            XCTAssertEqual(actual, expect, file: file, line: line)
+    @Test func testMembership() {
+        func setContainsScalar(_ set: BuiltInUnicodeScalarSet, _ scalar: Unicode.Scalar, _ expect: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(set.contains(scalar) == expect, sourceLocation: sourceLocation)
         }
 
         setContainsScalar(.lowercaseLetters, "a", true)

@@ -10,32 +10,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
+#elseif FOUNDATION_FRAMEWORK
+import Foundation
 #endif
 
-final class ErrorTests : XCTestCase {
+struct ErrorTests {
     func thisThrows() throws {
         throw CocoaError(CocoaError.Code(rawValue: 42), userInfo: ["hi" : "there"])
     }
     
-    func test_throwCocoaError() {
-        let code: CocoaError.Code
-        do {
+    @Test func test_throwCocoaError() {
+        #expect {
             try thisThrows()
-            code = .featureUnsupported
-        } catch {
-            if let error = error as? CocoaError {
-                code = error.code
-            } else {
-                code = .featureUnsupported
-            }
+        } throws: {
+            ($0 as? CocoaError)?.code.rawValue == 42
         }
-        
-        XCTAssertEqual(code.rawValue, 42)
     }
 }

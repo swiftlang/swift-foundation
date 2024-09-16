@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Testing
 
-final class PredicateMacroFunctionCallTests: XCTestCase {
-    func testSubscript() {
+struct PredicateMacroFunctionCallTests {
+    @Test func testSubscript() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -96,7 +96,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testContains() {
+    @Test func testContains() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -130,7 +130,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testContainsWhere() {
+    @Test func testContainsWhere() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -175,7 +175,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testAllSatisfy() {
+    @Test func testAllSatisfy() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -220,7 +220,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testFilter() {
+    @Test func testFilter() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -347,7 +347,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testStartsWith() {
+    @Test func testStartsWith() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in
@@ -386,7 +386,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testMin() {
+    @Test func testMin() {
         AssertPredicateExpansion(
             """
             #Predicate<[Int]> { inputA in
@@ -406,7 +406,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testMax() {
+    @Test func testMax() {
         AssertPredicateExpansion(
             """
             #Predicate<[Int]> { inputA in
@@ -426,7 +426,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testLocalizedStandardContains() {
+    @Test func testLocalizedStandardContains() {
         AssertPredicateExpansion(
             """
             #Predicate<String> { inputA in
@@ -462,7 +462,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testLocalizedStandardCompare() {
+    @Test func testLocalizedStandardCompare() {
         AssertPredicateExpansion(
             """
             #Predicate<String> { inputA in
@@ -516,7 +516,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
         )
     }
     
-    func testCaseInsensitiveCompare() {
+    @Test func testCaseInsensitiveCompare() {
         AssertPredicateExpansion(
             """
             #Predicate<String> { inputA in
@@ -535,7 +535,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
     }
     
     #if FOUNDATION_FRAMEWORK
-    func testEvaluate() {
+    @Test func testEvaluate() {
         AssertPredicateExpansion(
             """
             #Predicate<String> { input in
@@ -584,7 +584,7 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
     }
     #endif
     
-    func testDiagnoseUnsupportedFunction() {
+    @Test func testDiagnoseUnsupportedFunction() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { inputA in

@@ -10,12 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
-#if canImport(Glibc)
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(WASI)
+import WASILibc
+#elseif os(Windows)
+import CRT
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -24,13 +30,15 @@ import Glibc
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-class DataIOTests : XCTestCase {
+final class DataIOTests {
     
     // MARK: - Helpers
     
-    func testURL() -> URL {
+    let url: URL
+    
+    init() {
         // Generate a random file name
-        URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent("testfile-\(UUID().uuidString)")
+        url = URL.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
     }
     
     func generateTestData(count: Int = 16_777_216) -> Data {
@@ -52,10 +60,10 @@ class DataIOTests : XCTestCase {
         let data = generateTestData()
         try data.write(to: url, options: writeOptions)
         let readData = try Data(contentsOf: url, options: readOptions)
-        XCTAssertEqual(data, readData)
+        #expect(data == readData)
     }
     
-    func cleanup(at url: URL) {
+    deinit {
         do {
             try FileManager.default.removeItem(at: url)
         } catch {
@@ -63,18 +71,14 @@ class DataIOTests : XCTestCase {
         }
     }
     
-    
     // MARK: - Tests
     
-    func test_basicReadWrite() throws {
-        let url = testURL()
+    @Test func test_basicReadWrite() throws {
         try writeAndVerifyTestData(to: url)
-        cleanup(at: url)
     }
     
-    func test_slicedReadWrite() throws {
+    @Test func test_slicedReadWrite() throws {
         // Be sure to use progress reporting so we get tests of the chunking
-        let url = testURL()
         let data = generateTestData()
         let slice = data[data.startIndex.advanced(by: 1 * 1024 * 1024)..<data.startIndex.advanced(by: 8 * 1024 * 1024)]
 
@@ -87,72 +91,56 @@ class DataIOTests : XCTestCase {
         p.resignCurrent()
 #endif
         let readData = try Data(contentsOf: url, options: [])
-        XCTAssertEqual(readData, slice)
-        cleanup(at: url)
+        #expect(readData == slice)
     }
 
     // Atomic writing is a very different code path
-    func test_readWriteAtomic() throws {
-        let url = testURL()
+    @Test func test_readWriteAtomic() throws {
         // Perform an atomic write to a file that does not exist
         try writeAndVerifyTestData(to: url, writeOptions: [.atomic])
 
         // Perform an atomic write to a file that already exists
         try writeAndVerifyTestData(to: url, writeOptions: [.atomic])
-
-        cleanup(at: url)
     }
 
-    func test_readWriteMapped() throws {
-        let url = testURL()
+    @Test func test_readWriteMapped() throws {
         try writeAndVerifyTestData(to: url, readOptions: [.mappedIfSafe])
-
-        cleanup(at: url)
     }
 
-    func test_writeFailure() throws {
-        let url = testURL()
+    @Test func test_writeFailure() throws {
 
         let data = Data()
         try data.write(to: url)
-
-#if FOUNDATION_FRAMEWORK
-        XCTAssertThrowsError(try data.write(to: url, options: [.withoutOverwriting])) { e in
-            XCTAssertEqual((e as NSError).code, NSFileWriteFileExistsError)
-        }
-#else
-        XCTAssertThrowsError(try data.write(to: url, options: [.withoutOverwriting]))
-#endif
         
-        cleanup(at: url)
-
+        #expect {
+            try data.write(to: url, options: [.withoutOverwriting])
+        } throws: {
+            ($0 as? CocoaError)?.code == .fileWriteFileExists
+        }
+        
         // Make sure clearing the error condition allows the write to succeed
+        try FileManager.default.removeItem(at: url)
         try data.write(to: url, options: [.withoutOverwriting])
-
-        cleanup(at: url)
     }
     
 #if FOUNDATION_FRAMEWORK
     // Progress is currently stubbed out for FoundationPreview
-    func test_writeWithProgress() throws {
-        let url = testURL()
+    @Test func test_writeWithProgress() throws {
         
         let p = Progress(totalUnitCount: 1)
         p.becomeCurrent(withPendingUnitCount: 1)
         try writeAndVerifyTestData(to: url)
         p.resignCurrent()
         
-        XCTAssertEqual(p.completedUnitCount, 1)
-        XCTAssertEqual(p.fractionCompleted, 1.0, accuracy: 0.1)
-        cleanup(at: url)
+        #expect(p.completedUnitCount == 1)
+        #expect((0.9 ..< 1.1).contains(p.fractionCompleted))
     }
 #endif
     
 #if FOUNDATION_FRAMEWORK
-    func test_writeWithAttributes() throws {
+    @Test func test_writeWithAttributes() throws {
         let writeData = generateTestData()
         
-        let url = testURL()
         // Data doesn't have a direct API to write with attributes, but our I/O code has it. Use it via @testable interface here.
         
         let writeAttrs: [String : Data] = [FileAttributeKey.hfsCreatorCode.rawValue : "abcd".data(using: .ascii)!]
@@ -162,137 +150,115 @@ class DataIOTests : XCTestCase {
         var readAttrs: [String : Data] = [:]
         let readData = try readDataFromFile(path: .url(url), reportProgress: false, options: [], attributesToRead: [FileAttributeKey.hfsCreatorCode.rawValue], attributes: &readAttrs)
         
-        XCTAssertEqual(writeData, readData)
-        XCTAssertEqual(writeAttrs, readAttrs)
+        #expect(writeData == readData)
+        #expect(writeAttrs == readAttrs)
         
-        cleanup(at: url)
     }
 #endif
         
-    func test_emptyFile() throws {
+    @Test func test_emptyFile() throws {
         let data = Data()
-        let url = testURL()
         try data.write(to: url)
         let read = try Data(contentsOf: url, options: [])
-        XCTAssertEqual(data, read)
-        
-        cleanup(at: url)
+        #expect(data == read)
     }
     
-#if FOUNDATION_FRAMEWORK
-    // String(contentsOf:) is not available outside the framework yet
-    func test_emptyFileString() {
+    @Test func test_emptyFileString() throws {
         let data = Data()
-        let url = testURL()
-        
-        do {
-            try data.write(to: url)
-            let readString = try String(contentsOf: url)
-            XCTAssertEqual(readString, "")
-            
-            let readStringWithEncoding = try String(contentsOf: url, encoding: String._Encoding.utf8)
-            XCTAssertEqual(readStringWithEncoding, "")
-            
-            cleanup(at: url)
-        } catch {
-            XCTFail("Could not read file: \(error)")
-        }
+        try data.write(to: url)
+        let readStringWithEncoding = try String(contentsOf: url, encoding: String.Encoding.utf8)
+        #expect(readStringWithEncoding.isEmpty)
     }
-#endif
     
-    func test_largeFile() throws {
+    @Test func test_largeFile() throws {
 #if !os(watchOS)
         // More than 2 GB
         let size = 0x80010000
-        let url = testURL()
 
         let data = generateTestData(count: size)
         
         try data.write(to: url)
-        let read = try! Data(contentsOf: url, options: .mappedIfSafe)
+        let read = try Data(contentsOf: url, options: .mappedIfSafe)
 
         // No need to compare the contents, but do compare the size
-        XCTAssertEqual(data.count, read.count)
+        #expect(data.count == read.count)
         
 #if FOUNDATION_FRAMEWORK
         // Try the NSData path
-        let readNS = try! NSData(contentsOf: url, options: .mappedIfSafe) as Data
-        XCTAssertEqual(data.count, readNS.count)
+        let readNS = try NSData(contentsOf: url, options: .mappedIfSafe) as Data
+        #expect(data.count == readNS.count)
 #endif
 
-        cleanup(at: url)
 #endif // !os(watchOS)
     }
     
-    func test_writeToSpecialFile() throws {
-        #if !os(Linux) && !os(Windows)
-        throw XCTSkip("This test is only supported on Linux and Windows")
-        #else
-        #if os(Windows)
+#if os(Linux) || os(Windows)
+    @Test func test_writeToSpecialFile() {
+#if os(Windows)
         let path = URL(filePath: "CON", directoryHint: .notDirectory)
-        #else
+#else
         let path = URL(filePath: "/dev/stdout", directoryHint: .notDirectory)
-        #endif
-        XCTAssertNoThrow(try Data("Output to STDOUT\n".utf8).write(to: path))
-        #endif
+#endif
+        #expect(throws: Never.self) {
+            try Data("Output to STDOUT\n".utf8).write(to: path)
+        }
     }
+#endif
     
-    func test_zeroSizeFile() throws {
-        #if !os(Linux)
-        throw XCTSkip("This test is only applicable on Linux")
-        #else
+#if os(Linux)
+    @Test func test_zeroSizeFile() throws {
         // Some files in /proc report a file size of 0 bytes via a stat call
         // Ensure that these files can still be read despite appearing to be empty
-        let maps = try String(contentsOfFile: "/proc/self/maps", encoding: String._Encoding.utf8)
-        XCTAssertFalse(maps.isEmpty)
-        #endif
+        let maps = try String(contentsOfFile: "/proc/self/maps", encoding: String.Encoding.utf8)
+        #expect(!maps.isEmpty)
     }
+#endif
 
     // MARK: - String Path Tests
-    func testStringDeletingLastPathComponent() {
-        XCTAssertEqual("/a/b/c".deletingLastPathComponent(), "/a/b")
-        XCTAssertEqual("".deletingLastPathComponent(), "")
-        XCTAssertEqual("/".deletingLastPathComponent(), "/")
-        XCTAssertEqual("q".deletingLastPathComponent(), "")
-        XCTAssertEqual("/aaa".deletingLastPathComponent(), "/")
-        XCTAssertEqual("/aaa/".deletingLastPathComponent(), "/")
-        XCTAssertEqual("/a/b/c/".deletingLastPathComponent(), "/a/b")
-        XCTAssertEqual("hello".deletingLastPathComponent(), "")
-        XCTAssertEqual("hello/".deletingLastPathComponent(), "")
+    @Test func testStringDeletingLastPathComponent() {
+        #expect("/a/b/c".deletingLastPathComponent() == "/a/b")
+        #expect("".deletingLastPathComponent() == "")
+        #expect("/".deletingLastPathComponent() == "/")
+        #expect("q".deletingLastPathComponent() == "")
+        #expect("/aaa".deletingLastPathComponent() == "/")
+        #expect("/aaa/".deletingLastPathComponent() == "/")
+        #expect("/a/b/c/".deletingLastPathComponent() == "/a/b")
+        #expect("hello".deletingLastPathComponent() == "")
+        #expect("hello/".deletingLastPathComponent() == "")
     }
     
-    func testAppendingPathComponent() {
+    @Test func testAppendingPathComponent() {
         let comp = "test"
-        XCTAssertEqual("/a/b/c".appendingPathComponent(comp), "/a/b/c/test")
-        XCTAssertEqual("".appendingPathComponent(comp), "test")
-        XCTAssertEqual("/".appendingPathComponent(comp), "/test")
-        XCTAssertEqual("q".appendingPathComponent(comp), "q/test")
-        XCTAssertEqual("/aaa".appendingPathComponent(comp), "/aaa/test")
-        XCTAssertEqual("/a/b/c/".appendingPathComponent(comp), "/a/b/c/test")
-        XCTAssertEqual("hello".appendingPathComponent(comp), "hello/test")
-        XCTAssertEqual("hello/".appendingPathComponent(comp), "hello/test")
+        #expect("/a/b/c".appendingPathComponent(comp) == "/a/b/c/test")
+        #expect("".appendingPathComponent(comp) == "test")
+        #expect("/".appendingPathComponent(comp) == "/test")
+        #expect("q".appendingPathComponent(comp) == "q/test")
+        #expect("/aaa".appendingPathComponent(comp) == "/aaa/test")
+        #expect("/a/b/c/".appendingPathComponent(comp) == "/a/b/c/test")
+        #expect("hello".appendingPathComponent(comp) == "hello/test")
+        #expect("hello/".appendingPathComponent(comp) == "hello/test")
         
-        XCTAssertEqual("hello/".appendingPathComponent("/test"), "hello/test")
-        XCTAssertEqual("hello".appendingPathComponent("/test"), "hello/test")
-        XCTAssertEqual("hello///".appendingPathComponent("///test"), "hello/test")
-        XCTAssertEqual("hello".appendingPathComponent("test/"), "hello/test")
-        XCTAssertEqual("hello".appendingPathComponent("test/test2"), "hello/test/test2")
-        XCTAssertEqual("hello".appendingPathComponent("test/test2/"), "hello/test/test2")
-        XCTAssertEqual("hello".appendingPathComponent("test///test2/"), "hello/test/test2")
-        XCTAssertEqual("hello".appendingPathComponent("/"), "hello")
-        XCTAssertEqual("//".appendingPathComponent("/"), "/")
-        XCTAssertEqual("".appendingPathComponent(""), "")
+        #expect("hello/".appendingPathComponent("/test") == "hello/test")
+        #expect("hello".appendingPathComponent("/test") == "hello/test")
+        #expect("hello///".appendingPathComponent("///test") == "hello/test")
+        #expect("hello".appendingPathComponent("test/") == "hello/test")
+        #expect("hello".appendingPathComponent("test/test2") == "hello/test/test2")
+        #expect("hello".appendingPathComponent("test/test2/") == "hello/test/test2")
+        #expect("hello".appendingPathComponent("test///test2/") == "hello/test/test2")
+        #expect("hello".appendingPathComponent("/") == "hello")
+        #expect("//".appendingPathComponent("/") == "/")
+        #expect("".appendingPathComponent("") == "")
     }
     
-    func testStringLastPathComponent() {
-        XCTAssertEqual("/a/b/c".lastPathComponent, "c")
-        XCTAssertEqual("".lastPathComponent, "")
-        XCTAssertEqual("/".lastPathComponent, "/")
-        XCTAssertEqual("q".lastPathComponent, "q")
-        XCTAssertEqual("/aaa".lastPathComponent, "aaa")
-        XCTAssertEqual("/a/b/c/".lastPathComponent, "c")
-        XCTAssertEqual("hello".lastPathComponent, "hello")
-        XCTAssertEqual("hello/".lastPathComponent, "hello")
+    @Test func testStringLastPathComponent() {
+        #expect("/a/b/c".lastPathComponent == "c")
+        #expect("".lastPathComponent == "")
+        #expect("/".lastPathComponent == "/")
+        #expect("q".lastPathComponent == "q")
+        #expect("/aaa".lastPathComponent == "aaa")
+        #expect("/a/b/c/".lastPathComponent == "c")
+        #expect("hello".lastPathComponent == "hello")
+        #expect("hello/".lastPathComponent == "hello")
     }
 }
 
