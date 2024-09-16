@@ -1,7 +1,7 @@
 # Extending `Calendar.RecurrenceRule.End`
 
 
-* Proposal: SF-NNNN
+* Proposal: SF-0010
 * Author(s): Hristo Staykov <hstaykov@apple.com>
 * Review Manager: [Tina Liu](https://github.com/itingliu)
 * Status: **Active review**
