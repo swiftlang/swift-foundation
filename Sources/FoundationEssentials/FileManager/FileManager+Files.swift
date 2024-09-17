@@ -955,6 +955,8 @@ extension _FileManagerImpl {
                 #if os(WASI)
                 // WASI does not support extended attributes
                 throw CocoaError.errorWithFilePath(.featureUnsupported, path)
+                #elseif canImport(Android)
+                // Android doesn't allow setting this for normal apps, so just skip it.
                 #else
                 try Self._setAttributes(extendedAttrs, at: fileSystemRepresentation, followSymLinks: false)
                 #endif

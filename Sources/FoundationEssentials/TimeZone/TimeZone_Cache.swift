@@ -173,7 +173,7 @@ struct TimeZoneCache : Sendable {
                 }
             }
             
-#if os(Linux) && !os(WASI)
+#if os(Linux)
             // Try localtime
             tzset()
             var t = time(nil)

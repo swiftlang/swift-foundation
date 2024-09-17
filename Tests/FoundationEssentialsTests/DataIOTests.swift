@@ -238,7 +238,7 @@ class DataIOTests : XCTestCase {
     }
     
     func test_zeroSizeFile() throws {
-        #if !os(Linux)
+        #if !os(Linux) && !os(Android)
         throw XCTSkip("This test is only applicable on Linux")
         #else
         // Some files in /proc report a file size of 0 bytes via a stat call
