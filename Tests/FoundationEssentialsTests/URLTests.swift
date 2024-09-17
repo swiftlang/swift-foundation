@@ -1137,4 +1137,38 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(comp.host, "/path/to/socket")
         XCTAssertEqual(comp.path, "/info")
     }
+
+    func testURLComponentsUnixDomainSocketOverWebSocketScheme() {
+        var comp = URLComponents()
+        comp.scheme = "ws+unix"
+        comp.host = "/path/to/socket"
+        comp.path = "/info"
+        XCTAssertEqual(comp.string, "ws+unix://%2Fpath%2Fto%2Fsocket/info")
+
+        comp.scheme = "wss+unix"
+        XCTAssertEqual(comp.string, "wss+unix://%2Fpath%2Fto%2Fsocket/info")
+
+        comp.encodedHost = "%2Fpath%2Fto%2Fsocket"
+        XCTAssertEqual(comp.string, "wss+unix://%2Fpath%2Fto%2Fsocket/info")
+        XCTAssertEqual(comp.encodedHost, "%2Fpath%2Fto%2Fsocket")
+        XCTAssertEqual(comp.host, "/path/to/socket")
+        XCTAssertEqual(comp.path, "/info")
+
+        // "/path/to/socket" is not a valid host for schemes
+        // that IDNA-encode hosts instead of percent-encoding
+        comp.scheme = "ws"
+        XCTAssertNil(comp.string)
+
+        comp.scheme = "wss"
+        XCTAssertNil(comp.string)
+
+        comp.scheme = "wss+unix"
+        XCTAssertEqual(comp.string, "wss+unix://%2Fpath%2Fto%2Fsocket/info")
+
+        // Check that we can parse a percent-encoded ws+unix URL string
+        comp = URLComponents(string: "ws+unix://%2Fpath%2Fto%2Fsocket/info")!
+        XCTAssertEqual(comp.encodedHost, "%2Fpath%2Fto%2Fsocket")
+        XCTAssertEqual(comp.host, "/path/to/socket")
+        XCTAssertEqual(comp.path, "/info")
+    }
 }
