@@ -450,7 +450,7 @@ extension _ProcessInfo {
         var siInfo = SYSTEM_INFO()
         GetSystemInfo(&siInfo)
         return Int(siInfo.dwNumberOfProcessors)
-#elseif os(Linux) || os(FreeBSD)
+#elseif os(Linux) || os(FreeBSD) || canImport(Android)
         return Int(sysconf(Int32(_SC_NPROCESSORS_CONF)))
 #else
         return 1
@@ -467,7 +467,7 @@ extension _ProcessInfo {
             return 0
         }
         return Int(count)
-#elseif os(Linux) || os(FreeBSD)
+#elseif os(Linux) || os(FreeBSD) || canImport(Android)
         #if os(Linux)
         if let fsCount = Self.fsCoreCount() {
             return fsCount
@@ -561,7 +561,7 @@ extension _ProcessInfo {
             return 0
         }
         return totalMemoryKB * 1024
-#elseif os(Linux) || os(FreeBSD)
+#elseif os(Linux) || os(FreeBSD) || canImport(Android)
         var memory = sysconf(Int32(_SC_PHYS_PAGES))
         memory *= sysconf(Int32(_SC_PAGESIZE))
         return UInt64(memory)

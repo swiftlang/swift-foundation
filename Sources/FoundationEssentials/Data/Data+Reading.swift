@@ -34,7 +34,7 @@ import WASILibc
 func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutableRawPointer!, _ size: Int, _ position: UInt32, _ options: Int32) -> Int {
 #if canImport(Darwin)
     return fgetxattr(fd, name, value, size, position, options)
-#elseif canImport(Glibc) || canImport(Musl)
+#elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fgetxattr(fd, name, value, size)
 #else
     return -1
@@ -355,7 +355,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     let localProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(fileSize)) : nil
     
     if fileSize == 0 {
-        #if os(Linux)
+        #if os(Linux) || os(Android)
         // Linux has some files that may report a size of 0 but actually have contents
         let chunkSize = 1024 * 4
         var buffer = malloc(chunkSize)!
