@@ -95,8 +95,9 @@ open class PropertyListEncoder {
     /// - throws: `EncodingError.invalidValue` if a non-conforming floating-point value is encountered during encoding, and the encoding strategy is `.throw`.
     /// - throws: An error if any value throws an error during encoding.
     open func encode<Value : Encodable>(_ value: Value) throws -> Data {
+        let format = self.outputFormat
         do {
-            switch options.outputFormat {
+            switch format {
             case .binary:
                 return try _encodeBPlist(value)
             case .xml:
@@ -105,7 +106,7 @@ open class PropertyListEncoder {
                 throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Property list format .openStep not supported for writing"])
 #if FOUNDATION_FRAMEWORK
             @unknown default:
-                throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Unknown property list format \(options.outputFormat)"])
+                throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Unknown property list format \(format)"])
 #endif
             }
         } catch {
@@ -166,8 +167,9 @@ open class PropertyListEncoder {
     
     @available(FoundationPreview 0.1, *)
     open func encode<T : EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration) throws -> Data {
+        let format = self.outputFormat
         do {
-            switch options.outputFormat {
+            switch format {
             case .binary:
                 return try _encodeBPlist(value, configuration: configuration)
             case .xml:
@@ -176,7 +178,7 @@ open class PropertyListEncoder {
                 throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Property list format .openStep not supported for writing"])
 #if FOUNDATION_FRAMEWORK
             @unknown default:
-                throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Unknown property list format \(options.outputFormat)"])
+                throw CocoaError(.propertyListWriteInvalid, userInfo: [NSDebugDescriptionErrorKey:"Unknown property list format \(format)"])
 #endif
             }
         } catch {
