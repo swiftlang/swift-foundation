@@ -31,21 +31,19 @@ import WASILibc
 /// maps to JulianDay  `2451545`                 (Jan 01 2000, 12:00)
 extension Date {
     static let julianDayAtDateReference: Double = 2_451_910.5 // 2001 Jan 1, midnight, UTC
-    static let maxJulianDay = 0x7F000000
-    static let minJulianDay = -0x7F000000
+    static let maxJulianDay = 0x7F000000  // Dec 20, 5828963 AD
+    static let minJulianDay = -0x7F000000 // Sep 20, 5838270 BC
 
     var julianDate: Double {
         timeIntervalSinceReferenceDate / 86400 + Self.julianDayAtDateReference
     }
 
-    var julianDay: Int {
+    func julianDay() throws (GregorianCalendarError) -> Int {
         let jd = (julianDate + 0.5).rounded(.down)
-        guard jd <= Double(Self.maxJulianDay) else {
-            return Self.maxJulianDay
+        guard jd <= Double(Self.maxJulianDay), jd >= Double(Self.minJulianDay) else {
+            throw .overflow(nil, self, nil)
         }
-        guard jd >= Double(Self.minJulianDay) else {
-            return Self.minJulianDay
-        }
+
         return Int(jd)
     }
 
@@ -168,7 +166,7 @@ enum ResolvedDateComponents {
 
 /// Internal-use error for indicating unexpected situations when finding dates.
 enum GregorianCalendarError : Error {
-    case overflow(Calendar.Component, Date /* failing start date */, Date /* failing end date */)
+    case overflow(Calendar.Component?, Date? /* failing start date */, Date? /* failing end date */)
     case notAdvancing(Date /* next */, Date /* previous */)
 }
 
@@ -185,6 +183,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     let kSecondsInDay = 86400
     let kSecondsInHour = 3600
     let kSecondsInMinute = 60
+    let kDefaultJulianCutoverDay = 2299161
 
     let julianCutoverDay: Int// Julian day (noon-based) of cutover
     let gregorianStartYear: Int
@@ -199,12 +198,17 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         self.timeZone = timeZone ?? TimeZone.default
         if let gregorianStartDate {
             self.gregorianStartDate = gregorianStartDate
-            self.julianCutoverDay = gregorianStartDate.julianDay
+            do {
+                self.julianCutoverDay = try gregorianStartDate.julianDay()
+            } catch {
+                self.julianCutoverDay = kDefaultJulianCutoverDay
+            }
+
             let (y, _, _) = Self.yearMonthDayFromJulianDay(julianCutoverDay, useJulianRef: false)
             self.gregorianStartYear = y
         } else {
             self.gregorianStartYear = 1582
-            self.julianCutoverDay = 2299161
+            self.julianCutoverDay = kDefaultJulianCutoverDay
             self.gregorianStartDate = Date(timeIntervalSince1970: -12219292800) // 1582-10-15T00:00:00Z
         }
 
@@ -611,7 +615,10 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             var result = start
             repeat {
                 start += 1
-                let newDate = add(component, to: date, amount: 1, inTimeZone: tz)
+                let newDate = try? add(component, to: date, amount: 1, inTimeZone: tz)
+                guard let newDate else {
+                    return nil
+                }
                 let newDC = dateComponents(allComponents, from: newDate, in: tz)
                 let value = newDC.value(for: component)
                 if value != start {
@@ -757,8 +764,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             var prevDow = dow
             var prevWork = work
             while dow != firstWeekday {
-                work = add(.day, to: work, amount: -3, inTimeZone: timeZone)
-                work = add(.day, to: work, amount: 2, inTimeZone: timeZone)
+                work = try add(.day, to: work, amount: -3, inTimeZone: timeZone)
+                work = try add(.day, to: work, amount: 2, inTimeZone: timeZone)
                 dow = dateComponent(.weekday, from: work)
 
                 guard prevWork != work && prevDow != dow else {
@@ -821,7 +828,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             var prev: Date
             repeat {
                 prev = udate
-                udate = self.add(.second, to: prev, amount: -1, inTimeZone: timeZone)
+                udate = try self.add(.second, to: prev, amount: -1, inTimeZone: timeZone)
                 guard udate < prev else {
                     throw GregorianCalendarError.notAdvancing(udate, prev)
                 }
@@ -877,15 +884,15 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     // move date to target day of week
-    func dateAfterDateWithTargetDoW(_ start: Date, _ targetDoW: Int) throws -> (Date, daysAdded: Int) {
+    func dateAfterDateWithTargetDoW(_ start: Date, _ targetDoW: Int) throws (GregorianCalendarError) -> (Date, daysAdded: Int) {
         var daysAdded = 0
         var weekday = dateComponent(.weekday, from: start)
         var work = start
         var prev = start
         while weekday != targetDoW {
-            work = self.add(.day, to: work, amount: 1, inTimeZone: timeZone)
+            work = try self.add(.day, to: work, amount: 1, inTimeZone: timeZone)
             guard prev < work else {
-                throw GregorianCalendarError.notAdvancing(work, prev)
+                throw .notAdvancing(work, prev)
             }
             weekday = dateComponent(.weekday, from: work)
             daysAdded += 1
@@ -899,7 +906,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let result: Int?
         do {
             result = try _ordinality(of: smaller, in: larger, for: date)
-        } catch let error as GregorianCalendarError {
+        } catch {
 #if canImport(os)
             switch error {
             case .overflow(_, _, _):
@@ -909,14 +916,12 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             }
 #endif
             result = nil
-        } catch {
-            preconditionFailure("Unrecognized calendar error")
         }
 
         return result
     }
 
-    func _ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) throws -> Int? {
+    func _ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) throws (GregorianCalendarError) -> Int? {
 
         switch larger {
         case .era:
@@ -951,7 +956,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                     var prev = start
                     repeat {
                         month += 1
-                        test = add(.month, to: start, amount: month, inTimeZone: timeZone)
+                        test = try add(.month, to: start, amount: month, inTimeZone: timeZone)
                         guard prev < test else {
                             throw GregorianCalendarError.notAdvancing(test, prev)
                         }
@@ -982,7 +987,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 var prev = start
                 repeat {
                     week += 1
-                    test = add(.weekOfYear, to: start, amount: week, inTimeZone: timeZone)
+                    test = try add(.weekOfYear, to: start, amount: week, inTimeZone: timeZone)
                     guard prev < test else {
                         throw GregorianCalendarError.notAdvancing(test, prev)
                     }
@@ -1009,7 +1014,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 var prev = startMatchingWeekday
                 repeat {
                     nthWeekday += 1
-                    test = self.add(.weekOfYear, to: startMatchingWeekday, amount: nthWeekday, inTimeZone: timeZone)
+                    test = try add(.weekOfYear, to: startMatchingWeekday, amount: nthWeekday, inTimeZone: timeZone)
                     guard prev < test else {
                         throw GregorianCalendarError.notAdvancing(test, prev)
                     }
@@ -1068,7 +1073,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
             case .weekOfYear: /* kCFCalendarUnitWeek_Deprecated */
                 let dc = self.dateComponents([.year, .month, .day], from: date, in: timeZone)
-                let doy = dayOfYear(fromYear: dc.year!, month: dc.month!, day: dc.day!)
+                let doy = try dayOfYear(fromYear: dc.year!, month: dc.month!, day: dc.day!)
                 var work = dc
                 work.day = 1
                 work.month = 1
@@ -1091,7 +1096,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
             case .day, .dayOfYear:
                 let dc = self.dateComponents([.year, .month, .day], from: date, in: timeZone)
-                let doy = dayOfYear(fromYear: dc.year!, month: dc.month!, day: dc.day!)
+                let doy = try dayOfYear(fromYear: dc.year!, month: dc.month!, day: dc.day!)
                 return doy
 
             case .hour:
@@ -1458,39 +1463,51 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             return nil
         }
 
-        var upperBound: Date
-        switch effectiveUnit {
-        case .era:
-            let newUDate = add(.era, to: start, amount: 1, inTimeZone: timeZone)
-            guard newUDate != start else {
-                // Probably because we are at the limit of era.
-                return DateInterval(start: start, duration: inf_ti)
+        let upperBound: Date
+        do {
+            switch effectiveUnit {
+            case .era:
+                let newUDate = try add(.era, to: start, amount: 1, inTimeZone: timeZone)
+                guard newUDate != start else {
+                    // Probably because we are at the limit of era.
+                    return DateInterval(start: start, duration: inf_ti)
+                }
+                upperBound = start
+
+            case .year:
+                upperBound = try add(.year, to: start, amount: 1, inTimeZone: timeZone)
+
+            case .yearForWeekOfYear:
+                upperBound = try add(.yearForWeekOfYear, to: start, amount: 1, inTimeZone: timeZone)
+
+            case .quarter:
+                upperBound = try add(.month, to: start, amount: 3, inTimeZone: timeZone)
+
+            case .month:
+                upperBound = try add(.month, to: start, amount: 1, inTimeZone: timeZone)
+
+            case .weekOfYear: /* kCFCalendarUnitWeek_Deprecated */
+                upperBound = try add(.weekOfYear, to: start, amount: 1, inTimeZone: timeZone)
+
+            case .weekOfMonth:
+                upperBound = try add(.weekOfMonth, to: start, amount: 1, inTimeZone: timeZone)
+
+            case .day, .dayOfYear:
+                upperBound = try add(.day, to: start, amount: 1, inTimeZone: timeZone)
+
+            default:
+                upperBound = start
             }
-            upperBound = start
 
-        case .year:
-            upperBound = add(.year, to: start, amount: 1, inTimeZone: timeZone)
-
-        case .yearForWeekOfYear:
-            upperBound = add(.yearForWeekOfYear, to: start, amount: 1, inTimeZone: timeZone)
-
-        case .quarter:
-            upperBound = add(.month, to: start, amount: 3, inTimeZone: timeZone)
-
-        case .month:
-            upperBound = add(.month, to: start, amount: 1, inTimeZone: timeZone)
-
-        case .weekOfYear: /* kCFCalendarUnitWeek_Deprecated */
-            upperBound = add(.weekOfYear, to: start, amount: 1, inTimeZone: timeZone)
-
-        case .weekOfMonth:
-            upperBound = add(.weekOfMonth, to: start, amount: 1, inTimeZone: timeZone)
-
-        case .day, .dayOfYear:
-            upperBound = add(.day, to: start, amount: 1, inTimeZone: timeZone)
-
-        default:
-            upperBound = start
+        } catch {
+            switch error {
+            case .overflow(_, _, _):
+                // We are at the limit.
+                return DateInterval(start: start, duration: inf_ti)
+            case .notAdvancing(_, _):
+                // Doesn't apply here
+                return nil
+            }
         }
 
         // move back to 0h0m0s, in case the start of the unit wasn't at 0h0m0s
@@ -1633,7 +1650,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         // If the components specifies a new time zone, perform this calculation using the specified timezone
         // If the date falls into the skipped time frame when transitioning into DST (e.g. 1:00 - 3:00 AM for PDT), we want to treat it as if DST hasn't happened yet. So, use .former for dstRepeatedTimePolicy.
         // If the date falls into the repeated time frame when DST ends (e.g. 1:00 - 2:00 AM for PDT), we want the first instance, i.e. the instance before turning back the clock. So, use .former for dstSkippedTimePolicy.
-        return date(from: components, inTimeZone: components.timeZone ?? timeZone, dstRepeatedTimePolicy: .former, dstSkippedTimePolicy: .former)
+        return try? date(from: components, inTimeZone: components.timeZone ?? timeZone, dstRepeatedTimePolicy: .former, dstSkippedTimePolicy: .former)
     }
 
     //  Returns the weekday with reference to `firstWeekday`, in the range of 0...6
@@ -1678,7 +1695,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return dow
     }
 
-    func julianDay(usingJulianReference: Bool, resolvedComponents: ResolvedDateComponents) -> Int {
+    // throws if out of supported julian day range
+    func julianDay(usingJulianReference: Bool, resolvedComponents: ResolvedDateComponents) throws (GregorianCalendarError) -> Int {
 
         var rawMonth: Int // 1-based
         let monthStart = 1
@@ -1703,7 +1721,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
 
         // `julianDayAtBeginningOfYear` points to the noon of the day *before* the beginning of year/month
-        let julianDayAtBeginningOfYear = Self.julianDay(ofDay: 0, month: rawMonth, year: rawYear, useJulianReference: usingJulianReference)
+        let julianDayAtBeginningOfYear = try Self.julianDay(ofDay: 0, month: rawMonth, year: rawYear, useJulianReference: usingJulianReference)
 
         let first = relativeWeekday(fromJulianDay: julianDayAtBeginningOfYear + 1) // weekday of the first day in the month, 0...6
 
@@ -1768,7 +1786,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return julianDay
     }
 
-    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, dstRepeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, dstSkippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> Date? {
+    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, dstRepeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, dstSkippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws (GregorianCalendarError) -> Date {
 
         let resolvedComponents = ResolvedDateComponents(dateComponents: components)
 
@@ -1780,9 +1798,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             break
         }
 
-        var julianDay = self.julianDay(usingJulianReference: useJulianReference, resolvedComponents: resolvedComponents)
+        var julianDay = try self.julianDay(usingJulianReference: useJulianReference, resolvedComponents: resolvedComponents)
         if !useJulianReference && julianDay < julianCutoverDay { // Recalculate using julian reference if we're before cutover
-            julianDay = self.julianDay(usingJulianReference: true, resolvedComponents: resolvedComponents)
+            julianDay = try self.julianDay(usingJulianReference: true, resolvedComponents: resolvedComponents)
         }
 
         let nano_coef = 1_000_000_000
@@ -1858,7 +1876,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     // day and month are 1-based
-    static func julianDay(ofDay day: Int, month: Int, year: Int, useJulianReference: Bool = false) -> Int {
+    // throws if out of supported julian day range
+    static func julianDay(ofDay day: Int, month: Int, year: Int, useJulianReference: Bool = false) throws (GregorianCalendarError) -> Int {
+
         let y = 4716 // number of years from epoch of computation to epoch of calendar
         let j = 1401 // number of days from the epoch of computation to the first day of the Julian period
         let m = 2 // value of M for which M' is zero
@@ -1873,9 +1893,17 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let C = -38
 
         let h = month - m
-        let g = year + y - (n - h) / n
+        let shiftedYear = year.addingReportingOverflow(y)
+        guard !shiftedYear.overflow else {
+            throw .overflow(nil, nil, nil)
+        }
+        let g = shiftedYear.partialValue - (n - h) / n
         let f = (h - 1 + n) % n
-        let e = (p * g + q) / r + day - 1 - j
+        let pg = p.multipliedReportingOverflow(by: g)
+        guard !pg.overflow else {
+            throw .overflow(nil, nil, nil)
+        }
+        let e = (pg.partialValue + q) / r + day - 1 - j
         let J = e + (s * f + t) / u
         let julianDayNumber: Int
         if useJulianReference {
@@ -1891,11 +1919,11 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return date < gregorianStartDate
     }
 
-    func dayOfYear(fromYear year: Int, month: Int, day: Int) -> Int {
+    func dayOfYear(fromYear year: Int, month: Int, day: Int) throws (GregorianCalendarError) -> Int {
         let daysBeforeMonthNonLeap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
         let daysBeforeMonthLeap =    [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
 
-        let julianDay = Self.julianDay(ofDay: day, month: month, year: year)
+        let julianDay = try Self.julianDay(ofDay: day, month: month, year: year)
         let useJulianCalendar = julianDay < julianCutoverDay
         let isLeapYear = gregorianYearIsLeap(year)
         var dayOfYear = (isLeapYear ? daysBeforeMonthLeap : daysBeforeMonthNonLeap)[month - 1] + day
@@ -1936,7 +1964,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         let dateOffsetInSeconds = localDate.timeIntervalSinceReferenceDate.rounded(.down)
         let date = Date(timeIntervalSinceReferenceDate: dateOffsetInSeconds) // Round down the given date to seconds
-        let julianDay = date.julianDay
 
         let useJulianRef = useJulianReference(date)
 
@@ -1944,9 +1971,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if (timeInDay < 0) {
             timeInDay += 86400
         }
-
-        var (year, month, day) = Self.yearMonthDayFromJulianDay(julianDay, useJulianRef: useJulianRef)
-        let isLeapYear = gregorianYearIsLeap(year)
 
         let hour = Int(timeInDay / 3600) // zero-based
         timeInDay = timeInDay.truncatingRemainder(dividingBy: 3600.0)
@@ -1957,54 +1981,80 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let second = Int(timeInDay)
         let nanosecond = Int((localDate.timeIntervalSinceReferenceDate - dateOffsetInSeconds) * 1_000_000_000)
 
-        // To calculate day of year, work backwards with month/day
-        let dayOfYear = dayOfYear(fromYear: year, month: month, day: day)
+        let dayOfYear: Int
+        let weekday: Int
+        let weekOfMonth: Int
+        var yearForWeekOfYear: Int
+        var weekdayOrdinal: Int
+        var weekOfYear: Int
+        var isLeapYear: Bool
+        var year: Int
+        var month: Int
+        var day: Int
+        do {
+            let julianDay = try date.julianDay()
+             (year, month, day) = Self.yearMonthDayFromJulianDay(julianDay, useJulianRef: useJulianRef)
+            isLeapYear = gregorianYearIsLeap(year)
 
-        func remainder(numerator: Int, denominator: Int ) -> Int {
-            let r = numerator % denominator
-            return r >= 0 ? r : r + denominator
-        }
-        // Week of year calculation, from ICU calendar.cpp :: computeWeekFields
-        // 1-based: 1...7
-        let weekday = remainder(numerator: julianDay + 1, denominator: 7) + 1
+            // To calculate day of year, work backwards with month/day
+            dayOfYear = try self.dayOfYear(fromYear: year, month: month, day: day)
+            func remainder(numerator: Int, denominator: Int ) -> Int {
+                let r = numerator % denominator
+                return r >= 0 ? r : r + denominator
+            }
+            // Week of year calculation, from ICU calendar.cpp :: computeWeekFields
+            // 1-based: 1...7
+            weekday = remainder(numerator: julianDay + 1, denominator: 7) + 1
 
-        // 0-based 0...6
-        let relativeWeekday = (weekday + 7 - firstWeekday) % 7
-        let relativeWeekdayForJan1 = (weekday - dayOfYear + 7001 - firstWeekday) % 7
-        var weekOfYear = (dayOfYear - 1 + relativeWeekdayForJan1) / 7 // 0...53
-        if (7 - relativeWeekdayForJan1) >= minimumDaysInFirstWeek {
-            weekOfYear += 1
-        }
+            // 0-based 0...6
+            let relativeWeekday = (weekday + 7 - firstWeekday) % 7
+            let relativeWeekdayForJan1 = (weekday - dayOfYear + 7001 - firstWeekday) % 7
+            weekOfYear = (dayOfYear - 1 + relativeWeekdayForJan1) / 7 // 0...53
+            if (7 - relativeWeekdayForJan1) >= minimumDaysInFirstWeek {
+                weekOfYear += 1
+            }
 
-        var yearForWeekOfYear = year
-        // Adjust for weeks at end of the year that overlap into previous or next calendar year
-        if weekOfYear == 0 {
-            let previousDayOfYear = dayOfYear + (gregorianYearIsLeap(year - 1) ? 366 : 365)
-            weekOfYear = weekNumber(desiredDay: previousDayOfYear, dayOfPeriod: previousDayOfYear, weekday: weekday)
-            yearForWeekOfYear -= 1
-        } else {
-            let lastDayOfYear = (gregorianYearIsLeap(year) ? 366 : 365)
-            // Fast check: For it to be week 1 of the next year, the DOY
-            // must be on or after L-5, where L is yearLength(), then it
-            // cannot possibly be week 1 of the next year:
-            //          L-5                  L
-            // doy: 359 360 361 362 363 364 365 001
-            // dow:      1   2   3   4   5   6   7
-            if dayOfYear >= lastDayOfYear - 5 {
-                var lastRelativeDayOfWeek = (relativeWeekday + lastDayOfYear - dayOfYear) % 7
-                if lastRelativeDayOfWeek < 0 {
-                    lastRelativeDayOfWeek += 7
-                }
+            yearForWeekOfYear = year
+            // Adjust for weeks at end of the year that overlap into previous or next calendar year
+            if weekOfYear == 0 {
+                let previousDayOfYear = dayOfYear + (gregorianYearIsLeap(year - 1) ? 366 : 365)
+                weekOfYear = weekNumber(desiredDay: previousDayOfYear, dayOfPeriod: previousDayOfYear, weekday: weekday)
+                yearForWeekOfYear -= 1
+            } else {
+                let lastDayOfYear = (gregorianYearIsLeap(year) ? 366 : 365)
+                // Fast check: For it to be week 1 of the next year, the DOY
+                // must be on or after L-5, where L is yearLength(), then it
+                // cannot possibly be week 1 of the next year:
+                //          L-5                  L
+                // doy: 359 360 361 362 363 364 365 001
+                // dow:      1   2   3   4   5   6   7
+                if dayOfYear >= lastDayOfYear - 5 {
+                    var lastRelativeDayOfWeek = (relativeWeekday + lastDayOfYear - dayOfYear) % 7
+                    if lastRelativeDayOfWeek < 0 {
+                        lastRelativeDayOfWeek += 7
+                    }
 
-                if ((6 - lastRelativeDayOfWeek) >= minimumDaysInFirstWeek) && ((dayOfYear + 7 - relativeWeekday) > lastDayOfYear) {
-                    weekOfYear = 1
-                    yearForWeekOfYear += 1
+                    if ((6 - lastRelativeDayOfWeek) >= minimumDaysInFirstWeek) && ((dayOfYear + 7 - relativeWeekday) > lastDayOfYear) {
+                        weekOfYear = 1
+                        yearForWeekOfYear += 1
+                    }
                 }
             }
-        }
 
-        let weekOfMonth = weekNumber(desiredDay: day, dayOfPeriod: day, weekday: weekday)
-        let weekdayOrdinal = (day - 1) / 7 + 1
+            weekOfMonth = weekNumber(desiredDay: day, dayOfPeriod: day, weekday: weekday)
+            weekdayOrdinal = (day - 1) / 7 + 1
+        } catch {
+            year = .max
+            month = .max
+            day = .max
+            dayOfYear = .max
+            weekday = .max
+            weekOfMonth = .max
+            yearForWeekOfYear = .max
+            weekdayOrdinal = .max
+            weekOfYear = .max
+            isLeapYear = false
+        }
 
         var dc = DateComponents()
         if components.contains(.calendar) {
@@ -2157,7 +2207,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return nil
     }
 
-    func add(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) -> Date {
+    func add(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) throws (GregorianCalendarError) -> Date {
 
         guard amount != 0 else {
             return date
@@ -2191,10 +2241,20 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             if let era = dc.era, era == 0 {
                 amount = -amount
             }
-            dc.yearForWeekOfYear = (dc.yearForWeekOfYear ?? 0) + amount
+
+            if let yearForWeekOfYear = dc.yearForWeekOfYear {
+                let (res, overflow) = yearForWeekOfYear.addingReportingOverflow(amount)
+                guard !overflow else {
+                    throw .overflow(field, date, nil)
+                }
+                dc.yearForWeekOfYear = res
+            } else {
+                dc.yearForWeekOfYear = amount
+            }
+
             capDay(in: &dc)
             // Use .latter for `repeatedTimePolicy` since we handle the repeated time below ourself
-            resultInWholeSeconds = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
+            resultInWholeSeconds = try self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)
 
         case .year:
             var dc = dateComponents(monthBasedComponents, from: dateInWholeSecond, in: timeZone)
@@ -2202,15 +2262,25 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             if let era = dc.era, era == 0 {
                 amount = -amount
             }
-            dc.year = (dc.year ?? 0) + amount
+
+            if let year = dc.year {
+                let (res, overflow) = year.addingReportingOverflow(amount)
+                guard !overflow else {
+                    throw .overflow(field, date, nil)
+                }
+                dc.year = res
+            } else {
+                dc.year = amount
+            }
+
             capDay(in: &dc)
-            resultInWholeSeconds = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
+            resultInWholeSeconds = try self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)
 
         case .month:
             var dc = dateComponents(monthBasedComponents, from: dateInWholeSecond, in: timeZone)
             dc.month = (dc.month ?? 0) + amount
             capDay(in: &dc) // adding 1 month to Jan 31 should return Feb 29, not Feb 31
-            resultInWholeSeconds = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
+            resultInWholeSeconds = try self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)
         case .quarter:
             // TODO: This isn't supported in Calendar_ICU either. We should do it here though.
             return date
@@ -2316,7 +2386,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return newValue
     }
 
-    func addAndWrap(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) -> Date {
+    func addAndWrap(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) throws (GregorianCalendarError) -> Date {
 
         guard amount != 0 else {
             return date
@@ -2353,7 +2423,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             capDay(in: &dc) // day in month may change if the year changes from a leap year to a non-leap year for Feb
 
             // Use .latter for `repeatedTimePolicy` since we handle the repeated time below ourself
-            result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
+            result = try self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)
 
         case .month:
             var dc = dateComponents(monthBasedComponents, from: date, in: timeZone)
@@ -2364,7 +2434,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             dc.month = newMonth
 
             capDay(in: &dc) // adding 1 month to Jan 31 should return Feb 29, not Feb 31
-            result = self.date(from: dc, inTimeZone: timeZone)!
+            result = try self.date(from: dc, inTimeZone: timeZone)
 
         case .dayOfYear:
             var monthIncludingDayOfYear = monthBasedComponents
@@ -2389,7 +2459,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             adjustedDateComponents.month = nil
             adjustedDateComponents.day = nil
             adjustedDateComponents.dayOfYear = newDayOfYear
-            result = self.date(from: adjustedDateComponents, inTimeZone: timeZone)!
+            result = try self.date(from: adjustedDateComponents, inTimeZone: timeZone)
 
         case .day:
             let (_, monthStart, daysInMonth, inGregorianCutoverMonth) = dayOfMonthConsideringGregorianCutover(date, inTimeZone: timeZone)
@@ -2409,7 +2479,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 let range = minMaxRange(of: .day, in: dc)!
                 let newDay = add(amount: amount, to: day, wrappingTo: range)
                 dc.day = newDay
-                result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
+                result = try self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)
             }
 
         case .hour, .minute, .second:
@@ -2552,7 +2622,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             } else {
                 var dc = dateComponents(monthBasedComponents, from: date, in: .gmt)
                 dc.day = newDayOfMonth
-                result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
+                result = try self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)
             }
 
         case .weekOfYear:
@@ -2570,7 +2640,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 guard let month = work.month, let year = work.year, let day = work.day else {
                     preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
                 }
-                var isoDayOfYear = dayOfYear(fromYear: year, month: month, day: day)
+                var isoDayOfYear = try dayOfYear(fromYear: year, month: month, day: day)
                 if month == 1 && weekOfYear > 52 {
                     // the first week of the next year
                     isoDayOfYear += yearLength(yearForWeekOfYear)
@@ -2591,7 +2661,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
             dc.weekOfYear = newWeekOfYear
 
-            result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
+            result = try self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)
 
         case .yearForWeekOfYear:
             // basically the same as year calculation
@@ -2613,7 +2683,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             dc.yearForWeekOfYear = newValue
             capDay(in: &dc) // day in month may change if the year changes from a leap year to a non-leap year for Feb
 
-            result = self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)!
+            result = try self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)
 
         case .nanosecond:
             return date + (Double(amount) * 1.0e-9)
@@ -2630,7 +2700,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
 
-    internal func date(byAddingAndWrapping components: DateComponents, to date: Date) -> Date? {
+    internal func date(byAddingAndWrapping components: DateComponents, to date: Date) throws (GregorianCalendarError) -> Date {
         let timeZone = components.timeZone ?? self.timeZone
         var result = date
 
@@ -2640,63 +2710,63 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         // The results are the same for most cases regardless of the order except for when the addition moves the date across DST transition.
         // We aim to maintain the clock time when adding larger-than-day units, so that the time in the day remains unchanged even after time zone changes. However, we cannot hold this promise if the result lands in the "skipped hour" on the DST start date as that time does not actually exist. In this case we adjust the time of the day to the correct timezone. There is always some ambiguity, but matching the order used in `dateComponents(_:from:to:)` at least allows round tripping.
         if let amount = components.era {
-            result = addAndWrap(.era, to: result, amount: amount, inTimeZone: timeZone) }
+            result = try addAndWrap(.era, to: result, amount: amount, inTimeZone: timeZone) }
         if let amount = components.year {
-            result = addAndWrap(.year, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.year, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.yearForWeekOfYear {
-            result = addAndWrap(.yearForWeekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.yearForWeekOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.quarter {
-            result = addAndWrap(.quarter, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.quarter, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.month {
-            result = addAndWrap(.month, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.month, to: result, amount: amount, inTimeZone: timeZone)
         }
 
         // Weeks
         if let amount = components.weekOfYear {
-            result = addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
         // `week` is for backward compatibility only, and is only used if weekOfYear is missing
         if let amount = components.week, components.weekOfYear == nil {
-            result = addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.weekOfMonth {
-            result = addAndWrap(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.weekdayOrdinal {
-            result = addAndWrap(.weekdayOrdinal, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.weekdayOrdinal, to: result, amount: amount, inTimeZone: timeZone)
         }
 
         // Days
         if let amount = components.day {
-            result = addAndWrap(.day, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.day, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.dayOfYear {
-            result = addAndWrap(.dayOfYear, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.dayOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.weekday {
-            result = addAndWrap(.weekday, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.weekday, to: result, amount: amount, inTimeZone: timeZone)
         }
 
         // Time
         if let amount = components.hour {
-            result = addAndWrap(.hour, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.hour, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.minute {
-            result = addAndWrap(.minute, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.minute, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.second {
-            result = addAndWrap(.second, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.second, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.nanosecond {
-            result = addAndWrap(.nanosecond, to: result, amount: amount, inTimeZone: timeZone)
+            result = try addAndWrap(.nanosecond, to: result, amount: amount, inTimeZone: timeZone)
         }
         return result
     }
 
-    internal func date(byAddingAndCarryingOverComponents components: DateComponents, to date: Date) -> Date? {
+    internal func date(byAddingAndCarryingOverComponents components: DateComponents, to date: Date) throws (GregorianCalendarError) -> Date {
         let timeZone = components.timeZone ?? self.timeZone
         var result = date
 
@@ -2705,74 +2775,78 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         // Add from the largest component to the smallest to match the order used in `dateComponents(_:from:to:)` to allow round tripping
         // See more discussion in date(byAddingAndWrapping:to:)
         if let amount = components.era {
-            result = add(.era, to: result, amount: amount, inTimeZone: timeZone) }
+            result = try add(.era, to: result, amount: amount, inTimeZone: timeZone) }
         if let amount = components.year {
-            result = add(.year, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.year, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.yearForWeekOfYear {
-            result = add(.yearForWeekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.yearForWeekOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.quarter {
-            result = add(.quarter, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.quarter, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.month {
-            result = add(.month, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.month, to: result, amount: amount, inTimeZone: timeZone)
         }
 
         // Weeks
         if let amount = components.weekOfYear {
-            result = add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.weekOfMonth {
-            result = add(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.weekOfMonth, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.weekdayOrdinal {
-            result = add(.weekdayOrdinal, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.weekdayOrdinal, to: result, amount: amount, inTimeZone: timeZone)
         }
         // `week` is for backward compatibility only, and is only used if weekOfYear is missing
         if let amount = components.week, components.weekOfYear == nil {
-            result = add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.weekOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
 
         // Days
         if let amount = components.day {
-            result = add(.day, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.day, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.dayOfYear {
-            result = add(.dayOfYear, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.dayOfYear, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.weekday {
-            result = add(.weekday, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.weekday, to: result, amount: amount, inTimeZone: timeZone)
         }
 
         // Time
         if let amount = components.hour {
-            result = add(.hour, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.hour, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.minute {
-            result = add(.minute, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.minute, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.second {
-            result = add(.second, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.second, to: result, amount: amount, inTimeZone: timeZone)
         }
         if let amount = components.nanosecond {
-            result = add(.nanosecond, to: result, amount: amount, inTimeZone: timeZone)
+            result = try add(.nanosecond, to: result, amount: amount, inTimeZone: timeZone)
         }
         return result
     }
 
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
-        if wrappingComponents {
-            return self.date(byAddingAndWrapping: components, to: date)
-        } else {
-            return self.date(byAddingAndCarryingOverComponents: components, to: date)
+        do {
+            if wrappingComponents {
+                return try self.date(byAddingAndWrapping: components, to: date)
+            } else {
+                return try self.date(byAddingAndCarryingOverComponents: components, to: date)
+            }
+        } catch {
+            return nil
         }
     }
 
     // MARK: Differences
 
     // Calendar::fieldDifference
-    func difference(inComponent component: Calendar.Component, from start: Date, to end: Date) throws -> (difference: Int, newStart: Date) {
+    func difference(inComponent component: Calendar.Component, from start: Date, to end: Date) throws (GregorianCalendarError) -> (difference: Int, newStart: Date) {
         guard end != start else {
             return (0, start)
         }
@@ -2796,8 +2870,12 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             } else {
                 Int(diffInNano)
             }
-            let advanced = add(component, to: start, amount: diff, inTimeZone: timeZone)
-            return (diff, advanced)
+            do {
+                let advanced = try add(component, to: start, amount: diff, inTimeZone: timeZone)
+                return (diff, advanced)
+            } catch {
+                throw .overflow(component, start, end)
+            }
 
         case .year, .month, .day, .hour, .minute, .second, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear:
             // continue to below
@@ -2808,7 +2886,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         var max = forward ? 1 : -1
         var min = 0
         while true {
-            let ms = add(component, to: start, amount: max, inTimeZone: timeZone)
+            let ms = try add(component, to: start, amount: max, inTimeZone: timeZone)
             guard forward ? (ms > start) : (ms < start) else {
                 throw GregorianCalendarError.notAdvancing(start, ms)
             }
@@ -2830,7 +2908,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         while (forward && (max - min) > 1) || (!forward && (min - max > 1)) {
             let t = min + (max - min) / 2
 
-            let ms = add(component, to: start, amount: t, inTimeZone: timeZone)
+            let ms = try add(component, to: start, amount: t, inTimeZone: timeZone)
             if ms == end {
                 return (t, ms)
             } else if (forward && ms > end) || (!forward && ms < end) {
@@ -2840,7 +2918,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             }
         }
 
-        let advanced = add(component, to: start, amount: min, inTimeZone: timeZone)
+        let advanced = try add(component, to: start, amount: min, inTimeZone: timeZone)
 
         return (min, advanced)
     }
@@ -2944,7 +3022,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                     } else {
                         dc.setValue(diff, for: component)
                     }
-                } catch let error as GregorianCalendarError {
+                } catch {
 #if canImport(os)
                     switch error {
                     case .overflow(_, _, _):
@@ -2954,8 +3032,6 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                     }
 #endif
                     dc.setValue(end > start ? Int(Int32.max) : Int(Int32.min), for: component)
-                } catch {
-                    preconditionFailure("Unknown error: \(error)")
                 }
 
             case .timeZone, .isLeapMonth, .calendar:
