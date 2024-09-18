@@ -1503,6 +1503,15 @@ data1 = <7465
             _testRoundTrip(of: input, in: .xml)
         }
     }
+    
+    func testCustomSubclass() throws {
+        // verify we consult the subclass for the output format
+        let encodeMe = ["hello":"world"]
+        let encoder = XMLOnlyEncoder()
+        let data = try encoder.encode(encodeMe)
+        let dataAsStr = String(data: data, encoding: .utf8)!
+        XCTAssertTrue(dataAsStr.hasPrefix("<?xml"))
+    }
 }
             
 
@@ -2036,3 +2045,11 @@ private struct MultipleDecodeOptionsTestType : Codable, Equatable {
     }
 }
 
+// MARK: - Helper Class
+
+class XMLOnlyEncoder : PropertyListEncoder, @unchecked Sendable {
+    override var outputFormat: PropertyListDecoder.PropertyListFormat {
+        get { return .xml }
+        set { }
+    }
+}
