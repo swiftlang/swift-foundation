@@ -416,6 +416,7 @@ final class StringTests : XCTestCase {
         XCTAssertEqual("//".lastPathComponent, "/")
         XCTAssertEqual("/////".lastPathComponent, "/")
         XCTAssertEqual("/./..//./..//".lastPathComponent, "..")
+        XCTAssertEqual("/😎/😂/❤️/".lastPathComponent, "❤️")
     }
 
     func testRemovingDotSegments() {
@@ -858,6 +859,34 @@ final class StringTests : XCTestCase {
         XCTAssertEqual("/path.foo//".deletingPathExtension(), "/path/")
     }
 
+    func testPathComponents() {
+        let tests: [(String, [String])] = [
+            ("", []),
+            ("/", ["/"]),
+            ("//", ["/", "/"]),
+            ("a", ["a"]),
+            ("/a", ["/", "a"]),
+            ("a/", ["a", "/"]),
+            ("/a/", ["/", "a", "/"]),
+            ("///", ["/", "/"]),
+            ("//a", ["/", "a"]),
+            ("a//", ["a", "/"]),
+            ("//a//", ["/", "a", "/"]),
+            ("a/b/c", ["a", "b", "c"]),
+            ("/a/b/c", ["/", "a", "b", "c"]),
+            ("a/b/c/", ["a", "b", "c", "/"]),
+            ("/a/b/c/", ["/", "a", "b", "c", "/"]),
+            ("/abc//def///ghi/jkl//123///456/7890//", ["/", "abc", "def", "ghi", "jkl", "123", "456", "7890", "/"]),
+            ("/😎/😂/❤️/", ["/", "😎", "😂", "❤️", "/"]),
+            ("J'aime//le//café//☕️", ["J'aime", "le", "café", "☕️"]),
+            ("U+2215∕instead∕of∕slash(U+002F)", ["U+2215∕instead∕of∕slash(U+002F)"]),
+        ]
+        for (input, expected) in tests {
+            let result = input.pathComponents
+            XCTAssertEqual(result, expected)
+        }
+    }
+
     func test_dataUsingEncoding() {
         let s = "hello 🧮"
         
@@ -1006,33 +1035,47 @@ final class StringTests : XCTestCase {
         XCTAssertEqual("e\u{301}\u{301}f".data(using: .nonLossyASCII, allowLossyConversion: true), Data([UInt8(ascii: "e"), UInt8(ascii: "?"), UInt8(ascii: "?"), UInt8(ascii: "f")]))
     }
 
-    func test_transmutingCompressingSlashes() {
+    func test_compressingSlashes() {
         let testCases: [(String, String)] = [
+            ("", ""),                       // Empty string
+            ("/", "/"),                     // Single slash
             ("/////", "/"),                 // All slashes
             ("ABCDE", "ABCDE"),             // No slashes
             ("//ABC", "/ABC"),              // Starts with multiple slashes
             ("/ABCD", "/ABCD"),             // Starts with single slash
             ("ABC//", "ABC/"),              // Ends with multiple slashes
             ("ABCD/", "ABCD/"),             // Ends with single slash
-            ("AB//DF/GH//I", "AB/DF/GH/I") // Internal slashes
+            ("//ABC//", "/ABC/"),           // Starts and ends with multiple slashes
+            ("AB/CD", "AB/CD"),             // Single internal slash
+            ("AB//DF/GH//I", "AB/DF/GH/I"), // Internal slashes
+            ("//😎///😂/❤️//", "/😎/😂/❤️/")
         ]
         for (testString, expectedResult) in testCases {
             let result = testString
-                ._transmutingCompressingSlashes()
+                ._compressingSlashes()
             XCTAssertEqual(result, expectedResult)
         }
     }
 
     func test_pathHasDotDotComponent() {
         let testCases: [(String, Bool)] = [
-            ("../AB", true),            //Begins with ..
+            ("../AB", true),            // Begins with ..
             ("/ABC/..", true),          // Ends with ..
             ("/ABC/../DEF", true),      // Internal ..
             ("/ABC/DEF..", false),      // Ends with .. but not part of path
             ("ABC/../../DEF", true),    // Multiple internal dot dot
             ("/AB/./CD", false),        // Internal single dot
             ("/AB/..../CD", false),     // Internal multiple dots
-            ("..", true)                // Dot dot only
+            ("..", true),               // Dot dot only
+            ("...", false),
+            ("..AB", false),
+            ("..AB/", false),
+            ("..AB/..", true),
+            (".AB/./.", false),
+            ("/..AB/", false),
+            ("A../", false),
+            ("/..", true),
+            ("././/./.", false)
         ]
         for (testString, expectedResult) in testCases {
             let result = testString
