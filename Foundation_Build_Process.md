@@ -16,7 +16,7 @@ This is the quickest way to iterate on Foundation to add new APIs or fix bugs. S
 
 ## Individual Build (via SwiftPM)
 
-Each invididual project can be built via SwiftPM. This is useful when quickly iterating at desk and when developing within IDEs with integrated SwiftPM support such as Xcode. The SwiftPM build is configured via the `Package.swift` manifest at the root directory of each project. This build format supports building only Foundation components and their immediate dependencies without the need to build other toolchain libraries such as the standard library or the compiler itself. This is also the only build format that supports building and running unit tests.
+Each individual project can be built via SwiftPM. This is useful when quickly iterating at desk and when developing within IDEs with integrated SwiftPM support such as Xcode. The SwiftPM build is configured via the `Package.swift` manifest at the root directory of each project. This build format supports building only Foundation components and their immediate dependencies without the need to build other toolchain libraries such as the standard library or the compiler itself. This is also the only build format that supports building and running unit tests.
 
 ### When is this configuration used?
 
