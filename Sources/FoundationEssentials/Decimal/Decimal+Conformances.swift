@@ -236,6 +236,21 @@ extension Decimal /* : FloatingPoint */ {
     }
 
     public init(sign: FloatingPointSign, exponent: Int, significand: Decimal) {
+#if FOUNDATION_FRAMEWORK
+        // Compatibility path
+        if Self.compatibility1 {
+            self.init(
+                _exponent: Int32(exponent) + significand._exponent,
+                _length: significand._length,
+                _isNegative: sign == .plus ? 0 : 1,
+                _isCompact: significand._isCompact,
+                _reserved: 0,
+                _mantissa: significand._mantissa
+            )
+            return
+        }
+#endif
+
         self = significand
         do {
             self = try significand._multiplyByPowerOfTen(
