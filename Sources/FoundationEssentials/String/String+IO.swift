@@ -66,7 +66,7 @@ extension String {
         where S.Iterator.Element == UInt8
     {
         switch encoding {
-        case .ascii:
+        case .ascii, .nonLossyASCII:
             func makeString(buffer: UnsafeBufferPointer<UInt8>) -> String? {
                 return String(_validating: buffer, as: Unicode.ASCII.self)
             }

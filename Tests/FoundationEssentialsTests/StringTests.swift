@@ -983,6 +983,13 @@ final class StringTests : XCTestCase {
         XCTAssertEqual("e\u{301}\u{301}f".data(using: .ascii, allowLossyConversion: true), Data([UInt8(ascii: "e"), 0xFF, 0xFF, UInt8(ascii: "f")]))
         XCTAssertEqual("e\u{301}\u{301}f".data(using: .nonLossyASCII, allowLossyConversion: true), Data([UInt8(ascii: "e"), UInt8(ascii: "?"), UInt8(ascii: "?"), UInt8(ascii: "f")]))
     }
+    
+    func test_initWithBytes_ascii() {
+        XCTAssertEqual(String(bytes: "abc".utf8, encoding: String._Encoding.ascii), "abc")
+        XCTAssertEqual(String(bytes: "abc".utf8, encoding: String._Encoding.nonLossyASCII), "abc")
+        XCTAssertEqual(String(bytes: "e\u{301}\u{301}f".utf8, encoding: String._Encoding.ascii), nil)
+        XCTAssertEqual(String(bytes: "e\u{301}\u{301}f".utf8, encoding: String._Encoding.nonLossyASCII), nil)
+    }
 
     func test_transmutingCompressingSlashes() {
         let testCases: [(String, String)] = [
