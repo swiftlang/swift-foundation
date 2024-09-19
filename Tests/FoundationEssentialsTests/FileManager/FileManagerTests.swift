@@ -412,9 +412,13 @@ final class FileManagerTests : XCTestCase {
     func testCreateSymbolicLinkAtPath() throws {
         try FileManagerPlayground {
             "foo"
+            Directory("dir") {}
         }.test {
             try $0.createSymbolicLink(atPath: "bar", withDestinationPath: "foo")
             XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: "bar"), "foo")
+
+            try $0.createSymbolicLink(atPath: "dir_link", withDestinationPath: "dir")
+            XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: "dir_link"), "dir")
             
             XCTAssertThrowsError(try $0.createSymbolicLink(atPath: "bar", withDestinationPath: "foo")) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileWriteFileExists)
@@ -425,6 +429,21 @@ final class FileManagerTests : XCTestCase {
             XCTAssertThrowsError(try $0.destinationOfSymbolicLink(atPath: "foo")) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadUnknown)
             }
+        }
+
+        try FileManagerPlayground {
+            Directory("dir") {
+                Directory("other_dir") {
+                    "file"
+                }
+            }
+        }.test {
+            // Create a relative symlink to other_dir from within dir (tests windows special dir symlink handling)
+            try $0.createSymbolicLink(atPath: "dir/link", withDestinationPath: "other_dir")
+
+            // Ensure it is created successfully
+            XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: "dir/link"), "other_dir")
+            XCTAssertEqual(try $0.contentsOfDirectory(atPath: "dir/link"), ["file"])
         }
     }
     
