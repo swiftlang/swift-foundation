@@ -444,6 +444,26 @@ final class FileManagerTests : XCTestCase {
             // Ensure it is created successfully
             XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: "dir/link"), "other_dir")
             XCTAssertEqual(try $0.contentsOfDirectory(atPath: "dir/link"), ["file"])
+            
+            do {
+                // Second symlink creation with an absolute path
+                let absolute = URL(filePath: "dir/link2", relativeTo: URL(filePath: $0.currentDirectoryPath, directoryHint: .isDirectory)).path
+                try $0.createSymbolicLink(atPath: absolute, withDestinationPath: "other_dir")
+                
+                // Ensure it is created successfully
+                XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: "dir/link2"), "other_dir")
+                XCTAssertEqual(try $0.contentsOfDirectory(atPath: "dir/link2"), ["file"])
+            }
+            
+            do {
+                // And lastly a symlink to an absolute path
+                let absolute = URL(filePath: "dir/other_dir", relativeTo: URL(filePath: $0.currentDirectoryPath, directoryHint: .isDirectory)).path
+                try $0.createSymbolicLink(atPath: "dir/link3", withDestinationPath: absolute)
+                
+                // Ensure it is created successfully
+                XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: "dir/link3"), absolute)
+                XCTAssertEqual(try $0.contentsOfDirectory(atPath: "dir/link3"), ["file"])
+            }
         }
     }
     
