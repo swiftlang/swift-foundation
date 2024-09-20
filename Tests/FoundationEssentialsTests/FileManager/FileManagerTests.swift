@@ -461,7 +461,7 @@ final class FileManagerTests : XCTestCase {
                 try $0.createSymbolicLink(atPath: "dir/link3", withDestinationPath: absolute)
                 
                 // Ensure it is created successfully
-                XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: "dir/link3"), absolute)
+                XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: "dir/link3"), absolute.withFileSystemRepresentation { String(cString: $0!) })
                 XCTAssertEqual(try $0.contentsOfDirectory(atPath: "dir/link3"), ["file"])
             }
         }
