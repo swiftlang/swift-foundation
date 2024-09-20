@@ -252,10 +252,7 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
     var identifierCapturingPreferences: String {
         LocaleCache.cache.current.identifierCapturingPreferences
     }
-    
-    var doesNotRequireSpecialCaseHandling: Bool {
-        LocaleCache.cache.current.doesNotRequireSpecialCaseHandling
-    }
+
     
 #if FOUNDATION_FRAMEWORK
     func pref(for key: String) -> Any? {

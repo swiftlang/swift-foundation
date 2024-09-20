@@ -132,8 +132,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     let identifierCapturingPreferences: String
     let calendarIdentifier: Calendar.Identifier
     
-    let doesNotRequireSpecialCaseHandling: Bool
-    
     let prefs: LocalePreferences?
     
     private let lock: LockedState<State>
@@ -157,7 +155,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     required init(identifier: String, prefs: LocalePreferences? = nil) {
         self.identifier = Locale._canonicalLocaleIdentifier(from: identifier)
-        doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
         calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
         identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
@@ -166,7 +163,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     required init(components: Locale.Components) {
         self.identifier = components.icuIdentifier
-        doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         prefs = nil
         calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
         identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
@@ -284,7 +280,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         }
         
         self.identifier = Locale._canonicalLocaleIdentifier(from: fixedIdent)
-        doesNotRequireSpecialCaseHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(self.identifier)
         self.prefs = prefs
         calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
         identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
