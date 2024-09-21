@@ -4,10 +4,6 @@ Contributions to Foundation are welcome! This project follows the [contribution 
 
 Please see the [Foundation Evolution Process](Evolution.md) for any change that adds or modifies public API.
 
-## Licensing
-
-By submitting a pull request, you represent that you have the right to license your contribution to Apple and the community, and agree by submitting the patch that your contributions are licensed under the [Swift license](https://swift.org/LICENSE.txt).
-
 ## Bug reports
 
 We are using [GitHub Issues](https://github.com/apple/swift-foundation/issues) for tracking bugs, feature requests, and other work.
