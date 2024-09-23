@@ -21,6 +21,10 @@ public struct CocoaError : _BridgedStoredNSError {
         self._nsError = error
     }
     
+    internal init(_uncheckedNSError error: NSError) {
+        self._nsError = error
+    }
+    
     public static var errorDomain: String { return NSCocoaErrorDomain }
     
     public var hashValue: Int {

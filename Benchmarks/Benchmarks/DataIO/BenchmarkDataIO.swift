@@ -30,14 +30,6 @@ import Glibc
 import Darwin
 #endif
 
-func testPath() -> URL {
-    #if compiler(>=6)
-    FileManager.default.temporaryDirectory.appending(path: "testfile-\(UUID().uuidString)", directoryHint: .notDirectory)
-    #else
-    FileManager.default.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
-    #endif
-}
-
 func generateTestData(count: Int) -> Data {
     let memory = malloc(count)!
     let ptr = memory.bindMemory(to: UInt8.self, capacity: count)
@@ -51,17 +43,28 @@ func generateTestData(count: Int) -> Data {
     return Data(bytesNoCopy: ptr, count: count, deallocator: .free)
 }
 
-func cleanup(at path: URL) {
-    try? FileManager.default.removeItem(at: path)
+func cleanupTestPath() {
+    try? FileManager.default.removeItem(at: testPath)
     // Ignore any errors
 }
 
 // 16 MB file, big enough to trigger things like chunking
 let data = generateTestData(count: 1 << 24)
-let readMe = testPath()
+#if compiler(>=6)
+let testPath = FileManager.default.temporaryDirectory.appending(path: "testfile-\(UUID().uuidString)", directoryHint: .notDirectory)
+#else
+let testPath = FileManager.default.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
+#endif
+let nonExistentPath = URL(filePath: "/does-not-exist", directoryHint: .notDirectory)
 
 let base64Data = generateTestData(count: 1024 * 1024)
 let base64DataString = base64Data.base64EncodedString()
+
+extension Benchmark.Configuration {
+    fileprivate static var cleanupTestPathConfig: Self {
+        .init(teardown: cleanupTestPath)
+    }
+}
 
 let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
@@ -75,44 +78,78 @@ let benchmarks = {
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput]
     #endif
 
-    Benchmark("read-write-emptyFile") { benchmark in
-        let path = testPath()
+    Benchmark("read-write-emptyFile", configuration: .cleanupTestPathConfig) { benchmark in
         let data = Data()
-        try data.write(to: path)
-        let read = try Data(contentsOf: path, options: [])
-        cleanup(at: path)
+        try data.write(to: testPath)
+        let read = try Data(contentsOf: testPath, options: [])
     }
 
-    Benchmark("write-regularFile") { benchmark in
-        let path = testPath()
-        try data.write(to: path)
-        cleanup(at: path)
+    Benchmark("write-regularFile", configuration: .cleanupTestPathConfig) { benchmark in
+        try data.write(to: testPath)
+    }
+    
+    Benchmark("write-regularFile-atomic", configuration: .cleanupTestPathConfig) { benchmark in
+        try data.write(to: testPath, options: .atomic)
+    }
+    
+    Benchmark("write-regularFile-alreadyExists",
+              configuration: .init(
+                setup: {
+                    try! Data().write(to: testPath)
+                },
+                teardown: cleanupTestPath
+              )
+    ) { benchmark in
+        try? data.write(to: testPath)
+    }
+    
+    Benchmark("write-regularFile-alreadyExists-atomic",
+              configuration: .init(
+                setup: {
+                    try! Data().write(to: testPath)
+                },
+                teardown: cleanupTestPath
+              )
+    ) { benchmark in
+        try? data.write(to: testPath, options: .atomic)
     }
     
     Benchmark("read-regularFile", 
               configuration: .init(
                 setup: {
-                    try! data.write(to: readMe)
+                    try! data.write(to: testPath)
                 },
-                teardown: {
-                    cleanup(at: readMe)
-                }
+                teardown: cleanupTestPath
               )
     ) { benchmark in
-        blackHole(try Data(contentsOf: readMe))
+        blackHole(try Data(contentsOf: testPath))
+    }
+    
+    Benchmark("read-nonExistentFile") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(try? Data(contentsOf: nonExistentPath))
+        }
+    }
+    
+    Benchmark("read-nonExistentFile-userInfo") { benchmark in
+        for _ in benchmark.scaledIterations {
+            do {
+                blackHole(try Data(contentsOf: nonExistentPath))
+            } catch {
+                blackHole((error as? CocoaError)?.userInfo["NSURLErrorKey"])
+            }
+        }
     }
     
     Benchmark("read-hugeFile",
               configuration: .init(
                 setup: {
-                    try! generateTestData(count: 1 << 30).write(to: readMe)
+                    try! generateTestData(count: 1 << 30).write(to: testPath)
                 },
-                teardown: {
-                    cleanup(at: readMe)
-                }
+                teardown: cleanupTestPath
               )
     ) { benchmark in
-        blackHole(try Data(contentsOf: readMe))
+        blackHole(try Data(contentsOf: testPath))
     }
     
     // MARK: base64
