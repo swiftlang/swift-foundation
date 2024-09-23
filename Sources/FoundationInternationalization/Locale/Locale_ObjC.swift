@@ -219,7 +219,7 @@ extension NSLocale {
     @objc(_doesNotRequireSpecialCaseHandling)
     func _doesNotRequireSpecialCaseHandling() -> Bool {
         // Unable to use cached locale; create a new one. Subclass `_NSSwiftLocale` implements a better version
-        return Locale(identifier: localeIdentifier).doesNotRequireSpecialCaseHandling
+        Locale.identifierDoesNotRequireSpecialCaseHandling(localeIdentifier)
     }
 }
 
@@ -228,9 +228,13 @@ extension NSLocale {
 @objc(_NSSwiftLocale)
 internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
     var locale: Locale
+    var doesNotRequireSpecialHandling: Bool?
 
     internal init(_ locale: Locale) {
         self.locale = locale
+        // We cannot call `locale.identifier` to get the actual value here because that could trigger a recursive call into  LocaleCache. If we enter from this `init` just lazily fetch the variable.
+        self.doesNotRequireSpecialHandling = nil
+
         // The superclass does not care at all what the identifier is. Avoid a potentially recursive call into the Locale cache here by just using an empty string.
         super.init(localeIdentifier: "")
     }
@@ -244,9 +248,10 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
             return NSLocale.self
         }
     }
-    
+
     override init(localeIdentifier string: String) {
         self.locale = Locale(identifier: string)
+        self.doesNotRequireSpecialHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(string)
         super.init(localeIdentifier: "")
     }
 
@@ -266,6 +271,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
         }
 
         locale = Locale(identifier: ident)
+        doesNotRequireSpecialHandling = Locale.identifierDoesNotRequireSpecialCaseHandling(ident)
 
         // Must call a DI; this one does nothing so it's safe to call here.
         super.init(localeIdentifier: "")
@@ -521,7 +527,11 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
     }
     
     override func _doesNotRequireSpecialCaseHandling() -> Bool {
-        return locale.doesNotRequireSpecialCaseHandling
+        if let doesNotRequireSpecialHandling {
+            return doesNotRequireSpecialHandling
+        }
+
+        return Locale.identifierDoesNotRequireSpecialCaseHandling(locale.identifier)
     }
 }
 

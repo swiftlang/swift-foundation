@@ -742,11 +742,6 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// - "nl": Dutch
     /// - "el": Greek
     /// For all other locales such as en_US, this is `false`.
-    internal var doesNotRequireSpecialCaseHandling: Bool {
-        // We call into the _LocaleBase because this value is cached in many cases. They will defer the initial calculation to the below helper function.
-        _locale.doesNotRequireSpecialCaseHandling
-    }
-    
     package static func identifierDoesNotRequireSpecialCaseHandling(_ identifier: String) -> Bool {
         guard identifier.count >= 2 else { return true }
 

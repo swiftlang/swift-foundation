@@ -86,8 +86,6 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
     
     var identifierCapturingPreferences: String { get }
     
-    var doesNotRequireSpecialCaseHandling: Bool { get }
-    
 #if FOUNDATION_FRAMEWORK
     func pref(for key: String) -> Any?
     
@@ -101,10 +99,6 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
 }
 
 extension _LocaleProtocol {
-    package var doesNotRequireSpecialCaseHandling: Bool {
-        // Some implementations may cache this value, but we can provide a default value here.
-        Locale.identifierDoesNotRequireSpecialCaseHandling(identifier)
-    }
     
     package var regionCode: String? {
         region?.identifier

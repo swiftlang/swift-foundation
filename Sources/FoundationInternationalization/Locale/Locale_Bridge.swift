@@ -316,10 +316,6 @@ internal final class _LocaleBridged: _LocaleProtocol, @unchecked Sendable {
     func pref(for key: String) -> Any? {
         nil
     }
-    
-    var doesNotRequireSpecialCaseHandling: Bool {
-        Locale.identifierDoesNotRequireSpecialCaseHandling(identifier)
-    }
 }
 
 #endif
