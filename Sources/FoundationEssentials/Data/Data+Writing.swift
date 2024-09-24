@@ -345,10 +345,8 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
         } catch {
-            if let auxPath {
-                try auxPath.withNTPathRepresentation { pwszAuxPath in
-                    _ = DeleteFileW(pwszAuxPath)
-                }
+            try auxPath.withNTPathRepresentation { pwszAuxPath in
+                _ = DeleteFileW(pwszAuxPath)
             }
 
             if callback?.isCancelled ?? false {
@@ -359,9 +357,6 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
         }
 
         writeExtendedAttributes(fd: fd, attributes: attributes)
-
-        // We're done now
-        guard let auxPath else { return }
 
         _close(fd)
         fd = -1

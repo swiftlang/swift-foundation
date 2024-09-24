@@ -103,12 +103,12 @@ extension CocoaError {
 
 #if os(Windows)
 extension CocoaError.Code {
-    fileprivate init(win32: DWORD, reading: Bool) {
-        self = switch (reading, dwError) {
+    fileprivate init(win32: DWORD, reading: Bool, emptyPath: Bool? = nil) {
+        self = switch (reading, win32) {
         case (true, ERROR_FILE_NOT_FOUND), (true, ERROR_PATH_NOT_FOUND):
             // Windows will return ERROR_FILE_NOT_FOUND or ERROR_PATH_NOT_FOUND
             // for empty paths.
-            (path?.isEmpty ?? false) ? .fileReadInvalidFileName : .fileReadNoSuchFile
+            (emptyPath ?? false) ? .fileReadInvalidFileName : .fileReadNoSuchFile
         case (true, ERROR_ACCESS_DENIED): .fileReadNoPermission
         case (true, ERROR_INVALID_ACCESS): .fileReadNoPermission
         case (true, ERROR_INVALID_DRIVE): .fileReadNoSuchFile
@@ -123,7 +123,7 @@ extension CocoaError.Code {
         case (false, ERROR_FILE_NOT_FOUND), (false, ERROR_PATH_NOT_FOUND):
             // Windows will return ERROR_FILE_NOT_FOUND or ERROR_PATH_NOT_FOUND
             // for empty paths.
-            (path?.isEmpty ?? false) ? .fileWriteInvalidFileName : .fileNoSuchFile
+            (emptyPath ?? false) ? .fileWriteInvalidFileName : .fileNoSuchFile
         case (false, ERROR_ACCESS_DENIED): .fileWriteNoPermission
         case (false, ERROR_INVALID_ACCESS): .fileWriteNoPermission
         case (false, ERROR_INVALID_DRIVE): .fileNoSuchFile
@@ -147,14 +147,15 @@ extension CocoaError {
     static func errorWithFilePath(_ path: PathOrURL, win32 dwError: DWORD, reading: Bool) -> CocoaError {
         switch path {
         case let .path(path):
-            return CocoaError(.init(win32: dwError, reading: reading), path: path, underlying: Win32Error(dwError))
+            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path.isEmpty), path: path, underlying: Win32Error(dwError))
         case let .url(url):
-            return CocoaError(.init(win32: dwError, reading: reading), path: url.withUnsafeFileSystemRepresentation { String(cString: $0!) }, url: url, underlying: Win32Error(dwError))
+            let pathStr = url.withUnsafeFileSystemRepresentation { String(cString: $0!) }
+            return CocoaError(.init(win32: dwError, reading: reading, emptyPath: pathStr.isEmpty), path: pathStr, url: url, underlying: Win32Error(dwError))
         }
     }
     
     static func errorWithFilePath(_ path: String? = nil, win32 dwError: DWORD, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
-        return CocoaError(.init(win32: dwError, reading: reading), path: path, underlying: Win32Error(dwError), source: source, destination: destination)
+        return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path?.isEmpty), path: path, underlying: Win32Error(dwError), source: source, destination: destination)
     }
 }
 #endif
