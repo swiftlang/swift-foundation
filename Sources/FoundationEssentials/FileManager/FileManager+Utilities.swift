@@ -295,7 +295,7 @@ extension FileManager {
     @nonobjc
     var safeDelegate: FileManagerDelegate? {
 #if FOUNDATION_FRAMEWORK
-        self._safeDelegate() as? FileManagerDelegate
+        self._safeDelegate()
 #else
         self.delegate
 #endif

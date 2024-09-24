@@ -125,12 +125,18 @@ private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBuf
 
 private func cleanupTemporaryDirectory(at inPath: String?) {
     guard let inPath else { return }
+    #if canImport(Darwin) || os(Linux)
+    // Since we expect the directory to be empty at this point, try rmdir which is much faster than Darwin's removefile(3) for known empty directories
+    if inPath.withFileSystemRepresentation({ $0.flatMap(rmdir) }) == 0 {
+        return
+    }
+    #endif
     // Attempt to use FileManager, ignore error
     try? FileManager.default.removeItem(atPath: inPath)
 }
 
 /// Caller is responsible for calling `close` on the `Int32` file descriptor.
-private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, prefix: String, options: Data.WritingOptions) throws -> (Int32, String) {
+private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, prefix: String, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String) {
 #if os(WASI)
     // WASI does not have temp directories
     throw CocoaError(.featureUnsupported)
@@ -154,12 +160,12 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             // Furthermore, we can't compatibly switch to mkstemp() until we have the ability to set fchmod correctly, which requires the ability to query the current umask, which we don't have. (22033100)
 #if os(Windows)
             guard _mktemp_s(templateFileSystemRep, template.count + 1) == 0 else {
-                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
             let flags: CInt = _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR
 #else
             guard mktemp(templateFileSystemRep) != nil else {
-                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
             let flags: CInt = O_CREAT | O_EXCL | O_RDWR
 #endif
@@ -172,7 +178,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             
             // If the file exists, we repeat. Otherwise throw the error.
             if errno != EEXIST {
-                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
 
             // Try again
@@ -194,12 +200,25 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
 
 /// Returns `(file descriptor, temporary file path, temporary directory path)`
 /// Caller is responsible for calling `close` on the `Int32` file descriptor and calling `cleanupTemporaryDirectory` on the temporary directory path. The temporary directory path may be nil, if it does not need to be cleaned up.
-private func createProtectedTemporaryFile(at destinationPath: String, inPath: PathOrURL, options: Data.WritingOptions) throws -> (Int32, String, String?) {
+private func createProtectedTemporaryFile(at destinationPath: String, inPath: PathOrURL, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String, String?) {
 #if FOUNDATION_FRAMEWORK
     if _foundation_sandbox_check(getpid(), nil) != 0 {
         // Convert the path back into a string
         let url = URL(fileURLWithPath: destinationPath, isDirectory: false)
-        let temporaryDirectoryPath = try FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: url, create: true).path(percentEncoded: false)
+        var temporaryDirectoryPath: String
+        do {
+            temporaryDirectoryPath = try FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: url, create: true).path(percentEncoded: false)
+        } catch {
+            if let variant, let cocoaError = error as? CocoaError {
+                let code = cocoaError.code
+                var userInfo = cocoaError.userInfo
+                userInfo[NSUserStringVariantErrorKey] = variant
+                
+                throw CocoaError(code, userInfo: userInfo)
+            } else {
+                throw error
+            }
+        }
         
         let auxFile = temporaryDirectoryPath.appendingPathComponent(destinationPath.lastPathComponent)
         return try auxFile.withFileSystemRepresentation { auxFileFileSystemRep in
@@ -212,14 +231,14 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
             } else {
                 let savedErrno = errno
                 cleanupTemporaryDirectory(at: temporaryDirectoryPath)
-                throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false)
+                throw CocoaError.errorWithFilePath(inPath, errno: savedErrno, reading: false, variant: variant)
             }
         }
     }
 #endif
     
     let temporaryDirectoryPath = destinationPath.deletingLastPathComponent()
-    let (fd, auxFile) = try createTemporaryFile(at: temporaryDirectoryPath, inPath: inPath, prefix: ".dat.nosync", options: options)
+    let (fd, auxFile) = try createTemporaryFile(at: temporaryDirectoryPath, inPath: inPath, prefix: ".dat.nosync", options: options, variant: variant)
     return (fd, auxFile, nil)
 }
 
@@ -310,25 +329,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
 
 #if os(Windows)
     try inPath.path.withNTPathRepresentation { pwszPath in
-        var fd: CInt
-        var auxPath: String?
-        var temporaryDirectoryPath: String?
-
-        do {
-            (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: inPath.path, inPath: inPath, options: options)
-        } catch {
-            if let cocoaError = error as? CocoaError {
-                // Extract code and userInfo, then re-create it with an additional userInfo key.
-                let code = cocoaError.code
-                var userInfo = cocoaError.userInfo
-                userInfo[NSUserStringVariantErrorKey] = "Folder"
-
-                throw CocoaError(code, userInfo: userInfo)
-            } else {
-                // These should all be CocoaErrors, but just in case we re-throw the original one here.
-                throw error
-            }
-        }
+        var (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: inPath.path, inPath: inPath, options: options, variant: "Folder")
 
         // Cleanup temporary directory
         defer { cleanupTemporaryDirectory(at: temporaryDirectoryPath) }
@@ -344,10 +345,8 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
         do {
             try write(buffer: buffer, toFileDescriptor: fd, path: inPath, parentProgress: callback)
         } catch {
-            if let auxPath {
-                try auxPath.withNTPathRepresentation { pwszAuxPath in
-                    _ = DeleteFileW(pwszAuxPath)
-                }
+            try auxPath.withNTPathRepresentation { pwszAuxPath in
+                _ = DeleteFileW(pwszAuxPath)
             }
 
             if callback?.isCancelled ?? false {
@@ -358,9 +357,6 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
         }
 
         writeExtendedAttributes(fd: fd, attributes: attributes)
-
-        // We're done now
-        guard let auxPath else { return }
 
         _close(fd)
         fd = -1
@@ -379,10 +375,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
             throw CocoaError(.fileWriteInvalidFileName)
         }
         
-        let fd: Int32
         var mode: mode_t?
-        var temporaryDirectoryPath: String?
-        var auxPath: String?
         
 #if FOUNDATION_FRAMEWORK
         var newPath = inPath.path
@@ -410,21 +403,7 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
         let newPath = inPath.path
 #endif
         
-        do {
-            (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: newPath, inPath: inPath, options: options)
-        } catch {
-            if let cocoaError = error as? CocoaError {
-                // Extract code and userInfo, then re-create it with an additional userInfo key.
-                let code = cocoaError.code
-                var userInfo = cocoaError.userInfo
-                userInfo[NSUserStringVariantErrorKey] = "Folder"
-                
-                throw CocoaError(code, userInfo: userInfo)
-            } else {
-                // These should all be CocoaErrors, but just in case we re-throw the original one here.
-                throw error
-            }
-        }
+        var (fd, auxPath, temporaryDirectoryPath) = try createProtectedTemporaryFile(at: newPath, inPath: inPath, options: options, variant: "Folder")
         
         guard fd >= 0 else {
             let savedErrno = errno
@@ -442,11 +421,9 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
         } catch {
             let savedError = errno
             
-            if let auxPath {
-                auxPath.withFileSystemRepresentation { pathFileSystemRep in
-                    guard let pathFileSystemRep else { return }
-                    unlink(pathFileSystemRep)
-                }
+            auxPath.withFileSystemRepresentation { pathFileSystemRep in
+                guard let pathFileSystemRep else { return }
+                unlink(pathFileSystemRep)
             }
             cleanupTemporaryDirectory(at: temporaryDirectoryPath)
             
@@ -458,11 +435,6 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
         }
         
         writeExtendedAttributes(fd: fd, attributes: attributes)
-        
-        guard let auxPath else {
-            // We're done now
-            return
-        }
 
         try auxPath.withFileSystemRepresentation { auxPathFileSystemRep in
             guard let auxPathFileSystemRep else {
