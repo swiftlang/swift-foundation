@@ -101,9 +101,9 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "CalendarBenchmarks",
+            name: "InternationalizationBenchmarks",
             dependencies: targetDependency,
-            path: "Benchmarks/Calendar",
+            path: "Benchmarks/Internationalization",
             swiftSettings: swiftSettings,
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
