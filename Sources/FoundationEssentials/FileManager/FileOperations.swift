@@ -920,10 +920,11 @@ enum _FileOperations {
             try delegate.throwIfNecessary(errno, src, dst)
             return
         }
+        let copyFile = delegate.copyData
         guard !stat.isDirectory else {
             // wasi-libc does not support FTS for now, so we don't support copying/linking
             // directories on WASI for now.
-            let error = CocoaError.fileOperationError(.featureUnsupported, src, dst)
+            let error = CocoaError.errorWithFilePath(.featureUnsupported, src, variant: copyFile ? "Copy" : "Link", source: src, destination: dst)
             try delegate.throwIfNecessary(error, src, dst)
             return
         }
@@ -943,7 +944,7 @@ enum _FileOperations {
                 try delegate.throwIfNecessary(errno, src, dst)
             }
         } else {
-            if delegate.copyData {
+            if copyFile {
                 try _copyRegularFile(srcPtr, dstPtr, delegate: delegate)
             } else {
                 if link(srcPtr, dstPtr) != 0 {
