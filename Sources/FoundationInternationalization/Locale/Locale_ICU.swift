@@ -131,7 +131,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     let identifier: String
     let identifierCapturingPreferences: String
     let calendarIdentifier: Calendar.Identifier
-    
+
     let prefs: LocalePreferences?
     
     private let lock: LockedState<State>
