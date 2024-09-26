@@ -1774,12 +1774,6 @@ E {
 #endif
     }
     
-    func testConversionIncludingOnly() throws {
-        let str = AttributedString("Hello, world", attributes: .init().testInt(2).link(URL(string: "http://apple.com")!))
-        let nsStr = try NSAttributedString(str, includingOnly: \.test)
-        XCTAssertEqual(nsStr, NSAttributedString(string: "Hello, world", attributes: [.testInt: 2]))
-    }
-    
     func testConversionCoalescing() throws {
         let nsStr = NSMutableAttributedString("Hello, world")
         nsStr.setAttributes([.link : NSURL(string: "http://apple.com")!, .testInt : NSNumber(integerLiteral: 2)], range: NSRange(location: 0, length: 6))

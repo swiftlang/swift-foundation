@@ -140,18 +140,6 @@ extension Dictionary where Key == NSAttributedString.Key, Value == Any {
         try self.init(container, attributeTable: S.attributeKeyTypes())
     }
     
-    // These includingOnly SPI initializers were provided originally when conversion boxed attributes outside of the given scope as an AnyObject
-    // After rdar://80201634, these SPI initializers have the same behavior as the API initializers
-    @_spi(AttributedString)
-    public init<S: AttributeScope>(_ container: AttributeContainer, includingOnly scope: KeyPath<AttributeScopes, S.Type>) throws {
-        try self.init(container, including: S.self)
-    }
-    
-    @_spi(AttributedString)
-    public init<S: AttributeScope>(_ container: AttributeContainer, includingOnly scope: S.Type) throws {
-        try self.init(container, including: S.self)
-    }
-    
     fileprivate init(_ container: AttributeContainer, attributeTable: [String : any AttributedStringKey.Type], options: _AttributeConversionOptions = []) throws {
         self.init()
         for key in container.storage.keys {
@@ -184,16 +172,6 @@ extension NSAttributedString {
     
     public convenience init<S: AttributeScope>(_ attrStr: AttributedString, including scope: S.Type) throws {
         try self.init(attrStr, attributeTable: scope.attributeKeyTypes())
-    }
-    
-    @_spi(AttributedString)
-    public convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: KeyPath<AttributeScopes, S.Type>) throws {
-        try self.init(attrStr, including: S.self)
-    }
-    
-    @_spi(AttributedString)
-    public convenience init<S: AttributeScope>(_ attrStr: AttributedString, includingOnly scope: S.Type) throws {
-        try self.init(attrStr, including: scope)
     }
     
     internal convenience init(
