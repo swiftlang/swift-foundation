@@ -671,11 +671,6 @@ public struct URLComponents: Hashable, Equatable, Sendable {
     /// If the URLComponents has an authority component (user, password, host or port) and a path component, then the path must either begin with "/" or be an empty string. If the NSURLComponents does not have an authority component (user, password, host or port) and has a path component, the path component must not start with "//". If those requirements are not met, nil is returned.
     public var url: URL? {
         guard let string else { return nil }
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return CFURLCreateWithString(kCFAllocatorDefault, string as CFString, nil) as URL?
-        }
-        #endif
         return URL(string: string)
     }
 
@@ -683,13 +678,8 @@ public struct URLComponents: Hashable, Equatable, Sendable {
     ///
     /// If the URLComponents has an authority component (user, password, host or port) and a path component, then the path must either begin with "/" or be an empty string. If the URLComponents does not have an authority component (user, password, host or port) and has a path component, the path component must not start with "//". If those requirements are not met, nil is returned.
     public func url(relativeTo base: URL?) -> URL? {
-        guard let string else { return nil }
         guard let base else { return url }
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return CFURLCreateWithString(kCFAllocatorDefault, string as CFString, base as CFURL) as URL?
-        }
-        #endif
+        guard let string else { return nil }
         return URL(string: string, relativeTo: base)
     }
 
