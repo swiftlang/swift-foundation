@@ -151,30 +151,4 @@ let benchmarks = {
     ) { benchmark in
         blackHole(try Data(contentsOf: testPath))
     }
-    
-    // MARK: base64
-        
-    Benchmark("base64-encode", configuration: .init(
-        metrics: [.cpuTotal, .mallocCountTotal, .peakMemoryResident, .throughput],
-        scalingFactor: .kilo)
-    ) { benchmark in
-        for _ in benchmark.scaledIterations {
-            autoreleasepool {
-                blackHole(base64Data.base64EncodedString())
-            }
-        }
-    }
-    
-    
-    Benchmark("base64-decode", configuration: .init(
-        metrics: [.cpuTotal, .mallocCountTotal, .peakMemoryResident, .throughput],
-        scalingFactor: .kilo)
-    ) { benchmark in
-        for _ in benchmark.scaledIterations {
-            autoreleasepool {
-                blackHole(Data(base64Encoded: base64DataString))
-            }
-        }
-    }
-
 }

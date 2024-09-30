@@ -164,6 +164,15 @@ let package = Package(
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
         ),
+        .executableTarget(
+            name: "Base64Benchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/Base64",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
     ]
 )
 
