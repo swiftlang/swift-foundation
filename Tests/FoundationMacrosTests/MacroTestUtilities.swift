@@ -46,9 +46,9 @@ struct DiagnosticTest : ExpressibleByStringLiteral, Hashable, CustomStringConver
     
     var mappedToExpression: Self {
         DiagnosticTest(
-            message._replacing("Predicate", with: "Expression")._replacing("predicate", with: "expression"),
+            message.replacing("Predicate", with: "Expression").replacing("predicate", with: "expression"),
             fixIts: fixIts.map {
-                FixItTest($0.message, result: $0.result._replacing("#Predicate", with: "#Expression"))
+                FixItTest($0.message, result: $0.result.replacing("#Predicate", with: "#Expression"))
             }
         )
     }
@@ -125,7 +125,9 @@ func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String 
     let origSourceFile = Parser.parse(source: source)
     let expandedSourceFile: Syntax
     do {
-        expandedSourceFile = try OperatorTable.standardOperators.foldAll(origSourceFile).expand(macros: macros, in: context)
+        expandedSourceFile = try OperatorTable.standardOperators.foldAll(origSourceFile).expand(macros: macros) { syntax in
+            BasicMacroExpansionContext(sharingWith: context, lexicalContext: [syntax])
+        }
     } catch {
         XCTFail("Operator folding on input source failed with error \(error)")
         return
@@ -157,22 +159,10 @@ func AssertPredicateExpansion(_ source: String, _ result: String = "", diagnosti
     )
     AssertMacroExpansion(
         macros: ["Expression" : FoundationMacros.ExpressionMacro.self],
-        source._replacing("#Predicate", with: "#Expression"),
-        result._replacing(".Predicate", with: ".Expression"),
+        source.replacing("#Predicate", with: "#Expression"),
+        result.replacing(".Predicate", with: ".Expression"),
         diagnostics: Set(diagnostics.map(\.mappedToExpression)),
         file: file,
         line: line
     )
-}
-
-extension String {
-    func _replacing(_ text: String, with other: String) -> Self {
-        if #available(macOS 13.0, *) {
-            // Use the stdlib API if available
-            self.replacing(text, with: other)
-        } else {
-            // Use the Foundation API on older OSes
-            self.replacingOccurrences(of: text, with: other, options: [.literal])
-        }
-    }
 }
