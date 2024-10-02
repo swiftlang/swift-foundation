@@ -1368,7 +1368,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
-    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     public mutating func appendPathComponent(_ pathComponent: String, isDirectory: Bool) {
         self = appendingPathComponent(pathComponent, isDirectory: isDirectory)
     }
@@ -1381,7 +1381,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
-    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
+    @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use append(path:directoryHint:) instead")
     public mutating func appendPathComponent(_ pathComponent: String) {
         self = appendingPathComponent(pathComponent)
     }
