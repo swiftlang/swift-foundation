@@ -192,7 +192,7 @@ extension Platform {
 extension Platform {
     @discardableResult
     package static func copyCString(dst: UnsafeMutablePointer<CChar>, src: UnsafePointer<CChar>, size: Int) -> Int {
-        #if canImport(Darwin)
+        #if canImport(Darwin) || canImport(Android)
         return strlcpy(dst, src, size)
         #else
         // Glibc doesn't support strlcpy
@@ -267,7 +267,7 @@ extension Platform {
             return String(cString: buffer.baseAddress!).standardizingPath
             #endif
         }
-#elseif os(Linux)
+#elseif os(Linux) || os(Android)
         // For Linux, read /proc/self/exe
         return try? FileManager.default.destinationOfSymbolicLink(
             atPath: "/proc/self/exe").standardizingPath

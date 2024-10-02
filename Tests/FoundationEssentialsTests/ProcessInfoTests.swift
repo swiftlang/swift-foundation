@@ -115,7 +115,7 @@ final class ProcessInfoTests : XCTestCase {
         let expectedMinMajorVersion = 2
         #endif
         XCTAssertGreaterThanOrEqual(version.majorVersion, expectedMinMajorVersion, "Unrealistic major system version")
-        #elseif os(Windows) || os(Linux)
+        #elseif os(Windows) || os(Linux) || os(Android)
         let minVersion = OperatingSystemVersion(majorVersion: 1, minorVersion: 0, patchVersion: 0)
         XCTAssertTrue(ProcessInfo.processInfo.isOperatingSystemAtLeast(minVersion))
         #else
@@ -171,7 +171,7 @@ final class ProcessInfoTests : XCTestCase {
     func testProcessName() {
 #if FOUNDATION_FRAMEWORK
         let targetName = "TestHost"
-#elseif os(Linux) || os(Windows)
+#elseif os(Linux) || os(Windows) || os(Android)
         let targetName = "FoundationPreviewPackageTests.xctest"
 #else
         let targetName = "xctest"

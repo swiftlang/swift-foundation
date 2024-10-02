@@ -364,7 +364,7 @@ final class PredicateTests: XCTestCase {
     func testRegex_RegexBuilder() throws {
         #if !canImport(RegexBuilder)
         throw XCTSkip("RegexBuilder is unavavailable on this platform")
-        #elseif !os(Linux) && !FOUNDATION_FRAMEWORK
+        #elseif !os(Linux) && !os(Android) && !FOUNDATION_FRAMEWORK
         // Disable this test in swift-foundation macOS CI because of incorrect availability annotations in the StringProcessing module
         throw XCTSkip("This test is currently disabled on this platform")
         #else
