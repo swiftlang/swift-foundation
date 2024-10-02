@@ -68,7 +68,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         var currencySymbolDisplayNames: [String : String?] = [:]
         var currencyCodeDisplayNames: [String : String?] = [:]
         var numberFormatters = NumberFormattersBox()
-        
+
         // This type is @unchecked Sendable because it stores mutable pointers
         // The mutable pointers are only ever "mutated" during the call to cleanup, so this type can be safely sent across concurrency boundaries so long as care is taken to ensure that during a call to cleanup that you have exclusive access to this box
         // This is done by ensuring that cleanup is called from within the _LocaleICU lock
@@ -108,7 +108,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 // Vending non-mutable pointers ensures callers don't mutate state
                 return UnsafePointer(nf)
             }
-            
+
             mutating func cleanup() {
                 for nf in numberFormatters.values {
                     unum_close(nf)
@@ -120,7 +120,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         mutating func formatter(for style: UNumberFormatStyle, identifier: String, numberSymbols: [UInt32 : String]?) -> UnsafePointer<UNumberFormat?>? {
             numberFormatters.formatter(for: style, identifier: identifier, numberSymbols: numberSymbols)
         }
-        
+
         mutating func cleanup() {
             numberFormatters.cleanup()
         }
@@ -150,7 +150,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         LocaleCache.cache.fixedNSLocale(self)
     }
 #endif
-    
+
     // MARK: - init
 
     required init(identifier: String, prefs: LocalePreferences? = nil) {
@@ -204,7 +204,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             ident = Locale._canonicalLocaleIdentifier(from: identSet)
         } else {
             let preferredLocale = prefs.locale
-            
+
             // If CFBundleAllowMixedLocalizations is set, don't do any checking of the user's preferences for locale-matching purposes (32264371)
 #if FOUNDATION_FRAMEWORK
             // Do not call the usual 'objectForInfoDictionaryKey' method, as it localizes the Info.plist content, which recurisvely calls back into Locale
@@ -278,14 +278,14 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         } else {
             fixedIdent = "en_001"
         }
-        
+
         self.identifier = Locale._canonicalLocaleIdentifier(from: fixedIdent)
         self.prefs = prefs
         calendarIdentifier = Self._calendarIdentifier(forIdentifier: self.identifier)
         identifierCapturingPreferences = Self._identifierCapturingPreferences(forIdentifier: self.identifier, calendarIdentifier: calendarIdentifier, preferences: prefs)
         lock = LockedState(initialState: State())
     }
-    
+
     deinit {
         lock.withLock { state in
             // We can safely call this here because we have exclusive access to state within the lock
@@ -435,28 +435,28 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         guard let prefs else {
             return identifier
         }
-        
+
         var components = Locale.Components(identifier: identifier)
-        
+
         if let id = prefs.collationOrder {
             components.collation = .init(id)
         }
-        
+
         if let firstWeekdayPrefs = prefs.firstWeekday {
             let calendarID = calendarIdentifier
             if let weekdayNumber = firstWeekdayPrefs[calendarID], let weekday = Locale.Weekday(Int32(weekdayNumber)) {
                 components.firstDayOfWeek = weekday
             }
         }
-        
+
         if let measurementSystem = prefs.measurementSystem {
             components.measurementSystem = measurementSystem
         }
-        
+
         if let hourCycle = prefs.hourCycle {
             components.hourCycle = hourCycle
         }
-        
+
         return components.icuIdentifier
     }
 
@@ -728,7 +728,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             }
             calendarIDString = String(cString: result)
         }
-        
+
         guard let calendarIDString else {
             // Fallback value
             return .gregorian
@@ -763,7 +763,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             if let firstWeekday { calendar.firstWeekday = firstWeekday }
             if let minDaysInFirstWeek { calendar.minimumDaysInFirstWeek = minDaysInFirstWeek }
         }
-        
+
         // In order to avoid a retain cycle (Calendar has a Locale, Locale has a Calendar), we do not keep a reference to the Calendar in Locale but create one each time. Most of the time the value of `Calendar(identifier:)` will return a cached value in any case.
         return calendar
     }
@@ -1531,7 +1531,7 @@ extension Locale {
             return Int(result)
         }
     }
-    
+
     /// Returns the identifier conforming to the specified standard for the specified string.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public static func identifier(_ type: IdentifierType, from string: String) -> String {
