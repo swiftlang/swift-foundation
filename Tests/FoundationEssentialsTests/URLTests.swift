@@ -627,6 +627,26 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.host, "*.xn--poema-9qae5a.com.br")
     }
 
+    func testURLTildeFilePath() throws {
+        var url = URL(filePath: "~")
+        // "~" must either be expanded to an absolute path or resolved against a base URL
+        XCTAssertTrue(
+            url.relativePath.utf8.first == ._slash || (url.baseURL != nil && url.path().utf8.first == ._slash)
+        )
+
+        url = URL(filePath: "~", directoryHint: .isDirectory)
+        XCTAssertTrue(
+            url.relativePath.utf8.first == ._slash || (url.baseURL != nil && url.path().utf8.first == ._slash)
+        )
+        XCTAssertEqual(url.path().utf8.last, ._slash)
+
+        url = URL(filePath: "~/")
+        XCTAssertTrue(
+            url.relativePath.utf8.first == ._slash || (url.baseURL != nil && url.path().utf8.first == ._slash)
+        )
+        XCTAssertEqual(url.path().utf8.last, ._slash)
+    }
+
     func testURLComponentsPercentEncodedUnencodedProperties() throws {
         var comp = URLComponents()
 
