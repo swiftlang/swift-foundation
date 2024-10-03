@@ -1278,6 +1278,7 @@ final class CalendarBridgingTests : XCTestCase {
 
 
 // This test validates the results against FoundationInternationalization's calendar implementation temporarily until we completely ported the calendar
+#if false // Disabled because these tests are extensive and have long runtimes to validate full compatibility, they can be enabled locally to validate changes
 final class GregorianCalendarCompatibilityTests: XCTestCase {
 
     func testDateFromComponentsCompatibility() {
@@ -2345,3 +2346,4 @@ final class GregorianCalendarCompatibilityTests: XCTestCase {
     }
 
 }
+#endif
