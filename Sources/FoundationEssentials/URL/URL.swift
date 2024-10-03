@@ -2040,41 +2040,47 @@ extension URL {
     /// Checks if a file path is absolute and standardizes the inputted file path on Windows
     /// Assumes the path only contains `/` as the path separator
     internal static func isAbsolute(standardizing filePath: inout String) -> Bool {
+        if filePath.utf8.first == ._slash {
+            return true
+        }
         #if os(Windows)
-        var isAbsolute = false
         let utf8 = filePath.utf8
-        if utf8.first == ._slash {
-            // Either an absolute path or a UNC path
-            isAbsolute = true
-        } else if utf8.count >= 3 {
-            // Check if this is a drive letter
-            let first = utf8.first!
-            let secondIndex = utf8.index(after: utf8.startIndex)
-            let second = utf8[secondIndex]
-            let thirdIndex = utf8.index(after: secondIndex)
-            let third = utf8[thirdIndex]
-            isAbsolute = (
-                first.isAlpha
-                && (second == ._colon || second == ._pipe)
-                && third == ._slash
-            )
-
-            if isAbsolute {
-                // Standardize to "/[drive-letter]:/..."
-                if second == ._pipe {
-                    var filePathArray = Array(utf8)
-                    filePathArray[1] = ._colon
-                    filePathArray.insert(._slash, at: 0)
-                    filePath = String(decoding: filePathArray, as: UTF8.self)
-                } else {
-                    filePath = "/" + filePath
-                }
+        guard utf8.count >= 3 else {
+            return false
+        }
+        // Check if this is a drive letter
+        let first = utf8.first!
+        let secondIndex = utf8.index(after: utf8.startIndex)
+        let second = utf8[secondIndex]
+        let thirdIndex = utf8.index(after: secondIndex)
+        let third = utf8[thirdIndex]
+        let isAbsolute = (
+            first.isAlpha
+            && (second == ._colon || second == ._pipe)
+            && third == ._slash
+        )
+        if isAbsolute {
+            // Standardize to "/[drive-letter]:/..."
+            if second == ._pipe {
+                var filePathArray = Array(utf8)
+                filePathArray[1] = ._colon
+                filePathArray.insert(._slash, at: 0)
+                filePath = String(decoding: filePathArray, as: UTF8.self)
+            } else {
+                filePath = "/" + filePath
             }
         }
-        #else
-        let isAbsolute = filePath.utf8.first == UInt8(ascii: "/") || filePath.utf8.first == UInt8(ascii: "~")
-        #endif
         return isAbsolute
+        #else // os(Windows)
+        #if !NO_FILESYSTEM
+        // Expand the tilde if present
+        if filePath.utf8.first == UInt8(ascii: "~") {
+            filePath = filePath.expandingTildeInPath
+        }
+        #endif
+        // Make sure the expanded path is absolute
+        return filePath.utf8.first == ._slash
+        #endif // os(Windows)
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path, relative to a base URL.
