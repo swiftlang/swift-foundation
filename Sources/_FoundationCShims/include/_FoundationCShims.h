@@ -21,6 +21,7 @@
 #include "bplist_shims.h"
 #include "io_shims.h"
 #include "platform_shims.h"
+#include "process_shims.h"
 #include "filemanager_shims.h"
 #include "uuid.h"
 

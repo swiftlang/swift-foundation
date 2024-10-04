@@ -65,7 +65,10 @@ var dependencies: [Package.Dependency] {
                 branch: "main"),
             .package(
                 url: "https://github.com/swiftlang/swift-syntax",
-                from: "600.0.0-latest")
+                from: "600.0.0-latest"),
+            .package(
+                url: "https://github.com/apple/swift-system",
+                from: "1.0.0")
         ]
     }
 }
@@ -111,6 +114,7 @@ let package = Package(
             "FoundationMacros",
             .product(name: "_RopeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
+            .product(name: "SystemPackage", package: "swift-system"),
           ],
           exclude: [
             "Formatting/CMakeLists.txt",
