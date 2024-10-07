@@ -1319,9 +1319,32 @@ public struct URL: Equatable, Sendable, Hashable {
         }
     }
 
+    private static func windowsPath(for posixPath: String) -> String {
+        let utf8 = posixPath.utf8
+        guard utf8.count >= 4 else {
+            return posixPath
+        }
+        // "C:\" is standardized to "/C:/" on initialization
+        let array = Array(utf8)
+        if array[0] == ._slash,
+           array[1].isAlpha,
+           array[2] == ._colon,
+           array[3] == ._slash {
+            return String(Substring(utf8.dropFirst()))
+        }
+        return posixPath
+    }
+
     private static func fileSystemPath(for urlPath: String) -> String {
         let charsToLeaveEncoded: Set<UInt8> = [._slash, 0]
-        return Parser.percentDecode(urlPath._droppingTrailingSlashes, excluding: charsToLeaveEncoded) ?? ""
+        guard let posixPath = Parser.percentDecode(urlPath._droppingTrailingSlashes, excluding: charsToLeaveEncoded) else {
+            return ""
+        }
+        #if os(Windows)
+        return windowsPath(for: posixPath)
+        #else
+        return posixPath
+        #endif
     }
 
     var fileSystemPath: String {
