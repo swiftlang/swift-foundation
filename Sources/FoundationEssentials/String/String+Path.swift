@@ -194,7 +194,11 @@ extension String {
         guard let lastDot = self.utf8.lastIndex(of: dot) else {
             return self
         }
-        return String(self[..<lastDot])
+        var result = String(self[..<lastDot])
+        if utf8.last == ._slash {
+            result += "/"
+        }
+        return result
     }
 
     private func validatePathExtension(_ pathExtension: String) -> Bool {
@@ -214,7 +218,16 @@ extension String {
         guard validatePathExtension(pathExtension) else {
             return self
         }
-        return self + ".\(pathExtension)"
+        var result = self._droppingTrailingSlashes
+        guard result != "/" else {
+            // Path was all slashes
+            return self + ".\(pathExtension)"
+        }
+        result += ".\(pathExtension)"
+        if utf8.last == ._slash {
+            result += "/"
+        }
+        return result
     }
 
     internal var pathExtension: String {

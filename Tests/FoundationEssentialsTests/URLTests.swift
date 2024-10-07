@@ -659,6 +659,27 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.path().utf8.last, ._slash)
     }
 
+    func testURLPathExtensions() throws {
+        var url = URL(filePath: "/path", directoryHint: .notDirectory)
+        url.appendPathExtension("foo")
+        XCTAssertEqual(url.path(), "/path.foo")
+        url.deletePathExtension()
+        XCTAssertEqual(url.path(), "/path")
+
+        url = URL(filePath: "/path", directoryHint: .isDirectory)
+        url.appendPathExtension("foo")
+        XCTAssertEqual(url.path(), "/path.foo/")
+        url.deletePathExtension()
+        XCTAssertEqual(url.path(), "/path/")
+
+        url = URL(filePath: "/path/", directoryHint: .inferFromPath)
+        url.appendPathExtension("foo")
+        XCTAssertEqual(url.path(), "/path.foo/")
+        url.append(path: "/////")
+        url.deletePathExtension()
+        XCTAssertEqual(url.path(), "/path/")
+    }
+
     func testURLComponentsPercentEncodedUnencodedProperties() throws {
         var comp = URLComponents()
 
