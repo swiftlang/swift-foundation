@@ -813,6 +813,19 @@ final class StringTests : XCTestCase {
         }
     }
 
+    func testAppendingPathExtension() {
+        XCTAssertEqual("".appendingPathExtension("foo"), ".foo")
+        XCTAssertEqual("/".appendingPathExtension("foo"), "/.foo")
+        XCTAssertEqual("//".appendingPathExtension("foo"), "//.foo")
+        XCTAssertEqual("/path".appendingPathExtension("foo"), "/path.foo")
+        XCTAssertEqual("/path.zip".appendingPathExtension("foo"), "/path.zip.foo")
+        XCTAssertEqual("/path/".appendingPathExtension("foo"), "/path.foo/")
+        XCTAssertEqual("/path//".appendingPathExtension("foo"), "/path.foo/")
+        XCTAssertEqual("path".appendingPathExtension("foo"), "path.foo")
+        XCTAssertEqual("path/".appendingPathExtension("foo"), "path.foo/")
+        XCTAssertEqual("path//".appendingPathExtension("foo"), "path.foo/")
+    }
+
     func testDeletingPathExtenstion() {
         XCTAssertEqual("".deletingPathExtension(), "")
         XCTAssertEqual("/".deletingPathExtension(), "/")
@@ -835,6 +848,15 @@ final class StringTests : XCTestCase {
         XCTAssertEqual("/foo.bar/bar.baz/baz.zip".deletingPathExtension(), "/foo.bar/bar.baz/baz")
         XCTAssertEqual("/.././.././a.zip".deletingPathExtension(), "/.././.././a")
         XCTAssertEqual("/.././.././.".deletingPathExtension(), "/.././.././.")
+
+        XCTAssertEqual("path.foo".deletingPathExtension(), "path")
+        XCTAssertEqual("path.foo.zip".deletingPathExtension(), "path.foo")
+        XCTAssertEqual("/path.foo".deletingPathExtension(), "/path")
+        XCTAssertEqual("/path.foo.zip".deletingPathExtension(), "/path.foo")
+        XCTAssertEqual("path.foo/".deletingPathExtension(), "path/")
+        XCTAssertEqual("path.foo//".deletingPathExtension(), "path/")
+        XCTAssertEqual("/path.foo/".deletingPathExtension(), "/path/")
+        XCTAssertEqual("/path.foo//".deletingPathExtension(), "/path/")
     }
 
     func testPathComponents() {
