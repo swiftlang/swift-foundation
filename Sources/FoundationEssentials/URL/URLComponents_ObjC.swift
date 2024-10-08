@@ -157,10 +157,22 @@ internal class _NSSwiftURLComponents: _NSURLComponentsBridge {
     }
 
     override var url: URL? {
+        #if FOUNDATION_FRAMEWORK
+        guard foundation_swift_url_enabled() else {
+            guard let string else { return nil }
+            return CFURLCreateWithString(kCFAllocatorDefault, string as CFString, nil) as URL?
+        }
+        #endif
         return components.url
     }
 
     override func url(relativeTo base: URL?) -> URL? {
+        #if FOUNDATION_FRAMEWORK
+        guard foundation_swift_url_enabled() else {
+            guard let string else { return nil }
+            return CFURLCreateWithString(kCFAllocatorDefault, string as CFString, base as CFURL?) as URL?
+        }
+        #endif
         return components.url(relativeTo: base)
     }
 
