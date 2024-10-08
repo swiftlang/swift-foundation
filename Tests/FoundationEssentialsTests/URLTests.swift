@@ -330,6 +330,18 @@ final class URLTests : XCTestCase {
         try FileManager.default.removeItem(at: URL(filePath: "\(tempDirectory.path)/tmp-dir"))
     }
 
+    #if os(Windows)
+    func testURLWindowsDriveLetterPath() throws {
+        let url = URL(filePath: "C:\\test\\path", directoryHint: .notDirectory)
+        // .absoluteString and .path() use the RFC 8089 URL path
+        XCTAssertEqual(url.absoluteString, "file:///C:/test/path")
+        XCTAssertEqual(url.path(), "/C:/test/path")
+        // .path and .fileSystemPath strip the leading slash
+        XCTAssertEqual(url.path, "C:/test/path")
+        XCTAssertEqual(url.fileSystemPath, "C:/test/path")
+    }
+    #endif
+
     func testURLFilePathRelativeToBase() throws {
         try FileManagerPlayground {
             Directory("dir") {
@@ -571,9 +583,101 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(appended.relativePath, "relative/with:slash")
     }
 
+    func testURLFilePathDropsTrailingSlashes() throws {
+        var url = URL(filePath: "/path/slashes///")
+        XCTAssertEqual(url.path(), "/path/slashes///")
+        // TODO: Update this once .fileSystemPath uses backslashes for Windows
+        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+
+        url = URL(filePath: "/path/slashes/")
+        XCTAssertEqual(url.path(), "/path/slashes/")
+        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+
+        url = URL(filePath: "/path/slashes")
+        XCTAssertEqual(url.path(), "/path/slashes")
+        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+    }
+
+    func testURLNotDirectoryHintStripsTrailingSlash() throws {
+        // Supply a path with a trailing slash but say it's not a direcotry
+        var url = URL(filePath: "/path/", directoryHint: .notDirectory)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/path")
+
+        url = URL(fileURLWithPath: "/path/", isDirectory: false)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/path")
+
+        url = URL(filePath: "/path///", directoryHint: .notDirectory)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/path")
+
+        url = URL(fileURLWithPath: "/path///", isDirectory: false)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/path")
+
+        // With .checkFileSystem, don't modify the path for a non-existent file
+        url = URL(filePath: "/my/non/existent/path/", directoryHint: .checkFileSystem)
+        XCTAssertTrue(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/my/non/existent/path/")
+
+        url = URL(fileURLWithPath: "/my/non/existent/path/")
+        XCTAssertTrue(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/my/non/existent/path/")
+
+        url = URL(filePath: "/my/non/existent/path", directoryHint: .checkFileSystem)
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/my/non/existent/path")
+
+        url = URL(fileURLWithPath: "/my/non/existent/path")
+        XCTAssertFalse(url.hasDirectoryPath)
+        XCTAssertEqual(url.path(), "/my/non/existent/path")
+    }
+
     func testURLHostRetainsIDNAEncoding() throws {
         let url = URL(string: "ftp://user:password@*.xn--poema-9qae5a.com.br:4343/cat.txt")!
         XCTAssertEqual(url.host, "*.xn--poema-9qae5a.com.br")
+    }
+
+    func testURLTildeFilePath() throws {
+        var url = URL(filePath: "~")
+        // "~" must either be expanded to an absolute path or resolved against a base URL
+        XCTAssertTrue(
+            url.relativePath.utf8.first == ._slash || (url.baseURL != nil && url.path().utf8.first == ._slash)
+        )
+
+        url = URL(filePath: "~", directoryHint: .isDirectory)
+        XCTAssertTrue(
+            url.relativePath.utf8.first == ._slash || (url.baseURL != nil && url.path().utf8.first == ._slash)
+        )
+        XCTAssertEqual(url.path().utf8.last, ._slash)
+
+        url = URL(filePath: "~/")
+        XCTAssertTrue(
+            url.relativePath.utf8.first == ._slash || (url.baseURL != nil && url.path().utf8.first == ._slash)
+        )
+        XCTAssertEqual(url.path().utf8.last, ._slash)
+    }
+
+    func testURLPathExtensions() throws {
+        var url = URL(filePath: "/path", directoryHint: .notDirectory)
+        url.appendPathExtension("foo")
+        XCTAssertEqual(url.path(), "/path.foo")
+        url.deletePathExtension()
+        XCTAssertEqual(url.path(), "/path")
+
+        url = URL(filePath: "/path", directoryHint: .isDirectory)
+        url.appendPathExtension("foo")
+        XCTAssertEqual(url.path(), "/path.foo/")
+        url.deletePathExtension()
+        XCTAssertEqual(url.path(), "/path/")
+
+        url = URL(filePath: "/path/", directoryHint: .inferFromPath)
+        url.appendPathExtension("foo")
+        XCTAssertEqual(url.path(), "/path.foo/")
+        url.append(path: "/////")
+        url.deletePathExtension()
+        XCTAssertEqual(url.path(), "/path/")
     }
 
     func testURLComponentsPercentEncodedUnencodedProperties() throws {
