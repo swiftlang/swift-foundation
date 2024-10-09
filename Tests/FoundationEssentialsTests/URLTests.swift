@@ -640,22 +640,30 @@ final class URLTests : XCTestCase {
     }
 
     func testURLTildeFilePath() throws {
-        var url = URL(filePath: "~")
+        func urlIsAbsolute(_ url: URL) -> Bool {
+            if url.relativePath.utf8.first == ._slash {
+                return true
+            }
+            guard url.baseURL != nil else {
+                return false
+            }
+            #if !FOUNDATION_FRAMEWORK_NSURL
+            return url.path().utf8.first == ._slash
+            #else
+            return url.path.utf8.first == ._slash
+            #endif
+        }
+
         // "~" must either be expanded to an absolute path or resolved against a base URL
-        XCTAssertTrue(
-            url.relativePath.utf8.first == ._slash || (url.baseURL != nil && url.path().utf8.first == ._slash)
-        )
+        var url = URL(filePath: "~")
+        XCTAssertTrue(urlIsAbsolute(url))
 
         url = URL(filePath: "~", directoryHint: .isDirectory)
-        XCTAssertTrue(
-            url.relativePath.utf8.first == ._slash || (url.baseURL != nil && url.path().utf8.first == ._slash)
-        )
+        XCTAssertTrue(urlIsAbsolute(url))
         XCTAssertEqual(url.path().utf8.last, ._slash)
 
         url = URL(filePath: "~/")
-        XCTAssertTrue(
-            url.relativePath.utf8.first == ._slash || (url.baseURL != nil && url.path().utf8.first == ._slash)
-        )
+        XCTAssertTrue(urlIsAbsolute(url))
         XCTAssertEqual(url.path().utf8.last, ._slash)
     }
 
@@ -677,7 +685,12 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.path(), "/path.foo/")
         url.append(path: "/////")
         url.deletePathExtension()
+        #if !FOUNDATION_FRAMEWORK_NSURL
         XCTAssertEqual(url.path(), "/path/")
+        #else
+        // Old behavior only searches the last empty component, so the extension isn't actually removed
+        XCTAssertEqual(url.path(), "/path.foo///")
+        #endif
     }
 
     func testURLComponentsPercentEncodedUnencodedProperties() throws {
