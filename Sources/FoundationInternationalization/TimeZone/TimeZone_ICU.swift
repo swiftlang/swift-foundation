@@ -32,6 +32,13 @@ private func _timeZoneICUClass_localized() -> _TimeZoneProtocol.Type? {
 }
 #endif
 
+#if os(Windows)
+@_dynamicReplacement(for: _timeZoneIdentifier(forWindowsIdentifier:))
+private func _timeZoneIdentifier_ICU(forWindowsIdentifier windowsIdentifier: String) -> String? {
+    _TimeZoneICU.getSystemTimeZoneID(forWindowsIdentifier: windowsIdentifier)
+}
+#endif
+
 internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     init?(secondsFromGMT: Int) {
         fatalError("Unexpected init")
@@ -308,6 +315,23 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
         return result
     }
+
+    #if os(Windows)
+    internal static func getSystemTimeZoneID(forWindowsIdentifier identifier: String) -> String? {
+        let timeZoneIdentifier = Array(identifier.utf16)
+        let result: String? = timeZoneIdentifier.withUnsafeBufferPointer { identifier in
+            return _withResizingUCharBuffer { buffer, size, status in
+                let len = ucal_getTimeZoneIDForWindowsID(identifier.baseAddress, Int32(identifier.count), nil, buffer, size, &status)
+                if status.isSuccess {
+                    return len
+                } else {
+                    return nil
+                }
+            }
+        }
+        return result
+    }
+    #endif
 
     internal static func timeZoneNamesFromICU() -> [String] {
         let filteredTimeZoneNames = [

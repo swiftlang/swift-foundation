@@ -390,7 +390,7 @@ extension TimeZone {
 
 extension TimeZone {
     internal static func dataFromTZFile(_ name: String) -> Data {
-#if NO_TZFILE
+#if NO_TZFILE || os(Windows)
         return Data()
 #else
         let path = TZDIR + "/" + name
