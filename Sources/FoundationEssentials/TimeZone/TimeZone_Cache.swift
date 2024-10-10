@@ -50,6 +50,12 @@ dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
 }
 #endif
 
+#if os(Windows)
+dynamic package func _timeZoneIdentifier(forWindowsIdentifier windowsIdentifier: String) -> String? {
+    nil
+}
+#endif
+
 /// Singleton which listens for notifications about preference changes for TimeZone and holds cached values for current, fixed time zones, etc.
 struct TimeZoneCache : Sendable, ~Copyable {
     // MARK: - State
@@ -114,18 +120,14 @@ struct TimeZoneCache : Sendable, ~Copyable {
             }
 
 #if os(Windows)
-            let hFile = TZDEFAULT.withCString(encodedAs: UTF16.self) {
-                CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
-            }
-            defer { CloseHandle(hFile) }
-            let dwSize = GetFinalPathNameByHandleW(hFile, nil, 0, VOLUME_NAME_DOS)
-            let path = withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwSize)) {
-                _ = GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwSize, VOLUME_NAME_DOS)
-                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
-            }
-            if let rangeOfZoneInfo = path._range(of: "\(TZDIR)\\", anchored: false, backwards: false) {
-                let name = path[rangeOfZoneInfo.upperBound...]
-                if let result = fixed(String(name)) {
+            var timeZoneInfo = TIME_ZONE_INFORMATION()
+            if GetTimeZoneInformation(&timeZoneInfo) != TIME_ZONE_ID_INVALID {
+                let windowsName = withUnsafePointer(to: &(timeZoneInfo.StandardName)) {
+                    $0.withMemoryRebound(to: WCHAR.self, capacity: 32) {
+                        String(decoding: UnsafeBufferPointer(start: $0, count: wcslen($0)), as: UTF16.self)
+                    }
+                }
+                if let identifier = _timeZoneIdentifier(forWindowsIdentifier: windowsName), let result = fixed(identifier) {
                     return TimeZone(inner: result)
                 }
             }
