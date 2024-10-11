@@ -29,7 +29,7 @@ let benchmarks = {
     let thanksgivingComponents = DateComponents(month: 11, weekday: 5, weekdayOrdinal: 4)
     let cal = Calendar(identifier: .gregorian)
     let currentCalendar = Calendar.current
-    let thanksgivingStart = Date(timeIntervalSinceReferenceDate: 496359355.795410) //2016-09-23T14:35:55-0700
+    let thanksgivingStart = Date(timeIntervalSince1970: 1474666555.0) //2016-09-23T14:35:55-0700
     
     Benchmark("nextThousandThursdaysInTheFourthWeekOfNovember") { benchmark in
         // This benchmark used to be nextThousandThanksgivings, but the name was deceiving since it does not compute the next thousand thanksgivings
@@ -54,7 +54,7 @@ let benchmarks = {
     }
 
     // Only available in Swift 6 for non-Darwin platforms, macOS 15 for Darwin
-    #if swift(>=6.0)
+    #if compiler(>=6.0)
     if #available(macOS 15, *) {
         Benchmark("nextThousandThanksgivingsSequence") { benchmark in
             var count = 1000
@@ -66,7 +66,7 @@ let benchmarks = {
             }
         }
 
-        Benchmark("nextThousandThanksgivingsUsingRecurrenceRule") { benchmark in
+        Benchmark("RecurrenceRuleThanksgivings") { benchmark in
             var rule = Calendar.RecurrenceRule(calendar: cal, frequency: .yearly, end: .afterOccurrences(1000))
             rule.months = [11]
             rule.weekdays = [.nth(4, .thursday)]
@@ -76,6 +76,43 @@ let benchmarks = {
                 count += 1
             }
             assert(count == 1000)
+        }
+        Benchmark("RecurrenceRuleThanksgivingMeals") { benchmark in
+            var rule = Calendar.RecurrenceRule(calendar: cal, frequency: .yearly, end: .afterOccurrences(1000))
+            rule.months = [11]
+            rule.weekdays = [.nth(4, .thursday)]
+            rule.hours = [14, 18]
+            rule.matchingPolicy = .nextTime
+            for date in rule.recurrences(of: thanksgivingStart) {
+                Benchmark.blackHole(date)
+            }
+        }
+        Benchmark("RecurrenceRuleLaborDay") { benchmark in
+            var rule = Calendar.RecurrenceRule(calendar: cal, frequency: .yearly, end: .afterOccurrences(1000))
+            rule.months = [9]
+            rule.weekdays = [.nth(1, .monday)]
+            rule.matchingPolicy = .nextTime
+            for date in rule.recurrences(of: thanksgivingStart) {
+                Benchmark.blackHole(date)
+            }
+        }
+        Benchmark("RecurrenceRuleBikeParties") { benchmark in
+            var rule = Calendar.RecurrenceRule(calendar: cal, frequency: .monthly, end: .afterOccurrences(1000))
+            rule.weekdays = [.nth(1, .friday), .nth(-1, .friday)]
+            rule.matchingPolicy = .nextTime
+            for date in rule.recurrences(of: thanksgivingStart) {
+                Benchmark.blackHole(date)
+            }
+        }
+        Benchmark("RecurrenceRuleDailyWithTimes") { benchmark in
+            var rule = Calendar.RecurrenceRule(calendar: cal, frequency: .daily, end: .afterOccurrences(1000))
+            rule.hours = [9, 10]
+            rule.minutes = [0, 30]
+            rule.weekdays = [.every(.monday), .every(.tuesday), .every(.wednesday)]
+            rule.matchingPolicy = .nextTime
+            for date in rule.recurrences(of: thanksgivingStart) {
+                Benchmark.blackHole(date)
+            }
         }
     } // #available(macOS 15, *)
     #endif // swift(>=6.0)
@@ -93,7 +130,7 @@ let benchmarks = {
 
     // MARK: - Allocations
 
-    let reference = Date(timeIntervalSinceReferenceDate: 496359355.795410) //2016-09-23T14:35:55-0700
+    let reference = Date(timeIntervalSince1970: 1474666555.0) //2016-09-23T14:35:55-0700
     
     let allocationsConfiguration = Benchmark.Configuration(
         metrics: [.cpuTotal, .mallocCountTotal, .peakMemoryResident, .throughput],
