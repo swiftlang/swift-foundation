@@ -722,8 +722,14 @@ extension String {
                     return nil
                 }
 
-                // When using `VOLUME_NAME_DOS`, the returned path uses `\\?\`.
-                return String(decodingCString: $0.baseAddress!.advanced(by: 4), as: UTF16.self)
+                let pathBaseAddress: UnsafePointer<WCHAR>
+                if Array($0.prefix(4)) == Array(#"\\?\"#.utf16) {
+                    // When using `VOLUME_NAME_DOS`, the returned path uses `\\?\`.
+                    pathBaseAddress = UnsafePointer($0.baseAddress!.advanced(by: 4))
+                } else {
+                    pathBaseAddress = UnsafePointer($0.baseAddress!)
+                }
+                return String(decodingCString: pathBaseAddress, as: UTF16.self)
             }
         }
         #else // os(Windows)
