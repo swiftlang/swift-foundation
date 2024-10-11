@@ -156,6 +156,7 @@
 #include <tzfile.h>
 #else
 
+#if TARGET_OS_MAC || TARGET_OS_LINUX
 #ifndef TZDIR
 #define TZDIR    "/usr/share/zoneinfo/" /* Time zone object file directory */
 #endif /* !defined TZDIR */
@@ -163,6 +164,7 @@
 #ifndef TZDEFAULT
 #define TZDEFAULT    "/etc/localtime"
 #endif /* !defined TZDEFAULT */
+#endif /* TARGET_OS_MAC || TARGET_OS_LINUX */
 
 #endif
 
