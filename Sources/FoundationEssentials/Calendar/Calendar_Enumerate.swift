@@ -454,6 +454,7 @@ extension Calendar {
     }
 
     internal func _enumerateDates(startingAfter start: Date,
+                                  previouslyReturnedMatchDate: Date? = nil,
                                   matching matchingComponents: DateComponents,
                                   matchingPolicy: MatchingPolicy,
                                   repeatedTimePolicy: RepeatedTimePolicy,
@@ -470,7 +471,7 @@ extension Calendar {
         let STOP_EXHAUSTIVE_SEARCH_AFTER_MAX_ITERATIONS = 100
 
         var searchingDate = start
-        var previouslyReturnedMatchDate: Date? = nil
+        var previouslyReturnedMatchDate = previouslyReturnedMatchDate
         var iterations = -1
 
         repeat {
@@ -511,14 +512,8 @@ extension Calendar {
                                          matchingPolicy: MatchingPolicy,
                                          repeatedTimePolicy: RepeatedTimePolicy,
                                          direction: SearchDirection,
-                                         inSearchingDate: Date,
+                                         inSearchingDate searchingDate: Date,
                                          previouslyReturnedMatchDate: Date?) throws -> SearchStepResult {
-        var exactMatch = true
-        var isLeapDay = false
-        var searchingDate = inSearchingDate
-
-        // NOTE: Several comments reference "isForwardDST" as a way to relate areas in forward DST handling.
-        var isForwardDST = false
 
         // Step A: Call helper method that does the searching
 
@@ -539,8 +534,25 @@ extension Calendar {
             // TODO: Check if returning the same searchingDate has any purpose
             return SearchStepResult(result: nil, newSearchDate: searchingDate)
         }
+        
+        return try _adjustedDate(unadjustedMatchDate, startingAfter: start, matching: matchingComponents, adjustedMatchingComponents: compsToMatch , matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction, inSearchingDate: searchingDate, previouslyReturnedMatchDate: previouslyReturnedMatchDate)
+    }
+    
+    internal func _adjustedDate(_ unadjustedMatchDate: Date, startingAfter start: Date,
+                                allowStartDate: Bool = false,
+                                matching matchingComponents: DateComponents,
+                                adjustedMatchingComponents compsToMatch: DateComponents,
+                                matchingPolicy: MatchingPolicy,
+                                repeatedTimePolicy: RepeatedTimePolicy,
+                                direction: SearchDirection,
+                                inSearchingDate: Date,
+                                previouslyReturnedMatchDate: Date?) throws -> SearchStepResult {
+        var exactMatch = true
+        var isLeapDay = false
+        var searchingDate = inSearchingDate
 
-        // Step B: Couldn't find matching date with a quick and dirty search in the current era, year, etc.  Now try in the near future/past and make adjustments for leap situations and non-existent dates
+        // NOTE: Several comments reference "isForwardDST" as a way to relate areas in forward DST handling.
+        var isForwardDST = false
 
         // matchDate may be nil, which indicates a need to keep iterating
         // Step C: Validate what we found and then run block. Then prepare the search date for the next round of the loop
@@ -624,7 +636,7 @@ extension Calendar {
         }
 
         // If we get a result that is exactly the same as the start date, skip.
-        if order == .orderedSame {
+        if !allowStartDate, order == .orderedSame {
             return SearchStepResult(result: nil, newSearchDate: searchingDate)
         }
 
@@ -1393,7 +1405,7 @@ extension Calendar {
         }
     }
     
-    private func dateAfterMatchingEra(startingAt startDate: Date, components: DateComponents, direction: SearchDirection, matchedEra: inout Bool) -> Date? {
+    internal func dateAfterMatchingEra(startingAt startDate: Date, components: DateComponents, direction: SearchDirection, matchedEra: inout Bool) -> Date? {
         guard let era = components.era else {
             // Nothing to do
             return nil
@@ -1431,7 +1443,7 @@ extension Calendar {
         }
     }
 
-    private func dateAfterMatchingYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let year = components.year else {
             // Nothing to do
             return nil
@@ -1466,7 +1478,7 @@ extension Calendar {
         }
     }
 
-    private func dateAfterMatchingYearForWeekOfYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingYearForWeekOfYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let yearForWeekOfYear = components.yearForWeekOfYear else {
             // Nothing to do
             return nil
@@ -1494,7 +1506,7 @@ extension Calendar {
         }
     }
 
-    private func dateAfterMatchingQuarter(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingQuarter(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let quarter = components.quarter else { return nil }
 
         // Get the beginning of the year we need
@@ -1530,7 +1542,7 @@ extension Calendar {
         }
     }
 
-    private func dateAfterMatchingWeekOfYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingWeekOfYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let weekOfYear = components.weekOfYear else {
             // Nothing to do
             return nil
@@ -1569,7 +1581,7 @@ extension Calendar {
     }
     
     @available(FoundationPreview 0.4, *)
-    private func dateAfterMatchingDayOfYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingDayOfYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let dayOfYear = components.dayOfYear else {
             // Nothing to do
             return nil
@@ -1606,7 +1618,7 @@ extension Calendar {
         return result
     }
 
-    private func dateAfterMatchingMonth(startingAt startDate: Date, components: DateComponents, direction: SearchDirection, strictMatching: Bool) throws -> Date? {
+    internal func dateAfterMatchingMonth(startingAt startDate: Date, components: DateComponents, direction: SearchDirection, strictMatching: Bool) throws -> Date? {
         guard let month = components.month else {
             // Nothing to do
             return nil
@@ -1695,7 +1707,7 @@ extension Calendar {
         return result
     }
 
-    private func dateAfterMatchingWeekOfMonth(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingWeekOfMonth(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let weekOfMonth = components.weekOfMonth else {
             // Nothing to do
             return nil
@@ -1784,7 +1796,7 @@ extension Calendar {
         return result
     }
 
-    private func dateAfterMatchingWeekdayOrdinal(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingWeekdayOrdinal(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let weekdayOrdinal = components.weekdayOrdinal else {
             // Nothing to do
             return nil
@@ -1887,7 +1899,7 @@ extension Calendar {
         return result
     }
 
-    private func dateAfterMatchingWeekday(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingWeekday(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let weekday = components.weekday else {
             // Nothing to do
             return nil
@@ -1944,7 +1956,7 @@ extension Calendar {
         return result
     }
 
-    private func dateAfterMatchingDay(startingAt startDate: Date, originalStartDate: Date, components comps: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingDay(startingAt startDate: Date, originalStartDate: Date, components comps: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let day = comps.day else {
             // Nothing to do
             return nil
@@ -2045,7 +2057,7 @@ extension Calendar {
         return result
     }
 
-    private func dateAfterMatchingHour(startingAt startDate: Date, originalStartDate: Date, components: DateComponents, direction: SearchDirection, findLastMatch: Bool, isStrictMatching: Bool, matchingPolicy: MatchingPolicy) throws -> Date? {
+    internal func dateAfterMatchingHour(startingAt startDate: Date, originalStartDate: Date, components: DateComponents, direction: SearchDirection, findLastMatch: Bool, isStrictMatching: Bool, matchingPolicy: MatchingPolicy) throws -> Date? {
         guard let hour = components.hour else {
             // Nothing to do
             return nil
@@ -2182,7 +2194,7 @@ extension Calendar {
         return result
     }
 
-    private func dateAfterMatchingMinute(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingMinute(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let minute = components.minute else {
             // Nothing to do
             return nil
@@ -2211,7 +2223,7 @@ extension Calendar {
         return result
     }
 
-    private func dateAfterMatchingSecond(startingAt startDate: Date, originalStartDate: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
+    internal func dateAfterMatchingSecond(startingAt startDate: Date, originalStartDate: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let second = components.second else {
             // Nothing to do
             return nil
@@ -2277,7 +2289,7 @@ extension Calendar {
         return result
     }
 
-    private func dateAfterMatchingNanosecond(startingAt: Date, components: DateComponents, direction: SearchDirection) -> Date? {
+    internal func dateAfterMatchingNanosecond(startingAt: Date, components: DateComponents, direction: SearchDirection) -> Date? {
         guard let nanosecond = components.nanosecond else {
             // Nothing to do
             return nil
