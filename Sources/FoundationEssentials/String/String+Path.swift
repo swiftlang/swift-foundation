@@ -194,7 +194,11 @@ extension String {
         guard let lastDot = self.utf8.lastIndex(of: dot) else {
             return self
         }
-        return String(self[..<lastDot])
+        var result = String(self[..<lastDot])
+        if utf8.last == ._slash {
+            result += "/"
+        }
+        return result
     }
 
     private func validatePathExtension(_ pathExtension: String) -> Bool {
@@ -214,7 +218,16 @@ extension String {
         guard validatePathExtension(pathExtension) else {
             return self
         }
-        return self + ".\(pathExtension)"
+        var result = self._droppingTrailingSlashes
+        guard result != "/" else {
+            // Path was all slashes
+            return self + ".\(pathExtension)"
+        }
+        result += ".\(pathExtension)"
+        if utf8.last == ._slash {
+            result += "/"
+        }
+        return result
     }
 
     internal var pathExtension: String {
@@ -366,7 +379,7 @@ extension String {
         return String(cString: output)
     }
 
-    #if !NO_FILESYSTEM
+#if !NO_FILESYSTEM
     internal static func homeDirectoryPath(forUser user: String? = nil) -> String {
 #if os(Windows)
         if let user {
@@ -529,8 +542,10 @@ extension String {
 #else
         return "/tmp/"
 #endif
-#endif
+#endif // os(Windows)
     }
+#endif // !NO_FILESYSTEM
+
     /// Replaces any number of sequential `/`
     /// characters with /
     /// NOTE: Internal so it's testable
@@ -569,7 +584,7 @@ extension String {
         }
     }
 
-    private var _droppingTrailingSlashes: String {
+    internal var _droppingTrailingSlashes: String {
         guard !self.isEmpty else {
             return self
         }
@@ -579,7 +594,9 @@ extension String {
         }
         return String(self[...lastNonSlash])
     }
-    
+
+#if !NO_FILESYSTEM
+
     static var NETWORK_PREFIX: String { #"\\"# }
     
     private var _standardizingPath: String {
@@ -616,7 +633,8 @@ extension String {
     var standardizingPath: String {
         expandingTildeInPath._standardizingPath
     }
-    #endif // !NO_FILESYSTEM
+
+#endif // !NO_FILESYSTEM
     
     // _NSPathComponents
     var pathComponents: [String] {
