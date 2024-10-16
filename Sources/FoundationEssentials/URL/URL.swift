@@ -1357,6 +1357,11 @@ public struct URL: Equatable, Sendable, Hashable {
         return URL.fileSystemPath(for: path())
     }
 
+    /// True if the URL's relative path would resolve against a base URL path
+    private var pathResolvesAgainstBase: Bool {
+        return _parseInfo.scheme == nil && !hasAuthority && relativePath().utf8.first != ._slash
+    }
+
     /// Returns the path component of the URL if present, otherwise returns an empty string.
     ///
     /// - note: This function will resolve against the base `URL`.
@@ -1649,7 +1654,9 @@ public struct URL: Equatable, Sendable, Hashable {
     /// Returns a URL constructed by removing the last path component of self.
     ///
     /// This function may either remove a path component or append `/..`.
-    /// If the URL has an empty path (e.g., `http://www.example.com`), then this function will return the URL unchanged.
+    /// If the URL has an empty path that is not resolved against a base URL
+    /// (e.g., `http://www.example.com`),
+    /// then this function will return the URL unchanged.
     public func deletingLastPathComponent() -> URL {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1658,7 +1665,17 @@ public struct URL: Equatable, Sendable, Hashable {
             return result
         }
         #endif
-        guard !relativePath().isEmpty else { return self }
+        let shouldAppendDotDot = (
+            pathResolvesAgainstBase && (
+                relativePath().isEmpty
+                || relativePath().lastPathComponent == "."
+                || relativePath().lastPathComponent == ".."
+            )
+        )
+        if shouldAppendDotDot {
+            return self.appending(path: "..", directoryHint: .isDirectory)
+        }
+
         var components = URLComponents(parseInfo: _parseInfo)
         var newPath = components.percentEncodedPath.deletingLastPathComponent()
         // .deletingLastPathComponent() removes the trailing "/", but we know it's a directory
@@ -2226,7 +2243,15 @@ extension URL {
             pathToAppend = String(decoding: utf8, as: UTF8.self)
         }
 
-        if newPath.utf8.last != ._slash && pathToAppend.utf8.first != ._slash {
+        // If the current path is empty (relative), don't append a slash which
+        // would make the path absolute--unless we have an authority.
+
+        // If we have an authority, we must add a slash to separate the path from the authority,
+        // e.g. URL("http://example.com").appending(path: "path") == "http://example.com/path"
+
+        if newPath.isEmpty && !hasAuthority {
+            // Do nothing, path will be directly appended
+        } else if newPath.utf8.last != ._slash && pathToAppend.utf8.first != ._slash {
             newPath += "/"
         } else if newPath.utf8.last == ._slash && pathToAppend.utf8.first == ._slash {
             _ = newPath.popLast()
