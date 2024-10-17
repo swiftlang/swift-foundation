@@ -285,7 +285,7 @@ open class FileManager : @unchecked Sendable {
     }
 
     open var currentDirectoryPath: String {
-        _impl.currentDirectoryPath!
+        _impl.currentDirectoryPath ?? ""
     }
 
     open func changeCurrentDirectoryPath(_ path: String) -> Bool {
