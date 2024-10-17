@@ -19,6 +19,7 @@ Package.resolved
 .swiftpm
 
 **/.build*
+.index-build
 
 # VSCode
 **/.vscode
