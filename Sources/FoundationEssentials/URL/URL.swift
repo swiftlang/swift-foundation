@@ -1988,7 +1988,12 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif
-        _parseInfo = Parser.parse(urlString: _url.relativeString, encodingInvalidCharacters: true)!
+        if let parseInfo = Parser.parse(urlString: _url.relativeString, encodingInvalidCharacters: true) {
+            _parseInfo = parseInfo
+        } else {
+            // Go to compatibility jail (allow `URL` as a dummy string container for `NSURL` instead of crashing)
+            _parseInfo = URLParseInfo(urlString: _url.relativeString, urlParser: .RFC3986, schemeRange: nil, userRange: nil, passwordRange: nil, hostRange: nil, portRange: nil, pathRange: nil, queryRange: nil, fragmentRange: nil, isIPLiteral: false, didPercentEncodeHost: false, pathHasPercent: false)
+        }
         _baseParseInfo = reference.baseURL?._parseInfo
     }
 
