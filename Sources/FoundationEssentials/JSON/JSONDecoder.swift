@@ -672,8 +672,21 @@ extension JSONDecoderImpl: Decoder {
             }
 
         case .base64:
-            let string = try self.unwrapString(from: mapValue, for: codingPathNode, additionalKey)
-            guard let data = Data(base64Encoded: string) else {
+            guard case .string(let region, let isSimple) = mapValue else {
+                throw self.createTypeMismatchError(type: String.self, for: codingPathNode.path(byAppending: additionalKey), value: mapValue)
+            }
+            var data: Data?
+            if isSimple {
+                data = withBuffer(for: region) { buffer, _ in
+                    Data(decodingBase64: buffer)
+                }
+            }
+            if data == nil {
+                // For compatibility, try decoding as a string and then base64 decoding it.
+                let string = try self.unwrapString(from: mapValue, for: codingPathNode, additionalKey)
+                data = Data(base64Encoded: string)
+            }
+            guard let data else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: codingPathNode.path(byAppending: additionalKey), debugDescription: "Encountered Data is not valid Base64."))
             }
 
