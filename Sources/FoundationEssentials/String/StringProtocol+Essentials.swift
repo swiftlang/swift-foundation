@@ -74,6 +74,21 @@ extension UInt8 {
     }
 }
 
+extension UInt16 {
+    init(nextStep codepoint: UInt8) {
+        if codepoint < 128 {
+            self = Self(codepoint)
+        } else {
+            let tableOffset = Int(codepoint - 128)
+            self = withUnsafePointer(to: _stringshims_nextstep_mapping) {
+                $0.withMemoryRebound(to: Self.self, capacity: Int(_STRINGSHIMS_NEXTSTEP_MAP_SIZE)) {
+                    $0.advanced(by: tableOffset).pointee
+                }
+            }
+        }
+    }
+}
+
 // These provides concrete implementations for String and Substring, enhancing performance over generic StringProtocol.
 
 @available(FoundationPreview 0.4, *)

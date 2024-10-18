@@ -158,7 +158,6 @@ open class PropertyListDecoder {
             format = .xml
             return result
         }, openstep: { utf16View in
-#if FOUNDATION_FRAMEWORK
             let value: Any
             do {
                 value = try __ParseOldStylePropertyList(utf16: utf16View)
@@ -168,10 +167,6 @@ open class PropertyListDecoder {
             let decoder = __PlistDictionaryDecoder(referencing: value, at: [], options: options)
             format = .openStep
             return try doDecode(decoder)
-#else
-            // Unsupported until __PlistDictionaryDecoder is available
-            throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The openStep format is unsupported on this platform."))
-#endif
         })
     }
     
