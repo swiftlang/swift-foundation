@@ -2226,7 +2226,15 @@ extension URL {
             pathToAppend = String(decoding: utf8, as: UTF8.self)
         }
 
-        if newPath.utf8.last != ._slash && pathToAppend.utf8.first != ._slash {
+        // If the current path is empty (relative), don't append a slash which
+        // would make the path absolute--unless we have an authority.
+
+        // If we have an authority, we must add a slash to separate the path from the authority,
+        // e.g. URL("http://example.com").appending(path: "path") == "http://example.com/path"
+
+        if newPath.isEmpty && !hasAuthority {
+            // Do nothing, path will be directly appended
+        } else if newPath.utf8.last != ._slash && pathToAppend.utf8.first != ._slash {
             newPath += "/"
         } else if newPath.utf8.last == ._slash && pathToAppend.utf8.first == ._slash {
             _ = newPath.popLast()
