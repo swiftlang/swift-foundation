@@ -1213,21 +1213,38 @@ public struct URL: Equatable, Sendable, Hashable {
             return nil
         }
         #endif
-        guard let encodedHost else { return nil }
-        let didPercentEncodeHost = hasAuthority ? _parseInfo.didPercentEncodeHost : _baseParseInfo?.didPercentEncodeHost ?? false
-        if percentEncoded {
-            if didPercentEncodeHost {
-                return String(encodedHost)
-            }
-            guard let decoded = Parser.IDNADecodeHost(encodedHost) else {
+        guard let encodedHost else {
+            return nil
+        }
+
+        func requestedHost() -> String? {
+            let didPercentEncodeHost = hasAuthority ? _parseInfo.didPercentEncodeHost : _baseParseInfo?.didPercentEncodeHost ?? false
+            if percentEncoded {
+                if didPercentEncodeHost {
+                    return encodedHost
+                }
+                guard let decoded = Parser.IDNADecodeHost(encodedHost) else {
+                    return encodedHost
+                }
+                return Parser.percentEncode(decoded, component: .host)
+            } else {
+                if didPercentEncodeHost {
+                    return Parser.percentDecode(encodedHost)
+                }
                 return encodedHost
             }
-            return Parser.percentEncode(decoded, component: .host)
+        }
+
+        guard let requestedHost = requestedHost() else {
+            return nil
+        }
+
+        let isIPLiteral = hasAuthority ? _parseInfo.isIPLiteral : _baseParseInfo?.isIPLiteral ?? false
+        if isIPLiteral {
+            // Strip square brackets to be compatible with old URL.host behavior
+            return String(requestedHost.utf8.dropFirst().dropLast())
         } else {
-            if didPercentEncodeHost {
-                return Parser.percentDecode(encodedHost)
-            }
-            return String(encodedHost)
+            return requestedHost
         }
     }
 
