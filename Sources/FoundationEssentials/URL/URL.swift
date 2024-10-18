@@ -608,11 +608,11 @@ public struct URLResourceValues {
 extension URLResourceValues : Sendable {}
 #endif // FOUNDATION_FRAMEWORK
 
-#if FOUNDATION_FRAMEWORK_NSURL
+#if FOUNDATION_FRAMEWORK
 internal func foundation_swift_url_enabled() -> Bool {
     return _foundation_swift_url_feature_enabled()
 }
-#elseif FOUNDATION_FRAMEWORK
+#else
 internal func foundation_swift_url_enabled() -> Bool { return true }
 #endif
 
