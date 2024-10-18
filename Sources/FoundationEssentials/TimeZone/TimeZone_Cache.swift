@@ -131,6 +131,9 @@ struct TimeZoneCache : Sendable, ~Copyable {
                     return TimeZone(inner: result)
                 }
             }
+#elseif os(WASI)
+            // WASI doesn't provide a way to get the current timezone for now, so
+            // just return the default GMT timezone.
 #else
             let buffer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: Int(PATH_MAX + 1))
             defer { buffer.deallocate() }
