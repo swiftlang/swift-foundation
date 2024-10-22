@@ -41,22 +41,6 @@ extension Date {
 }
 
 #if !os(Windows)
-#if !os(WASI)
-private func _nameFor(uid: uid_t) -> String? {
-    guard let pwd = getpwuid(uid), let name = pwd.pointee.pw_name else {
-        return nil
-    }
-    return String(cString: name)
-}
-
-private func _nameFor(gid: gid_t) -> String? {
-    guard let pwd = getgrgid(gid), let name = pwd.pointee.gr_name else {
-        return nil
-    }
-    return String(cString: name)
-}
-#endif
-
 extension mode_t {
     private var _fileType: FileAttributeType {
         switch self & S_IFMT {
@@ -193,10 +177,10 @@ extension stat {
             .groupOwnerAccountID : _writeFileAttributePrimitive(st_gid, as: UInt.self)
         ]
         #if !os(WASI)
-        if let userName = _nameFor(uid: st_uid) {
+        if let userName = Platform.nameFor(uid: st_uid) {
             result[.ownerAccountName] = userName
         }
-        if let groupName = _nameFor(gid: st_gid) {
+        if let groupName = Platform.nameFor(gid: st_gid) {
             result[.groupOwnerAccountName] = groupName
         }
         #endif
@@ -942,8 +926,8 @@ extension _FileManagerImpl {
                 #else
                 // Bias toward userID & groupID - try to prevent round trips to getpwnam if possible.
                 var leaveUnchanged: UInt32 { UInt32(bitPattern: -1) }
-                let rawUserID = userID.flatMap(uid_t.init) ?? user.flatMap(Self._userAccountNameToNumber) ?? leaveUnchanged
-                let rawGroupID = groupID.flatMap(gid_t.init) ?? group.flatMap(Self._groupAccountNameToNumber) ?? leaveUnchanged
+                let rawUserID = userID.flatMap(uid_t.init) ?? user.flatMap(Platform.uidFor(name:)) ?? leaveUnchanged
+                let rawGroupID = groupID.flatMap(gid_t.init) ?? group.flatMap(Platform.gidFor(name:)) ?? leaveUnchanged
                 if chown(fileSystemRepresentation, rawUserID, rawGroupID) != 0 {
                     throw CocoaError.errorWithFilePath(path, errno: errno, reading: false)
                 }
