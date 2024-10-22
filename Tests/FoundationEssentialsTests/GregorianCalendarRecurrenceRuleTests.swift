@@ -516,11 +516,38 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
     func testYearlyRecurrenceWithWeekNumberExpansion() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.firstWeekday = 2 // Week starts on Monday
+        calendar.minimumDaysInFirstWeek = 4
+        
+        let start = Date(timeIntervalSince1970: 1357048800.0) // 2013-01-01T14:00:00-0000
+        let end   = Date(timeIntervalSince1970: 1483279200.0) // 2017-01-01T14:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: calendar, frequency: .yearly)
+        rule.weeks = [1, 2]
+        
+        let results = Array(rule.recurrences(of: start, in: start..<end))
+        
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 1357048800.0), // 2013-01-01T14:00:00-0000
+            Date(timeIntervalSince1970: 1357653600.0), // 2013-01-08T14:00:00-0000
+            Date(timeIntervalSince1970: 1388584800.0), // 2014-01-01T14:00:00-0000
+            Date(timeIntervalSince1970: 1389189600.0), // 2014-01-08T14:00:00-0000
+            Date(timeIntervalSince1970: 1420120800.0), // 2015-01-01T14:00:00-0000
+            Date(timeIntervalSince1970: 1420725600.0), // 2015-01-08T14:00:00-0000
+            Date(timeIntervalSince1970: 1452261600.0), // 2016-01-08T14:00:00-0000
+            Date(timeIntervalSince1970: 1452866400.0), // 2016-01-15T14:00:00-0000
+        ]
+        
+        XCTAssertEqual(results, expectedResults)
+    }
+    
+    func testYearlyRecurrenceWithWeekNumberExpansionCountingBack() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.firstWeekday = 2 // Week starts on Monday
         
         let start = Date(timeIntervalSince1970: 1704117600.0) // 2024-01-01T14:00:00-0000
         let end   = Date(timeIntervalSince1970: 1767225600.0) // 2026-01-01T00:00:00-0000
         
-        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly)
+        var rule = Calendar.RecurrenceRule(calendar: calendar, frequency: .yearly)
         rule.weeks = [1, -1]
         
         let results = Array(rule.recurrences(of: start, in: start..<end))
@@ -636,4 +663,17 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         }
         // If we get here, there isn't an infinite loop
    }
+    
+   func testOutOfRangeComponents() {
+        let start = Date(timeIntervalSince1970: 1695304800.0) // 2023-09-21T14:00:00-0000
+        let end   = Date(timeIntervalSince1970: 1729519200.0) // 2024-10-21T14:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly)
+        rule.daysOfTheMonth = [32, -32]
+        
+        let eventStart = Date(timeIntervalSince1970: 1285077600.0) // 2010-09-21T14:00:00-0000
+        let results = Array(rule.recurrences(of: eventStart, in: start..<end))
+        
+        XCTAssertEqual(results, [])
+    }
 }
