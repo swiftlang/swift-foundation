@@ -731,7 +731,7 @@ final class FileManagerTests : XCTestCase {
             
             // Test get current directory path when it's parent directory was removed.
             XCTAssertTrue($0.changeCurrentDirectoryPath("dir"))
-            try $0.removeItem(atPath: "../dir")
+            try $0.removeItem(atPath: $0.currentDirectoryPath)
             XCTAssertEqual($0.currentDirectoryPath, "")
         }
     }
