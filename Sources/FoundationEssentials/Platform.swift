@@ -158,43 +158,43 @@ extension Platform {
         }
     }
     
-    static func uidFor(name: String) -> uid_t? {
+    static func uid(forName name: String) -> uid_t? {
         withUserGroupBuffer(name, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwnam_r) {
             $0.pw_uid
         }
     }
     
-    static func gidFor(name: String) -> uid_t? {
+    static func gid(forName name: String) -> uid_t? {
         withUserGroupBuffer(name, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: getgrnam_r) {
             $0.gr_gid
         }
     }
     
-    static func nameFor(uid: uid_t) -> String? {
+    static func name(forUID uid: uid_t) -> String? {
         withUserGroupBuffer(uid, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwuid_r) {
             String(cString: $0.pw_name)
         }
     }
     
-    static func fullNameFor(uid: uid_t) -> String? {
+    static func fullName(forUID uid: uid_t) -> String? {
         withUserGroupBuffer(uid, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwuid_r) {
             String(cString: $0.pw_gecos)
         }
     }
     
-    static func nameFor(gid: gid_t) -> String? {
+    static func name(forGID gid: gid_t) -> String? {
         withUserGroupBuffer(gid, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: getgrgid_r) {
             String(cString: $0.gr_name)
         }
     }
     
-    static func homeDirFor(name: String) -> String? {
-        withUserGroupBuffer(name, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwnam_r) {
+    static func homeDirectory(forUserName userName: String) -> String? {
+        withUserGroupBuffer(userName, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwnam_r) {
             String(cString: $0.pw_dir)
         }
     }
     
-    static func homeDirFor(uid: uid_t) -> String? {
+    static func homeDirectory(forUID uid: uid_t) -> String? {
         withUserGroupBuffer(uid, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwuid_r) {
             String(cString: $0.pw_dir)
         }

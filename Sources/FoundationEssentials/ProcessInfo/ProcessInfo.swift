@@ -178,7 +178,7 @@ final class _ProcessInfo: Sendable {
 #if canImport(Darwin) || canImport(Android) || canImport(Glibc) || canImport(Musl)
         // Darwin and Linux
         let (euid, _) = Platform.getUGIDs()
-        if let username = Platform.nameFor(uid: euid) {
+        if let username = Platform.name(forUID: euid) {
             return username
         } else if let username = self.environment["USER"] {
             return username
@@ -214,7 +214,7 @@ final class _ProcessInfo: Sendable {
         return ""
 #elseif canImport(Darwin) || canImport(Android) || canImport(Glibc) || canImport(Musl)
         let (euid, _) = Platform.getUGIDs()
-        if let fullName = Platform.fullNameFor(uid: euid) {
+        if let fullName = Platform.fullName(forUID: euid) {
             return fullName
         }
         return ""
