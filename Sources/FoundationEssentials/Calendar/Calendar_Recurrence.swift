@@ -230,9 +230,23 @@ extension Calendar {
                     case .monthly:  [.second, .minute, .hour, .day]
                     case .yearly:   [.second, .minute, .hour, .day, .month]
                 }
-                let componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start) 
+                var componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start) 
                 
                 let rangeForBaseRecurrence: Range<Date>? = nil
+                var baseRecurrenceStartDate = start
+                if componentsForEnumerating.day != nil, dayOfMonthAction == .expand || weekdayAction == .expand {
+                    // If we expand either the day of the month or weekday, then
+                    // the day of month is likely to not match that of the start
+                    // date. Reset it to 1 in the base recurrence as to not skip
+                    // "invalid" anchors, such as February 30
+                    componentsForEnumerating.day = 1
+                }
+                if componentsForEnumerating.month != nil, monthAction == .expand {
+                    // Likewise, if we will be changing the month, reset it to 1 
+                    // in case the start date falls on a leap month
+                    componentsForEnumerating.month = 1
+                    componentsForEnumerating.isLeapMonth = nil
+                }
                 baseRecurrence = Calendar.DatesByMatching(calendar: recurrence.calendar,
                                                           start: start,
                                                           range: rangeForBaseRecurrence,
