@@ -28,9 +28,7 @@ After the review has completed, the Foundation Workgroup will make a decision on
 
 ### Abbreviated review for minor proposals
 
-Minor API enhancement ideas that have gained community interest through GitHub issues or forum threads may take a shorter review process. Examples include extending existing types with new functions or variables, or adding new `case` to `enum`. Instead of requiring both a pitch thread and a review, these changes can be proposed directly with a proposal document on a pitch thread. The workgroup has appointed an API champion (currently @itingliu) to oversee this process.
-
-The steps may look like the following:
+Minor API enhancement ideas that have gained community interest through GitHub issues or forum threads may take a shorter review process. Examples include extending existing types with new functions or variables, or adding new `case` to `enum`. Instead of requiring both a pitch thread and a review, these changes can be proposed directly with a proposal document on a pitch thread. The workgroup has appointed an API champion (currently @itingliu) to oversee this process. Here's what you would do:
 
 * **Develop the proposal**: Prepare the proposal using the [proposal template](Proposals/0000-template.md) with a prototype.
 * **Request an abbreviated review**: Initiate a pull request to the swift-foundation repository to indicate to the workgroup that you would like the proposal to be reviewed. Meanwhile, post the pull request on the "pitches" section of the Swift forums. Upon seeing the pitch on the forum, a workgroup member will be assigned to manage the review. 
