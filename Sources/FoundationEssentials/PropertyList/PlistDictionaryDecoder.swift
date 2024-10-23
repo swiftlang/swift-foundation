@@ -10,9 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Relies on NSNumber
-#if FOUNDATION_FRAMEWORK
-
 // MARK: - __PlistDictionaryDecoder
 
 internal class __PlistDictionaryDecoder : Decoder, _PlistDecoderEntryPointProtocol {
@@ -899,10 +896,14 @@ extension __PlistDictionaryDecoder {
             }
             return converted
         }
+
+        // Relies on NSNumber
+        #if FOUNDATION_FRAMEWORK
         if let ns = value as? NSNumber {
             // This was some other NSNumber value that couldn't fit in T.
             throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed property list number <\(ns)> does not fit in \(type)."))
         }
+        #endif
 
         throw DecodingError._typeMismatch(at: self.codingPath, expectation: type, reality: value)
     }
@@ -966,10 +967,14 @@ extension __PlistDictionaryDecoder {
             }
             return converted
         }
+
+        // Relies on NSNumber
+        #if FOUNDATION_FRAMEWORK
         if let ns = value as? NSNumber {
             // This was some other NSNumber value that couldn't fit in T.
             throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed property list number <\(ns)> does not fit in \(type)."))
         }
+        #endif
 
         throw DecodingError._typeMismatch(at: self.codingPath, expectation: type, reality: value)
     }
@@ -1028,5 +1033,3 @@ extension __PlistDictionaryDecoder {
         return try type.init(from: self, configuration: configuration)
     }
 }
-
-#endif // FOUNDATION_FRAMEWORK

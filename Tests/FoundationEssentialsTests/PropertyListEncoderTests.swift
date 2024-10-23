@@ -858,9 +858,6 @@ class TestPropertyListEncoder : XCTestCase {
         }
     }
 
-#if FOUNDATION_FRAMEWORK
-    // Requires old style plist support
-    // Requires "NEXTStep" decoding in String(bytes:encoding:) for decoding the octal characters
 
     func test_oldStylePlist_invalid() {
         let data = "goodbye cruel world".data(using: String._Encoding.utf16)!
@@ -968,7 +965,6 @@ string3 = "Good evening"; // Test
             XCTFail("Unexpected error: \(error)")
         }
     }
-#endif
     
 #if FOUNDATION_FRAMEWORK
     // Requires __PlistDictionaryDecoder

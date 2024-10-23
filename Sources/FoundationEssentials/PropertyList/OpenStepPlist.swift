@@ -302,12 +302,7 @@ private func parseOctal(startingWith ch: UInt16, _ pInfo: inout _ParseInfo) -> U
         }
     }
 
-    // A probably more expensive replacement for CFStringEncodingBytesToUnicode(kCFStringEncodingNextStepLatin, …)
-    guard let str = String(bytes: [num], encoding: .nextstep) else {
-        pInfo.err = OpenStepPlistError("Unable to convert octet-stream while parsing plist")
-        return 0
-    }
-    return str.utf16.first ?? 0
+    return .init(nextStep: num)
 }
 
 private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16 {
