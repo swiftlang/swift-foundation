@@ -729,10 +729,14 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["bar", "dir", "dir/foo"])
             XCTAssertFalse($0.changeCurrentDirectoryPath("does_not_exist"))
             
+            #if !os(Windows)
             // Test get current directory path when it's parent directory was removed.
+            // It's will be remove failed on Windows when directory is using.
             XCTAssertTrue($0.changeCurrentDirectoryPath("dir"))
             try $0.removeItem(atPath: $0.currentDirectoryPath)
             XCTAssertEqual($0.currentDirectoryPath, "")
+            #endif
+            
         }
     }
     
