@@ -109,7 +109,7 @@ extension Calendar {
         public var interval: Int
         /// When a recurring event stops recurring
         public struct End: Sendable, Equatable {
-            private enum _End: Equatable {
+            private enum _End: Equatable, Hashable {
                 case never
                 case afterDate(Date)
                 case afterOccurrences(Int)
@@ -449,7 +449,7 @@ extension Calendar.RecurrenceRule: Codable {
 }
 
 @available(FoundationPreview 6.0.2, *)
-extension Calendar.RecurrenceRule.End: CustomStringConvertible {
+extension Calendar.RecurrenceRule.End: CustomStringConvertible, Hashable {
     public var description: String {
         switch self._guts {
             case .never: "Never"
@@ -458,3 +458,9 @@ extension Calendar.RecurrenceRule.End: CustomStringConvertible {
         }
     }
 }
+@available(FoundationPreview 6.0.2, *)
+extension Calendar.RecurrenceRule.Month: Hashable { }
+@available(FoundationPreview 6.0.2, *)
+extension Calendar.RecurrenceRule.Weekday: Hashable { }
+@available(FoundationPreview 6.0.2, *)
+extension Calendar.RecurrenceRule: Hashable { }
