@@ -676,4 +676,67 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         
         XCTAssertEqual(results, [])
     }
+    
+    func testFirstMondaysStrictMatching() {
+        let startDate = Date(timeIntervalSince1970: 1706659200.0) // 2024-01-31T00:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly, matchingPolicy: .strict)
+        rule.weekdays = [.nth(1, .monday)]
+        
+        var dates = rule.recurrences(of: startDate).makeIterator()
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1707091200.0)) // 2024-02-05T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1709510400.0)) // 2024-03-04T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1711929600.0)) // 2024-04-01T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1714953600.0)) // 2024-05-06T00:00:00-0000
+    }
+    
+    func testFifthFridaysStrictMatching() {
+        let startDate = Date(timeIntervalSince1970: 1706659200.0) // 2024-01-31T00:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly, matchingPolicy: .strict)
+        rule.weekdays = [.nth(5, .friday)]
+        
+        var dates = rule.recurrences(of: startDate).makeIterator()
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1711670400.0)) // 2024-03-29T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1717113600.0)) // 2024-05-31T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1724976000.0)) // 2024-08-30T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1732838400.0)) // 2024-11-29T00:00:00-0000
+    }
+
+    func testYearlyRecurrenceWeekdayExpansionStrictMatching() {
+        let startDate = Date(timeIntervalSince1970: 1709164800.0) // 2024-02-29T00:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly, matchingPolicy: .strict)
+        rule.weekdays = [.nth(5, .friday)]
+        
+        var dates = rule.recurrences(of: startDate).makeIterator()
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1738281600.0)) // 2025-01-31T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1769731200.0)) // 2026-01-30T00:00:00-0000
+    }
+
+    func testYearlyRecurrenceDayOfYearExpansionStrictMatching() {
+        let startDate = Date(timeIntervalSince1970: 1709164800.0) // 2024-02-29T00:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly, matchingPolicy: .strict)
+        rule.daysOfTheYear = [61]
+        
+        var dates = rule.recurrences(of: startDate).makeIterator()
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1709251200.0)) // 2024-03-01T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1740873600.0)) // 2025-03-02T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1772409600.0)) // 2026-03-02T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1803945600.0)) // 2027-03-02T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1835481600.0)) // 2028-03-01T00:00:00-0000
+    }
+
+    func testYearlyRecurrenceWeekExpansionStrictMatching() {
+        let startDate = Date(timeIntervalSince1970: 1709164800.0) // 2024-02-29T00:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly, matchingPolicy: .strict)
+        rule.weeks = [2]
+        
+        var dates = rule.recurrences(of: startDate).makeIterator()
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1736553600.0)) // 2025-01-11T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1767484800.0)) // 2026-01-04T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1799020800.0)) // 2027-01-04T00:00:00-0000
+    }
 }
