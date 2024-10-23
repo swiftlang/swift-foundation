@@ -513,17 +513,16 @@ extension String {
         
         #if !os(WASI) // WASI does not have user concept
         // Next, attempt to find the home directory via getpwnam/getpwuid
-        var pass: UnsafeMutablePointer<passwd>?
         if let user {
-            pass = getpwnam(user)
+            if let dir = Platform.homeDirectory(forUserName: user) {
+                return dir.standardizingPath
+            }
         } else {
             // We use the real UID instead of the EUID here when the EUID is the root user (i.e. a process has called seteuid(0))
             // In this instance, we historically do this to ensure a stable home directory location for processes that call seteuid(0)
-            pass = getpwuid(Platform.getUGIDs(allowEffectiveRootUID: false).uid)
-        }
-        
-        if let dir = pass?.pointee.pw_dir {
-            return String(cString: dir).standardizingPath
+            if let dir = Platform.homeDirectory(forUID: Platform.getUGIDs(allowEffectiveRootUID: false).uid) {
+                return dir.standardizingPath
+            }
         }
         #endif // !os(WASI)
 

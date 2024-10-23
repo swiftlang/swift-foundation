@@ -275,20 +275,6 @@ extension _FileManagerImpl {
         }
     }
     #endif
-
-#if !os(Windows) && !os(WASI)
-    static func _userAccountNameToNumber(_ name: String) -> uid_t? {
-        name.withCString { ptr in
-            getpwnam(ptr)?.pointee.pw_uid
-        }
-    }
-    
-    static func _groupAccountNameToNumber(_ name: String) -> gid_t? {
-        name.withCString { ptr in
-            getgrnam(ptr)?.pointee.gr_gid
-        }
-    }
-#endif
 }
 
 extension FileManager {
