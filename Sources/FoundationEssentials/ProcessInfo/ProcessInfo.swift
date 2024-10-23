@@ -168,9 +168,8 @@ final class _ProcessInfo: Sendable {
 #if canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
         // Darwin and Linux
         let (euid, _) = Platform.getUGIDs()
-        if let upwd = getpwuid(euid),
-           let uname = upwd.pointee.pw_name {
-            return String(cString: uname)
+        if let username = Platform.name(forUID: euid) {
+            return username
         } else if let username = self.environment["USER"] {
             return username
         }
@@ -202,9 +201,8 @@ final class _ProcessInfo: Sendable {
     var fullUserName: String {
 #if canImport(Darwin) || os(Android) || canImport(Glibc) || canImport(Musl)
         let (euid, _) = Platform.getUGIDs()
-        if let upwd = getpwuid(euid),
-           let fullname = upwd.pointee.pw_gecos {
-            return String(cString: fullname)
+        if let fullName = Platform.fullName(forUID: euid) {
+            return fullName
         }
         return ""
 #elseif os(WASI)
