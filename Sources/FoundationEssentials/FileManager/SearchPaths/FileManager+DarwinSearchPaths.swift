@@ -160,20 +160,12 @@ extension String {
         guard self == "~" || self.hasPrefix("~/") else {
             return self
         }
-        var bufSize = sysconf(_SC_GETPW_R_SIZE_MAX)
-        if bufSize == -1 {
-            bufSize = 4096 // A generous guess.
+        let euid = geteuid()
+        let trueUid = euid == 0 ? getuid() : euid
+        guard let name = Platform.name(forUID: trueUid) else {
+            return self
         }
-        return withUnsafeTemporaryAllocation(of: CChar.self, capacity: bufSize) { pwBuff in
-            var pw: UnsafeMutablePointer<passwd>?
-            var pwd = passwd()
-            let euid = geteuid()
-            let trueUid = euid == 0 ? getuid() : euid
-            guard getpwuid_r(trueUid, &pwd, pwBuff.baseAddress!, bufSize, &pw) == 0, let pw else {
-                return self
-            }
-            return String(cString: pw.pointee.pw_dir).appendingPathComponent(String(self.dropFirst()))
-        }
+        return name.appendingPathComponent(String(self.dropFirst()))
     }
 }
 #endif // os(macOS) && FOUNDATION_FRAMEWORK

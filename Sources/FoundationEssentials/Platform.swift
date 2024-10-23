@@ -135,6 +135,70 @@ extension Platform {
         }
         return result
     }
+    
+    #if canImport(Darwin)
+    typealias Operation<Input, Output> = (Input, UnsafeMutablePointer<Output>?, UnsafeMutablePointer<CChar>?, Int, UnsafeMutablePointer<UnsafeMutablePointer<Output>?>?) -> Int32
+    #else
+    typealias Operation<Input, Output> = (Input, UnsafeMutablePointer<Output>, UnsafeMutablePointer<CChar>, Int, UnsafeMutablePointer<UnsafeMutablePointer<Output>?>) -> Int32
+    #endif
+    
+    private static func withUserGroupBuffer<Input, Output, R>(_ input: Input, _ output: Output, sizeProperty: Int32, operation: Operation<Input, Output>, block: (Output) throws -> R) rethrows -> R? {
+        var bufferLen = sysconf(sizeProperty)
+        if bufferLen == -1 {
+            bufferLen = 4096 // Generous default size estimate
+        }
+        return try withUnsafeTemporaryAllocation(of: CChar.self, capacity: bufferLen) {
+            var result = output
+            var ptr: UnsafeMutablePointer<Output>?
+            let error = operation(input, &result, $0.baseAddress!, bufferLen, &ptr)
+            guard error == 0 && ptr != nil else {
+                return nil
+            }
+            return try block(result)
+        }
+    }
+    
+    static func uid(forName name: String) -> uid_t? {
+        withUserGroupBuffer(name, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwnam_r) {
+            $0.pw_uid
+        }
+    }
+    
+    static func gid(forName name: String) -> uid_t? {
+        withUserGroupBuffer(name, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: getgrnam_r) {
+            $0.gr_gid
+        }
+    }
+    
+    static func name(forUID uid: uid_t) -> String? {
+        withUserGroupBuffer(uid, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwuid_r) {
+            String(cString: $0.pw_name)
+        }
+    }
+    
+    static func fullName(forUID uid: uid_t) -> String? {
+        withUserGroupBuffer(uid, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwuid_r) {
+            String(cString: $0.pw_gecos)
+        }
+    }
+    
+    static func name(forGID gid: gid_t) -> String? {
+        withUserGroupBuffer(gid, group(), sizeProperty: Int32(_SC_GETGR_R_SIZE_MAX), operation: getgrgid_r) {
+            String(cString: $0.gr_name)
+        }
+    }
+    
+    static func homeDirectory(forUserName userName: String) -> String? {
+        withUserGroupBuffer(userName, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwnam_r) {
+            String(cString: $0.pw_dir)
+        }
+    }
+    
+    static func homeDirectory(forUID uid: uid_t) -> String? {
+        withUserGroupBuffer(uid, passwd(), sizeProperty: Int32(_SC_GETPW_R_SIZE_MAX), operation: getpwuid_r) {
+            String(cString: $0.pw_dir)
+        }
+    }
 }
 #endif
 
