@@ -5,7 +5,7 @@
 * Author(s): Hristo Staykov <hstaykov@apple.com>
 * Review Manager: [Tina Liu](https://github.com/itingliu)
 * Status: **Implemented**
-* Bugs: <rdar://134294130>
+* Bugs: <rdar://134294130&136704624>
 * Implementation: [apple/swift-foundation#888](https://github.com/apple/swift-foundation/pull/888)
 * Previous Proposal: [SF-0009](0009-calendar-recurrence-rule.md)
 
@@ -14,6 +14,7 @@
 * **v1** Initial version
 * **v2** Added `CustomStringConvertible` conformance to `Calendar.RecurrenceRule.End`.
 * **v3** Renamed `count` to `occurrences`
+* **v4** Made `Calendar.RecurrenceRule` conform to `Hashable`
 
 ## Introduction
 
@@ -41,6 +42,8 @@ This is de-facto an enum, but it was declared as struct to be future-proof. Howe
 
 Additionally, we add `CustomStringConvertible` conformance to the struct. Previously, implementation details would be leaked when printing (`End(_guts: Foundation.Calendar.RecurrenceRule.End.(unknown context at $1a0a00afc)._End.never)`).
 
+Lastly, we also make `Calendar.RecurrenceRule` and its subtypes conform to `Hashable`
+
 ## Detailed design
 
 ```swift
@@ -66,6 +69,18 @@ public extension Calendar.RecurrenceRule.End: CustomStringConvertible {
         }
     }
 }
+
+@available(FoundationPreview 6.0.2, *)
+public extension Calendar.RecurrenceRule: Hashable { }
+
+@available(FoundationPreview 6.0.2, *)
+public extension Calendar.RecurrenceRule.End: Hashable { }
+
+@available(FoundationPreview 6.0.2, *)
+public extension Calendar.RecurrenceRule.Month: Hashable { }
+
+@available(FoundationPreview 6.0.2, *)
+public extension Calendar.RecurrenceRule.Weekday: Hashable { }
 ```
 
 ## Impact on existing code
