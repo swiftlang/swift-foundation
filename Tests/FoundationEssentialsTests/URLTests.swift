@@ -23,18 +23,6 @@ import TestSupport
 @testable import Foundation
 #endif
 
-private func checkBehavior<T: Equatable>(_ result: T, new: T, old: T, file: StaticString = #filePath, line: UInt = #line) {
-    #if FOUNDATION_FRAMEWORK
-    if foundation_swift_url_enabled() {
-        XCTAssertEqual(result, new, file: file, line: line)
-    } else {
-        XCTAssertEqual(result, old, file: file, line: line)
-    }
-    #else
-    XCTAssertEqual(result, new, file: file, line: line)
-    #endif
-}
-
 final class URLTests : XCTestCase {
 
     func testURLBasics() throws {
@@ -99,7 +87,11 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(relativeURLWithBase.password(), baseURL.password())
         XCTAssertEqual(relativeURLWithBase.host(), baseURL.host())
         XCTAssertEqual(relativeURLWithBase.port, baseURL.port)
-        checkBehavior(relativeURLWithBase.path(), new: "/base/relative/path", old: "relative/path")
+        #if !FOUNDATION_FRAMEWORK_NSURL
+        XCTAssertEqual(relativeURLWithBase.path(), "/base/relative/path")
+        #else
+        XCTAssertEqual(relativeURLWithBase.path(), "relative/path")
+        #endif
         XCTAssertEqual(relativeURLWithBase.relativePath, "relative/path")
         XCTAssertEqual(relativeURLWithBase.query(), "query")
         XCTAssertEqual(relativeURLWithBase.fragment(), "fragment")
@@ -162,7 +154,7 @@ final class URLTests : XCTestCase {
             "http:g"        :  "http:g", // For strict parsers
         ]
 
-        #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK_NSURL
         let testsFailingWithoutSwiftURL = Set([
             "",
             "../../../g",
@@ -173,8 +165,8 @@ final class URLTests : XCTestCase {
         #endif
 
         for test in tests {
-            #if FOUNDATION_FRAMEWORK
-            if !foundation_swift_url_enabled(), testsFailingWithoutSwiftURL.contains(test.key) {
+            #if FOUNDATION_FRAMEWORK_NSURL
+            if testsFailingWithoutSwiftURL.contains(test.key) {
                 continue
             }
             #endif
@@ -186,8 +178,8 @@ final class URLTests : XCTestCase {
     }
 
     func testURLPathAPIsResolveAgainstBase() throws {
-        #if FOUNDATION_FRAMEWORK
-        try XCTSkipIf(!foundation_swift_url_enabled())
+        #if FOUNDATION_FRAMEWORK_NSURL
+        try XCTSkipIf(true)
         #endif
         // Borrowing the same test cases from RFC 3986, but checking paths
         let base = URL(string: "http://a/b/c/d;p?q")
@@ -254,8 +246,8 @@ final class URLTests : XCTestCase {
     }
 
     func testURLPathComponentsPercentEncodedSlash() throws {
-        #if FOUNDATION_FRAMEWORK
-        try XCTSkipIf(!foundation_swift_url_enabled())
+        #if FOUNDATION_FRAMEWORK_NSURL
+        try XCTSkipIf(true)
         #endif
 
         var url = try XCTUnwrap(URL(string: "https://example.com/https%3A%2F%2Fexample.com"))
@@ -278,8 +270,8 @@ final class URLTests : XCTestCase {
     }
 
     func testURLRootlessPath() throws {
-        #if FOUNDATION_FRAMEWORK
-        try XCTSkipIf(!foundation_swift_url_enabled())
+        #if FOUNDATION_FRAMEWORK_NSURL
+        try XCTSkipIf(true)
         #endif
 
         let paths = ["", "path"]
@@ -573,8 +565,13 @@ final class URLTests : XCTestCase {
         // `appending(component:)` should explicitly treat `component` as a single
         // path component, meaning "/" should be encoded to "%2F" before appending
         appended = url.appending(component: slashComponent, directoryHint: .notDirectory)
-        checkBehavior(appended.absoluteString, new: "file:///var/mobile/relative/%2Fwith:slash", old: "file:///var/mobile/relative/with:slash")
-        checkBehavior(appended.relativePath, new: "relative/%2Fwith:slash", old: "relative/with:slash")
+        #if FOUNDATION_FRAMEWORK_NSURL
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/with:slash")
+        XCTAssertEqual(appended.relativePath, "relative/with:slash")
+        #else
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/%2Fwith:slash")
+        XCTAssertEqual(appended.relativePath, "relative/%2Fwith:slash")
+        #endif
 
         appended = url.appendingPathComponent(component, isDirectory: false)
         XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
@@ -688,48 +685,12 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.path(), "/path.foo/")
         url.append(path: "/////")
         url.deletePathExtension()
+        #if !FOUNDATION_FRAMEWORK_NSURL
+        XCTAssertEqual(url.path(), "/path/")
+        #else
         // Old behavior only searches the last empty component, so the extension isn't actually removed
-        checkBehavior(url.path(), new: "/path/", old: "/path.foo///")
-    }
-
-    func testURLAppendingToEmptyPath() throws {
-        let baseURL = URL(filePath: "/base/directory", directoryHint: .isDirectory)
-        let emptyPathURL = URL(filePath: "", relativeTo: baseURL)
-        let url = emptyPathURL.appending(path: "main.swift")
-        XCTAssertEqual(url.relativePath, "./main.swift")
-        XCTAssertEqual(url.path, "/base/directory/main.swift")
-
-        var example = try XCTUnwrap(URL(string: "https://example.com"))
-        XCTAssertEqual(example.host(), "example.com")
-        XCTAssertTrue(example.path().isEmpty)
-
-        // Appending to an empty path should add a slash if an authority exists
-        // The appended path should never become part of the host
-        example.append(path: "foo")
-        XCTAssertEqual(example.host(), "example.com")
-        XCTAssertEqual(example.path(), "/foo")
-        XCTAssertEqual(example.absoluteString, "https://example.com/foo")
-
-        var emptyHost = try XCTUnwrap(URL(string: "scheme://"))
-        XCTAssertTrue(emptyHost.host()?.isEmpty ?? true)
-        XCTAssertTrue(emptyHost.path().isEmpty)
-
-        emptyHost.append(path: "foo")
-        XCTAssertTrue(emptyHost.host()?.isEmpty ?? true)
-        // Old behavior failed to append correctly to an empty host
-        // Modern parsers agree that "foo" relative to "scheme://" is "scheme:///foo"
-        checkBehavior(emptyHost.path(), new: "/foo", old: "")
-        checkBehavior(emptyHost.absoluteString, new: "scheme:///foo", old: "scheme://")
-
-        var schemeOnly = try XCTUnwrap(URL(string: "scheme:"))
-        XCTAssertTrue(schemeOnly.host()?.isEmpty ?? true)
-        XCTAssertTrue(schemeOnly.path().isEmpty)
-
-        schemeOnly.append(path: "foo")
-        XCTAssertTrue(schemeOnly.host()?.isEmpty ?? true)
-        // Old behavior appends to the string, but is missing the path
-        checkBehavior(schemeOnly.path(), new: "foo", old: "")
-        XCTAssertEqual(schemeOnly.absoluteString, "scheme:foo")
+        XCTAssertEqual(url.path(), "/path.foo///")
+        #endif
     }
 
     func testURLComponentsPercentEncodedUnencodedProperties() throws {

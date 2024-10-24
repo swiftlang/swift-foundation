@@ -2214,8 +2214,9 @@ extension URL {
         var path = String(path)
         #endif
 
+        var newPath = relativePath()
         var insertedSlash = false
-        if !relativePath().isEmpty && path.utf8.first != ._slash {
+        if !newPath.isEmpty && path.utf8.first != ._slash {
             // Don't treat as first path segment when encoding
             path = "/" + path
             insertedSlash = true
@@ -2230,30 +2231,13 @@ extension URL {
             pathToAppend = String(decoding: utf8, as: UTF8.self)
         }
 
-        func appendedPath() -> String {
-            var currentPath = relativePath()
-            if currentPath.isEmpty && !hasAuthority {
-                guard _parseInfo.scheme == nil else {
-                    // Scheme only, append directly to the empty path, e.g.
-                    // URL("scheme:").appending(path: "path") == scheme:path
-                    return pathToAppend
-                }
-                // No scheme or authority, treat the empty path as "."
-                currentPath = "."
-            }
-
-            // If currentPath is empty, pathToAppend is relative, and we have an authority,
-            // we must append a slash to separate the path from authority, which happens below.
-
-            if currentPath.utf8.last != ._slash && pathToAppend.utf8.first != ._slash {
-                currentPath += "/"
-            } else if currentPath.utf8.last == ._slash && pathToAppend.utf8.first == ._slash {
-                _ = currentPath.popLast()
-            }
-            return currentPath + pathToAppend
+        if newPath.utf8.last != ._slash && pathToAppend.utf8.first != ._slash {
+            newPath += "/"
+        } else if newPath.utf8.last == ._slash && pathToAppend.utf8.first == ._slash {
+            _ = newPath.popLast()
         }
 
-        var newPath = appendedPath()
+        newPath += pathToAppend
 
         let hasTrailingSlash = newPath.utf8.last == ._slash
         let isDirectory: Bool
