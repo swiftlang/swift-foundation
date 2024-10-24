@@ -228,7 +228,7 @@ extension Calendar {
                     case .daily:    [.second, .minute, .hour]
                     case .weekly:   [.second, .minute, .hour, .weekday]
                     case .monthly:  [.second, .minute, .hour, .day]
-                    case .yearly:   [.second, .minute, .hour, .day, .month]
+                    case .yearly:   [.second, .minute, .hour, .day, .month, .isLeapMonth]
                 }
                 let componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start) 
                 

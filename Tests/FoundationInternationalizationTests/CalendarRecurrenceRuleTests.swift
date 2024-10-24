@@ -54,6 +54,58 @@ final class CalendarRecurrenceRuleTests: XCTestCase {
         XCTAssertEqual(results, expectedResults)
     }
     
+    func testExpandToLeapMonths() {
+        var lunarCalendar = Calendar(identifier: .chinese)
+        lunarCalendar.timeZone = .gmt
+        let locale = Locale(identifier: "zh-TW")
+        
+        let start = Date(timeIntervalSince1970: 1729641600.0) // 2024-10-23T00:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: lunarCalendar, frequency: .yearly)
+        rule.months = [Calendar.RecurrenceRule.Month(6, isLeap: true)]
+        rule.daysOfTheMonth = [1]
+        var sequence = rule.recurrences(of: start).makeIterator()
+        
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1753401600.0)) // 2025-07-25T00:00:00-0000 (Sixth leap month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1786579200.0)) // 2026-08-13T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1817164800.0)) // 2027-08-02T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1850342400.0)) // 2028-08-20T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1881014400.0)) // 2029-08-10T00:00:00-0000 (Seventh month)
+    }
+    
+    func testStartFromLeapMonth() {
+        var lunarCalendar = Calendar(identifier: .chinese)
+        lunarCalendar.timeZone = .gmt
+        
+        // Find recurrences of an event that happens on a leap month
+        let start = Date(timeIntervalSince1970: 1753401600.0) // 2025-07-25T00:00:00-0000 (Leap month)
+        
+        // A non-strict recurrence would match the month where the leap month would have been
+        let rule = Calendar.RecurrenceRule(calendar: lunarCalendar, frequency: .yearly, matchingPolicy: .nextTimePreservingSmallerComponents)
+        var sequence = rule.recurrences(of: start).makeIterator()
+        
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1753401600.0)) // 2025-07-25T00:00:00-0000 (Sixth leap month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1786579200.0)) // 2026-08-13T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1817164800.0)) // 2027-08-02T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1850342400.0)) // 2028-08-20T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1881014400.0)) // 2029-08-10T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1911600000.0)) // 2030-07-30T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1944777600.0)) // 2031-08-18T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 1975363200.0)) // 2032-08-06T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 2005948800.0)) // 2033-07-26T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 2039126400.0)) // 2034-08-14T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 2069798400.0)) // 2035-08-04T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 2100384000.0)) // 2036-07-23T00:00:00-0000 (Sixth leap month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 2133561600.0)) // 2037-08-11T00:00:00-0000 (Seventh month)
+        XCTAssertEqual(sequence.next(), Date(timeIntervalSince1970: 2164233600.0)) // 2038-08-01T00:00:00-0000 (Seventh month)
+        
+        // A strict recurrence only matches in years with leap months
+        let strictRule = Calendar.RecurrenceRule(calendar: lunarCalendar, frequency: .yearly, matchingPolicy: .strict)
+        var strictSequence = strictRule.recurrences(of: start).makeIterator()
+        XCTAssertEqual(strictSequence.next(), Date(timeIntervalSince1970: 1753401600.0)) // 2025-07-25T00:00:00-0000 (Sixth leap month)
+        XCTAssertEqual(strictSequence.next(), Date(timeIntervalSince1970: 2100384000.0)) // 2036-07-23T00:00:00-0000 (Sixth leap month)
+    }
+    
     func testDaylightSavingsRepeatedTimePolicyFirst() {
         let start = Date(timeIntervalSince1970: 1730535600.0) // 2024-11-02T01:20:00-0700
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily)
@@ -68,9 +120,9 @@ final class CalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1730712000.0), // 2024-11-04T01:20:00-0800
         ]
         XCTAssertEqual(results, expectedResults)
-   }
-   
-   func testDaylightSavingsRepeatedTimePolicyLast() {
+    }
+    
+    func testDaylightSavingsRepeatedTimePolicyLast() {
         let start = Date(timeIntervalSince1970: 1730535600.0) // 2024-11-02T01:20:00-0700
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily)
         rule.repeatedTimePolicy = .last
@@ -84,5 +136,5 @@ final class CalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1730712000.0), // 2024-11-04T01:20:00-0800
         ]
         XCTAssertEqual(results, expectedResults)
-   }
+    }
 }
