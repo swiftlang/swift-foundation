@@ -1769,6 +1769,35 @@ final class JSONEncoderTests : XCTestCase {
 //        let _ = try! JSONEncoder().encode(RedundantEncoding(subcase: .replaceUnkeyedContainerWithKeyed))
     }
 
+    func test_decodeIfPresent() throws {
+        let emptyDictJSON = try JSONEncoder().encode(DecodeIfPresentAllTypes<KeyedEncodeWithoutNulls>.allNils)
+        let testEmptyDict = try JSONDecoder().decode(DecodeIfPresentAllTypes<UseKeyed>.self, from: emptyDictJSON)
+        XCTAssertEqual(testEmptyDict, .allNils)
+
+        let allNullDictJSON = try JSONEncoder().encode(DecodeIfPresentAllTypes<KeyedEncodeWithNulls>.allNils)
+        let testAllNullDict = try JSONDecoder().decode(DecodeIfPresentAllTypes<UseKeyed>.self, from: allNullDictJSON)
+        XCTAssertEqual(testAllNullDict, .allNils)
+
+        let allOnesDictJSON = try JSONEncoder().encode(DecodeIfPresentAllTypes<UseKeyed>.allOnes)
+        let testAllOnesDict = try JSONDecoder().decode(DecodeIfPresentAllTypes<UseKeyed>.self, from: allOnesDictJSON)
+        XCTAssertEqual(testAllOnesDict, .allOnes)
+
+        let emptyArrayJSON = try JSONEncoder().encode(DecodeIfPresentAllTypes<UnkeyedEncodeWithoutNulls>.allNils)
+        let testEmptyArray = try JSONDecoder().decode(DecodeIfPresentAllTypes<UseUnkeyed>.self, from: emptyArrayJSON)
+        XCTAssertEqual(testEmptyArray, .allNils)
+
+        let allNullArrayJSON = try JSONEncoder().encode(DecodeIfPresentAllTypes<UnkeyedEncodeWithNulls>.allNils)
+        let testAllNullArray = try JSONDecoder().decode(DecodeIfPresentAllTypes<UseUnkeyed>.self, from: allNullArrayJSON)
+        XCTAssertEqual(testAllNullArray, .allNils)
+
+        let allOnesArrayJSON = try JSONEncoder().encode(DecodeIfPresentAllTypes<UseUnkeyed>.allOnes)
+        let testAllOnesArray = try JSONDecoder().decode(DecodeIfPresentAllTypes<UseUnkeyed>.self, from: allOnesArrayJSON)
+        XCTAssertEqual(testAllOnesArray, .allOnes)
+    }
+}
+
+// MARK: - SnakeCase Tests
+extension JSONEncoderTests {
     var json5Decoder: JSONDecoder {
         let decoder = JSONDecoder()
         decoder.allowsJSON5 = true
@@ -3461,6 +3490,198 @@ fileprivate struct DoubleNaNPlaceholder : Codable, Equatable {
   static func ==(_ lhs: DoubleNaNPlaceholder, _ rhs: DoubleNaNPlaceholder) -> Bool {
     return true
   }
+}
+
+internal protocol DecodeIfPresentAllTypesConfig {
+    static var useKeyed: Bool { get }
+    static var encodeNulls: Bool { get }
+}
+internal struct UseKeyed: DecodeIfPresentAllTypesConfig {
+    static let useKeyed = true
+    static let encodeNulls = true
+}
+internal struct UseUnkeyed: DecodeIfPresentAllTypesConfig {
+    static let useKeyed = false
+    static let encodeNulls = true
+}
+internal typealias KeyedEncodeWithNulls = UseKeyed
+internal typealias UnkeyedEncodeWithNulls = UseUnkeyed
+internal struct KeyedEncodeWithoutNulls: DecodeIfPresentAllTypesConfig {
+    static let useKeyed = true
+    static let encodeNulls = false
+}
+internal struct UnkeyedEncodeWithoutNulls: DecodeIfPresentAllTypesConfig {
+    static let useKeyed = false
+    static let encodeNulls = false
+}
+
+internal struct DecodeIfPresentAllTypes<Config: DecodeIfPresentAllTypesConfig>: Codable, Equatable {
+    let bool: Bool?
+    let string: String?
+    let i: Int?
+    let i8: Int8?
+    let i16: Int16?
+    let i32: Int32?
+    let i64: Int64?
+    let u: UInt?
+    let u8: UInt8?
+    let u16: UInt16?
+    let u32: UInt32?
+    let u64: UInt64?
+    let float: Float?
+    let double: Double?
+    let other: [Int]?
+
+    init(bool: Bool?, string: String?, i: Int?, i8: Int8?, i16: Int16?, i32: Int32?, i64: Int64?, u: UInt?, u8: UInt8?, u16: UInt16?, u32: UInt32?, u64: UInt64?, float: Float?, double: Double?, other: [Int]?) {
+        self.bool = bool
+        self.string = string
+        self.i = i
+        self.i8 = i8
+        self.i16 = i16
+        self.i32 = i32
+        self.i64 = i64
+        self.u = u
+        self.u8 = u8
+        self.u16 = u16
+        self.u32 = u32
+        self.u64 = u64
+        self.float = float
+        self.double = double
+        self.other = other
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case bool
+        case string
+        case i
+        case i8
+        case i16
+        case i32
+        case i64
+        case u
+        case u8
+        case u16
+        case u32
+        case u64
+        case float
+        case double
+        case other
+    }
+
+    func encode(to encoder: Encoder) throws {
+        switch (Config.useKeyed, Config.encodeNulls) {
+        case (true, true):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(bool, forKey: .bool)
+            try container.encode(string, forKey: .string)
+            try container.encode(i, forKey: .i)
+            try container.encode(i8, forKey: .i8)
+            try container.encode(i16, forKey: .i16)
+            try container.encode(i32, forKey: .i32)
+            try container.encode(i64, forKey: .i64)
+            try container.encode(u, forKey: .u)
+            try container.encode(u8, forKey: .u8)
+            try container.encode(u16, forKey: .u16)
+            try container.encode(u32, forKey: .u32)
+            try container.encode(u64, forKey: .u64)
+            try container.encode(float, forKey: .float)
+            try container.encode(double, forKey: .double)
+            try container.encode(other, forKey: .other)
+        case (true, false):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(bool, forKey: .bool)
+            try container.encodeIfPresent(string, forKey: .string)
+            try container.encodeIfPresent(i, forKey: .i)
+            try container.encodeIfPresent(i8, forKey: .i8)
+            try container.encodeIfPresent(i16, forKey: .i16)
+            try container.encodeIfPresent(i32, forKey: .i32)
+            try container.encodeIfPresent(i64, forKey: .i64)
+            try container.encodeIfPresent(u, forKey: .u)
+            try container.encodeIfPresent(u8, forKey: .u8)
+            try container.encodeIfPresent(u16, forKey: .u16)
+            try container.encodeIfPresent(u32, forKey: .u32)
+            try container.encodeIfPresent(u64, forKey: .u64)
+            try container.encodeIfPresent(float, forKey: .float)
+            try container.encodeIfPresent(double, forKey: .double)
+            try container.encodeIfPresent(other, forKey: .other)
+        case (false, true):
+            var container = encoder.unkeyedContainer()
+            try container.encode(bool)
+            try container.encode(string)
+            try container.encode(i)
+            try container.encode(i8)
+            try container.encode(i16)
+            try container.encode(i32)
+            try container.encode(i64)
+            try container.encode(u)
+            try container.encode(u8)
+            try container.encode(u16)
+            try container.encode(u32)
+            try container.encode(u64)
+            try container.encode(float)
+            try container.encode(double)
+            try container.encode(other)
+        case (false, false):
+            var container = encoder.unkeyedContainer()
+            if let bool { try container.encode(bool) }
+            if let string { try container.encode(string) }
+            if let i { try container.encode(i) }
+            if let i8 { try container.encode(i8) }
+            if let i16 { try container.encode(i16) }
+            if let i32 { try container.encode(i32) }
+            if let i64 { try container.encode(i64) }
+            if let u { try container.encode(u) }
+            if let u8 { try container.encode(u8) }
+            if let u16 { try container.encode(u16) }
+            if let u32 { try container.encode(u32) }
+            if let u64 { try container.encode(u64) }
+            if let float { try container.encode(float) }
+            if let double { try container.encode(double) }
+            if let other { try container.encode(other) }
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        switch Config.useKeyed {
+        case true:
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            bool = try container.decodeIfPresent(Bool.self, forKey: .bool)
+            string = try container.decodeIfPresent(String.self, forKey: .string)
+            i = try container.decodeIfPresent(Int.self, forKey: .i)
+            i8 = try container.decodeIfPresent(Int8.self, forKey: .i8)
+            i16 = try container.decodeIfPresent(Int16.self, forKey: .i16)
+            i32 = try container.decodeIfPresent(Int32.self, forKey: .i32)
+            i64 = try container.decodeIfPresent(Int64.self, forKey: .i64)
+            u = try container.decodeIfPresent(UInt.self, forKey: .u)
+            u8 = try container.decodeIfPresent(UInt8.self, forKey: .u8)
+            u16 = try container.decodeIfPresent(UInt16.self, forKey: .u16)
+            u32 = try container.decodeIfPresent(UInt32.self, forKey: .u32)
+            u64 = try container.decodeIfPresent(UInt64.self, forKey: .u64)
+            float = try container.decodeIfPresent(Float.self, forKey: .float)
+            double = try container.decodeIfPresent(Double.self, forKey: .double)
+            other = try container.decodeIfPresent([Int].self, forKey: .other)
+        case false:
+            var container = try decoder.unkeyedContainer()
+            bool = try container.decodeIfPresent(Bool.self)
+            string = try container.decodeIfPresent(String.self)
+            i = try container.decodeIfPresent(Int.self)
+            i8 = try container.decodeIfPresent(Int8.self)
+            i16 = try container.decodeIfPresent(Int16.self)
+            i32 = try container.decodeIfPresent(Int32.self)
+            i64 = try container.decodeIfPresent(Int64.self)
+            u = try container.decodeIfPresent(UInt.self)
+            u8 = try container.decodeIfPresent(UInt8.self)
+            u16 = try container.decodeIfPresent(UInt16.self)
+            u32 = try container.decodeIfPresent(UInt32.self)
+            u64 = try container.decodeIfPresent(UInt64.self)
+            float = try container.decodeIfPresent(Float.self)
+            double = try container.decodeIfPresent(Double.self)
+            other = try container.decodeIfPresent([Int].self)
+        }
+    }
+
+    static var allOnes: Self { .init(bool: true, string: "1", i: 1, i8: 1, i16: 1, i32: 1, i64: 1, u: 1, u8: 1, u16: 1, u32: 1, u64: 1, float: 1, double: 1, other: [1]) }
+    static var allNils: Self { .init(bool: nil, string: nil, i: nil, i8: nil, i16: nil, i32: nil, i64: nil, u: nil, u8: nil, u16: nil, u32: nil, u64: nil, float: nil, double: nil, other: nil) }
 }
 
 fileprivate enum EitherDecodable<T : Decodable, U : Decodable> : Decodable {

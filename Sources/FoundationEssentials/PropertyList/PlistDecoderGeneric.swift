@@ -321,13 +321,21 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
     func contains(_ key: Key) -> Bool {
         return self.container[key.stringValue] != nil
     }
-    
+
     @inline(__always)
-    func getValue<T>(for key: Key, type: T) throws -> Format.Map.Value {
+    func getValueIfPresent<T>(for key: Key, type: T) throws -> Format.Map.Value? {
         guard let ref = self.container[key.stringValue] else {
-            throw errorForMissingValue(key: key, type: type)
+            return nil
         }
         return try decoder.map.value(from: ref)
+    }
+
+    @inline(__always)
+    func getValue<T>(for key: Key, type: T) throws -> Format.Map.Value {
+        guard let value = try getValueIfPresent(for: key, type: type) else {
+            throw errorForMissingValue(key: key, type: type)
+        }
+        return value
     }
     
     @inline(never)
@@ -353,52 +361,109 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
         return try decoder.unwrapBool(from: value, for: codingPathNode, key)
     }
 
+    func decode(_ type: Bool.Type, forKey key: Key) throws -> Bool? {
+        guard let value = try getValueIfPresent(for: key, type: Bool.self),
+              !Format.valueIsNull(value)
+        else {
+            return nil
+        }
+        return try decoder.unwrapBool(from: value, for: codingPathNode, key)
+    }
+
     func decode(_ type: Int.Type, forKey key: Key) throws -> Int {
         try decodeFixedWidthInteger(key: key)
+    }
+
+    func decodeIfPresent(_ type: Int.Type, forKey key: Key) throws -> Int? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
     }
 
     func decode(_ type: Int8.Type, forKey key: Key) throws -> Int8 {
         try decodeFixedWidthInteger(key: key)
     }
 
+    func decodeIfPresent(_ type: Int8.Type, forKey key: Key) throws -> Int8? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
+    }
+
     func decode(_ type: Int16.Type, forKey key: Key) throws -> Int16 {
         try decodeFixedWidthInteger(key: key)
+    }
+
+    func decodeIfPresent(_ type: Int16.Type, forKey key: Key) throws -> Int16? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
     }
 
     func decode(_ type: Int32.Type, forKey key: Key) throws -> Int32 {
         try decodeFixedWidthInteger(key: key)
     }
 
+    func decodeIfPresent(_ type: Int32.Type, forKey key: Key) throws -> Int32? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
+    }
+
     func decode(_ type: Int64.Type, forKey key: Key) throws -> Int64 {
         try decodeFixedWidthInteger(key: key)
+    }
+
+    func decodeIfPresent(_ type: Int64.Type, forKey key: Key) throws -> Int64? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
     }
 
     func decode(_ type: UInt.Type, forKey key: Key) throws -> UInt {
         try decodeFixedWidthInteger(key: key)
     }
 
+    func decodeIfPresent(_ type: UInt.Type, forKey key: Key) throws -> UInt? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
+    }
+
     func decode(_ type: UInt8.Type, forKey key: Key) throws -> UInt8 {
         try decodeFixedWidthInteger(key: key)
+    }
+
+    func decodeIfPresent(_ type: UInt8.Type, forKey key: Key) throws -> UInt8? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
     }
 
     func decode(_ type: UInt16.Type, forKey key: Key) throws -> UInt16 {
         try decodeFixedWidthInteger(key: key)
     }
 
+    func decodeIfPresent(_ type: UInt16.Type, forKey key: Key) throws -> UInt16? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
+    }
+
     func decode(_ type: UInt32.Type, forKey key: Key) throws -> UInt32 {
         try decodeFixedWidthInteger(key: key)
+    }
+
+    func decodeIfPresent(_ type: UInt32.Type, forKey key: Key) throws -> UInt32? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
     }
 
     func decode(_ type: UInt64.Type, forKey key: Key) throws -> UInt64 {
         try decodeFixedWidthInteger(key: key)
     }
 
+    func decodeIfPresent(_ type: UInt64.Type, forKey key: Key) throws -> UInt64? {
+        try decodeFixedWidthIntegerIfPresent(key: key)
+    }
+
     func decode(_ type: Float.Type, forKey key: Key) throws -> Float {
         try decodeFloatingPoint(key: key)
     }
 
+    func decodeIfPresent(_ type: Float.Type, forKey key: Key) throws -> Float? {
+        try decodeFloatingPointIfPresent(key: key)
+    }
+
     func decode(_ type: Double.Type, forKey key: Key) throws -> Double {
         try decodeFloatingPoint(key: key)
+    }
+
+    func decodeIfPresent(_ type: Double.Type, forKey key: Key) throws -> Double? {
+        try decodeFloatingPointIfPresent(key: key)
     }
 
     func decode(_ type: String.Type, forKey key: Key) throws -> String {
@@ -406,9 +471,27 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
         return try decoder.unwrapString(from: value, for: codingPathNode, key)
     }
 
+    func decodeIfPresent(_ type: String.Type, forKey key: Key) throws -> String? {
+        guard let value = try getValueIfPresent(for: key, type: String.self),
+              !Format.valueIsNull(value)
+        else {
+            return nil
+        }
+        return try decoder.unwrapString(from: value, for: codingPathNode, key)
+    }
+
     func decode<T : Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
         let value = try getValue(for: key, type: type)
         return try decoder.unwrapGeneric(value, as: type, for: self.codingPathNode, key)
+    }
+
+    func decodeIfPresent<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T? {
+        guard let value = try getValueIfPresent(for: key, type: type),
+              !Format.valueIsNull(value)
+        else {
+            return nil
+        }
+        return try decoder.unwrapGeneric(value, as: type, for: codingPathNode, key)
     }
 
     func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> {
@@ -452,6 +535,24 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
 
     @inline(__always) private func decodeFloatingPoint<T: BinaryFloatingPoint>(key: Self.Key) throws -> T {
         let value = try getValue(for: key, type: T.self)
+        return try decoder.unwrapFloatingPoint(from: value, for: codingPathNode, key)
+    }
+
+    @inline(__always) private func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger>(key: Self.Key) throws -> T? {
+        guard let value = try getValueIfPresent(for: key, type: T.self),
+              !Format.valueIsNull(value)
+        else {
+            return nil
+        }
+        return try decoder.unwrapFixedWidthInteger(from: value, for: codingPathNode, key)
+    }
+
+    @inline(__always) private func decodeFloatingPointIfPresent<T: BinaryFloatingPoint>(key: Self.Key) throws -> T? {
+        guard let value = try getValueIfPresent(for: key, type: T.self),
+              !Format.valueIsNull(value)
+        else {
+            return nil
+        }
         return try decoder.unwrapFloatingPoint(from: value, for: codingPathNode, key)
     }
 }
@@ -511,18 +612,26 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
     }
 
     @inline(__always)
-    private mutating func peekNextValue<T>(ofType type: T.Type) throws -> Format.Map.Value {
+    private mutating func peekNextValueIfPresent<T>(ofType type: T.Type) throws -> Format.Map.Value? {
         if let value = peekedValue {
             return value
         }
         guard let nextRef = arrayIterator.next() else {
-            throw errorForEndOfContainer(type: type)
+            return nil
         }
         let nextValue = try decoder.map.value(from: nextRef)
         peekedValue = nextValue
         return nextValue
     }
-    
+
+    @inline(__always)
+    private mutating func peekNextValue<T>(ofType type: T.Type) throws -> Format.Map.Value {
+        guard let nextValue = try peekNextValueIfPresent(ofType: type) else {
+            throw errorForEndOfContainer(type: type)
+        }
+        return nextValue
+    }
+
     @inline(never)
     private func errorForEndOfContainer<T>(type: T.Type) -> DecodingError {
         var message = "Unkeyed container is at end."
@@ -562,6 +671,15 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
         return result
     }
 
+    mutating func decodeIfPresent(_ type: Bool.Type) throws -> Bool? {
+        guard let value = try self.peekNextValueIfPresent(ofType: Bool.self) else {
+            return nil
+        }
+        let result = Format.valueIsNull(value) ? nil: try self.decoder.unwrapBool(from: value, for: codingPathNode, currentIndexKey)
+        advanceToNextValue()
+        return result
+    }
+
     mutating func decode(_ type: String.Type) throws -> String {
         let value = try self.peekNextValue(ofType: String.self)
         let string = try decoder.unwrapString(from: value, for: codingPathNode, currentIndexKey)
@@ -569,58 +687,124 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
         return string
     }
 
+    mutating func decodeIfPresent(_ type: String.Type) throws -> String? {
+        guard let value = try self.peekNextValueIfPresent(ofType: String.self) else {
+            return nil
+        }
+        let result = Format.valueIsNull(value) ? nil: try self.decoder.unwrapString(from: value, for: codingPathNode, currentIndexKey)
+        advanceToNextValue()
+        return result
+    }
+
     mutating func decode(_: Double.Type) throws -> Double {
         try decodeFloatingPoint()
+    }
+
+    mutating func decodeIfPresent(_: Double.Type) throws -> Double? {
+        try decodeFloatingPointIfPresent()
     }
 
     mutating func decode(_: Float.Type) throws -> Float {
         try decodeFloatingPoint()
     }
 
+    mutating func decodeIfPresent(_: Float.Type) throws -> Float? {
+        try decodeFloatingPointIfPresent()
+    }
+
     mutating func decode(_: Int.Type) throws -> Int {
         try decodeFixedWidthInteger()
+    }
+
+    mutating func decodeIfPresent(_: Int.Type) throws -> Int? {
+        try decodeFixedWidthIntegerIfPresent()
     }
 
     mutating func decode(_: Int8.Type) throws -> Int8 {
         try decodeFixedWidthInteger()
     }
 
+    mutating func decodeIfPresent(_: Int8.Type) throws -> Int8? {
+        try decodeFixedWidthIntegerIfPresent()
+    }
+
     mutating func decode(_: Int16.Type) throws -> Int16 {
         try decodeFixedWidthInteger()
     }
 
-     mutating func decode(_: Int32.Type) throws -> Int32 {
+    mutating func decodeIfPresent(_: Int16.Type) throws -> Int16? {
+        try decodeFixedWidthIntegerIfPresent()
+    }
+
+    mutating func decode(_: Int32.Type) throws -> Int32 {
         try decodeFixedWidthInteger()
+    }
+
+    mutating func decodeIfPresent(_: Int32.Type) throws -> Int32? {
+        try decodeFixedWidthIntegerIfPresent()
     }
 
     mutating func decode(_: Int64.Type) throws -> Int64 {
         try decodeFixedWidthInteger()
     }
 
+    mutating func decodeIfPresent(_: Int64.Type) throws -> Int64? {
+        try decodeFixedWidthIntegerIfPresent()
+    }
+
     mutating func decode(_: UInt.Type) throws -> UInt {
         try decodeFixedWidthInteger()
+    }
+
+    mutating func decodeIfPresent(_: UInt.Type) throws -> UInt? {
+        try decodeFixedWidthIntegerIfPresent()
     }
 
     mutating func decode(_: UInt8.Type) throws -> UInt8 {
         try decodeFixedWidthInteger()
     }
 
+    mutating func decodeIfPresent(_: UInt8.Type) throws -> UInt8? {
+        try decodeFixedWidthIntegerIfPresent()
+    }
+
     mutating func decode(_: UInt16.Type) throws -> UInt16 {
         try decodeFixedWidthInteger()
+    }
+
+    mutating func decodeIfPresent(_: UInt16.Type) throws -> UInt16? {
+        try decodeFixedWidthIntegerIfPresent()
     }
 
     mutating func decode(_: UInt32.Type) throws -> UInt32 {
         try decodeFixedWidthInteger()
     }
 
+    mutating func decodeIfPresent(_: UInt32.Type) throws -> UInt32? {
+        try decodeFixedWidthIntegerIfPresent()
+    }
+
     mutating func decode(_: UInt64.Type) throws -> UInt64 {
         try decodeFixedWidthInteger()
+    }
+
+    mutating func decodeIfPresent(_: UInt64.Type) throws -> UInt64? {
+        try decodeFixedWidthIntegerIfPresent()
     }
 
     mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
         let value = try self.peekNextValue(ofType: type)
         let result = try decoder.unwrapGeneric(value, as: type, for: codingPathNode, currentIndexKey)
 
+        advanceToNextValue()
+        return result
+    }
+
+    mutating func decodeIfPresent<T: Decodable>(_ type: T.Type) throws -> T? {
+        guard let value = try self.peekNextValueIfPresent(ofType: T.self) else {
+            return nil
+        }
+        let result: T? = Format.valueIsNull(value) ? nil : try self.decoder.unwrapGeneric(value, as: type, for: codingPathNode, currentIndexKey)
         advanceToNextValue()
         return result
     }
@@ -663,6 +847,24 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
     @inline(__always) private mutating func decodeFloatingPoint<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>() throws -> T {
         let value = try self.peekNextValue(ofType: T.self)
         let result: T = try self.decoder.unwrapFloatingPoint(from: value, for: codingPathNode, currentIndexKey)
+        advanceToNextValue()
+        return result
+    }
+
+    @inline(__always) private mutating func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger>() throws -> T? {
+        guard let value = try self.peekNextValueIfPresent(ofType: T.self) else {
+            return nil
+        }
+        let result: T? = Format.valueIsNull(value) ? nil : try self.decoder.unwrapFixedWidthInteger(from: value, for: codingPathNode, currentIndexKey)
+        advanceToNextValue()
+        return result
+    }
+
+    @inline(__always) private mutating func decodeFloatingPointIfPresent<T: PrevalidatedJSONNumberBufferConvertible & BinaryFloatingPoint>() throws -> T? {
+        guard let value = try self.peekNextValueIfPresent(ofType: T.self) else {
+            return nil
+        }
+        let result: T? = Format.valueIsNull(value) ? nil : try self.decoder.unwrapFloatingPoint(from: value, for: codingPathNode, currentIndexKey)
         advanceToNextValue()
         return result
     }

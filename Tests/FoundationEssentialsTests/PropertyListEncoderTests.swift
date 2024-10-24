@@ -502,6 +502,11 @@ class TestPropertyListEncoder : XCTestCase {
         }
     }
 
+    private func _forEachEncodingFormat(_ body: (PropertyListDecoder.PropertyListFormat) throws -> Void) rethrows {
+        try body(.xml)
+        try body(.binary)
+    }
+
     // MARK: - Other tests
     func testUnkeyedContainerContainingNulls() throws {
         struct UnkeyedContainerContainingNullTestType : Codable, Equatable {
@@ -1507,6 +1512,38 @@ data1 = <7465
         let data = try encoder.encode(encodeMe)
         let dataAsStr = String(data: data, encoding: .utf8)!
         XCTAssertTrue(dataAsStr.hasPrefix("<?xml"))
+    }
+
+    func test_decodeIfPresent() throws {
+        try _forEachEncodingFormat { format in
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = format
+
+            let emptyDictEncoding = try encoder.encode(DecodeIfPresentAllTypes<KeyedEncodeWithoutNulls>.allNils)
+            let testEmptyDict = try PropertyListDecoder().decode(DecodeIfPresentAllTypes<UseKeyed>.self, from: emptyDictEncoding)
+            XCTAssertEqual(testEmptyDict, .allNils)
+
+            let allNullDictEncoding = try encoder.encode(DecodeIfPresentAllTypes<KeyedEncodeWithNulls>.allNils)
+            let testAllNullDict = try PropertyListDecoder().decode(DecodeIfPresentAllTypes<UseKeyed>.self, from: allNullDictEncoding)
+            XCTAssertEqual(testAllNullDict, .allNils)
+
+            let allOnesDictEncoding = try encoder.encode(DecodeIfPresentAllTypes<UseKeyed>.allOnes)
+            let testAllOnesDict = try PropertyListDecoder().decode(DecodeIfPresentAllTypes<UseKeyed>.self, from: allOnesDictEncoding)
+            XCTAssertEqual(testAllOnesDict, .allOnes)
+
+            let emptyArrayEncoding = try encoder.encode(DecodeIfPresentAllTypes<UnkeyedEncodeWithoutNulls>.allNils)
+            let testEmptyArray = try PropertyListDecoder().decode(DecodeIfPresentAllTypes<UseUnkeyed>.self, from: emptyArrayEncoding)
+            XCTAssertEqual(testEmptyArray, .allNils)
+
+            let allNullArrayEncoding = try encoder.encode(DecodeIfPresentAllTypes<UnkeyedEncodeWithNulls>.allNils)
+            let testAllNullArray = try PropertyListDecoder().decode(DecodeIfPresentAllTypes<UseUnkeyed>.self, from: allNullArrayEncoding)
+            XCTAssertEqual(testAllNullArray, .allNils)
+
+            let allOnesArrayEncoding = try encoder.encode(DecodeIfPresentAllTypes<UseUnkeyed>.allOnes)
+            let testAllOnesArray = try PropertyListDecoder().decode(DecodeIfPresentAllTypes<UseUnkeyed>.self, from: allOnesArrayEncoding)
+            XCTAssertEqual(testAllOnesArray, .allOnes)
+        }
+
     }
 }
             
