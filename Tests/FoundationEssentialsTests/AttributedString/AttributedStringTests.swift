@@ -43,6 +43,21 @@ final class TestAttributedString: XCTestCase {
         for _ in AttributedString().runs {
             XCTFail("Empty AttributedString should not enumerate any attributes")
         }
+        
+        do {
+            let str = AttributedString("Foo")
+            for _ in str[str.startIndex ..< str.startIndex].runs {
+                XCTFail("Empty AttributedSubstring should not enumerate any attributes")
+            }
+        }
+        
+        do {
+            let str = AttributedString("Foo", attributes: AttributeContainer.testInt(2))
+            let i = str.index(afterCharacter: str.startIndex)
+            for _ in str[i ..< i].runs {
+                XCTFail("Empty AttributedSubstring should not enumerate any attributes")
+            }
+        }
     }
 
     func verifyAttributes<T>(_ runs: AttributedString.Runs.AttributesSlice1<T>, string: AttributedString, expectation: [(String, T.Value?)]) where T.Value : Sendable {
