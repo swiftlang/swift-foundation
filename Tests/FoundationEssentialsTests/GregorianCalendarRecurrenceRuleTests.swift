@@ -676,4 +676,30 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         
         XCTAssertEqual(results, [])
     }
+    
+    func testFirstMondaysStrictMatching() {
+        let startDate = Date(timeIntervalSince1970: 1706659200.0) // 2024-01-31T00:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly, matchingPolicy: .strict)
+        rule.weekdays = [.nth(1, .monday)]
+        
+        var dates = rule.recurrences(of: startDate).makeIterator()
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1707091200.0)) // 2024-02-05T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1709510400.0)) // 2024-03-04T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1711929600.0)) // 2024-04-01T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1714953600.0)) // 2024-05-06T00:00:00-0000
+    }
+    
+    func testFifthFridaysStrictMatching() {
+        let startDate = Date(timeIntervalSince1970: 1706659200.0) // 2024-01-31T00:00:00-0000
+        
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly, matchingPolicy: .strict)
+        rule.weekdays = [.nth(5, .friday)]
+        
+        var dates = rule.recurrences(of: startDate).makeIterator()
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1711670400.0)) // 2024-03-29T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1717113600.0)) // 2024-05-31T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1724976000.0)) // 2024-08-30T00:00:00-0000
+        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1732838400.0)) // 2024-11-29T00:00:00-0000
+    }
 }
