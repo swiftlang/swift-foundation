@@ -586,6 +586,156 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(appended.relativePath, "relative/with:slash")
     }
 
+    func testURLDeletingLastPathComponent() throws {
+        var absolute = URL(filePath: "/absolute/path", directoryHint: .notDirectory)
+        // Note: .relativePath strips the trailing slash for compatibility
+        XCTAssertEqual(absolute.relativePath, "/absolute/path")
+        XCTAssertFalse(absolute.hasDirectoryPath)
+
+        absolute.deleteLastPathComponent()
+        XCTAssertEqual(absolute.relativePath, "/absolute")
+        XCTAssertTrue(absolute.hasDirectoryPath)
+
+        absolute.deleteLastPathComponent()
+        XCTAssertEqual(absolute.relativePath, "/")
+        XCTAssertTrue(absolute.hasDirectoryPath)
+
+        // The old .deleteLastPathComponent() implementation appends ".." to the
+        // root directory "/", resulting in "/../". This resolves back to "/".
+        // The new implementation simply leaves "/" as-is.
+        absolute.deleteLastPathComponent()
+        checkBehavior(absolute.relativePath, new: "/", old: "/..")
+        XCTAssertTrue(absolute.hasDirectoryPath)
+
+        absolute.append(path: "absolute", directoryHint: .isDirectory)
+        checkBehavior(absolute.path, new: "/absolute", old: "/../absolute")
+
+        // Reset `var absolute` to "/absolute" to prevent having
+        // a "/../" prefix in all the old expectations.
+        absolute = URL(filePath: "/absolute", directoryHint: .isDirectory)
+
+        var relative = URL(filePath: "relative/path", directoryHint: .notDirectory, relativeTo: absolute)
+        XCTAssertEqual(relative.relativePath, "relative/path")
+        XCTAssertFalse(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/absolute/relative/path")
+
+        relative.deleteLastPathComponent()
+        XCTAssertEqual(relative.relativePath, "relative")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/absolute/relative")
+
+        relative.deleteLastPathComponent()
+        XCTAssertEqual(relative.relativePath, ".")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/absolute")
+
+        relative.deleteLastPathComponent()
+        XCTAssertEqual(relative.relativePath, "..")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/")
+
+        relative.deleteLastPathComponent()
+        XCTAssertEqual(relative.relativePath, "../..")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        checkBehavior(relative.path, new:"/", old: "/..")
+
+        relative.append(path: "path", directoryHint: .isDirectory)
+        XCTAssertEqual(relative.relativePath, "../../path")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        checkBehavior(relative.path, new: "/path", old: "/../path")
+
+        relative.deleteLastPathComponent()
+        XCTAssertEqual(relative.relativePath, "../..")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        checkBehavior(relative.path, new: "/", old: "/..")
+
+        relative = URL(filePath: "", relativeTo: absolute)
+        checkBehavior(relative.relativePath, new: "", old: ".")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/absolute")
+
+        relative.deleteLastPathComponent()
+        XCTAssertEqual(relative.relativePath, "..")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/")
+
+        relative.deleteLastPathComponent()
+        XCTAssertEqual(relative.relativePath, "../..")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        checkBehavior(relative.path, new: "/", old: "/..")
+
+        relative = URL(filePath: "relative/./", relativeTo: absolute)
+        // According to RFC 3986, "." and ".." segments should not be removed
+        // until the path is resolved against the base URL (when calling .path)
+        checkBehavior(relative.relativePath, new: "relative/.", old: "relative")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/absolute/relative")
+
+        relative.deleteLastPathComponent()
+        checkBehavior(relative.relativePath, new: "relative/..", old: ".")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/absolute")
+
+        relative = URL(filePath: "relative/.", directoryHint: .isDirectory, relativeTo: absolute)
+        checkBehavior(relative.relativePath, new: "relative/.", old: "relative")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/absolute/relative")
+
+        relative.deleteLastPathComponent()
+        checkBehavior(relative.relativePath, new: "relative/..", old: ".")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/absolute")
+
+        relative = URL(filePath: "relative/..", relativeTo: absolute)
+        XCTAssertEqual(relative.relativePath, "relative/..")
+        checkBehavior(relative.hasDirectoryPath, new: true, old: false)
+        XCTAssertEqual(relative.path, "/absolute")
+
+        relative.deleteLastPathComponent()
+        XCTAssertEqual(relative.relativePath, "relative/../..")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/")
+
+        relative = URL(filePath: "relative/..", directoryHint: .isDirectory, relativeTo: absolute)
+        XCTAssertEqual(relative.relativePath, "relative/..")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/absolute")
+
+        relative.deleteLastPathComponent()
+        XCTAssertEqual(relative.relativePath, "relative/../..")
+        XCTAssertTrue(relative.hasDirectoryPath)
+        XCTAssertEqual(relative.path, "/")
+
+        var url = try XCTUnwrap(URL(string: "scheme://host.with.no.path"))
+        XCTAssertTrue(url.path().isEmpty)
+
+        url.deleteLastPathComponent()
+        XCTAssertEqual(url.absoluteString, "scheme://host.with.no.path")
+        XCTAssertTrue(url.path().isEmpty)
+
+        let unusedBase = URL(string: "base://url")
+        url = try XCTUnwrap(URL(string: "scheme://host.with.no.path", relativeTo: unusedBase))
+        XCTAssertEqual(url.absoluteString, "scheme://host.with.no.path")
+        XCTAssertTrue(url.path().isEmpty)
+
+        url.deleteLastPathComponent()
+        XCTAssertEqual(url.absoluteString, "scheme://host.with.no.path")
+        XCTAssertTrue(url.path().isEmpty)
+
+        var schemeRelative = try XCTUnwrap(URL(string: "scheme:relative/path"))
+        // Bug in the old implementation where a relative path is not recognized
+        checkBehavior(schemeRelative.relativePath, new: "relative/path", old: "")
+
+        schemeRelative.deleteLastPathComponent()
+        checkBehavior(schemeRelative.relativePath, new: "relative", old: "")
+
+        schemeRelative.deleteLastPathComponent()
+        XCTAssertEqual(schemeRelative.relativePath, "")
+
+        schemeRelative.deleteLastPathComponent()
+        XCTAssertEqual(schemeRelative.relativePath, "")
+    }
+
     func testURLFilePathDropsTrailingSlashes() throws {
         var url = URL(filePath: "/path/slashes///")
         XCTAssertEqual(url.path(), "/path/slashes///")
