@@ -261,7 +261,7 @@ extension _FileManagerImpl {
             attr?[.protectionKey] = nil
         }
         #elseif os(WASI)
-        // WASI doesn't support a temporary file, so can't use `.atomic`
+        // `.atomic` is unavailable on WASI
         let opts: Data.WritingOptions = []
         #else
         let opts = Data.WritingOptions.atomic

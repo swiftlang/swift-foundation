@@ -2099,6 +2099,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         public init(rawValue: UInt) { self.rawValue = rawValue }
 
         /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
+#if os(WASI)
+        @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
+#endif
         public static let atomic = WritingOptions(rawValue: 1 << 0)
         
         /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
@@ -2474,9 +2477,11 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     /// - parameter options: Options for writing the data. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
     public func write(to url: URL, options: Data.WritingOptions = []) throws {
+#if !os(WASI) // `.atomic` is unavailable on WASI
         if options.contains(.withoutOverwriting) && options.contains(.atomic) {
             fatalError("withoutOverwriting is not supported with atomic")
         }
+#endif
         
         guard url.isFileURL else {
             throw CocoaError(.fileWriteUnsupportedScheme)
