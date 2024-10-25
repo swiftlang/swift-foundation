@@ -162,10 +162,10 @@ extension String {
         }
         let euid = geteuid()
         let trueUid = euid == 0 ? getuid() : euid
-        guard let name = Platform.name(forUID: trueUid) else {
+        guard let home = Platform.homeDirectory(forUID: trueUid) else {
             return self
         }
-        return name.appendingPathComponent(String(self.dropFirst()))
+        return home.appendingPathComponent(String(self.dropFirst()))
     }
 }
 #endif // os(macOS) && FOUNDATION_FRAMEWORK
