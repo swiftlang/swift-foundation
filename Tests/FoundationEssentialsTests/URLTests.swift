@@ -792,6 +792,42 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.host, "*.xn--poema-9qae5a.com.br")
     }
 
+    func testURLHostIPLiteralCompatibility() throws {
+        var url = URL(string: "http://[::]")!
+        XCTAssertEqual(url.host, "::")
+        XCTAssertEqual(url.host(), "::")
+
+        url = URL(string: "https://[::1]:433/")!
+        XCTAssertEqual(url.host, "::1")
+        XCTAssertEqual(url.host(), "::1")
+
+        url = URL(string: "https://[2001:db8::]/")!
+        XCTAssertEqual(url.host, "2001:db8::")
+        XCTAssertEqual(url.host(), "2001:db8::")
+
+        url = URL(string: "https://[2001:db8::]:433")!
+        XCTAssertEqual(url.host, "2001:db8::")
+        XCTAssertEqual(url.host(), "2001:db8::")
+
+        url = URL(string: "http://[fe80::a%25en1]")!
+        XCTAssertEqual(url.absoluteString, "http://[fe80::a%25en1]")
+        XCTAssertEqual(url.host, "fe80::a%en1")
+        XCTAssertEqual(url.host(percentEncoded: true), "fe80::a%25en1")
+        XCTAssertEqual(url.host(percentEncoded: false), "fe80::a%en1")
+
+        url = URL(string: "http://[fe80::a%en1]")!
+        XCTAssertEqual(url.absoluteString, "http://[fe80::a%25en1]")
+        XCTAssertEqual(url.host, "fe80::a%en1")
+        XCTAssertEqual(url.host(percentEncoded: true), "fe80::a%25en1")
+        XCTAssertEqual(url.host(percentEncoded: false), "fe80::a%en1")
+
+        url = URL(string: "http://[fe80::a%100%CustomZone]")!
+        XCTAssertEqual(url.absoluteString, "http://[fe80::a%25100%25CustomZone]")
+        XCTAssertEqual(url.host, "fe80::a%100%CustomZone")
+        XCTAssertEqual(url.host(percentEncoded: true), "fe80::a%25100%25CustomZone")
+        XCTAssertEqual(url.host(percentEncoded: false), "fe80::a%100%CustomZone")
+    }
+
     func testURLTildeFilePath() throws {
         func urlIsAbsolute(_ url: URL) -> Bool {
             if url.relativePath.utf8.first == ._slash {
