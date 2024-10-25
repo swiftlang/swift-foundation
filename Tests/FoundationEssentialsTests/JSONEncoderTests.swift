@@ -366,6 +366,32 @@ final class JSONEncoderTests : XCTestCase {
                        nonConformingFloatDecodingStrategy: decodingStrategy)
     }
 
+    // MARK: - Directly Encoded Array Tests
+
+    func testDirectlyEncodedArrays() {
+        let encodingStrategy: JSONEncoder.NonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "INF", negativeInfinity: "-INF", nan: "NaN")
+        let decodingStrategy: JSONDecoder.NonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "INF", negativeInfinity: "-INF", nan: "NaN")
+
+        struct Arrays: Codable, Equatable {
+            let integers: [Int]
+            let doubles: [Double]
+            let strings: [String]
+        }
+
+        let value = Arrays(
+            integers: [.min, 0, 42, .max],
+            doubles: [42.0, 3.14, .infinity, -.infinity],
+            strings: ["Hello", "World", "true", "0\n1", "\u{0008}"]
+        )
+        _testRoundTrip(of: value,
+                       nonConformingFloatEncodingStrategy: encodingStrategy,
+                       nonConformingFloatDecodingStrategy: decodingStrategy)
+        _testRoundTrip(of: value,
+                       outputFormatting: .prettyPrinted,
+                       nonConformingFloatEncodingStrategy: encodingStrategy,
+                       nonConformingFloatDecodingStrategy: decodingStrategy)
+    }
+
     // MARK: - Key Strategy Tests
     private struct EncodeMe : Encodable {
         var keyName: String
@@ -1644,6 +1670,7 @@ final class JSONEncoderTests : XCTestCase {
                 case firstSuper
                 case secondSuper
                 case unkeyed
+                case direct
             }
             func encode(to encoder: Encoder) throws {
                 var keyed = encoder.container(keyedBy: CodingKeys.self)
@@ -1665,6 +1692,9 @@ final class JSONEncoderTests : XCTestCase {
                 try unkeyedSVC1.encode("First")
                 try unkeyedSVC2.encode("Second")
 
+                let directSuper = keyed.superEncoder(forKey: .direct)
+                try ["direct":"super"].encode(to: directSuper)
+
                 // NOTE!!! At present, the order in which the values in the unkeyed container's superEncoders above get inserted into the resulting array depends on the order in which the superEncoders are deinit'd!! This can result in some very unexpected results, and this pattern is not recommended. This test exists just to verify compatibility.
             }
         }
@@ -1674,6 +1704,7 @@ final class JSONEncoderTests : XCTestCase {
         XCTAssertTrue(string.contains("\"firstSuper\":\"First\""))
         XCTAssertTrue(string.contains("\"secondSuper\":\"Second\""))
         XCTAssertTrue(string.contains("[0,\"First\",\"Second\",42]"))
+        XCTAssertTrue(string.contains("{\"direct\":\"super\"}"))
     }
 
     func testRedundantKeys() {
