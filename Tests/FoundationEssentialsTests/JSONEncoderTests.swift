@@ -193,7 +193,30 @@ final class JSONEncoderTests : XCTestCase {
                        dateDecodingStrategy: .millisecondsSince1970)
     }
 
-    func testEncodingDateCustom() {
+    fileprivate struct TopLevelArrayWrapper<T> : Codable, Equatable where T : Codable, T : Equatable {
+        let value: T
+
+        init(_ value: T) {
+            self.value = value
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.unkeyedContainer()
+            try container.encode(value)
+        }
+
+        init(from decoder: Decoder) throws {
+            var container = try decoder.unkeyedContainer()
+            value = try container.decode(T.self)
+            assert(container.isAtEnd)
+        }
+
+        static func ==(_ lhs: TopLevelArrayWrapper<T>, _ rhs: TopLevelArrayWrapper<T>) -> Bool {
+            return lhs.value == rhs.value
+        }
+    }
+
+    func test_encodingDateCustom() {
         let timestamp = Date()
 
         // We'll encode a number instead of a date.
@@ -212,6 +235,13 @@ final class JSONEncoderTests : XCTestCase {
         // Optional dates should encode the same way.
         _testRoundTrip(of: Optional(timestamp),
                        expectedJSON: expectedJSON,
+                       dateEncodingStrategy: .custom(encode),
+                       dateDecodingStrategy: .custom(decode))
+
+        // So should wrapped dates.
+        let expectedJSON_array = "[42]".data(using: .utf8)!
+        _testRoundTrip(of: TopLevelArrayWrapper(timestamp),
+                       expectedJSON: expectedJSON_array,
                        dateEncodingStrategy: .custom(encode),
                        dateDecodingStrategy: .custom(decode))
     }
@@ -362,6 +392,32 @@ final class JSONEncoderTests : XCTestCase {
                        nonConformingFloatDecodingStrategy: decodingStrategy)
         _testRoundTrip(of: Optional(-Double.infinity),
                        expectedJSON: "\"-INF\"".data(using: String._Encoding.utf8)!,
+                       nonConformingFloatEncodingStrategy: encodingStrategy,
+                       nonConformingFloatDecodingStrategy: decodingStrategy)
+    }
+
+    // MARK: - Directly Encoded Array Tests
+
+    func testDirectlyEncodedArrays() {
+        let encodingStrategy: JSONEncoder.NonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "INF", negativeInfinity: "-INF", nan: "NaN")
+        let decodingStrategy: JSONDecoder.NonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "INF", negativeInfinity: "-INF", nan: "NaN")
+
+        struct Arrays: Codable, Equatable {
+            let integers: [Int]
+            let doubles: [Double]
+            let strings: [String]
+        }
+
+        let value = Arrays(
+            integers: [.min, 0, 42, .max],
+            doubles: [42.0, 3.14, .infinity, -.infinity],
+            strings: ["Hello", "World", "true", "0\n1", "\u{0008}"]
+        )
+        _testRoundTrip(of: value,
+                       nonConformingFloatEncodingStrategy: encodingStrategy,
+                       nonConformingFloatDecodingStrategy: decodingStrategy)
+        _testRoundTrip(of: value,
+                       outputFormatting: .prettyPrinted,
                        nonConformingFloatEncodingStrategy: encodingStrategy,
                        nonConformingFloatDecodingStrategy: decodingStrategy)
     }
@@ -1644,6 +1700,7 @@ final class JSONEncoderTests : XCTestCase {
                 case firstSuper
                 case secondSuper
                 case unkeyed
+                case direct
             }
             func encode(to encoder: Encoder) throws {
                 var keyed = encoder.container(keyedBy: CodingKeys.self)
@@ -1665,6 +1722,9 @@ final class JSONEncoderTests : XCTestCase {
                 try unkeyedSVC1.encode("First")
                 try unkeyedSVC2.encode("Second")
 
+                let directSuper = keyed.superEncoder(forKey: .direct)
+                try ["direct":"super"].encode(to: directSuper)
+
                 // NOTE!!! At present, the order in which the values in the unkeyed container's superEncoders above get inserted into the resulting array depends on the order in which the superEncoders are deinit'd!! This can result in some very unexpected results, and this pattern is not recommended. This test exists just to verify compatibility.
             }
         }
@@ -1674,6 +1734,7 @@ final class JSONEncoderTests : XCTestCase {
         XCTAssertTrue(string.contains("\"firstSuper\":\"First\""))
         XCTAssertTrue(string.contains("\"secondSuper\":\"Second\""))
         XCTAssertTrue(string.contains("[0,\"First\",\"Second\",42]"))
+        XCTAssertTrue(string.contains("{\"direct\":\"super\"}"))
     }
 
     func testRedundantKeys() {
@@ -1726,6 +1787,39 @@ final class JSONEncoderTests : XCTestCase {
 
         data = try! JSONEncoder().encode(RedundantEncoding(replacedType: .unkeyedContainer, useSuperEncoder: true))
         XCTAssertEqual(String(data: data, encoding: .utf8), ("{\"key\":42}"))
+    }
+
+    func test_SR17581_codingEmptyDictionaryWithNonstringKeyDoesRoundtrip() throws {
+        struct Something: Codable {
+            struct Key: Codable, Hashable {
+                var x: String
+            }
+
+            var dict: [Key: String]
+
+            enum CodingKeys: String, CodingKey {
+                case dict
+            }
+
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.dict = try container.decode([Key: String].self, forKey: .dict)
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(dict, forKey: .dict)
+            }
+
+            init(dict: [Key: String]) {
+                self.dict = dict
+            }
+        }
+
+        let toEncode = Something(dict: [:])
+        let data = try JSONEncoder().encode(toEncode)
+        let result = try JSONDecoder().decode(Something.self, from: data)
+        XCTAssertEqual(result.dict.count, 0)
     }
 
     // None of these tests can be run in our automatic test suites right now, because they are expected to hit a preconditionFailure. They can only be verified manually.
@@ -2775,6 +2869,13 @@ extension JSONEncoderTests {
         // Optional dates should encode the same way.
         _testRoundTrip(of: Optional(timestamp),
                        expectedJSON: expectedJSON,
+                       dateEncodingStrategy: .formatted(formatter),
+                       dateDecodingStrategy: .formatted(formatter))
+
+        // So should wrapped dates.
+        let expectedJSON_array = "[\"\(formatter.string(from: timestamp))\"]".data(using: String._Encoding.utf8)!
+        _testRoundTrip(of: TopLevelArrayWrapper(timestamp),
+                       expectedJSON: expectedJSON_array,
                        dateEncodingStrategy: .formatted(formatter),
                        dateDecodingStrategy: .formatted(formatter))
     }
