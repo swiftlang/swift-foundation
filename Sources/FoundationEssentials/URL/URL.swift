@@ -658,9 +658,14 @@ public struct URL: Equatable, Sendable, Hashable {
         let string = parseInfo.urlString
         var ranges = [CFRange]()
         var flags: _CFURLFlags = [
-            .isDecomposable,
             .originalAndURLStringsMatch,
         ]
+
+        // CFURL considers a URL decomposable if it does not have a scheme
+        // or if there is a slash directly following the scheme.
+        if parseInfo.scheme == nil || parseInfo.hasAuthority || parseInfo.path.utf8.first == ._slash {
+            flags.insert(.isDecomposable)
+        }
 
         if let schemeRange = parseInfo.schemeRange {
             flags.insert(.hasScheme)
