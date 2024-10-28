@@ -269,7 +269,18 @@ extension _FileManagerImpl {
 
                 let parent = path.deletingLastPathComponent()
                 if !parent.isEmpty {
-                    try createDirectory(atPath: parent, withIntermediateDirectories: true, attributes: attributes)
+                    do {
+                        try createDirectory(atPath: parent, withIntermediateDirectories: true, attributes: attributes)
+                    } catch {
+                        var isDirectory: Bool = false
+                        if fileManager.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory {
+                            // `createDirectory` failed but we have a directory now. This might happen if the directory
+                            // is created by another process between the check above and the call to `createDirectory`.
+                            // Since we have the expected end result, this is fine.
+                        } else {
+                            throw error
+                        }
+                    }
                 }
             }
 
