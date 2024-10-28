@@ -614,8 +614,7 @@ extension Calendar {
     ///   weekdays of intereset, or to filter a list of dates
     func _weekdayComponents(for weekdays: [Calendar.RecurrenceRule.Weekday],
                             in parent: Calendar.Component,
-                            anchor: Date,
-                            anchorComponents: DateComponents? = nil) -> [DateComponents]? {
+                            anchor: Date) -> [DateComponents]? {
         /// Map of weekdays to which occurences of the weekday we are interested
         /// in. `1` is the first such weekday in the interval, `-1` is the last.
         /// An empty array indicates that any weekday is valid
@@ -645,9 +644,6 @@ extension Calendar {
         } else {
             .weekOfYear
         }
-        /// The components we return for matching and enumeration
-        let componentSet: Calendar.ComponentSet = [.weekday, .hour, .minute, .second]
-        
                 
         guard
             let interval = dateInterval(of: parent, for: anchor)
@@ -656,7 +652,6 @@ extension Calendar {
         lazy var weekRange = range(of: weekComponent, in: parent, for: anchor)!
         
         var result: [DateComponents] = []
-        let anchorComponents = anchorComponents ?? _dateComponents(componentSet, from: anchor)
         
         lazy var firstWeekday = component(.weekday, from: interval.start)
         // The end of the interval would always be midnight on the day after, so
@@ -667,7 +662,7 @@ extension Calendar {
         for (weekday, occurences) in map {
             let weekdayIdx = weekday.icuIndex
             if occurences == [] {
-                var components = anchorComponents
+                var components = DateComponents()
                 components.setValue(nil, for: weekComponent)
                 components.weekday = weekdayIdx
                 result.append(components)
@@ -675,7 +670,7 @@ extension Calendar {
                 lazy var firstWeek = weekRange.lowerBound + (weekdayIdx < firstWeekday ? 1 : 0)
                 lazy var lastWeek  = weekRange.upperBound - (weekdayIdx > lastWeekday  ? 1 : 0)
                 for occurence in occurences {
-                    var components = anchorComponents
+                    var components = DateComponents()
                     if occurence > 0 {
                         components.setValue(firstWeek - 1 + occurence, for: weekComponent)
                     } else {
@@ -815,7 +810,7 @@ extension Calendar {
         if let weekdays = combinationComponents.weekdays {
             dates = try dates.flatMap { date, comps in
                 let parentComponent: Calendar.Component = .month
-                let weekdayComponents = _weekdayComponents(for: weekdays, in: parentComponent, anchor: date, anchorComponents: comps)
+                let weekdayComponents = _weekdayComponents(for: weekdays, in: parentComponent, anchor: date)
                 let dates = try weekdayComponents!.map { comps in 
                     var date = date
                     if let result = try dateAfterMatchingWeekOfYear(startingAt: date, components: comps, direction: .forward) {
