@@ -229,19 +229,24 @@ extension SyntaxProtocol {
 
 private protocol PredicateSyntaxRewriter : SyntaxRewriter {
     var success: Bool { get }
+    var ignorable: Bool { get }
     var diagnostics: [Diagnostic] { get }
 }
 
 extension PredicateSyntaxRewriter {
     var success: Bool { true }
+    var ignorable: Bool { false }
     var diagnostics: [Diagnostic] { [] }
 }
 
 extension SyntaxProtocol {
     fileprivate func rewrite(with rewriter: some PredicateSyntaxRewriter) throws -> Syntax {
-        let translated = rewriter.rewrite(Syntax(self))
+        let translated = rewriter.rewrite(self)
         guard rewriter.success else {
             throw DiagnosticsError(diagnostics: rewriter.diagnostics)
+        }
+        guard !rewriter.ignorable else {
+            return Syntax(self)
         }
         return translated
     }
@@ -251,6 +256,7 @@ private class OptionalChainRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
     var withinValidChainingTreeStart = true
     var withinChainingTree = false
     var optionalInput: ExprSyntax? = nil
+    var ignorable = true
     
     private func _prePossibleTopOfTree() -> Bool {
         if !withinChainingTree && withinValidChainingTreeStart {
@@ -265,6 +271,7 @@ private class OptionalChainRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         withinChainingTree = false
         if let input = optionalInput {
             optionalInput = nil
+            ignorable = false
             let visited = self.visit(input)
             let closure = ClosureExprSyntax(statements: [CodeBlockItemSyntax(item: CodeBlockItemSyntax.Item(node))])
             let functionMember = MemberAccessExprSyntax(base: visited, name: "flatMap")
@@ -282,9 +289,13 @@ private class OptionalChainRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
         
         // We're in the middle of a potential tree, so rewrite the closure with a fresh state
         // This ensures potential chaining in the closure isn't rewritten outside of the closure
-        guard let rewritten = (try? node.rewrite(with: OptionalChainRewriter()))?.as(ExprSyntax.self) else {
+        let nestedRewriter = OptionalChainRewriter()
+        guard let rewritten = (try? node.rewrite(with: nestedRewriter))?.as(ExprSyntax.self) else {
             // If rewriting the closure failed, just leave the closure as-is
             return ExprSyntax(node)
+        }
+        if ignorable {
+            ignorable = nestedRewriter.ignorable
         }
         return rewritten
     }
