@@ -27,7 +27,7 @@ import WASILibc
 internal import _FoundationCShims
 
 extension StringProtocol {
-    fileprivate func _standardizingSlashes() -> String {
+    fileprivate func _convertingSlashesIfNeeded() -> String {
         #if os(Windows)
         // The string functions below all assume that the path separator is a forward slash
         // Standardize the path to use forward slashes before processing for consistency
@@ -43,132 +43,125 @@ extension StringProtocol {
 }
 
 extension String {
+
+    // MARK: - Non-filesystem String Extensions
+
+    internal var pathComponents: [String] {
+        _convertingSlashesIfNeeded()._pathComponents
+    }
+
+    private var _pathComponents: [String] {
+        guard !isEmpty else {
+            return []
+        }
+        var result = [String]()
+
+        var start = startIndex
+        if utf8.first == ._slash {
+            result.append("/")
+            start = utf8.firstIndex { $0 != ._slash } ?? endIndex
+        }
+        var end = start
+        while end != endIndex {
+            end = utf8[end...].firstIndex(of: ._slash) ?? endIndex
+            if start != end {
+                result.append(String(self[start..<end]))
+            }
+            start = utf8[end...].firstIndex { $0 != ._slash } ?? endIndex
+            end = start
+        }
+        if utf8.count > 1 && utf8.last == ._slash {
+            result.append("/")
+        }
+        return result
+    }
+
     internal func deletingLastPathComponent() -> String {
-        _standardizingSlashes()._deletingLastPathComponent()
+        _convertingSlashesIfNeeded()._deletingLastPathComponent()
     }
     
     private func _deletingLastPathComponent() -> String {
-        let lastSlash = self.lastIndex { $0 == "/" }
-        guard let lastSlash else {
-            // No slash
+        guard let lastSlash = utf8.lastIndex(of: ._slash) else {
+            // No slash, entire string is deleted
             return ""
         }
-        
-        if lastSlash == startIndex {
-            // Only a first slash, return a bare slash.
+
+        // Skip past consecutive slashes, if any (e.g. find "y" in "/my//path" or "h" in "/path//")
+        guard let lastNonSlash = self[..<lastSlash].utf8.lastIndex(where: { $0 != ._slash }) else {
+            // String consists entirely of slashes, return a single slash
             return "/"
         }
-        
-        if lastSlash == index(before: endIndex) {
-            // This is a trailing slash. Ignore it.
-            let beforeLastSlash = self[startIndex..<lastSlash].lastIndex { $0 == "/" }
-            if let beforeLastSlash {
-                return String(self[startIndex..<beforeLastSlash])
-            } else {
-                // No other slash. Return empty string.
-                return ""
-            }
-        } else {
-            return String(self[startIndex..<lastSlash])
+
+        let hasTrailingSlash = (lastSlash == utf8.index(before: endIndex))
+        guard hasTrailingSlash else {
+            // No trailing slash, return up to (including) the last non-slash character
+            return String(self[...lastNonSlash])
         }
+
+        // We have a trailing slash, find the slash before the last component
+        guard let previousSlash = self[..<lastNonSlash].utf8.lastIndex(of: ._slash) else {
+            // No prior slash, deleting the last component removes the entire string (e.g. "path/")
+            return ""
+        }
+
+        // Again, skip past consecutive slashes, if any (e.g. find "y" in "/my//path/")
+        guard let previousNonSlash = self[..<previousSlash].utf8.lastIndex(where: { $0 != ._slash }) else {
+            // String is an absolute path with a single component (e.g. "/path/" or "//path/")
+            return "/"
+        }
+
+        return String(self[...previousNonSlash])
     }
         
     internal func appendingPathComponent(_ component: String) -> String {
-        _standardizingSlashes()._appendingPathComponent(component)
+        _convertingSlashesIfNeeded()._appendingPathComponent(component)
     }
     
     private func _appendingPathComponent(_ component: String) -> String {
-        var result = self
-        if !component.isEmpty {
-            var needsSlash = true
-            if isEmpty {
-                needsSlash = false
-            } else if count == 1 {
-                needsSlash = first! != "/"
-            } else if count == 2 {
-                // "net"
-                needsSlash = !(self[startIndex] == "\\" && self[index(after: startIndex)] == "\\")
-            }
-            
-            if needsSlash {
-                result = result + "/"
-            }
-            
-            result = result + component
+        guard !isEmpty else {
+            return component._standardizingSlashes
         }
-        
-        result = result.reduce(into: "") { partialResult, c in
-            guard c == "/" else {
-                partialResult += String(c)
-                return
-            }
-            
-            guard !partialResult.isEmpty else {
-                partialResult += "/"
-                return
-            }
-            
-            let lastCharacter = partialResult.last!
-            if lastCharacter != "/" {
-                // Append the slash
-                partialResult += "/"
-            }
+
+        if utf8.elementsEqual([._backslash, ._backslash]) {
+            return self + component._standardizingSlashes
         }
-        
-        if result.isEmpty { return "" }
-        
-        if result.last! != "/" {
-            return result
-        }
-        
-        var idx = result.endIndex
-        idx = result.index(before: idx)
-        while idx != result.startIndex && result[idx] == "/" {
-            idx = result.index(before: idx)
-        }
-        
-        return String(result[result.startIndex..<result.index(after: idx)])
+
+        return (self + "/" + component)._standardizingSlashes
     }
 
     internal var lastPathComponent: String {
-        _standardizingSlashes()._lastPathComponent
+        _convertingSlashesIfNeeded()._lastPathComponent
     }
     
     private var _lastPathComponent: String {
-        let lastSlash = self.lastIndex { $0 == "/" }
-        guard let lastSlash else {
+        guard utf8.count > 1 else {
+            return self
+        }
+
+        guard let lastSlash = utf8.lastIndex(of: ._slash) else {
             // No slash, just return self
             return self
         }
-        
-        if lastSlash == startIndex {
-            if count == 1 {
-                // Only a first slash, return a bare slash.
-                return "/"
-            } else {
-                return String(self[index(after: startIndex)..<endIndex])
-            }
+
+        guard lastSlash == utf8.index(before: endIndex) else {
+            // Not a trailing slash, return the component after it
+            return String(self[utf8.index(after: lastSlash)...])
         }
-        
-        if lastSlash == index(before: endIndex) {
-            // This is a trailing slash. Ignore it and all slashes that directly precede it.
-            let lastNonSlash = self[startIndex..<lastSlash].lastIndex { $0 != "/" }
-            guard let lastNonSlash else {
-                // String is all slashes, return a bare slash.
-                return "/"
-            }
-            let slashBeforeLastComponent = self[startIndex..<lastNonSlash].lastIndex { $0 == "/" }
-            if let slashBeforeLastComponent {
-                return String(self[index(after: slashBeforeLastComponent)...lastNonSlash])
-            } else {
-                // No other slash. Return string up to the last non-slash character.
-                return String(self[startIndex...lastNonSlash])
-            }
-        } else {
-            return String(self[index(after: lastSlash)..<endIndex])
+
+        // We have a trailing slash. Ignore it and all slashes that directly precede it
+        guard let lastNonSlash = self[..<lastSlash].utf8.lastIndex(where: { $0 != ._slash }) else {
+            // String is all slashes, return a bare slash
+            return "/"
         }
+
+        guard let previousSlash = self[..<lastNonSlash].utf8.lastIndex(of: ._slash) else {
+            return String(self[...lastNonSlash])
+        }
+
+        return String(self[utf8.index(after: previousSlash)...lastNonSlash])
     }
 
+    // Internal for testing purposes
     internal static let invalidExtensionScalars = Set<Unicode.Scalar>([
         " ",
         "/",
@@ -190,8 +183,7 @@ extension String {
         guard !pathExtension.isEmpty else {
             return self
         }
-        let dot = UInt8(ascii: ".")
-        guard let lastDot = self.utf8.lastIndex(of: dot) else {
+        guard let lastDot = utf8.lastIndex(of: ._dot) else {
             return self
         }
         var result = String(self[..<lastDot])
@@ -202,15 +194,15 @@ extension String {
     }
 
     private func validatePathExtension(_ pathExtension: String) -> Bool {
-        guard pathExtension.utf8.last != UInt8(ascii: ".") else {
+        guard pathExtension.utf8.last != ._dot else {
             return false
         }
-        if let lastDot = pathExtension.utf8.lastIndex(of: UInt8(ascii: ".")) {
-            let beforeDot = pathExtension[..<lastDot]._standardizingSlashes().unicodeScalars
-            let afterDot = pathExtension[pathExtension.index(after: lastDot)...]._standardizingSlashes().unicodeScalars
+        if let lastDot = pathExtension.utf8.lastIndex(of: ._dot) {
+            let beforeDot = pathExtension[..<lastDot]._convertingSlashesIfNeeded().unicodeScalars
+            let afterDot = pathExtension[pathExtension.index(after: lastDot)...]._convertingSlashesIfNeeded().unicodeScalars
             return beforeDot.allSatisfy { $0 != "/" } && afterDot.allSatisfy { !String.invalidExtensionScalars.contains($0) }
         } else {
-            return pathExtension._standardizingSlashes().unicodeScalars.allSatisfy { !String.invalidExtensionScalars.contains($0) }
+            return pathExtension._convertingSlashesIfNeeded().unicodeScalars.allSatisfy { !String.invalidExtensionScalars.contains($0) }
         }
     }
 
@@ -231,11 +223,10 @@ extension String {
     }
 
     internal var pathExtension: String {
-        let dot = UInt8(ascii: ".")
         let lastComponent = lastPathComponent.utf8
-        guard lastComponent.last != dot,
-              !lastComponent.starts(with: [dot, dot]),
-              let lastDot = lastComponent.lastIndex(of: dot),
+        guard lastComponent.last != ._dot,
+              !lastComponent.starts(with: [._dot, ._dot]),
+              let lastDot = lastComponent.lastIndex(of: ._dot),
               lastDot != lastComponent.startIndex else {
             return ""
         }
@@ -247,31 +238,29 @@ extension String {
     }
 
     internal func merging(relativePath: String) -> String {
-        _standardizingSlashes()._merging(relativePath: relativePath)
+        _convertingSlashesIfNeeded()._merging(relativePath: relativePath)
     }
     
     private func _merging(relativePath: String) -> String {
-        guard relativePath.utf8.first != UInt8(ascii: "/") else {
+        guard relativePath.utf8.first != ._slash else {
             return relativePath
         }
-        guard let basePathEnd = self.utf8.lastIndex(of: UInt8(ascii: "/")) else {
+        guard let basePathEnd = self.utf8.lastIndex(of: ._slash) else {
             return relativePath
         }
         return self[...basePathEnd] + relativePath
     }
 
     internal var removingDotSegments: String {
-        _standardizingSlashes()._removingDotSegments
+        _convertingSlashesIfNeeded()._removingDotSegments
     }
     
     private var _removingDotSegments: String {
-        let input = self.utf8
-        guard !input.isEmpty else {
+        guard !isEmpty else {
             return ""
         }
-        var output = [UInt8]()
 
-        enum DotState {
+        enum RemovingDotState {
             case initial
             case dot
             case dotDot
@@ -280,108 +269,162 @@ extension String {
             case slashDotDot
             case appendUntilSlash
         }
-        let dot = UInt8(ascii: ".")
-        let slash = UInt8(ascii: "/")
 
-        var state = DotState.initial
-        for v in input {
+        return String(unsafeUninitializedCapacity: utf8.count) { buffer in
+
+            // State machine for remove_dot_segments() from RFC 3986
+            //
+            // First, remove all "./" and "../" prefixes by moving through
+            // the .initial, .dot, and .dotDot states (without appending).
+            //
+            // Then, move through the remaining states/components, first
+            // checking if the component is special ("/./" or "/../") so
+            // that we only append when necessary.
+
+            var state = RemovingDotState.initial
+            var i = 0
+            for v in utf8 {
+                switch state {
+                case .initial:
+                    if v == ._dot {
+                        state = .dot
+                    } else if v == ._slash {
+                        state = .slash
+                    } else {
+                        buffer[i] = v
+                        i += 1
+                        state = .appendUntilSlash
+                    }
+                case .dot:
+                    if v == ._dot {
+                        state = .dotDot
+                    } else if v == ._slash {
+                        state = .initial
+                    } else {
+                        i = buffer[i...i+1].initialize(fromContentsOf: [._dot, v])
+                        state = .appendUntilSlash
+                    }
+                case .dotDot:
+                    if v == ._slash {
+                        state = .initial
+                    } else {
+                        i = buffer[i...i+2].initialize(fromContentsOf: [._dot, ._dot, v])
+                        state = .appendUntilSlash
+                    }
+                case .slash:
+                    if v == ._dot {
+                        state = .slashDot
+                    } else if v == ._slash {
+                        buffer[i] = ._slash
+                        i += 1
+                    } else {
+                        i = buffer[i...i+1].initialize(fromContentsOf: [._slash, v])
+                        state = .appendUntilSlash
+                    }
+                case .slashDot:
+                    if v == ._dot {
+                        state = .slashDotDot
+                    } else if v == ._slash {
+                        state = .slash
+                    } else {
+                        i = buffer[i...i+2].initialize(fromContentsOf: [._slash, ._dot, v])
+                        state = .appendUntilSlash
+                    }
+                case .slashDotDot:
+                    if v == ._slash {
+                        // Cheaply remove the previous component by moving i to its start
+                        i = buffer[..<i].lastIndex(of: ._slash) ?? 0
+                        state = .slash
+                    } else {
+                        i = buffer[i...i+3].initialize(fromContentsOf: [._slash, ._dot, ._dot, v])
+                        state = .appendUntilSlash
+                    }
+                case .appendUntilSlash:
+                    if v == ._slash {
+                        state = .slash
+                    } else {
+                        buffer[i] = v
+                        i += 1
+                    }
+                }
+            }
+
             switch state {
-            case .initial:
-                if v == dot {
-                    state = .dot
-                } else if v == slash {
-                    state = .slash
-                } else {
-                    output.append(v)
-                    state = .appendUntilSlash
-                }
-                break
-            case .dot:
-                if v == dot {
-                    state = .dotDot
-                } else if v == slash {
-                    state = .initial
-                } else {
-                    output.append(contentsOf: [dot, v])
-                    state = .appendUntilSlash
-                }
-                break
-            case .dotDot:
-                if v == slash {
-                    state = .initial
-                } else {
-                    output.append(contentsOf: [dot, dot, v])
-                    state = .appendUntilSlash
-                }
-                break
-            case .slash:
-                if v == dot {
-                    state = .slashDot
-                } else if v == slash {
-                    output.append(slash)
-                } else {
-                    output.append(contentsOf: [slash, v])
-                    state = .appendUntilSlash
-                }
-                break
+            case .slash: fallthrough
             case .slashDot:
-                if v == dot {
-                    state = .slashDotDot
-                } else if v == slash {
-                    state = .slash
-                } else {
-                    output.append(contentsOf: [slash, dot, v])
-                    state = .appendUntilSlash
-                }
-                break
+                buffer[i] = ._slash
+                i += 1
             case .slashDotDot:
-                if v == slash {
-                    while let last = output.popLast(), last != slash { }
-                    state = .slash
-                } else {
-                    output.append(contentsOf: [slash, dot, dot, v])
-                    state = .appendUntilSlash
-                }
-                break
-            case .appendUntilSlash:
-                if v == slash {
-                    state = .slash
-                } else {
-                    output.append(v)
-                }
+                // Note: "/.." is not yet appended to the buffer
+                i = buffer[..<i].lastIndex(of: ._slash) ?? 0
+                buffer[i] = ._slash
+                i += 1
+            default:
                 break
             }
+
+            return i
         }
-
-        switch state {
-        case .initial:
-            break
-        case .dot:
-            break
-        case .dotDot:
-            break
-        case .slash:
-            output.append(slash)
-            break
-        case .slashDot:
-            output.append(slash)
-            break
-        case .slashDotDot:
-            while let last = output.popLast(), last != slash { }
-            output.append(slash)
-            break
-        case .appendUntilSlash:
-            break
-        }
-
-        output.append(0) // NULL-terminated
-
-        return String(cString: output)
     }
 
+    /// Replaces any number of sequential `/`
+    /// characters with a single `/`
+    /// NOTE: Internal so it's testable
+    /// - Returns: The replaced String
+    internal func _compressingSlashes() -> String {
+        guard utf8.count > 1 else {
+            return self
+        }
+
+        enum SlashState {
+            case initial
+            case slash
+        }
+
+        return String(unsafeUninitializedCapacity: utf8.count) { buffer in
+            var state = SlashState.initial
+            var i = 0
+            for v in utf8 {
+                switch state {
+                case .initial:
+                    buffer[i] = v
+                    i += 1
+                    if v == ._slash {
+                        state = .slash
+                    }
+                case .slash:
+                    if v != ._slash {
+                        buffer[i] = v
+                        i += 1
+                        state = .initial
+                    }
+                }
+            }
+            return i
+        }
+    }
+
+    internal var _droppingTrailingSlashes: String {
+        guard !self.isEmpty else {
+            return self
+        }
+        guard let lastNonSlash = utf8.lastIndex(where: { $0 != ._slash }) else {
+            // It's all /'s so just return a single slash
+            return "/"
+        }
+        return String(self[...lastNonSlash])
+    }
+
+    private var _standardizingSlashes: String {
+        _compressingSlashes()._droppingTrailingSlashes
+    }
+
+// MARK: - Filesystem String Extensions
+
 #if !NO_FILESYSTEM
+
     internal static func homeDirectoryPath(forUser user: String? = nil) -> String {
-#if os(Windows)
+        #if os(Windows)
         if let user {
             func fallbackUserDirectory() -> String {
                 guard let fallback = ProcessInfo.processInfo.environment["ALLUSERSPROFILE"] else {
@@ -455,7 +498,8 @@ extension String {
             }
             return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
-#else
+        #else // os(Windows)
+
         #if targetEnvironment(simulator)
         if user == nil, let envValue = getenv("CFFIXED_USER_HOME") ?? getenv("HOME") {
             return String(cString: envValue).standardizingPath
@@ -480,8 +524,8 @@ extension String {
                 return dir.standardizingPath
             }
         }
-        #endif
-        
+        #endif // !os(WASI)
+
         // Fallback to HOME for the current user if possible
         if user == nil, let home = getenv("HOME") {
             return String(cString: home).standardizingPath
@@ -489,27 +533,28 @@ extension String {
         
         // If all else fails, log and fall back to /var/empty
         return "/var/empty"
-#endif
+        #endif // os(Windows)
     }
     
     // From swift-corelibs-foundation's NSTemporaryDirectory. Internal for now, pending a better public API.
     internal static var temporaryDirectoryPath: String {
         func normalizedPath(with path: String) -> String {
-            var result = path._standardizingSlashes()
+            let result = path._convertingSlashesIfNeeded()
             guard result.utf8.last != ._slash else {
                 return result
             }
             return result + "/"
         }
-#if os(Windows)
+        #if os(Windows)
         let cchLength: DWORD = GetTempPathW(0, nil)
         var wszPath: [WCHAR] = Array<WCHAR>(repeating: 0, count: Int(cchLength + 1))
         guard GetTempPathW(DWORD(wszPath.count), &wszPath) <= cchLength else {
             preconditionFailure("GetTempPathW mutation race")
         }
         return normalizedPath(with: String(decodingCString: wszPath, as: UTF16.self).standardizingPath)
-#else
-#if canImport(Darwin)
+        #else // os(Windows)
+
+        #if canImport(Darwin)
         // If confstr returns 0 it either failed or the variable had no content
         // If the variable had no content, we should continue on below
         // If it fails, we should also silently ignore the error and continue on below. This API can fail for non-programmer reasons such as the device being out of storage space when libSystem attempts to create the directory
@@ -528,80 +573,57 @@ extension String {
                 return result
             }
         }
-#endif
-#if !os(WASI)
+        #endif // canImport(Darwin)
+
+        #if !os(WASI)
         if let envValue = Platform.getEnvSecure("TMPDIR") {
             return normalizedPath(with: envValue)
         }
-#endif
-#if os(Android)
+        #endif
+
+        #if os(Android)
         // Bionic uses /data/local/tmp/ as temporary directory. TMPDIR is rarely
         // defined.
         return "/data/local/tmp/"
-#else
+        #else
         return "/tmp/"
-#endif
-#endif // os(Windows)
-    }
-#endif // !NO_FILESYSTEM
-
-    /// Replaces any number of sequential `/`
-    /// characters with /
-    /// NOTE: Internal so it's testable
-    /// - Returns: The replaced String
-    internal func _transmutingCompressingSlashes() -> String {
-        let input = self.utf8
-        guard input.count > 1 else {
-            return self
-        }
-
-        enum SlashState {
-            case initial
-            case slash
-        }
-
-        return String(unsafeUninitializedCapacity: input.count) { buffer in
-            var state = SlashState.initial
-            var i = 0
-            for v in input {
-                switch state {
-                case .initial:
-                    buffer[i] = v
-                    i += 1
-                    if v == ._slash {
-                        state = .slash
-                    }
-                case .slash:
-                    if v != ._slash {
-                        buffer[i] = v
-                        i += 1
-                        state = .initial
-                    }
-                }
-            }
-            return i
-        }
+        #endif
+        #endif // os(Windows)
     }
 
-    internal var _droppingTrailingSlashes: String {
-        guard !self.isEmpty else {
-            return self
-        }
-        guard let lastNonSlash = self.lastIndex(where: { $0 != "/"}) else {
-            // It's all /'s so just return a single slash
-            return "/"
-        }
-        return String(self[...lastNonSlash])
-    }
+    private static let NETWORK_PREFIX: [UInt8] = [._backslash, ._backslash]
 
-#if !NO_FILESYSTEM
+    private static let _automountPrefixes = {
+        let prefixes: [[UInt8]] = [
+            Array("/private/var/automount/".utf8),
+            Array("/var/automount/".utf8),
+            Array("/private/".utf8)
+        ]
+        return prefixes
+    }()
 
-    static var NETWORK_PREFIX: String { #"\\"# }
-    
+    private static let _automountExclusionList = {
+        let exclusions: [[UInt8]] = [
+            Array("/Applications".utf8),
+            Array("/Library".utf8),
+            Array("/System".utf8),
+            Array("/Users".utf8),
+            Array("/Volumes".utf8),
+            Array("/bin".utf8),
+            Array("/cores".utf8),
+            Array("/dev".utf8),
+            Array("/opt".utf8),
+            Array("/private".utf8),
+            Array("/sbin".utf8),
+            Array("/usr".utf8)
+        ]
+        return exclusions
+    }()
+
     private var _standardizingPath: String {
-        var result = _standardizingSlashes()._transmutingCompressingSlashes()._droppingTrailingSlashes
-        let postNetStart = if result.starts(with: String.NETWORK_PREFIX) {
-            result.firstIndex(of: "/") ?? result.endIndex
+        var result = _convertingSlashesIfNeeded()._standardizingSlashes
+        let postNetStart = if result.utf8.starts(with: String.NETWORK_PREFIX) {
+            result.utf8.firstIndex(of: ._slash) ?? result.endIndex
         } else {
             result.startIndex
         }
@@ -613,15 +635,15 @@ extension String {
         result = result._removingDotSegments
 
         // Automounted paths need to be stripped for various flavors of paths
-        let exclusionList = ["/Applications", "/Library", "/System", "/Users", "/Volumes", "/bin", "/cores", "/dev", "/opt", "/private", "/sbin", "/usr"]
-        for path in ["/private/var/automount", "/var/automount", "/private"] {
-            if result.starts(with: "\(path)/") {
-                let newPath = String(result.dropFirst(path.count))
-                let isExcluded = exclusionList.contains {
-                    newPath == $0 || newPath.starts(with: "\($0)/")
+        for prefix in String._automountPrefixes {
+            if result.utf8.starts(with: prefix) {
+                let prefixEndSlash = result.utf8.index(result.startIndex, offsetBy: prefix.count - 1)
+                let newPath = result[prefixEndSlash...]
+                let isExcluded = String._automountExclusionList.contains {
+                    newPath._hasPathPrefix($0)
                 }
-                if !isExcluded && FileManager.default.fileExists(atPath: newPath) {
-                    result = newPath
+                if !isExcluded && FileManager.default.fileExists(atPath: String(newPath)) {
+                    result = String(newPath)
                 }
                 break
             }
@@ -633,47 +655,28 @@ extension String {
         expandingTildeInPath._standardizingPath
     }
 
-#endif // !NO_FILESYSTEM
-    
-    // _NSPathComponents
-    var pathComponents: [String] {
-        _standardizingSlashes()._pathComponents
-    }
-    
-    private var _pathComponents: [String] {
-        var components = self.components(separatedBy: "/").filter { !$0.isEmpty }
-        if self.first == "/" {
-            components.insert("/", at: 0)
-        }
-        if self.last == "/" && self.count > 1 {
-            components.append("/")
-        }
-        return components
-    }
-    
-    #if !NO_FILESYSTEM
     var abbreviatingWithTildeInPath: String {
-        _standardizingSlashes()._abbreviatingWithTildeInPath
+        _convertingSlashesIfNeeded()._abbreviatingWithTildeInPath
     }
     
     private var _abbreviatingWithTildeInPath: String {
         guard !self.isEmpty && self != "/" else { return self }
-        let homeDir = String.homeDirectoryPath()
-        guard self.starts(with: homeDir) else { return self }
-        let nextIdxInOriginal = self.unicodeScalars.index(self.startIndex, offsetBy: homeDir.unicodeScalars.count)
-        guard nextIdxInOriginal == self.endIndex || self[nextIdxInOriginal] == "/" else { return self }
+        let homeDir = String.homeDirectoryPath().utf8
+        guard utf8.starts(with: homeDir) else { return self }
+        let nextIdxInOriginal = utf8.index(startIndex, offsetBy: homeDir.count)
+        guard nextIdxInOriginal == endIndex || utf8[nextIdxInOriginal] == ._slash else { return self }
         return "~" + self[nextIdxInOriginal...]
     }
     
     var expandingTildeInPath: String {
-        _standardizingSlashes()._expandingTildeInPath
+        _convertingSlashesIfNeeded()._expandingTildeInPath
     }
     
     private var _expandingTildeInPath: String {
-        guard self.first == "~" else { return self }
+        guard utf8.first == UInt8(ascii: "~") else { return self }
         var user: String? = nil
-        let firstSlash = self.firstIndex(of: "/") ?? self.endIndex
-        let indexAfterTilde = self.index(after: self.startIndex)
+        let firstSlash = utf8.firstIndex(of: ._slash) ?? endIndex
+        let indexAfterTilde = utf8.index(after: startIndex)
         if firstSlash != indexAfterTilde {
             user = String(self[indexAfterTilde ..< firstSlash])
         }
@@ -699,13 +702,12 @@ extension String {
         }
         #else
         return nil
-        #endif
+        #endif // canImport(Darwin)
     }
     
     func _resolvingSymlinksInPath() -> String? {
         guard !isEmpty else { return nil }
-
-#if os(Windows)
+        #if os(Windows)
         return try? self.withNTPathRepresentation {
             let hFile: HANDLE = CreateFileW($0, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
             if hFile == INVALID_HANDLE_VALUE {
@@ -723,7 +725,7 @@ extension String {
                 return String(decodingCString: $0.baseAddress!.advanced(by: 4), as: UTF16.self)
             }
         }
-#else
+        #else // os(Windows)
         return self.withFileSystemRepresentation { fsPtr -> String? in
             guard let fsPtr else { return nil }
             // If not using the cache (which may not require hitting the disk at all if it's warm), try getting the full path from getattrlist.
@@ -808,7 +810,7 @@ extension String {
                 }
             }
         }
-#endif
+        #endif // os(Windows)
     }
     
     var resolvingSymlinksInPath: String {
@@ -818,15 +820,20 @@ extension String {
         }
         return result._standardizingPath
     }
-    #endif // !NO_FILESYSTEM
+
+#endif // !NO_FILESYSTEM
+
 }
 
-fileprivate enum DotState {
+// MARK: - StringProtocol Helper Extensions
+
+fileprivate enum DotDotState {
     case initial
     case dot
     case dotDot
     case lookingForSlash
 }
+
 extension StringProtocol {
     internal func replacing(_ a: UInt8, with b: UInt8) -> String {
         var utf8Array = Array(self.utf8)
@@ -848,13 +855,12 @@ extension StringProtocol {
 
     // Internal for testing purposes
     internal func _hasDotDotComponent() -> Bool {
-        let input = self.utf8
-        guard input.count >= 2 else {
+        guard utf8.count >= 2 else {
             return false
         }
 
-        var state = DotState.initial
-        for v in input {
+        var state = DotDotState.initial
+        for v in utf8 {
             switch state {
             case .initial:
                 if v == ._dot {
@@ -874,7 +880,7 @@ extension StringProtocol {
                 }
             case .dotDot:
                 if v == ._slash {
-                    return true // Starts with "../"
+                    return true // Starts with "../" or contains "/../"
                 } else {
                     state = .lookingForSlash
                 }
@@ -886,6 +892,15 @@ extension StringProtocol {
                 }
             }
         }
-        return state == .dotDot
+        return state == .dotDot // Is ".." or ends with "/.."
+    }
+
+    // Returns true if self == prefix or self starts with (prefix + "/")
+    internal func _hasPathPrefix(_ prefix: some Collection<UInt8>) -> Bool {
+        guard utf8.starts(with: prefix) else {
+            return false
+        }
+        let prefixEnd = utf8.index(startIndex, offsetBy: prefix.count)
+        return prefixEnd == endIndex || utf8[prefixEnd] == ._slash
     }
 }
