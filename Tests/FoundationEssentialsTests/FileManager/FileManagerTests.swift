@@ -179,7 +179,157 @@ final class FileManagerTests : XCTestCase {
     private func randomData(count: Int = 10000) -> Data {
         Data((0 ..< count).map { _ in UInt8.random(in: .min ..< .max) })
     }
-    
+
+    func test_emptyFilename() {
+
+        // Some of these tests will throw an NSException on Darwin which would be normally be
+        // modelled by a fatalError() or other hard failure, however since most of these functions
+        // are throwable, an NSError is thrown instead which is more useful.
+        let fm = FileManager.default
+
+        #if os(Windows)
+        let defaultHomeDirectory = ProcessInfo.processInfo.environment["ALLUSERSPROFILE"]!
+        let emptyFileNameError: CocoaError.Code? = .fileReadInvalidFileName
+        #else
+        let defaultHomeDirectory = "/var/empty"
+        let emptyFileNameError: CocoaError.Code? = nil
+        #endif
+
+        XCTAssertEqual(fm.homeDirectory(forUser: ""), URL(filePath: defaultHomeDirectory, directoryHint: .isDirectory))
+        XCTAssertEqual(NSHomeDirectoryForUser(""), defaultHomeDirectory)
+
+        XCTAssertThrowsError(try fm.contentsOfDirectory(atPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadNoSuchFile)
+        }
+
+        XCTAssertNil(fm.enumerator(atPath: ""))
+        XCTAssertNil(fm.subpaths(atPath: ""))
+        XCTAssertThrowsError(try fm.subpathsOfDirectory(atPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadNoSuchFile)
+        }
+
+        XCTAssertThrowsError(try fm.createDirectory(atPath: "", withIntermediateDirectories: true)) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileNoSuchFile)
+        }
+        XCTAssertFalse(fm.createFile(atPath: "", contents: Data()))
+        XCTAssertThrowsError(try fm.removeItem(atPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileNoSuchFile)
+        }
+
+        XCTAssertThrowsError(try fm.copyItem(atPath: "", toPath: "/test_emptyFilename_nonExistent"))  {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadNoSuchFile)
+        }
+        XCTAssertThrowsError(try fm.copyItem(atPath: "", toPath: ""))  {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadNoSuchFile)
+        }
+        XCTAssertThrowsError(try fm.copyItem(atPath: "/test_emptyFilename_nonExistent", toPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, .fileReadNoSuchFile)
+        }
+
+        #if false
+        // TODO: re-enable when URLResourceValues are supported in swift-foundation
+        XCTAssertThrowsError(try fm.moveItem(atPath: "", toPath: "/test_emptyFilename_nonExistent")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadInvalidFileName)
+        }
+        #endif
+        XCTAssertThrowsError(try fm.moveItem(atPath: "", toPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            #if os(Windows)
+            XCTAssertEqual(code, .fileNoSuchFile)
+            #else
+            XCTAssertEqual(code, .fileWriteFileExists)
+            #endif
+        }
+        XCTAssertThrowsError(try fm.moveItem(atPath: "/test_emptyFilename_nonExistent", toPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            #if os(Windows)
+            XCTAssertEqual(code, .fileNoSuchFile)
+            #else
+            XCTAssertEqual(code, .fileWriteFileExists)
+            #endif
+        }
+
+        XCTAssertThrowsError(try fm.linkItem(atPath: "", toPath: "/test_emptyFilename_nonExistent")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadNoSuchFile)
+        }
+        XCTAssertThrowsError(try fm.linkItem(atPath: "", toPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadNoSuchFile)
+        }
+        XCTAssertThrowsError(try fm.linkItem(atPath: "/test_emptyFilename_nonExistent", toPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, .fileReadNoSuchFile)
+        }
+
+        XCTAssertThrowsError(try fm.createSymbolicLink(atPath: "", withDestinationPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileNoSuchFile)
+        }
+        XCTAssertThrowsError(try fm.createSymbolicLink(atPath: "", withDestinationPath: "/test_emptyFilename_nonExistent")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileNoSuchFile)
+        }
+
+        var bIsDirectory = false
+        let absoluteDestURL = URL(filePath: "", relativeTo: URL(filePath: "/test_emptyFilename_nonExistent", directoryHint: .notDirectory))
+        print("absolute URL: \(absoluteDestURL)")
+        print("absolute path: \(absoluteDestURL.path)")
+        print("file exists: \(fm.fileExists(atPath: absoluteDestURL.path, isDirectory: &bIsDirectory))")
+        print("is directory: \(bIsDirectory)")
+
+        XCTAssertThrowsError(try fm.createSymbolicLink(atPath: "/test_emptyFilename_nonExistent", withDestinationPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, .fileNoSuchFile)
+        }
+
+        XCTAssertThrowsError(try fm.destinationOfSymbolicLink(atPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadNoSuchFile)
+        }
+        XCTAssertFalse(fm.fileExists(atPath: ""))
+        XCTAssertFalse(fm.fileExists(atPath: "", isDirectory: nil))
+        XCTAssertFalse(fm.isReadableFile(atPath: ""))
+        XCTAssertFalse(fm.isWritableFile(atPath: ""))
+        XCTAssertFalse(fm.isExecutableFile(atPath: ""))
+        #if os(Windows)
+        XCTAssertFalse(fm.isDeletableFile(atPath: ""))
+        #else
+        XCTAssertTrue(fm.isDeletableFile(atPath: ""))
+        #endif
+
+        XCTAssertThrowsError(try fm.attributesOfItem(atPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadNoSuchFile)
+        }
+        XCTAssertThrowsError(try fm.attributesOfFileSystem(forPath: "")) {
+            let code = ($0 as? CocoaError)?.code
+            XCTAssertEqual(code, emptyFileNameError ?? .fileReadNoSuchFile)
+        }
+
+        XCTAssertNil(fm.contents(atPath: ""))
+        XCTAssertFalse(fm.contentsEqual(atPath: "", andPath: ""))
+        XCTAssertFalse(fm.contentsEqual(atPath: "/test_emptyFilename_nonExistent", andPath: ""))
+        XCTAssertFalse(fm.contentsEqual(atPath: "", andPath: "/test_emptyFilename_nonExistent"))
+
+        //_ = fm.fileSystemRepresentation(withPath: "")  // NSException
+        XCTAssertEqual(fm.string(withFileSystemRepresentation: UnsafePointer(bitPattern: 1)!, length: 0), "")
+
+        XCTAssertFalse(fm.changeCurrentDirectoryPath(""))
+        XCTAssertNotEqual(fm.currentDirectoryPath, "")
+
+        // Not Implemented - XCTAssertNil(fm.componentsToDisplay(forPath: ""))
+        // Not Implemented - XCTAssertEqual(fm.displayName(atPath: ""), "")
+    }
+
     func testContentsAtPath() throws {
         let data = randomData()
         try FileManagerPlayground {
