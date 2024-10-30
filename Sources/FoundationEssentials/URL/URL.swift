@@ -652,6 +652,7 @@ public struct URL: Equatable, Sendable, Hashable {
         static let isDecomposable       = _CFURLFlags(rawValue: 0x00004000)
         static let posixAndURLPathsMatch        = _CFURLFlags(rawValue: 0x00008000)
         static let originalAndURLStringsMatch   = _CFURLFlags(rawValue: 0x00010000)
+        static let originatedFromSwift          = _CFURLFlags(rawValue: 0x00020000)
     }
 
     private static func _cfURL(from parseInfo: URLParseInfo, baseURL: CFURL?) -> CFURL {
@@ -659,6 +660,7 @@ public struct URL: Equatable, Sendable, Hashable {
         var ranges = [CFRange]()
         var flags: _CFURLFlags = [
             .originalAndURLStringsMatch,
+            .originatedFromSwift,
         ]
 
         // CFURL considers a URL decomposable if it does not have a scheme
