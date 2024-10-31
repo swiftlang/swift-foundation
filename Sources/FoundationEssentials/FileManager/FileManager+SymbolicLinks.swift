@@ -59,8 +59,8 @@ extension _FileManagerImpl {
     ) throws {
 #if os(Windows)
         var bIsDirectory = false
-        let absoluteDestPath = URL(filePath: destPath, relativeTo: URL(filePath: path, directoryHint: .notDirectory)).path
-        _ = fileManager.fileExists(atPath: absoluteDestPath, isDirectory: &bIsDirectory)
+        _ = fileManager.fileExists(atPath: destPath, isDirectory: &bIsDirectory)
+        print("isDirectory: \(bIsDirectory)")
 
         try path.withNTPathRepresentation { lpSymlinkFileName in
             try destPath.withFileSystemRepresentation {
