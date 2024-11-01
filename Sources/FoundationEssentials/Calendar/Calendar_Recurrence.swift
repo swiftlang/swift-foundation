@@ -230,12 +230,42 @@ extension Calendar {
                     case .monthly:  [.second, .minute, .hour, .day]
                     case .yearly:   [.second, .minute, .hour, .day, .month, .isLeapMonth]
                 }
-                let componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start) 
+                var componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start) 
                 
-                let rangeForBaseRecurrence: Range<Date>? = nil
+                let expansionChangesDay = dayOfYearAction == .expand || dayOfMonthAction == .expand || weekAction == .expand || weekdayAction == .expand
+                let expansionChangesMonth = dayOfYearAction == .expand || monthAction == .expand || weekAction == .expand
+
+                if expansionChangesDay, componentsForEnumerating.day != nil {
+                    // If we expand either the day of the month or weekday, then
+                    // the day of month is likely to not match that of the start
+                    // date. Reset it to 1 in the base recurrence as to not skip
+                    // "invalid" anchors, such as February 30
+                    componentsForEnumerating.day = 1
+                }
+                if expansionChangesMonth, componentsForEnumerating.month != nil {
+                    // Likewise, if we will be changing the month, reset it to 1 
+                    // in case the start date falls on a leap month
+                    componentsForEnumerating.month = 1
+                    componentsForEnumerating.isLeapMonth = nil
+                }
+                if expansionChangesDay || expansionChangesMonth, weekAction == .expand, weekdayAction != .expand {
+                    // If we are expanding weeks, all expansions in a given year
+                    // will have the same weekday. Above we have reset the month
+                    // or the day of the month, so we also changed that weekday.
+
+                    // To specify a yearly recurrence which starts from the same
+                    // weekday, and which doesn't start from a leap day / month,
+                    // simply use `dayOfYear` of the start date
+                    componentsForEnumerating.day = nil
+                    componentsForEnumerating.month = nil
+                    componentsForEnumerating.isLeapMonth = nil
+                    let daysInWeek = recurrence.calendar.maximumRange(of: .weekday)!.count
+                    componentsForEnumerating.dayOfYear = recurrence.calendar.component(.dayOfYear, from: start) % daysInWeek // mod 7 to get the same weekday in the beginning of the year, so it's guaranteed to always exist
+                }
+
                 baseRecurrence = Calendar.DatesByMatching(calendar: recurrence.calendar,
                                                           start: start,
-                                                          range: rangeForBaseRecurrence,
+                                                          range: nil,
                                                           matchingComponents: componentsForEnumerating,
                                                           matchingPolicy: recurrence.matchingPolicy,
                                                           repeatedTimePolicy: recurrence.repeatedTimePolicy,
@@ -335,6 +365,9 @@ extension Calendar {
                     componentCombinations.weekdays = recurrence.weekdays
                     componentCombinations.daysOfYear = nil
                     componentCombinations.daysOfMonth = nil
+                    if recurrence.frequency == .yearly, monthAction != .expand {
+                        componentCombinations.months = nil
+                    }
                 } else if recurrence.frequency == .weekly || weekAction == .expand {
                    if let weekdayIdx = components.weekday, let weekday = Locale.Weekday(weekdayIdx) {
                        // In a weekly recurrence (or one that expands weeks of year), we want results to fall on the same weekday as the initial date
