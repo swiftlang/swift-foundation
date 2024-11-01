@@ -57,7 +57,6 @@ final class CalendarRecurrenceRuleTests: XCTestCase {
     func testExpandToLeapMonths() {
         var lunarCalendar = Calendar(identifier: .chinese)
         lunarCalendar.timeZone = .gmt
-        let locale = Locale(identifier: "zh-TW")
         
         let start = Date(timeIntervalSince1970: 1729641600.0) // 2024-10-23T00:00:00-0000
         
