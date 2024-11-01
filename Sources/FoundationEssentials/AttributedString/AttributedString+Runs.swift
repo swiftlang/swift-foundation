@@ -47,8 +47,7 @@ extension AttributedString {
                     _runOffset: _guts.runs.count,
                     runIndex: _guts.runs.endIndex.base,
                     stringIndex: _strBounds.upperBound)
-            } else if _strBounds.upperBound == _guts.string.startIndex {
-                assert(stringLowerBound == stringUpperBound)
+            } else if _strBounds.upperBound == _strBounds.lowerBound {
                 end = start
             } else {
                 let last = _guts.runs.index(atUTF8Offset: _strBounds.upperBound.utf8Offset - 1).index
@@ -62,7 +61,7 @@ extension AttributedString {
             assert(start._runIndex != nil && start._stringIndex != nil)
             assert(end._runIndex != nil && end._stringIndex != nil)
             assert(start._stringIndex!.utf8Offset <= _strBounds.lowerBound.utf8Offset)
-            assert(end._stringIndex!.utf8Offset >= _strBounds.upperBound.utf8Offset)
+            assert(end == start || end._stringIndex!.utf8Offset >= _strBounds.upperBound.utf8Offset)
             self._bounds = start ..< end
         }
     }
