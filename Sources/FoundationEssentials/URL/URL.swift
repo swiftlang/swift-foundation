@@ -1351,6 +1351,11 @@ public struct URL: Equatable, Sendable, Hashable {
         return URL.fileSystemPath(for: path())
     }
 
+    /// True if the URL's relative path would resolve against a base URL path
+    private var pathResolvesAgainstBase: Bool {
+        return _parseInfo.scheme == nil && !hasAuthority && relativePath().utf8.first != ._slash
+    }
+
     /// Returns the path component of the URL if present, otherwise returns an empty string.
     ///
     /// - note: This function will resolve against the base `URL`.
@@ -1643,7 +1648,9 @@ public struct URL: Equatable, Sendable, Hashable {
     /// Returns a URL constructed by removing the last path component of self.
     ///
     /// This function may either remove a path component or append `/..`.
-    /// If the URL has an empty path (e.g., `http://www.example.com`), then this function will return the URL unchanged.
+    /// If the URL has an empty path that is not resolved against a base URL
+    /// (e.g., `http://www.example.com`),
+    /// then this function will return the URL unchanged.
     public func deletingLastPathComponent() -> URL {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
@@ -1652,13 +1659,30 @@ public struct URL: Equatable, Sendable, Hashable {
             return result
         }
         #endif
-        guard !relativePath().isEmpty else { return self }
-        var components = URLComponents(parseInfo: _parseInfo)
-        var newPath = components.percentEncodedPath.deletingLastPathComponent()
+        let path = relativePath()
+        let shouldAppendDotDot = (
+            pathResolvesAgainstBase && (
+                path.isEmpty
+                || path.lastPathComponent == "."
+                || path.lastPathComponent == ".."
+            )
+        )
+
+        var newPath = path
+        if newPath.lastPathComponent != ".." {
+            newPath = newPath.deletingLastPathComponent()
+        }
+        if shouldAppendDotDot {
+            newPath = newPath.appendingPathComponent("..")
+        }
+        if newPath.isEmpty && pathResolvesAgainstBase {
+            newPath = "."
+        }
         // .deletingLastPathComponent() removes the trailing "/", but we know it's a directory
-        if !newPath.isEmpty, newPath.utf8.last != UInt8(ascii: "/") {
+        if !newPath.isEmpty && newPath.utf8.last != ._slash {
             newPath += "/"
         }
+        var components = URLComponents(parseInfo: _parseInfo)
         components.percentEncodedPath = newPath
         return components.url(relativeTo: baseURL)!
     }
