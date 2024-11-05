@@ -140,11 +140,11 @@ internal struct JSONWriter {
                     appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "t")])
                 case 0x0...0xf:
                     appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "u"), UInt8(ascii: "0"), UInt8(ascii: "0"), UInt8(ascii: "0")])
-                    writer(ascii: valueToASCII(cursor.pointee / 16))
+                    writer(ascii: valueToASCII(cursor.pointee))
                 case 0x10...0x1f:
                     appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "u"), UInt8(ascii: "0"), UInt8(ascii: "0")])
-                    writer(ascii: valueToASCII(cursor.pointee % 16))
                     writer(ascii: valueToASCII(cursor.pointee / 16))
+                    writer(ascii: valueToASCII(cursor.pointee % 16))
                 default:
                     // Accumulate this byte
                     cursor += 1
