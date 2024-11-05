@@ -250,6 +250,36 @@ extension _FileManagerImpl {
         
         try fileManager.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
+
+#if os(Windows)
+    /// If `path` is absolute, this is the same as `path.withNTPathRepresentation`.
+    /// If `path` is relative, this creates an absolute path of `path` relative to `currentDirectoryPath` and runs
+    /// `body` with that path.
+    private func withAbsoluteNTPathRepresentation<Result>(
+        of path: String,
+        _ body: (UnsafePointer<WCHAR>) throws -> Result
+    ) throws -> Result {
+        try path.withNTPathRepresentation { pwszPath in
+            if !PathIsRelativeW(pwszPath) {
+                // We already have an absolute path. Nothing to do
+                return try body(pwszPath)
+            }
+            guard let currentDirectoryPath else {
+                preconditionFailure("We should always have a current directory on Windows")
+            }
+
+            // We have a relateive path. Make it absolute.
+            let absoluteUrl = URL(
+                filePath: path,
+                directoryHint: .isDirectory,
+                relativeTo: URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
+            )
+            return try absoluteUrl.path.withNTPathRepresentation { pwszPath in
+                return try body(pwszPath)
+            }
+        }
+    }
+#endif
     
     func createDirectory(
         atPath path: String,
@@ -257,28 +287,45 @@ extension _FileManagerImpl {
         attributes: [FileAttributeKey : Any]? = nil
     ) throws {
 #if os(Windows)
-        try path.withNTPathRepresentation { pwszPath in
-            if createIntermediates {
-                var isDirectory: Bool = false
-                if fileManager.fileExists(atPath: path, isDirectory: &isDirectory) {
-                    guard isDirectory else {
-                        throw CocoaError.errorWithFilePath(path, win32: ERROR_FILE_EXISTS, reading: false)
-                    }
-                    return
+        var saAttributes: SECURITY_ATTRIBUTES =
+            SECURITY_ATTRIBUTES(nLength: DWORD(MemoryLayout<SECURITY_ATTRIBUTES>.size),
+                                lpSecurityDescriptor: nil,
+                                bInheritHandle: false)
+        // `SHCreateDirectoryExW` creates intermediate directories while `CreateDirectoryW` does not.
+        if createIntermediates {
+            // `SHCreateDirectoryExW` requires an absolute path while `CreateDirectoryW` works based on the current working
+            // directory.
+            try withAbsoluteNTPathRepresentation(of: path) { pwszPath in
+                let errorCode = SHCreateDirectoryExW(nil, pwszPath, &saAttributes)
+                guard let errorCode = DWORD(exactly: errorCode) else {
+                    // `SHCreateDirectoryExW` returns `Int` but all error codes are defined in terms of `DWORD`, aka
+                    // `UInt`. We received an unknown error code.
+                    throw CocoaError.errorWithFilePath(.fileWriteUnknown, path)
                 }
-
-                let parent = path.deletingLastPathComponent()
-                if !parent.isEmpty {
-                    try createDirectory(atPath: parent, withIntermediateDirectories: true, attributes: attributes)
+                switch errorCode {
+                case ERROR_SUCCESS:
+                    if let attributes {
+                        try? fileManager.setAttributes(attributes, ofItemAtPath: path)
+                    }
+                case ERROR_ALREADY_EXISTS:
+                    var isDirectory: Bool = false
+                    if fileExists(atPath: path, isDirectory: &isDirectory), isDirectory {
+                        // A directory already exists at this path, which is not an error if we have
+                        // `createIntermediates == true`.
+                        break
+                    }
+                    // A file (not a directory) exists at the given path or the file creation failed and the item
+                    // at this path has been deleted before the call to `fileExists`. Throw the original error.
+                    fallthrough
+                default:
+                    throw CocoaError.errorWithFilePath(path, win32: errorCode, reading: false)
                 }
             }
-
-            var saAttributes: SECURITY_ATTRIBUTES =
-                SECURITY_ATTRIBUTES(nLength: DWORD(MemoryLayout<SECURITY_ATTRIBUTES>.size),
-                                    lpSecurityDescriptor: nil,
-                                    bInheritHandle: false)
-            guard CreateDirectoryW(pwszPath, &saAttributes) else {
-                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+        } else {
+            try path.withNTPathRepresentation { pwszPath in
+                guard CreateDirectoryW(pwszPath, &saAttributes) else {
+                    throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+                }
             }
             if let attributes {
                 try? fileManager.setAttributes(attributes, ofItemAtPath: path)
