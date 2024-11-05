@@ -121,12 +121,14 @@ extension DiagnosticTest {
 }
 
 func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String = "TestModule", testFileName: String = "test.swift", _ source: String, _ result: String = "", diagnostics: Set<DiagnosticTest> = [], file: StaticString = #filePath, line: UInt = #line) {
-    let context = BasicMacroExpansionContext()
     let origSourceFile = Parser.parse(source: source)
     let expandedSourceFile: Syntax
+    let context: BasicMacroExpansionContext
     do {
-        expandedSourceFile = try OperatorTable.standardOperators.foldAll(origSourceFile).expand(macros: macros) { syntax in
-            BasicMacroExpansionContext(sharingWith: context, lexicalContext: [syntax])
+        let foldedSourceFile = try OperatorTable.standardOperators.foldAll(origSourceFile).cast(SourceFileSyntax.self)
+        context = BasicMacroExpansionContext(sourceFiles: [foldedSourceFile : .init(moduleName: testModuleName, fullFilePath: testFileName)])
+        expandedSourceFile = foldedSourceFile.expand(macros: macros) {
+            BasicMacroExpansionContext(sharingWith: context, lexicalContext: [$0])
         }
     } catch {
         XCTFail("Operator folding on input source failed with error \(error)")
@@ -139,6 +141,9 @@ func AssertMacroExpansion(macros: [String : Macro.Type], testModuleName: String 
     for diagnostic in context.diagnostics {
         if !diagnostics.contains(where: { $0.matches(diagnostic) }) {
             XCTFail("Produced extra diagnostic:\n\(diagnostic._assertionDescription)", file: file, line: line)
+        } else {
+            let location = context.location(of: diagnostic.node, at: .afterLeadingTrivia, filePathMode: .fileID)
+            XCTAssertNotNil(location, "Produced diagnostic without attached source information:\n\(diagnostic._assertionDescription)", file: file, line: line)
         }
     }
     for diagnostic in diagnostics {

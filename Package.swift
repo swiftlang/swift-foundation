@@ -65,7 +65,7 @@ var dependencies: [Package.Dependency] {
                 branch: "main"),
             .package(
                 url: "https://github.com/swiftlang/swift-syntax",
-                from: "600.0.0")
+                branch: "main")
         ]
     }
 }
