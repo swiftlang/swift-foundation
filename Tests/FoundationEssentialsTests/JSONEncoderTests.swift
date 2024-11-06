@@ -1159,10 +1159,20 @@ final class JSONEncoderTests : XCTestCase {
             "\"\\u00E9\"" : "é",
 
             // G-clef (UTF16 surrogate pair) 0x1D11E
-            "\"\\uD834\\uDD1E\"" : "𝄞"
+            "\"\\uD834\\uDD1E\"" : "𝄞",
         ]
         for (input, expectedOutput) in testCases {
             _test(JSONString: input, to: expectedOutput)
+        }
+    }
+    
+    func test_encodingJSONHexUnicodeEscapes() throws {
+        let testCases = [
+            "\u{0001}\u{0002}\u{0003}": "\"\\u0001\\u0002\\u0003\"",
+            "\u{0010}\u{0018}\u{001f}": "\"\\u0010\\u0018\\u001f\"",
+        ]
+        for (string, json) in testCases {
+            _testRoundTrip(of: string, expectedJSON: Data(json.utf8))
         }
     }
 
