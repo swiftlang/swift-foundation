@@ -57,6 +57,13 @@ extension FileManager.SearchPathDomainMask {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
+@_cdecl("_NSSearchPathsForDirectoryInDomain")
+func _NSSearchPaths(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, expandTilde: Bool) -> [String] {
+    _SearchPathURLs(for: directory, in: domain, expandTilde: expandTilde).map(\.path)
+}
+#endif
+
 func _SearchPathURLs(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, expandTilde: Bool) -> some Sequence<URL> {
     #if canImport(Darwin)
     let basic = _DarwinSearchPathsSequence(directory: directory, domainMask: domain.intersection(.valid)).lazy.map {
