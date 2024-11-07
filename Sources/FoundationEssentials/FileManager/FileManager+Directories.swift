@@ -513,13 +513,22 @@ extension _FileManagerImpl {
     
     var currentDirectoryPath: String? {
 #if os(Windows)
-        let dwLength: DWORD = GetCurrentDirectoryW(0, nil)
-        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
-            if GetCurrentDirectoryW(dwLength, $0.baseAddress) == dwLength - 1 {
-                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+        var dwLength: DWORD = GetCurrentDirectoryW(0, nil)
+        guard dwLength > 0 else { return nil }
+
+        for _ in 0 ... 8 {
+            if let szCurrentDirectory = withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength), {
+                let dwResult: DWORD = GetCurrentDirectoryW(dwLength, $0.baseAddress)
+                if dwResult == dwLength - 1 {
+                    return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+                }
+                dwLength = dwResult
+                return nil
+            }) {
+                return szCurrentDirectory
             }
-            return nil
         }
+        return nil
 #else
         withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
