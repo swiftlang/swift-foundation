@@ -340,13 +340,39 @@ final class URLTests : XCTestCase {
 
     #if os(Windows)
     func testURLWindowsDriveLetterPath() throws {
-        let url = URL(filePath: "C:\\test\\path", directoryHint: .notDirectory)
+        var url = URL(filePath: #"C:\test\path"#, directoryHint: .notDirectory)
         // .absoluteString and .path() use the RFC 8089 URL path
         XCTAssertEqual(url.absoluteString, "file:///C:/test/path")
         XCTAssertEqual(url.path(), "/C:/test/path")
         // .path and .fileSystemPath strip the leading slash
         XCTAssertEqual(url.path, "C:/test/path")
         XCTAssertEqual(url.fileSystemPath, "C:/test/path")
+
+        url = URL(filePath: #"C:\"#, directoryHint: .isDirectory)
+        XCTAssertEqual(url.absoluteString, "file:///C:/")
+        XCTAssertEqual(url.path(), "/C:/")
+        XCTAssertEqual(url.path, "C:/")
+        XCTAssertEqual(url.fileSystemPath, "C:/")
+
+        url = URL(filePath: #"C:\\\"#, directoryHint: .isDirectory)
+        XCTAssertEqual(url.absoluteString, "file:///C:///")
+        XCTAssertEqual(url.path(), "/C:///")
+        XCTAssertEqual(url.path, "C:/")
+        XCTAssertEqual(url.fileSystemPath, "C:/")
+
+        url = URL(filePath: #"\C:\"#, directoryHint: .isDirectory)
+        XCTAssertEqual(url.absoluteString, "file:///C:/")
+        XCTAssertEqual(url.path(), "/C:/")
+        XCTAssertEqual(url.path, "C:/")
+        XCTAssertEqual(url.fileSystemPath, "C:/")
+
+        let base = URL(filePath: #"\d:\path\"#, directoryHint: .isDirectory)
+        url = URL(filePath: #"%43:\fake\letter"#, directoryHint: .notDirectory, relativeTo: base)
+        // ":" is encoded to "%3A" in the first path segment so it's not mistaken as the scheme separator
+        XCTAssertEqual(url.relativeString, "%2543%3A/fake/letter")
+        XCTAssertEqual(url.path(), "/d:/path/%2543%3A/fake/letter")
+        XCTAssertEqual(url.path, "d:/path/%43:/fake/letter")
+        XCTAssertEqual(url.fileSystemPath, "d:/path/%43:/fake/letter")
     }
     #endif
 
