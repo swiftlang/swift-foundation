@@ -589,7 +589,7 @@ enum JSONFuture {
         var dict: [String: JSONFuture] = [:]
 
         init() {
-            self.dict.reserveCapacity(20)
+            self.dict.reserveCapacity(4)
         }
 
         init(dict: [String: JSONFuture]) {
