@@ -2,17 +2,18 @@
 
 * Proposal: SF-NNNN
 * Author(s): [Philippe Hausler](https://github.com/phausler), [Christopher Thielen](https://github.com/cthielen)
-* Review Manager: TBD
+* Review Manager: [Charles Hu](https://github.com/iCharlesHu)
 * Status: **Draft**
 
 ## Revision history
 
 * **v1** Initial version
 * **v2** Remove `static` from `NotificationCenter.Message.isolation` to better support actor instances
+* **v3** Remove generic isolation pattern in favor of dedicated `MainActorMessage` and `AsyncMessage` types. Apply SE-0299-style static member lookups for `addObserver()`. Provide default value for `Message.name`.
 
 ## Introduction
 
-The `NotificationCenter` API provides the ability to decouple code through a pattern of "posting" notifications and "observing" them. It is highly-integrated throughout frameworks on macOS, iOS, and other Darwin-based systems.
+`NotificationCenter` provides the ability to decouple code through a pattern of "posting" notifications and "observing" them. It is highly-integrated throughout frameworks on macOS, iOS, and other Darwin-based systems.
 
 Posters send notifications identified by `Notification.Name`, and optionally include a payload in the form of `object` and `userInfo` fields.
 
@@ -31,102 +32,128 @@ For `NotificationCenter`:
 
 Well-written Swift code strongly prefers being explicit about concurrency isolation and types to help the compiler ensure program safety and correctness.
 
-## Proposed solution and example
+## Proposed solution
 
-We propose a new protocol, `NotificationCenter.Message`, which allows the creation of types that can be posted and observed using `NotificationCenter`. `NotificationCenter.Message` provides support for isolation in Swift Concurrency and is designed to interoperate with the existing `Notification` type for easy adoption.
+We propose a new base protocol, `NotificationCenter.Message`, with specializations `NotificationCenter.MainActorMessage` and `NotificationCenter.AsyncMessage`, which allow the creation of strong types that can be posted and observed using `NotificationCenter`, and an optional protocol, `NotificationCenter.MessageIdentifier`, which provides a typed, ergonomic experience when registering observers.
 
-`NotificationCenter.Message` is created by specifying a name of type `Notification.Name`:
+These protocols can be used on top of existing `Notification` declarations, enabling quick adoption.
 
 ```swift
-struct EventDidOccur: NotificationCenter.Message {
-    static var name: Notification.Name { eventDidOccurNotification }
+// Client-side
+
+// Compiler will type-check that .willLaunchApplication is valid for workspace
+let token = center.addObserver(of: workspace, for: .willLaunchApplication) { message in
+    // Do something with message properties (e.g. message.application)
+    // Bound to MainActor
+}
+
+// Framework-side
+
+// Adapting the existing NSWorkspace.willLaunchApplicationNotification notification ...
+extension NSWorkspace {
+    public struct WillLaunchApplication: NotificationCenter.MainActorMessage {
+        // Protocol requirements
+        public static var name: Notification.Name { NSWorkspace.willLaunchApplicationNotification }
+        typealias Subject = NSWorkspace
+        
+        // Custom properties
+        public var application: NSRunningApplication
+    }
+}
+
+// Optional SE-0299-style message identifier
+extension NotificationCenter.MessageIdentifier
+    where Self == NotificationCenter.BaseMessageIdentifier<NSWorkspace.WillLaunchApplication> {
+    static var willLaunchApplication: Self { .init() }
 }
 ```
 
-Providing a `Notification.Name` enables `NotificationCenter.Message` to interoperate with posters and observers of the existing `Notification` type.
+Messages conforming to `MainActorMessage` will bind observers to `MainActor` and deliver messages synchronously from `MainActor`-bound contexts, while messages conforming to `AsyncMessage` are `Sendable`, run observers in an asynchronous context, and are delivered asynchronously.
 
-By default, observers of types conforming to `NotificationCenter.Message` will be observed on `MainActor`, and other isolations can be expressed as well:
+The optional lookup type, `NotificationCenter.MessageIdentifier`, provides an [SE-0299](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0299-extend-generic-static-member-lookup.md)-style ergonomic experience for finding notification types when registering observers. The use of a separate `MessageIdentifier` type and `BaseMessageIdentifier` type ensures this lookup functionality does not impact implementations of `Message`-conforming types, and prevents `Message` types from needing to be initialized and discarded for the sole purpose of observer registration.
 
-```swift
-struct EventDidOccur: NotificationCenter.Message {
-    static var name: Notification.Name { eventDidOccurNotification }
-    var isolation: EventActor { EventActor.shared }
-}
-```
+The first parameter of `addObserver(of:for:)` accepts both metatypes and instance types. Registering with a metatype enables an observer to receive all messages for the given identifier (equivalent to `object = nil` in the current `NotificationCenter`), while registering with an instance will only deliver messages related to that instance.
 
-This information is used by the compiler to ensure isolation:
+`NotificationCenter.Message` provides optional bi-directional interoperability with the existing `Notification` type by using the `Notification.Name` property and two optional methods, `makeMessage(:Notification)` and `makeNotification(:Self)`:
 
 ```swift
-NotificationCenter.default.addObserver(EventDidOccur.self) { message, isolation in
-    // This is bound to the isolation of EventActor as specified by EventDidOccur
-}
-```
+// Framework-side
 
-When a `NotificationCenter.Message` shares its name with an existing `Notification`, its observers will be called when either `NotificationCenter.Message` or `Notification` is posted. To make this behavior transparent to any observers, you can optionally define a `static makeMessage(:Notification)` method to transform the contents of a posted `Notification` into a `NotificationCenter.Message`:
+extension NSWorkspace {
+    public struct WillLaunchApplication: NotificationCenter.MainActorMessage {
+        // This message shares its name with an existing Notification
+        public static var name: Notification.Name { NSWorkspace.willLaunchApplicationNotification }
+        public typealias Subject = NSWorkspace
+        
+        public var application: NSRunningApplication
 
-```swift
-struct EventDidOccur: NotificationCenter.Message {
-    ...
-    
-    static func makeMessage(_ notification: Notification) -> Self? {
-        // Transform notification.userInfo? into stored properties, etc.
-        guard let contents = notification.userInfo?["contents"] as? String else {
-            return nil
+        public static func makeMessage(_ notification: Notification) -> Self? {
+            guard
+                let application = notification.userInfo?["applicationUserInfoKey"] as? NSRunningApplication
+            else {
+                return nil
+            }
+            
+            return Self(application: application)
         }
         
-        ...
+        // makeNotification() does not need to translate `object`
+        public static func makeNotification(_ message: Self) -> Notification {
+            return Notification(name: Self.name,
+                                userInfo: ["applicationUserInfoKey": message.application])
+        }
     }
 }
 ```
 
-You can also offer the reverse, posting a `NotificationCenter.Message` and transforming its contents for observers expecting the existing `Notification` type, e.g. observers in Objective-C code:
+Using these methods, posters and observers of both the `Notification` and `Message` type have full, bi-directional interoperability.
 
-```swift
-struct EventDidOccur: NotificationCenter.Message {
-    ...
-    
-    static func makeNotification(_ message: Self) -> Notification {
-        // Transform stored properties into notification.object? and notification.userInfo?
-        return Notification(name: Self.name, object: message.someProperty, userInfo: ["payload": message.someOtherProperty])
-    }
-}
-```
+## Example usage
 
-Here's an example of adapting the existing [NSWorkspace.willLaunchApplicationNotification](https://developer.apple.com/documentation/appkit/nsworkspace/1528611-willlaunchapplicationnotificatio) `Notification` to use `NotificationCenter.Message`:
+This example adapts the existing [NSWorkspace.willLaunchApplicationNotification](https://developer.apple.com/documentation/appkit/nsworkspace/1528611-willlaunchapplicationnotificatio) `Notification` to use `NotificationCenter.Message`. It defines the optional `MessageIdentifier` to make registering observers easier, and it defines `makeMessage(:Notification)` and `makeNotification(:Self)` for bi-directional interoperability with existing NotificationCenter posters and observers.
+
+Existing code which vends notifications do not need to alter existing `Notification` declarations, observers, or posts to adopt to this proposal.
 
 ```swift
 extension NSWorkspace {
-    // Bound to MainActor by default
-    public struct WillLaunchApplication: NotificationCenter.Message {
+    public struct WillLaunchApplication: NotificationCenter.MainActorMessage {
         public static var name: Notification.Name { NSWorkspace.willLaunchApplicationNotification }
-        public var workspace: NSWorkspace
-        public var runningApplication: NSRunningApplication
+        public typealias Subject = NSWorkspace
+        
+        public var application: NSRunningApplication
 
-        init(workspace: NSWorkspace, runningApplication: NSRunningApplication) {
-            self.workspace = workspace
-            self.runningApplication = runningApplication
-        }
-
-        static func makeMessage(_ notification: Notification) -> Self? {
-            guard let workspace = notification.object as? NSWorkspace,
-                  let runningApplication = notification.userInfo?["applicationUserInfoKey"] as? NSRunningApplication
-            else { return nil }
+        public static func makeMessage(_ notification: Notification) -> Self? {
+            guard
+                let application = notification.userInfo?["applicationUserInfoKey"] as? NSRunningApplication
+            else {
+                return nil
+            }
             
-            self.init(workspace: workspace, runningApplication: runningApplication)
+            return Self(application: application)
         }
         
-        static func makeNotification(_ message: Self) -> Notification {
-            return Notification(name: Self.name, object: message.workspace, userInfo: ["applicationUserInfoKey": message.runningApplication])
+        public static func makeNotification(_ message: Self) -> Notification {
+            return Notification(name: Self.name, userInfo: ["applicationUserInfoKey": message.application])
         }
     }
+}
+
+extension NotificationCenter.MessageIdentifier where Self == NotificationCenter.BaseMessageIdentifier<NSWorkspace.WillLaunchApplication> {
+    static var willLaunchApplication: Self { .init() }
 }
 ```
 
 This notification could be observed by a client using:
 
 ```swift
-NotificationCenter.default.addObserver(NSWorkspace.WillLaunchApplication.self) { message in 
-    // Do something with message.runningApplication ...
+let token = center.addObserver(of: workspace, for: .willLaunchApplication) { message in
+    // Do something with message.application
+}
+
+// Or, without a specific instance to observe ...
+
+let token = center.addObserver(of: NSWorkspace.self, for: .willLaunchApplication) { message in
+    // Do something with message.application
 }
 ```
 
@@ -134,65 +161,93 @@ And it could be posted using:
 
 ```swift
 NotificationCenter.default.post(
-    NSWorkspace.WillLaunchApplication(workspace: someWorkspace, runningApplication: someRunningApplication)
+    NSWorkspace.WillLaunchApplication(application: launchedApplication),
+    with: workspace
 )
 ```
 
 ## Detailed design
 
-### The `NotificationCenter.Message` protocol
+### `NotificationCenter.Message`, `NotificationCenter.MainActorMessage`, and `NotificationCenter.AsyncMessage`
 
-The new `NotificationCenter.Message` protocol enables the creation of types that can be posted and observed using `NotificationCenter`. These types include isolation information for the compiler, defaulting to `MainActor` if no other isolation is specified:
+The `NotificationCenter.Message` protocol acts as a base for `NotificationCenter.MainActorMessage` and `NotificationCenter.AsyncMessage`, helping the two share functionality:
 
 ```swift
 @available(FoundationPreview 0.5, *)
 extension NotificationCenter {
-    public protocol Message<Isolation> {
-        associatedtype Isolation: Actor
-    
+    public protocol Message {
+        associatedtype Subject: AnyObject
         static var name: Notification.Name { get }
-        var isolation: Isolation { get }
         
         static func makeMessage(_ notification: Notification) -> Self?
         static func makeNotification(_ message: Self) -> Notification
     }
-}
-
-@available(FoundationPreview 0.5, *)
-extension NotificationCenter.Message where Isolation == MainActor {
-    public var isolation: MainActor { .shared }
+    
+    public protocol MainActorMessage: Message {}
+    public protocol AsyncMessage: Message, Sendable {}
 }
 ```
 
 `NotificationCenter.Message` is designed to interoperate with existing uses of `Notification` by sharing `Notification.Name` identifiers. This means an observer expecting `NotificationCenter.Message` will be called when a `Notification` is posted if the `Notification.Name` identifier matches, and vice versa.
 
-For this reason, the protocol specifies the static methods `makeMessage(:Notification)` and `makeNotification(:Self)` to transform the payload between posters and observers of both the `NotificationCenter.Message` and `Notification` types. These methods have default implementations in cases where interoperability with `Notification` is not necessary.
+The protocol specifies `makeMessage(:Notification)` and `makeNotification(:Self)` to transform the payload between posters and observers of both the `NotificationCenter.Message` and `Notification` types. These methods have default implementations in cases where interoperability with `Notification` is not necessary.
+
+For `Message` types that do not need to interoperate with existing `Notification` uses, the `name` property does not need to be specified, and will default to the fully qualified name of the `Message` type, e.g. `MyModule.MyMessage`. Note that when using this default, renaming the type or relocating it to another module has a similar effect as changing ABI, as any code that was compiled separately will not be aware of the name change until recompiled. Developers can control this effect by explicitly setting the `name` property if needed.
 
 ### Observing messages
 
-Observing `NotificationCenter.Message` can be done with new overloads to `addObserver`:
+Observing messages can be done with new overloads to `addObserver`. Clients do not need to know whether a message conforms to `MainActorMessage` or `AsyncMessage`.
+
+For `MainActorMessage`:
 
 ```swift
-    @available(FoundationPreview 0.5, *)
-    public func addObserver<MessageType: NotificationCenter.Message>(
-        _ notification: MessageType.Type,
-        observer: @Sendable @escaping (MessageType, isolated MessageType.Isolation) -> Void
-    ) -> ObservationToken
+@available(FoundationPreview 0.5, *)
+extension NotificationCenter {
+    // e.g. addObserver(of: workspace, for: .willLaunchApplication) { message in ... }
+    public func addObserver<I: MessageIdentifier, M: MainActorMessage>(of subject: M.Subject,
+                                                                       for identifier: I,
+                                                                       using observer: @escaping @MainActor (M) -> Void)
+        -> ObservationToken where I.MessageType == M
+
+    // e.g. addObserver(of: NSWorkspace.self, for: .willLaunchApplication) { message in ... }
+    public func addObserver<I: MessageIdentifier, M: MainActorMessage>(of subject: M.Subject.Type,
+                                                                       for identifier: I,
+                                                                       using observer: @escaping @MainActor (M) -> Void)
+        -> ObservationToken where I.MessageType == M
+
+    // e.g. addObserver(NSWorkspace.WillLaunchApplication.self) { message in ... }
+    public func addObserver<M: MainActorMessage>(_ messageType: M.Type,
+                                                 subject: M.Subject? = nil,
+                                                 using observer: @escaping @MainActor (M) -> Void)
+        -> ObservationToken
+}
 ```
 
-As well as one specialized for `MainActor`, which no longer requires the `isolated MessageType.Isolation` parameter to capture the isolation:
+And for `AsyncMessage`:
 
 ```swift
-    @available(FoundationPreview 0.5, *)
-    public func addObserver<MessageType: NotificationCenter.Message>(
-        _ notification: MessageType.Type,
-        observer: @MainActor @Sendable @escaping (MessageType) -> Void
-    ) -> ObservationToken
+@available(FoundationPreview 0.5, *)
+extension NotificationCenter {
+    public func addObserver<I: MessageIdentifier, M: AsyncMessage>(of subject: M.Subject,
+                                                                   for identifier: I,
+                                                                   using observer: @escaping @Sendable (M) async -> Void)
+        -> ObservationToken where I.MessageType == M
+
+    public func addObserver<I: MessageIdentifier, M: AsyncMessage>(of subject: M.Subject.Type,
+                                                                   for identifier: I,
+                                                                   using observer: @escaping @Sendable (M) async -> Void)
+        -> ObservationToken where I.MessageType == M
+    
+    public func addObserver<M: AsyncMessage>(_ messageType: M.Type,
+                                             subject: M.Subject? = nil,
+                                             using observer: @escaping @Sendable (M) async -> Void)
+        -> ObservationToken
+}
 ```
 
-These overloads ensure that the `observer` closure will be called on the isolation specified by the `NotificationCenter.Message`, and enable the compiler to provide the expected isolation diagnostics.
+Observer closures take a single `Message` parameter and do not receive the `subject` parameter passed to `addObserver()` nor `post()`. Not all messages use instances for their subjects, and not all subject instances are `Sendable` though their messages may be. If a `Message` author needs the `subject` to be delivered to the observer closure, they can do so by making it a property on their `Message` type.
 
-They also return a new `ObservationToken`, which can be used with a new `removeObserver()` method for faster de-registration of observers:
+These `addObserver()` methods return a new `ObservationToken`, which can be used with a new `removeObserver()` method for faster de-registration of observers:
 
 ```swift
 @available(FoundationPreview 0.5, *)
@@ -205,44 +260,23 @@ extension NotificationCenter {
 
 ### Posting messages
 
-Like the new `addObserver` overloads, the new `post` overloads allow for both an arbitrary isolation as well as a `MainActor` specialization:
+Posting messages can be done with new overloads on the existing `post` method:
 
 ```swift
 @available(FoundationPreview 0.5, *)
-public func post<MessageType: NotificationCenter.Message>(_ message: MessageType,
-                                                          isolation: isolated MessageType.Isolation)
-
-@available(FoundationPreview 0.5, *)
-@MainActor
-public func post<MessageType: NotificationCenter.Message>(_ message: MessageType) where MessageType.Isolation == MainActor
+extension NotificationCenter {
+    public func post<M: Message>(_ message: M, with subject: M.Subject)
+    public func post<M: Message>(_ message: M, with subject: M.Subject.Type)
+}
 ```
 
-Posting requires passing an instance of the `NotificationCenter.Message`-conforming type and the desired isolation:
+Unlike `addObserver`, these methods do not use `MessageIdentifier` static members for message lookup because posting messages requires directly initializing `Message` types.
 
-```swift
-let eventMessage = EventDidOccur()
-NotificationCenter.default.post(eventMessage, isolation: eventMessage.isolation)
-```
-
-Or just the instance for `MainActor`-bound types:
-
-```swift
-NotificationCenter.default.post(EventDidOccur(...))
-```
-
-Like the existing `post()` methods, all observers will be called synchronously and serially to ensure existing notification usage patterns like `will` / `did` are executed in order. This is possible because the isolation used to call `post()` will match the isolation defined by `NotificationCenter.Message`, and all observers will then be called from that same isolation.
-
-Unlike the existing `post()`, these methods do not accept the `object` and `userInfo` parameters. Instead, clients should store their payloads in their `NotificationCenter.Message`-conforming types.
-
-```swift
-message.payloadVariable = SomeType()
-
-NotificationCenter.default.post(message)
-```
+While both `post()` methods are called synchronously, only the `MainActorMessage` overload delivers synchronously. Posting an `AsyncMessage`, as suggested by the name, will result in asynchronous delivery.
 
 ### Interoperability with `Notification`
 
-Clients can also migrate information to and from existing `Notification` types using `NotificationCenter.Message.makeMessage(:Notification)` and `NotificationCenter.Message.makeNotification(:Self)`. Implementing these enables the mixing of posters and observers between the `Notification` and `NotificationCenter.Message` types:
+Clients can migrate information to and from existing `Notification` types using `NotificationCenter.Message.makeMessage(:Notification)` and `NotificationCenter.Message.makeNotification(:Self)`. Implementing these enables the mixing of posters and observers between the `Notification` and `NotificationCenter.Message` types:
 
 ```swift
 struct EventDidOccur: NotificationCenter.Message {
@@ -255,62 +289,98 @@ struct EventDidOccur: NotificationCenter.Message {
     }
     
     static func makeNotification(_ message: Self) -> Notification {
-        return Notification(name: Self.name, object: message.someProperty, userInfo: ["foo": message.foo])
+        return Notification(name: Self.name, object: object, userInfo: ["foo": self.foo])
     }
 }
 ```
 
 These methods do not need to be implemented if all posters and observers are using `NotificationCenter.Message`.
 
-If `Notification` and `NotificationCenter.Message` posters and observers are mixed without implementing these methods, observers for both types will be called but will not receive the associated payloads.
-
-See the table below for the effects of `makeMessage` / `makeNotification`:
+See the table below for the effects of implementing `makeMessage(:Notification)` / `makeNotification(:Self)`:
 
 | Posting...    | Observing...    | Behavior |
 | ------------- | --------------- | ------------------------------------------ |
-| Message       | Notification    | Notification observers will receive the result of `makeNotification()` if available, else they will be called with a `nil` value for `userInfo` and `object` |
-| Notification  | Message         | Message observers will receive the result of `makeMessage()` if available, else the observer will not be called |
+| Message       | Notification    | Notification observers will receive the result of `makeNotification(:Self)` if available, else they will be called with a `nil` value for `userInfo` |
+| Notification  | Message         | Message observers will receive the result of `makeMessage(:Notification)` if available, else the observer will not be called |
 
 ### Isolation from non-Swift Concurrency posters
 
 Observers called via the existing, pre-Swift Concurrency `.post()` methods are either called on the same thread as the poster, or called in an explicitly passed `OperationQueue`.
 
-However, users can still adopt `NotificationCenter.Message` with pre-Swift Concurrency `.post()` calls by providing a `NotificationCenter.Message` with the proper `Notification.Name` value and isolation information. For example, if an Objective-C method calls the `post(name:object:userInfo:)` method on the main thread, `NotificationCenter.Message` can be used to define a message with the same `Notification.Name` and provide the appropriate isolation information, enabling clients observing `NotificationCenter.Message` to access the `object` and `userInfo` parameters of the original `Notification` in a safe manner through `makeMessage(:Notification)`.
+However, users can still adopt `NotificationCenter.Message` with pre-Swift Concurrency `.post()` calls by providing a `NotificationCenter.Message` with the proper `Notification.Name` value and picking the correct type between `MainActorMessage` and `AsyncMessage`.
 
-The new `addObserver` methods will attempt to check isolation and may halt program execution if isolation expectations are mismatched.
+For example, if an Objective-C method calls the `post(name:object:userInfo:)` method on the main thread, `NotificationCenter.MainActorMessage` can be used to define a message with the same `Notification.Name`, enabling clients observing the message to access the `object` and `userInfo` parameters of the original `Notification` in a safe manner through `makeMessage(:Notification)`.
 
 ## Impact on existing code
 
 These changes are entirely additive but could impact existing code due to the ability to interoperate between `NotificationCenter.Message` and `Notification`.
 
-Specifically, if an observer for `NotificationCenter.Message` receives a message posted as a `Notification` which violates the isolation contract specified in `NotificationCenter.Message`, the correct fix may be to modify the existing `Notification` `.post()` call to uphold that contract.
+If an observer for `NotificationCenter.Message` receives a message posted as a `Notification` which violates the isolation contract specified in `NotificationCenter.MainActorMessage` / `NotificationCenter.AsyncMessage`, the correct fix may be to modify the existing `Notification` `.post()` call to uphold that contract.
 
 ## Future directions
 
-At the moment, the non-`MainActor` variant of post has a redundant `isolation` parameter:
+None at this time.
+
+## Alternatives considered
+
+### Use generic isolation to support actor instances and other global actors
+A previous iteration of this proposal stored an `Actor`-conforming type on the `Message` protocol, enabling `addObserver()` and `post()` to declare `isolated` parameters conforming to the given type. This enabled a flexible form of generic isolation, enabling the use of arbitrary global actors, as well as isolating to instances of an actor:
 
 ```swift
+public func addObserver<MessageType: NotificationCenter.Message>(
+        _ notification: MessageType.Type,
+        observer: @Sendable @escaping (MessageType, isolated MessageType.Isolation) -> Void
+    ) -> ObservationToken
+
 public func post<MessageType: NotificationCenter.Message>(_ message: MessageType,
                                                           isolation: isolated MessageType.Isolation)
 ```
 
-The correct value of this parameter is always that of `message.isolation`, but we're unable to express this at the moment. In the future, we may be able to provide an overload which no longer requires the second parameter.
+Unfortunately, the design required careful handling to use correctly and had some ergonomic shortcomings:
+ * The use of an `isolated` parameter enables the checking of an `Actor`-conforming type, but not the specific instance of an isolation, making it possible to `post()` with the wrong isolation. `assertIsolated()`/`assumeIsolated()` could be used to mitigate this behavior somewhat.
+ * The `isolated` parameter value should really have a default value of `message.isolation` but it is not possible to cross-referencing parameter values this way in Swift today.
+ * The use of `isolated` in the observer closure requires passing in an `Actor` type that the client likely does not need.
 
-## Alternatives considered
-
-### Maintain the use of `object` and `userInfo` instead of posting instances of `NotificationCenter.Message`
-We could achieve the goals of adopting Swift Concurrency and providing stronger type information by using a design which more closely aligns with the existing APIs:
+### Use `Message` directly for static member lookup
+The `addObserver()` static member lookup experience requires there be a type initialized as the value of the given static member:
 
 ```swift
-public func post<NotificationType: IsolatedNotification>(_ notification: NotificationType.Type,
-                                                         isolation: NotificationType.Isolation = NotificationType.isolation,
-                                                         object: Any? = nil,
-                                                         userInfo: [AnyHashable : Any]? = nil)
+addObserver(of: workspace, for: .willLaunchApplication) { ... }
+
+// .willLaunchApplication provided by ...
+extension NotificationCenter.MessageIdentifier
+    where Self == NotificationCenter.BaseMessageIdentifier<NSWorkspace.WillLaunchApplication, NSWorkspace> {
+    static var willLaunchApplication: Self { .init() }
+}
 ```
 
-While this design works, it encourages the use of the `object` and `userInfo` parameters, which eschew the stronger type information provided by creating specific `NotificationCenter.Message`-conforming types.
+Alternatively, we could extend `Message` directly, and have the static variable return a specific `Message` type, removing the need for the `MessageIdentifier` protocol and `BaseMessageIdentifier` struct.
 
-### Require `NotificationCenter.Message` to conform to `Sendable`
-Conforming `NotificationCenter.Message` to `Sendable` is not necessary due to the `addObserver` and `post` methods enforcing the isolation specified by `NotificationCenter.Message`.
+However, this puts initializer requirements on the `Message`-conforming type for the purposes of an optional lookup API, which could encourage developers to declare properties of their `Message` types as `Optional` when they shouldn't be. It also requires initializing and discarding a `Message` variable, which may or may not be large depending on future `Message` adoption, while the `MessageIdentifier` type is unlikely to grow.
 
-Further, there may be cases where a non-`Sendable` `NotificationCenter.Message` is posted and observed from within the same isolation, which is a valid operation and should not be disallowed.
+### Deliver `subject` as a separate parameter to observers
+The current proposal splits out the subject of a `Message` in the `addObserver()` overload but does not split it out in the observer closure nor the `post()` method:
+
+```swift
+// Subject is a separate parameter for addObserver() call, but not closure ...
+center.addObserver(of: someSubject, for: .someMessage) { message in ... }
+
+// Nor post() ...
+center.post(SomeMessage())
+```
+
+We could alternatively ferry `subject` in both the observer closure and `post()` function:
+
+```swift
+// Subject is a separate parameter for addObserver() call, but not closure ...
+center.addObserver(of: someSubject, for: .someMessage) { message, subject in ... }
+
+// Nor post() ...
+center.post(SomeMessage(), with: someSubject)
+```
+
+However, not all messages have subject instances (e.g. `addObserver(of: NSWindow.self, for: .willMove)`). While `post()` could take a default parameter for an optional `subject`, the `addObserver()` closure would always have to specify a `subject` parameter even for messages without subject instances.
+
+Further, even messages with subjects do not necessarily need their observers to access the subject instance.
+
+Finally, developers always have the choice of including the subject in the design of their `Message` types if they'd like. For these reasons, we've opted not to ferry `subject` through the API.
