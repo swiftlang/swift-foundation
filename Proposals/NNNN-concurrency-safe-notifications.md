@@ -289,7 +289,7 @@ struct EventDidOccur: NotificationCenter.Message {
     }
     
     static func makeNotification(_ message: Self) -> Notification {
-        return Notification(name: Self.name, object: object, userInfo: ["foo": self.foo])
+        return Notification(name: Self.name, userInfo: ["foo": self.foo])
     }
 }
 ```
