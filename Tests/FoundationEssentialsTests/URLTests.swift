@@ -373,6 +373,17 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.path(), "/d:/path/%2543%3A/fake/letter")
         XCTAssertEqual(url.path, "d:/path/%43:/fake/letter")
         XCTAssertEqual(url.fileSystemPath, "d:/path/%43:/fake/letter")
+
+        let cwd = URL.currentDirectory()
+        var iter = cwd.path().utf8.makeIterator()
+        if iter.next() == ._slash,
+           let driveLetter = iter.next(), driveLetter.isLetter!,
+           iter.next() == ._colon {
+            let path = #"\\?\"# + "\(Unicode.Scalar(driveLetter))" + #":\"#
+            url = URL(filePath: path, directoryHint: .isDirectory)
+            XCTAssertEqual(url.path.last, "/")
+            XCTAssertEqual(url.fileSystemPath.last, "/")
+        }
     }
     #endif
 

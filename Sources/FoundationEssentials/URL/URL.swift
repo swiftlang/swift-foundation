@@ -13,6 +13,10 @@
 public struct URLResourceKey {}
 #endif
 
+#if os(Windows)
+import WinSDK
+#endif
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 internal import CoreFoundation_Private.CFURL
@@ -1349,25 +1353,32 @@ public struct URL: Equatable, Sendable, Hashable {
         }
     }
 
+    #if os(Windows)
     private static func windowsPath(for urlPath: String) -> String {
-        let utf8 = urlPath.utf8
-        guard !utf8.starts(with: [._slash, ._slash]) else {
-            // UNC path, don't strip any trailing slash, which might be root
-            return decodeFilePath(urlPath)
-        }
-        // "C:\" is standardized to "/C:/" on initialization
-        var iter = utf8.makeIterator()
-        guard iter.next() == ._slash,
-              let driveLetter = iter.next(), driveLetter.isAlpha,
-              iter.next() == ._colon,
-              iter.next() == ._slash else {
+        var iter = urlPath.utf8.makeIterator()
+        guard iter.next() == ._slash else {
             return decodeFilePath(urlPath._droppingTrailingSlashes)
         }
-        // Strip trailing slashes from the path, which preserves a root "/"
-        let path = String(Substring(utf8.dropFirst(3)))._droppingTrailingSlashes
-        // Don't include a leading slash before the drive letter
-        return "\(Unicode.Scalar(driveLetter)):\(decodeFilePath(path))"
+        // "C:\" is standardized to "/C:/" on initialization.
+        if let driveLetter = iter.next(), driveLetter.isAlpha,
+           iter.next() == ._colon,
+           iter.next() == ._slash {
+            // Strip trailing slashes from the path, which preserves a root "/".
+            let path = String(Substring(urlPath.utf8.dropFirst(3)))._droppingTrailingSlashes
+            // Don't include a leading slash before the drive letter
+            return "\(Unicode.Scalar(driveLetter)):\(decodeFilePath(path))"
+        }
+        // There are many flavors of UNC paths, so use PathIsRootW to ensure
+        // we don't strip a trailing slash that represents a root.
+        let path = decodeFilePath(urlPath)
+        return path.replacing(._slash, with: ._backslash).withCString(encodedAs: UTF16.self) { pwszPath in
+            guard !PathIsRootW(pwszPath) else {
+                return path
+            }
+            return path._droppingTrailingSlashes
+        }
     }
+    #endif
 
     private static func decodeFilePath(_ path: some StringProtocol) -> String {
         let charsToLeaveEncoded: Set<UInt8> = [._slash, 0]
