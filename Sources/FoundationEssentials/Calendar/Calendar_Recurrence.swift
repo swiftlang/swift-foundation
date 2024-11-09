@@ -465,7 +465,7 @@ extension Calendar {
                             return nil
                         }
                         if let range = self.range {
-                            if date > range.upperBound {
+                            if date >= range.upperBound {
                                 finished = true
                                 return nil
                             } else if date < range.lowerBound {
