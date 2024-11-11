@@ -13,6 +13,10 @@
 public struct URLResourceKey {}
 #endif
 
+#if os(Windows)
+import WinSDK
+#endif
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 internal import CoreFoundation_Private.CFURL
@@ -1357,31 +1361,43 @@ public struct URL: Equatable, Sendable, Hashable {
         }
     }
 
-    private static func windowsPath(for posixPath: String) -> String {
-        let utf8 = posixPath.utf8
-        guard utf8.count >= 4 else {
-            return posixPath
+    #if os(Windows)
+    private static func windowsPath(for urlPath: String) -> String {
+        var iter = urlPath.utf8.makeIterator()
+        guard iter.next() == ._slash else {
+            return decodeFilePath(urlPath._droppingTrailingSlashes)
         }
-        // "C:\" is standardized to "/C:/" on initialization
-        let array = Array(utf8)
-        if array[0] == ._slash,
-           array[1].isAlpha,
-           array[2] == ._colon,
-           array[3] == ._slash {
-            return String(Substring(utf8.dropFirst()))
+        // "C:\" is standardized to "/C:/" on initialization.
+        if let driveLetter = iter.next(), driveLetter.isAlpha,
+           iter.next() == ._colon,
+           iter.next() == ._slash {
+            // Strip trailing slashes from the path, which preserves a root "/".
+            let path = String(Substring(urlPath.utf8.dropFirst(3)))._droppingTrailingSlashes
+            // Don't include a leading slash before the drive letter
+            return "\(Unicode.Scalar(driveLetter)):\(decodeFilePath(path))"
         }
-        return posixPath
+        // There are many flavors of UNC paths, so use PathIsRootW to ensure
+        // we don't strip a trailing slash that represents a root.
+        let path = decodeFilePath(urlPath)
+        return path.replacing(._slash, with: ._backslash).withCString(encodedAs: UTF16.self) { pwszPath in
+            guard !PathIsRootW(pwszPath) else {
+                return path
+            }
+            return path._droppingTrailingSlashes
+        }
+    }
+    #endif
+
+    private static func decodeFilePath(_ path: some StringProtocol) -> String {
+        let charsToLeaveEncoded: Set<UInt8> = [._slash, 0]
+        return Parser.percentDecode(path, excluding: charsToLeaveEncoded) ?? ""
     }
 
     private static func fileSystemPath(for urlPath: String) -> String {
-        let charsToLeaveEncoded: Set<UInt8> = [._slash, 0]
-        guard let posixPath = Parser.percentDecode(urlPath._droppingTrailingSlashes, excluding: charsToLeaveEncoded) else {
-            return ""
-        }
         #if os(Windows)
-        return windowsPath(for: posixPath)
+        return windowsPath(for: urlPath)
         #else
-        return posixPath
+        return decodeFilePath(urlPath._droppingTrailingSlashes)
         #endif
     }
 
