@@ -779,6 +779,14 @@ public struct URL: Equatable, Sendable, Hashable {
             _url = URL._converted(from: inner)
             return
         }
+        // Linked-on-or-after check for apps which pass an empty string.
+        // The new URL(string:) implementations allow the empty string
+        // as input since an empty path is valid and can be resolved
+        // against a base URL. This is shown in the RFC 3986 examples:
+        // https://datatracker.ietf.org/doc/html/rfc3986#section-5.4.1
+        if Self.compatibility1 && string.isEmpty {
+            return nil
+        }
         #endif // FOUNDATION_FRAMEWORK
         guard let parseInfo = Parser.parse(urlString: string, encodingInvalidCharacters: true) else {
             return nil
