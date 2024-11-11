@@ -739,4 +739,31 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1767484800.0)) // 2026-01-04T00:00:00-0000
         XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1799020800.0)) // 2027-01-04T00:00:00-0000
     }
+
+    func testWeekdayFilter() {
+        var alarms = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily)
+        alarms.weekdays = [.every(.monday), .every(.tuesday), .every(.wednesday), .every(.thursday), .every(.friday)]
+        alarms.hours = [7, 8]
+        alarms.minutes = [0, 15, 30, 45]
+
+        let start = Date(timeIntervalSince1970: 1695304800.0) // 2023-09-21T14:00:00-0000
+        var results = alarms.recurrences(of: start).makeIterator()
+
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695366000.0)) // 2023-09-22T07:00:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695366900.0)) // 2023-09-22T07:15:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695367800.0)) // 2023-09-22T07:30:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695368700.0)) // 2023-09-22T07:45:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695369600.0)) // 2023-09-22T08:00:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695370500.0)) // 2023-09-22T08:15:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695371400.0)) // 2023-09-22T08:30:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695372300.0)) // 2023-09-22T08:45:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695625200.0)) // 2023-09-25T07:00:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695626100.0)) // 2023-09-25T07:15:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695627000.0)) // 2023-09-25T07:30:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695627900.0)) // 2023-09-25T07:45:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695628800.0)) // 2023-09-25T08:00:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695629700.0)) // 2023-09-25T08:15:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695630600.0)) // 2023-09-25T08:30:00-0000
+        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695631500.0)) // 2023-09-25T08:45:00-0000
+    }
 }
