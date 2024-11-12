@@ -57,9 +57,9 @@ struct _DarwinSearchPathsSequence: Sequence {
             switch directory {
             #if os(macOS) && FOUNDATION_FRAMEWORK
             case .trashDirectory:
-                state = .special(domainMask.union([.userDomainMask, .localDomainMask]))
+                state = .special(domainMask.intersection([.userDomainMask, .localDomainMask]))
             case ._homeDirectory, .applicationScriptsDirectory:
-                state = .special(domainMask.union(.userDomainMask))
+                state = .special(domainMask.intersection(.userDomainMask))
             #endif
                 
             default:
