@@ -1,9 +1,9 @@
 # Concurrency-Safe Notifications
 
-* Proposal: SF-NNNN
+* Proposal: SF-0010
 * Author(s): [Philippe Hausler](https://github.com/phausler), [Christopher Thielen](https://github.com/cthielen)
 * Review Manager: [Charles Hu](https://github.com/iCharlesHu)
-* Status: **Draft**
+* Status: **Active Review: Nov 12, 2024...Nov 19, 2024**
 
 ## Revision history
 
