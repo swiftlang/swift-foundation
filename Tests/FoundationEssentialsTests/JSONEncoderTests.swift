@@ -1641,6 +1641,16 @@ final class JSONEncoderTests : XCTestCase {
         
         XCTAssertThrowsError(try decoder.decode(String.self, from: utf8_BOM + json.data(using: String._Encoding.utf16BigEndian)!))
     }
+    
+    func test_invalidKeyUTF8() {
+        // {"key[255]":"value"}
+        // The invalid UTF-8 byte sequence in the key should trigger a thrown error, not a crash.
+        let data = Data([123, 34, 107, 101, 121, 255, 34, 58, 34, 118, 97, 108, 117, 101, 34, 125])
+        struct Example: Decodable {
+            let key: String
+        }
+        XCTAssertThrowsError(try JSONDecoder().decode(Example.self, from: data))
+    }
 
     func test_valueNotFoundError() {
         struct ValueNotFound : Decodable {

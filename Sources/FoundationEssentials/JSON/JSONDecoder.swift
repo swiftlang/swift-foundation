@@ -786,8 +786,8 @@ extension JSONDecoderImpl: Decoder {
 
         var iter = jsonMap.makeObjectIterator(from: region.startOffset)
         while let (keyValue, value) = iter.next() {
-            // Failing to unwrap a string here is impossible, as scanning already guarantees that dictionary keys are strings.
-            let key = try! self.unwrapString(from: keyValue, for: dictCodingPathNode, _CodingKey?.none)
+            // We know these values are keys, but UTF-8 decoding could still fail.
+            let key = try self.unwrapString(from: keyValue, for: dictCodingPathNode, _CodingKey?.none)
             let value = try self.unwrap(value, as: dictType.elementType, for: dictCodingPathNode, _CodingKey(stringValue: key)!)
             result[key]._setIfNil(to: value)
         }
@@ -1202,14 +1202,14 @@ extension JSONDecoderImpl {
             switch keyDecodingStrategy {
             case .useDefaultKeys:
                 while let (keyValue, value) = iter.next() {
-                    // Failing to unwrap a string here is impossible, as scanning already guarantees that dictionary keys are strings.
-                    let key = try! impl.unwrapString(from: keyValue, for: codingPathNode, _CodingKey?.none)
+                    // We know these values are keys, but UTF-8 decoding could still fail.
+                    let key = try impl.unwrapString(from: keyValue, for: codingPathNode, _CodingKey?.none)
                     result[key]._setIfNil(to: value)
                 }
             case .convertFromSnakeCase:
                 while let (keyValue, value) = iter.next() {
-                    // Failing to unwrap a string here is impossible, as scanning already guarantees that dictionary keys are strings.
-                    let key = try! impl.unwrapString(from: keyValue, for: codingPathNode, _CodingKey?.none)
+                    // We know these values are keys, but UTF-8 decoding could still fail.
+                    let key = try impl.unwrapString(from: keyValue, for: codingPathNode, _CodingKey?.none)
 
                     // Convert the snake case keys in the container to camel case.
                     // If we hit a duplicate key after conversion, then we'll use the first one we saw.
@@ -1219,8 +1219,8 @@ extension JSONDecoderImpl {
             case .custom(let converter):
                 let codingPathForCustomConverter = codingPathNode.path
                 while let (keyValue, value) = iter.next() {
-                    // Failing to unwrap a string here is impossible, as scanning already guarantees that dictionary keys are strings.
-                    let key = try! impl.unwrapString(from: keyValue, for: codingPathNode, _CodingKey?.none)
+                    // We know these values are keys, but UTF-8 decoding could still fail. 
+                    let key = try impl.unwrapString(from: keyValue, for: codingPathNode, _CodingKey?.none)
 
                     var pathForKey = codingPathForCustomConverter
                     pathForKey.append(_CodingKey(stringValue: key)!)
