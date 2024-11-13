@@ -57,9 +57,9 @@ struct _DarwinSearchPathsSequence: Sequence {
             switch directory {
             #if os(macOS) && FOUNDATION_FRAMEWORK
             case .trashDirectory:
-                state = .special(domainMask.union([.userDomainMask, .localDomainMask]))
+                state = .special(domainMask.intersection([.userDomainMask, .localDomainMask]))
             case ._homeDirectory, .applicationScriptsDirectory:
-                state = .special(domainMask.union(.userDomainMask))
+                state = .special(domainMask.intersection(.userDomainMask))
             #endif
                 
             default:
@@ -155,6 +155,11 @@ struct _DarwinSearchPathsSequence: Sequence {
 }
 
 #if os(macOS) && FOUNDATION_FRAMEWORK
+@_cdecl("_NSRealHomeDirectory")
+internal func _NSRealHomeDirectory() -> String {
+    "~".replacingTildeWithRealHomeDirectory
+}
+
 extension String {
     internal var replacingTildeWithRealHomeDirectory: String {
         guard self == "~" || self.hasPrefix("~/") else {

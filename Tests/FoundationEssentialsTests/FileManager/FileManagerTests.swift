@@ -840,6 +840,13 @@ final class FileManagerTests : XCTestCase {
             }
         }
     }
+    
+    func testSpecialTrashDirectoryDuplication() throws {
+        try FileManagerPlayground {}.test { fileManager in
+            let trashURLs = fileManager.urls(for: .trashDirectory, in: .userDomainMask)
+            XCTAssertEqual(trashURLs.count, 1, "There should only be one trash directory for the user domain, found \(trashURLs)")
+        }
+    }
     #endif
     
     func testSearchPaths() throws {
