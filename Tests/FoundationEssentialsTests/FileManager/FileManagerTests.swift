@@ -732,7 +732,7 @@ final class FileManagerTests : XCTestCase {
             // Test get current directory path when it's parent directory was removed.
             XCTAssertTrue($0.changeCurrentDirectoryPath("dir"))
 #if os(Windows)
-            // It's will be remove failed on Windows when directory is using.
+            // Removing the current working directory fails on Windows because the directory is in use.
             XCTAssertThrowsError(try $0.removeItem(atPath: $0.currentDirectoryPath)) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileWriteNoPermission)
             }
