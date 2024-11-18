@@ -232,7 +232,10 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// Returns the identifier of the locale.
     public var identifier: String {
-        _locale.identifier
+        @_effects(releasenone)
+        get {
+            _locale.identifier
+        }
     }
 
     /// Returns the language code of the locale, or nil if has none.
@@ -743,12 +746,15 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// - "el": Greek
     /// For all other locales such as en_US, this is `false`.
     package static func identifierDoesNotRequireSpecialCaseHandling(_ identifier: String) -> Bool {
-        guard identifier.count >= 2 else { return true }
-
-        let first = identifier.prefix(2)
-        switch first {
-        case "az", "lt", "tr", "nl", "el":
-            return false // Does require special handling
+        var byteIterator = identifier.utf8.makeIterator()
+        switch (byteIterator.next(), byteIterator.next()) {
+        case
+            (UInt8(ascii: "a"), UInt8(ascii: "z")),
+            (UInt8(ascii: "l"), UInt8(ascii: "t")),
+            (UInt8(ascii: "t"), UInt8(ascii: "r")),
+            (UInt8(ascii: "n"), UInt8(ascii: "l")),
+            (UInt8(ascii: "e"), UInt8(ascii: "l")):
+            return false
         default:
             return true // Does not require special handling
         }

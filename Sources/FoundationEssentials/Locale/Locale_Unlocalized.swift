@@ -257,10 +257,6 @@ internal final class _LocaleUnlocalized : _LocaleProtocol, @unchecked Sendable {
         identifier
     }
     
-    var doesNotRequireSpecialCaseHandling: Bool {
-        true
-    }
-    
 #if FOUNDATION_FRAMEWORK
     func pref(for key: String) -> Any? {
         nil
