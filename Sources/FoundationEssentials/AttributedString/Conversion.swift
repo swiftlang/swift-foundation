@@ -438,7 +438,8 @@ extension Range where Bound == AttributedString.Index {
         guard range.location != NSNotFound else { return nil }
         guard range.location >= 0, range.length >= 0 else { return nil }
         let endOffset = range.location + range.length
-        let bstr = string.__guts.string
+        let bstrBounds = Range<BigString.Index>(uncheckedBounds: (string.startIndex._value, string.endIndex._value))
+        let bstr = string.__guts.string[bstrBounds]
         guard endOffset <= bstr.utf16.count else { return nil }
 
         let start = bstr.utf16.index(bstr.startIndex, offsetBy: range.location)

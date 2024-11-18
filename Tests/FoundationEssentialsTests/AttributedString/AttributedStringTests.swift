@@ -2372,6 +2372,14 @@ E {
         }
     }
     
+    func testNSRangeConversionOnSlice() throws {
+        let str = AttributedString("012345")
+        let slice = str[str.index(str.startIndex, offsetByCharacters: 3) ..< str.endIndex]
+        let nsRange = NSRange(location: 0, length: 2)
+        let range = try XCTUnwrap(Range(nsRange, in: slice))
+        XCTAssertEqual(String(slice[range].characters), "34")
+    }
+    
 #endif // FOUNDATION_FRAMEWORK
     
     func testOOBRangeConversion() {
