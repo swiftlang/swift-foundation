@@ -163,7 +163,7 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 }
             }
             
-#if os(Linux)
+#if os(Linux) || os(Android)
             // Try localtime
             tzset()
             var t = time(nil)
