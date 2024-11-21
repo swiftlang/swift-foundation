@@ -508,7 +508,11 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
     override func _numberingSystem() -> String! {
         locale.numberingSystem.identifier
     }
-    
+
+    override func _identifierCapturingPreferences() -> String {
+        locale.identifierCapturingPreferences
+    }
+
     override func _localeWithNewCalendarIdentifier(_ calendarIdentifier: String?) -> NSLocale? {
         guard let calendarIdentifier else {
             // No real need to copy here; Locale is immutable
