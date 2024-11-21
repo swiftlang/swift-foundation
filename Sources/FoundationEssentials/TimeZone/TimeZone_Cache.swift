@@ -170,7 +170,9 @@ struct TimeZoneCache : Sendable, ~Copyable {
             var lt : tm = tm()
             localtime_r(&t, &lt)
 
-            if let name = String(validatingUTF8: lt.tm_zone) {
+            // tm_zone is nullable on Android.
+            let tm_zone: UnsafePointer<CChar>? = lt.tm_zone
+            if let tm_zone, let name = String(validatingUTF8: tm_zone) {
                 if let result = fixed(name) {
                     return TimeZone(inner: result)
                 }
