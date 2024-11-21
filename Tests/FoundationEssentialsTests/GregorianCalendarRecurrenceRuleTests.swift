@@ -766,4 +766,19 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695630600.0)) // 2023-09-25T08:30:00-0000
         XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695631500.0)) // 2023-09-25T08:45:00-0000
     }
+
+    func testRangeExcludesUpperBounds() {
+        let start = Date(timeIntervalSince1970: 1695304800.0) // 2023-09-21T14:00:00-0000
+        let end   = Date(timeIntervalSince1970: 1697896800.0) // 2023-10-21T14:00:00-0000
+
+        let rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly)
+
+        let eventStart = Date(timeIntervalSince1970: 1285077600.0) // 2010-09-21T14:00:00-0000
+        let results = Array(rule.recurrences(of: eventStart, in: start..<end))
+
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 1695304800.0), // 2023-09-21T14:00:00-0000
+        ]
+        XCTAssertEqual(results, expectedResults)
+     }
 }
