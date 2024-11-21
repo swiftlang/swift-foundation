@@ -190,7 +190,7 @@ final class LocaleTests : XCTestCase {
         verify(cldr: "fr_u_cu_eur_nu_latn", bcp47: "fr-u-cu-eur-nu-latn", icu: "fr@currency=eur;numbers=latn") {
             var localeComponents = Locale.Components(languageCode: .french)
             localeComponents.currency = "eur"
-            localeComponents.numberingSystem = .latn
+            localeComponents.numberingSystem = .latin
             return localeComponents
         }
 
