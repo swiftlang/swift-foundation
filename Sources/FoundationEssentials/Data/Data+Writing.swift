@@ -37,18 +37,22 @@ import WASILibc
 
 // MARK: - Helpers
 
+#if os(Windows)
+private func openFileDescriptorProtected(path: UnsafePointer<UInt16>, flags: Int32, options: Data.WritingOptions) -> Int32 {
+    var fd: CInt = 0
+    _ = _wsopen_s(&fd, path, flags, _SH_DENYNO, _S_IREAD | _S_IWRITE)
+    return fd
+}
+#else
 private func openFileDescriptorProtected(path: UnsafePointer<CChar>, flags: Int32, options: Data.WritingOptions) -> Int32 {
 #if FOUNDATION_FRAMEWORK
     // Use file protection on this platform
     return _NSOpenFileDescriptor_Protected(path, Int(flags), options, 0o666)
-#elseif os(Windows)
-    var fd: CInt = 0
-    _ = _sopen_s(&fd, path, flags, _SH_DENYNO, _S_IREAD | _S_IWRITE)
-    return fd
 #else
     return open(path, flags, 0o666)
 #endif
 }
+#endif
 
 private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: UnsafeRawBufferPointer, reportProgress: Bool) throws -> Int {
     // Fetch this once
@@ -159,18 +163,18 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             // The warning diligently tells us we shouldn't be using mktemp() because blindly opening the returned path opens us up to a TOCTOU race. However, in this case, we're being careful by doing O_CREAT|O_EXCL and repeating, just like the implementation of mkstemp.
             // Furthermore, we can't compatibly switch to mkstemp() until we have the ability to set fchmod correctly, which requires the ability to query the current umask, which we don't have. (22033100)
 #if os(Windows)
-            guard _mktemp_s(templateFileSystemRep, template.count + 1) == 0 else {
+            guard _mktemp_s(templateFileSystemRep, strlen(templateFileSystemRep) + 1) == 0 else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
-            let flags: CInt = _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR
+            let fd = String(cString: templateFileSystemRep).withCString(encodedAs: UTF16.self) {
+                openFileDescriptorProtected(path: $0, flags: _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR, options: options)
+            }
 #else
             guard mktemp(templateFileSystemRep) != nil else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
-            let flags: CInt = O_CREAT | O_EXCL | O_RDWR
+            let fd = openFileDescriptorProtected(path: templateFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options)
 #endif
-
-            let fd = openFileDescriptorProtected(path: templateFileSystemRep, flags: flags, options: options)
             if fd >= 0 {
                 // Got a good fd
                 return (fd, String(cString: templateFileSystemRep))
