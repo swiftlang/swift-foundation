@@ -1037,4 +1037,18 @@ final class FileManagerTests : XCTestCase {
         XCTAssertEqual(FileManager.default.homeDirectory(forUser: UUID().uuidString), fallbackPath)
         #endif
     }
+
+    func testWindowsDirectoryCreationCrash() throws {
+        try FileManagerPlayground {
+            Directory("a\u{301}") {
+
+            }
+        }.test {
+            XCTAssertTrue($0.fileExists(atPath: "a\u{301}"))
+            let data = randomData()
+            XCTAssertTrue($0.createFile(atPath: "a\u{301}/test", contents: data))
+            XCTAssertTrue($0.fileExists(atPath: "a\u{301}/test"))
+            XCTAssertEqual($0.contents(atPath: "a\u{301}/test"), data)
+        }
+    }
 }
