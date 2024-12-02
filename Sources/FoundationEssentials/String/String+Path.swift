@@ -560,17 +560,12 @@ extension String {
         // If it fails, we should also silently ignore the error and continue on below. This API can fail for non-programmer reasons such as the device being out of storage space when libSystem attempts to create the directory
         let length: Int = confstr(_CS_DARWIN_USER_TEMP_DIR, nil, 0)
         if length > 0 {
-            let result: String? = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: length) { buffer in
+            return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: length) { buffer in
+                buffer.initialize(repeating: 0)
+                defer { buffer.deinitialize() }
                 let finalLength = confstr(_CS_DARWIN_USER_TEMP_DIR, buffer.baseAddress!, buffer.count)
                 assert(length == finalLength, "Value of _CS_DARWIN_USER_TEMP_DIR changed?")
-                if length > 0 && length < buffer.count {
-                    return String(decoding: buffer, as: UTF8.self)
-                }
-                return nil
-            }
-            
-            if let result {
-                return result
+                return String(cString: buffer.baseAddress!)
             }
         }
         #endif // canImport(Darwin)
