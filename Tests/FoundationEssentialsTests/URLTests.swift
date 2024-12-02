@@ -162,7 +162,6 @@ final class URLTests : XCTestCase {
             "http:g"        :  "http:g", // For strict parsers
         ]
 
-        #if FOUNDATION_FRAMEWORK
         let testsFailingWithoutSwiftURL = Set([
             "",
             "../../../g",
@@ -170,14 +169,11 @@ final class URLTests : XCTestCase {
             "/./g",
             "/../g",
         ])
-        #endif
 
         for test in tests {
-            #if FOUNDATION_FRAMEWORK
             if !foundation_swift_url_enabled(), testsFailingWithoutSwiftURL.contains(test.key) {
                 continue
             }
-            #endif
 
             let url = URL(string: test.key, relativeTo: base)
             XCTAssertNotNil(url, "Got nil url for string: \(test.key)")
@@ -186,9 +182,7 @@ final class URLTests : XCTestCase {
     }
 
     func testURLPathAPIsResolveAgainstBase() throws {
-        #if FOUNDATION_FRAMEWORK
         try XCTSkipIf(!foundation_swift_url_enabled())
-        #endif
         // Borrowing the same test cases from RFC 3986, but checking paths
         let base = URL(string: "http://a/b/c/d;p?q")
         let tests = [
@@ -254,9 +248,7 @@ final class URLTests : XCTestCase {
     }
 
     func testURLPathComponentsPercentEncodedSlash() throws {
-        #if FOUNDATION_FRAMEWORK
         try XCTSkipIf(!foundation_swift_url_enabled())
-        #endif
 
         var url = try XCTUnwrap(URL(string: "https://example.com/https%3A%2F%2Fexample.com"))
         XCTAssertEqual(url.pathComponents, ["/", "https://example.com"])
@@ -278,9 +270,7 @@ final class URLTests : XCTestCase {
     }
 
     func testURLRootlessPath() throws {
-        #if FOUNDATION_FRAMEWORK
         try XCTSkipIf(!foundation_swift_url_enabled())
-        #endif
 
         let paths = ["", "path"]
         let queries = [nil, "query"]
@@ -412,18 +402,10 @@ final class URLTests : XCTestCase {
     func testURLRelativeDotDotResolution() throws {
         let baseURL = URL(filePath: "/docs/src/")
         var result = URL(filePath: "../images/foo.png", relativeTo: baseURL)
-        #if FOUNDATION_FRAMEWORK_NSURL
         XCTAssertEqual(result.path, "/docs/images/foo.png")
-        #else
-        XCTAssertEqual(result.path(), "/docs/images/foo.png")
-        #endif
 
         result = URL(filePath: "/../images/foo.png", relativeTo: baseURL)
-        #if FOUNDATION_FRAMEWORK_NSURL
         XCTAssertEqual(result.path, "/../images/foo.png")
-        #else
-        XCTAssertEqual(result.path(), "/../images/foo.png")
-        #endif
     }
 
     func testAppendFamily() throws {
@@ -865,6 +847,7 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.host(percentEncoded: false), "fe80::a%100%CustomZone")
     }
 
+    #if !os(Windows)
     func testURLTildeFilePath() throws {
         func urlIsAbsolute(_ url: URL) -> Bool {
             if url.relativePath.utf8.first == ._slash {
@@ -873,11 +856,7 @@ final class URLTests : XCTestCase {
             guard url.baseURL != nil else {
                 return false
             }
-            #if !FOUNDATION_FRAMEWORK_NSURL
-            return url.path().utf8.first == ._slash
-            #else
             return url.path.utf8.first == ._slash
-            #endif
         }
 
         // "~" must either be expanded to an absolute path or resolved against a base URL
@@ -892,6 +871,7 @@ final class URLTests : XCTestCase {
         XCTAssertTrue(urlIsAbsolute(url))
         XCTAssertEqual(url.path().utf8.last, ._slash)
     }
+    #endif // !os(Windows)
 
     func testURLPathExtensions() throws {
         var url = URL(filePath: "/path", directoryHint: .notDirectory)
