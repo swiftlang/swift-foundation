@@ -2427,6 +2427,22 @@ E {
         
         XCTAssertEqual(AttributedString(str[range], including: None.self), AttributedString("BC"))
     }
+    
+    func testScopeIterationAPI() {
+        struct TestScope : AttributeScope {
+            let testInt: AttributeScopes.TestAttributes.TestIntAttribute
+            let testBool: AttributeScopes.TestAttributes.TestBoolAttribute
+        }
+        
+        let testNames = TestScope.attributeKeys.map { $0.name }.sorted()
+        XCTAssertEqual(testNames, [AttributeScopes.TestAttributes.TestBoolAttribute.name, AttributeScopes.TestAttributes.TestIntAttribute.name].sorted())
+        
+        struct EmptyScope : AttributeScope {
+            
+        }
+        var emptyIterator = EmptyScope.attributeKeys.makeIterator()
+        XCTAssertNil(emptyIterator.next())
+    }
 #endif // FOUNDATION_FRAMEWORK
 
     func testAssignDifferentSubstring() {
