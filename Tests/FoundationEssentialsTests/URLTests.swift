@@ -847,6 +847,7 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.host(percentEncoded: false), "fe80::a%100%CustomZone")
     }
 
+    #if !os(Windows)
     func testURLTildeFilePath() throws {
         func urlIsAbsolute(_ url: URL) -> Bool {
             if url.relativePath.utf8.first == ._slash {
@@ -870,6 +871,7 @@ final class URLTests : XCTestCase {
         XCTAssertTrue(urlIsAbsolute(url))
         XCTAssertEqual(url.path().utf8.last, ._slash)
     }
+    #endif // !os(Windows)
 
     func testURLPathExtensions() throws {
         var url = URL(filePath: "/path", directoryHint: .notDirectory)
