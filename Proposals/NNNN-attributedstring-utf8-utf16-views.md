@@ -66,12 +66,6 @@ extension AttributedSubstring {
     public var utf8: AttributedString.UTF8View { get }
     public var utf16: AttributedString.UTF16View { get }
 }
-
-@available(FoundationPreview 6.2, *)
-extension DiscontiguousAttributedSubstring {
-    public var utf8: DiscontiguousSlice<AttributedString.UTF8View> { get }
-    public var utf16: DiscontiguousSlice<AttributedString.UTF16View> { get }
-}
 ```
 
 _Note: omitted here for brevity, `AttributedString.UTF8View` and `AttributedString.UTF16View` must implement all relevant, optional protocol requirements from `BidirectionalCollection` and `RangeReplaceableCollection` to ensure efficient operations over the underlying storage_
