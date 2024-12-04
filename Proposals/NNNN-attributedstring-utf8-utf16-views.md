@@ -61,6 +61,13 @@ protocol AttributedStringProtocol {
     var utf16: AttributedString.UTF16View { get }
 }
 
+
+@available(FoundationPreview 6.2, *)
+extension AttributedStringProtocol {
+    public var utf8: AttributedString.UTF8View { get }
+    public var utf16: AttributedString.UTF16View { get }
+}
+
 @available(FoundationPreview 6.2, *)
 extension AttributedSubstring {
     public var utf8: AttributedString.UTF8View { get }
@@ -72,7 +79,7 @@ _Note: omitted here for brevity, `AttributedString.UTF8View` and `AttributedStri
 
 ## Source compatibility
 
-All of these changes are additive and have no impact on source compatibility except for the addition to `AttributedStringProtocol`. The added requirements to `AttributedStringProtocol` are both source and ABI breaking changes for any clients that have types conforming to this protocol. However, as declared by `AttributedStringProtocol`'s documentation, only Foundation is allowed to conform types to this protocol and other libraries outside of Foundation may not declare a conformance. Therefore, I feel that this is a suitable change to make as we will ensure that Foundation itself does not break and any clients that have declared conformances themselves are in violation of this type's API contract.
+All of these changes are additive and have no impact on source compatibility. The added requirements to `AttributedStringProtocol` have provided default implementations and as such are not ABI/API breaking changes.
 
 ## Implications on adoption
 
