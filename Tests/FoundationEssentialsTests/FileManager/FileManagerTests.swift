@@ -1049,6 +1049,16 @@ final class FileManagerTests : XCTestCase {
         XCTAssertEqual(FileManager.default.homeDirectory(forUser: UUID().uuidString), fallbackPath)
         #endif
     }
+    
+    func testSearchPathsWithoutExpandingTilde() throws {
+        #if !canImport(Darwin)
+        throw XCTSkip("This test is not applicable for this platform")
+        #else
+        for path in _DarwinSearchPaths(for: .libraryDirectory, in: .userDomainMask, expandTilde: false) {
+            XCTAssertTrue(path.starts(with: "~/"), "Path '\(path)' did not start with ~/ as expected")
+        }
+        #endif
+    }
 
     func testWindowsDirectoryCreationCrash() throws {
         try FileManagerPlayground {

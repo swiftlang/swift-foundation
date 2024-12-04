@@ -57,41 +57,11 @@ extension FileManager.SearchPathDomainMask {
     }
 }
 
-#if FOUNDATION_FRAMEWORK
-@_cdecl("_NSSearchPathsForDirectoryInDomain")
-func _NSSearchPaths(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, expandTilde: Bool) -> [String] {
-    _SearchPathURLs(for: directory, in: domain, expandTilde: expandTilde).map(\.path)
-}
-#endif
-
 func _SearchPathURLs(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, expandTilde: Bool) -> some Sequence<URL> {
     #if canImport(Darwin)
-    let basic = _DarwinSearchPathsSequence(directory: directory, domainMask: domain.intersection(.valid)).lazy.map {
-        if expandTilde {
-            return URL(filePath: $0.expandingTildeInPath, directoryHint: .isDirectory)
-        } else {
-            return URL(filePath: $0, directoryHint: .isDirectory)
-        }
+    _DarwinSearchPaths(for: directory, in: domain, expandTilde: expandTilde).map {
+        URL(filePath: $0, directoryHint: .isDirectory)
     }
-    
-    #if os(macOS) && FOUNDATION_FRAMEWORK
-    // NSSharedUserDomainMask is basically just a wrapper around NSUserDomainMask.
-    let compatibleSharedUserDomainMask = domain != .allDomainsMask && (domain.rawValue & 16) != 0
-    if domain.contains(._sharedUserDomainMask) || compatibleSharedUserDomainMask {
-        var result = Array(basic)
-        for path in _DarwinSearchPathsSequence(directory: directory, domainMask: .userDomainMask) {
-            let expandedURL = URL(filePath: expandTilde ? path.replacingTildeWithRealHomeDirectory : path, directoryHint: .isDirectory)
-            // Avoid duplicates, which would occur with (NSUserDomainMask | NSSharedUserDomainMask) in non-sandboxed apps.
-            if !result.contains(expandedURL) {
-                // Insert this path after NSUserDomainMask and before any of the more general paths.
-                let insertionIndex = domain.contains(.userDomainMask) ? 1 : 0
-                result.insert(expandedURL, at: insertionIndex)
-            }
-        }
-        return result
-    }
-    #endif
-    return Array(basic)
     #else
     var result = Set<URL>()
     var domain = domain.intersection(.valid)
@@ -109,3 +79,37 @@ func _SearchPathURLs(for directory: FileManager.SearchPathDirectory, in domain: 
     return result
     #endif
 }
+
+#if canImport(Darwin)
+#if FOUNDATION_FRAMEWORK
+@_cdecl("_NSSearchPathsForDirectoryInDomain")
+#endif
+func _DarwinSearchPaths(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, expandTilde: Bool) -> [String] {
+    let basic = _DarwinSearchPathsSequence(directory: directory, domainMask: domain.intersection(.valid)).lazy.map {
+        if expandTilde {
+            $0.expandingTildeInPath
+        } else {
+            $0
+        }
+    }
+    
+    #if os(macOS) && FOUNDATION_FRAMEWORK
+    // NSSharedUserDomainMask is basically just a wrapper around NSUserDomainMask.
+    let compatibleSharedUserDomainMask = domain != .allDomainsMask && (domain.rawValue & 16) != 0
+    if domain.contains(._sharedUserDomainMask) || compatibleSharedUserDomainMask {
+        var result = Array(basic)
+        for path in _DarwinSearchPathsSequence(directory: directory, domainMask: .userDomainMask) {
+            let expandedPath = expandTilde ? path.replacingTildeWithRealHomeDirectory : path
+            // Avoid duplicates, which would occur with (NSUserDomainMask | NSSharedUserDomainMask) in non-sandboxed apps.
+            if !result.contains(expandedPath) {
+                // Insert this path after NSUserDomainMask and before any of the more general paths.
+                let insertionIndex = domain.contains(.userDomainMask) ? 1 : 0
+                result.insert(expandedPath, at: insertionIndex)
+            }
+        }
+        return result
+    }
+    #endif
+    return Array(basic)
+}
+#endif
