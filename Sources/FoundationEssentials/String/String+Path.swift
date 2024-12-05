@@ -422,86 +422,42 @@ extension String {
 // MARK: - Filesystem String Extensions
 
 #if !NO_FILESYSTEM
-
-    internal static func homeDirectoryPath(forUser user: String? = nil) -> String {
+    
+    internal static func homeDirectoryPath() -> String {
         #if os(Windows)
-        if let user {
-            func fallbackUserDirectory() -> String {
-                guard let fallback = ProcessInfo.processInfo.environment["ALLUSERSPROFILE"] else {
-                    fatalError("Unable to find home directory for user \(user) and ALLUSERSPROFILE environment variable is not set")
-                }
-                
-                return fallback
-            }
-
-            guard !user.isEmpty else {
-                return fallbackUserDirectory()
+        func fallbackCurrentUserDirectory() -> String {
+            guard let fallback = ProcessInfo.processInfo.environment["ALLUSERSPROFILE"] else {
+                fatalError("Unable to find home directory for current user and ALLUSERSPROFILE environment variable is not set")
             }
             
-            return user.withCString(encodedAs: UTF16.self) { pwszUserName in
-                var cbSID: DWORD = 0
-                var cchReferencedDomainName: DWORD = 0
-                var eUse: SID_NAME_USE = SidTypeUnknown
-                LookupAccountNameW(nil, pwszUserName, nil, &cbSID, nil, &cchReferencedDomainName, &eUse)
-                guard cbSID > 0 else {
-                    return fallbackUserDirectory()
-                }
-
-                return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(cbSID)) { pSID in
-                    return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(cchReferencedDomainName)) { pwszReferencedDomainName in
-                        guard LookupAccountNameW(nil, pwszUserName, pSID.baseAddress, &cbSID, pwszReferencedDomainName.baseAddress, &cchReferencedDomainName, &eUse) else {
-                            return fallbackUserDirectory()
-                        }
-
-                        var pwszSID: LPWSTR? = nil
-                        guard ConvertSidToStringSidW(pSID.baseAddress, &pwszSID) else {
-                            fatalError("unable to convert SID to string for user \(user)")
-                        }
-
-                        return #"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\\#(String(decodingCString: pwszSID!, as: UTF16.self))"#.withCString(encodedAs: UTF16.self) { pwszKeyPath in
-                            return "ProfileImagePath".withCString(encodedAs: UTF16.self) { pwszKey in
-                                var cbData: DWORD = 0
-                                RegGetValueW(HKEY_LOCAL_MACHINE, pwszKeyPath, pwszKey, RRF_RT_REG_SZ, nil, nil, &cbData)
-                                guard cbData > 0 else {
-                                    fatalError("unable to query ProfileImagePath for user \(user)")
-                                }
-                                return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(cbData)) { pwszData in
-                                    guard RegGetValueW(HKEY_LOCAL_MACHINE, pwszKeyPath, pwszKey, RRF_RT_REG_SZ, nil, pwszData.baseAddress, &cbData) == ERROR_SUCCESS else {
-                                        fatalError("unable to query ProfileImagePath for user \(user)")
-                                    }
-                                    return String(decodingCString: pwszData.baseAddress!, as: UTF16.self)
-                                }
-                            }
-                        }
-
-                    }
-                }
-            }
+            return fallback
         }
-
+        
         var hToken: HANDLE? = nil
         guard OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) else {
             guard let UserProfile = ProcessInfo.processInfo.environment["UserProfile"] else {
-                fatalError("unable to evaluate `%UserProfile%`")
+                return fallbackCurrentUserDirectory()
             }
             return UserProfile
         }
         defer { CloseHandle(hToken) }
-
+        
         var dwcchSize: DWORD = 0
         _ = GetUserProfileDirectoryW(hToken, nil, &dwcchSize)
-
+        
         return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwcchSize)) {
             var dwcchSize: DWORD = DWORD($0.count)
             guard GetUserProfileDirectoryW(hToken, $0.baseAddress, &dwcchSize) else {
-                fatalError("unable to query user profile directory")
+                return fallbackCurrentUserDirectory()
             }
             return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
-        #else // os(Windows)
-
+        #else
+        
+        
         #if targetEnvironment(simulator)
-        if user == nil, let envValue = getenv("CFFIXED_USER_HOME") ?? getenv("HOME") {
+        // Simulator checks these environment variables first for the current user
+        if let envValue = getenv("CFFIXED_USER_HOME") ?? getenv("HOME") {
             return String(cString: envValue).standardizingPath
         }
         #endif
@@ -512,28 +468,81 @@ extension String {
         }
         
         #if !os(WASI) // WASI does not have user concept
-        // Next, attempt to find the home directory via getpwnam/getpwuid
-        if let user {
-            if let dir = Platform.homeDirectory(forUserName: user) {
-                return dir.standardizingPath
-            }
-        } else {
-            // We use the real UID instead of the EUID here when the EUID is the root user (i.e. a process has called seteuid(0))
-            // In this instance, we historically do this to ensure a stable home directory location for processes that call seteuid(0)
-            if let dir = Platform.homeDirectory(forUID: Platform.getUGIDs(allowEffectiveRootUID: false).uid) {
-                return dir.standardizingPath
-            }
+        // Next, attempt to find the home directory via getpwuid
+        // We use the real UID instead of the EUID here when the EUID is the root user (i.e. a process has called seteuid(0))
+        // In this instance, we historically do this to ensure a stable home directory location for processes that call seteuid(0)
+        if let dir = Platform.homeDirectory(forUID: Platform.getUGIDs(allowEffectiveRootUID: false).uid) {
+            return dir.standardizingPath
         }
-        #endif // !os(WASI)
-
+        #endif
+        
         // Fallback to HOME for the current user if possible
-        if user == nil, let home = getenv("HOME") {
+        if let home = getenv("HOME") {
             return String(cString: home).standardizingPath
         }
         
-        // If all else fails, log and fall back to /var/empty
+        // If all else fails, fall back to /var/empty
         return "/var/empty"
-        #endif // os(Windows)
+        #endif
+    }
+
+    internal static func homeDirectoryPath(forUser user: String) -> String? {
+        #if os(Windows)
+        guard !user.isEmpty else {
+            return nil
+        }
+        
+        return user.withCString(encodedAs: UTF16.self) { pwszUserName in
+            var cbSID: DWORD = 0
+            var cchReferencedDomainName: DWORD = 0
+            var eUse: SID_NAME_USE = SidTypeUnknown
+            LookupAccountNameW(nil, pwszUserName, nil, &cbSID, nil, &cchReferencedDomainName, &eUse)
+            guard cbSID > 0 else {
+                return nil
+            }
+            
+            return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(cbSID)) { pSID in
+                return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(cchReferencedDomainName)) { pwszReferencedDomainName in
+                    guard LookupAccountNameW(nil, pwszUserName, pSID.baseAddress, &cbSID, pwszReferencedDomainName.baseAddress, &cchReferencedDomainName, &eUse) else {
+                        return nil
+                    }
+                    
+                    var pwszSID: LPWSTR? = nil
+                    guard ConvertSidToStringSidW(pSID.baseAddress, &pwszSID) else {
+                        fatalError("unable to convert SID to string for user \(user)")
+                    }
+                    
+                    return #"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\\#(String(decodingCString: pwszSID!, as: UTF16.self))"#.withCString(encodedAs: UTF16.self) { pwszKeyPath in
+                        return "ProfileImagePath".withCString(encodedAs: UTF16.self) { pwszKey in
+                            var cbData: DWORD = 0
+                            RegGetValueW(HKEY_LOCAL_MACHINE, pwszKeyPath, pwszKey, RRF_RT_REG_SZ, nil, nil, &cbData)
+                            guard cbData > 0 else {
+                                fatalError("unable to query ProfileImagePath for user \(user)")
+                            }
+                            return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(cbData)) { pwszData in
+                                guard RegGetValueW(HKEY_LOCAL_MACHINE, pwszKeyPath, pwszKey, RRF_RT_REG_SZ, nil, pwszData.baseAddress, &cbData) == ERROR_SUCCESS else {
+                                    fatalError("unable to query ProfileImagePath for user \(user)")
+                                }
+                                return String(decodingCString: pwszData.baseAddress!, as: UTF16.self)
+                            }
+                        }
+                    }
+                    
+                }
+            }
+        }
+        #else
+        // First check CFFIXED_USER_HOME if the environment is not considered tainted
+        if let envVar = Platform.getEnvSecure("CFFIXED_USER_HOME") {
+            return envVar.standardizingPath
+        }
+        #if !os(WASI) // WASI does not have user concept
+        // Next, attempt to find the home directory via getpwnam
+        return Platform.homeDirectory(forUserName: user)?.standardizingPath
+        #else
+        return nil
+        #endif
+        #endif
     }
     
     // From swift-corelibs-foundation's NSTemporaryDirectory. Internal for now, pending a better public API.
@@ -669,13 +678,17 @@ extension String {
     
     private var _expandingTildeInPath: String {
         guard utf8.first == UInt8(ascii: "~") else { return self }
-        var user: String? = nil
         let firstSlash = utf8.firstIndex(of: ._slash) ?? endIndex
         let indexAfterTilde = utf8.index(after: startIndex)
+        var userDir: String
         if firstSlash != indexAfterTilde {
-            user = String(self[indexAfterTilde ..< firstSlash])
+            guard let dir = String.homeDirectoryPath(forUser: String(self[indexAfterTilde ..< firstSlash])) else {
+                return self
+            }
+            userDir = dir
+        } else {
+            userDir = String.homeDirectoryPath()
         }
-        let userDir = String.homeDirectoryPath(forUser: user)
         return userDir + self[firstSlash...]
     }
     
