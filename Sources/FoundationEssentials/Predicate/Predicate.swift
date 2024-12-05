@@ -27,9 +27,11 @@ public struct Predicate<each Input> : Sendable {
     }
 }
 
+#if hasFeature(Macros)
 @freestanding(expression)
 @available(FoundationPredicate 0.1, *)
 public macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
+#endif
 
 @available(FoundationPredicate 0.1, *)
 extension Predicate {
