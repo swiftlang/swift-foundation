@@ -48,7 +48,13 @@ extension _FileManagerImpl {
     }
     
     func homeDirectory(forUser userName: String?) -> URL? {
-        URL(filePath:  String.homeDirectoryPath(forUser: userName), directoryHint: .isDirectory)
+        guard let userName else {
+            return homeDirectoryForCurrentUser
+        }
+        guard let path = String.homeDirectoryPath(forUser: userName) else {
+            return nil
+        }
+        return URL(filePath: path, directoryHint: .isDirectory)
     }
     
     var temporaryDirectory: URL {
