@@ -332,6 +332,7 @@ public enum CurrencyFormatStyleConfiguration {
         var roundingIncrement: RoundingIncrement?
         var presentation: Presentation
         var notation: Notation?
+        var currencyCode: String
     }
 
     public struct SignDisplayStrategy: Codable, Hashable, Sendable {

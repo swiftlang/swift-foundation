@@ -183,7 +183,7 @@ extension Decimal.FormatStyle {
         public init(code: String, locale: Locale = .autoupdatingCurrent) {
             self.locale = locale
             self.currencyCode = code
-            self.collection = Configuration.Collection(presentation: .standard)
+            self.collection = Configuration.Collection(presentation: .standard, currencyCode: code)
         }
 
         public var attributed: Attributed {

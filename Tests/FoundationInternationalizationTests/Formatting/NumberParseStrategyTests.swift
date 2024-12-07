@@ -157,6 +157,67 @@ final class NumberParseStrategyTests : XCTestCase {
         _verifyRoundtripCurrency(negativeData, currencyStyle.decimalSeparator(strategy: .always), "currency style, decimal display: always")
     }
 
+    func testParseCurrencyWithDifferentCodes() throws {
+        let enUS = Locale(identifier: "en_US")
+        // Decimal
+        let style = Decimal.FormatStyle.Currency(code: "GBP", locale: enUS).presentation(.isoCode)
+        XCTAssertEqual(style.format(3.14), "GBP 3.14")
+
+        let parsed = try style.parseStrategy.parse("GBP 3.14")
+        XCTAssertEqual(parsed, 3.14)
+
+        // Floating point
+        let floatingPointStyle: FloatingPointFormatStyle<Double>.Currency = .init(code: "GBP", locale: enUS).presentation(.isoCode)
+        XCTAssertEqual(floatingPointStyle.format(3.14), "GBP 3.14")
+
+        let parsedFloatingPoint = try floatingPointStyle.parseStrategy.parse("GBP 3.14")
+        XCTAssertEqual(parsedFloatingPoint, 3.14)
+
+        // Integer
+        let integerStyle: IntegerFormatStyle<Int32>.Currency = .init(code: "GBP", locale: enUS).presentation(.isoCode)
+        XCTAssertEqual(integerStyle.format(32), "GBP 32.00")
+
+        let parsedInt = try integerStyle.parseStrategy.parse("GBP 32.00")
+        XCTAssertEqual(parsedInt, 32)
+    }
+
+    func test_roundtripForeignCurrency() {
+        let testData: [Int] = [
+            87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0
+        ]
+        let negativeData: [Int] = [
+            -87650000, -8765000, -876500, -87650, -8765, -876, -87, -8
+        ]
+
+        func _verifyRoundtripCurrency(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Currency, _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) {
+            for value in testData {
+                let str = style.format(value)
+                let parsed = try! Int(str, strategy: style.parseStrategy)
+                XCTAssertEqual(value, parsed, "\(testName): formatted string: \(str) parsed: \(parsed)", file: file, line: line)
+
+                let nonLenientParsed = try! Int(str, format: style, lenient: false)
+                XCTAssertEqual(value, nonLenientParsed, file: file, line: line)
+            }
+        }
+
+        let currencyStyle: IntegerFormatStyle<Int>.Currency = .init(code: "EUR", locale: Locale(identifier: "en_US"))
+        _verifyRoundtripCurrency(testData, currencyStyle, "currency style")
+        _verifyRoundtripCurrency(testData, currencyStyle.sign(strategy: .always()), "currency style, sign: always")
+        _verifyRoundtripCurrency(testData, currencyStyle.grouping(.never), "currency style, grouping: never")
+        _verifyRoundtripCurrency(testData, currencyStyle.presentation(.isoCode), "currency style, presentation: iso code")
+        _verifyRoundtripCurrency(testData, currencyStyle.presentation(.fullName), "currency style, presentation: iso code")
+        _verifyRoundtripCurrency(testData, currencyStyle.presentation(.narrow), "currency style, presentation: iso code")
+        _verifyRoundtripCurrency(testData, currencyStyle.decimalSeparator(strategy: .always), "currency style, decimal display: always")
+
+        _verifyRoundtripCurrency(negativeData, currencyStyle, "currency style")
+        _verifyRoundtripCurrency(negativeData, currencyStyle.sign(strategy: .accountingAlways()), "currency style, sign: always")
+        _verifyRoundtripCurrency(negativeData, currencyStyle.grouping(.never), "currency style, grouping: never")
+        _verifyRoundtripCurrency(negativeData, currencyStyle.presentation(.isoCode), "currency style, presentation: iso code")
+        _verifyRoundtripCurrency(negativeData, currencyStyle.presentation(.fullName), "currency style, presentation: iso code")
+        _verifyRoundtripCurrency(negativeData, currencyStyle.presentation(.narrow), "currency style, presentation: iso code")
+        _verifyRoundtripCurrency(negativeData, currencyStyle.decimalSeparator(strategy: .always), "currency style, decimal display: always")
+    }
+
     let testNegativePositiveDecimalData: [Decimal] = [  Decimal(string:"87650")!, Decimal(string:"8765")!,
         Decimal(string:"876.5")!, Decimal(string:"87.65")!, Decimal(string:"8.765")!, Decimal(string:"0.8765")!, Decimal(string:"0.08765")!, Decimal(string:"0.008765")!, Decimal(string:"0")!, Decimal(string:"-0.008765")!, Decimal(string:"-876.5")!, Decimal(string:"-87650")! ]
 
@@ -188,7 +249,7 @@ final class NumberParseStrategyTests : XCTestCase {
         XCTAssertEqual(try! strategy.parse("-1,234.56 US dollars"), Decimal(string: "-1234.56")!)
         XCTAssertEqual(try! strategy.parse("-USD\u{00A0}1,234.56"), Decimal(string: "-1234.56")!)
     }
-    
+
     func testNumericBoundsParsing() throws {
         let locale = Locale(identifier: "en_US")
         do {
