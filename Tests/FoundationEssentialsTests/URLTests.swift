@@ -369,10 +369,19 @@ final class URLTests : XCTestCase {
         if iter.next() == ._slash,
            let driveLetter = iter.next(), driveLetter.isLetter!,
            iter.next() == ._colon {
-            let path = #"\\?\"# + "\(Unicode.Scalar(driveLetter))" + #":\"#
+            let drive = "\(Unicode.Scalar(driveLetter))"
+            let path = #"\\?\"# + drive + #":\"#
             url = URL(filePath: path, directoryHint: .isDirectory)
             XCTAssertEqual(url.path.last, "/")
             XCTAssertEqual(url.fileSystemPath.last, "/")
+
+            // Test drive-relative path
+            let driveRelativePath = "\(drive):hello"
+            url = URL(filePath: driveRelativePath)
+            XCTAssertEqual(url.relativePath, "hello")
+            XCTAssertEqual(url.relativeString, "hello")
+            XCTAssertTrue(url.baseURL?.path.starts(with: "\(drive):/") ?? false)
+            XCTAssertTrue(url.path.starts(with: "\(drive):/"))
         }
     }
     #endif
