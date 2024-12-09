@@ -486,7 +486,7 @@ extension _FileManagerImpl {
     private func _extendedAttribute(_ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data? {
         #if canImport(Darwin)
         var size = getxattr(path, key, nil, 0, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
-        #elseif os(FreeBSD) || os(NetBSD)
+        #elseif os(FreeBSD)
         var size = (followSymlinks ? extattr_get_file : extattr_get_link)(path, EXTATTR_NAMESPACE_USER, key, nil, 0)
         #else
         var size = followSymlinks ? getxattr(path, key, nil, 0) : lgetxattr(path, key, nil, 0)
@@ -500,7 +500,7 @@ extension _FileManagerImpl {
         let buffer = malloc(size)!
         #if canImport(Darwin)
         size = getxattr(path, key, buffer, size, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
-        #elseif os(FreeBSD) || os(NetBSD)
+        #elseif os(FreeBSD)
         size = (followSymlinks ? extattr_get_file : extattr_get_link)(path, EXTATTR_NAMESPACE_USER, key, buffer, size)
         #else
         size = followSymlinks ? getxattr(path, key, buffer, size) : lgetxattr(path, key, buffer, size)
@@ -520,7 +520,7 @@ extension _FileManagerImpl {
     private func _extendedAttributes(at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> [String : Data]? {
         #if canImport(Darwin)
         var size = listxattr(path, nil, 0, 0)
-        #elseif os(FreeBSD) || os(NetBSD)
+        #elseif os(FreeBSD)
         var size = (followSymlinks ? extattr_list_file : extattr_list_link)(path, EXTATTR_NAMESPACE_USER, nil, 0)
         #else
         var size = listxattr(path, nil, 0)
@@ -530,7 +530,7 @@ extension _FileManagerImpl {
         defer { keyList.deallocate() }
         #if canImport(Darwin)
         size = listxattr(path, keyList.baseAddress!, size, 0)
-        #elseif os(FreeBSD) || os(NetBSD)
+        #elseif os(FreeBSD)
         size = (followSymlinks ? extattr_list_file : extattr_list_link)(path, EXTATTR_NAMESPACE_USER, nil, 0)
         #else
         size = listxattr(path, keyList.baseAddress!, size)

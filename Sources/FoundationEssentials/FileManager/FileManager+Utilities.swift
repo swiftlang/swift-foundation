@@ -183,22 +183,22 @@ extension _FileManagerImpl {
         try value.withUnsafeBytes { buffer in
             #if canImport(Darwin)
             let result = setxattr(path, key, buffer.baseAddress!, buffer.count, 0, followSymLinks ? 0 : XATTR_NOFOLLOW)
-            #else
+            #elseif os(FreeBSD)
             var result: Int32
-            #endif
-            #if os(FreeBSD)
             if followSymLinks {
                 result = Int32(extattr_set_file(path, EXTATTR_NAMESPACE_USER, key, buffer.baseAddress!, buffer.count))
             } else {
                 result = Int32(extattr_set_link(path, EXTATTR_NAMESPACE_USER, key, buffer.baseAddress!, buffer.count))
             }
             #else
+            var result: UInt32
             if followSymLinks {
                 result = lsetxattr(path, key, buffer.baseAddress!, buffer.count, 0)
             } else {
                 result = setxattr(path, key, buffer.baseAddress!, buffer.count, 0)
             }
             #endif
+
             #if os(macOS) && FOUNDATION_FRAMEWORK
             // if setxaddr failed and its a permission error for a sandbox app trying to set quaratine attribute, ignore it since its not
             // permitted, the attribute will be put on the file by the quaratine MAC hook
