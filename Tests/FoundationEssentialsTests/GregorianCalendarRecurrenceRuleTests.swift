@@ -426,6 +426,29 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         ]
         XCTAssertEqual(results, expectedResults)
     }
+
+    func testYearlyRecurrenceMovingToFeb29() {
+        /// Rule for an event that repeats on February 29th of each year, or closest date after
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly, matchingPolicy: .nextTimePreservingSmallerComponents)
+        rule.months = [2]
+        rule.daysOfTheMonth = [29]
+
+        let rangeStart = Date(timeIntervalSince1970: 946684800.0) // 2000-01-01T00:00:00-0000
+        let rangeEnd = Date(timeIntervalSince1970: 1262304000.0) // 2010-01-01T00:00:00-0000
+        var birthdays = rule.recurrences(of: rangeStart, in: rangeStart..<rangeEnd).makeIterator()
+        //                               ^ Since the rule will change the month and day, we only borrow the time of day from the initial date
+
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 951782400.0)) // 2000-02-29T00:00:00-0000
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 983404800.0)) // 2001-03-01T00:00:00-0000
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1014940800.0)) // 2002-03-01T00:00:00-0000
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1046476800.0)) // 2003-03-01T00:00:00-0000
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1078012800.0)) // 2004-02-29T00:00:00-0000
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1109635200.0)) // 2005-03-01T00:00:00-0000
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1141171200.0)) // 2006-03-01T00:00:00-0000
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1172707200.0)) // 2007-03-01T00:00:00-0000
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1204243200.0)) // 2008-02-29T00:00:00-0000
+        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1235865600.0)) // 2009-03-01T00:00:00-0000
+    }
     
     func testYearlyRecurrenceWithMonthExpansion() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
@@ -780,5 +803,5 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1695304800.0), // 2023-09-21T14:00:00-0000
         ]
         XCTAssertEqual(results, expectedResults)
-     }
+    }
 }
