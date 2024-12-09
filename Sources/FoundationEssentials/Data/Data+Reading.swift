@@ -34,6 +34,8 @@ import WASILibc
 func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutableRawPointer!, _ size: Int, _ position: UInt32, _ options: Int32) -> Int {
 #if canImport(Darwin)
     return fgetxattr(fd, name, value, size, position, options)
+#elseif os(FreeBSD)
+    return extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, name, value, size)
 #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fgetxattr(fd, name, value, size)
 #else
