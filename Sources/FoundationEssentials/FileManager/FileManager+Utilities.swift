@@ -185,6 +185,14 @@ extension _FileManagerImpl {
             let result = setxattr(path, key, buffer.baseAddress!, buffer.count, 0, followSymLinks ? 0 : XATTR_NOFOLLOW)
             #else
             var result: Int32
+            #endif
+            #if os(FreeBSD)
+            if followSymLinks {
+                result = Int32(extattr_set_file(path, EXTATTR_NAMESPACE_USER, key, buffer.baseAddress!, buffer.count))
+            } else {
+                result = Int32(extattr_set_link(path, EXTATTR_NAMESPACE_USER, key, buffer.baseAddress!, buffer.count))
+            }
+            #else
             if followSymLinks {
                 result = lsetxattr(path, key, buffer.baseAddress!, buffer.count, 0)
             } else {

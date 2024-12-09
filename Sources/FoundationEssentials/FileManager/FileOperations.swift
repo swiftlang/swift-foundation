@@ -900,10 +900,17 @@ enum _FileOperations {
         }
         #else
         while current < total {
+            #if os(FreeBSD)
+            guard copy_file_range(srcfd, &current, dstfd, nil, total - Int(current), 0) != -1 else {
+                try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
+                return
+            }
+            #else
             guard sendfile(dstfd, srcfd, &current, Swift.min(total - Int(current), chunkSize)) != -1 else {
                 try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
                 return
             }
+            #endif
         }
         #endif
     }

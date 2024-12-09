@@ -606,6 +606,8 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
             // Returns non-zero on error, but we ignore them
 #if canImport(Darwin)
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0, 0)
+#elseif os(FreeBSD)
+            _ = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, key, valueBuf.baseAddress!, valueBuf.count)
 #elseif canImport(Glibc) || canImport(Musl)
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0)
 #endif
