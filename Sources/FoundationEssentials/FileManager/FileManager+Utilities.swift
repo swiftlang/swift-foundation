@@ -191,7 +191,7 @@ extension _FileManagerImpl {
                 result = Int32(extattr_set_link(path, EXTATTR_NAMESPACE_USER, key, buffer.baseAddress!, buffer.count))
             }
             #else
-            var result: UInt32
+            var result: Int32
             if followSymLinks {
                 result = lsetxattr(path, key, buffer.baseAddress!, buffer.count, 0)
             } else {
