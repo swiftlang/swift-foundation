@@ -140,13 +140,13 @@ final class _ProcessInfo: Sendable {
         var ullTime: ULONGLONG = 0
         QueryUnbiasedInterruptTimePrecise(&ullTime)
         let time: UInt64 = ullTime
+#elseif os(FreeBSD) || os(OpenBSD)
+        var ts: timespec = timespec()
+        clock_gettime(CLOCK_MONOTONIC, &ts)
+        let time: UInt64 = UInt64(ts.tv_sec) * 1000000000 + UInt64(ts.tv_nsec)
 #else
         var ts: timespec = timespec()
-#if os(Linux)
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
-#else
-        clock_gettime(CLOCK_MONOTONIC, &ts)
-#endif
         let time: UInt64 = UInt64(ts.tv_sec) * 1000000000 + UInt64(ts.tv_nsec)
 #endif
         let timeString = String(time, radix: 16, uppercase: true)
