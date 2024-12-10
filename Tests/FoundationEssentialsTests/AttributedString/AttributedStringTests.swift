@@ -2504,4 +2504,62 @@ E {
 
         XCTAssertEqual(attrStr, AttributedString("XYZ", attributes: .init().testInt(1)))
     }
+    
+    func testUTF8View() {
+        let testStrings = [
+            "Hello, world",
+            "🎺😄abc🎶def",
+            "¡Hola! ¿Cómo estás?",
+            "שָׁלוֹם"
+        ]
+        
+        for string in testStrings {
+            let attrStr = AttributedString(string)
+            XCTAssertEqual(attrStr.utf8.count, string.utf8.count, "Counts are not equal for string \(string)")
+            XCTAssertTrue(attrStr.utf8.elementsEqual(string.utf8), "Full elements are not equal for string \(string)")
+            for offset in 0 ..< string.utf8.count {
+                let idxInString = string.utf8.index(string.startIndex, offsetBy: offset)
+                let idxInAttrStr = attrStr.utf8.index(attrStr.startIndex, offsetBy: offset)
+                XCTAssertEqual(
+                    string.utf8.distance(from: string.startIndex, to: idxInString),
+                    attrStr.utf8.distance(from: attrStr.startIndex, to: idxInAttrStr),
+                    "Offsets to \(idxInString) are not equal for string \(string)"
+                )
+                XCTAssertEqual(string.utf8[idxInString], attrStr.utf8[idxInAttrStr], "Elements at offset \(offset) are not equal for string \(string)")
+                XCTAssertTrue(string.utf8[..<idxInString].elementsEqual(attrStr.utf8[..<idxInAttrStr]), "Slices up to \(offset) are not equal for string \(string)")
+                XCTAssertTrue(string.utf8[idxInString...].elementsEqual(attrStr.utf8[idxInAttrStr...]), "Slices from \(offset) are not equal for string \(string)")
+                XCTAssertTrue(string[..<idxInString].utf8.elementsEqual(attrStr[..<idxInAttrStr].utf8), "Slices up to \(offset) are not equal for string \(string)")
+                XCTAssertTrue(string[idxInString...].utf8.elementsEqual(attrStr[idxInAttrStr...].utf8), "Slices from \(offset) are not equal for string \(string)")
+            }
+        }
+    }
+    
+    func testUTF16View() {
+        let testStrings = [
+            "Hello, world",
+            "🎺😄abc🎶def",
+            "¡Hola! ¿Cómo estás?",
+            "שָׁלוֹם"
+        ]
+        
+        for string in testStrings {
+            let attrStr = AttributedString(string)
+            XCTAssertEqual(attrStr.utf16.count, string.utf16.count, "Counts are not equal for string \(string)")
+            XCTAssertTrue(attrStr.utf16.elementsEqual(string.utf16), "Full elements are not equal for string \(string)")
+            for offset in 0 ..< string.utf16.count {
+                let idxInString = string.utf16.index(string.startIndex, offsetBy: offset)
+                let idxInAttrStr = attrStr.utf16.index(attrStr.startIndex, offsetBy: offset)
+                XCTAssertEqual(
+                    string.utf16.distance(from: string.startIndex, to: idxInString),
+                    attrStr.utf16.distance(from: attrStr.startIndex, to: idxInAttrStr),
+                    "Offsets to \(idxInString) are not equal for string \(string)"
+                )
+                XCTAssertEqual(string.utf16[idxInString], attrStr.utf16[idxInAttrStr], "Elements at offset \(offset) are not equal for string \(string)")
+                XCTAssertTrue(string.utf16[..<idxInString].elementsEqual(attrStr.utf16[..<idxInAttrStr]), "Slices up to \(offset) are not equal for string \(string)")
+                XCTAssertTrue(string.utf16[idxInString...].elementsEqual(attrStr.utf16[idxInAttrStr...]), "Slices from \(offset) are not equal for string \(string)")
+                XCTAssertTrue(string[..<idxInString].utf16.elementsEqual(attrStr[..<idxInAttrStr].utf16), "Slices up to \(offset) are not equal for string \(string)")
+                XCTAssertTrue(string[idxInString...].utf16.elementsEqual(attrStr[idxInAttrStr...].utf16), "Slices from \(offset) are not equal for string \(string)")
+            }
+        }
+    }
 }
