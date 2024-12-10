@@ -14,7 +14,9 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
+#if FOUNDATION_FRAMEWORK
+@testable import Foundation
+#else
 @testable import FoundationEssentials
 #endif
 
@@ -104,6 +106,24 @@ final class LockedStateTests : XCTestCase {
         )
 
         assertLockNotHeld(lockedState, "Lock was not properly released by withLockExtendingLifetimeOfState()")
+    }
+    
+    func testWithLockExtendingLifespanDoesExtendLifetimeOfState() {
+        weak var state: TestObject?
+        let lockedState: LockedState<TestObject>
+        
+        (state, lockedState) = {
+            let state = TestObject()
+            return (state, LockedState(initialState: state))
+        }()
+        
+        lockedState.withLockExtendingLifetimeOfState { state in
+            weak var oldState = state
+            state = TestObject()
+            XCTAssertNotNil(oldState, "State object lifetime was not extended after reassignment within body")
+        }
+        
+        XCTAssertNil(state, "State object lifetime was extended beyond end of call")
     }
 }
 
