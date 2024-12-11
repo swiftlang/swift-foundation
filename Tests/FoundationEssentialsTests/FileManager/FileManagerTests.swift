@@ -495,7 +495,7 @@ final class FileManagerTests : XCTestCase {
     func testCopyItemAtPathToPath() throws {
         let data = randomData()
         try FileManagerPlayground {
-            Directory("dir") {
+            Directory("dir", attributes: [.posixPermissions : 0o777]) {
                 File("foo", contents: data)
                 "bar"
             }
@@ -511,7 +511,7 @@ final class FileManagerTests : XCTestCase {
 #else
             XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")])
 #endif
-
+            XCTAssertEqual(try $0.attributesOfItem(atPath: "dir2")[.posixPermissions] as? UInt, 0o777)
             XCTAssertThrowsError(try $0.copyItem(atPath: "does_not_exist", toPath: "dir3")) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
             }

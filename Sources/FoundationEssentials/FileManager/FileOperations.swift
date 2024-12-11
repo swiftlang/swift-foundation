@@ -949,6 +949,91 @@ enum _FileOperations {
     }
     #endif
 
+    #if !canImport(Darwin)
+    private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
+        // Copy extended attributes
+        var size = flistxattr(srcFD, nil, 0)
+        if size > 0 {
+            try withUnsafeTemporaryAllocation(of: CChar.self, capacity: size) { keyList in
+                size = flistxattr(srcFD, keyList.baseAddress!, size)
+                if size > 0 {
+                    var current = keyList.baseAddress!
+                    let end = keyList.baseAddress!.advanced(by: keyList.count)
+                    while current < end {
+                        var valueSize = fgetxattr(srcFD, current, nil, 0)
+                        if valueSize >= 0 {
+                            try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: valueSize) { valueBuffer in
+                                valueSize = fgetxattr(srcFD, current, valueBuffer.baseAddress!, valueSize)
+                                if valueSize >= 0 {
+                                    if fsetxattr(dstFD, current, valueBuffer.baseAddress!, valueSize, 0) != 0 {
+                                        try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+                                    }
+                                }
+                            }
+                        }
+                        current = current.advanced(by: strlen(current) + 1) /* pass null byte */
+                    }
+                }
+            }
+        }
+        var statInfo = stat()
+        if fstat(srcFD, &statInfo) == 0 {
+            // Copy owner/group
+            if fchown(dstFD, statInfo.st_uid, statInfo.st_gid) != 0 {
+                try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+            }
+            
+            // Copy modification date
+            let value = timeval(tv_sec: statInfo.st_mtim.tv_sec, tv_usec: statInfo.st_mtim.tv_nsec / 1000)
+            var tv = (value, value)
+            try withUnsafePointer(to: &tv) {
+                try $0.withMemoryRebound(to: timeval.self, capacity: 2) {
+                    if futimes(dstFD, $0) != 0 {
+                        try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+                    }
+                }
+            }
+            
+            // Copy permissions
+            if fchmod(dstFD, statInfo.st_mode) != 0 {
+                try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+            }
+        } else {
+            try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+        }
+    }
+    #endif
+    
+    private static func _openDirectoryFD(_ ptr: UnsafePointer<CChar>, srcPath: @autoclosure () -> String, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws -> CInt? {
+        let fd = open(ptr, O_RDONLY | O_NOFOLLOW | O_DIRECTORY)
+        guard fd >= 0 else {
+            try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+            return nil
+        }
+        return fd
+    }
+    
+    // Safely copies metadata from one directory to another ensuring that both paths are directories and cannot be swapped for files before/while copying metadata
+    private static func _safeCopyDirectoryMetadata(src: UnsafePointer<CChar>, dst: UnsafePointer<CChar>, delegate: some LinkOrCopyDelegate, extraFlags: Int32 = 0) throws {
+        guard let srcFD = try _openDirectoryFD(src, srcPath: String(cString: src), dstPath: String(cString: dst), delegate: delegate) else {
+            return
+        }
+        defer { close(srcFD) }
+        
+        guard let dstFD = try _openDirectoryFD(dst, srcPath: String(cString: src), dstPath: String(cString: dst), delegate: delegate) else {
+            return
+        }
+        defer { close(dstFD) }
+        
+        #if canImport(Darwin)
+        if fcopyfile(srcFD, dstFD, nil, copyfile_flags_t(COPYFILE_METADATA | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
+            try delegate.throwIfNecessary(errno, String(cString: src), String(cString: dst))
+        }
+        #else
+        try _copyDirectoryMetadata(srcFD: srcFD, srcPath: String(cString: src), dstFD: dstFD, dstPath: String(cString: dst), delegate: delegate)
+        #endif
+    }
+
     #if os(WASI)
     private static func _linkOrCopyFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
         let src = String(cString: srcPtr)
@@ -1040,18 +1125,7 @@ enum _FileOperations {
                         
                     case FTS_DP:
                         // Directory being visited in post-order - copy the permissions over.
-                        #if canImport(Darwin)
-                        if copyfile(fts_path, buffer.baseAddress!, nil, copyfile_flags_t(COPYFILE_METADATA | COPYFILE_NOFOLLOW | extraFlags)) != 0 {
-                            try delegate.throwIfNecessary(errno, String(cString: fts_path), String(cString: buffer.baseAddress!))
-                        }
-                        #else
-                        do {
-                            let attributes = try fileManager.attributesOfItem(atPath: String(cString: fts_path))
-                            try fileManager.setAttributes(attributes, ofItemAtPath: String(cString: buffer.baseAddress!))
-                        } catch {
-                            try delegate.throwIfNecessary(error, String(cString: fts_path), String(cString: buffer.baseAddress!))
-                        }
-                        #endif
+                        try Self._safeCopyDirectoryMetadata(src: fts_path, dst: buffer.baseAddress!, delegate: delegate, extraFlags: extraFlags)
                         
                     case FTS_SL: fallthrough    // Symlink.
                     case FTS_SLNONE:            // Symlink with no target.
