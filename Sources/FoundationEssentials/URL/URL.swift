@@ -2225,11 +2225,40 @@ extension URL {
         #if os(Windows)
         // Convert any "\" to "/" before storing the URL parse info
         var filePath = path.replacing(._backslash, with: ._slash)
+        let isAbsolute: Bool
+        var iter = filePath.utf8.makeIterator()
+        if let driveLetter = iter.next(), driveLetter.isAlpha,
+           iter.next() == ._colon,
+           iter.next() != ._slash {
+            // Drive-relative path: use the current directory for the given drive letter
+            // as the base URL, and remove the drive letter from the relative path.
+            let relativePath = String(Substring(filePath.utf8.dropFirst(2)))
+            let basePath: String? = "\(Unicode.Scalar(driveLetter)):".withCString(encodedAs: UTF16.self) { pwszDriveLetter in
+                let dwLength: DWORD = GetFullPathNameW(pwszDriveLetter, 0, nil, nil)
+                guard dwLength > 0 else {
+                    return nil
+                }
+                return try? withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
+                    guard GetFullPathNameW(pwszDriveLetter, DWORD($0.count), $0.baseAddress, nil) > 0 else {
+                        return nil
+                    }
+                    return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+                }
+            }
+            guard let basePath else {
+                self.init(filePath: relativePath, directoryHint: directoryHint, relativeTo: base)
+                return
+            }
+            baseURL = URL(filePath: basePath, directoryHint: .isDirectory)
+            filePath = relativePath
+            isAbsolute = false
+        } else {
+            isAbsolute = URL.isAbsolute(standardizing: &filePath)
+        }
         #else
         var filePath = path
-        #endif
-
         let isAbsolute = URL.isAbsolute(standardizing: &filePath)
+        #endif
 
         #if !NO_FILESYSTEM
         if !isAbsolute {
