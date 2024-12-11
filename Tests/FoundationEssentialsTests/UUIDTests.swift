@@ -116,4 +116,24 @@ final class UUIDTests : XCTestCase {
         XCTAssertFalse(uuid2 > uuid1)
         XCTAssertTrue(uuid2 == uuid1)
     }
+    
+    func test_UUIDUniqueness() {
+        let uuidsAtTimeRangeT0 = (0...9999).reduce(into: [UUID: UUID]()) { result, _ in
+            let uuid = UUID()
+            return result[uuid] = uuid
+        }
+        
+        let uuidsAtTimeRangeT1 = (0...9999).reduce(into: [UUID: UUID]()) { result, _ in
+            let uuid = UUID()
+            return result[uuid] = uuid
+        }
+        
+        uuidsAtTimeRangeT1.values.forEach { uuid in
+            if uuid == uuidsAtTimeRangeT0[uuid] {
+                XCTFail("Uniqueness failed")
+            } else {
+                XCTAssertTrue(true, "Uniqueness passed")
+            }
+        }
+    }
 }
