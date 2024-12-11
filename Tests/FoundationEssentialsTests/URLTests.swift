@@ -893,6 +893,15 @@ final class URLTests : XCTestCase {
         url.deletePathExtension()
         // Old behavior only searches the last empty component, so the extension isn't actually removed
         checkBehavior(url.path(), new: "/path/", old: "/path.foo///")
+
+        url = URL(filePath: "/tmp/x")
+        url.appendPathExtension("")
+        XCTAssertEqual(url.path(), "/tmp/x")
+        XCTAssertEqual(url, url.deletingPathExtension().appendingPathExtension(url.pathExtension))
+
+        url = URL(filePath: "/tmp/x.")
+        url.deletePathExtension()
+        XCTAssertEqual(url.path(), "/tmp/x.")
     }
 
     func testURLAppendingToEmptyPath() throws {
