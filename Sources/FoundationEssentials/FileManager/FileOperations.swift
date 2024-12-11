@@ -948,7 +948,7 @@ enum _FileOperations {
         #endif
     }
     #endif
-
+    
     #if !canImport(Darwin)
     private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
         // Copy extended attributes
