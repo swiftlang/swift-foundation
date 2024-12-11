@@ -184,6 +184,7 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
                 setGrouping(config.group, formatter: formatter)
                 setDecimalSeparator(config.decimalSeparatorStrategy, formatter: formatter)
                 setRoundingIncrement(config.roundingIncrement, formatter: formatter)
+                try setTextAttribute(.currencyCode, formatter: formatter, value: config.currencyCode)
 
                 // Currency specific attributes
                 if let sign = config.signDisplayStrategy {
