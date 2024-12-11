@@ -510,8 +510,10 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/bar", "dir2/bar"), .init("dir/foo", "dir2/foo")])
 #else
             XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")])
-#endif
+            
+            // Specifically for non-Windows (where copying directory metadata takes a special path) double check that the metadata was copied exactly
             XCTAssertEqual(try $0.attributesOfItem(atPath: "dir2")[.posixPermissions] as? UInt, 0o777)
+#endif
             XCTAssertThrowsError(try $0.copyItem(atPath: "does_not_exist", toPath: "dir3")) {
                 XCTAssertEqual(($0 as? CocoaError)?.code, .fileReadNoSuchFile)
             }
