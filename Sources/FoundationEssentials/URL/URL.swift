@@ -1754,7 +1754,7 @@ public struct URL: Equatable, Sendable, Hashable {
             return result
         }
         #endif
-        guard !relativePath().isEmpty else { return self }
+        guard !pathExtension.isEmpty, !relativePath().isEmpty else { return self }
         var components = URLComponents(parseInfo: _parseInfo)
         // pathExtension might need to be percent-encoded, so use .path
         let newPath = components.path.appendingPathExtension(pathExtension)
