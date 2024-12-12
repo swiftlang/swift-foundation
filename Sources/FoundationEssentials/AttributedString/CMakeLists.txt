@@ -21,6 +21,8 @@ target_sources(FoundationEssentials PRIVATE
     AttributedString+Runs+Run.swift
     AttributedString+Runs.swift
     AttributedString+UnicodeScalarView.swift
+    AttributedString+UTF8View.swift
+    AttributedString+UTF16View.swift
     AttributedString+_InternalRun.swift
     AttributedString+_InternalRuns.swift
     AttributedString+_InternalRunsSlice.swift
