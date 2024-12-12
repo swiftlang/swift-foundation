@@ -112,7 +112,7 @@ extension Calendar {
 
 ### Matching Sequences
 
-The new `Sequence`-based API is a great fit for Swift because it composes with all the existing algorithms and functions that exist on `Sequence`. For example, the following code finds the next 3 minutes after _August 22, 2022 at 3:02:38 PM PDT_, then uses `zip` to combine them with some strings. The second array naturally has 3 elements. In contrast with the existing `enumerate` method, no additional counting of how many values we've seen and manully setting a `stop` argument to break out of a loop is required.
+The new `Sequence`-based API is a great fit for Swift because it composes with all the existing algorithms and functions that exist on `Sequence`. For example, the following code finds the next 3 minutes after _August 22, 2022 at 3:02:38 PM PDT_, then uses `zip` to combine them with some strings. The second array naturally has 3 elements. In contrast with the existing `enumerate` method, no additional counting of how many values we've seen and manually setting a `stop` argument to break out of a loop is required.
 
 ```swift
 let cal = Calendar(identifier: .gregorian)
@@ -243,7 +243,7 @@ The `DateSequence` API is missing one parameter that `enumerateDates` has - a `B
 
 We decided not to add the new fields to the `DateComponents` initializer. Swift might add a new "magic `with`" [operator](https://github.com/apple/swift-evolution/pull/2123) which will provide a better pattern for initializing immutable struct types with `var` fields. Even if that proposal does not end up accepted, adding a new initializer for each new field will quickly become unmanageable, and using default values makes the initializers ambiguous. Instead, the caller can simply set the desired value after initialization.
 
-We originally considered adding a field for Julian days, but decided this would be better expressed as a conversion from `Date` instead of from a `DateComponents`. Julian days are similar to `Date` in that they represent a point on a fixed timeline. For Julian days, they also assume a fixed calendar and time zone. Combining this with the open API of a `DateComponents`, which allows setting both a `Calendar` and `TimeZone` property, provides an opportunity for confusion. In addition, ICU defines a Julian day slightly differently than other standards and our current implementation relies on ICU for the calculations. This discrepency could lead to errors if the developer was not careful to offset the result manually.
+We originally considered adding a field for Julian days, but decided this would be better expressed as a conversion from `Date` instead of from a `DateComponents`. Julian days are similar to `Date` in that they represent a point on a fixed timeline. For Julian days, they also assume a fixed calendar and time zone. Combining this with the open API of a `DateComponents`, which allows setting both a `Calendar` and `TimeZone` property, provides an opportunity for confusion. In addition, ICU defines a Julian day slightly differently than other standards and our current implementation relies on ICU for the calculations. This discrepancy could lead to errors if the developer was not careful to offset the result manually.
 
 We considered changing the type of the `byAdding` argument to `dates(startingAt:byAdding:value:wrappingComponents:)` from `Calendar.Component` to `Int`, reading as something like: "dates starting at D, by adding 1, .day". However, we instead chose to use the same argument names and types as the existing `date(byAdding:value:to:wrappingComponent:)` API (which this new `Sequence` API calls) for consistency in the overall `Calendar` API.
 
@@ -255,7 +255,7 @@ let dates = calendar.dates(in: start..., matching: components, direction: .backw
 
 We considered adding new `Calendar.SearchDirection` enumeration values (backwards from, forwards from), but existing API would not know how to use them. We also feel that adding a new enumeration type for this API is more complicated than simply adding arguments to the functions themselves.
 
-We considered omitting the `startingAt` argument and assuming a starting point in the `range` argument based on `direction`. This works for the matching API (although it may be a little confusing), but it doesn't work for the adding API because it does not use a direction but instead the positive or negative values of the `DateComponents`. These components may be a combination of positive and negative values, making it diffcult to make a predictable assumption about where the starting point of the search should be. It is better to simply ask for it directly. 
+We considered omitting the `startingAt` argument and assuming a starting point in the `range` argument based on `direction`. This works for the matching API (although it may be a little confusing), but it doesn't work for the adding API because it does not use a direction but instead the positive or negative values of the `DateComponents`. These components may be a combination of positive and negative values, making it difficult to make a predictable assumption about where the starting point of the search should be. It is better to simply ask for it directly. 
 
 ## Acknowledgments
 
