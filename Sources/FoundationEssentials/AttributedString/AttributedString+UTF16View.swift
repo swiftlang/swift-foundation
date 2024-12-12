@@ -33,10 +33,6 @@ extension AttributedString {
             _guts = guts
             _range = range
         }
-
-        public init() {
-            self.init(Guts())
-        }
     }
 
     public var utf16: UTF16View {
