@@ -1,9 +1,9 @@
 # `AttributedString` UTF-8 and UTF-16 Views
 
-* Proposal: [SF-NNNN](NNNN-attributedstring-utf8-utf16-views.md)
+* Proposal: [SF-0012](0012-attributedstring-utf8-utf16-views.md)
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
-* Review Manager: TBD
-* Status: **Pitch**
+* Review Manager: [Tina Liu](https://github.com/itingliu)
+* Status: **Accepted**
 * Implementation: [swiftlang/swift-foundation#1066](https://github.com/swiftlang/swift-foundation/pull/1066)
 
 ## Introduction/Motivation
