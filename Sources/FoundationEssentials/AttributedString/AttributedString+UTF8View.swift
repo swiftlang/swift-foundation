@@ -73,14 +73,14 @@ extension AttributedString.UTF8View: BidirectionalCollection {
     }
 
     public func index(before i: AttributedString.Index) -> AttributedString.Index {
-        precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
+        precondition(i > startIndex && i <= endIndex, "AttributedString index out of bounds")
         let j = Index(_guts.string.utf8.index(before: i._value))
         precondition(j >= startIndex, "Can't advance AttributedString index before start index")
         return j
     }
 
     public func index(after i: AttributedString.Index) -> AttributedString.Index {
-        precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
+        precondition(i >= startIndex && i < endIndex, "AttributedString index out of bounds")
         let j = Index(_guts.string.utf8.index(after: i._value))
         precondition(j <= endIndex, "Can't advance AttributedString index after end index")
         return j
@@ -127,7 +127,7 @@ extension AttributedString.UTF8View: BidirectionalCollection {
     public subscript(bounds: Range<AttributedString.Index>) -> Self {
         let bounds = bounds._bstringRange
         precondition(
-            bounds.lowerBound >= _range.lowerBound && bounds.lowerBound < _range.upperBound &&
+            bounds.lowerBound >= _range.lowerBound && bounds.lowerBound <= _range.upperBound &&
             bounds.upperBound >= _range.lowerBound && bounds.upperBound <= _range.upperBound,
             "AttributedString index range out of bounds")
         return Self(_guts, in: bounds)
