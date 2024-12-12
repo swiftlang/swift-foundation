@@ -1236,6 +1236,16 @@ public struct URL: Equatable, Sendable, Hashable {
             return nil
         }
 
+        #if FOUNDATION_FRAMEWORK
+        // Linked-on-or-after check for apps which expect .host() to return nil
+        // for URLs like "https:///". The new .host() implementation returns
+        // an empty string because according to RFC 3986, a host always exists
+        // if there is an authority component, it just might be empty.
+        if Self.compatibility2 && encodedHost.isEmpty {
+            return nil
+        }
+        #endif
+
         func requestedHost() -> String? {
             let didPercentEncodeHost = hasAuthority ? _parseInfo.didPercentEncodeHost : _baseParseInfo?.didPercentEncodeHost ?? false
             if percentEncoded {
