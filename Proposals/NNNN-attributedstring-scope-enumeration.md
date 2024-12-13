@@ -12,29 +12,36 @@
 
 ## Proposed solution
 
-We will provide a new API on `AttributeScope` that will allow clients to enumerate the attribute keys contained within a scope. This will allow clients to create a `Set<NSAttributedString.Key>` from an `AttributeScope` like the following:
+We will provide a new API on `AttributeScope` that will allow clients to enumerate the attribute keys contained within a scope. This will allow clients to create a `Set<NSAttributedString.Key>` from an `AttributeScope` in order to support bridging between the two for new APIs like the following:
 
 ```swift
-public func someAPI<S: AttributeScope>(_ scope: S.Type) {
-    let nsKeys = scope.attributeKeys.map {
-        NSAttributeString.Key($0.name)
+// Existing NSAttributedString-based text view
+struct MyTextView {
+    // Sets the list of attributes that are allowed to be used in this text view
+    public mutating func setAllowedAttributes(_ keys: Set<NSAttributedString.Key>) {
+        // ... existing ObjC-based implementation ...
     }
-    
-    // ... use nsKeys
+
+    // New AttributedString API that interops with the existing ObjC implementation
+    public mutating func setAllowedAttributes(_ scope: some AttributeScope.Type) {
+        let allowedNSKeys = scope.attributeKeys.map {
+            NSAttributedString.Key($0.name)
+        }
+        self.setAllowedAttributes(Set(allowedNSKeys))
+    }
 }
 ```
 
 Clients can also use the APIs on `AttributedStringKey` to filter the keys as necessary. For example, another API might want to create a `Set<NSAttributedString.Key>` of just keys that have the `inhertedByAddedText` property set to `true`:
 
 ```swift
-public func someAPI<S: AttributeScope>(_ scope: S.Type) {
-    let nsKeys = scope.attributeKeys.filter {
+public func setAllowedAttributes(_ scope: some AttributeScope.Type) {
+    let allowedNSKeys = scope.attributeKeys.filter {
         $0.inheritedByAddedText
     }.map {
         NSAttributeString.Key($0.name)
     }
-    
-    // ... use nsKeys
+    self.setAllowedAttributes(Set(allowedNSKeys))
 }
 ```
 
