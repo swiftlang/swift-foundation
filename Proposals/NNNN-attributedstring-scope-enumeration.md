@@ -3,6 +3,7 @@
 * Proposal: [SF-NNNN](NNNN-attributedstring-scope-enumeration.md)
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: TBD
+* Implementation: [swiftlang/swift-foundation#1093](https://github.com/swiftlang/swift-foundation/pull/1093)
 * Status: **Pitch**
 
 ## Introduction/Motivation
