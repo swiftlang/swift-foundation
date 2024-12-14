@@ -988,11 +988,11 @@ enum _FileOperations {
             #endif
             
             // Copy modification date
-            let value = timeval(tv_sec: statInfo.st_mtim.tv_sec, tv_usec: statInfo.st_mtim.tv_nsec / 1000)
+            let value = statInfo.st_mtim
             var tv = (value, value)
             try withUnsafePointer(to: &tv) {
-                try $0.withMemoryRebound(to: timeval.self, capacity: 2) {
-                    if futimes(dstFD, $0) != 0 {
+                try $0.withMemoryRebound(to: timespec.self, capacity: 2) {
+                    if futimens(dstFD, $0) != 0 {
                         try delegate.throwIfNecessary(errno, srcPath(), dstPath())
                     }
                 }
