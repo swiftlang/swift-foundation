@@ -2239,6 +2239,17 @@ extension URL {
         var filePath = path
         #endif
 
+        #if FOUNDATION_FRAMEWORK
+        // Linked-on-or-after check for apps which incorrectly pass a full
+        // "file:" URL string. In the old implementation, this could work
+        // rarely if the app immediately called .appendingPathComponent(_:),
+        // which used to accidentally interpret a relative string starting
+        // with "file:" as an absolute file URL string.
+        if Self.compatibility3 && filePath.starts(with: "file:") {
+            filePath = String(filePath.dropFirst(5))
+        }
+        #endif
+
         let isAbsolute = URL.isAbsolute(standardizing: &filePath)
 
         #if !NO_FILESYSTEM
