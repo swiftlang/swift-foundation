@@ -102,6 +102,10 @@ static inline int32_t _platform_shims_O_CREAT(void) { return O_CREAT; }
 static inline int32_t _platform_shims_O_EXCL(void) { return O_EXCL; }
 static inline int32_t _platform_shims_O_TRUNC(void) { return O_TRUNC; }
 static inline int32_t _platform_shims_O_WRONLY(void) { return O_WRONLY; }
+static inline int32_t _platform_shims_O_RDONLY(void) { return O_RDONLY; }
+static inline int32_t _platform_shims_O_DIRECTORY(void) { return O_DIRECTORY; }
+static inline int32_t _platform_shims_O_NOFOLLOW(void) { return O_NOFOLLOW; }
+
 #endif
 
 #endif /* CSHIMS_PLATFORM_SHIMS */
