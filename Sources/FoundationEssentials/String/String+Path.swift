@@ -207,7 +207,7 @@ extension String {
     }
 
     internal func appendingPathExtension(_ pathExtension: String) -> String {
-        guard validatePathExtension(pathExtension) else {
+        guard !pathExtension.isEmpty, validatePathExtension(pathExtension) else {
             return self
         }
         var result = self._droppingTrailingSlashes
