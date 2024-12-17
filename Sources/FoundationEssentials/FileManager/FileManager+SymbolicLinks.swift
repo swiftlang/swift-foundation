@@ -59,14 +59,18 @@ extension _FileManagerImpl {
     ) throws {
 #if os(Windows)
         var bIsDirectory = false
-        let absoluteDestPath = URL(filePath: destPath, relativeTo: URL(filePath: path, directoryHint: .notDirectory)).path
-        _ = fileManager.fileExists(atPath: absoluteDestPath, isDirectory: &bIsDirectory)
+        _ = fileManager.fileExists(atPath: destPath, isDirectory: &bIsDirectory)
+        print("isDirectory: \(bIsDirectory)")
 
         try path.withNTPathRepresentation { lpSymlinkFileName in
             try destPath.withFileSystemRepresentation {
-                try String(cString: $0!).withCString(encodedAs: UTF16.self) { lpTargetFileName in
+                let destPathStr = String(cString: $0!)
+                print(destPathStr)
+                try destPathStr.withCString(encodedAs: UTF16.self) { lpTargetFileName in
                     if CreateSymbolicLinkW(lpSymlinkFileName, lpTargetFileName, SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE | (bIsDirectory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0)) == 0 {
-                        throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
+                        var err = GetLastError()
+                        print(err)
+                        throw CocoaError.errorWithFilePath(path, win32: err, reading: false)
                     }
                 }
             }
