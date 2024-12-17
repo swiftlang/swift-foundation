@@ -155,7 +155,7 @@ extension CocoaError {
     }
     
     static func errorWithFilePath(_ path: String? = nil, win32 dwError: DWORD, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
-        return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path?.isEmpty), path: path, underlying: Win32Error(dwError), source: source, destination: destination)
+        return CocoaError(.init(win32: dwError, reading: reading, emptyPath: path?.isEmpty), path: path, underlying: Win32Error(dwError), variant: variant, source: source, destination: destination)
     }
 }
 #endif
