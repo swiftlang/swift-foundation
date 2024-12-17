@@ -181,7 +181,7 @@ final class NumberParseStrategyTests : XCTestCase {
         XCTAssertEqual(parsedInt, 32)
     }
 
-    func test_roundtripForeignCurrency() {
+    func test_roundtripForeignCurrency() throws {
         let testData: [Int] = [
             87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0
         ]
@@ -189,10 +189,10 @@ final class NumberParseStrategyTests : XCTestCase {
             -87650000, -8765000, -876500, -87650, -8765, -876, -87, -8
         ]
 
-        func _verifyRoundtripCurrency(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Currency, _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) {
+        func _verifyRoundtripCurrency(_ testData: [Int], _ style: IntegerFormatStyle<Int>.Currency, _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) throws {
             for value in testData {
                 let str = style.format(value)
-                let parsed = try! Int(str, strategy: style.parseStrategy)
+                let parsed = try Int(str, strategy: style.parseStrategy)
                 XCTAssertEqual(value, parsed, "\(testName): formatted string: \(str) parsed: \(parsed)", file: file, line: line)
 
                 let nonLenientParsed = try! Int(str, format: style, lenient: false)
@@ -201,21 +201,21 @@ final class NumberParseStrategyTests : XCTestCase {
         }
 
         let currencyStyle: IntegerFormatStyle<Int>.Currency = .init(code: "EUR", locale: Locale(identifier: "en_US"))
-        _verifyRoundtripCurrency(testData, currencyStyle, "currency style")
-        _verifyRoundtripCurrency(testData, currencyStyle.sign(strategy: .always()), "currency style, sign: always")
-        _verifyRoundtripCurrency(testData, currencyStyle.grouping(.never), "currency style, grouping: never")
-        _verifyRoundtripCurrency(testData, currencyStyle.presentation(.isoCode), "currency style, presentation: iso code")
-        _verifyRoundtripCurrency(testData, currencyStyle.presentation(.fullName), "currency style, presentation: iso code")
-        _verifyRoundtripCurrency(testData, currencyStyle.presentation(.narrow), "currency style, presentation: iso code")
-        _verifyRoundtripCurrency(testData, currencyStyle.decimalSeparator(strategy: .always), "currency style, decimal display: always")
+        try _verifyRoundtripCurrency(testData, currencyStyle, "currency style")
+        try _verifyRoundtripCurrency(testData, currencyStyle.sign(strategy: .always()), "currency style, sign: always")
+        try _verifyRoundtripCurrency(testData, currencyStyle.grouping(.never), "currency style, grouping: never")
+        try _verifyRoundtripCurrency(testData, currencyStyle.presentation(.isoCode), "currency style, presentation: iso code")
+        try _verifyRoundtripCurrency(testData, currencyStyle.presentation(.fullName), "currency style, presentation: iso code")
+        try _verifyRoundtripCurrency(testData, currencyStyle.presentation(.narrow), "currency style, presentation: iso code")
+        try _verifyRoundtripCurrency(testData, currencyStyle.decimalSeparator(strategy: .always), "currency style, decimal display: always")
 
-        _verifyRoundtripCurrency(negativeData, currencyStyle, "currency style")
-        _verifyRoundtripCurrency(negativeData, currencyStyle.sign(strategy: .accountingAlways()), "currency style, sign: always")
-        _verifyRoundtripCurrency(negativeData, currencyStyle.grouping(.never), "currency style, grouping: never")
-        _verifyRoundtripCurrency(negativeData, currencyStyle.presentation(.isoCode), "currency style, presentation: iso code")
-        _verifyRoundtripCurrency(negativeData, currencyStyle.presentation(.fullName), "currency style, presentation: iso code")
-        _verifyRoundtripCurrency(negativeData, currencyStyle.presentation(.narrow), "currency style, presentation: iso code")
-        _verifyRoundtripCurrency(negativeData, currencyStyle.decimalSeparator(strategy: .always), "currency style, decimal display: always")
+        try _verifyRoundtripCurrency(negativeData, currencyStyle, "currency style")
+        try _verifyRoundtripCurrency(negativeData, currencyStyle.sign(strategy: .accountingAlways()), "currency style, sign: always")
+        try _verifyRoundtripCurrency(negativeData, currencyStyle.grouping(.never), "currency style, grouping: never")
+        try _verifyRoundtripCurrency(negativeData, currencyStyle.presentation(.isoCode), "currency style, presentation: iso code")
+        try _verifyRoundtripCurrency(negativeData, currencyStyle.presentation(.fullName), "currency style, presentation: iso code")
+        try _verifyRoundtripCurrency(negativeData, currencyStyle.presentation(.narrow), "currency style, presentation: iso code")
+        try _verifyRoundtripCurrency(negativeData, currencyStyle.decimalSeparator(strategy: .always), "currency style, decimal display: always")
     }
 
     let testNegativePositiveDecimalData: [Decimal] = [  Decimal(string:"87650")!, Decimal(string:"8765")!,
