@@ -195,7 +195,7 @@ final class NumberParseStrategyTests : XCTestCase {
                 let parsed = try Int(str, strategy: style.parseStrategy)
                 XCTAssertEqual(value, parsed, "\(testName): formatted string: \(str) parsed: \(parsed)", file: file, line: line)
 
-                let nonLenientParsed = try! Int(str, format: style, lenient: false)
+                let nonLenientParsed = try Int(str, format: style, lenient: false)
                 XCTAssertEqual(value, nonLenientParsed, file: file, line: line)
             }
         }
