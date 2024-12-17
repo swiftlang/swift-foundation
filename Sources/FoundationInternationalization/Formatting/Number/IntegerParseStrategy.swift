@@ -103,6 +103,6 @@ public extension IntegerParseStrategy {
         self.formatStyle = format
         self.lenient = lenient
         self.locale = format.locale
-        self.numberFormatType = .currency(format.collection)
+        self.numberFormatType = .currency(format.collection, format.currencyCode)
     }
 }
