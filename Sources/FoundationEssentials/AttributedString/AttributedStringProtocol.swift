@@ -51,12 +51,30 @@ public protocol AttributedStringProtocol
     var runs : AttributedString.Runs { get }
     var characters : AttributedString.CharacterView { get }
     var unicodeScalars : AttributedString.UnicodeScalarView { get }
+    
+    @available(FoundationPreview 6.2, *)
+    var utf8 : AttributedString.UTF8View { get }
+    
+    @available(FoundationPreview 6.2, *)
+    var utf16 : AttributedString.UTF16View { get }
 
     @preconcurrency subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable { get set }
     @preconcurrency subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable { get set }
     subscript<S: AttributeScope>(dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>) -> ScopedAttributeContainer<S> { get set }
 
     subscript<R: RangeExpression>(bounds: R) -> AttributedSubstring where R.Bound == AttributedString.Index { get }
+}
+
+
+@available(FoundationPreview 6.2, *)
+extension AttributedStringProtocol {
+    var utf8 : AttributedString.UTF8View {
+        AttributedString.UTF8View(__guts, in: Range(uncheckedBounds: (startIndex._value, endIndex._value)))
+    }
+    
+    var utf16 : AttributedString.UTF16View {
+        AttributedString.UTF16View(__guts, in: Range(uncheckedBounds: (startIndex._value, endIndex._value)))
+    }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
