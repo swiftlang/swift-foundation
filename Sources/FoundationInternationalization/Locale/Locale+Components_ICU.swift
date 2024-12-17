@@ -453,7 +453,7 @@ extension Locale.NumberingSystem {
         if let numberingSystem, status.isSuccess {
             self.init(String(cString: unumsys_getName(numberingSystem)))
         } else {
-            self = .latn
+            self = .latin
         }
     }
 }

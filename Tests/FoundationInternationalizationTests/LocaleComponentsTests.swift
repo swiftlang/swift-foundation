@@ -444,7 +444,7 @@ final class LocaleCodableTests: XCTestCase {
         }
 
         do {
-            let codableObj = Locale.NumberingSystem.latn
+            let codableObj = Locale.NumberingSystem.latin
             let decoded = _testRoundtripCoding(codableObj, identifier: codableObj.identifier, normalizedIdentifier: codableObj._normalizedIdentifier)
             XCTAssertEqual(decoded?.identifier, codableObj.identifier)
             XCTAssertEqual(decoded?._normalizedIdentifier, codableObj._normalizedIdentifier)
