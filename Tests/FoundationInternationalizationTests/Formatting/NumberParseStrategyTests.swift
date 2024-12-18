@@ -218,6 +218,44 @@ final class NumberParseStrategyTests : XCTestCase {
         try _verifyRoundtripCurrency(negativeData, currencyStyle.decimalSeparator(strategy: .always), "currency style, decimal display: always")
     }
 
+    func test_parseStategyCodable_sameCurrency() throws {
+        // same currency code
+        let fs: IntegerFormatStyle<Int32>.Currency = .init(code: "USD", locale: Locale(identifier:"en_US"))
+        let p = IntegerParseStrategy(format: fs)
+        // Valid JSON representation for `p`
+        let existingSerializedParseStrategy = """
+            {"formatStyle":{"locale":{"current":0,"identifier":"en_US"},"collection":{"presentation":{"option":1}},"currencyCode":"USD"},"numberFormatType":{"currency":{"_0":{"presentation":{"option":1}}}},"lenient":true,"locale":{"identifier":"en_US","current":0}}
+        """
+
+        guard let existingData = existingSerializedParseStrategy.data(using: .utf8) else {
+            XCTFail("Unable to get data from JSON string")
+            return
+        }
+
+        let decoded: IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency> = try JSONDecoder().decode(IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency>.self, from: existingData)
+        XCTAssertEqual(decoded, p)
+        XCTAssertEqual(decoded.formatStyle, fs)
+        XCTAssertEqual(decoded.formatStyle.currencyCode, "USD")
+    }
+
+    func test_parseStategyCodable_differentCurrency() throws {
+        let fs: IntegerFormatStyle<Int32>.Currency = .init(code: "GBP", locale: Locale(identifier:"en_US"))
+        let p = IntegerParseStrategy(format: fs)
+        // Valid JSON representation for `p`
+        let existingSerializedParseStrategy = """
+            {"formatStyle":{"collection":{"presentation":{"option":1}},"locale":{"current":0,"identifier":"en_US"},"currencyCode":"GBP"},"lenient":true,"locale":{"current":0,"identifier":"en_US"},"numberFormatType":{"currency":{"_0":{"presentation":{"option":1}}}}}
+        """
+
+        guard let existingData = existingSerializedParseStrategy.data(using: .utf8) else {
+            XCTFail("Unable to get data from JSON string")
+            return
+        }
+        let decoded: IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency> = try JSONDecoder().decode(IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency>.self, from: existingData)
+        XCTAssertEqual(decoded, p)
+        XCTAssertEqual(decoded.formatStyle, fs)
+        XCTAssertEqual(decoded.formatStyle.currencyCode, "GBP")
+    }
+
     let testNegativePositiveDecimalData: [Decimal] = [  Decimal(string:"87650")!, Decimal(string:"8765")!,
         Decimal(string:"876.5")!, Decimal(string:"87.65")!, Decimal(string:"8.765")!, Decimal(string:"0.8765")!, Decimal(string:"0.08765")!, Decimal(string:"0.008765")!, Decimal(string:"0")!, Decimal(string:"-0.008765")!, Decimal(string:"-876.5")!, Decimal(string:"-87650")! ]
 
@@ -368,3 +406,4 @@ final class NumberExtensionParseStrategyTests: XCTestCase {
         XCTAssertEqual(try Decimal("-$3000.0000014", format: .currency(code: "USD")), Decimal(string: "-3000.0000014")!)
     }
 }
+

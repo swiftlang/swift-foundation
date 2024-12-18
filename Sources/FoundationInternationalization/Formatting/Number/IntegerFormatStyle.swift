@@ -563,7 +563,7 @@ extension IntegerFormatStyle {
 extension IntegerFormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
-        IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
+        try IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
 
@@ -571,7 +571,7 @@ extension IntegerFormatStyle : CustomConsumingRegexComponent {
 extension IntegerFormatStyle.Percent : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
-        IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
+        try IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
 
@@ -579,7 +579,7 @@ extension IntegerFormatStyle.Percent : CustomConsumingRegexComponent {
 extension IntegerFormatStyle.Currency : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
     public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Value)? {
-        IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
+        try IntegerParseStrategy(format: self, lenient: false).parse(input, startingAt: index, in: bounds)
     }
 }
 
