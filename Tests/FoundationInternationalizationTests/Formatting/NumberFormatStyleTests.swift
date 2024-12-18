@@ -599,24 +599,22 @@ final class NumberFormatStyleTests: XCTestCase {
         let gbpInUS = Decimal.FormatStyle.Currency(code: "GBP", locale: enUSLocale)
         let encoded = try JSONEncoder().encode(gbpInUS)
         let json_gbp = String(data: encoded, encoding: String.Encoding.utf8)!
-        print(json_gbp)
-
         let previouslyEncoded = """
-{
-    "collection":
-    {
-        "presentation":
         {
-            "option": 1
+            "collection":
+            {
+                "presentation":
+                {
+                    "option": 1
+                }
+            },
+            "currencyCode": "GBP",
+            "locale":
+            {
+                "current": 0,
+                "identifier": "en_US"
+            }
         }
-    },
-    "currencyCode": "GBP",
-    "locale":
-    {
-        "current": 0,
-        "identifier": "en_US"
-    }
-}
 """.data(using: .utf8)
 
         guard let previouslyEncoded else {

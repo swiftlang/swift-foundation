@@ -54,7 +54,7 @@ extension Decimal.ParseStrategy {
             numberFormatType = .percent(format.collection)
             locale = format.locale
         } else if let format = formatStyle as? Decimal.FormatStyle.Currency {
-            numberFormatType = .currency(format.collection, format.currencyCode)
+            numberFormatType = .currency(format.collection, currencyCode: format.currencyCode)
             locale = format.locale
         } else {
             // For some reason we've managed to accept a format style of a type that we don't own, which shouldn't happen. Fallback to the default decimal style and try anyways.
