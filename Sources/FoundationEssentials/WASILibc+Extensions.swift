@@ -49,5 +49,14 @@ internal var O_TRUNC: Int32 {
 internal var O_WRONLY: Int32 {
     return _platform_shims_O_WRONLY()
 }
+internal var O_RDONLY: Int32 {
+    return _platform_shims_O_RDONLY()
+}
+internal var O_DIRECTORY: Int32 {
+    return _platform_shims_O_DIRECTORY()
+}
+internal var O_NOFOLLOW: Int32 {
+    return _platform_shims_O_NOFOLLOW()
+}
 
 #endif // os(WASI)
