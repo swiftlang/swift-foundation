@@ -2136,8 +2136,11 @@ extension URL {
     }
 #endif // FOUNDATION_FRAMEWORK
 
-#if !NO_FILESYSTEM
+    /// Checks the file system to determine if the path is a directory
     private static func isDirectory(_ path: String) -> Bool {
+        #if NO_FILESYSTEM
+        return path.utf8.last == ._slash
+        #else
         #if os(Windows)
         let path = path.replacing(._slash, with: ._backslash)
         #endif
@@ -2149,54 +2152,62 @@ extension URL {
         var isDirectory: ObjCBool = false
         _ = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
         return isDirectory.boolValue
-        #endif
+        #endif // !FOUNDATION_FRAMEWORK
+        #endif // NO_FILESYSTEM
     }
-#endif // !NO_FILESYSTEM
 
-    /// Checks if a file path is absolute and standardizes the inputted file path on Windows
-    /// Assumes the path only contains `/` as the path separator
+    /// Checks if a file path is absolute and standardizes the inputted file path
     internal static func isAbsolute(standardizing filePath: inout String) -> Bool {
         if filePath.utf8.first == ._slash {
+            #if os(Windows)
+            filePath = filePath.replacing(._backslash, with: ._slash)
+            #endif
             return true
         }
-        #if os(Windows)
-        let utf8 = filePath.utf8
-        guard utf8.count >= 3 else {
+        #if NO_FILESYSTEM
+        return false
+        #elseif os(Windows)
+        // PathIsRelativeW:
+        // - true for "path" and "\path"
+        // - false otherwise (including "C:path")
+        let isRelative: Bool = filePath.withCString(encodedAs: UTF16.self) { pwszPath in
+            PathIsRelativeW(pwszPath)
+        }
+        if isRelative && filePath.utf8.first != ._backslash {
+            // e.g. "path" - only case where we won't resolve to an absolute path
+            filePath = filePath.replacing(._backslash, with: ._slash)
             return false
         }
-        // Check if this is a drive letter
-        let first = utf8.first!
-        let secondIndex = utf8.index(after: utf8.startIndex)
-        let second = utf8[secondIndex]
-        let thirdIndex = utf8.index(after: secondIndex)
-        let third = utf8[thirdIndex]
-        let isAbsolute = (
-            first.isAlpha
-            && (second == ._colon || second == ._pipe)
-            && third == ._slash
-        )
-        if isAbsolute {
-            // Standardize to "/[drive-letter]:/..."
-            if second == ._pipe {
-                var filePathArray = Array(utf8)
-                filePathArray[1] = ._colon
-                filePathArray.insert(._slash, at: 0)
-                filePath = String(decoding: filePathArray, as: UTF8.self)
-            } else {
-                filePath = "/" + filePath
-            }
+        filePath = filePath.fullPathName ?? filePath
+        filePath = filePath.replacing(._backslash, with: ._slash)
+        if filePath.utf8.first != ._slash {
+            // Prepend a "/" to form an RFC 8089 path
+            filePath = "/" + filePath
         }
-        return isAbsolute
+        return true
         #else // os(Windows)
-        #if !NO_FILESYSTEM
         // Expand the tilde if present
         if filePath.utf8.first == UInt8(ascii: "~") {
             filePath = filePath.expandingTildeInPath
         }
-        #endif
         // Make sure the expanded path is absolute
         return filePath.utf8.first == ._slash
         #endif // os(Windows)
+    }
+
+    private static func currentDirectoryOrNil() -> URL? {
+        #if NO_FILESYSTEM
+        return nil
+        #else
+        let path: String? = FileManager.default.currentDirectoryPath
+        guard var filePath = path else {
+            return nil
+        }
+        guard URL.isAbsolute(standardizing: &filePath) else {
+            return nil
+        }
+        return URL(filePath: filePath, directoryHint: .isDirectory)
+        #endif // NO_FILESYSTEM
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path, relative to a base URL.
@@ -2225,19 +2236,12 @@ extension URL {
         #endif // FOUNDATION_FRAMEWORK
         var baseURL = base
         guard !path.isEmpty else {
-            #if !NO_FILESYSTEM
             baseURL = baseURL ?? .currentDirectoryOrNil()
-            #endif
             self.init(string: "", relativeTo: baseURL)!
             return
         }
 
-        #if os(Windows)
-        // Convert any "\" to "/" before storing the URL parse info
-        var filePath = path.replacing(._backslash, with: ._slash)
-        #else
         var filePath = path
-        #endif
 
         #if FOUNDATION_FRAMEWORK
         // Linked-on-or-after check for apps which incorrectly pass a full
@@ -2251,12 +2255,9 @@ extension URL {
         #endif
 
         let isAbsolute = URL.isAbsolute(standardizing: &filePath)
-
-        #if !NO_FILESYSTEM
         if !isAbsolute {
             baseURL = baseURL ?? .currentDirectoryOrNil()
         }
-        #endif
 
         let isDirectory: Bool
         switch directoryHint {
@@ -2266,7 +2267,6 @@ extension URL {
             filePath = filePath._droppingTrailingSlashes
             isDirectory = false
         case .checkFileSystem:
-            #if !NO_FILESYSTEM
             func absoluteFilePath() -> String {
                 guard !isAbsolute, let baseURL else {
                     return filePath
@@ -2275,9 +2275,6 @@ extension URL {
                 return URL.fileSystemPath(for: absolutePath)
             }
             isDirectory = URL.isDirectory(absoluteFilePath())
-            #else
-            isDirectory = filePath.utf8.last == ._slash
-            #endif
         case .inferFromPath:
             isDirectory = filePath.utf8.last == ._slash
         }
@@ -2571,20 +2568,6 @@ extension URL {
 
 #if !NO_FILESYSTEM
 extension URL {
-    private static func currentDirectoryOrNil() -> URL? {
-        let path: String? = FileManager.default.currentDirectoryPath
-        guard var filePath = path else {
-            return nil
-        }
-        #if os(Windows)
-        filePath = filePath.replacing(._backslash, with: ._slash)
-        #endif
-        guard URL.isAbsolute(standardizing: &filePath) else {
-            return nil
-        }
-        return URL(filePath: filePath, directoryHint: .isDirectory)
-    }
-
     /// The working directory of the current process.
     /// Calling this property will issue a `getcwd` syscall.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)

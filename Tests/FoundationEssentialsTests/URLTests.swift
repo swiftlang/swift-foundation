@@ -345,18 +345,18 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.fileSystemPath, "C:/")
 
         url = URL(filePath: #"C:\\\"#, directoryHint: .isDirectory)
-        XCTAssertEqual(url.absoluteString, "file:///C:///")
-        XCTAssertEqual(url.path(), "/C:///")
-        XCTAssertEqual(url.path, "C:/")
-        XCTAssertEqual(url.fileSystemPath, "C:/")
-
-        url = URL(filePath: #"\C:\"#, directoryHint: .isDirectory)
         XCTAssertEqual(url.absoluteString, "file:///C:/")
         XCTAssertEqual(url.path(), "/C:/")
         XCTAssertEqual(url.path, "C:/")
         XCTAssertEqual(url.fileSystemPath, "C:/")
 
-        let base = URL(filePath: #"\d:\path\"#, directoryHint: .isDirectory)
+        url = URL(filePath: "/C:/", directoryHint: .isDirectory)
+        XCTAssertEqual(url.absoluteString, "file:///C:/")
+        XCTAssertEqual(url.path(), "/C:/")
+        XCTAssertEqual(url.path, "C:/")
+        XCTAssertEqual(url.fileSystemPath, "C:/")
+
+        let base = URL(filePath: #"d:\path\"#, directoryHint: .isDirectory)
         url = URL(filePath: #"%43:\fake\letter"#, directoryHint: .notDirectory, relativeTo: base)
         // ":" is encoded to "%3A" in the first path segment so it's not mistaken as the scheme separator
         XCTAssertEqual(url.relativeString, "%2543%3A/fake/letter")
@@ -369,10 +369,16 @@ final class URLTests : XCTestCase {
         if iter.next() == ._slash,
            let driveLetter = iter.next(), driveLetter.isLetter!,
            iter.next() == ._colon {
-            let path = #"\\?\"# + "\(Unicode.Scalar(driveLetter))" + #":\"#
+            let drive = "\(Unicode.Scalar(driveLetter))"
+            let path = #"\\?\"# + drive + #":\"#
             url = URL(filePath: path, directoryHint: .isDirectory)
             XCTAssertEqual(url.path.last, "/")
             XCTAssertEqual(url.fileSystemPath.last, "/")
+
+            // Test drive-relative path
+            let driveRelativePath = "\(Unicode.Scalar(driveLetter)):hello"
+            url = URL(filePath: driveRelativePath)
+            XCTAssertTrue(url.path.starts(with: "\(drive):/"))
         }
     }
     #endif

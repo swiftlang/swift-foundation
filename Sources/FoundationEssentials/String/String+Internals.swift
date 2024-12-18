@@ -47,6 +47,23 @@ extension String {
             }
         }
     }
+
+    /// Returns a string created by calling `GetFullPathNameW` on `self`.
+    /// If `self` is a relative path, this will resolve against the current directory to return an absolute path.
+    internal var fullPathName: String? {
+        return self.withCString(encodedAs: UTF16.self) { pwszPath in
+            let dwLength: DWORD = GetFullPathNameW(pwszPath, 0, nil, nil)
+            guard dwLength > 0 else {
+                return nil
+            }
+            return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
+                guard GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil) > 0 else {
+                    return nil
+                }
+                return String(decodingCString: $0.baseAddress!, as: UTF16.self)
+            }
+        }
+    }
 }
 #endif
 
