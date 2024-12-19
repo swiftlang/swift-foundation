@@ -109,6 +109,7 @@ extension UNumberFormatAttribute {
 
 extension UNumberFormatTextAttribute {
     static let defaultRuleSet = UNUM_DEFAULT_RULESET
+    static let currencyCode = UNUM_CURRENCY_CODE
 }
 
 extension UDateRelativeDateTimeFormatterStyle {
