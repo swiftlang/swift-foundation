@@ -50,7 +50,7 @@ public typealias NumberFormatStyleConfiguration = Foundation.NumberFormatStyleCo
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias CurrencyFormatStyleConfiguration = Foundation.CurrencyFormatStyleConfiguration
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public typealias IntegerParseStrategy = FoundationInternationalization.IntegerParseStrategy
+public typealias IntegerParseStrategy = Foundation.IntegerParseStrategy
 
 @available(FoundationPreview 0.4, *)
 public typealias DiscreteFormatStyle = Foundation.DiscreteFormatStyle
