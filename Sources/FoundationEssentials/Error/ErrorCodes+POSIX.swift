@@ -623,7 +623,7 @@ extension POSIXError {
         return .EMULTIHOP
     }
 
-    #if !os(WASI)
+    #if !os(WASI) && !os(FreeBSD)
     /// No message available on STREAM.
     public static var ENODATA: POSIXErrorCode {
         return .ENODATA
@@ -635,7 +635,7 @@ extension POSIXError {
         return .ENOLINK
     }
 
-    #if !os(WASI)
+    #if !os(WASI) && !os(FreeBSD)
     /// No STREAM resources.
     public static var ENOSR: POSIXErrorCode {
         return .ENOSR
@@ -653,7 +653,7 @@ extension POSIXError {
         return .EPROTO
     }
 
-    #if !os(OpenBSD) && !os(WASI)
+    #if !os(OpenBSD) && !os(WASI) && !os(FreeBSD)
     /// STREAM ioctl timeout.
     public static var ETIME: POSIXErrorCode {
         return .ETIME
