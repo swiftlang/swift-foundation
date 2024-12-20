@@ -777,19 +777,12 @@ public struct URL: Equatable, Sendable, Hashable {
     ///
     /// Returns `nil` if a `URL` cannot be formed with the string (for example, if the string contains characters that are illegal in a URL, or is an empty string).
     public init?(string: __shared String) {
+        guard !string.isEmpty else { return nil }
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
-            guard !string.isEmpty, let inner = NSURL(string: string) else { return nil }
+            guard let inner = NSURL(string: string) else { return nil }
             _url = URL._converted(from: inner)
             return
-        }
-        // Linked-on-or-after check for apps which pass an empty string.
-        // The new URL(string:) implementations allow the empty string
-        // as input since an empty path is valid and can be resolved
-        // against a base URL. This is shown in the RFC 3986 examples:
-        // https://datatracker.ietf.org/doc/html/rfc3986#section-5.4.1
-        if Self.compatibility1 && string.isEmpty {
-            return nil
         }
         #endif // FOUNDATION_FRAMEWORK
         guard let parseInfo = Parser.parse(urlString: string, encodingInvalidCharacters: true) else {
