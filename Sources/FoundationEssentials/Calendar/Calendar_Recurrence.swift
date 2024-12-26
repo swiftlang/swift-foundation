@@ -909,7 +909,8 @@ extension Calendar {
         }
         
         let results =  try unadjustedMatchDates.map { date, components in
-            (try _adjustedDate(date, startingAfter: start, allowStartDate: true, matching: components, adjustedMatchingComponents: components , matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: .forward, inSearchingDate: start, previouslyReturnedMatchDate: nil), components)
+            let adjustedComponents = _adjustedComponents(components, date: start, direction: .forward)
+            return (try _adjustedDate(date, startingAfter: start, allowStartDate: true, matching: components, adjustedMatchingComponents: adjustedComponents, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: .forward, inSearchingDate: start, previouslyReturnedMatchDate: nil), components)
         }
             
         var foundDates: [Date] = []
