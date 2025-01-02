@@ -447,7 +447,12 @@ extension StringProtocol {
             attributes = [:]
         }
 
+#if os(WASI)
+        guard !useAuxiliaryFile else { throw CocoaError(.featureUnsupported) }
+        let options : Data.WritingOptions = []
+#else
         let options : Data.WritingOptions = useAuxiliaryFile ? [.atomic] : []
+#endif
 
         try writeToFile(path: .path(String(path)), data: data, options: options, attributes: attributes, reportProgress: false)
     }
@@ -465,7 +470,12 @@ extension StringProtocol {
             attributes = [:]
         }
 
+#if os(WASI)
+        guard !useAuxiliaryFile else { throw CocoaError(.featureUnsupported) }
+        let options : Data.WritingOptions = []
+#else
         let options : Data.WritingOptions = useAuxiliaryFile ? [.atomic] : []
+#endif
 
         try writeToFile(path: .url(url), data: data, options: options, attributes: attributes, reportProgress: false)
     }
