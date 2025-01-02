@@ -911,7 +911,7 @@ enum _FileOperations {
     
     #if !canImport(Darwin)
     private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
-        #if !os(WASI)
+        #if !os(WASI) && !os(Android)
         // Copy extended attributes
         var size = flistxattr(srcFD, nil, 0)
         if size > 0 {
