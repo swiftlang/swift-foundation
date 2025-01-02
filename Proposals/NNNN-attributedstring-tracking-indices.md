@@ -4,6 +4,7 @@
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: TBD
 * Status: **Pitch**
+* Implementation: [swiftlang/swift-foundation#1109](https://github.com/swiftlang/swift-foundation/pull/1109)
 
 ## Introduction
 
