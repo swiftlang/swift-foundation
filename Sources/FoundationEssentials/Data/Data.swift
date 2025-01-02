@@ -209,9 +209,41 @@ internal final class __DataStorage : @unchecked Sendable {
         return _bytes?.advanced(by: -_offset)
     }
 
+    @inlinable
+    static var copyWillRetainMask: Int {
+#if _pointerBitWidth(_64)
+        return Int(bitPattern: 0x8000000000000000)
+#elseif _pointerBitWidth(_32)
+        return Int(bitPattern: 0x80000000)
+#endif
+    }
+    
+    @inlinable
+    static var capacityMask: Int {
+#if _pointerBitWidth(_64)
+        return Int(bitPattern: 0x7FFFFFFFFFFFFFFF)
+#elseif _pointerBitWidth(_32)
+        return Int(bitPattern: 0x7FFFFFFF)
+#endif
+    }
+    
     @inlinable // This is @inlinable as trivially computable.
     var capacity: Int {
-        return _capacity
+        return _capacity & __DataStorage.capacityMask
+    }
+    
+    @inlinable
+    var _copyWillRetain: Bool {
+        get {
+            return _capacity & __DataStorage.copyWillRetainMask == 0
+        }
+        set {
+            if !newValue {
+                _capacity |= __DataStorage.copyWillRetainMask
+            } else {
+                _capacity &= __DataStorage.capacityMask
+            }
+        }
     }
 
     @inlinable // This is @inlinable as trivially computable.
@@ -355,7 +387,7 @@ internal final class __DataStorage : @unchecked Sendable {
     func setLength(_ length: Int) {
         let origLength = _length
         let newLength = length
-        if _capacity < newLength || _bytes == nil {
+        if capacity < newLength || _bytes == nil {
             ensureUniqueBufferReference(growingTo: newLength, clear: true)
         } else if origLength < newLength && _needToZero {
             _ = memset(_bytes! + origLength, 0, newLength - origLength)
@@ -370,7 +402,7 @@ internal final class __DataStorage : @unchecked Sendable {
         precondition(length >= 0, "Length of appending bytes must not be negative")
         let origLength = _length
         let newLength = origLength + length
-        if _capacity < newLength || _bytes == nil {
+        if capacity < newLength || _bytes == nil {
             ensureUniqueBufferReference(growingTo: newLength, clear: false)
         }
         _length = newLength
@@ -437,7 +469,7 @@ internal final class __DataStorage : @unchecked Sendable {
         let range = range_.lowerBound - _offset ..< range_.upperBound - _offset
         if range.upperBound - range.lowerBound == 0 { return }
         if _length < range.upperBound {
-            if _capacity <= range.upperBound {
+            if capacity <= range.upperBound {
                 ensureUniqueBufferReference(growingTo: range.upperBound, clear: false)
             }
             _length = range.upperBound
@@ -1962,7 +1994,17 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             deallocator._deallocator(bytes, count)
             _representation = .empty
         } else {
-            _representation = _Representation(__DataStorage(bytes: bytes, length: count, copy: false, deallocator: whichDeallocator, offset: 0), count: count)
+            let storage = __DataStorage(bytes: bytes, length: count, copy: false, deallocator: whichDeallocator, offset: 0)
+            switch deallocator {
+            // technically .custom can potential cause this too but there is a potential chance this is expected behavior
+            // commented out for now... revisit later
+            // case .custom: fallthrough
+            case .none:
+                storage._copyWillRetain = false
+            default:
+                break
+            }
+            _representation = _Representation(storage, count: count)
         }
     }
 
