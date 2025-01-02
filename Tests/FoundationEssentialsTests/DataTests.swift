@@ -1887,3 +1887,29 @@ extension DataTests {
     }
 }
 #endif // FOUNDATION_FRAMEWORK
+
+#if FOUNDATION_FRAMEWORK // Bridging is not available in the FoundationPreview package
+extension DataTests {
+    func test_noCustomDealloc_bridge() {
+        let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1024, alignment: MemoryLayout<AnyObject>.alignment)
+        
+        let data: Data = Data(bytesNoCopy: bytes.baseAddress!, count: bytes.count, deallocator: .free)
+        let copy = data._bridgeToObjectiveC().copy() as! NSData
+        data.withUnsafeBytes { buffer in
+            XCTAssertEqual(buffer.baseAddress, copy.bytes)
+        }
+    }
+    
+    func test_noCopy_uaf_bridge() {
+        // this can only really be tested (modulo ASAN) via comparison of the pointer address of the storage.
+        let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1024, alignment: MemoryLayout<AnyObject>.alignment)
+        
+        let data: Data = Data(bytesNoCopy: bytes.baseAddress!, count: bytes.count, deallocator: .none)
+        let copy = data._bridgeToObjectiveC().copy() as! NSData
+        data.withUnsafeBytes { buffer in
+            XCTAssertNotEqual(buffer.baseAddress, copy.bytes)
+        }
+        bytes.deallocate()
+    }
+}
+#endif
