@@ -354,9 +354,15 @@ struct _POSIXDirectoryContentsSequence: Sequence {
                     continue
                 }
                 #endif
+                #if os(FreeBSD)
+                guard dent.pointee.d_fileno != 0 else {
+                    continue
+                }
+                #else
                 guard dent.pointee.d_ino != 0 else {
                     continue
                 }
+                #endif
                 // Use name
                 let fileName: String
                 #if os(WASI)
