@@ -172,7 +172,7 @@ internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type
 
 // TODO: Support AttributeScope key finding in FoundationPreview
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-internal extension AttributeScope {
+extension AttributeScope {
     private static var scopeDescription: ScopeDescription {
         if let cached = _loadedScopeCache.withLock({ $0[Self.self] }) {
             return cached
@@ -198,13 +198,17 @@ internal extension AttributeScope {
         return desc
     }
     
-    static func attributeKeyTypes() -> [String : any AttributedStringKey.Type] {
+    internal static func attributeKeyTypes() -> [String : any AttributedStringKey.Type] {
         Self.scopeDescription.attributes
     }
     
-    static func markdownKeyTypes() -> [String : any MarkdownDecodableAttributedStringKey.Type] {
+    internal static func markdownKeyTypes() -> [String : any MarkdownDecodableAttributedStringKey.Type] {
         Self.scopeDescription.markdownAttributes
     }
+    
+    @available(FoundationPreview 6.2, *)
+    public static var attributeKeys: some Sequence<any AttributedStringKey.Type> {
+        Self.scopeDescription.attributes.values
+    }
 }
-
 #endif // FOUNDATION_FRAMEWORK
