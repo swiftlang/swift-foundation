@@ -223,7 +223,9 @@ extension UnsafeBufferPointer {
         defer {
             if nullTerminated {
                 // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
-                buffer[buffer.count - 1] = 0
+                if !buffer.isEmpty {
+                    buffer[buffer.count - 1] = 0
+                }
             }
         }
         
@@ -333,7 +335,9 @@ extension NSString {
                 let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
                 defer {
                     // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
-                    buffer[buffer.count - 1] = 0
+                    if !buffer.isEmpty {
+                        buffer[buffer.count - 1] = 0
+                    }
                 }
                 
                 // We only allow embedded nulls if there are no non-null characters following the first null character
