@@ -1,10 +1,11 @@
 # `AttributedString` Scope Enumeration
 
-* Proposal: [SF-NNNN](NNNN-attributedstring-scope-enumeration.md)
+* Proposal: [SF-0013](0013-attributedstring-scope-enumeration.md)
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
-* Review Manager: TBD
+* Review Manager: [Tina Liu](https://github.com/itingliu)
 * Implementation: [swiftlang/swift-foundation#1093](https://github.com/swiftlang/swift-foundation/pull/1093)
-* Status: **Pitch**
+* Status: **Accepted**
+* Review: **[Pitch](https://forums.swift.org/t/pitch-attributedstring-scope-enumeration/76573)**
 
 ## Introduction/Motivation
 
