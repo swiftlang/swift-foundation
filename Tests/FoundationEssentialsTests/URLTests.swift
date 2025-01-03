@@ -1405,6 +1405,12 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(comp.path, "/my\u{0}path")
     }
 
+    func testURLStandardizedEmptyString() {
+        let url = URL(string: "../../../")!
+        let standardized = url.standardized
+        XCTAssertTrue(standardized.path().isEmpty)
+    }
+
 #if FOUNDATION_FRAMEWORK
     func testURLComponentsBridging() {
         var nsURLComponents = NSURLComponents(
