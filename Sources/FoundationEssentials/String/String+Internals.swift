@@ -220,6 +220,13 @@ extension UnsafeBufferPointer {
         var decoder = T()
         var iterator = self.makeIterator()
         
+        defer {
+            if nullTerminated {
+                // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
+                buffer[buffer.count - 1] = 0
+            }
+        }
+        
         func appendOutput(_ values: some Collection<UInt8>) throws {
             let bufferPortion = UnsafeMutableBufferPointer(start: buffer.baseAddress!.advanced(by: bufferIdx), count: bufferLength - bufferIdx)
             guard bufferPortion.count >= values.count else {
@@ -324,6 +331,10 @@ extension NSString {
             } else if self.fastestEncoding == NSASCIIStringEncoding, let fastUTF8 = self._fastCStringContents(false) {
                 // If we have quick access to ASCII contents, no need to decompose
                 let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
+                defer {
+                    // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
+                    buffer[buffer.count - 1] = 0
+                }
                 
                 // We only allow embedded nulls if there are no non-null characters following the first null character
                 if let embeddedNullIdx = utf8Buffer.firstIndex(of: 0) {
