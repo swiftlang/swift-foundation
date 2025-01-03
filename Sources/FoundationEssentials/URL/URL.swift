@@ -1847,7 +1847,7 @@ public struct URL: Equatable, Sendable, Hashable {
         var components = URLComponents(parseInfo: _parseInfo)
         let newPath = components.percentEncodedPath.removingDotSegments
         components.percentEncodedPath = newPath
-        return components.url(relativeTo: baseURL)!
+        return components.url(relativeTo: baseURL) ?? self
     }
 
     /// Standardizes the path of a file URL by removing dot segments.

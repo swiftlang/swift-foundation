@@ -676,7 +676,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             return CFURLCreateWithString(kCFAllocatorDefault, string as CFString, nil) as URL?
         }
         #endif
-        return URL(string: string)
+        return URL(string: string, relativeTo: nil)
     }
 
     /// Returns a URL created from the URLComponents relative to a base URL.
