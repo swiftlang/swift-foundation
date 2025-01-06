@@ -220,12 +220,20 @@ extension UnsafeBufferPointer {
         var decoder = T()
         var iterator = self.makeIterator()
         
+        guard !buffer.isEmpty else {
+            if !nullTerminated && iterator.next() == nil {
+                // No bytes to write, so an empty buffer is OK
+                return 0
+            } else {
+                throw DecompositionError.insufficientSpace
+            }
+        }
+        
         defer {
             if nullTerminated {
                 // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
-                if !buffer.isEmpty {
-                    buffer[buffer.count - 1] = 0
-                }
+                // At this point, the buffer is known to be non-empty, so it must have space for at least a null terminating byte (even if it overwrites the final output byte in the buffer)
+                buffer[buffer.count - 1] = 0
             }
         }
         
@@ -325,6 +333,12 @@ extension NSString {
     func __swiftFillFileSystemRepresentation(pointer: UnsafeMutablePointer<CChar>, maxLength: Int) -> Bool {
         autoreleasepool {
             let buffer = UnsafeMutableBufferPointer(start: pointer, count: maxLength)
+            
+            guard !buffer.isEmpty else {
+                // No space for a null terminating byte, so it's not worth even trying to read the string contents
+                return false
+            }
+            
             // See if we have a quick-access buffer we can just convert directly
             if let fastCharacters = self._fastCharacterContents() {
                 // If we have quick access to UTF-16 contents, decompose from UTF-16
@@ -335,9 +349,8 @@ extension NSString {
                 let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
                 defer {
                     // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
-                    if !buffer.isEmpty {
-                        buffer[buffer.count - 1] = 0
-                    }
+                    // At this point, the buffer is known to be non-empty, so it must have space for at least a null terminating byte (even if it overwrites the final output byte in the buffer)
+                    buffer[buffer.count - 1] = 0
                 }
                 
                 // We only allow embedded nulls if there are no non-null characters following the first null character
