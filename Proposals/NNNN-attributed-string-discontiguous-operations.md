@@ -1,9 +1,10 @@
 # `AttributedString` Discontiguous Operations
 
-* Proposal: [SF-NNNN](NNNN-attributed-string-discontiguous-operations.md)
+* Proposal: [SF-0014](0014-attributed-string-discontiguous-operations.md)
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
-* Review Manager: TBD
-* Status: **Pitch** 
+* Review Manager: [Tina Liu](https://github.com/itingliu)
+* Status: **Review: Jan 15, 2025...Jan 22, 2025**
+* Review: ([Pitch](https://forums.swift.org/t/pitch-attributedstring-discontiguous-operations/76574)) 
 
 ## Introduction
 
