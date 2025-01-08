@@ -175,7 +175,7 @@ final class URLTests : XCTestCase {
                 continue
             }
 
-            let url = URL(string: test.key, relativeTo: base)
+            let url = URL(stringOrEmpty: test.key, relativeTo: base)
             XCTAssertNotNil(url, "Got nil url for string: \(test.key)")
             XCTAssertEqual(url?.absoluteString, test.value, "Failed test for string: \(test.key)")
         }
@@ -236,7 +236,7 @@ final class URLTests : XCTestCase {
             "http:g"        :  "g", // For strict parsers
         ]
         for test in tests {
-            let url = URL(string: test.key, relativeTo: base)!
+            let url = URL(stringOrEmpty: test.key, relativeTo: base)!
             XCTAssertEqual(url.path(), test.value)
             if (url.hasDirectoryPath && url.path().count > 1) {
                 // The trailing slash is stripped in .path for file system compatibility
@@ -589,11 +589,13 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
         XCTAssertEqual(appended.relativePath, "relative/no:slash")
 
-        // `appending(component:)` should explicitly treat `component` as a single
-        // path component, meaning "/" should be encoded to "%2F" before appending
+        // .appending(component:) should explicitly treat slashComponent as a single
+        // path component, meaning "/" should be encoded to "%2F" before appending.
+        // However, the old behavior didn't do this for file URLs, so we maintain the
+        // old behavior to prevent breakage.
         appended = url.appending(component: slashComponent, directoryHint: .notDirectory)
-        checkBehavior(appended.absoluteString, new: "file:///var/mobile/relative/%2Fwith:slash", old: "file:///var/mobile/relative/with:slash")
-        checkBehavior(appended.relativePath, new: "relative/%2Fwith:slash", old: "relative/with:slash")
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/with:slash")
+        XCTAssertEqual(appended.relativePath, "relative/with:slash")
 
         appended = url.appendingPathComponent(component, isDirectory: false)
         XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
@@ -669,7 +671,7 @@ final class URLTests : XCTestCase {
         checkBehavior(relative.path, new: "/", old: "/..")
 
         relative = URL(filePath: "", relativeTo: absolute)
-        checkBehavior(relative.relativePath, new: "", old: ".")
+        XCTAssertEqual(relative.relativePath, ".")
         XCTAssertTrue(relative.hasDirectoryPath)
         XCTAssertEqual(relative.path, "/absolute")
 

@@ -137,10 +137,17 @@ internal enum URLParserKind {
     case RFC3986
 }
 
+internal struct URLParserCompatibility: OptionSet {
+    let rawValue: UInt8
+    static let allowEmptyScheme = URLParserCompatibility(rawValue: 1 << 0)
+}
+
 internal protocol URLParserProtocol {
     static var kind: URLParserKind { get }
 
     static func parse(urlString: String, encodingInvalidCharacters: Bool) -> URLParseInfo?
+    static func parse(urlString: String, encodingInvalidCharacters: Bool, compatibility: URLParserCompatibility) -> URLParseInfo?
+
     static func validate(_ string: (some StringProtocol)?, component: URLComponents.Component) -> Bool
     static func validate(_ string: (some StringProtocol)?, component: URLComponents.Component, percentEncodingAllowed: Bool) -> Bool
 
@@ -401,15 +408,18 @@ internal struct RFC3986Parser: URLParserProtocol {
     }
 
     /// Fast path used during initial URL buffer parsing.
-    private static func validate(schemeBuffer: Slice<UnsafeBufferPointer<UInt8>>) -> Bool {
-        guard let first = schemeBuffer.first,
-              first >= UInt8(ascii: "A"),
+    private static func validate(schemeBuffer: Slice<UnsafeBufferPointer<UInt8>>, compatibility: URLParserCompatibility = .init()) -> Bool {
+        guard let first = schemeBuffer.first else {
+            return compatibility.contains(.allowEmptyScheme)
+        }
+        guard first >= UInt8(ascii: "A"),
               validate(buffer: schemeBuffer, component: .scheme, percentEncodingAllowed: false) else {
             return false
         }
         return true
     }
 
+    /// Only used by URLComponents, don't need to consider `URLParserCompatibility.allowEmptyScheme`
     private static func validate(scheme: some StringProtocol) -> Bool {
         // A valid scheme must start with an ALPHA character.
         // If first >= "A" and is in schemeAllowed, then first is ALPHA.
@@ -593,10 +603,14 @@ internal struct RFC3986Parser: URLParserProtocol {
     /// Parses a URL string into `URLParseInfo`, with the option to add (or skip) encoding of invalid characters.
     /// If `encodingInvalidCharacters` is `true`, this function handles encoding of invalid components.
     static func parse(urlString: String, encodingInvalidCharacters: Bool) -> URLParseInfo? {
+        return parse(urlString: urlString, encodingInvalidCharacters: encodingInvalidCharacters, compatibility: .init())
+    }
+
+    static func parse(urlString: String, encodingInvalidCharacters: Bool, compatibility: URLParserCompatibility) -> URLParseInfo? {
         #if os(Windows)
         let urlString = urlString.replacing(UInt8(ascii: "\\"), with: UInt8(ascii: "/"))
         #endif
-        guard let parseInfo = parse(urlString: urlString) else {
+        guard let parseInfo = parse(urlString: urlString, compatibility: compatibility) else {
             return nil
         }
 
@@ -690,10 +704,10 @@ internal struct RFC3986Parser: URLParserProtocol {
 
     /// Parses a URL string into its component parts and stores these ranges in a `URLParseInfo`.
     /// This function calls `parse(buffer:)`, then converts the buffer ranges into string ranges.
-    private static func parse(urlString: String) -> URLParseInfo? {
+    private static func parse(urlString: String, compatibility: URLParserCompatibility = .init()) -> URLParseInfo? {
         var string = urlString
         let bufferParseInfo = string.withUTF8 {
-            parse(buffer: $0)
+            parse(buffer: $0, compatibility: compatibility)
         }
         guard let bufferParseInfo else {
             return nil
@@ -726,7 +740,7 @@ internal struct RFC3986Parser: URLParserProtocol {
 
     /// Parses a URL string into its component parts and stores these ranges in a `URLBufferParseInfo`.
     /// This function only parses based on delimiters and does not do any encoding.
-    private static func parse(buffer: UnsafeBufferPointer<UInt8>) -> URLBufferParseInfo? {
+    private static func parse(buffer: UnsafeBufferPointer<UInt8>, compatibility: URLParserCompatibility = .init()) -> URLBufferParseInfo? {
         // A URI is either:
         // 1. scheme ":" hier-part [ "?" query ] [ "#" fragment ]
         // 2. relative-ref
@@ -746,12 +760,12 @@ internal struct RFC3986Parser: URLParserProtocol {
             let v = buffer[currentIndex]
             if v == UInt8(ascii: ":") {
                 // Scheme must be at least 1 character, otherwise this is a relative-ref.
-                if currentIndex != buffer.startIndex {
+                if currentIndex != buffer.startIndex || compatibility.contains(.allowEmptyScheme) {
                     parseInfo.schemeRange = buffer.startIndex..<currentIndex
                     currentIndex = buffer.index(after: currentIndex)
                     if currentIndex == buffer.endIndex {
                         guard let schemeRange = parseInfo.schemeRange,
-                              validate(schemeBuffer: buffer[schemeRange]) else {
+                              validate(schemeBuffer: buffer[schemeRange], compatibility: compatibility) else {
                             return nil
                         }
                         // The string only contained a scheme, but the path always exists.
@@ -777,7 +791,7 @@ internal struct RFC3986Parser: URLParserProtocol {
         }
 
         if let schemeRange = parseInfo.schemeRange {
-            guard validate(schemeBuffer: buffer[schemeRange]) else {
+            guard validate(schemeBuffer: buffer[schemeRange], compatibility: compatibility) else {
                 return nil
             }
         }
