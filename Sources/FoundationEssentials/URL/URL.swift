@@ -763,7 +763,36 @@ public struct URL: Equatable, Sendable, Hashable {
     internal var _parseInfo: URLParseInfo!
     private var _baseParseInfo: URLParseInfo?
 
+    private static func parse(urlString: String, encodingInvalidCharacters: Bool = true) -> URLParseInfo? {
+        return Parser.parse(urlString: urlString, encodingInvalidCharacters: encodingInvalidCharacters, compatibility: .allowEmptyScheme)
+    }
+
     internal init(parseInfo: URLParseInfo, relativeTo url: URL? = nil) {
+        _parseInfo = parseInfo
+        if parseInfo.scheme == nil {
+            _baseParseInfo = url?.absoluteURL._parseInfo
+        }
+        #if FOUNDATION_FRAMEWORK
+        _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
+        #endif // FOUNDATION_FRAMEWORK
+    }
+
+    /// The public initializers don't allow the empty string, and we must maintain that behavior
+    /// for compatibility. However, there are cases internally where we need to create a URL with
+    /// an empty string, such as when `.deletingLastPathComponent()` of a single path
+    /// component. This previously worked since `URL` just wrapped an `NSURL`, which
+    /// allows the empty string.
+    internal init?(stringOrEmpty: String, relativeTo url: URL? = nil) {
+        #if FOUNDATION_FRAMEWORK
+        guard foundation_swift_url_enabled() else {
+            guard let inner = NSURL(string: stringOrEmpty, relativeTo: url) else { return nil }
+            _url = URL._converted(from: inner)
+            return
+        }
+        #endif // FOUNDATION_FRAMEWORK
+        guard let parseInfo = URL.parse(urlString: stringOrEmpty) else {
+            return nil
+        }
         _parseInfo = parseInfo
         if parseInfo.scheme == nil {
             _baseParseInfo = url?.absoluteURL._parseInfo
@@ -785,7 +814,7 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif // FOUNDATION_FRAMEWORK
-        guard let parseInfo = Parser.parse(urlString: string, encodingInvalidCharacters: true) else {
+        guard let parseInfo = URL.parse(urlString: string) else {
             return nil
         }
         _parseInfo = parseInfo
@@ -798,14 +827,15 @@ public struct URL: Equatable, Sendable, Hashable {
     ///
     /// Returns `nil` if a `URL` cannot be formed with the string (for example, if the string contains characters that are illegal in a URL, or is an empty string).
     public init?(string: __shared String, relativeTo url: __shared URL?) {
+        guard !string.isEmpty else { return nil }
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
-            guard !string.isEmpty, let inner = NSURL(string: string, relativeTo: url) else { return nil }
+            guard let inner = NSURL(string: string, relativeTo: url) else { return nil }
             _url = URL._converted(from: inner)
             return
         }
         #endif // FOUNDATION_FRAMEWORK
-        guard let parseInfo = Parser.parse(urlString: string, encodingInvalidCharacters: true) else {
+        guard let parseInfo = URL.parse(urlString: string) else {
             return nil
         }
         _parseInfo = parseInfo
@@ -824,14 +854,15 @@ public struct URL: Equatable, Sendable, Hashable {
     /// If the URL string is still invalid after encoding, `nil` is returned.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public init?(string: __shared String, encodingInvalidCharacters: Bool) {
+        guard !string.isEmpty else { return nil }
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
-            guard !string.isEmpty, let inner = NSURL(string: string, encodingInvalidCharacters: encodingInvalidCharacters) else { return nil }
+            guard let inner = NSURL(string: string, encodingInvalidCharacters: encodingInvalidCharacters) else { return nil }
             _url = URL._converted(from: inner)
             return
         }
         #endif // FOUNDATION_FRAMEWORK
-        guard let parseInfo = Parser.parse(urlString: string, encodingInvalidCharacters: encodingInvalidCharacters) else {
+        guard let parseInfo = URL.parse(urlString: string, encodingInvalidCharacters: encodingInvalidCharacters) else {
             return nil
         }
         _parseInfo = parseInfo
@@ -858,7 +889,7 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #endif
         let directoryHint: DirectoryHint = isDirectory ? .isDirectory : .notDirectory
-        self.init(filePath: path, directoryHint: directoryHint, relativeTo: base)
+        self.init(filePath: path.isEmpty ? "." : path, directoryHint: directoryHint, relativeTo: base)
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path, relative to a base URL.
@@ -877,7 +908,7 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif
-        self.init(filePath: path, directoryHint: .checkFileSystem, relativeTo: base)
+        self.init(filePath: path.isEmpty ? "." : path, directoryHint: .checkFileSystem, relativeTo: base)
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path.
@@ -898,7 +929,7 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #endif
         let directoryHint: DirectoryHint = isDirectory ? .isDirectory : .notDirectory
-        self.init(filePath: path, directoryHint: directoryHint)
+        self.init(filePath: path.isEmpty ? "." : path, directoryHint: directoryHint)
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path.
@@ -917,7 +948,7 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif
-        self.init(filePath: path, directoryHint: .checkFileSystem)
+        self.init(filePath: path.isEmpty ? "." : path, directoryHint: .checkFileSystem)
     }
     
     // NSURL(fileURLWithPath:) can return nil incorrectly for some malformed paths
@@ -941,24 +972,24 @@ public struct URL: Equatable, Sendable, Hashable {
     ///
     /// If the data representation is not a legal URL string as ASCII bytes, the URL object may not behave as expected. If the URL cannot be formed then this will return nil.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
-    public init?(dataRepresentation: __shared Data, relativeTo url: __shared URL?, isAbsolute: Bool = false) {
+    public init?(dataRepresentation: __shared Data, relativeTo base: __shared URL?, isAbsolute: Bool = false) {
         guard !dataRepresentation.isEmpty else { return nil }
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
             if isAbsolute {
-                _url = URL._converted(from: NSURL(absoluteURLWithDataRepresentation: dataRepresentation, relativeTo: url))
+                _url = URL._converted(from: NSURL(absoluteURLWithDataRepresentation: dataRepresentation, relativeTo: base))
             } else {
-                _url = URL._converted(from: NSURL(dataRepresentation: dataRepresentation, relativeTo: url))
+                _url = URL._converted(from: NSURL(dataRepresentation: dataRepresentation, relativeTo: base))
             }
             return
         }
         #endif
         var url: URL?
         if let string = String(data: dataRepresentation, encoding: .utf8) {
-            url = URL(string: string, relativeTo: url)
+            url = URL(stringOrEmpty: string, relativeTo: base)
         }
         if url == nil, let string = String(data: dataRepresentation, encoding: .isoLatin1) {
-            url = URL(string: string, relativeTo: url)
+            url = URL(stringOrEmpty: string, relativeTo: base)
         }
         guard let url else {
             return nil
@@ -983,7 +1014,7 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif
-        guard let parseInfo = Parser.parse(urlString: _url.relativeString, encodingInvalidCharacters: true) else {
+        guard let parseInfo = URL.parse(urlString: _url.relativeString) else {
             return nil
         }
         _parseInfo = parseInfo
@@ -1004,7 +1035,7 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #endif
         bookmarkDataIsStale = stale.boolValue
-        let parseInfo = Parser.parse(urlString: _url.relativeString, encodingInvalidCharacters: true)!
+        let parseInfo = URL.parse(urlString: _url.relativeString)!
         _parseInfo = parseInfo
         if parseInfo.scheme == nil {
             _baseParseInfo = url?.absoluteURL._parseInfo
@@ -1226,6 +1257,14 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #endif
         guard let encodedHost else {
+            return nil
+        }
+
+        // According to RFC 3986, a host always exists if there is an authority
+        // component, it just might be empty. However, the old implementation
+        // of URL.host() returned nil for URLs like "https:///", and apps rely
+        // on this behavior, so keep it for bincompat.
+        if encodedHost.isEmpty, user() == nil, password() == nil, port == nil {
             return nil
         }
 
@@ -2053,7 +2092,7 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif
-        if let parseInfo = Parser.parse(urlString: _url.relativeString, encodingInvalidCharacters: true) {
+        if let parseInfo = URL.parse(urlString: _url.relativeString) {
             _parseInfo = parseInfo
         } else {
             // Go to compatibility jail (allow `URL` as a dummy string container for `NSURL` instead of crashing)
@@ -2211,7 +2250,7 @@ extension URL {
             #if !NO_FILESYSTEM
             baseURL = baseURL ?? .currentDirectoryOrNil()
             #endif
-            self.init(string: "", relativeTo: baseURL)!
+            self.init(string: "./", relativeTo: baseURL)!
             return
         }
 
@@ -2474,6 +2513,14 @@ extension URL {
             #endif // NO_FILESYSTEM
         }
         #endif // FOUNDATION_FRAMEWORK
+
+        // The old .appending(component:) implementation did not actually percent-encode
+        // "/" for file URLs as the documentation suggests. Many apps accidentally use
+        // .appending(component: "path/with/slashes") instead of using .appending(path:),
+        // so changing this behavior would cause breakage.
+        if isFileURL {
+            return appending(path: component, directoryHint: directoryHint, encodingSlashes: false)
+        }
         return appending(path: component, directoryHint: directoryHint, encodingSlashes: true)
     }
 
