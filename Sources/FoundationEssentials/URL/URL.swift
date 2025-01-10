@@ -1749,7 +1749,13 @@ public struct URL: Equatable, Sendable, Hashable {
     /// then this function will return the URL unchanged.
     public func deletingLastPathComponent() -> URL {
         #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
+        /// Compatibility path for apps that loop on:
+        /// `url = url.deletingPathComponent().standardized` until `url.path.isEmpty`.
+        ///
+        /// This used to work due to a combination of bugs where:
+        /// `URL("/").deletingLastPathComponent == URL("/../")`
+        /// `URL("/../").standardized == URL("")`
+        guard foundation_swift_url_enabled(), !Self.compatibility4 else {
             // This is a slight behavior change from NSURL, but better than returning "http://www.example.com../".
             guard !path.isEmpty, let result = _url.deletingLastPathComponent.map({ URL(reference: $0 as NSURL) }) else { return self }
             return result
@@ -1876,7 +1882,13 @@ public struct URL: Equatable, Sendable, Hashable {
     /// - note: This method does not consult the file system.
     public var standardized: URL {
         #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
+        /// Compatibility path for apps that loop on:
+        /// `url = url.deletingPathComponent().standardized` until `url.path.isEmpty`.
+        ///
+        /// This used to work due to a combination of bugs where:
+        /// `URL("/").deletingLastPathComponent == URL("/../")`
+        /// `URL("/../").standardized == URL("")`
+        guard foundation_swift_url_enabled(), !Self.compatibility4 else {
             // NSURL should not return nil here unless this is a file reference URL, which should be impossible
             guard let result = _url.standardized.map({ URL(reference: $0 as NSURL) }) else { return self }
             return result
