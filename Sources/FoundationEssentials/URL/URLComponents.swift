@@ -142,10 +142,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             return nil
         }
 
-        mutating func setScheme(_ newValue: String?) throws {
+        mutating func setScheme(_ newValue: String?, force: Bool = false) throws {
             reset(.scheme)
-            guard Parser.validate(newValue, component: .scheme) else {
-                throw InvalidComponentError.scheme
+            if !force {
+                guard Parser.validate(newValue, component: .scheme) else {
+                    throw InvalidComponentError.scheme
+                }
             }
             _scheme = newValue
             if encodedHost != nil {
@@ -714,6 +716,11 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 fatalError("Attempting to set scheme with invalid characters")
             }
         }
+    }
+
+    /// Used by `URL` to allow empty scheme for compatibility.
+    internal mutating func forceScheme(_ scheme: String) {
+        try? components.setScheme(scheme, force: true)
     }
 
 #if FOUNDATION_FRAMEWORK
