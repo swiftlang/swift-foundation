@@ -123,7 +123,7 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
     enum NumberFormatType : Hashable, Codable {
         case number(NumberFormatStyleConfiguration.Collection)
         case percent(NumberFormatStyleConfiguration.Collection)
-        case currency(CurrencyFormatStyleConfiguration.Collection)
+        case currency(CurrencyFormatStyleConfiguration.Collection, currencyCode: String)
         case descriptive(DescriptiveNumberFormatConfiguration.Collection)
     }
 
@@ -143,7 +143,7 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
                 }
             case .percent(_):
                 icuType = .percent
-            case .currency(let config):
+            case .currency(let config, _):
                 icuType = config.icuNumberFormatStyle
             case .descriptive(let config):
                 icuType = config.icuNumberFormatStyle
@@ -178,12 +178,13 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
                     }
                 }
 
-            case .currency(let config):
+            case .currency(let config, let currencyCode):
                 setMultiplier(config.scale, formatter: formatter)
                 setPrecision(config.precision, formatter: formatter)
                 setGrouping(config.group, formatter: formatter)
                 setDecimalSeparator(config.decimalSeparatorStrategy, formatter: formatter)
                 setRoundingIncrement(config.roundingIncrement, formatter: formatter)
+                try setTextAttribute(.currencyCode, formatter: formatter, value: currencyCode)
 
                 // Currency specific attributes
                 if let sign = config.signDisplayStrategy {
