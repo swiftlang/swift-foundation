@@ -1488,7 +1488,7 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #endif
         if _baseParseInfo != nil {
-            return absoluteURL.path(percentEncoded: percentEncoded)
+            return absoluteURL.relativePath(percentEncoded: percentEncoded)
         }
         if percentEncoded {
             return String(_parseInfo.path)
