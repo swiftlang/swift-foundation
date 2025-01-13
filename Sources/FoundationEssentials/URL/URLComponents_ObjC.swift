@@ -33,6 +33,10 @@ extension NSURLComponents {
         guard let components = URLComponents(string: string, encodingInvalidCharacters: encodingInvalidCharacters) else { return nil }
         return _NSSwiftURLComponents(components: components)
     }
+
+    static func _parseString(_ string: String, encodingInvalidCharacters: Bool, compatibility: URLParserCompatibility.RawValue) -> String? {
+        return RFC3986Parser.parse(urlString: string, encodingInvalidCharacters: encodingInvalidCharacters, compatibility: .init(rawValue: compatibility))?.urlString
+    }
 }
 
 #if canImport(_FoundationICU)

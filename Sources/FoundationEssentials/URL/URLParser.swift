@@ -699,7 +699,7 @@ internal struct RFC3986Parser: URLParserProtocol {
             }
         }
 
-        return parse(urlString: finalURLString)
+        return parse(urlString: finalURLString, compatibility: compatibility)
     }
 
     /// Parses a URL string into its component parts and stores these ranges in a `URLParseInfo`.
