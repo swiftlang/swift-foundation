@@ -1123,7 +1123,9 @@ public struct URL: Equatable, Sendable, Hashable {
         }
 
         if let baseScheme = _baseParseInfo.scheme {
-            result.scheme = String(baseScheme)
+            // Scheme might be empty, which URL allows for compatibility,
+            // but URLComponents does not, so we force it internally.
+            result.forceScheme(String(baseScheme))
         }
 
         if hasAuthority {
