@@ -34,11 +34,11 @@ extension Locale {
                 if let languageCode = languageCode {
                     result += languageCode._normalizedIdentifier
                 }
-                if let script = script {
+                if let script = script, script != "" {
                     result += "-"
                     result += script._normalizedIdentifier
                 }
-                if let region = region {
+                if let region = region, region != "" {
                     result += "_"
                     result += region._normalizedIdentifier
                 }
