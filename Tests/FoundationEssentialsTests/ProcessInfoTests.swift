@@ -171,7 +171,7 @@ final class ProcessInfoTests : XCTestCase {
     func testProcessName() {
 #if FOUNDATION_FRAMEWORK
         let targetName = "TestHost"
-#elseif os(Linux) || os(Windows) || os(Android)
+#elseif os(Linux) || os(Windows) || os(Android) || os(FreeBSD)
         let targetName = "swift-foundationPackageTests.xctest"
 #else
         let targetName = "xctest"
