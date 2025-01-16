@@ -36,3 +36,48 @@ Minor API enhancement ideas that have gained community interest through GitHub i
 
 At the end of the review period, the review manager will accept the proposal if there is a broad agreement among workgroup members and the community.
 
+
+### Appendix: Review Announcement Template
+
+(Credit: This section is adapted from [Swift-Evolution's announcement template](https://github.com/apple/swift-evolution/blob/main/process.md#review-announcement))
+
+When a proposal enters review, a new topic will be posted to the [Foundation project of the Swift forums](https://forums.swift.org/c/related-projects/foundation/) using the following template.
+
+<details>
+    <summary> Template </summary>
+
+---
+Hello Swift community,
+
+The review of [\<\<PROPOSAL NAME>>]\(\<\<LINK TO PROPOSAL>>) begins now and runs through \<\<REVIEW END DATE>>
+
+Reviews are an important part of the Swift-Foundation evolution process. All review feedback should be either on this forum thread or, if you would like to keep your feedback private, directly to me as the review manager by \<\<CONTACT METHOD>>. When contacting the review manager directly, please include proposal name in the subject line.
+
+
+##### Trying it out
+
+If you'd like to try this proposal out, you can check out \<\<LINK TO IMPLEMENTATION>>.
+
+##### What goes into a review?
+
+The goal of the review process is to improve the proposal under review
+through constructive criticism and, eventually, determine the direction of
+Swift-Foundation. When writing your review, here are some questions you might want to
+answer in your review:
+
+* What is your evaluation of the proposal?
+* Does this proposal fit well with the feel and direction of Swift-Foundation?
+* If you have used other languages or libraries with a similar
+  feature, how do you feel that this proposal compares to those?
+* How much effort did you put into your review? A glance, a quick
+  reading, or an in-depth study?
+
+More information about Swift-Foundation review process is available at
+
+> <https://github.com/apple/swift-foundation/blob/main/CONTRIBUTING.md>
+
+Thank you,
+
+-\<\<REVIEW MANAGER NAME>>
+
+Review Manager
