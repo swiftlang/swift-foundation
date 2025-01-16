@@ -595,6 +595,37 @@ final class NumberFormatStyleTests: XCTestCase {
         XCTAssertEqual((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$1000T")
     }
 
+    func testCurrency_Codable() throws {
+        let gbpInUS = Decimal.FormatStyle.Currency(code: "GBP", locale: enUSLocale)
+        let encoded = try JSONEncoder().encode(gbpInUS)
+        let json_gbp = String(data: encoded, encoding: String.Encoding.utf8)!
+        let previouslyEncoded = """
+        {
+            "collection":
+            {
+                "presentation":
+                {
+                    "option": 1
+                }
+            },
+            "currencyCode": "GBP",
+            "locale":
+            {
+                "current": 0,
+                "identifier": "en_US"
+            }
+        }
+""".data(using: .utf8)
+
+        guard let previouslyEncoded else {
+            XCTFail()
+            return
+        }
+
+        let decoded = try JSONDecoder().decode(Decimal.FormatStyle.Currency, from: previouslyEncoded)
+        XCTAssertEqual(decoded, gbpInUS)
+    }
+
     func testCurrency_scientific() throws {
         let baseStyle = Decimal.FormatStyle.Currency(code: "USD", locale: Locale(identifier: "en_US")).notation(.scientific)
 
@@ -1905,23 +1936,33 @@ final class FormatStylePatternMatchingTests : XCTestCase {
         _verifyMatching("€52,249", formatStyle: floatStyle, expectedUpperBound: nil, expectedValue: nil)
         _verifyMatching("€52,249", formatStyle: decimalStyle, expectedUpperBound: nil, expectedValue: nil)
 
-        // Different locale
         let frenchStyle: IntegerFormatStyle<Int>.Currency = .init(code: "EUR", locale: frFR)
+        let frenchPrice = frenchStyle.format(57379)
+        XCTAssertEqual(frenchPrice, "57 379,00 €")
+        _verifyMatching("57 379,00 €", formatStyle: frenchStyle, expectedUpperBound: "57 379,00 €".endIndex, expectedValue: 57379)
+        _verifyMatching("57 379 €", formatStyle: frenchStyle, expectedUpperBound: "57 379 €".endIndex, expectedValue: 57379)
+        _verifyMatching("57 379,00 € semble beaucoup", formatStyle: frenchStyle, expectedUpperBound: "57 379,00 €".endIndex, expectedValue: 57379)
 
-        let frenchPrice = "57 379 €"
-        _verifyMatching(frenchPrice, formatStyle: frenchStyle, expectedUpperBound: frenchPrice.endIndex, expectedValue: 57379)
-        _verifyMatching(frenchPrice, formatStyle: floatStyle.locale(frFR), expectedUpperBound: frenchPrice.endIndex, expectedValue: 57379)
-        _verifyMatching(frenchPrice, formatStyle: decimalStyle.locale(frFR), expectedUpperBound: frenchPrice.endIndex, expectedValue: 57379)
+        // Does not match when matching with USD style
+        _verifyMatching("57 379,00 €", formatStyle: floatStyle.locale(frFR), expectedUpperBound: nil, expectedValue: nil)
+        _verifyMatching("57 379,00 €", formatStyle: decimalStyle.locale(frFR), expectedUpperBound: nil, expectedValue: nil)
 
-        _verifyMatching("\(frenchPrice) semble beaucoup", formatStyle: frenchStyle, expectedUpperBound: frenchPrice.endIndex, expectedValue: 57379)
-        _verifyMatching("\(frenchPrice) semble beaucoup", formatStyle: floatStyle.locale(frFR), expectedUpperBound: frenchPrice.endIndex, expectedValue: 57379)
-        _verifyMatching("\(frenchPrice) semble beaucoup", formatStyle: decimalStyle.locale(frFR), expectedUpperBound: frenchPrice.endIndex, expectedValue: 57379)
+        // Mix currency and locale
+        _verifyMatching("57 379,00 $US", formatStyle: floatStyle.locale(frFR), expectedUpperBound: "57 379,00 $US".endIndex, expectedValue: 57379)
+        _verifyMatching("57 379,00 $US", formatStyle: decimalStyle.locale(frFR), expectedUpperBound: "57 379,00 $US".endIndex, expectedValue: 57379)
+        _verifyMatching("57 379,00 $US semble beaucoup", formatStyle: floatStyle.locale(frFR), expectedUpperBound: "57 379,00 $US".endIndex, expectedValue: 57379)
+        _verifyMatching("57 379,00 $US semble beaucoup", formatStyle: decimalStyle.locale(frFR), expectedUpperBound: "57 379,00 $US".endIndex, expectedValue: 57379)
 
+        // Range tests
         let newFrenchStr = "<remplir le blanc> coûte \(frenchPrice)"
         let frenchMatchRange = newFrenchStr.firstIndex(of: "5")! ..< newFrenchStr.endIndex
         _verifyMatching(newFrenchStr, formatStyle: frenchStyle, range: frenchMatchRange, expectedUpperBound: newFrenchStr.endIndex, expectedValue: 57379)
-        _verifyMatching(newFrenchStr, formatStyle: floatStyle.locale(frFR), range: frenchMatchRange, expectedUpperBound: newFrenchStr.endIndex, expectedValue: 57379)
-        _verifyMatching(newFrenchStr, formatStyle: decimalStyle.locale(frFR), range: frenchMatchRange, expectedUpperBound: newFrenchStr.endIndex, expectedValue: 57379)
+
+        // Mix currency and locale range tests
+        let newFrenchUSDStr = "<remplir le blanc> coûte 57 379,00 $US"
+        let usdPriceRange = newFrenchUSDStr.firstIndex(of: "5")! ..< newFrenchUSDStr.endIndex
+        _verifyMatching(newFrenchUSDStr, formatStyle: floatStyle.locale(frFR), range: usdPriceRange, expectedUpperBound: newFrenchUSDStr.endIndex, expectedValue: 57379)
+        _verifyMatching(newFrenchUSDStr, formatStyle: decimalStyle.locale(frFR), range: usdPriceRange, expectedUpperBound: newFrenchUSDStr.endIndex, expectedValue: 57379)
 
         // Sign tests
         let signTests = [
