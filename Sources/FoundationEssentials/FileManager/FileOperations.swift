@@ -960,7 +960,7 @@ enum _FileOperations {
             
             #if !os(WASI) // WASI doesn't have fchmod for now
             // Copy permissions
-            if fchmod(dstFD, statInfo.st_mode) != 0 {
+            if fchmod(dstFD, mode_t(statInfo.st_mode)) != 0 {
                 try delegate.throwIfNecessary(errno, srcPath(), dstPath())
             }
             #endif
