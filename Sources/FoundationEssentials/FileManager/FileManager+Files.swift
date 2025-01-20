@@ -736,6 +736,9 @@ extension _FileManagerImpl {
             #if canImport(Darwin)
             let fsNumber = result.f_fsid.val.0
             let blockSize = UInt64(result.f_bsize)
+            #elseif os(OpenBSD)
+            let fsNumber = result.f_fsid
+            let blockSize = UInt64(result.f_bsize)
             #else
             let fsNumber = result.f_fsid
             let blockSize = UInt(result.f_frsize)
