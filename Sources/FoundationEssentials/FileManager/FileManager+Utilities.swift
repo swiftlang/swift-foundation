@@ -178,7 +178,7 @@ extension _FileManagerImpl {
         #endif
     }
 
-#if !os(Windows) && !os(WASI)
+#if !os(Windows) && !os(WASI) && !os(OpenBSD)
     static func _setAttribute(_ key: UnsafePointer<CChar>, value: Data, at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
         try value.withUnsafeBytes { buffer in
             #if canImport(Darwin)
