@@ -354,7 +354,8 @@ struct _POSIXDirectoryContentsSequence: Sequence {
                     continue
                 }
                 #endif
-                #if os(FreeBSD)
+
+                #if os(FreeBSD) || os(OpenBSD)
                 guard dent.pointee.d_fileno != 0 else {
                     continue
                 }
@@ -363,6 +364,7 @@ struct _POSIXDirectoryContentsSequence: Sequence {
                     continue
                 }
                 #endif
+
                 // Use name
                 let fileName: String
                 #if os(WASI)
