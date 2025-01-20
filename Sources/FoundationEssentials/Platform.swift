@@ -224,7 +224,7 @@ extension Platform {
 // MARK: - Environment Variables
 extension Platform {
     static func getEnvSecure(_ name: String) -> String? {
-        #if canImport(Glibc)
+        #if canImport(Glibc) && !os(OpenBSD)
         if let value = secure_getenv(name) {
             return String(cString: value)
         } else {
