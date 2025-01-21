@@ -2116,7 +2116,7 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif
-        if let parseInfo = URL.parse(urlString: _url.relativeString) {
+        if let parseInfo = RFC3986Parser.parse(urlString: _url.relativeString, encodingInvalidCharacters: true, compatibility: [.allowEmptyScheme, .allowAnyPort]) {
             _parseInfo = parseInfo
         } else {
             // Go to compatibility jail (allow `URL` as a dummy string container for `NSURL` instead of crashing)
