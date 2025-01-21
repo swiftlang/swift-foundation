@@ -220,6 +220,23 @@ extension UnsafeBufferPointer {
         var decoder = T()
         var iterator = self.makeIterator()
         
+        guard !buffer.isEmpty else {
+            if !nullTerminated && iterator.next() == nil {
+                // No bytes to write, so an empty buffer is OK
+                return 0
+            } else {
+                throw DecompositionError.insufficientSpace
+            }
+        }
+        
+        defer {
+            if nullTerminated {
+                // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
+                // At this point, the buffer is known to be non-empty, so it must have space for at least a null terminating byte (even if it overwrites the final output byte in the buffer)
+                buffer[buffer.count - 1] = 0
+            }
+        }
+        
         func appendOutput(_ values: some Collection<UInt8>) throws {
             let bufferPortion = UnsafeMutableBufferPointer(start: buffer.baseAddress!.advanced(by: bufferIdx), count: bufferLength - bufferIdx)
             guard bufferPortion.count >= values.count else {
@@ -316,6 +333,12 @@ extension NSString {
     func __swiftFillFileSystemRepresentation(pointer: UnsafeMutablePointer<CChar>, maxLength: Int) -> Bool {
         autoreleasepool {
             let buffer = UnsafeMutableBufferPointer(start: pointer, count: maxLength)
+            
+            guard !buffer.isEmpty else {
+                // No space for a null terminating byte, so it's not worth even trying to read the string contents
+                return false
+            }
+            
             // See if we have a quick-access buffer we can just convert directly
             if let fastCharacters = self._fastCharacterContents() {
                 // If we have quick access to UTF-16 contents, decompose from UTF-16
@@ -324,6 +347,11 @@ extension NSString {
             } else if self.fastestEncoding == NSASCIIStringEncoding, let fastUTF8 = self._fastCStringContents(false) {
                 // If we have quick access to ASCII contents, no need to decompose
                 let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
+                defer {
+                    // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
+                    // At this point, the buffer is known to be non-empty, so it must have space for at least a null terminating byte (even if it overwrites the final output byte in the buffer)
+                    buffer[buffer.count - 1] = 0
+                }
                 
                 // We only allow embedded nulls if there are no non-null characters following the first null character
                 if let embeddedNullIdx = utf8Buffer.firstIndex(of: 0) {
