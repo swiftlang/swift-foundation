@@ -966,6 +966,21 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(schemeOnly.absoluteString, "scheme:foo")
     }
 
+    func testURLEmptySchemeCompatibility() throws {
+        var url = try XCTUnwrap(URL(string: ":memory:"))
+        XCTAssertEqual(url.scheme, "")
+
+        let base = try XCTUnwrap(URL(string: "://home"))
+        XCTAssertEqual(base.host(), "home")
+
+        url = try XCTUnwrap(URL(string: "/path", relativeTo: base))
+        XCTAssertEqual(url.scheme, "")
+        XCTAssertEqual(url.host(), "home")
+        XCTAssertEqual(url.path, "/path")
+        XCTAssertEqual(url.absoluteString, "://home/path")
+        XCTAssertEqual(url.absoluteURL.scheme, "")
+    }
+
     func testURLComponentsPercentEncodedUnencodedProperties() throws {
         var comp = URLComponents()
 
