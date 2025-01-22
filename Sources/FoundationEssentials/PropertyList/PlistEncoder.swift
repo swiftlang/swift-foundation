@@ -19,7 +19,9 @@
 // name. The two must coexist, so it was renamed. The old name must not
 // be used in the new runtime. _TtC10Foundation20_PropertyListEncoder
 // is the mangled name for Foundation._PropertyListEncoder.
+#if FOUNDATION_FRAMEWORK
 @_objcRuntimeName(_TtC10Foundation20_PropertyListEncoder)
+#endif
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 open class PropertyListEncoder {
 
