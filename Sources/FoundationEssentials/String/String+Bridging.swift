@@ -275,4 +275,65 @@ extension BidirectionalCollection where Element == Unicode.Scalar, Index == Stri
 
 }
 
+// START: Workaround for https://github.com/swiftlang/swift/pull/78697
+
+// The extensions below are temporarily relocated to work around a compiler crash.
+// Once that crash is resolved, they should be moved back to their original files.
+
+#if !NO_FILESYSTEM
+
+// Relocated from FileManager+Utilities.swift
+#if FOUNDATION_FRAMEWORK && os(macOS)
+extension URLResourceKey {
+    static var _finderInfoKey: Self { URLResourceKey("_NSURLFinderInfoKey") }
+}
 #endif
+
+// Relocated from FileManager+Files.swift
+#if FOUNDATION_FRAMEWORK
+internal import DarwinPrivate.sys.content_protection
+#endif
+
+#if !os(Windows)
+#if FOUNDATION_FRAMEWORK
+extension FileProtectionType {
+    var intValue: Int32? {
+        switch self {
+        case .complete: PROTECTION_CLASS_A
+        case .init(rawValue: "NSFileProtectionWriteOnly"), .completeUnlessOpen: PROTECTION_CLASS_B
+        case .init(rawValue: "NSFileProtectionCompleteUntilUserAuthentication"), .completeUntilFirstUserAuthentication: PROTECTION_CLASS_C
+        case .none: PROTECTION_CLASS_D
+        #if !os(macOS)
+        case .completeWhenUserInactive: PROTECTION_CLASS_CX
+        #endif
+        default: nil
+        }
+    }
+    
+    init?(intValue value: Int32) {
+        switch value {
+        case PROTECTION_CLASS_A: self = .complete
+        case PROTECTION_CLASS_B: self = .completeUnlessOpen
+        case PROTECTION_CLASS_C: self = .completeUntilFirstUserAuthentication
+        case PROTECTION_CLASS_D: self = .none
+        #if !os(macOS)
+        case PROTECTION_CLASS_CX: self = .completeWhenUserInactive
+        #endif
+        default: return nil
+        }
+    }
+}
+#endif
+#endif
+#endif
+
+#endif
+
+#if !NO_FILESYSTEM
+// Relocated from FileManager+Files.swift. Originally fileprivate.
+extension FileAttributeKey {
+    internal static var _extendedAttributes: Self { Self("NSFileExtendedAttributes") }
+}
+#endif
+
+// END: Workaround for https://github.com/swiftlang/swift/pull/78697

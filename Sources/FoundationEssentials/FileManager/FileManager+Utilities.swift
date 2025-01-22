@@ -69,12 +69,6 @@ extension stat {
 }
 #endif
 
-#if FOUNDATION_FRAMEWORK && os(macOS)
-extension URLResourceKey {
-    static var _finderInfoKey: Self { URLResourceKey("_NSURLFinderInfoKey") }
-}
-#endif
-
 extension _FileManagerImpl {
     #if os(macOS) && FOUNDATION_FRAMEWORK
     private struct _HFSFinderInfo {
