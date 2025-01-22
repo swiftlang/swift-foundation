@@ -438,7 +438,7 @@ final class NumberFormatStyleTests: XCTestCase {
         XCTAssertEqual((-3.14159 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(-3.14159))
         XCTAssertEqual((-3000.14159 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(-3000.14159))
     }
-    
+
 #if FOUNDATION_FRAMEWORK
     func test_autoupdatingCurrentChangesFormatResults() {
         let locale = Locale.autoupdatingCurrent
@@ -450,7 +450,7 @@ final class NumberFormatStyleTests: XCTestCase {
         let currency = Decimal(123.45)
         let percent = 54.32
         let bytes = 1_234_567_890
-        
+
         // Get a formatted result from es-ES
         var prefs = LocalePreferences()
         prefs.languages = ["es-ES"]
@@ -463,7 +463,7 @@ final class NumberFormatStyleTests: XCTestCase {
         let formattedSpanishCurrency = currency.formatted(.currency(code: "USD").locale(locale))
         let formattedSpanishPercent = percent.formatted(.percent.locale(locale))
         let formattedSpanishBytes = bytes.formatted(.byteCount(style: .decimal).locale(locale))
-        
+
         // Get a formatted result from en-US
         prefs.languages = ["en-US"]
         prefs.locale = "en_US"
@@ -475,7 +475,7 @@ final class NumberFormatStyleTests: XCTestCase {
         let formattedEnglishCurrency = currency.formatted(.currency(code: "USD").locale(locale))
         let formattedEnglishPercent = percent.formatted(.percent.locale(locale))
         let formattedEnglishBytes = bytes.formatted(.byteCount(style: .decimal).locale(locale))
-        
+
         // Reset to current preferences before any possibility of failing this test
         LocaleCache.cache.reset()
 
@@ -598,7 +598,7 @@ final class NumberFormatStyleTests: XCTestCase {
     func testCurrency_Codable() throws {
         let gbpInUS = Decimal.FormatStyle.Currency(code: "GBP", locale: enUSLocale)
         let encoded = try JSONEncoder().encode(gbpInUS)
-        let json_gbp = String(data: encoded, encoding: String.Encoding.utf8)!
+        // Valid JSON presentation of the format style
         let previouslyEncoded = """
         {
             "collection":
@@ -615,14 +615,14 @@ final class NumberFormatStyleTests: XCTestCase {
                 "identifier": "en_US"
             }
         }
-""".data(using: .utf8)
+        """.data(using: .utf8)
 
         guard let previouslyEncoded else {
             XCTFail()
             return
         }
 
-        let decoded = try JSONDecoder().decode(Decimal.FormatStyle.Currency, from: previouslyEncoded)
+        let decoded = try JSONDecoder().decode(Decimal.FormatStyle.Currency.self, from: previouslyEncoded)
         XCTAssertEqual(decoded, gbpInUS)
     }
 
