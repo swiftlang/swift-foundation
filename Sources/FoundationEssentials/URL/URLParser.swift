@@ -140,6 +140,7 @@ internal enum URLParserKind {
 internal struct URLParserCompatibility: OptionSet {
     let rawValue: UInt8
     static let allowEmptyScheme = URLParserCompatibility(rawValue: 1 << 0)
+    static let allowAnyPort = URLParserCompatibility(rawValue: 1 << 1)
 }
 
 internal protocol URLParserProtocol {
@@ -835,7 +836,11 @@ internal struct RFC3986Parser: URLParserProtocol {
                     if let schemeRange = parseInfo.schemeRange {
                         schemeBuffer = buffer[schemeRange]
                     }
-                    guard validate(portBuffer: buffer[portRange], forSchemeBuffer: schemeBuffer) else {
+                    if compatibility.contains(.allowAnyPort) {
+                        guard buffer[portRange].allSatisfy({ $0.isValidURLCharacter }) else {
+                            return nil
+                        }
+                    } else if !validate(portBuffer: buffer[portRange], forSchemeBuffer: schemeBuffer) {
                         return nil
                     }
                 }
@@ -1198,6 +1203,18 @@ fileprivate extension UTF8.CodeUnit {
             return 0b11111110
         default:
             return 0
+        }
+    }
+
+    // let urlAllowed = CharacterSet(charactersIn: unreserved + reserved)
+    var isValidURLCharacter: Bool {
+        guard self < 128 else { return false }
+        if self < 64 {
+            let allowed = UInt64(12682136387466559488)
+            return (allowed & (UInt64(1) << self)) != 0
+        } else {
+            let allowed = UInt64(5188146765093666815)
+            return (allowed & (UInt64(1) << (self - 64))) != 0
         }
     }
 }
