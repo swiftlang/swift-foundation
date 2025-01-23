@@ -16,6 +16,7 @@ target_sources(FoundationEssentials PRIVATE
     BidirectionalCollection.swift
     BuiltInUnicodeScalarSet.swift
     RegexPatternCache.swift
+    String+Bridging.swift
     String+Comparison.swift
     String+Encoding.swift
     String+EndianAdaptorSequence.swift
