@@ -72,11 +72,11 @@ extension DateComponents {
 #endif // FOUNDATION_FRAMEWORK
     
     // Parsing
-    /// Creates a new `Date` by parsing the given representation.
+    /// Creates a new `DateComponents` by parsing the given representation.
     /// - Parameter value: A representation of a date. The type of the representation is specified by `ParseStrategy.ParseInput`.
     /// - Parameters:
     ///   - value: A representation of a date. The type of the representation is specified by `ParseStrategy.ParseInput`.
-    ///   - strategy: The parse strategy to parse `value` whose `ParseOutput` is `Date`.
+    ///   - strategy: The parse strategy to parse `value` whose `ParseOutput` is `DateComponents`.
 #if FOUNDATION_FRAMEWORK
     public init<T: Foundation.ParseStrategy>(_ value: T.ParseInput, strategy: T) throws where T.ParseOutput == Self {
         self = try strategy.parse(value)
@@ -86,7 +86,7 @@ extension DateComponents {
         self = try strategy.parse(value)
     }
 #endif // FOUNDATION_FRAMEWORK
-    /// Creates a new `Date` by parsing the given string representation.
+    /// Creates a new `DateComponents` by parsing the given string representation.
 #if FOUNDATION_FRAMEWORK
     @_disfavoredOverload
     public init<T: Foundation.ParseStrategy, Value: StringProtocol>(_ value: Value, strategy: T) throws where T.ParseOutput == Self, T.ParseInput == String {
