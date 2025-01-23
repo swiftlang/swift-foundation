@@ -32,7 +32,7 @@ A principal design goal is to ensure that it is very cheap to parse and serializ
 
 ## Detailed design
 
-The parser requires the presence of all fields in the spec. The weekday field is validated as being one of the specified values (for example, `Mon`, `Tue`, etc.), but is ignored for purposes of creating the actual `Date`. For the hour, minute, and second fields, the parser validates the values are within the ranges defined in the spec. Foundation does not support leap seconds, so values of 60 for the seconds field are set to 0 instead.
+The parser requires the presence of all fields, with the exception of the weekday. If the weekday is present, then it is validated as being one of the specified values (for example, `Mon`, `Tue`, etc.), but is ignored for purposes of creating the actual `Date`. For the hour, minute, and second fields, the parser validates the values are within the ranges defined in the spec. Foundation does not support leap seconds, so values of 60 for the seconds field are set to 0 instead.
 
 ### Date parsing
 
@@ -164,6 +164,32 @@ extension DateComponents.HTTPFormatStyle : CustomConsumingRegexComponent {
 extension RegexComponent where Self == DateComponents.HTTPFormatStyle {
     /// Creates a regex component to match a RFC 9110 HTTP date and time, such as "Sun, 06 Nov 1994 08:49:37 GMT", and capture the string as a `DateComponents`.
     public static var http: DateComponents.HTTPFormatStyle
+}
+```
+
+### DateComponents Additions
+
+The `DateComponents.HTTPDateFormatStyle` type is the first `FormatStyle` for `DateComponents`. Therefore, a few additions are also needed to the `DateComponents` type as well to allow formatting it directly. These are identical to the existing methods on other formatted types, including `Date`.
+
+```swift
+@available(FoundationPreview 6.2, *)
+extension DateComponents {
+    /// Converts `self` to its textual representation.
+    /// - Parameter format: The format for formatting `self`.
+    /// - Returns: A representation of `self` using the given `format`. The type of the representation is specified by `FormatStyle.FormatOutput`.
+    public func formatted<F: FormatStyle>(_ format: F) -> F.FormatOutput where F.FormatInput == DateComponents
+    
+    // Parsing
+    /// Creates a new `Date` by parsing the given representation.
+    /// - Parameter value: A representation of a date. The type of the representation is specified by `ParseStrategy.ParseInput`.
+    /// - Parameters:
+    ///   - value: A representation of a date. The type of the representation is specified by `ParseStrategy.ParseInput`.
+    ///   - strategy: The parse strategy to parse `value` whose `ParseOutput` is `DateComponents`.
+    public init<T: ParseStrategy>(_ value: T.ParseInput, strategy: T) throws where T.ParseOutput == Self {
+
+    /// Creates a new `DateComponents` by parsing the given string representation.
+    @_disfavoredOverload
+    public init<T: ParseStrategy, Value: StringProtocol>(_ value: Value, strategy: T) throws where T.ParseOutput == Self, T.ParseInput == String
 }
 ```
 
