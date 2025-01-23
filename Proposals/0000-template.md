@@ -1,13 +1,13 @@
 # Feature name
 
-* Proposal: [FOU-NNNN](NNNN-filename.md)
+* Proposal: [SF-NNNN](NNNN-filename.md)
 * Authors: [Author 1](https://github.com/swiftdev), [Author 2](https://github.com/swiftdev)
 * Review Manager: TBD
 * Status: **Awaiting implementation** or **Awaiting review**
-* Bug: *if applicable* [apple/swift#NNNNN](https://github.com/apple/swift-foundation/issues/NNNNN)
-* Implementation: [apple/swift-foundation#NNNNN](https://github.com/apple/swift-foundation/pull/NNNNN)
-* Previous Proposal: *if applicable* [FOU-XXXX](XXXX-filename.md)
-* Previous Revision: *if applicable* [1](https://github.com/apple/swift-evolution/blob/...commit-ID.../proposals/NNNN-filename.md)
+* Bug: *if applicable* [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/issues/NNNNN)
+* Implementation: [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/pull/NNNNN)
+* Previous Proposal: *if applicable* [SF-XXXX](XXXX-filename.md)
+* Previous Revision: *if applicable* [1](https://github.com/swiftlang/swift-foundation/blob/...commit-ID.../Proposals/NNNN-filename.md)
 * Review: ([pitch](https://forums.swift.org/...))
 
 When filling out this template, you should delete or replace all of the text except for the section headers and the header fields above. For example, you should delete everything from this paragraph down to the Introduction section below.
