@@ -1375,6 +1375,16 @@ final class URLTests : XCTestCase {
 
         XCTAssertNotNil(URL(string: comp.string!))
         XCTAssertNotNil(URLComponents(string: comp.string!))
+
+        // In rare cases, an app might rely on URL allowing an empty scheme,
+        // but then take that string and pass it to URLComponents to modify
+        // other components of the URL. We shouldn't percent-encode the colon
+        // in these cases.
+
+        let url = try XCTUnwrap(URL(string: "://host/path"))
+        comp = try XCTUnwrap(URLComponents(string: url.absoluteString))
+        comp.query = "key=value"
+        XCTAssertEqual(comp.string, "://host/path?key=value")
     }
 
     func testURLComponentsInvalidPaths() {
