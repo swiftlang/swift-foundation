@@ -728,7 +728,6 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(weekend, weekendForNilLocale)
     }
     
-    @available(FoundationPreview 0.4, *)
     func test_datesAdding_range() {
         let startDate = Date(timeIntervalSinceReferenceDate: 689292158.712307) // 2022-11-04 22:02:38 UTC
         let endDate = startDate + (86400 * 3) + (3600 * 2) // 3 days + 2 hours later - cross a DST boundary which adds a day with an additional hour in it
@@ -741,7 +740,6 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(numberOfDays, 3)
     }
     
-    @available(FoundationPreview 0.4, *)
     func test_datesAdding_year() {
         // Verify that adding 12 months once is the same as adding 1 month 12 times
         let startDate = Date(timeIntervalSinceReferenceDate: 688946558.712307) // 2022-10-31 22:02:38 UTC
@@ -754,7 +752,6 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(oneYearOnce, oneYearTwelve)
     }
     
-    @available(FoundationPreview 0.4, *)
     func test_datesMatching_simpleExample() {
         let cal = Calendar(identifier: .gregorian)
         // August 22, 2022 at 3:02:38 PM PDT
@@ -773,7 +770,6 @@ final class CalendarTests : XCTestCase {
         }
     }
 
-    @available(FoundationPreview 0.4, *)
     func test_datesMatching() {
         let startDate = Date(timeIntervalSinceReferenceDate: 682898558.712307) // 2022-08-22 22:02:38 UTC
         let endDate = startDate + (86400 * 3)
@@ -804,7 +800,6 @@ final class CalendarTests : XCTestCase {
         XCTAssertTrue(unboundedBackward.first! > unboundedBackward.last!)
     }
     
-    @available(FoundationPreview 0.4, *)
     func test_dayOfYear_bounds() {
         let date = Date(timeIntervalSinceReferenceDate: 682898558.712307) // 2022-08-22 22:02:38 UTC, day 234
         var cal = Calendar(identifier: .gregorian)
@@ -840,7 +835,6 @@ final class CalendarTests : XCTestCase {
         XCTAssertEqual(previousDayComps, previousDayExpectationComps)
     }
     
-    @available(FoundationPreview 0.4, *)
     func test_dayOfYear() {
         // An arbitrary date, for which we know the answers
         let date = Date(timeIntervalSinceReferenceDate: 682898558.712307) // 2022-08-22 22:02:38 UTC, day 234

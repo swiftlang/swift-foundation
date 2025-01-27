@@ -1816,7 +1816,6 @@ class TestNumberAttributeFormatStyle: XCTestCase {
 }
 
 // MARK: Pattern Matching
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 final class FormatStylePatternMatchingTests : XCTestCase {
     let frFR = Locale(identifier: "fr_FR")
     let enUS = Locale(identifier: "en_US")

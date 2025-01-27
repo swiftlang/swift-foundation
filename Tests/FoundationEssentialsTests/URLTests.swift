@@ -546,7 +546,6 @@ final class URLTests : XCTestCase {
         try FileManager.default.removeItem(at: builder(tempDirectory))
     }
 
-    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     func testURLEncodingInvalidCharacters() throws {
         let urlStrings = [
             " ",

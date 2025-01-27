@@ -20,7 +20,6 @@ import TestSupport
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-@available(FoundationPreview 0.1, *)
 class SortComparatorTests: XCTestCase {
     func test_comparable_descriptors() {
         let intDesc: ComparableComparator<Int> = ComparableComparator<Int>()

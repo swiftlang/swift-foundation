@@ -328,7 +328,6 @@ final class DateRelativeFormatStyleTests: XCTestCase {
         XCTAssertNotEqual(formattedSpanish, formattedEnglish)
     }
 
-    @available(FoundationPreview 0.4, *)
     func testAllowedFieldsNamed() throws {
         var named = Date.RelativeFormatStyle(presentation: .named, locale: enUSLocale, calendar: calendar)
 
@@ -362,7 +361,6 @@ final class DateRelativeFormatStyleTests: XCTestCase {
         _verifyStyle("2021-06-11T07:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "tomorrow")
     }
 
-    @available(FoundationPreview 0.4, *)
     func testAllowedFieldsNumeric() throws {
         var named = Date.RelativeFormatStyle(presentation: .numeric, locale: enUSLocale, calendar: calendar)
 
@@ -395,7 +393,6 @@ final class DateRelativeFormatStyleTests: XCTestCase {
 
 // MARK: DiscreteFormatStyle conformance test
 
-@available(FoundationPreview 0.4, *)
 final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
     let enUSLocale = Locale(identifier: "en_US")
     var calendar = Calendar(identifier: .gregorian)

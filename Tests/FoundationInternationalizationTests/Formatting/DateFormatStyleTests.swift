@@ -23,7 +23,6 @@ import TestSupport
 @testable import Foundation
 #endif
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 final class DateFormatStyleTests : XCTestCase {
     let referenceDate = Date(timeIntervalSinceReferenceDate: 0)
 
@@ -584,7 +583,6 @@ final class DateFormatStyleTests : XCTestCase {
         }
     }
 
-    @available(FoundationPreview 0.4, *)
     func testRemovingFields() {
         var format: Date.FormatStyle = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
         func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #filePath, line: UInt = #line) {
@@ -1068,7 +1066,6 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
     }
 }
 
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 final class MatchConsumerAndSearcherTests : XCTestCase {
 
     let enUS = Locale(identifier: "en_US")
@@ -1358,7 +1355,6 @@ extension DateFormatStyleTests {
 
 // MARK: DiscreteFormatStyle conformance test
 
-@available(FoundationPreview 0.4, *)
 final class TestDateStyleDiscreteConformance : XCTestCase {
     let enUSLocale = Locale(identifier: "en_US")
     var calendar = Calendar(identifier: .gregorian)
@@ -1602,7 +1598,6 @@ final class TestDateStyleDiscreteConformance : XCTestCase {
     }
 }
 
-@available(FoundationPreview 0.4, *)
 final class TestDateVerbatimStyleDiscreteConformance : XCTestCase {
     let enUSLocale = Locale(identifier: "en_US")
     var calendar = Calendar(identifier: .gregorian)
