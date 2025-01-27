@@ -615,7 +615,7 @@ final class NumberFormatStyleTests: XCTestCase {
                 "identifier": "en_US"
             }
         }
-        """.data(using: .utf8)
+        """.data(using: String._Encoding.utf8)
 
         guard let previouslyEncoded else {
             XCTFail()

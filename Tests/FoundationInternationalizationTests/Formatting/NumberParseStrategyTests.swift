@@ -227,7 +227,7 @@ final class NumberParseStrategyTests : XCTestCase {
             {"formatStyle":{"locale":{"current":0,"identifier":"en_US"},"collection":{"presentation":{"option":1}},"currencyCode":"USD"},"numberFormatType":{"currency":{"_0":{"presentation":{"option":1}}}},"lenient":true,"locale":{"identifier":"en_US","current":0}}
         """
 
-        guard let existingData = existingSerializedParseStrategy.data(using: .utf8) else {
+        guard let existingData = existingSerializedParseStrategy.data(using: String._Encoding.utf8) else {
             XCTFail("Unable to get data from JSON string")
             return
         }
@@ -246,7 +246,7 @@ final class NumberParseStrategyTests : XCTestCase {
             {"formatStyle":{"collection":{"presentation":{"option":1}},"locale":{"current":0,"identifier":"en_US"},"currencyCode":"GBP"},"lenient":true,"locale":{"current":0,"identifier":"en_US"},"numberFormatType":{"currency":{"_0":{"presentation":{"option":1}}}}}
         """
 
-        guard let existingData = existingSerializedParseStrategy.data(using: .utf8) else {
+        guard let existingData = existingSerializedParseStrategy.data(using: String._Encoding.utf8) else {
             XCTFail("Unable to get data from JSON string")
             return
         }

@@ -239,7 +239,7 @@ final class JSONEncoderTests : XCTestCase {
                        dateDecodingStrategy: .custom(decode))
 
         // So should wrapped dates.
-        let expectedJSON_array = "[42]".data(using: .utf8)!
+        let expectedJSON_array = "[42]".data(using: String._Encoding.utf8)!
         _testRoundTrip(of: TopLevelArrayWrapper(timestamp),
                        expectedJSON: expectedJSON_array,
                        dateEncodingStrategy: .custom(encode),

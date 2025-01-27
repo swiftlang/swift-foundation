@@ -23,6 +23,9 @@ import RegexBuilder
 @freestanding(expression)
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
+@freestanding(expression)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+macro Expression<each Input, Output>(_ body: (repeat each Input) -> Output) -> Expression<repeat each Input, Output> = #externalMacro(module: "FoundationMacros", type: "ExpressionMacro")
 #endif
 
 // Work around an issue issue on older Swift compilers

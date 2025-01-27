@@ -1009,7 +1009,7 @@ final class StringTests : XCTestCase {
     func test_dataUsingEncoding_preservingBOM() {
         func roundTrip(_ data: Data) -> Bool {
             let str = String(data: data, encoding: .utf8)!
-            let strAsUTF16BE = str.data(using: .utf16BigEndian)!
+            let strAsUTF16BE = str.data(using: String._Encoding.utf16BigEndian)!
             let strRoundTripUTF16BE = String(data: strAsUTF16BE, encoding: .utf16BigEndian)!
             return strRoundTripUTF16BE == str
         }
@@ -1026,8 +1026,8 @@ final class StringTests : XCTestCase {
     func test_dataUsingEncoding_ascii() {
         XCTAssertEqual("abc".data(using: .ascii), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
         XCTAssertEqual("abc".data(using: .nonLossyASCII), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
-        XCTAssertEqual("e\u{301}\u{301}f".data(using: .ascii), nil)
-        XCTAssertEqual("e\u{301}\u{301}f".data(using: .nonLossyASCII), nil)
+        XCTAssertEqual("e\u{301}\u{301}f".data(using: String._Encoding.ascii), nil)
+        XCTAssertEqual("e\u{301}\u{301}f".data(using: String._Encoding.nonLossyASCII), nil)
         
         XCTAssertEqual("abc".data(using: .ascii, allowLossyConversion: true), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
         XCTAssertEqual("abc".data(using: .nonLossyASCII, allowLossyConversion: true), Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
@@ -1326,7 +1326,7 @@ final class StringTests : XCTestCase {
             XCTAssertNotNil(String(data: data, encoding: encoding), "Failed to decode \(data) (\(string.debugDescription))", file: file, line: line)
         }
         for string in invalid {
-            XCTAssertNil(string.data(using: .macOSRoman), "Incorrectly successfully encoded \(string.debugDescription)", file: file, line: line)
+            XCTAssertNil(string.data(using: String._Encoding.macOSRoman), "Incorrectly successfully encoded \(string.debugDescription)", file: file, line: line)
         }
     }
     
