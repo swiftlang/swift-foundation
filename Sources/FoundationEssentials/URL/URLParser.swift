@@ -31,8 +31,9 @@ final class URLParseInfo: Sendable {
     let isIPLiteral: Bool
     let didPercentEncodeHost: Bool
     let pathHasPercent: Bool
+    let pathHasFileID: Bool
 
-    init(urlString: String, urlParser: URLParserKind, schemeRange: Range<String.Index>?, userRange: Range<String.Index>?, passwordRange: Range<String.Index>?, hostRange: Range<String.Index>?, portRange: Range<String.Index>?, pathRange: Range<String.Index>?, queryRange: Range<String.Index>?, fragmentRange: Range<String.Index>?, isIPLiteral: Bool, didPercentEncodeHost: Bool, pathHasPercent: Bool) {
+    init(urlString: String, urlParser: URLParserKind, schemeRange: Range<String.Index>?, userRange: Range<String.Index>?, passwordRange: Range<String.Index>?, hostRange: Range<String.Index>?, portRange: Range<String.Index>?, pathRange: Range<String.Index>?, queryRange: Range<String.Index>?, fragmentRange: Range<String.Index>?, isIPLiteral: Bool, didPercentEncodeHost: Bool, pathHasPercent: Bool, pathHasFileID: Bool) {
         self.urlString = urlString
         self.urlParser = urlParser
         self.schemeRange = schemeRange
@@ -46,6 +47,7 @@ final class URLParseInfo: Sendable {
         self.isIPLiteral = isIPLiteral
         self.didPercentEncodeHost = didPercentEncodeHost
         self.pathHasPercent = pathHasPercent
+        self.pathHasFileID = pathHasFileID
     }
 
     var hasAuthority: Bool {
@@ -131,6 +133,7 @@ fileprivate struct URLBufferParseInfo {
     var isIPLiteral: Bool = false
     var didPercentEncodeHost: Bool = false
     var pathHasPercent: Bool = false
+    var pathHasFileID: Bool = false
 }
 
 internal enum URLParserKind {
@@ -735,7 +738,8 @@ internal struct RFC3986Parser: URLParserProtocol {
             fragmentRange: convert(bufferParseInfo.fragmentRange),
             isIPLiteral: bufferParseInfo.isIPLiteral,
             didPercentEncodeHost: bufferParseInfo.didPercentEncodeHost,
-            pathHasPercent: bufferParseInfo.pathHasPercent
+            pathHasPercent: bufferParseInfo.pathHasPercent,
+            pathHasFileID: bufferParseInfo.pathHasFileID
         )
     }
 
@@ -851,6 +855,10 @@ internal struct RFC3986Parser: URLParserProtocol {
 
         let pathStartIndex = currentIndex
         var sawPercent = false
+        if buffer[pathStartIndex...].starts(with: URL.fileIDPrefix) {
+            parseInfo.pathHasFileID = true
+            currentIndex = buffer.index(pathStartIndex, offsetBy: URL.fileIDPrefix.count)
+        }
         while currentIndex != buffer.endIndex {
             let v = buffer[currentIndex]
             if v == UInt8(ascii: "?") || v == UInt8(ascii: "#") {

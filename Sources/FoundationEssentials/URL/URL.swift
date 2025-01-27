@@ -634,6 +634,8 @@ public struct URL: Equatable, Sendable, Hashable {
     }()
 #endif
 
+    internal static let fileIDPrefix = Array("/.file/id=".utf8)
+
 #if FOUNDATION_FRAMEWORK
 
     private var _url: NSURL
@@ -747,10 +749,7 @@ public struct URL: Equatable, Sendable, Hashable {
         if isDirectory {
             flags.insert(.isDirectory)
         }
-
-        let fileIDPrefix = [UInt8(ascii: "/"), UInt8(ascii: "."), UInt8(ascii: "f"), UInt8(ascii: "i"), UInt8(ascii: "l"), UInt8(ascii: "e"), UInt8(ascii: "/"), UInt8(ascii: "i"), UInt8(ascii: "d"), UInt8(ascii: "=")]
-
-        if path.starts(with: fileIDPrefix) {
+        if parseInfo.pathHasFileID {
             flags.insert(.pathHasFileID)
         }
         if !isDirectory && !parseInfo.pathHasPercent {
@@ -784,6 +783,10 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #if FOUNDATION_FRAMEWORK
         _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
+        if self.isFileURL && _parseInfo.pathHasFileID {
+            // _baseParseInfo cannot have a file ID because it came from `URL`
+            self = URL(reference: _url)
+        }
         #endif // FOUNDATION_FRAMEWORK
     }
 
@@ -809,6 +812,9 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #if FOUNDATION_FRAMEWORK
         _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
+        if self.isFileURL && _parseInfo.pathHasFileID {
+            self = URL(reference: _url)
+        }
         #endif // FOUNDATION_FRAMEWORK
     }
 
@@ -830,6 +836,9 @@ public struct URL: Equatable, Sendable, Hashable {
         _parseInfo = parseInfo
         #if FOUNDATION_FRAMEWORK
         _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
+        if self.isFileURL && _parseInfo.pathHasFileID {
+            self = URL(reference: _url)
+        }
         #endif // FOUNDATION_FRAMEWORK
     }
 
@@ -854,6 +863,9 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #if FOUNDATION_FRAMEWORK
         _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
+        if self.isFileURL && _parseInfo.pathHasFileID {
+            self = URL(reference: _url)
+        }
         #endif // FOUNDATION_FRAMEWORK
     }
 
@@ -878,6 +890,9 @@ public struct URL: Equatable, Sendable, Hashable {
         _parseInfo = parseInfo
         #if FOUNDATION_FRAMEWORK
         _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
+        if self.isFileURL && _parseInfo.pathHasFileID {
+            self = URL(reference: _url)
+        }
         #endif // FOUNDATION_FRAMEWORK
     }
 
@@ -2120,9 +2135,9 @@ public struct URL: Equatable, Sendable, Hashable {
             _parseInfo = parseInfo
         } else {
             // Go to compatibility jail (allow `URL` as a dummy string container for `NSURL` instead of crashing)
-            _parseInfo = URLParseInfo(urlString: _url.relativeString, urlParser: .RFC3986, schemeRange: nil, userRange: nil, passwordRange: nil, hostRange: nil, portRange: nil, pathRange: nil, queryRange: nil, fragmentRange: nil, isIPLiteral: false, didPercentEncodeHost: false, pathHasPercent: false)
+            _parseInfo = URLParseInfo(urlString: _url.relativeString, urlParser: .RFC3986, schemeRange: nil, userRange: nil, passwordRange: nil, hostRange: nil, portRange: nil, pathRange: nil, queryRange: nil, fragmentRange: nil, isIPLiteral: false, didPercentEncodeHost: false, pathHasPercent: false, pathHasFileID: false)
         }
-        _baseParseInfo = reference.baseURL?._parseInfo
+        _baseParseInfo = reference.baseURL?.absoluteURL._parseInfo
     }
 
     private var reference: NSURL {
