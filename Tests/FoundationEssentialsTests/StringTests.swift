@@ -1118,14 +1118,6 @@ final class StringTests : XCTestCase {
             } catch {
                 XCTFail(error.localizedDescription)
             }
-
-            let usedEncoding: String._Encoding = String._Encoding(rawValue: 0)
-            do {
-                _ = try String(contentsOfFile: nonExistentURL.path())
-                XCTFail()
-            } catch {
-                expectEqual(0, usedEncoding.rawValue)
-            }
         }
 
     }

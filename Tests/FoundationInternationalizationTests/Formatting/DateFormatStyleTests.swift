@@ -644,7 +644,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         ]
 
         for (style, expectation) in expectations {
-            let formatted = style.attributed.format(date)
+            let formatted = style.attributedStyle.format(date)
             XCTAssertEqual(formatted, expectation.attributedString)
         }
     }
@@ -669,7 +669,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         ]
 
         for (style, expectation) in expectations {
-            let formatted = style.attributed.format(date)
+            let formatted = style.attributedStyle.format(date)
             XCTAssertEqual(formatted, expectation.attributedString)
         }
     }
@@ -700,11 +700,11 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         var format = Date.FormatStyle.dateTime
         format.timeZone = .gmt
 
-        test(date.formatted(format.weekday().locale(enUSLocale).attributed), [("Mon", .weekday)])
-        test(date.formatted(format.weekday().locale(zhTW).attributed), [("週一", .weekday)])
+        test(date.formatted(format.weekday().locale(enUSLocale).attributedStyle), [("Mon", .weekday)])
+        test(date.formatted(format.weekday().locale(zhTW).attributedStyle), [("週一", .weekday)])
 
-        test(date.formatted(format.weekday().attributed.locale(enUSLocale)), [("Mon", .weekday)])
-        test(date.formatted(format.weekday().attributed.locale(zhTW)),  [("週一", .weekday)])
+        test(date.formatted(format.weekday().attributedStyle.locale(enUSLocale)), [("Mon", .weekday)])
+        test(date.formatted(format.weekday().attributedStyle.locale(zhTW)),  [("週一", .weekday)])
     }
 
 #if FOUNDATION_FRAMEWORK
@@ -980,7 +980,7 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
         func verify(_ f: Date.FormatString, expected: [Segment], file: StaticString = #filePath, line: UInt = #line) {
-            let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale:Locale(identifier: "en_US"), timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)).attributed)
+            let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale:Locale(identifier: "en_US"), timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)).attributedStyle)
             XCTAssertEqual(s, expected.attributedString, file: file, line: line)
         }
         verify("\(year: .twoDigits)_\(month: .defaultDigits)_\(day: .defaultDigits)", expected:
