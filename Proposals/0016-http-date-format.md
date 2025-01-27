@@ -131,7 +131,7 @@ extension DateComponents.HTTPFormatStyle : FormatStyle {
 
 @available(FoundationPreview 6.2, *)
 public extension FormatStyle where Self == DateComponents.HTTPFormatStyle {
-    static var http: Self
+    static var httpComponents: Self
 }
 
 @available(FoundationPreview 6.2, *)
@@ -146,12 +146,12 @@ extension DateComponents.HTTPFormatStyle: ParseableFormatStyle {
 
 @available(FoundationPreview 6.2, *)
 extension ParseableFormatStyle where Self == DateComponents.HTTPFormatStyle {
-    public static var http: Self
+    public static var httpComponents: Self
 }
 
 @available(FoundationPreview 6.2, *)
 extension ParseStrategy where Self == DateComponents.HTTPFormatStyle {
-    public static var http: Self
+    public static var httpComponents: Self
 }
 
 @available(FoundationPreview 6.2, *)
@@ -163,9 +163,11 @@ extension DateComponents.HTTPFormatStyle : CustomConsumingRegexComponent {
 @available(FoundationPreview 6.2, *)
 extension RegexComponent where Self == DateComponents.HTTPFormatStyle {
     /// Creates a regex component to match a RFC 9110 HTTP date and time, such as "Sun, 06 Nov 1994 08:49:37 GMT", and capture the string as a `DateComponents`.
-    public static var http: DateComponents.HTTPFormatStyle
+    public static var httpComponents: DateComponents.HTTPFormatStyle
 }
 ```
+
+The extensions on the protocols must use a different name for the `DateComponents` and `Date` versions in order to ambiguity when the return type is not specified, such is in `Regex`'s builder syntax.
 
 ### DateComponents Additions
 
