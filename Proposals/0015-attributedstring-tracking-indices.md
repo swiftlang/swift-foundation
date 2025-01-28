@@ -7,6 +7,13 @@
 * Review: ([Pitch](https://forums.swift.org/t/pitch-attributedstring-tracking-indices/76578/3)) 
 * Implementation: [swiftlang/swift-foundation#1109](https://github.com/swiftlang/swift-foundation/pull/1109)
 
+## Revision History
+
+* **v1**: Initial Version
+* **v2**: Minor Updates:
+    - Added an alternatives considered section about the naming of `transform(updating:_:)`
+    - Added a clarification around the impacts of lossening index acceptance behavior
+
 ## Introduction
 
 Similar to many other `Collection` types in Swift, `AttributedString` uses an opaque index type (`AttributedString.Index`) to represent locations within the storage of the text. `AttributedString` uses an opaque type instead of a trivial type like an integer in order to store a more complex representation of the location within the text. Specifically, `AttributedString` uses its index to store not only a raw UTF-8 offset into the text storage, but also a "path" through the rope structure that backs the `AttributedString`. This allows `AttributedString` to quickly find a location within the text storage given an index without performing linear scans of the underlying text on each access or mutation. However, because this opaque index type stores more complex information, it must be handled very carefully and kept in-sync with the `AttributedString` itself. Unlike an integer offset (which can often still be a valid index into a collection like `Array` after a mutation even if it points to a different semantic location), `AttributedString.Index` currently makes no guarantees about its validity after any mutation to the `AttributedString` and in many cases will (intentionally) crash when used improperly. As `AttributedString` is adopted in more advanced use cases throughout our platforms, we'd like to improve upon this developer experience for some common use cases of stored `AttributedString.Index`s.
@@ -133,7 +140,9 @@ _Note: The `DiscontiguousAttributedSubstring` APIs are conditional on the approv
 
 ## Source compatibility
 
-All of these additions are additive and have no impact on source compatibility
+All of these additions are additive and have no impact on source compatibility.
+
+The change in behavior related to the new API Guarantees mentioned above (concerning `AttributedString.Index` acceptance) could change the behavior of an app in certain situations. Previously, apps passing invalid indices were not guaranteed to perform correctly and may crash, whereas now apps running against a newer version of Foundation will be guaranteed to not crash in some of these situations. While there could be edge cases where this is a change in behavior, we don't believe this to be problematic as this new guarantee has actually been the behavior of `AttributedString` in most circumstances for the past few years. `AttributedString.Index` already stores the UTF-8 offset in addition to the path through the rope structure and will fallback to the UTF-8 offset when the rope path is invalid. Therefore in most circumstances we expect this will not be a behavior change but rather just an additional documented guarantee of pre-existing behavior, and I don't believe that any complex use of these indices that would hit an edge case where the application previously crashed would be problematic if the app now continues execution falling back to the known UTF-8 offset when it is in-bounds.
 
 ## Implications on adoption
 
@@ -235,6 +244,15 @@ Instead, I found it much clearer to use a return value instead to clearly distin
 ### `transform(updating: AttributedString.Index, _:)` in addition to `Range`-based APIs
 
 Originally I had considered whether we should offer a third overload to `transform(updating:_:)` that accepts an `Index` instead of a `Range`. However, we found this to be potentially ambiguous in regards to whether this was equivalent to tracking the location just before this index (i.e. `idx ..< idx` - an empty range indicating a location just before `idx`) or equivalent to tracking a range that contained this index (i.e. `idx ..< indexAfterIdx`). Furthermore, the latter behavior is still ambiguous as to whether the created range should encapsulate the full grapheme cluster at `idx`, just the first unicode scalar, or a single UTF-8 scalar as `AttributedString` is not a collection itself. To avoid this ambiguity without introducing a very verbose, explicitly-named overload, I chose not to offer this API and instead direct callers to create a range themselves (either empty or containing a single character/unicode scalar as desired).
+
+### Naming of `transform(updating:_:)`
+
+During Foundation evolution review, we had discussed the naming of `transform(updating:_:)` to determine whether it was a suitable name. I had originally proposed this naming for the following reasons:
+
+- "transform": indicates that the receiver (the `AttributedString`) is being mutated, aligns with existing APIs such as `transformingAttributes` to indicate a mutation, and does not use the -ing suffix to indicate that the mutation is done in-place
+- "updating": indicates that the provided value is going to be updated, uses the -ing suffix to indicate that the updated value is being returned to the caller rather than being mutated in-place via an `inout` parameter
+
+We considered additional names for this api such as `tracking:` and `reindexing:` instead of `updating:` for added clarity and to avoid confusion with other usages of the word "updating" in Foundation such as the "autoupdating" locale/timezone/etc. However I believe that `updating:` is still the right choice of name for this label because words like "tracking"/"reindexing" are not sufficiently clearer in my opinion and do not have precedent in existing APIs to rely on whereas "updating" has precedent in existing APIs and can be differentiated from other different Foundation APIs due to the lack of the "auto" prefix indicating that the update is performed automatically without additional API calls.
 
 ## Acknowledgments
 
