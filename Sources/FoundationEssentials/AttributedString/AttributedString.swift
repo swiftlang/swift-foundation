@@ -372,9 +372,25 @@ extension Range where Bound == AttributedString.Index {
     }
 }
 
+extension RangeSet where Bound == AttributedString.Index {
+    internal var _bstringIndices: RangeSet<BigString.Index> {
+        RangeSet<BigString.Index>(self.ranges.map(\._bstringRange))
+    }
+}
+
+extension RangeSet where Bound == BigString.Index {
+    internal var _attributedStringIndices: RangeSet<AttributedString.Index> {
+        RangeSet<AttributedString.Index>(self.ranges.map(\._attributedStringRange))
+    }
+}
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Range where Bound == BigString.Index {
     internal var _utf8OffsetRange: Range<Int> {
         Range<Int>(uncheckedBounds: (lowerBound.utf8Offset, upperBound.utf8Offset))
+    }
+    
+    internal var _attributedStringRange: Range<AttributedString.Index> {
+        Range<AttributedString.Index>(uncheckedBounds: (AttributedString.Index(lowerBound), AttributedString.Index(upperBound)))
     }
 }

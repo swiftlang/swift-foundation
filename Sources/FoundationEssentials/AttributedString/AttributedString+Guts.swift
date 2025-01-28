@@ -105,9 +105,9 @@ extension AttributedString.Guts {
         if left._guts === right._guts, left._strBounds == right._strBounds { return true }
 
         guard left.count == right.count else { return false }
+        guard !left.isEmpty else { return true }
 
-        var leftIndex = left._strBounds.lowerBound
-        var rightIndex = right._strBounds.lowerBound
+        guard var leftIndex = left._strBounds.ranges.first?.lowerBound, var rightIndex = right._strBounds.ranges.first?.lowerBound else { return false }
 
         var it1 = left.makeIterator()
         var it2 = right.makeIterator()
@@ -135,8 +135,8 @@ extension AttributedString.Guts {
                 return false
             }
         }
-        assert(leftIndex == left._strBounds.upperBound)
-        assert(rightIndex == right._strBounds.upperBound)
+        assert(leftIndex == left._strBounds.ranges.last?.upperBound)
+        assert(rightIndex == right._strBounds.ranges.last?.upperBound)
         return true
     }
 
@@ -159,6 +159,10 @@ extension AttributedString.Guts {
 
 extension AttributedString.Guts {
     internal func description(in range: Range<BigString.Index>) -> String {
+        self.description(in: RangeSet(range))
+    }
+    
+    internal func description(in range: RangeSet<BigString.Index>) -> String {
         var result = ""
         let runs = Runs(self, in: range)
         for run in runs {

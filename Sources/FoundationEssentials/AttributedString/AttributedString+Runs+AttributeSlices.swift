@@ -50,10 +50,32 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                let run = _slice.runs[_index]
-                let next = _slice.index(after: _index)
-                let range = _index ..< next
-                _index = next
+                
+                var run: AttributedString.Runs.Run
+                var range: Range<AttributedString.Index>
+                if _slice.runs._isDiscontiguous {
+                    // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
+                    run = _slice.runs[_index]
+                    let end = _slice.runs._slicedRunBoundary(
+                        after: _index,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: true)
+                    let next = _slice.runs._slicedRunBoundary(
+                        after: end,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: false)
+                    range = _index ..< end
+                    _index = next
+                } else {
+                    // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
+                    run = _slice.runs[_index]
+                    let next = _slice.index(after: _index)
+                    range = _index ..< next
+                    _index = next
+                }
+                
                 return (run._attributes[T.self], range)
             }
         }
@@ -63,25 +85,29 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            Index(runs._strBounds.lowerBound)
+            Index(runs.startIndex._stringIndex!)
         }
 
         public var endIndex: Index {
-            Index(runs._strBounds.upperBound)
+            Index(runs.endIndex._stringIndex!)
         }
 
         public func index(before i: Index) -> Index {
             runs._slicedRunBoundary(
                 before: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfPrevious: false
+            )
         }
 
         public func index(after i: Index) -> Index {
             runs._slicedRunBoundary(
                 after: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfCurrent: false
+            )
         }
 
         public subscript(position: AttributedString.Index) -> Element {
@@ -89,7 +115,12 @@ extension AttributedString.Runs {
                 roundingDown: position,
                 attributeNames: _names,
                 constraints: _constraints)
-            let end = self.index(after: position)
+            let end = runs._slicedRunBoundary(
+                after: position,
+                attributeNames: _names,
+                constraints: _constraints,
+                endOfCurrent: true
+            )
             let attributes = runs._guts.runs[runIndex].attributes
             return (attributes[T.self], start ..< end)
         }
@@ -157,10 +188,32 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                let run = _slice.runs[_index]
-                let next = _slice.index(after: _index)
-                let range = _index ..< next
-                _index = next
+                
+                var run: AttributedString.Runs.Run
+                var range: Range<AttributedString.Index>
+                if _slice.runs._isDiscontiguous {
+                    // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
+                    run = _slice.runs[_index]
+                    let end = _slice.runs._slicedRunBoundary(
+                        after: _index,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: true)
+                    let next = _slice.runs._slicedRunBoundary(
+                        after: end,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: false)
+                    range = _index ..< end
+                    _index = next
+                } else {
+                    // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
+                    run = _slice.runs[_index]
+                    let next = _slice.index(after: _index)
+                    range = _index ..< next
+                    _index = next
+                }
+                
                 return (run._attributes[T.self], run._attributes[U.self], range)
             }
         }
@@ -168,27 +221,31 @@ extension AttributedString.Runs {
         public func makeIterator() -> Iterator {
             Iterator(self)
         }
-
+        
         public var startIndex: Index {
-            Index(runs._strBounds.lowerBound)
+            Index(runs.startIndex._stringIndex!)
         }
-
+        
         public var endIndex: Index {
-            Index(runs._strBounds.upperBound)
+            Index(runs.endIndex._stringIndex!)
         }
 
         public func index(before i: Index) -> Index {
             runs._slicedRunBoundary(
                 before: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfPrevious: false
+            )
         }
 
         public func index(after i: Index) -> Index {
             runs._slicedRunBoundary(
                 after: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfCurrent: false
+            )
         }
 
         public subscript(position: AttributedString.Index) -> Element {
@@ -196,7 +253,12 @@ extension AttributedString.Runs {
                 roundingDown: position,
                 attributeNames: _names,
                 constraints: _constraints)
-            let end = self.index(after: position)
+            let end = runs._slicedRunBoundary(
+                after: position,
+                attributeNames: _names,
+                constraints: _constraints,
+                endOfCurrent: true
+            )
             let attributes = runs._guts.runs[runIndex].attributes
             return (attributes[T.self], attributes[U.self], start ..< end)
         }
@@ -284,10 +346,32 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                let run = _slice.runs[_index]
-                let next = _slice.index(after: _index)
-                let range = _index ..< next
-                _index = next
+                
+                var run: AttributedString.Runs.Run
+                var range: Range<AttributedString.Index>
+                if _slice.runs._isDiscontiguous {
+                    // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
+                    run = _slice.runs[_index]
+                    let end = _slice.runs._slicedRunBoundary(
+                        after: _index,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: true)
+                    let next = _slice.runs._slicedRunBoundary(
+                        after: end,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: false)
+                    range = _index ..< end
+                    _index = next
+                } else {
+                    // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
+                    run = _slice.runs[_index]
+                    let next = _slice.index(after: _index)
+                    range = _index ..< next
+                    _index = next
+                }
+                
                 return (
                     run._attributes[T.self],
                     run._attributes[U.self],
@@ -299,27 +383,31 @@ extension AttributedString.Runs {
         public func makeIterator() -> Iterator {
             Iterator(self)
         }
-
+        
         public var startIndex: Index {
-            Index(runs._strBounds.lowerBound)
+            Index(runs.startIndex._stringIndex!)
         }
-
+        
         public var endIndex: Index {
-            Index(runs._strBounds.upperBound)
+            Index(runs.endIndex._stringIndex!)
         }
 
         public func index(before i: Index) -> Index {
             runs._slicedRunBoundary(
                 before: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfPrevious: false
+            )
         }
 
         public func index(after i: Index) -> Index {
             runs._slicedRunBoundary(
                 after: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfCurrent: false
+            )
         }
 
         public subscript(position: AttributedString.Index) -> Element {
@@ -327,7 +415,12 @@ extension AttributedString.Runs {
                 roundingDown: position,
                 attributeNames: _names,
                 constraints: _constraints)
-            let end = self.index(after: position)
+            let end = runs._slicedRunBoundary(
+                after: position,
+                attributeNames: _names,
+                constraints: _constraints,
+                endOfCurrent: true
+            )
             let attributes = runs._guts.runs[runIndex].attributes
             return (attributes[T.self], attributes[U.self], attributes[V.self], start ..< end)
         }
@@ -424,10 +517,32 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                let run = _slice.runs[_index]
-                let next = _slice.index(after: _index)
-                let range = _index ..< next
-                _index = next
+                
+                var run: AttributedString.Runs.Run
+                var range: Range<AttributedString.Index>
+                if _slice.runs._isDiscontiguous {
+                    // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
+                    run = _slice.runs[_index]
+                    let end = _slice.runs._slicedRunBoundary(
+                        after: _index,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: true)
+                    let next = _slice.runs._slicedRunBoundary(
+                        after: end,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: false)
+                    range = _index ..< end
+                    _index = next
+                } else {
+                    // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
+                    run = _slice.runs[_index]
+                    let next = _slice.index(after: _index)
+                    range = _index ..< next
+                    _index = next
+                }
+                
                 return (
                     run._attributes[T.self],
                     run._attributes[U.self],
@@ -440,27 +555,31 @@ extension AttributedString.Runs {
         public func makeIterator() -> Iterator {
             Iterator(self)
         }
-
+        
         public var startIndex: Index {
-            Index(runs._strBounds.lowerBound)
+            Index(runs.startIndex._stringIndex!)
         }
-
+        
         public var endIndex: Index {
-            Index(runs._strBounds.upperBound)
+            Index(runs.endIndex._stringIndex!)
         }
 
         public func index(before i: Index) -> Index {
             runs._slicedRunBoundary(
                 before: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfPrevious: false
+            )
         }
 
         public func index(after i: Index) -> Index {
             runs._slicedRunBoundary(
                 after: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfCurrent: false
+            )
         }
 
         public subscript(position: AttributedString.Index) -> Element {
@@ -468,7 +587,12 @@ extension AttributedString.Runs {
                 roundingDown: position,
                 attributeNames: _names,
                 constraints: _constraints)
-            let end = self.index(after: position)
+            let end = runs._slicedRunBoundary(
+                after: position,
+                attributeNames: _names,
+                constraints: _constraints,
+                endOfCurrent: true
+            )
             let attributes = runs._guts.runs[runIndex].attributes
             return (
                 attributes[T.self],
@@ -580,10 +704,32 @@ extension AttributedString.Runs {
                 if _index == _slice.endIndex {
                     return nil
                 }
-                let run = _slice.runs[_index]
-                let next = _slice.index(after: _index)
-                let range = _index ..< next
-                _index = next
+                
+                var run: AttributedString.Runs.Run
+                var range: Range<AttributedString.Index>
+                if _slice.runs._isDiscontiguous {
+                    // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
+                    run = _slice.runs[_index]
+                    let end = _slice.runs._slicedRunBoundary(
+                        after: _index,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: true)
+                    let next = _slice.runs._slicedRunBoundary(
+                        after: end,
+                        attributeNames: _slice._names,
+                        constraints: _slice._constraints,
+                        endOfCurrent: false)
+                    range = _index ..< end
+                    _index = next
+                } else {
+                    // Contiguous runs ensures that the next index is the end of our run, which we can cache as the start of the next
+                    run = _slice.runs[_index]
+                    let next = _slice.index(after: _index)
+                    range = _index ..< next
+                    _index = next
+                }
+                
                 return (
                     run._attributes[T.self],
                     run._attributes[U.self],
@@ -597,27 +743,31 @@ extension AttributedString.Runs {
         public func makeIterator() -> Iterator {
             Iterator(self)
         }
-
+        
         public var startIndex: Index {
-            Index(runs._strBounds.lowerBound)
+            Index(runs.startIndex._stringIndex!)
         }
-
+        
         public var endIndex: Index {
-            Index(runs._strBounds.upperBound)
+            Index(runs.endIndex._stringIndex!)
         }
 
         public func index(before i: Index) -> Index {
             runs._slicedRunBoundary(
                 before: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfPrevious: false
+            )
         }
 
         public func index(after i: Index) -> Index {
             runs._slicedRunBoundary(
                 after: i,
                 attributeNames: _names,
-                constraints: _constraints)
+                constraints: _constraints,
+                endOfCurrent: false
+            )
         }
 
         public subscript(position: AttributedString.Index) -> Element {
@@ -625,7 +775,12 @@ extension AttributedString.Runs {
                 roundingDown: position,
                 attributeNames: _names,
                 constraints: _constraints)
-            let end = self.index(after: position)
+            let end = runs._slicedRunBoundary(
+                after: position,
+                attributeNames: _names,
+                constraints: _constraints,
+                endOfCurrent: true
+            )
             let attributes = runs._guts.runs[runIndex].attributes
             return (
                 attributes[T.self],
