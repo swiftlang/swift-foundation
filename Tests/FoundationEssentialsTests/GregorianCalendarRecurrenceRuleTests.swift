@@ -20,7 +20,6 @@ import TestSupport
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-@available(FoundationPreview 0.4, *)
 final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
     /// A Gregorian calendar in GMT with no time zone changes
     var gregorian: Calendar = {
