@@ -216,6 +216,12 @@ extension AttributedString._AttributeStorage {
             _attributeModified(attributeName, old: oldValue, new: newValue)
         }
     }
+    
+    mutating func removeValue<T: AttributedStringKey>(forKey: T.Type) -> Bool {
+        let oldValue = self.contents.removeValue(forKey: T.name)
+        _attributeModified(T.name, old: oldValue, new: nil)
+        return oldValue != nil
+    }
 
     internal mutating func mergeIn(_ other: Self, mergePolicy: AttributeMergePolicy = .keepNew) {
         for (key, value) in other.contents {

@@ -432,6 +432,12 @@ let benchmarks = {
         blackHole(hasher.finalize())
     }
     
+    Benchmark("removeNonExistentAttribute") { benchmark in
+        var str = manyAttributesString
+        str.testBool = nil
+        blackHole(str)
+    }
+    
     struct TestAttribute : AttributedStringKey {
         static var name = "0"
         typealias Value = Int

@@ -391,7 +391,7 @@ extension AttributedString.Guts {
     ) where K.Value: Sendable {
         let utf8Range = unicodeScalarRange(roundingDown: range)._utf8OffsetRange
         self.runs(in: utf8Range).updateEach { attributes, range, mutated in
-            attributes[K.self] = nil
+            mutated = attributes.removeValue(forKey: K.self)
         }
         if K.runBoundaries != nil {
             self.enforceAttributeConstraintsAfterMutation(
