@@ -266,8 +266,8 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         let szMapSize: UInt64 = min(UInt64(maxLength ?? Int.max), szFileSize)
         let pData: UnsafeMutableRawPointer =
             MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, SIZE_T(szMapSize))
-        return ReadBytesResult(bytes: pData, length: Int(szMapSize), deallocator: .custom({ hMapping, _ in
-            guard UnmapViewOfFile(hMapping) else {
+        return ReadBytesResult(bytes: pData, length: Int(szMapSize), deallocator: .custom({ pData, _ in
+            guard UnmapViewOfFile(pData) else {
                 fatalError("UnmapViewOfFile")
             }
             guard CloseHandle(hMapping) else {
