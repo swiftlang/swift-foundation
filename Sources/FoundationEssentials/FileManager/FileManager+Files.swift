@@ -718,7 +718,7 @@ extension _FileManagerImpl {
             func _quotactl<T>(_ path: UnsafePointer<CChar>, _ cmd: Int32, _ type: Int32, _ uid: uid_t, init: T) -> T? {
                 var res = `init`
                 let success = withUnsafeMutableBytes(of: &res) { buffer in
-                    quotactl(path, QCMD(cmd, type), Int32(uid), buffer.baseAddress!) == 0
+                    quotactl(path, QCMD(cmd, type), Int32(bitPattern: uid), buffer.baseAddress!) == 0
                 }
                 return success ? res : nil
             }
