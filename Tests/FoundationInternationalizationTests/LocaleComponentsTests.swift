@@ -171,6 +171,7 @@ final class LocaleComponentsTests: XCTestCase {
             return comps
         }
 
+#if FIXED_ICU76_POSIX_VARIANT
         verify("en-US-u-ca-japanese-cu-eur-va-posix-tz-brrbr-ms-metric") {
             var comps = Locale.Components(languageCode: "en", languageRegion: "US")
             comps.calendar = .japanese
@@ -180,6 +181,7 @@ final class LocaleComponentsTests: XCTestCase {
             comps.measurementSystem = .metric
             return comps
         }
+#endif
 
         verify("de-DE-u-co-phonebk") {
             var comps = Locale.Components(languageCode: .german, languageRegion: .germany)
