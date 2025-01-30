@@ -52,6 +52,67 @@ final class ISO8601FormatStyleParsingTests: XCTestCase {
         XCTAssertEqual(try? iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon).parse("15:35:46Z"), Date(timeIntervalSinceReferenceDate: -978251054.0))
     }
     
+    func test_ISO8601ParseComponents_fromString() throws {
+        let components = try DateComponents.ISO8601FormatStyle().parse("2022-01-28T15:35:46Z")
+        XCTAssertEqual(components, DateComponents(calendar: Calendar(identifier: .iso8601), timeZone: .gmt, year: 2022, month: 1, day: 28, hour: 15, minute: 35, second: 46))
+        XCTAssertNotNil(components.date)
+    }
+    
+    func test_ISO8601ParseComponents_missingComponents() throws {
+        // Default style requires time
+        XCTAssertThrowsError(try DateComponents.ISO8601FormatStyle().parse("2022-01-28"))
+    }
+
+    /// See also the format-only tests in DateISO8601FormatStyleEssentialsTests
+    func test_ISO8601ParseComponents() throws {
+        let iso8601 = DateComponents.ISO8601FormatStyle()
+
+        // Date is: "2022-01-28 15:35:46"
+        XCTAssertEqual(try? iso8601.parse("2022-01-28T15:35:46Z"), DateComponents(calendar: Calendar(identifier: .iso8601), timeZone: .gmt, year: 2022, month: 1, day: 28, hour: 15, minute: 35, second: 46))
+
+        var iso8601Pacific = iso8601
+        let tz = TimeZone(secondsFromGMT: -3600 * 8)!
+        iso8601Pacific.timeZone = tz
+        XCTAssertEqual(try? iso8601Pacific.timeSeparator(.omitted).parse("2022-01-28T073546-0800"), DateComponents(calendar: Calendar(identifier: .iso8601), timeZone: tz, year: 2022, month: 1, day: 28, hour: 7, minute: 35, second: 46))
+
+        // Day-only results: the default time is midnight for parsed date when the time piece is missing
+        // Date is: "2022-01-28 00:00:00"
+        XCTAssertEqual(try? iso8601.year().month().day().dateSeparator(.dash).parse("2022-01-28"), DateComponents(calendar: Calendar(identifier: .iso8601), year: 2022, month: 1, day: 28))
+        // Date is: "2022-01-28 00:00:00"
+        XCTAssertEqual(try? iso8601.year().month().day().dateSeparator(.omitted).parse("20220128"), DateComponents(calendar: Calendar(identifier: .iso8601), year: 2022, month: 1, day: 28))
+
+        // Time-only results: we use the default date of the format style, 1970-01-01, to supplement the parsed date without year, month or day
+        // Date is: "1970-01-23 00:00:00"
+        // note: weekday as understood by Calendar is not the same integer value as the one in the ISO8601 format
+        XCTAssertEqual(try? iso8601.weekOfYear().day().dateSeparator(.dash).parse("W04-05"), DateComponents(calendar: Calendar(identifier: .iso8601), weekday: 6, weekOfYear: 4))
+        // Date is: "1970-01-28 15:35:46"
+        var expectedWithDayOfYear = DateComponents(calendar: Calendar(identifier: .iso8601), hour: 15, minute: 35, second: 46)
+        expectedWithDayOfYear.dayOfYear = 28
+        XCTAssertEqual(try? iso8601.day().time(includingFractionalSeconds: false).timeSeparator(.colon).parse("028T15:35:46"), expectedWithDayOfYear)
+        // Date is: "1970-01-01 15:35:46"
+        XCTAssertEqual(try? iso8601.time(includingFractionalSeconds: false).timeSeparator(.colon).parse("15:35:46"), DateComponents(calendar: Calendar(identifier: .iso8601), hour: 15, minute: 35, second: 46))
+        // Date is: "1970-01-01 15:35:46"
+        XCTAssertEqual(try? iso8601.time(includingFractionalSeconds: false).timeZone(separator: .omitted).parse("15:35:46Z"), DateComponents(calendar: Calendar(identifier: .iso8601), timeZone: .gmt, hour: 15, minute: 35, second: 46))
+        // Date is: "1970-01-01 15:35:46"
+        XCTAssertEqual(try? iso8601.time(includingFractionalSeconds: false).timeZone(separator: .colon).parse("15:35:46Z"), DateComponents(calendar: Calendar(identifier: .iso8601), timeZone: .gmt, hour: 15, minute: 35, second: 46))
+        // Date is: "1970-01-01 15:35:46"
+        XCTAssertEqual(try? iso8601.timeZone(separator: .colon).time(includingFractionalSeconds: false).timeSeparator(.colon).parse("15:35:46Z"), DateComponents(calendar: Calendar(identifier: .iso8601), timeZone: .gmt, hour: 15, minute: 35, second: 46))
+    }
+        
+    func test_ISO8601FractionalSecondsAreOptional() {
+        let iso8601 = Date.ISO8601FormatStyle()
+        let iso8601WithFraction = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        
+        let str = "2022-01-28T15:35:46Z"
+        let strWithFraction = "2022-01-28T15:35:46.123Z"
+        
+        XCTAssertNotNil(try? iso8601.parse(str))
+        XCTAssertNotNil(try? iso8601.parse(strWithFraction))
+
+        XCTAssertNotNil(try? iso8601WithFraction.parse(str))
+        XCTAssertNotNil(try? iso8601WithFraction.parse(strWithFraction))
+    }
+    
     func test_weekOfYear() throws {
         let iso8601 = Date.ISO8601FormatStyle()
 
@@ -124,12 +185,27 @@ final class ISO8601FormatStyleParsingTests: XCTestCase {
         XCTAssertEqual(try? iso8601gmtP1.timeSeparator(.omitted).parse("2022-01-28T163546+01:00:00"), date)
     }
     
-    func test_fractionalSeconds() {
+    func test_fractionalSeconds() throws {
         let expectedDate = Date(timeIntervalSinceReferenceDate: 646876592.34567)
         var iso8601 = Date.ISO8601FormatStyle().year().month().day().time(includingFractionalSeconds: true)
         iso8601.timeZone = .gmt
 
-        XCTAssertEqual(try? iso8601.parse("2021-07-01T23:56:32.34567"), expectedDate)
+        let parsedWithFraction = try XCTUnwrap(try iso8601.parse("2021-07-01T23:56:32.34567"))
+        let parsedWithoutFraction = try XCTUnwrap(try iso8601.parse("2021-07-01T23:56:32"))
+        
+        let parsedWithFraction1 = try XCTUnwrap(try iso8601.parse("2021-07-01T23:56:32.3"))
+        let parsedWithFraction2 = try XCTUnwrap(try iso8601.parse("2021-07-01T23:56:32.34"))
+        let parsedWithFraction3 = try XCTUnwrap(try iso8601.parse("2021-07-01T23:56:32.345"))
+        let parsedWithFraction4 = try XCTUnwrap(try iso8601.parse("2021-07-01T23:56:32.3456"))
+
+        XCTAssertEqual(parsedWithoutFraction.timeIntervalSinceReferenceDate, expectedDate.timeIntervalSinceReferenceDate, accuracy: 1.0)
+
+        // More accurate due to inclusion of fraction
+        XCTAssertEqual(parsedWithFraction.timeIntervalSinceReferenceDate, expectedDate.timeIntervalSinceReferenceDate, accuracy: 0.01)
+        XCTAssertEqual(parsedWithFraction1.timeIntervalSinceReferenceDate, expectedDate.timeIntervalSinceReferenceDate, accuracy: 0.1)
+        XCTAssertEqual(parsedWithFraction2.timeIntervalSinceReferenceDate, expectedDate.timeIntervalSinceReferenceDate, accuracy: 0.1)
+        XCTAssertEqual(parsedWithFraction3.timeIntervalSinceReferenceDate, expectedDate.timeIntervalSinceReferenceDate, accuracy: 0.1)
+        XCTAssertEqual(parsedWithFraction4.timeIntervalSinceReferenceDate, expectedDate.timeIntervalSinceReferenceDate, accuracy: 0.1)
     }
     
     func test_specialTimeZonesAndSpaces() {

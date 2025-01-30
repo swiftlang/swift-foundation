@@ -170,6 +170,11 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     public func secondsFromGMT(for date: Date = Date()) -> Int {
         _tz.secondsFromGMT(for: date)
     }
+    
+    /// If the time zone does not observe daylight savings, then return the constant offset from GMT. Otherwise, returns nil.
+    internal var fixedOffsetFromGMT: Int? {
+        _tz.fixedOffsetFromGMT
+    }
 
     internal func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
         _tz.rawAndDaylightSavingTimeOffset(for: date, repeatedTimePolicy: repeatedTimePolicy, skippedTimePolicy: skippedTimePolicy)
