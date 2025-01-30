@@ -780,9 +780,9 @@ extension AttributedString.Runs {
             AttributeContainer(storage.filterWithoutInvalidatingDependents { _names.contains($0.key) })
         }
     }
-
+    
     @_spi(AttributedString)
-    public subscript(nsAttributedStringKeys keys: NSAttributedString.Key...) -> NSAttributesSlice {
+    public subscript(nsAttributedStringKeys keys: [NSAttributedString.Key]) -> NSAttributesSlice {
         return NSAttributesSlice(runs: self, names: keys.map { $0.rawValue })
     }
 }
