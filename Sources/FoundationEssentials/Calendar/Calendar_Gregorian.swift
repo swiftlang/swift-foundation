@@ -191,11 +191,27 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     let inf_ti : TimeInterval = 4398046511104.0
 
-    // FIXME: Support other Gregorian-calendar family such as ISO8601
-    // Only respects Gregorian identifier
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
 
-        self.timeZone = timeZone ?? TimeZone.default
+        // ISO8601 has different default values for time zone, locale, firstWeekday, and minimumDaysInFirstWeek
+        let defaultTimeZone: TimeZone
+        let defaultLocale: Locale?
+        let defaultFirstWeekday: Int?
+        let defaultMinimumDaysInFirstWeek: Int?
+        
+        if identifier == .iso8601 {
+            defaultTimeZone = .gmt
+            defaultLocale = Locale.unlocalized
+            defaultFirstWeekday = 2
+            defaultMinimumDaysInFirstWeek = 4
+        } else {
+            defaultTimeZone = .default
+            defaultLocale = nil
+            defaultFirstWeekday = nil
+            defaultMinimumDaysInFirstWeek = nil
+        }
+                
+        self.timeZone = timeZone ?? defaultTimeZone
         if let gregorianStartDate {
             self.gregorianStartDate = gregorianStartDate
             do {
@@ -212,10 +228,12 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             self.gregorianStartDate = Date(timeIntervalSince1970: -12219292800) // 1582-10-15T00:00:00Z
         }
 
-        self.locale = locale
+        self.locale = locale ?? defaultLocale
 
         if let firstWeekday, (firstWeekday >= 1 && firstWeekday <= 7) {
             _firstWeekday = firstWeekday
+        } else if let defaultFirstWeekday {
+            _firstWeekday = defaultFirstWeekday
         }
 
         if var minimumDaysInFirstWeek {
@@ -225,12 +243,14 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 minimumDaysInFirstWeek = 7
             }
             _minimumDaysInFirstWeek = minimumDaysInFirstWeek
+        } else if let defaultMinimumDaysInFirstWeek {
+            _minimumDaysInFirstWeek = defaultMinimumDaysInFirstWeek
         }
+        
+        self.identifier = identifier
     }
 
-    var identifier: Calendar.Identifier {
-        .gregorian
-    }
+    let identifier: Calendar.Identifier
 
     var locale: Locale?
 
