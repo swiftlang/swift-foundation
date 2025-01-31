@@ -200,16 +200,16 @@ final class TestAttributedString: XCTestCase {
 
         let middleRange = attrStr.characters.index(attrStr.startIndex, offsetBy: 3) ..< attrStr.characters.index(attrStr.endIndex, offsetBy: -3)
         let view = attrStr[middleRange].runs
-        verifyAttributes(view[nsAttributedStringKeys: .testInt], string: attrStr, expectation: [("lo", .init().testInt(1)), (" Wo", .init())])
-        verifyAttributes(view[nsAttributedStringKeys: .testDouble], string: attrStr, expectation: [("lo ", .init()), ("Wo", .init().testDouble(2.0))])
-        verifyAttributes(view[nsAttributedStringKeys: .testString], string: attrStr, expectation: [("lo Wo", .init())])
-        verifyAttributes(view[nsAttributedStringKeys: .testInt, .testDouble], string: attrStr, expectation: [("lo", .init().testInt(1)), (" ", .init()), ("Wo", .init().testDouble(2.0))])
+        verifyAttributes(view[nsAttributedStringKeys: [.testInt]], string: attrStr, expectation: [("lo", .init().testInt(1)), (" Wo", .init())])
+        verifyAttributes(view[nsAttributedStringKeys: [.testDouble]], string: attrStr, expectation: [("lo ", .init()), ("Wo", .init().testDouble(2.0))])
+        verifyAttributes(view[nsAttributedStringKeys: [.testString]], string: attrStr, expectation: [("lo Wo", .init())])
+        verifyAttributes(view[nsAttributedStringKeys: [.testInt, .testDouble]], string: attrStr, expectation: [("lo", .init().testInt(1)), (" ", .init()), ("Wo", .init().testDouble(2.0))])
         
         attrStr[middleRange].testString = "Test"
-        verifyAttributes(attrStr.runs[nsAttributedStringKeys: .testInt], string: attrStr, expectation: [("Hello", .init().testInt(1)), (" World", .init())])
-        verifyAttributes(attrStr.runs[nsAttributedStringKeys: .testDouble], string: attrStr, expectation: [("Hello ", .init()), ("World", .init().testDouble(2.0))])
-        verifyAttributes(attrStr.runs[nsAttributedStringKeys: .testString], string: attrStr, expectation: [("Hel", .init()), ("lo Wo", .init().testString("Test")), ("rld", .init())])
-        verifyAttributes(attrStr.runs[nsAttributedStringKeys: .testInt, .testDouble, .testString], string: attrStr, expectation: [
+        verifyAttributes(attrStr.runs[nsAttributedStringKeys: [.testInt]], string: attrStr, expectation: [("Hello", .init().testInt(1)), (" World", .init())])
+        verifyAttributes(attrStr.runs[nsAttributedStringKeys: [.testDouble]], string: attrStr, expectation: [("Hello ", .init()), ("World", .init().testDouble(2.0))])
+        verifyAttributes(attrStr.runs[nsAttributedStringKeys: [.testString]], string: attrStr, expectation: [("Hel", .init()), ("lo Wo", .init().testString("Test")), ("rld", .init())])
+        verifyAttributes(attrStr.runs[nsAttributedStringKeys: [.testInt, .testDouble, .testString]], string: attrStr, expectation: [
             ("Hel", .init().testInt(1)),
             ("lo", .init().testInt(1).testString("Test")),
             (" ", .init().testString("Test")),
