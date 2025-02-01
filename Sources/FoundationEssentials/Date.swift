@@ -259,7 +259,7 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         // NSDate uses the constant format `uuuu-MM-dd HH:mm:ss '+0000'`
 
         // Glibc needs a non-standard format option to pad %Y to 4 digits
-#if canImport(Glibc)
+#if canImport(Glibc) && !os(FreeBSD)
         let format = "%4Y-%m-%d %H:%M:%S +0000"
 #else
         let format = "%Y-%m-%d %H:%M:%S +0000"
