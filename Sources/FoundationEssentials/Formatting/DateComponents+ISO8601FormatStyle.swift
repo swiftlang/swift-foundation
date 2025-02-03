@@ -425,20 +425,34 @@ extension DateComponents.ISO8601FormatStyle {
         
         var it = view.makeIterator()
         var needsSeparator = false
-        var dc = DateComponents(calendar: Calendar(identifier: .iso8601))
+        
+        // Keep these fields local and set them in the DateComponents once for improved performance
+        var yearForWeekOfYear: Int?
+        var year: Int?
+        var month: Int?
+        var weekOfYear: Int?
+        var weekday: Int?
+        var day: Int?
+        var dayOfYear: Int?
+        var hour: Int?
+        var minute: Int?
+        var second: Int?
+        var nanosecond: Int?
+        var timeZone: TimeZone?
+
         if fields.contains(.year) {
             let max = dateSeparator == .omitted ? 4 : nil
             let value = try it.digits(maxDigits: max, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
             if fields.contains(.weekOfYear) {
-                dc.yearForWeekOfYear = value
+                yearForWeekOfYear = value
             } else {
-                dc.year = value
+                year = value
             }
             
             needsSeparator = true
         } else if fillMissingUnits {
             // Support for deprecated formats with missing values
-            dc.year = 1970
+            year = 1970
         }
         
         if fields.contains(.month) {
@@ -452,7 +466,7 @@ extension DateComponents.ISO8601FormatStyle {
             guard _calendar.maximumRange(of: .month)!.contains(value) else {
                 throw parseError(inputString, exampleFormattedString: Date.ISO8601FormatStyle(self).format(Date.now))
             }
-            dc.month = value
+            month = value
 
             needsSeparator = true
         } else if fields.contains(.weekOfYear) {
@@ -468,12 +482,12 @@ extension DateComponents.ISO8601FormatStyle {
             guard _calendar.maximumRange(of: .weekOfYear)!.contains(value) else {
                 throw parseError(inputString, exampleFormattedString: Date.ISO8601FormatStyle(self).format(Date.now))
             }
-            dc.weekOfYear = value
+            weekOfYear = value
             
             needsSeparator = true
         } else if fillMissingUnits {
             // Support for deprecated formats with missing values
-            dc.month = 1
+            month = 1
         }
         
         if fields.contains(.day) {
@@ -490,7 +504,7 @@ extension DateComponents.ISO8601FormatStyle {
                 guard _calendar.maximumRange(of: .weekday)!.contains(value) else {
                     throw parseError(inputString, exampleFormattedString: Date.ISO8601FormatStyle(self).format(Date.now))
                 }
-                dc.weekday = value
+                weekday = value
                 
             } else if fields.contains(.month) {
                 // parse day of month ('dd')
@@ -500,7 +514,7 @@ extension DateComponents.ISO8601FormatStyle {
                     throw parseError(inputString, exampleFormattedString: Date.ISO8601FormatStyle(self).format(Date.now))
                 }
 
-                dc.day = value
+                day = value
                 
             } else {
                 // parse 3 digit day of year ('DDD')
@@ -510,7 +524,7 @@ extension DateComponents.ISO8601FormatStyle {
                     throw parseError(inputString, exampleFormattedString: Date.ISO8601FormatStyle(self).format(Date.now))
                 }
 
-                dc.dayOfYear = value
+                dayOfYear = value
             }
             
             needsSeparator = true
@@ -530,15 +544,15 @@ extension DateComponents.ISO8601FormatStyle {
             
             switch timeSeparator {
             case .colon:
-                dc.hour = try it.digits(input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                hour = try it.digits(input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
                 try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
-                dc.minute = try it.digits(input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                minute = try it.digits(input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
                 try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
-                dc.second = try it.digits(input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                second = try it.digits(input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
             case .omitted:
-                dc.hour = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
-                dc.minute = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
-                dc.second = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                hour = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                minute = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                second = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
             }
             
             // When parsing, fractional seconds are always optional (as of Swift 6.2).
@@ -547,7 +561,7 @@ extension DateComponents.ISO8601FormatStyle {
                 // Looks like a fractional seconds
                 let _ = it.next() // consume the period
                 let fractionalSeconds = try it.digits(nanoseconds: true, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
-                dc.nanosecond = fractionalSeconds
+                nanosecond = fractionalSeconds
             }
             
             needsSeparator = true
@@ -564,10 +578,9 @@ extension DateComponents.ISO8601FormatStyle {
                 throw parseError(inputString, exampleFormattedString: Date.ISO8601FormatStyle(self).format(Date.now))
             }
 
-            let tz: TimeZone
 
             if plusOrMinusOrZ == UInt8(ascii: "Z") || plusOrMinusOrZ == UInt8(ascii: "z") {
-                tz = .gmt
+                timeZone = .gmt
             } else {
                 var tzOffset = 0
                 let positive: Bool
@@ -640,20 +653,37 @@ extension DateComponents.ISO8601FormatStyle {
                 }
                 
                 if tzOffset == 0 {
-                    tz = .gmt
+                    timeZone = .gmt
                 } else {
                     guard let parsedTimeZone = TimeZone(secondsFromGMT: positive ? tzOffset : -tzOffset) else {
                         // Out of range time zone
                         throw parseError(inputString, exampleFormattedString: Date.ISO8601FormatStyle(self).format(Date.now))
                     }
                     
-                    tz = parsedTimeZone
+                    timeZone = parsedTimeZone
                 }
             }
-            
-            dc.timeZone = tz
         }
         
+        // Use the internal init which does not attempt to check each value for Int.max
+        let dc = DateComponents(calendar: Calendar(identifier: .iso8601),
+                                timeZone: timeZone,
+                                rawEra: nil,
+                                rawYear: year,
+                                rawMonth: month,
+                                rawDay: day,
+                                rawHour: hour,
+                                rawMinute: minute,
+                                rawSecond: second,
+                                rawNanosecond: nanosecond,
+                                rawWeekday: weekday,
+                                rawWeekdayOrdinal: nil,
+                                rawQuarter: nil,
+                                rawWeekOfMonth: nil,
+                                rawWeekOfYear: weekOfYear,
+                                rawYearForWeekOfYear: yearForWeekOfYear,
+                                rawDayOfYear: dayOfYear)
+
         // Would be nice to see this functionality on BufferView, but for now we calculate it ourselves.
         let utf8CharactersRead = it.curPointer - view.startIndex._rawValue
         return ComponentsParseResult(consumed: utf8CharactersRead, components: dc)

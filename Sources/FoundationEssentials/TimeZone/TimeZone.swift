@@ -60,11 +60,15 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     /// - parameter seconds: The number of seconds from GMT.
     /// - returns: A time zone, or `nil` if a valid time zone could not be created from `seconds`.
     public init?(secondsFromGMT seconds: Int) {
-        guard let cached = TimeZoneCache.cache.offsetFixed(seconds) else {
-            return nil
+        if seconds == 0 {
+            _tz = TimeZoneCache.cache.gmt
+        } else {
+            guard let cached = TimeZoneCache.cache.offsetFixed(seconds) else {
+                return nil
+            }
+            
+            _tz = cached
         }
-
-        _tz = cached
     }
 
     internal init?(name: String) {
@@ -245,6 +249,10 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     }
 
     public static func ==(lhs: TimeZone, rhs: TimeZone) -> Bool {
+        if lhs._tz === rhs._tz {
+            return true
+        }
+        
         // Autoupdating is only ever equal to autoupdating. Other time zones compare their values.
         if lhs._tz.isAutoupdating && rhs._tz.isAutoupdating {
             return true
