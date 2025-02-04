@@ -1798,6 +1798,110 @@ extension DataTests {
 // MARK: - Base64 Encode/Decode Tests
 
 extension DataTests {
+
+    func test_base64Encode_emptyData() {
+        XCTAssertEqual(Data().base64EncodedString(), "")
+        XCTAssertEqual(Data().base64EncodedData(), Data())
+    }
+
+    func test_base64Encode_arrayOfNulls() {
+        let input = Data(repeating: 0, count: 10)
+        XCTAssertEqual(input.base64EncodedString(), "AAAAAAAAAAAAAA==")
+        XCTAssertEqual(input.base64EncodedData(), Data("AAAAAAAAAAAAAA==".utf8))
+    }
+
+    func test_base64Encode_differentPaddingNeeds() {
+        XCTAssertEqual(Data([1, 2, 3, 4]).base64EncodedString(), "AQIDBA==")
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]).base64EncodedString(), "AQIDBAU=")
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]).base64EncodedString(), "AQIDBAUG")
+
+        XCTAssertEqual(Data([1, 2, 3, 4]).base64EncodedString(options: [.lineLength64Characters]), "AQIDBA==")
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]).base64EncodedString(options: [.lineLength64Characters]), "AQIDBAU=")
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]).base64EncodedString(options: [.lineLength64Characters]), "AQIDBAUG")
+    }
+
+    func test_base64Encode_addingLinebreaks() {
+        let input = """
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut at tincidunt arcu. Suspendisse nec sodales erat, sit amet imperdiet ipsum. Etiam sed ornare felis.
+            """
+
+        // using .endLineWithLineFeed
+        XCTAssertEqual(
+            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters, .endLineWithLineFeed]),
+            """
+            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\n\
+            bmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\n\
+            b2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\n\
+            IG9ybmFyZSBmZWxpcy4=
+            """
+        )
+        XCTAssertEqual(
+            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters, .endLineWithLineFeed]),
+            """
+            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\n\
+            VXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\n\
+            bWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
+            """
+        )
+
+        // using .endLineWithCarriageReturn
+        XCTAssertEqual(
+            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters, .endLineWithCarriageReturn]),
+            """
+            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\
+            bmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\
+            b2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\
+            IG9ybmFyZSBmZWxpcy4=
+            """
+        )
+        XCTAssertEqual(
+            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters, .endLineWithCarriageReturn]),
+            """
+            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\r\
+            VXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\r\
+            bWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
+            """
+        )
+
+        // using .endLineWithLineFeed, .endLineWithCarriageReturn
+        XCTAssertEqual(
+            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters, .endLineWithLineFeed, .endLineWithCarriageReturn]),
+            """
+            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\n\
+            bmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\n\
+            b2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\n\
+            IG9ybmFyZSBmZWxpcy4=
+            """
+        )
+        XCTAssertEqual(
+            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters, .endLineWithLineFeed, .endLineWithCarriageReturn]),
+            """
+            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\r\n\
+            VXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\r\n\
+            bWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
+            """
+        )
+
+        // using no explicit endLine option
+        XCTAssertEqual(
+            Data(input.utf8).base64EncodedString(options: [.lineLength64Characters]),
+            """
+            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np\r\n\
+            bmcgZWxpdC4gVXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBz\r\n\
+            b2RhbGVzIGVyYXQsIHNpdCBhbWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2Vk\r\n\
+            IG9ybmFyZSBmZWxpcy4=
+            """
+        )
+        XCTAssertEqual(
+            Data(input.utf8).base64EncodedString(options: [.lineLength76Characters]),
+            """
+            TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4g\r\n\
+            VXQgYXQgdGluY2lkdW50IGFyY3UuIFN1c3BlbmRpc3NlIG5lYyBzb2RhbGVzIGVyYXQsIHNpdCBh\r\n\
+            bWV0IGltcGVyZGlldCBpcHN1bS4gRXRpYW0gc2VkIG9ybmFyZSBmZWxpcy4=
+            """
+        )
+    }
+
     func test_base64Data_small() {
         let data = Data("Hello World".utf8)
         let base64 = data.base64EncodedString()
