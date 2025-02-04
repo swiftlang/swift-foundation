@@ -3,7 +3,7 @@
 * Proposal: [SF-0015](0015-attributedstring-tracking-indices.md)
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **Review: Jan 15, 2025...Jan 22, 2025**
+* Status: **Accepted**
 * Review: ([Pitch](https://forums.swift.org/t/pitch-attributedstring-tracking-indices/76578/3)) 
 * Implementation: [swiftlang/swift-foundation#1109](https://github.com/swiftlang/swift-foundation/pull/1109)
 
