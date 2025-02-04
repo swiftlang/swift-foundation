@@ -1,6 +1,15 @@
                             The Foundation Project
                             ======================
 
+This product contains a derivation of Fabian Fett's 'Base64.swift'.
+
+  * LICENSE (Apache License 2.0):
+    * https://github.com/swift-extras/swift-extras-base64/blob/dc8121fdd2b444c97d6b0534e8ad4ddecbe0d5f4/LICENSE
+  * HOMEPAGE:
+    * https://github.com/swift-extras/swift-extras-base64
+
+---
+
 This product contains a derivation of Daniel Lemire's 'chromiumbase64'
 implementation in 'fastbase64'.
 
