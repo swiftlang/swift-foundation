@@ -1,9 +1,9 @@
 # Expanded calendar support
 
-* Proposal: SF-NNN
-* Authors: [Dragan Besevic](d_besevic@apple.com>)
+* Proposal: SF-017
+* Authors: [Dragan Besevic](dragan@unicode.org)
 * Review Manager: Tina Liu
-* Status: **Awaiting review**
+* Status: **Accepted**
 
 
 ## Revision history
