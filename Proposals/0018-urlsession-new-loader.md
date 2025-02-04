@@ -1,11 +1,11 @@
 # New HTTP loader for URLSession
 
-* Proposal: [SF-NNNN](NNNN-urlsession-new-loader.md)
+* Proposal: [SF-0018](0018-urlsession-new-loader.md)
 * Authors: [Guoye Zhang](https://github.com/guoye-zhang)
-* Review Manager: TBD
+* Review Manager: [Tina L](https://github.com/itingliu)
 * Status: **Awaiting review**
 * Implementation: [swiftlang/swift-corelibs-foundation#5162](https://github.com/swiftlang/swift-corelibs-foundation/pull/5162)
-* Review: ([pitch](https://forums.swift.org/...))
+* Review: ([pitch](https://forums.swift.org/t/pitch-new-http-loader-for-urlsession-on-darwin/77440))
 
 ## Introduction
 
