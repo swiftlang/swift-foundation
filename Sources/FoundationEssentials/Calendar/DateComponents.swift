@@ -77,6 +77,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     }
     
     /// Same as the public initializer, but with the dayOfYear field, and skipping the 'conversion' for callers who expect ObjC behavior (Int.max -> nil).
+    @inline(__always)
     internal init(calendar: Calendar? = nil,
          timeZone: TimeZone? = nil,
          rawEra: Int? = nil,
@@ -93,7 +94,8 @@ public struct DateComponents : Hashable, Equatable, Sendable {
          rawWeekOfMonth: Int? = nil,
          rawWeekOfYear: Int? = nil,
          rawYearForWeekOfYear: Int? = nil,
-         rawDayOfYear: Int? = nil) {
+         rawDayOfYear: Int? = nil,
+         isLeapMonth: Bool? = nil) {
 
         // Be sure to set the time zone of the calendar if appropriate
         if var calendar, let timeZone {
@@ -121,6 +123,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         _weekOfYear = rawWeekOfYear
         _yearForWeekOfYear = rawYearForWeekOfYear
         _dayOfYear = rawDayOfYear
+        _isLeapMonth = isLeapMonth
     }
 
     package init?(component: Calendar.Component, value: Int) {
