@@ -1,0 +1,20 @@
+                            The Foundation Project
+                            ======================
+
+This product contains a derivation of Daniel Lemire's 'chromiumbase64'
+implementation in 'fastbase64'.
+
+  * LICENSE:
+    * https://github.com/lemire/fastbase64/blob/master/LICENSE
+  * HOMEPAGE:
+    * https://github.com/lemire/fastbase64
+
+---
+
+This product contains a derivation of Nick Galbreath's 'base64'
+implementation in 'stringencoders'.
+
+  * LICENSE (The MIT License):
+    * https://github.com/client9/stringencoders/blob/master/LICENSE
+  * HOMEPAGE:
+    * https://github.com/client9/stringencoders
