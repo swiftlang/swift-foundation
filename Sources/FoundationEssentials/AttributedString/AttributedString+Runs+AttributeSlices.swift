@@ -782,6 +782,11 @@ extension AttributedString.Runs {
     }
     
     @_spi(AttributedString)
+    public subscript(nsAttributedStringKeys keys: NSAttributedString.Key...) -> NSAttributesSlice {
+        self[nsAttributedStringKeys: keys]
+    }
+    
+    @_spi(AttributedString)
     public subscript(nsAttributedStringKeys keys: [NSAttributedString.Key]) -> NSAttributesSlice {
         return NSAttributesSlice(runs: self, names: keys.map { $0.rawValue })
     }
