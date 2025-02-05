@@ -1935,9 +1935,8 @@ extension DataTests {
     }
 
     func test_base64Decode_invalidLength() {
-        XCTAssertThrowsError(_ = try Base64.decode(bytes: "AAAAA".utf8)) { error in
-            XCTAssertEqual(error as? Base64.DecodingError, .invalidLength)
-        }
+        XCTAssertNil(Data(base64Encoded: "AAAAA"))
+        XCTAssertNil(Data(base64Encoded: "AAAAA", options: .ignoreUnknownCharacters))
     }
 
     func test_base64Decode_variousPaddingNeeds() {
