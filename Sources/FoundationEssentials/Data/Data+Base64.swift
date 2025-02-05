@@ -444,21 +444,8 @@ extension Base64 {
 
     static func decode(string encoded: String, options: Data.Base64DecodingOptions = []) throws -> Data {
         let decoded = try encoded.utf8.withContiguousStorageIfAvailable { characterPointer -> Data in
-            guard characterPointer.count > 0 else {
-                return Data()
-            }
-
-            let outputLength = ((characterPointer.count + 3) / 4) * 3
-
-            return try characterPointer.withMemoryRebound(to: UInt8.self) { input -> Data in
-                let pointer = malloc(outputLength)
-                let other = pointer?.bindMemory(to: UInt8.self, capacity: outputLength)
-                let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
-                var length = outputLength
-                try Self._decodeChromiumIgnoringErrors(from: input, into: target, length: &length, options: options)
-
-                return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
-            }
+            // `withContiguousStorageIfAvailable` sadly does not support typed throws
+            try Self._decodeToData(from: characterPointer, options: options)
         }
 
         if decoded != nil {
@@ -471,23 +458,9 @@ extension Base64 {
     }
 
     static func decode(data encoded: Data, options: Data.Base64DecodingOptions = []) throws -> Data {
-        let decoded = try encoded.withContiguousStorageIfAvailable { characterPointer -> Data in
+        let decoded = try encoded.withContiguousStorageIfAvailable { bufferPointer -> Data in
             // `withContiguousStorageIfAvailable` sadly does not support typed throws
-            guard characterPointer.count > 0 else {
-                return Data()
-            }
-
-            let outputLength = ((characterPointer.count + 3) / 4) * 3
-
-            return try characterPointer.withMemoryRebound(to: UInt8.self) { input -> Data in
-                let pointer = malloc(outputLength)
-                let other = pointer?.bindMemory(to: UInt8.self, capacity: outputLength)
-                let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
-                var length = outputLength
-                try Self._decodeChromiumIgnoringErrors(from: input, into: target, length: &length, options: options)
-
-                return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
-            }
+            try Self._decodeToData(from: bufferPointer, options: options)
         }
 
         if decoded != nil {
@@ -502,23 +475,9 @@ extension Base64 {
             return Data()
         }
 
-        let decoded = try bytes.withContiguousStorageIfAvailable { characterPointer -> Data in
+        let decoded = try bytes.withContiguousStorageIfAvailable { bufferPointer -> Data in
             // `withContiguousStorageIfAvailable` sadly does not support typed throws
-            guard characterPointer.count > 0 else {
-                return Data()
-            }
-
-            let outputLength = ((characterPointer.count + 3) / 4) * 3
-
-            return try characterPointer.withMemoryRebound(to: UInt8.self) { input -> Data in
-                let pointer = malloc(outputLength)
-                let other = pointer?.bindMemory(to: UInt8.self, capacity: outputLength)
-                let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
-                var length = outputLength
-                try Self._decodeChromiumIgnoringErrors(from: input, into: target, length: &length, options: options)
-
-                return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
-            }
+            try Self._decodeToData(from: bufferPointer, options: options)
         }
 
         if decoded != nil {
@@ -528,11 +487,33 @@ extension Base64 {
         return try self.decode(bytes: Array(bytes), options: options)
     }
 
+    static func _decodeToData(from inBuffer: UnsafeBufferPointer<UInt8>, options: Data.Base64DecodingOptions) throws(DecodingError) -> Data {
+        guard inBuffer.count > 0 else {
+            return Data()
+        }
+
+        let outputLength = ((inBuffer.count + 3) / 4) * 3
+
+        let pointer = malloc(outputLength)
+        let other = pointer?.bindMemory(to: UInt8.self, capacity: outputLength)
+        let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
+        var length = outputLength
+        if options.contains(.ignoreUnknownCharacters) {
+            try Self._decodeChromiumIgnoringErrors(from: inBuffer, into: target, length: &length, options: options)
+        } else {
+            // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
+            // branch prediction?
+            try self._decodeChromium(from: inBuffer, into: target, length: &length, options: options)
+        }
+
+        return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
+    }
+
     static func _decodeChromium(
         from inBuffer: UnsafeBufferPointer<UInt8>,
         into outBuffer: UnsafeMutableBufferPointer<UInt8>,
         length: inout Int,
-        options: Data.Base64DecodingOptions = []
+        options: Data.Base64DecodingOptions
     ) throws(DecodingError) {
         let remaining = inBuffer.count % 4
         guard remaining == 0 else { throw DecodingError.invalidLength }
