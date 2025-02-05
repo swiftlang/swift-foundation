@@ -2,8 +2,8 @@
 
 * Proposal: [SF-0016](0016-http-date-format.md)
 * Authors: [Cory Benfield](https://github.com/Lukasa), [Tobias](https://github.com/t089), [Tony Parker](https://github.com/parkera)
-* Review Manager: TBD
-* Status: **Awaiting Review**
+* Review Manager: [Tina L](https://github.com/itingliu)
+* Status: **Active Review: Feb 04, 2025...Feb 11, 2025**
 * Review: ([Pitch](https://forums.swift.org/t/pitch-http-date-format-style/76783)) 
 * Implementation: [swiftlang/swift-foundation#1127](https://github.com/swiftlang/swift-foundation/pull/1127)
 
