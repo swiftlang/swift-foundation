@@ -442,14 +442,17 @@ extension Base64 {
         static var unexpectedEnd: Self { .init(.unexpectedEnd) }
     }
 
-    static func decode(string encoded: String, options: Data.Base64DecodingOptions = []) throws -> Data {
-        let decoded = try encoded.utf8.withContiguousStorageIfAvailable { characterPointer -> Data in
-            // `withContiguousStorageIfAvailable` sadly does not support typed throws
-            try Self._decodeToData(from: characterPointer, options: options)
+    static func decode(string encoded: String, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data {
+        let result = encoded.utf8.withContiguousStorageIfAvailable { bufferPointer in
+            // `withContiguousStorageIfAvailable` sadly does not support typed throws, so we need
+            // to use Result to get the error out without allocation for the error.
+            Result(catching: { () throws(DecodingError) -> Data in
+                try Self._decodeToData(from: bufferPointer, options: options)
+            })
         }
 
-        if decoded != nil {
-            return decoded!
+        if let result {
+            return try result.get()
         }
 
         var encoded = encoded
@@ -457,31 +460,37 @@ extension Base64 {
         return try Self.decode(string: encoded, options: options)
     }
 
-    static func decode(data encoded: Data, options: Data.Base64DecodingOptions = []) throws -> Data {
-        let decoded = try encoded.withContiguousStorageIfAvailable { bufferPointer -> Data in
-            // `withContiguousStorageIfAvailable` sadly does not support typed throws
-            try Self._decodeToData(from: bufferPointer, options: options)
+    static func decode(data encoded: Data, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data? {
+        let result = encoded.withContiguousStorageIfAvailable { bufferPointer in
+            // `withContiguousStorageIfAvailable` sadly does not support typed throws, so we need
+            // to use Result to get the error out without allocation for the error.
+            Result(catching: { () throws(DecodingError) -> Data in
+                try Self._decodeToData(from: bufferPointer, options: options)
+            })
         }
 
-        if decoded != nil {
-            return decoded!
+        if let result {
+            return try result.get()
         }
 
         return try Self.decode(bytes: Array(encoded), options: options)
     }
 
-    static func decode<Buffer: Collection>(bytes: Buffer, options: Data.Base64DecodingOptions = []) throws -> Data where Buffer.Element == UInt8 {
+    static func decode<Buffer: Collection>(bytes: Buffer, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data where Buffer.Element == UInt8 {
         guard bytes.count > 0 else {
             return Data()
         }
 
-        let decoded = try bytes.withContiguousStorageIfAvailable { bufferPointer -> Data in
-            // `withContiguousStorageIfAvailable` sadly does not support typed throws
-            try Self._decodeToData(from: bufferPointer, options: options)
+        let result = bytes.withContiguousStorageIfAvailable { bufferPointer in
+            // `withContiguousStorageIfAvailable` sadly does not support typed throws, so we need
+            // to use Result to get the error out without allocation for the error.
+            Result(catching: { () throws(DecodingError) -> Data in
+                try Self._decodeToData(from: bufferPointer, options: options)
+            })
         }
 
-        if decoded != nil {
-            return decoded!
+        if let result {
+            return try result.get()
         }
 
         return try self.decode(bytes: Array(bytes), options: options)
