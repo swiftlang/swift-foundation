@@ -337,7 +337,7 @@ extension Base64 {
 
         if let result = bytes.withContiguousStorageIfAvailable({ input -> [UInt8] in
             [UInt8](unsafeUninitializedCapacity: newCapacity) { buffer, length in
-                Self._encodeChromium(input: input, buffer: buffer, length: &length, options: options)
+                Self._encode(input: input, buffer: buffer, length: &length, options: options)
             }
         }) {
             return result
@@ -355,7 +355,7 @@ extension Base64 {
             if let result = bytes.withContiguousStorageIfAvailable({ input -> String in
                 String(unsafeUninitializedCapacity: newCapacity) { buffer -> Int in
                     var length = newCapacity
-                    Self._encodeChromium(input: input, buffer: buffer, length: &length, options: options)
+                    Self._encode(input: input, buffer: buffer, length: &length, options: options)
                     return length
                 }
             }) {
@@ -379,7 +379,7 @@ extension Base64 {
             _ = data.withUnsafeMutableBytes { rawBuffer in
                 rawBuffer.withMemoryRebound(to: UInt8.self) { buffer in
                     var length = newCapacity
-                    Self._encodeChromium(input: input, buffer: buffer, length: &length, options: options)
+                    Self._encode(input: input, buffer: buffer, length: &length, options: options)
                     return length
                 }
             }
@@ -392,9 +392,9 @@ extension Base64 {
     }
 
     @usableFromInline
-    static func _encodeChromium(input: UnsafeBufferPointer<UInt8>, buffer: UnsafeMutableBufferPointer<UInt8>, length: inout Int, options: Data.Base64EncodingOptions) {
+    static func _encode(input: UnsafeBufferPointer<UInt8>, buffer: UnsafeMutableBufferPointer<UInt8>, length: inout Int, options: Data.Base64EncodingOptions) {
         if options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters) {
-            return self._encodeChromiumWithLineBreaks(input: input, buffer: buffer, length: &length, options: options)
+            return self._encodeWithLineBreaks(input: input, buffer: buffer, length: &length, options: options)
         }
 
         let omitPaddingCharacter = false // options.contains(.omitPaddingCharacter)
@@ -450,7 +450,7 @@ extension Base64 {
         }
     }
 
-    static func _encodeChromiumWithLineBreaks(
+    static func _encodeWithLineBreaks(
         input: UnsafeBufferPointer<UInt8>,
         buffer: UnsafeMutableBufferPointer<UInt8>,
         length: inout Int,
