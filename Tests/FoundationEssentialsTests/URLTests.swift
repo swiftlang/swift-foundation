@@ -450,6 +450,11 @@ final class URLTests : XCTestCase {
             testAppendQueryItems.absoluteString,
             "https://www.example.com?id=42&color=blue"
         )
+        let emptyQueryItems: [URLQueryItem] = []
+        XCTAssertEqual(
+            base.appending(queryItems: emptyQueryItems).absoluteString,
+            "https://www.example.com"
+        )
 
         // Appending components
         XCTAssertEqual(

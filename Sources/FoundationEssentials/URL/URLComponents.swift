@@ -592,7 +592,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 return
             }
             guard !newValue.isEmpty else {
-                _query = ""
+                _query = nil
                 return
             }
 
