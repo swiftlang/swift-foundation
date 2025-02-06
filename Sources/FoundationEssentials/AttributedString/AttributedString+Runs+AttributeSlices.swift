@@ -51,8 +51,8 @@ extension AttributedString.Runs {
                     return nil
                 }
                 
-                var run: AttributedString.Runs.Run
-                var range: Range<AttributedString.Index>
+                let run: AttributedString.Runs.Run
+                let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
                     // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
                     run = _slice.runs[_index]
@@ -189,8 +189,8 @@ extension AttributedString.Runs {
                     return nil
                 }
                 
-                var run: AttributedString.Runs.Run
-                var range: Range<AttributedString.Index>
+                let run: AttributedString.Runs.Run
+                let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
                     // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
                     run = _slice.runs[_index]
@@ -347,8 +347,8 @@ extension AttributedString.Runs {
                     return nil
                 }
                 
-                var run: AttributedString.Runs.Run
-                var range: Range<AttributedString.Index>
+                let run: AttributedString.Runs.Run
+                let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
                     // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
                     run = _slice.runs[_index]
@@ -518,8 +518,8 @@ extension AttributedString.Runs {
                     return nil
                 }
                 
-                var run: AttributedString.Runs.Run
-                var range: Range<AttributedString.Index>
+                let run: AttributedString.Runs.Run
+                let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
                     // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
                     run = _slice.runs[_index]
@@ -705,8 +705,8 @@ extension AttributedString.Runs {
                     return nil
                 }
                 
-                var run: AttributedString.Runs.Run
-                var range: Range<AttributedString.Index>
+                let run: AttributedString.Runs.Run
+                let range: Range<AttributedString.Index>
                 if _slice.runs._isDiscontiguous {
                     // Need to find the end of the current run (which may not be the same as the start of the next since it's discontiguous)
                     run = _slice.runs[_index]
