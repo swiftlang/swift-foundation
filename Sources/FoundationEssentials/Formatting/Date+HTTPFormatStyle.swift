@@ -152,6 +152,7 @@ extension DateComponents.HTTPFormatStyle : ParseStrategy {
 extension DateComponents {
     /// Converts `DateComponents` into RFC 9110-compatible "HTTP date" `String`, and parses in the reverse direction.
     /// This parser does not do validation on the individual values of the components. An optional date can be created from the result using `Calendar(identifier: .gregorian).date(from: ...)`.
+    /// When formatting, missing or invalid fields are filled with default values: `Sun`, `01`, `Jan`, `2000`, `00:00:00`, `GMT`. Note that missing fields may result in an invalid date or time.
     public struct HTTPFormatStyle : Sendable, Hashable, Codable, ParseableFormatStyle {
         public init() {
         }
@@ -164,10 +165,6 @@ extension DateComponents {
                 var buffer = OutputBuffer(initializing: _buffer.baseAddress!, capacity: _buffer.count)
                 
                 switch components.weekday {
-                case 1:
-                    buffer.appendElement(CChar(UInt8(ascii: "S")))
-                    buffer.appendElement(CChar(UInt8(ascii: "u")))
-                    buffer.appendElement(CChar(UInt8(ascii: "n")))
                 case 2:
                     buffer.appendElement(CChar(UInt8(ascii: "M")))
                     buffer.appendElement(CChar(UInt8(ascii: "o")))
@@ -192,8 +189,13 @@ extension DateComponents {
                     buffer.appendElement(CChar(UInt8(ascii: "S")))
                     buffer.appendElement(CChar(UInt8(ascii: "a")))
                     buffer.appendElement(CChar(UInt8(ascii: "t")))
+                case 1:
+                    // Sunday, or default / missing
+                    fallthrough
                 default:
-                    preconditionFailure("Invalid weekday \(String(describing: components.weekday))")
+                    buffer.appendElement(CChar(UInt8(ascii: "S")))
+                    buffer.appendElement(CChar(UInt8(ascii: "u")))
+                    buffer.appendElement(CChar(UInt8(ascii: "n")))
                 }
                 
                 buffer.appendElement(CChar(UInt8(ascii: ",")))
@@ -204,10 +206,6 @@ extension DateComponents {
                 buffer.appendElement(CChar(UInt8(ascii: " ")))
                 
                 switch components.month {
-                case 1:
-                    buffer.appendElement(CChar(UInt8(ascii: "J")))
-                    buffer.appendElement(CChar(UInt8(ascii: "a")))
-                    buffer.appendElement(CChar(UInt8(ascii: "n")))
                 case 2:
                     buffer.appendElement(CChar(UInt8(ascii: "F")))
                     buffer.appendElement(CChar(UInt8(ascii: "e")))
@@ -252,8 +250,13 @@ extension DateComponents {
                     buffer.appendElement(CChar(UInt8(ascii: "D")))
                     buffer.appendElement(CChar(UInt8(ascii: "e")))
                     buffer.appendElement(CChar(UInt8(ascii: "c")))
+                case 1:
+                    // Jan or default value
+                    fallthrough
                 default:
-                    preconditionFailure("Invalid month \(String(describing: components.month))")
+                    buffer.appendElement(CChar(UInt8(ascii: "J")))
+                    buffer.appendElement(CChar(UInt8(ascii: "a")))
+                    buffer.appendElement(CChar(UInt8(ascii: "n")))
                 }
                 buffer.appendElement(CChar(UInt8(ascii: " ")))
                 
@@ -261,9 +264,9 @@ extension DateComponents {
                 buffer.append(year, zeroPad: 4)
                 buffer.appendElement(CChar(UInt8(ascii: " ")))
                 
-                let h = components.hour!
-                let m = components.minute!
-                let s = components.second!
+                let h = components.hour ?? 0
+                let m = components.minute ?? 0
+                let s = components.second ?? 0 
                 
                 buffer.append(h, zeroPad: 2)
                 buffer.appendElement(CChar(UInt8(ascii: ":")))
