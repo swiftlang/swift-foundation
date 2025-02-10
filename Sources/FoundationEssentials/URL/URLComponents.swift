@@ -367,14 +367,23 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         }
 
         private var percentEncodedPathNoColon: String {
-            guard percentEncodedPath.utf8.first(where: { $0 == ._colon || $0 == ._slash }) == ._colon else {
-                return percentEncodedPath
+            let p = percentEncodedPath
+            guard p.utf8.first(where: { $0 == ._colon || $0 == ._slash }) == ._colon else {
+                return p
             }
-            let colonEncodedPath = Array(percentEncodedPath.utf8).replacing(
+            if p.utf8.first == ._colon {
+                // In the rare case that an app relies on URL allowing an empty
+                // scheme and passes its URL string directly to URLComponents
+                // to modify other components, we need to return the path without
+                // encoding the colons.
+                return p
+            }
+            let firstSlash = p.utf8.firstIndex(of: ._slash) ?? p.endIndex
+            let colonEncodedSegment = Array(p[..<firstSlash].utf8).replacing(
                 [._colon],
                 with: [UInt8(ascii: "%"), UInt8(ascii: "3"), UInt8(ascii: "A")]
             )
-            return String(decoding: colonEncodedPath, as: UTF8.self)
+            return String(decoding: colonEncodedSegment, as: UTF8.self) + p[firstSlash...]
         }
 
         mutating func setPercentEncodedPath(_ newValue: String) throws {

@@ -69,10 +69,6 @@ extension String : _ObjectiveCBridgeable {
                 return String(unsafeUninitializedCapacity: SMALL_STRING_CAPACITY) {
                     _NSTaggedPointerStringGetBytes(source, $0.baseAddress!)
                 }
-            } else if tag == OBJC_TAG_NSAtom {
-                //TODO: expose an optimized path for this in Swift
-                let cStr = source.utf8String!
-                return String.init(utf8String: cStr)!
             } else if tag.rawValue == 22 /* OBJC_TAG_Foundation_1 */ {
                 let cStr = source.utf8String!
                 return String.init(utf8String: cStr)!

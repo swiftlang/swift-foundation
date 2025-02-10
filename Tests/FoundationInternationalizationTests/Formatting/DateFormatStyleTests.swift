@@ -23,7 +23,6 @@ import TestSupport
 @testable import Foundation
 #endif
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 final class DateFormatStyleTests : XCTestCase {
     let referenceDate = Date(timeIntervalSinceReferenceDate: 0)
 
@@ -584,7 +583,6 @@ final class DateFormatStyleTests : XCTestCase {
         }
     }
 
-    @available(FoundationPreview 0.4, *)
     func testRemovingFields() {
         var format: Date.FormatStyle = .init(calendar: .init(identifier: .gregorian), timeZone: .gmt).locale(Locale(identifier: "en_US"))
         func verifyWithFormat(_ date: Date, expected: String, file: StaticString = #filePath, line: UInt = #line) {
@@ -644,7 +642,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         ]
 
         for (style, expectation) in expectations {
-            let formatted = style.attributed.format(date)
+            let formatted = style.attributedStyle.format(date)
             XCTAssertEqual(formatted, expectation.attributedString)
         }
     }
@@ -669,7 +667,7 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         ]
 
         for (style, expectation) in expectations {
-            let formatted = style.attributed.format(date)
+            let formatted = style.attributedStyle.format(date)
             XCTAssertEqual(formatted, expectation.attributedString)
         }
     }
@@ -700,11 +698,11 @@ final class DateAttributedFormatStyleTests : XCTestCase {
         var format = Date.FormatStyle.dateTime
         format.timeZone = .gmt
 
-        test(date.formatted(format.weekday().locale(enUSLocale).attributed), [("Mon", .weekday)])
-        test(date.formatted(format.weekday().locale(zhTW).attributed), [("週一", .weekday)])
+        test(date.formatted(format.weekday().locale(enUSLocale).attributedStyle), [("Mon", .weekday)])
+        test(date.formatted(format.weekday().locale(zhTW).attributedStyle), [("週一", .weekday)])
 
-        test(date.formatted(format.weekday().attributed.locale(enUSLocale)), [("Mon", .weekday)])
-        test(date.formatted(format.weekday().attributed.locale(zhTW)),  [("週一", .weekday)])
+        test(date.formatted(format.weekday().attributedStyle.locale(enUSLocale)), [("Mon", .weekday)])
+        test(date.formatted(format.weekday().attributedStyle.locale(zhTW)),  [("週一", .weekday)])
     }
 
 #if FOUNDATION_FRAMEWORK
@@ -980,7 +978,7 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
         func verify(_ f: Date.FormatString, expected: [Segment], file: StaticString = #filePath, line: UInt = #line) {
-            let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale:Locale(identifier: "en_US"), timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)).attributed)
+            let s = date.formatted(Date.VerbatimFormatStyle.verbatim(f, locale:Locale(identifier: "en_US"), timeZone: utcTimeZone, calendar: Calendar(identifier: .gregorian)).attributedStyle)
             XCTAssertEqual(s, expected.attributedString, file: file, line: line)
         }
         verify("\(year: .twoDigits)_\(month: .defaultDigits)_\(day: .defaultDigits)", expected:
@@ -1068,7 +1066,6 @@ final class DateVerbatimFormatStyleTests : XCTestCase {
     }
 }
 
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 final class MatchConsumerAndSearcherTests : XCTestCase {
 
     let enUS = Locale(identifier: "en_US")
@@ -1358,7 +1355,6 @@ extension DateFormatStyleTests {
 
 // MARK: DiscreteFormatStyle conformance test
 
-@available(FoundationPreview 0.4, *)
 final class TestDateStyleDiscreteConformance : XCTestCase {
     let enUSLocale = Locale(identifier: "en_US")
     var calendar = Calendar(identifier: .gregorian)
@@ -1602,7 +1598,6 @@ final class TestDateStyleDiscreteConformance : XCTestCase {
     }
 }
 
-@available(FoundationPreview 0.4, *)
 final class TestDateVerbatimStyleDiscreteConformance : XCTestCase {
     let enUSLocale = Locale(identifier: "en_US")
     var calendar = Calendar(identifier: .gregorian)

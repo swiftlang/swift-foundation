@@ -3876,5 +3876,25 @@ final class GregorianCalendarTests : XCTestCase {
         test(.minute, expected: -120)
         test(.second, expected: -7200)
     }
+    
+    // MARK: ISO8601
+    
+    func test_iso8601Gregorian() {
+        var calendar1 = Calendar(identifier: .iso8601)
+        let calendar2 = Calendar(identifier: .iso8601)
+        XCTAssertEqual(calendar1, calendar2)
+        
+        XCTAssertEqual(calendar1.firstWeekday, 2)
+        XCTAssertEqual(calendar1.minimumDaysInFirstWeek, 4)
+        XCTAssertEqual(calendar1.timeZone, .gmt)
+        XCTAssertEqual(calendar1.locale, .unlocalized)
+        
+        // Verify that the properties are still mutable
+        let tz = TimeZone(secondsFromGMT: -3600)!
+        calendar1.timeZone = tz
+        XCTAssertNotEqual(calendar1, calendar2)
+        
+        XCTAssertEqual(calendar1.timeZone, tz)
+    }
 }
 

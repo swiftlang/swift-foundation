@@ -22,7 +22,6 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif
 
-@available(FoundationPreview 0.4, *)
 extension DiscreteFormatStyle where FormatInput : Comparable {
     /// Produces a sequence that generates all outputs of a discrete format style from a given start to a given end.
     func evaluate(from initialInput: FormatInput, to end: FormatInput, _ advance: @escaping (FormatInput, FormatInput) -> FormatInput? = { prev, next in next }) -> LazySequence<DiscreteFormatStyleSequence<Self>> {
@@ -30,7 +29,6 @@ extension DiscreteFormatStyle where FormatInput : Comparable {
     }
 }
 
-@available(FoundationPreview 0.4, *)
 extension DiscreteFormatStyle {
     /// Produces a sequence that generates all outputs of a discrete format style from a given start to a given end.
     func evaluate(from initialInput: FormatInput, to end: FormatInput, _ advance: @escaping (FormatInput, FormatInput) -> FormatInput? = { prev, next in next }, isLower: @escaping (FormatInput, FormatInput) -> Bool) -> LazySequence<DiscreteFormatStyleSequence<Self>> {
@@ -39,7 +37,6 @@ extension DiscreteFormatStyle {
 }
 
 /// A sequence that generates all outputs of a discrete format style from a given start to a given end.
-@available(FoundationPreview 0.4, *)
 struct DiscreteFormatStyleSequence<Style: DiscreteFormatStyle> : Sequence, IteratorProtocol {
     private let style: Style
     private var input: Style.FormatInput
@@ -139,7 +136,6 @@ func verify<T: Equatable>(
 /// `discreteInput(before:)` and `discreteInput(after:)` are shorter than they could
 /// be, i.e. `style.format(style.discreteInput(after: sample)) == style.format(sample)`.
 /// - Parameter samples: The number of random samples to verify.
-@available(FoundationPreview 0.4, *)
 func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     _ style: Style,
     strict: Bool = false,
@@ -178,7 +174,6 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
 /// be, i.e. `style.format(style.discreteInput(after: sample)) == style.format(sample)`.
 /// - Parameter samples: The number of random samples to verify.
 /// ````
-@available(FoundationPreview 0.4, *)
 func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     _ style: Style,
     strict: Bool = false,
@@ -220,7 +215,6 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
 /// be, i.e. `style.format(style.discreteInput(after: sample)) == style.format(sample)`.
 /// - Parameter samples: The number of random samples to verify.
 /// ````
-@available(FoundationPreview 0.4, *)
 func verifyDiscreteFormatStyleConformance(
     _ style: Date.ComponentsFormatStyle,
     strict: Bool = false,
@@ -289,7 +283,6 @@ func verifyDiscreteFormatStyleConformance(
 /// `discreteInput(before:)` and `discreteInput(after:)` are shorter than they could
 /// be, i.e. `style.format(style.discreteInput(after: sample)) == style.format(sample)`.
 /// - Parameter samples: The number of random samples to verify.
-@available(FoundationPreview 0.4, *)
 func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     _ style: Style,
     strict: Bool = false,

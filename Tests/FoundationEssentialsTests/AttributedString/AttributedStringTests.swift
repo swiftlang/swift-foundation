@@ -200,16 +200,16 @@ final class TestAttributedString: XCTestCase {
 
         let middleRange = attrStr.characters.index(attrStr.startIndex, offsetBy: 3) ..< attrStr.characters.index(attrStr.endIndex, offsetBy: -3)
         let view = attrStr[middleRange].runs
-        verifyAttributes(view[nsAttributedStringKeys: .testInt], string: attrStr, expectation: [("lo", .init().testInt(1)), (" Wo", .init())])
-        verifyAttributes(view[nsAttributedStringKeys: .testDouble], string: attrStr, expectation: [("lo ", .init()), ("Wo", .init().testDouble(2.0))])
-        verifyAttributes(view[nsAttributedStringKeys: .testString], string: attrStr, expectation: [("lo Wo", .init())])
-        verifyAttributes(view[nsAttributedStringKeys: .testInt, .testDouble], string: attrStr, expectation: [("lo", .init().testInt(1)), (" ", .init()), ("Wo", .init().testDouble(2.0))])
+        verifyAttributes(view[nsAttributedStringKeys: [.testInt]], string: attrStr, expectation: [("lo", .init().testInt(1)), (" Wo", .init())])
+        verifyAttributes(view[nsAttributedStringKeys: [.testDouble]], string: attrStr, expectation: [("lo ", .init()), ("Wo", .init().testDouble(2.0))])
+        verifyAttributes(view[nsAttributedStringKeys: [.testString]], string: attrStr, expectation: [("lo Wo", .init())])
+        verifyAttributes(view[nsAttributedStringKeys: [.testInt, .testDouble]], string: attrStr, expectation: [("lo", .init().testInt(1)), (" ", .init()), ("Wo", .init().testDouble(2.0))])
         
         attrStr[middleRange].testString = "Test"
-        verifyAttributes(attrStr.runs[nsAttributedStringKeys: .testInt], string: attrStr, expectation: [("Hello", .init().testInt(1)), (" World", .init())])
-        verifyAttributes(attrStr.runs[nsAttributedStringKeys: .testDouble], string: attrStr, expectation: [("Hello ", .init()), ("World", .init().testDouble(2.0))])
-        verifyAttributes(attrStr.runs[nsAttributedStringKeys: .testString], string: attrStr, expectation: [("Hel", .init()), ("lo Wo", .init().testString("Test")), ("rld", .init())])
-        verifyAttributes(attrStr.runs[nsAttributedStringKeys: .testInt, .testDouble, .testString], string: attrStr, expectation: [
+        verifyAttributes(attrStr.runs[nsAttributedStringKeys: [.testInt]], string: attrStr, expectation: [("Hello", .init().testInt(1)), (" World", .init())])
+        verifyAttributes(attrStr.runs[nsAttributedStringKeys: [.testDouble]], string: attrStr, expectation: [("Hello ", .init()), ("World", .init().testDouble(2.0))])
+        verifyAttributes(attrStr.runs[nsAttributedStringKeys: [.testString]], string: attrStr, expectation: [("Hel", .init()), ("lo Wo", .init().testString("Test")), ("rld", .init())])
+        verifyAttributes(attrStr.runs[nsAttributedStringKeys: [.testInt, .testDouble, .testString]], string: attrStr, expectation: [
             ("Hel", .init().testInt(1)),
             ("lo", .init().testInt(1).testString("Test")),
             (" ", .init().testString("Test")),
@@ -2426,6 +2426,22 @@ E {
         XCTAssertEqual(AttributedString(str[range], including: \.foundation), expected)
         
         XCTAssertEqual(AttributedString(str[range], including: None.self), AttributedString("BC"))
+    }
+    
+    func testScopeIterationAPI() {
+        struct TestScope : AttributeScope {
+            let testInt: AttributeScopes.TestAttributes.TestIntAttribute
+            let testBool: AttributeScopes.TestAttributes.TestBoolAttribute
+        }
+        
+        let testNames = TestScope.attributeKeys.map { $0.name }.sorted()
+        XCTAssertEqual(testNames, [AttributeScopes.TestAttributes.TestBoolAttribute.name, AttributeScopes.TestAttributes.TestIntAttribute.name].sorted())
+        
+        struct EmptyScope : AttributeScope {
+            
+        }
+        var emptyIterator = EmptyScope.attributeKeys.makeIterator()
+        XCTAssertNil(emptyIterator.next())
     }
 #endif // FOUNDATION_FRAMEWORK
 

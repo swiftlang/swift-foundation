@@ -70,7 +70,6 @@ final class DateTests : XCTestCase {
                               3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
     }
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func test_now() {
         let date1 : Date = .now
         let date2 : Date = .now

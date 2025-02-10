@@ -25,8 +25,8 @@ dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
 }
 #endif
 
-func _calendarClass(identifier: Calendar.Identifier, useGregorian: Bool) -> _CalendarProtocol.Type? {
-    if useGregorian && identifier == .gregorian {
+func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
+    if identifier == .gregorian || identifier == .iso8601 {
         return _CalendarGregorian.self
     } else {
         return _calendarICUClass()
@@ -54,7 +54,7 @@ struct CalendarCache : Sendable, ~Copyable {
                         
         let id = Locale.current._calendarIdentifier
         // If we cannot create the right kind of class, we fail immediately here
-        let calendarClass = _calendarClass(identifier: id, useGregorian: true)!
+        let calendarClass = _calendarClass(identifier: id)!
         let calendar = calendarClass.init(identifier: id, timeZone: nil, locale: Locale.current, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         
         return _current.withLock {
@@ -90,7 +90,7 @@ struct CalendarCache : Sendable, ~Copyable {
         }
         
         // If we cannot create the right kind of class, we fail immediately here
-        let calendarClass = _calendarClass(identifier: id, useGregorian: true)!
+        let calendarClass = _calendarClass(identifier: id)!
         let new = calendarClass.init(identifier: id, timeZone: nil, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         
         return _fixed.withLock {
@@ -106,7 +106,7 @@ struct CalendarCache : Sendable, ~Copyable {
     func fixed(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) -> any _CalendarProtocol {
         // Note: Only the ObjC NSCalendar initWithCoder supports gregorian start date values. For Swift it is always nil.
         // If we cannot create the right kind of class, we fail immediately here
-        let calendarClass = _calendarClass(identifier: identifier, useGregorian: true)!
+        let calendarClass = _calendarClass(identifier: identifier)!
         return calendarClass.init(identifier: identifier, timeZone: timeZone, locale: locale, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 

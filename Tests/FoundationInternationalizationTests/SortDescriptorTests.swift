@@ -28,7 +28,6 @@ class Hello {
 @available(*, unavailable)
 extension Hello : Sendable {}
 
-@available(FoundationPreview 0.1, *)
 final class SortDescriptorTests: XCTestCase {
     struct NonNSObjectRoot {
         enum Gadget: Int, Comparable {

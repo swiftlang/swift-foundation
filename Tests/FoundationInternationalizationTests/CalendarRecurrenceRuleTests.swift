@@ -21,7 +21,6 @@ import TestSupport
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-@available(FoundationPreview 0.4, *)
 final class CalendarRecurrenceRuleTests: XCTestCase {
     /// A Gregorian calendar with a time zone set to California
     var gregorian: Calendar = {

@@ -555,7 +555,6 @@ final class DurationTimeAttributedStyleTests : XCTestCase {
 
 // MARK: DiscreteFormatStyle conformance test
 
-@available(FoundationPreview 0.4, *)
 final class TestDurationTimeDiscreteConformance : XCTestCase {
     func testBasics() throws {
         var style: Duration._TimeFormatStyle
