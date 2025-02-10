@@ -341,7 +341,6 @@ extension Base64 {
         return self.encodeToData(bytes: Array(bytes), options: options)
     }
 
-    @usableFromInline
     static func _encode(input: UnsafeBufferPointer<UInt8>, buffer: UnsafeMutableBufferPointer<UInt8>, length: inout Int, options: Data.Base64EncodingOptions) {
         if options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters) {
             return self._encodeWithLineBreaks(input: input, buffer: buffer, length: &length, options: options)
@@ -349,7 +348,7 @@ extension Base64 {
 
         let omitPaddingCharacter = false // options.contains(.omitPaddingCharacter)
 
-        Self.withUnsafeEncodingTablesAsBufferPointers(options: options) { e0, e1 in
+        Self.withUnsafeEncodingTablesAsBufferPointers(options: options) { (e0, e1) throws(Never) -> Void in
             let to = input.count / 3 * 3
             var outIndex = 0
             for index in stride(from: 0, to: to, by: 3) {
@@ -372,18 +371,19 @@ extension Base64 {
 
                 buffer[outIndex] = e0[Int(i1)]
 
-                if let i2 = i2, let i3 = i3 {
+                if let i2 = i2 {
                     buffer[outIndex &+ 1] = e1[Int(((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F))]
-                    buffer[outIndex &+ 2] = e1[Int(((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03))]
-                    buffer[outIndex &+ 3] = e1[Int(i3)]
-                    outIndex += 4
-                } else if let i2 = i2 {
-                    buffer[outIndex &+ 1] = e1[Int(((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F))]
-                    buffer[outIndex &+ 2] = e1[Int((i2 & 0x0F) &<< 2)]
-                    outIndex += 3
-                    if !omitPaddingCharacter {
-                        buffer[outIndex] = Self.encodePaddingCharacter
-                        outIndex &+= 1
+                    if let i3 = i3 {
+                        buffer[outIndex &+ 2] = e1[Int(((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03))]
+                        buffer[outIndex &+ 3] = e1[Int(i3)]
+                        outIndex += 4
+                    } else {
+                        buffer[outIndex &+ 2] = e1[Int((i2 & 0x0F) &<< 2)]
+                        outIndex += 3
+                        if !omitPaddingCharacter {
+                            buffer[outIndex] = Self.encodePaddingCharacter
+                            outIndex &+= 1
+                        }
                     }
                 } else {
                     buffer[outIndex &+ 1] = e1[Int((i1 & 0x03) << 4)]
@@ -522,15 +522,15 @@ extension Base64 {
         return capacityWithoutBreaks + lineBreakCapacity
     }
 
-    static func withUnsafeEncodingTablesAsBufferPointers<R>(options: Data.Base64EncodingOptions, _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<UInt8>) throws -> R) rethrows -> R {
+    static func withUnsafeEncodingTablesAsBufferPointers<R, E: Error>(options: Data.Base64EncodingOptions, _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<UInt8>) throws(E) -> R) throws(E) -> R {
         let encoding0 = Self.encoding0
         let encoding1 = Self.encoding1
 
         assert(encoding0.count == 256)
         assert(encoding1.count == 256)
 
-        return try encoding0.withUnsafeBufferPointer { e0 -> R in
-            try encoding1.withUnsafeBufferPointer { e1 -> R in
+        return try encoding0.withUnsafeBufferPointer { e0 throws(E) -> R in
+            try encoding1.withUnsafeBufferPointer { e1 throws(E) -> R in
                 try body(e0, e1)
             }
         }
