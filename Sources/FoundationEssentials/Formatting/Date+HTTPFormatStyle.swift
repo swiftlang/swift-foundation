@@ -152,7 +152,7 @@ extension DateComponents.HTTPFormatStyle : ParseStrategy {
 extension DateComponents {
     /// Converts `DateComponents` into RFC 9110-compatible "HTTP date" `String`, and parses in the reverse direction.
     /// This parser does not do validation on the individual values of the components. An optional date can be created from the result using `Calendar(identifier: .gregorian).date(from: ...)`.
-    /// When formatting, missing or invalid fields are filled with default values: `Sun`, `01`, `Jan`, `2000`, `00:00:00`, `GMT`. Note that missing fields may result in an invalid date or time.
+    /// When formatting, missing or invalid fields are filled with default values: `Sun`, `01`, `Jan`, `2000`, `00:00:00`, `GMT`. Note that missing fields may result in an invalid date or time. Other values in the `DateComponents` are ignored.
     public struct HTTPFormatStyle : Sendable, Hashable, Codable, ParseableFormatStyle {
         public init() {
         }
@@ -431,8 +431,9 @@ extension DateComponents {
             if second < 0 || second > 60 {
                 throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Second \(second) is out of bounds")
             }
+            // Foundation does not support leap seconds. We convert 60 seconds into 59 seconds.
             if second == 60 {
-                dc.second = 0
+                dc.second = 59
             } else {
                 dc.second = second
             }
