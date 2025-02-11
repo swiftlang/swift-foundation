@@ -316,4 +316,32 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             XCTAssertEqual(String(copy.characters), "ZbYdXfg")
         }
     }
+    
+    func testSubCharacterSlicing() {
+        // This test validates that DiscontiguousAttributedSubstring.characters (i.e. DiscontiguousSlice<AttributedString.CharacterView>) behaves the same as DiscontiguousSlice<String> w.r.t. slicing on sub-character boundaries
+        // Note: Country flag emojis are excluded from the text below because AttributedString.CharacterView is not self-slicing and Slice<AttributedString.CharacterView> does not properly handle sub-character slicing within country flag emojis
+        let complexString = "ABCDáëĩoō№Ωאבג🎺🌈WXYZ"
+        let complexAttrStr = AttributedString(complexString)
+        let unicodeScalarCount = complexString.unicodeScalars.count
+        for aStart in 0 ... unicodeScalarCount {
+            for aEnd in aStart ... unicodeScalarCount {
+                for bStart in aEnd ... unicodeScalarCount {
+                    for bEnd in bStart ... unicodeScalarCount {
+                        let aStr = complexString.unicodeScalars.index(complexString.startIndex, offsetBy: aStart) ..< complexString.unicodeScalars.index(complexString.startIndex, offsetBy: aEnd)
+                        let bStr = complexString.unicodeScalars.index(complexString.startIndex, offsetBy: bStart) ..< complexString.unicodeScalars.index(complexString.startIndex, offsetBy: bEnd)
+                        let aAttrStr = complexAttrStr.unicodeScalars.index(complexAttrStr.startIndex, offsetBy: aStart) ..< complexAttrStr.unicodeScalars.index(complexAttrStr.startIndex, offsetBy: aEnd)
+                        let bAttrStr = complexAttrStr.unicodeScalars.index(complexAttrStr.startIndex, offsetBy: bStart) ..< complexAttrStr.unicodeScalars.index(complexAttrStr.startIndex, offsetBy: bEnd)
+                        let strRanges = RangeSet([aStr, bStr])
+                        let attrStrRanges = RangeSet([aAttrStr, bAttrStr])
+                        let strSlice = complexString[strRanges]
+                        let attrStrSlice = complexAttrStr[attrStrRanges].characters
+                        XCTAssert(
+                            strSlice.elementsEqual(attrStrSlice),
+                            "Ranges [\(aStart)..<\(aEnd), \(bStart)..<\(bEnd)] did not have equal character contents: String(\(Array(strSlice))) vs. AttributedString(\(Array(attrStrSlice)))"
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
