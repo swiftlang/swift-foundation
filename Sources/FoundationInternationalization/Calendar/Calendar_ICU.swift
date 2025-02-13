@@ -1446,33 +1446,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 if time < -42790982400.0 { return nil }
             case .chinese:
                 if time < -146325744000.0 { return nil }
-            case .bangla:
-                fallthrough
-            case .gujarati:
-                fallthrough
-            case .kannada:
-                fallthrough
-            case .malayalam:
-                fallthrough
-            case .marathi:
-                fallthrough
-            case .odia:
-                fallthrough
-            case .tamil:
-                fallthrough
-            case .telugu:
-                fallthrough
-            case .vikram:
-                // TODO: This is copied from `.indian` and needs to be revisited for each new calendar.
-                if time < -60645542400.0 { return nil }
-                return Date(timeIntervalSinceReferenceDate: -60645542400.0)
-            case .dangi:
-                fallthrough
-            case .thai:
-                fallthrough
-            case .vietnamese:
-                // TODO: This is copied from `.chinese` and needs to be revisited for each new calendar.
-                if time < -146325744000.0 { return nil }
             }
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: capped))
@@ -1567,33 +1540,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             case .japanese:
                 if time < -42790982400.0 { return nil }
             case .chinese:
-                if time < -146325744000.0 { return nil }
-            case .bangla:
-                fallthrough
-            case .gujarati:
-                fallthrough
-            case .kannada:
-                fallthrough
-            case .malayalam:
-                fallthrough
-            case .marathi:
-                fallthrough
-            case .odia:
-                fallthrough
-            case .tamil:
-                fallthrough
-            case .telugu:
-                fallthrough
-            case .vikram:
-                // TODO: This is copied from `.indian` and needs to be revisited for each new calendar.
-                if time < -60645542400.0 { return nil }
-                return DateInterval(start: Date(timeIntervalSinceReferenceDate: -60645542400.0), duration: inf_ti)
-            case .dangi:
-                fallthrough
-            case .thai:
-                fallthrough
-            case .vietnamese:
-                // TODO: This is copied from `.chinese` and needs to be revisited for each new calendar.
                 if time < -146325744000.0 { return nil }
             }
         case .hour:

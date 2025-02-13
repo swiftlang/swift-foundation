@@ -62,42 +62,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
         @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
         case islamicUmmAlQura
 
-        @available(FoundationPreview 6.2, *)
-        case bangla
-        
-        @available(FoundationPreview 6.2, *)
-        case gujarati
-        
-        @available(FoundationPreview 6.2, *)
-        case kannada
-        
-        @available(FoundationPreview 6.2, *)
-        case malayalam
-        
-        @available(FoundationPreview 6.2, *)
-        case marathi
-        
-        @available(FoundationPreview 6.2, *)
-        case odia
-        
-        @available(FoundationPreview 6.2, *)
-        case tamil
-        
-        @available(FoundationPreview 6.2, *)
-        case telugu
-        
-        @available(FoundationPreview 6.2, *)
-        case vikram
-        
-        @available(FoundationPreview 6.2, *)
-        case dangi
-        
-        @available(FoundationPreview 6.2, *)
-        case thai
-        
-        @available(FoundationPreview 6.2, *)
-        case vietnamese
-
         package static let cldrKeywordKey = "ca"
         package static let legacyKeywordKey = ICULegacyKey("calendar")
 
@@ -125,18 +89,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case "roc": self = .republicOfChina
             case "islamic-tbla": self = .islamicTabular
             case "islamic-umalqura": self = .islamicUmmAlQura
-            case "bangla": self = .bangla
-            case "gujarati": self = .gujarati
-            case "kannada": self = .kannada
-            case "malayalam": self = .malayalam
-            case "marathi": self = .marathi
-            case "odia": self = .odia
-            case "tamil": self = .tamil
-            case "telugu": self = .telugu
-            case "vikram": self = .vikram
-            case "dangi": self = .dangi
-            case "thai": self = .thai
-            case "vietnamese": self = .vietnamese
             default: return nil
             }
         }
@@ -159,18 +111,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .republicOfChina: return "roc"
             case .islamicTabular: return "islamic-tbla"
             case .islamicUmmAlQura: return "islamic-umalqura"
-            case .bangla: return "bangla"
-            case .gujarati: return "gujarati"
-            case .kannada: return "kannada"
-            case .malayalam: return "malayalam"
-            case .marathi: return "marathi"
-            case .odia: return "odia"
-            case .tamil: return "tamil"
-            case .telugu: return "telugu"
-            case .vikram: return "vikram"
-            case .dangi: return "dangi"
-            case .thai: return "thai"
-            case .vietnamese: return "vietnamese"
             }
         }
 
@@ -193,18 +133,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .coptic: return "coptic"
             case .ethiopicAmeteMihret: return "ethiopic"
             case .ethiopicAmeteAlem: return "ethiopic-amete-alem"
-            case .bangla: return "bangla"
-            case .gujarati: return "gujarati"
-            case .kannada: return "kannada"
-            case .malayalam: return "malayalam"
-            case .marathi: return "marathi"
-            case .odia: return "odia"
-            case .tamil: return "tamil"
-            case .telugu: return "telugu"
-            case .vikram: return "vikram"
-            case .dangi: return "dangi"
-            case .thai: return "thai"
-            case .vietnamese: return "vietnamese"
             }
         }
         
@@ -1384,30 +1312,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return .islamicTabular
         case .islamicUmmAlQura:
             return .islamicUmmAlQura
-        case .bangla:
-            return .bangla
-        case .gujarati:
-            return .gujarati
-        case .kannada:
-            return .kannada
-        case .malayalam:
-            return .malayalam
-        case .marathi:
-            return .marathi
-        case .odia:
-            return .odia
-        case .tamil:
-            return .tamil
-        case .telugu:
-            return .telugu
-        case .vikram:
-            return .vikram
-        case .dangi: 
-            return .dangi
-        case .thai:
-            return .thai
-        case .vietnamese:
-            return .vietnamese
         }
     }
 
@@ -1445,30 +1349,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return .islamicTabular
         case .islamicUmmAlQura:
             return .islamicUmmAlQura
-        case .bangla:
-            return .bangla
-        case .gujarati:
-            return .gujarati
-        case .kannada:
-            return .kannada
-        case .malayalam:
-            return .malayalam
-        case .marathi:
-            return .marathi
-        case .odia:
-            return .odia
-        case .tamil:
-            return .tamil
-        case .telugu:
-            return .telugu
-        case .vikram:
-            return .vikram
-        case .dangi:
-            return .dangi
-        case .thai:
-            return .thai
-        case .vietnamese:
-            return .vietnamese
         default:
             return nil
         }
