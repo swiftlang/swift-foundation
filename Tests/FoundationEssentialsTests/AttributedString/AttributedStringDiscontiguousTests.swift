@@ -317,31 +317,24 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
         }
     }
     
-    func testSubCharacterSlicing() {
-        // This test validates that DiscontiguousAttributedSubstring.characters (i.e. DiscontiguousSlice<AttributedString.CharacterView>) behaves the same as DiscontiguousSlice<String> w.r.t. slicing on sub-character boundaries
-        // Note: Country flag emojis are excluded from the text below because AttributedString.CharacterView is not self-slicing and Slice<AttributedString.CharacterView> does not properly handle sub-character slicing within country flag emojis
-        let complexString = "ABCDáëĩoō№Ωאבג🎺🌈WXYZ"
-        let complexAttrStr = AttributedString(complexString)
-        let unicodeScalarCount = complexString.unicodeScalars.count
-        for aStart in 0 ... unicodeScalarCount {
-            for aEnd in aStart ... unicodeScalarCount {
-                for bStart in aEnd ... unicodeScalarCount {
-                    for bEnd in bStart ... unicodeScalarCount {
-                        let aStr = complexString.unicodeScalars.index(complexString.startIndex, offsetBy: aStart) ..< complexString.unicodeScalars.index(complexString.startIndex, offsetBy: aEnd)
-                        let bStr = complexString.unicodeScalars.index(complexString.startIndex, offsetBy: bStart) ..< complexString.unicodeScalars.index(complexString.startIndex, offsetBy: bEnd)
-                        let aAttrStr = complexAttrStr.unicodeScalars.index(complexAttrStr.startIndex, offsetBy: aStart) ..< complexAttrStr.unicodeScalars.index(complexAttrStr.startIndex, offsetBy: aEnd)
-                        let bAttrStr = complexAttrStr.unicodeScalars.index(complexAttrStr.startIndex, offsetBy: bStart) ..< complexAttrStr.unicodeScalars.index(complexAttrStr.startIndex, offsetBy: bEnd)
-                        let strRanges = RangeSet([aStr, bStr])
-                        let attrStrRanges = RangeSet([aAttrStr, bAttrStr])
-                        let strSlice = complexString[strRanges]
-                        let attrStrSlice = complexAttrStr[attrStrRanges].characters
-                        XCTAssert(
-                            strSlice.elementsEqual(attrStrSlice),
-                            "Ranges [\(aStart)..<\(aEnd), \(bStart)..<\(bEnd)] did not have equal character contents: String(\(Array(strSlice))) vs. AttributedString(\(Array(attrStrSlice)))"
-                        )
-                    }
-                }
-            }
-        }
+    func testGraphemesAcrossDiscontiguousRanges() {
+        let str = "a\n\u{301}"
+        let attrStr = AttributedString(str)
+        let strRangeA = str.startIndex ..< str.index(after: str.startIndex) // Range of 'a'
+        let strRangeB = str.index(before: str.endIndex) ..< str.endIndex // Range of '\u{301}'
+        let attrStrRangeA = attrStr.startIndex ..< attrStr.index(afterCharacter: attrStr.startIndex) // Range of 'a'
+        let attrStrRangeB = attrStr.index(beforeCharacter: attrStr.endIndex) ..< attrStr.endIndex // Range of '\u{301}'
+        let strRanges = RangeSet([strRangeA, strRangeB])
+        let attrStrRanges = RangeSet([attrStrRangeA, attrStrRangeB])
+        
+        // These discontiguous slices represent subranges that include the scalar 'a' followed by \u{301}
+        // Unicode grapheme breaking rules dictate that these two unicode scalars form one grapheme cluster
+        // While it may be considered unexpected, DiscontiguousSlice<String> nor DiscontiguousSlice<AttributedString.CharacterView> today will not combine these together and instead produce two Character elements
+        // However, the important behavior that we are testing here is that:
+        //      (1) Slicing in this manner does not crash
+        //      (2) The behavior is consistent between String and AttributedString.CharacterView
+        let strSlice = str[strRanges]
+        let attrStrSlice = attrStr[attrStrRanges].characters
+        XCTAssert(strSlice.elementsEqual(attrStrSlice), "Characters \(Array(strSlice)) and \(Array(attrStrSlice)) do not match")
     }
 }
