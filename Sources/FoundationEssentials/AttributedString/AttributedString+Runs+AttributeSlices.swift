@@ -895,25 +895,27 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            Index(_runs._strBounds.lowerBound)
+            Index(_runs.startIndex._stringIndex!)
         }
 
         public var endIndex: Index {
-            Index(_runs._strBounds.upperBound)
+            Index(_runs.endIndex._stringIndex!)
         }
 
         public func index(before i: Index) -> Index {
             _runs._slicedRunBoundary(
                 before: i,
                 attributeNames: _names,
-                constraints: [])
+                constraints: [],
+                endOfPrevious: false)
         }
 
         public func index(after i: Index) -> Index {
             _runs._slicedRunBoundary(
                 after: i,
                 attributeNames: _names,
-                constraints: [])
+                constraints: [],
+                endOfCurrent: false)
         }
 
         public subscript(position: AttributedString.Index) -> Element {
@@ -921,7 +923,12 @@ extension AttributedString.Runs {
                 roundingDown: position,
                 attributeNames: _names,
                 constraints: [])
-            let end = self.index(after: position)
+            let end = _runs._slicedRunBoundary(
+                after: position,
+                attributeNames: _names,
+                constraints: [],
+                endOfCurrent: true
+            )
             let attributes = _runs._guts.runs[runIndex].attributes
             return (buildContainer(from: attributes), start ..< end)
         }
