@@ -511,9 +511,11 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual($0.contents(atPath: "dir/foo"), data)
             XCTAssertEqual($0.contents(atPath: "dir2/foo"), data)
 #if os(Windows)
-            XCTAssertEqual($0.delegateCaptures.shouldCopy.sorted(), [.init("dir", "dir2"), .init("dir/bar", "dir2/bar"), .init("dir/foo", "dir2/foo")].sorted())
+            XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/bar", "dir2/bar"), .init("dir/foo", "dir2/foo")])
 #else
-            XCTAssertEqual($0.delegateCaptures.shouldCopy.sorted(), [.init("dir", "dir2"), .init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")].sorted())
+            var shouldCopy = $0.delegateCaptures.shouldCopy
+            XCTAssertEqual(shouldCopy.removeFirst(), .init("dir", "dir2"))
+            XCTAssertEqual(shouldCopy.sorted(), [.init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")].sorted())
             
             // Specifically for non-Windows (where copying directory metadata takes a special path) double check that the metadata was copied exactly
             XCTAssertEqual(try $0.attributesOfItem(atPath: "dir2")[.posixPermissions] as? UInt, 0o777)
