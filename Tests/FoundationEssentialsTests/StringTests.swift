@@ -1004,6 +1004,13 @@ final class StringTests : XCTestCase {
         
         let utf32BEBOMStringMismatch = String(bytes: utf32BEWithBOM, encoding: String._Encoding.utf32LittleEndian)
         XCTAssertNil(utf32BEBOMStringMismatch)
+        
+        // UTF-8 With BOM
+        
+        let utf8BOM = Data([0xEF, 0xBB, 0xBF])
+        let helloWorld = Data("Hello, world".utf8)
+        XCTAssertEqual(String(bytes: utf8BOM + helloWorld, encoding: String._Encoding.utf8), "Hello, world")
+        XCTAssertEqual(String(bytes: helloWorld + utf8BOM, encoding: String._Encoding.utf8), "Hello, world\u{FEFF}")
     }
 
     func test_dataUsingEncoding_preservingBOM() {

@@ -101,6 +101,10 @@ extension String {
             }
         case .utf8:
             func makeString(buffer: UnsafeBufferPointer<UInt8>) -> String? {
+                var buffer = buffer
+                if buffer.starts(with: [0xEF, 0xBB, 0xBF]) {
+                    buffer = UnsafeBufferPointer(rebasing: buffer.suffix(from: 3))
+                }
                 if let string = String._tryFromUTF8(buffer) {
                     return string
                 }
