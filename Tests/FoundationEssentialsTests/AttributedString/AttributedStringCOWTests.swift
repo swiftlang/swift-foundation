@@ -64,7 +64,7 @@ final class TestAttributedStringCOW: XCTestCase {
     
     func makeSubranges(_ str: AttributedString) -> RangeSet<AttributedString.Index> {
         let rangeA = str.characters.index(str.startIndex, offsetBy: 2)..<str.characters.index(str.startIndex, offsetBy: 4)
-        let rangeB = str.characters.index(str.startIndex, offsetBy: -4)..<str.characters.index(str.endIndex, offsetBy: -2)
+        let rangeB = str.characters.index(str.endIndex, offsetBy: -4)..<str.characters.index(str.endIndex, offsetBy: -2)
         return RangeSet([rangeA, rangeB])
     }
     
