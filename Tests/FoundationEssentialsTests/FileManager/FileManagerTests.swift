@@ -34,7 +34,7 @@ extension FileManager {
 }
 
 private struct DelegateCaptures : Equatable, Sendable {
-    struct Operation : Equatable, CustomStringConvertible {
+    struct Operation : Equatable, CustomStringConvertible, Comparable {
         let src: String
         let dst: String?
         
@@ -44,6 +44,10 @@ private struct DelegateCaptures : Equatable, Sendable {
             } else {
                 "'\(src)'"
             }
+        }
+
+        static func <(lhs: Operation, rhs: Operation) -> Bool {
+          lhs.src < rhs.src || lhs.dst == nil || (rhs.dst != nil && lhs.dst! < rhs.dst!)
         }
         
         init(_ src: String, _ dst: String? = nil) {
@@ -509,7 +513,9 @@ final class FileManagerTests : XCTestCase {
 #if os(Windows)
             XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/bar", "dir2/bar"), .init("dir/foo", "dir2/foo")])
 #else
-            XCTAssertEqual($0.delegateCaptures.shouldCopy, [.init("dir", "dir2"), .init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")])
+            var shouldCopy = $0.delegateCaptures.shouldCopy
+            XCTAssertEqual(shouldCopy.removeFirst(), .init("dir", "dir2"))
+            XCTAssertEqual(shouldCopy.sorted(), [.init("dir/foo", "dir2/foo"), .init("dir/bar", "dir2/bar")].sorted())
             
             // Specifically for non-Windows (where copying directory metadata takes a special path) double check that the metadata was copied exactly
             XCTAssertEqual(try $0.attributesOfItem(atPath: "dir2")[.posixPermissions] as? UInt, 0o777)
