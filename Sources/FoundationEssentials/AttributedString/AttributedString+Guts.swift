@@ -31,12 +31,14 @@ extension AttributedString {
 
         var string: BigString
         var runs: _InternalRuns
+        var trackedRanges: [Range<BigString.Index>]
 
         // Note: the caller is responsible for performing attribute fix-ups if needed based on the source of the runs
         init(string: BigString, runs: _InternalRuns) {
             precondition(string.isEmpty == runs.isEmpty, "An empty attributed string should not contain any runs")
             self.string = string
             self.runs = runs
+            self.trackedRanges = []
         }
 
         // Note: the caller is responsible for performing attribute fix-ups if needed based on the source of the runs
@@ -418,18 +420,20 @@ extension AttributedString.Guts {
 
     func _prepareStringMutation(
         in range: Range<BigString.Index>
-    ) -> (oldUTF8Count: Int, invalidationRange: Range<Int>) {
+    ) -> (mutationStartUTF8Offset: Int, isInsertion: Bool, oldUTF8Count: Int, invalidationRange: Range<Int>) {
         let utf8TargetRange = range._utf8OffsetRange
         let invalidationRange = self.enforceAttributeConstraintsBeforeMutation(to: utf8TargetRange)
+        self._prepareTrackedIndicesUpdate(mutationRange: range)
         assert(invalidationRange.lowerBound <= utf8TargetRange.lowerBound)
         assert(invalidationRange.upperBound >= utf8TargetRange.upperBound)
-        return (self.string.utf8.count, invalidationRange)
+        return (utf8TargetRange.lowerBound, utf8TargetRange.isEmpty, self.string.utf8.count, invalidationRange)
     }
 
     func _finalizeStringMutation(
-        _ state: (oldUTF8Count: Int, invalidationRange: Range<Int>)
+        _ state: (mutationStartUTF8Offset: Int, isInsertion: Bool, oldUTF8Count: Int, invalidationRange: Range<Int>)
     ) {
         let utf8Delta = self.string.utf8.count - state.oldUTF8Count
+        self._finalizeTrackedIndicesUpdate(mutationStartOffset: state.mutationStartUTF8Offset, isInsertion: state.isInsertion, utf8LengthDelta: utf8Delta)
         let lower = state.invalidationRange.lowerBound
         let upper = state.invalidationRange.upperBound + utf8Delta
         self.enforceAttributeConstraintsAfterMutation(

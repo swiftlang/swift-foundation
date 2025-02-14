@@ -377,4 +377,8 @@ extension Range where Bound == BigString.Index {
     internal var _utf8OffsetRange: Range<Int> {
         Range<Int>(uncheckedBounds: (lowerBound.utf8Offset, upperBound.utf8Offset))
     }
+    
+    internal var _attrStrRange: Range<AttributedString.Index> {
+        Range<AttributedString.Index>(uncheckedBounds: (.init(lowerBound), .init(upperBound)))
+    }
 }
