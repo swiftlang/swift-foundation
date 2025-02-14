@@ -608,6 +608,19 @@ public struct Calendar : Hashable, Equatable, Sendable {
         return dc
     }
 
+    /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
+    /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
+    internal func _dateComponents(_ components: ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {
+        var dc = _calendar.dateComponents(components, from: date.capped, in: timeZone)
+
+        // Fill out the Calendar field of dateComponents, if requested.
+        if components.contains(.calendar) {
+            dc.calendar = self
+        }
+
+        return dc
+    }
+
     /// Returns all the date components of a date, as if in a given time zone (instead of the `Calendar` time zone).
     ///
     /// The time zone overrides the time zone of the `Calendar` for the purposes of this calculation.
