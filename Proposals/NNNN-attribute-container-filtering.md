@@ -5,6 +5,7 @@
 * Review Manager: TBD
 * Status: **Pitch**
 * Implementation: _Awaiting Implementation_
+* Review: ([pitch](https://forums.swift.org/t/pitch-attributecontainer-filtering/77890))
 
 ## Introduction/Motivation
 
