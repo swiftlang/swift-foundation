@@ -13,9 +13,9 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 //===----------------------------------------------------------------------===//

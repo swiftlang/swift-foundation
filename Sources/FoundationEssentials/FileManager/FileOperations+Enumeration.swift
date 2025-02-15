@@ -115,15 +115,15 @@ struct _Win32DirectoryContentsSequence: Sequence {
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 import posix_filesystem.dirent
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 internal import _FoundationCShims
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 internal import _FoundationCShims
 #endif
 

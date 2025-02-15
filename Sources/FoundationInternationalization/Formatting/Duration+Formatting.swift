@@ -17,15 +17,15 @@ import FoundationEssentials
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
