@@ -15,9 +15,9 @@ import Darwin
 #elseif canImport(Android)
 import unistd
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(ucrt)
 import ucrt
 #endif

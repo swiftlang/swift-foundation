@@ -23,7 +23,7 @@ import TestSupport
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 /// Since we can't really mock system settings like OS name,

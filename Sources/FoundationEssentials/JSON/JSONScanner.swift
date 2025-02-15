@@ -56,7 +56,7 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif // canImport(Darwin)
 
 internal import _FoundationCShims

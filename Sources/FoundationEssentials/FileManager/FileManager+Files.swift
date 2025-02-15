@@ -18,20 +18,20 @@ internal import DarwinPrivate.sys.content_protection
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 import posix_filesystem
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 internal import _FoundationCShims
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 internal import _FoundationCShims
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
 internal import _FoundationCShims
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 extension Date {
