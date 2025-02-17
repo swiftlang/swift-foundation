@@ -62,6 +62,12 @@ final class TestAttributedStringCOW: XCTestCase {
         return str.characters.index(str.startIndex, offsetBy: 2)..<str.characters.index(str.endIndex, offsetBy: -2)
     }
     
+    func makeSubranges(_ str: AttributedString) -> RangeSet<AttributedString.Index> {
+        let rangeA = str.characters.index(str.startIndex, offsetBy: 2)..<str.characters.index(str.startIndex, offsetBy: 4)
+        let rangeB = str.characters.index(str.endIndex, offsetBy: -4)..<str.characters.index(str.endIndex, offsetBy: -2)
+        return RangeSet([rangeA, rangeB])
+    }
+    
     lazy var container: AttributeContainer = {
         var container = AttributeContainer()
         container.testInt = 2
@@ -96,6 +102,9 @@ final class TestAttributedStringCOW: XCTestCase {
             str.removeSubrange(..<str.characters.index(str.startIndex, offsetBy: 3))
         }
         assertCOWBehavior { (str) in
+            str.removeSubranges(makeSubranges(str))
+        }
+        assertCOWBehavior { (str) in
             str.replaceSubrange(..<str.characters.index(str.startIndex, offsetBy: 3), with: AttributedString("b", attributes: containerB))
         }
         assertCOWBehavior { (str) in
@@ -127,6 +136,31 @@ final class TestAttributedStringCOW: XCTestCase {
         }
         assertCOWBehavior { (str) in
             str[makeSubrange(str)].test.testInt = 3
+        }
+    }
+    
+    func testDiscontiguousSubstring() {
+        assertCOWBehavior { (str) in
+            str[makeSubranges(str)].setAttributes(container)
+        }
+        assertCOWBehavior { (str) in
+            str[makeSubranges(str)].mergeAttributes(container)
+        }
+        assertCOWBehavior { (str) in
+            str[makeSubranges(str)].replaceAttributes(container, with: containerB)
+        }
+        assertCOWBehavior { (str) in
+            str[makeSubranges(str)][AttributeScopes.TestAttributes.TestIntAttribute.self] = 3
+        }
+        assertCOWBehavior { (str) in
+            str[makeSubranges(str)].testInt = 3
+        }
+        assertCOWBehavior { (str) in
+            str[makeSubranges(str)].test.testInt = 3
+        }
+        assertCOWBehavior { (str) in
+            let other = AttributedString("___________")
+            str[makeSubranges(str)] = other[makeSubranges(other)]
         }
     }
     

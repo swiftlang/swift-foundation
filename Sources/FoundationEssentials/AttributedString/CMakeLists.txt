@@ -35,5 +35,6 @@ target_sources(FoundationEssentials PRIVATE
     AttributedSubstring.swift
     Collection\ Stdlib\ Defaults.swift
     Conversion.swift
+    DiscontiguousAttributedSubstring.swift
     FoundationAttributes.swift
     String.Index+ABI.swift)
