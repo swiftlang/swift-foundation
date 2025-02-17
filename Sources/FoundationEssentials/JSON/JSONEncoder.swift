@@ -295,7 +295,8 @@ open class JSONEncoder {
     }
 
     /// Contextual user-provided information for use during encoding.
-    open var userInfo: [CodingUserInfoKey : Any] {
+    @preconcurrency
+    open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
             optionsLock.lock()
             defer { optionsLock.unlock() }
@@ -324,7 +325,7 @@ open class JSONEncoder {
         var dataEncodingStrategy: DataEncodingStrategy = .base64
         var nonConformingFloatEncodingStrategy: NonConformingFloatEncodingStrategy = .throw
         var keyEncodingStrategy: KeyEncodingStrategy = .useDefaultKeys
-        var userInfo: [CodingUserInfoKey : Any] = [:]
+        var userInfo: [CodingUserInfoKey : any Sendable] = [:]
     }
 
     /// The options set on the top-level encoder.

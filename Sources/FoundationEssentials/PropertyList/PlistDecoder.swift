@@ -38,7 +38,8 @@ open class PropertyListDecoder {
     // MARK: Options
 
     /// Contextual user-provided information for use during decoding.
-    open var userInfo: [CodingUserInfoKey : Any] {
+    @preconcurrency
+    open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
             optionsLock.lock()
             defer { optionsLock.unlock() }
@@ -62,7 +63,7 @@ open class PropertyListDecoder {
 
     /// Options set on the top-level encoder to pass down the decoding hierarchy.
     internal struct _Options {
-        var userInfo: [CodingUserInfoKey : Any] = [:]
+        var userInfo: [CodingUserInfoKey : any Sendable] = [:]
     }
 
     /// The options set on the top-level decoder.
