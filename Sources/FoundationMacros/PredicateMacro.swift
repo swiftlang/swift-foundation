@@ -14,6 +14,7 @@ import SwiftSyntax
 import SwiftSyntaxMacros
 internal import SwiftDiagnostics
 internal import SwiftSyntaxBuilder
+@_spi(ExperimentalLanguageFeatures) import SwiftSyntax
 
 // A list of all functions supported by Predicate/Expression itself, any other functions called will be diagnosed as an error
 // This allows for checking the function name, the number of arguments, and the argument labels, but the types of the arguments will need to be validated by the post-expansion type checking pass
@@ -393,6 +394,12 @@ extension KeyPathExprSyntax {
                 }
             case .subscript(let sub):
                 result = ExprSyntax(SubscriptCallExprSyntax(calledExpression: result, arguments: sub.arguments))
+#if !FOUNDATION_FRAMEWORK
+            case .method(let method):
+                let methodName = method.declName
+                let methodAccess = MemberAccessExprSyntax(base: result, declName: methodName)
+                result = ExprSyntax(FunctionCallExprSyntax(calledExpression: methodAccess, arguments: method.arguments))
+#endif
 #if FOUNDATION_FRAMEWORK
             default:
                 return nil
