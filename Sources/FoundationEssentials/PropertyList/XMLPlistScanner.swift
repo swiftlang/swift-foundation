@@ -908,68 +908,80 @@ internal struct XMLPlistScanner {
         }
     }
     
-    func determineTag() throws -> XMLPlistTag? {
+    mutating func readTag() throws -> XMLPlistTag? {
         let marker = reader.readIndex
-        switch reader.char(at: marker) {
+        var tag: XMLPlistTag?
+        switch reader.peek() {
         case UInt8(ascii: "a"): // Array
             if matches(tag: .array, at: marker, until: reader.endIndex) {
-                return .array
+                tag = .array
             }
         case UInt8(ascii: "d"): // Dictionary, data, or date
             if matches(tag: .dict, at: marker, until: reader.endIndex) {
-                return .dict
+                tag = .dict
             } else if matches(tag: .data, at: marker, until: reader.endIndex) {
-                return .data
+                tag = .data
             } else if matches(tag: .date, at: marker, until: reader.endIndex) {
-                return .date
+                tag = .date
             }
         case UInt8(ascii: "f"): // false (boolean)
             if matches(tag: .false, at: marker, until: reader.endIndex) {
-                return .false
+                tag = .false
             }
         case UInt8(ascii: "i"): // integer
             if matches(tag: .integer, at: marker, until: reader.endIndex) {
-                return .integer
+                tag = .integer
             }
         case UInt8(ascii: "k"): // Key of a dictionary
             if matches(tag: .key, at: marker, until: reader.endIndex) {
-                return .key
+                tag = .key
             }
         case UInt8(ascii: "p"): // Plist
             if matches(tag: .plist, at: marker, until: reader.endIndex) {
-                return .plist
+                tag = .plist
             }
         case UInt8(ascii: "r"): // real
             if matches(tag: .real, at: marker, until: reader.endIndex) {
-                return .real
+                tag = .real
             }
         case UInt8(ascii: "s"): // String
             if matches(tag: .string, at: marker, until: reader.endIndex) {
-                return .string
+                tag = .string
             }
         case UInt8(ascii: "t"): // true (boolean)
             if matches(tag: .true, at: marker, until: reader.endIndex) {
-                return .true
+                tag = .true
             }
-        case ._space, ._tab, ._newline, ._return, ._closeangle:
-            throw XMLPlistError.malformedTag(line: reader.lineNumber)
         default:
             break
         }
-        return nil
+        
+        guard let tag else {
+            return nil
+        }
+        
+        // Tag names must be delimited either by whitespace or a '>' or `/` character to be valid.
+        reader.advance(tag.tagLength)
+        switch reader.peek() {
+        case ._closeangle, ._forwardslash, ._space, ._tab, ._newline, ._return:
+            return tag
+        default:
+            return nil
+        }
     }
 
     mutating func peekXMLElement() throws -> (XMLPlistTag, isEmpty: Bool) {
-        guard let tag = try determineTag() else {
-            let badTagStart = reader.readIndex
-            while let ch = reader.read(), ch != ._closeangle { }
-            let badTagEnd = reader.readIndex
-            let markerStr = String._tryFromUTF8(reader.fullBuffer[badTagStart..<badTagEnd]) ?? "<unparseable>"
+        let tagStart = reader.readIndex
+        guard let tag = try readTag() else {
+            var idx = reader.readIndex
+            while idx < reader.endIndex, reader.char(at: idx) != ._closeangle {
+                reader.advance(&idx)
+            }
+            let markerStr = String._tryFromUTF8(reader.fullBuffer[tagStart..<idx]) ?? "<unparseable>"
             throw XMLPlistError.other("Encountered unknown tag \(markerStr) on line \(reader.lineNumber)")
         }
         
-        reader.advance(tag.tagLength)
-
+        // Skip past any characters (whitespace or attributes) that may follow a valid tag name.
         while let ch = reader.read(), ch != ._closeangle { }
         if reader.isAtEnd {
             throw XMLPlistError.malformedTag(line: reader.lineNumber)

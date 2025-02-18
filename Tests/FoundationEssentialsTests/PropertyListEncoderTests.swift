@@ -1545,6 +1545,17 @@ data1 = <7465
         }
 
     }
+    
+    func test_garbageCharactersAfterXMLTagName() throws {
+        let garbage = "<plist><dict><key>bar</key><stringGARBAGE>foo</string></dict></plist>".data(using: .utf8)!
+        
+        XCTAssertThrowsError(try PropertyListDecoder().decode([String:String].self, from: garbage))
+        
+        // Historical behavior allows for whitespace to immediately follow tag names
+        let acceptable = "<plist><dict><key>bar</key><string      >foo</string></dict></plist>".data(using: .utf8)!
+        
+        XCTAssertEqual(try PropertyListDecoder().decode([String:String].self, from: acceptable), ["bar":"foo"])
+    }
 }
             
 
