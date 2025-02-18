@@ -190,6 +190,93 @@ final class PredicateMacroBasicTests: XCTestCase {
             })
             """
         )
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object> {
+                $0.foo()
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<Object>({
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.foo()
+                )
+            })
+            """
+        )
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object> { input in
+                input.foo()
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<Object>({ input in
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg(input),
+                    keyPath: \.foo()
+                )
+            })
+            """
+        )
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object> {
+                $0.foo().bar
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<Object>({
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.foo()
+                    ),
+                    keyPath: \.bar
+                )
+            })
+            """
+        )
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object> {
+                \Object.init(val:)
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<Object>({
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg(Object.self),
+                    keyPath: \.init(val:)
+                )
+            })
+            """
+        )
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object> { input in
+                input.unsupportedMethod()
+            }
+            """,
+            diagnostics: ["2:10: The method unsupportedMethod() is not supported in this predicate"]
+        )
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object> { input in
+                input.methodWithArgs(1, "test")
+            }
+            """,
+            diagnostics: ["2:10: The method methodWithArgs(_:_:) is not supported in this predicate"]
+        )
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object> {
+                \Object.unsupportedInit(param:)
+            }
+            """,
+            diagnostics: ["2:10: The initializer unsupportedInit(param:) is not supported in this predicate"]
+        )
     }
     
     func testComments() {
