@@ -88,11 +88,11 @@ extension AttributedSubstring { // Equatable
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedSubstring : AttributedStringProtocol {
     public var startIndex: AttributedString.Index {
-        .init(_range.lowerBound)
+        .init(_range.lowerBound, version: _guts.version)
     }
 
     public var endIndex: AttributedString.Index {
-        .init(_range.upperBound)
+        .init(_range.upperBound, version: _guts.version)
     }
 
     internal mutating func ensureUniqueReference() {
