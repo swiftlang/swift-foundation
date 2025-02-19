@@ -522,16 +522,16 @@ extension Base64 {
         return capacityWithoutBreaks + lineBreakCapacity
     }
 
-    static func withUnsafeEncodingTablesAsBufferPointers<R, E: Error>(options: Data.Base64EncodingOptions, _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<UInt8>) throws(E) -> R) throws(E) -> R {
+    static func withUnsafeEncodingTablesAsBufferPointers<R>(options: Data.Base64EncodingOptions, _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<UInt8>) -> R) -> R {
         let encoding0 = Self.encoding0
         let encoding1 = Self.encoding1
 
         assert(encoding0.count == 256)
         assert(encoding1.count == 256)
 
-        return try encoding0.withUnsafeBufferPointer { e0 throws(E) -> R in
-            try encoding1.withUnsafeBufferPointer { e1 throws(E) -> R in
-                try body(e0, e1)
+        return encoding0.withUnsafeBufferPointer { e0 in
+            encoding1.withUnsafeBufferPointer { e1 in
+                body(e0, e1)
             }
         }
     }
