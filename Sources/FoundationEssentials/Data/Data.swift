@@ -18,7 +18,7 @@
 @usableFromInline let memcpy = ucrt.memcpy
 @usableFromInline let memcmp = ucrt.memcmp
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 @usableFromInline let calloc = Bionic.calloc
 @usableFromInline let malloc = Bionic.malloc
 @usableFromInline let free = Bionic.free
@@ -71,13 +71,13 @@ internal func malloc_good_size(_ size: Int) -> Int {
 #endif
 
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(ucrt)
 import ucrt
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 #if os(Windows)

@@ -16,7 +16,7 @@ internal import _ForSwiftFoundation
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 internal import _FoundationCShims
