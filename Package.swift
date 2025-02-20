@@ -62,10 +62,10 @@ var dependencies: [Package.Dependency] {
                 from: "1.1.0"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
-                branch: "main"),
+                branch: "release/6.1"),
             .package(
                 url: "https://github.com/swiftlang/swift-syntax",
-                branch: "main")
+                branch: "release/6.1")
         ]
     }
 }
