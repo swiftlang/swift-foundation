@@ -2578,4 +2578,25 @@ E {
             }
         }
     }
+    
+    func testAttributeContainerFiltering() {
+        XCTAssertEqual(AttributeContainer().filter(runBoundaries: nil), AttributeContainer())
+        XCTAssertEqual(AttributeContainer().filter(runBoundaries: .paragraph), AttributeContainer())
+        XCTAssertEqual(AttributeContainer().filter(inheritedByAddedText: true), AttributeContainer())
+        XCTAssertEqual(AttributeContainer().filter(inheritedByAddedText: false), AttributeContainer())
+        
+        let testContainer = AttributeContainer.testInt(2).testBool(true).testString("Hello")
+        XCTAssertEqual(testContainer.filter(runBoundaries: nil), testContainer)
+        XCTAssertEqual(testContainer.filter(runBoundaries: .paragraph), AttributeContainer())
+        XCTAssertEqual(testContainer.filter(inheritedByAddedText: true), testContainer)
+        XCTAssertEqual(testContainer.filter(inheritedByAddedText: false), AttributeContainer())
+        
+        let testConstrainedContainer = AttributeContainer.testInt(2).testParagraphConstrained(3).testCharacterConstrained(4).testNonExtended(5)
+        XCTAssertEqual(testConstrainedContainer.filter(runBoundaries: nil), AttributeContainer.testInt(2).testNonExtended(5))
+        XCTAssertEqual(testConstrainedContainer.filter(runBoundaries: .paragraph), AttributeContainer.testParagraphConstrained(3))
+        XCTAssertEqual(testConstrainedContainer.filter(runBoundaries: .character("A")), AttributeContainer())
+        XCTAssertEqual(testConstrainedContainer.filter(runBoundaries: .character("*")), AttributeContainer.testCharacterConstrained(4))
+        XCTAssertEqual(testConstrainedContainer.filter(inheritedByAddedText: true), AttributeContainer.testInt(2).testParagraphConstrained(3).testCharacterConstrained(4))
+        XCTAssertEqual(testConstrainedContainer.filter(inheritedByAddedText: false), AttributeContainer.testNonExtended(5))
+    }
 }
