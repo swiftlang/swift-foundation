@@ -394,6 +394,8 @@ extension KeyPathExprSyntax {
             case .subscript(let sub):
                 result = ExprSyntax(SubscriptCallExprSyntax(calledExpression: result, arguments: sub.arguments))
 #if FOUNDATION_FRAMEWORK
+            case .method(let method):
+                result = ExprSyntax(FunctionCallExprSyntax(calledExpression: method, arguments: method.arguments))
             default:
                 return nil
 #endif
