@@ -587,10 +587,7 @@ extension Base64 {
         length: inout Int,
         options: Data.Base64DecodingOptions
     ) throws(DecodingError) {
-        let remaining = inBuffer.count % 4
-        if !options.contains(.ignoreUnknownCharacters) {
-            guard remaining == 0 else { throw DecodingError.invalidLength }
-        }
+        assert(options.contains(.ignoreUnknownCharacters))
 
         let outputLength = ((inBuffer.count + 3) / 4) * 3
         guard outBuffer.count >= outputLength else {
@@ -601,7 +598,7 @@ extension Base64 {
             var outIndex = 0
             var inIndex = 0
 
-            while inIndex + 3 < inBuffer.count {
+            fastLoop: while inIndex + 3 < inBuffer.count {
                 let a0 = inBuffer[inIndex]
                 let a1 = inBuffer[inIndex &+ 1]
                 let a2 = inBuffer[inIndex &+ 2]
@@ -611,11 +608,6 @@ extension Base64 {
                 if x >= Self.badCharacter {
                     if a3 == Self.encodePaddingCharacter {
                         break // the loop
-                    }
-
-                    guard options.contains(.ignoreUnknownCharacters) else {
-                        // TODO: Inspect characters here better
-                        throw DecodingError.invalidCharacter(inBuffer[inIndex])
                     }
 
                     // error fast path. we assume that illeagal errors are at the boundary.
@@ -639,10 +631,45 @@ extension Base64 {
                             continue
                         }
                     }
-                    fatalError()
-                }
 
-                inIndex &+= 4
+                    // error slow path... the first character is valid base64
+                    let b0 = a0
+                    var b1: UInt8? = nil
+                    var b2: UInt8? = nil
+                    var b3: UInt8? = nil
+                    let startIndex = inIndex
+                    inIndex &+= 1
+                    scanForValidCharacters: while inIndex < inBuffer.count {
+                        guard self.isValidBase64Byte(inBuffer[inIndex], options: options) else {
+                            if inBuffer[inIndex] == Self.encodePaddingCharacter {
+                                inIndex = startIndex
+                                break fastLoop
+                            }
+                            inIndex &+= 1
+                            continue scanForValidCharacters
+                        }
+
+                        defer { inIndex &+= 1 }
+
+                        if b1 == nil {
+                            b1 = inBuffer[inIndex]
+                        } else if b2 == nil {
+                            b2 = inBuffer[inIndex]
+                        } else if b3 == nil {
+                            b3 = inBuffer[inIndex]
+                            break scanForValidCharacters
+                        }
+                    }
+
+                    guard let b1, let b2, let b3 else {
+                        throw DecodingError.invalidLength
+                    }
+
+                    x = d0[Int(b0)] | d1[Int(b1)] | d2[Int(b2)] | d3[Int(b3)]
+
+                } else {
+                    inIndex &+= 4
+                }
 
                 withUnsafePointer(to: &x) { ptr in
                     ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { newPtr in
@@ -660,34 +687,101 @@ extension Base64 {
                 return
             }
 
-            // TODO: check we have at least two more characters, or they are all bs
+            guard inIndex + 3 < inBuffer.count else {
+                if options.contains(.ignoreUnknownCharacters) {
+                    // ensure that all remaining characters are unknown
+                    while inIndex < inBuffer.count {
+                        let value = inBuffer[inIndex]
+                        if self.isValidBase64Byte(value, options: options) || value == Self.encodePaddingCharacter {
+                            throw DecodingError.invalidCharacter(inBuffer[inIndex])
+                        }
+                        inIndex &+= 1
+                    }
+                    length = outIndex
+                    return
+                }
+                throw DecodingError.invalidLength
+            }
 
             let a0 = inBuffer[inIndex]
             let a1 = inBuffer[inIndex + 1]
-            var a2: UInt8?
-            var a3: UInt8?
-            if inIndex + 2 < inBuffer.count, inBuffer[inIndex + 2] != Self.encodePaddingCharacter {
+            var a2: UInt8 = 65
+            var a3: UInt8 = 65
+            var padding2 = false
+            var padding3 = false
+
+            if inBuffer[inIndex + 2] == Self.encodePaddingCharacter {
+                padding2 = true
+            } else {
                 a2 = inBuffer[inIndex + 2]
             }
-            if inIndex + 3 < inBuffer.count, inBuffer[inIndex + 3] != Self.encodePaddingCharacter {
+            if inBuffer[inIndex + 3] == Self.encodePaddingCharacter {
+                padding3 = true
+            } else {
+                if padding2 && self.isValidBase64Byte(inBuffer[inIndex + 3], options: options) {
+                    throw DecodingError.unexpectedPaddingCharacter
+                }
                 a3 = inBuffer[inIndex + 3]
             }
 
-            var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2 ?? 65)] | d3[Int(a3 ?? 65)]
+            var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
             if x >= Self.badCharacter {
-                // TODO: Inspect characters here better
-                throw DecodingError.invalidCharacter(inBuffer[inIndex])
+                var b0: UInt8? = nil
+                var b1: UInt8? = nil
+                var b2: UInt8? = nil
+                var b3: UInt8? = nil
+
+                scanForValidCharacters: while inIndex < inBuffer.count {
+                    defer { inIndex &+= 1 }
+                    let value = inBuffer[inIndex]
+                    if self.isValidBase64Byte(value, options: options) {
+                        if b0 == nil {
+                            b0 = value
+                        } else if b1 == nil {
+                            b1 = value
+                        } else if b2 == nil {
+                            b2 = value
+                        } else if b3 == nil {
+                            if padding2 { throw DecodingError.unexpectedPaddingCharacter }
+                            b3 = value
+                            break scanForValidCharacters
+                        }
+                    } else if value == Self.encodePaddingCharacter {
+                        guard b0 != nil, b1 != nil else {
+                            throw DecodingError.invalidLength
+                        }
+                        if b2 == nil {
+                            padding2 = true
+                            b2 = 65
+                        } else if b3 == nil {
+                            padding3 = true
+                            b3 = 65
+                            break scanForValidCharacters
+                        }
+                    }
+                }
+
+                guard let b0, let b1, let b2, let b3 else {
+                    if b0 == nil {
+                        length = outIndex
+                        return
+                    }
+                    throw DecodingError.invalidLength
+                }
+
+                x = d0[Int(b0)] | d1[Int(b1)] | d2[Int(b2)] | d3[Int(b3)]
+                assert(x < Self.badCharacter)
             }
 
             withUnsafePointer(to: &x) { ptr in
                 ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { newPtr in
                     outBuffer[outIndex] = newPtr[0]
                     outIndex += 1
-                    if a2 != nil {
+                    if !padding2 {
                         outBuffer[outIndex] = newPtr[1]
                         outIndex += 1
                     }
-                    if a3 != nil {
+                    if !padding3 {
                         outBuffer[outIndex] = newPtr[2]
                         outIndex += 1
                     }
