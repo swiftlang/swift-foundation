@@ -423,23 +423,11 @@ extension Base64 {
 
 extension Base64 {
 
-    struct DecodingError: Error, Equatable {
-        fileprivate enum _Internal: Error, Equatable {
-            case invalidLength
-            case invalidCharacter(UInt8)
-            case unexpectedPaddingCharacter
-            case unexpectedEnd
-        }
-
-        fileprivate let value: _Internal
-        fileprivate init(_ value: _Internal) {
-            self.value = value
-        }
-
-        static var invalidLength: Self { .init(.invalidLength) }
-        static func invalidCharacter(_ character: UInt8) -> Self { .init(.invalidCharacter(character)) }
-        static var unexpectedPaddingCharacter: Self { .init(.unexpectedPaddingCharacter) }
-        static var unexpectedEnd: Self { .init(.unexpectedEnd) }
+    enum DecodingError: Error, Equatable {
+        case invalidLength
+        case invalidCharacter(UInt8)
+        case unexpectedPaddingCharacter
+        case unexpectedEnd
     }
 
     static func decode(string encoded: String, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data {
@@ -726,15 +714,20 @@ extension Base64 {
         assert(decoding2.count == 256)
         assert(decoding3.count == 256)
 
-        return try decoding0.withUnsafeBufferPointer { d0 throws(E) -> R in
-            try decoding1.withUnsafeBufferPointer { d1 throws(E) -> R in
-                try decoding2.withUnsafeBufferPointer { d2 throws(E) -> R in
-                    try decoding3.withUnsafeBufferPointer { d3 throws(E) -> R in
-                        try body(d0, d1, d2, d3)
+        // Workaround that `withUnsafeBufferPointer` started to support typed throws in Swift 6.1
+        let result = decoding0.withUnsafeBufferPointer { d0 -> Result<R, E> in
+            decoding1.withUnsafeBufferPointer { d1 -> Result<R, E> in
+                decoding2.withUnsafeBufferPointer { d2 -> Result<R, E> in
+                    decoding3.withUnsafeBufferPointer { d3 -> Result<R, E> in
+                        Result { () throws(E) -> R in
+                            try body(d0, d1, d2, d3)
+                        }
                     }
                 }
             }
         }
+
+        return try result.get()
     }
 
     static func isValidBase64Byte(_ byte: UInt8, options: Data.Base64DecodingOptions) -> Bool {
