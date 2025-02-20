@@ -4,7 +4,7 @@
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: TBD
 * Status: **Pitch**
-* Implementation: _Awaiting Implementation_
+* Implementation: [swiftlang/swift-foundation#1182](https://github.com/swiftlang/swift-foundation/pull/1182)
 * Review: ([pitch](https://forums.swift.org/t/pitch-attributecontainer-filtering/77890))
 
 ## Introduction/Motivation
