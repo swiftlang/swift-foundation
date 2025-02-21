@@ -1902,6 +1902,36 @@ extension DataTests {
         )
     }
 
+    func test_base64Encode_DoesNotAddLineSeparatorsInLastLineWhenStringFitsInLine() {
+         XCTAssertEqual(
+             Data(repeating: 0, count: 48).base64EncodedString(options: .lineLength64Characters),
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        )
+
+         XCTAssertEqual(
+             Data(repeating: 0, count: 96).base64EncodedString(options: .lineLength64Characters),
+             """
+             AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
+             AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+             """,
+        )
+        print([UInt8](Data(repeating: 0, count: 96).base64EncodedString(options: .lineLength64Characters).utf8))
+
+        XCTAssertEqual(
+            Data(repeating: 0, count: 57).base64EncodedString(options: .lineLength76Characters),
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        )
+
+        XCTAssertEqual(
+            Data(repeating: 0, count: 114).base64EncodedString(options: .lineLength76Characters),
+            """
+            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
+            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+            """,
+        )
+
+    }
+
     func test_base64Decode_emptyString() {
         XCTAssertEqual(Data(), Data(base64Encoded: ""))
     }
