@@ -351,16 +351,8 @@ extension Base64 {
         Self.withUnsafeEncodingTablesAsBufferPointers(options: options) { (e0, e1) throws(Never) -> Void in
             let to = input.count / 3 * 3
             var outIndex = 0
-            for index in stride(from: 0, to: to, by: 3) {
-                let i1 = input[index]
-                let i2 = input[index &+ 1]
-                let i3 = input[index &+ 2]
-                buffer[outIndex] = e0[Int(i1)]
-                buffer[outIndex &+ 1] = e1[Int(((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F))]
-                buffer[outIndex &+ 2] = e1[Int(((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03))]
-                buffer[outIndex &+ 3] = e1[Int(i3)]
-                outIndex += 4
-            }
+
+            self.loopEncode(e0, e1, input: input, from: 0, to: to, output: buffer, outIndex: &outIndex)
 
             if to < input.count {
                 let index = to
@@ -435,18 +427,26 @@ extension Base64 {
 
         Self.withUnsafeEncodingTablesAsBufferPointers(options: options) { e0, e1 in
             var outIndex = 0
-            for lineInputIndex in stride(from: 0, to: lines * lineLength, by: lineLength) {
-                for index in stride(from: lineInputIndex, to: lineInputIndex + lineLength, by: 3) {
-                    let i1 = input[index]
-                    let i2 = input[index + 1]
-                    let i3 = input[index + 2]
-                    buffer[outIndex] = e0[Int(i1)]
-                    buffer[outIndex + 1] = e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))]
-                    buffer[outIndex + 2] = e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))]
-                    buffer[outIndex + 3] = e1[Int(i3)]
-                    outIndex += 4
+
+            // first full line
+            if input.count >= lineLength {
+                self.loopEncode(e0, e1, input: input, from: 0, to: lineLength, output: buffer, outIndex: &outIndex)
+            }
+
+            // following full lines
+            for lineInputIndex in stride(from: lineLength, to: lines * lineLength, by: lineLength) {
+                buffer[outIndex] = separatorByte1
+                outIndex += 1
+                if let separatorByte2 {
+                    buffer[outIndex] = separatorByte2
+                    outIndex += 1
                 }
 
+                self.loopEncode(e0, e1, input: input, from: lineInputIndex, to: lineInputIndex + lineLength, output: buffer, outIndex: &outIndex)
+            }
+
+            // last line beginning
+            if lines > 0 && lines * lineLength < input.count {
                 buffer[outIndex] = separatorByte1
                 outIndex += 1
                 if let separatorByte2 {
@@ -454,18 +454,8 @@ extension Base64 {
                     outIndex += 1
                 }
             }
-
             let to = input.count / 3 * 3
-            for index in stride(from: lines * lineLength, to: to, by: 3) {
-                    let i1 = input[index]
-                    let i2 = input[index + 1]
-                    let i3 = input[index + 2]
-                    buffer[outIndex] = e0[Int(i1)]
-                    buffer[outIndex + 1] = e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))]
-                    buffer[outIndex + 2] = e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))]
-                    buffer[outIndex + 3] = e1[Int(i3)]
-                    outIndex += 4
-            }
+            self.loopEncode(e0, e1, input: input, from: lines * lineLength, to: to, output: buffer, outIndex: &outIndex)
 
             if to < input.count {
                 let index = to
@@ -501,6 +491,27 @@ extension Base64 {
             }
 
             length = outIndex
+        }
+    }
+
+    private static func loopEncode(
+        _ e0: UnsafeBufferPointer<UInt8>,
+        _ e1: UnsafeBufferPointer<UInt8>,
+        input: UnsafeBufferPointer<UInt8>,
+        from: Int,
+        to: Int,
+        output: UnsafeMutableBufferPointer<UInt8>,
+        outIndex: inout Int
+    ) {
+        for index in stride(from: from, to: to, by: 3) {
+            let i1 = input[index]
+            let i2 = input[index + 1]
+            let i3 = input[index + 2]
+            output[outIndex] = e0[Int(i1)]
+            output[outIndex + 1] = e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))]
+            output[outIndex + 2] = e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))]
+            output[outIndex + 3] = e1[Int(i3)]
+            outIndex += 4
         }
     }
 
