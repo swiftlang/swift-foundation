@@ -36,8 +36,8 @@ An example use case is the server sending a template string to a client, to info
 ## Proposed solution
 
 ```swift
-let template = try URL.Template("http://www.example.com/foo{?query,number}")
-let url = template.makeURL(variables: [
+let template = URL.Template("http://www.example.com/foo{?query,number}")
+let url = template?.makeURL(variables: [
     "query": "bar baz",
     "number": "234",
 ])
