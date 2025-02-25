@@ -3,8 +3,9 @@
 * Proposal: [SF-0007](0007-swift-subprocess.md)
 * Authors: [Charles Hu](https://github.com/iCharlesHu)
 * Review Manager: [Tina Liu](https://github.com/itingliu)
-* Status: **2nd Review, Active: Dec 12, 2024...Dec 19, 2024**
+* Status: **3nd Review, Active: Feb 24, 2025...March 03, 2025**
 * Bugs: [rdar://118127512](rdar://118127512), [apple/swift-foundation#309](https://github.com/apple/swift-foundation/issues/309)
+* Review: [Pitch](https://forums.swift.org/t/pitch-swift-subprocess/69805/65), [1st review](https://forums.swift.org/t/review-sf-0007-introducing-swift-subprocess/70337), [2nd review](https://forums.swift.org/t/review-2nd-sf-0007-subprocess/76547)
 
 
 ## Revision History
