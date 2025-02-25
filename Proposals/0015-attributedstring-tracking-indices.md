@@ -13,6 +13,7 @@
 * **v2**: Minor Updates:
     - Added an alternatives considered section about the naming of `transform(updating:_:)`
     - Added a clarification around the impacts of lossening index acceptance behavior
+* **v3**: Separate `inout` and returning-`Optional` variants of transformation function
 
 ## Introduction
 
@@ -29,7 +30,7 @@ To accomplish this goal, we will provide a few new APIs to make `AttributedStrin
 ```swift
 var attrStr = AttributedString("The quick brown fox jumped over the lazy dog")
 guard let rangeOfJumped = attrStr.range(of: "jumped") else { ... }
-let updatedRangeOfJumped = attrStr.transform(updating: rangeOfJumped) {
+attrStr.transform(updating: &rangeOfJumped) {
     $0.insert("Wow!", at: $0.startIndex)
 }
 
@@ -38,7 +39,7 @@ if let updatedRangeOfJumped {
 }
 ```
 
-Note that in the above sample code, the returned `Range` references the range of "jumped" which is valid for use with the mutated `attrStr` (it will not crash) and it locates the same text - it does not represent the range of "fox ju" (a range offset by the 4 characters that were inserted at the beginning of the string).
+Note that in the above sample code, the updated `Range` references the range of "jumped" which is valid for use with the mutated `attrStr` (it will not crash) and it locates the same text - it does not represent the range of "fox ju" (a range offset by the 4 characters that were inserted at the beginning of the string). We will provide overloads that accept an `inout` range (or list of ranges) to update in-place as well as overloads that return an optional range (or list of ranges) to update out-of-place in order to provide fallback behavior when tracking fails.
 
 Additionally, we will provide a set of APIs and guarantees to reduce the frequency of crashes caused by invalid indices and allow for dynamically determining whether an index has become out-of-sync with a given `AttributedString`. For example:
 
@@ -61,6 +62,18 @@ To support the proposed design, we will introduce the following APIs to keep ind
 ```swift
 @available(FoundationPreview 6.2, *)
 extension AttributedString {
+    /// Tracks the location of the provided range throughout the mutation closure, updating the provided range to one that represents the same effective locations after the mutation. If updating the provided range is not possible (tracking failed) then this function will fatal error. Use the Optional-returning variants to provide custom fallback behavior.
+    /// - Parameters:
+    ///   - range: a range to track throughout the `body` closure
+    ///   - body: a mutating operation, or set of operations, to perform on the value of `self`. The value of `self` is provided to the closure as an `inout AttributedString` that the closure should mutate directly. Do not capture the value of `self` in the provided closure - the closure should mutate the provided `inout` copy.
+    public mutating func transform<E>(updating range: inout Range<Index>, body: (inout AttributedString) throws(E) -> Void) throws(E) -> Void
+    
+    /// Tracks the location of the provided ranges throughout the mutation closure, updating them to new ranges that represent the same effective locations after the mutation. If updating the provided ranges is not possible (tracking failed) then this function will fatal error. Use the Optional-returning variants to provide custom fallback behavior.
+    /// - Parameters:
+    ///   - ranges: a list of ranges to track throughout the `body` closure. The updated array (after the function is called) is guaranteed to be the same size as the provided array. Updated ranges are located at the same indices as their respective original ranges in the input `ranges` array.
+    ///   - body: a mutating operation, or set of operations, to perform on the value of `self`. The value of `self` is provided to the closure as an `inout AttributedString` that the closure should mutate directly. Do not capture the value of `self` in the provided closure - the closure should mutate the provided `inout` copy.
+    public mutating func transform<E>(updating ranges: inout [Range<Index>], body: (inout AttributedString) throws(E) -> Void) throws(E) -> Void
+    
     /// Tracks the location of the provided range throughout the mutation closure, returning a new, updated range that represents the same effective locations after the mutation
     /// - Parameters:
     ///   - range: a range to track throughout the `body` closure
@@ -79,9 +92,9 @@ extension AttributedString {
 
 ### Notable Behavior of `transform(updating:_:)`
 
-#### Returning `nil`
+#### Returning `nil` / crashing
 
-`transform(updating:_:)` has an optional return value because it is possible (although expected to be rare) that `AttributedString` may lose tracking of indices during a mutation. Tracking is lost if the `AttributedString` is completely replaced by another `AttributedString`, for example:
+Non-`inout` variants of `transform(updating:_:)` have optional return values because it is possible (although expected to be rare) that `AttributedString` may lose tracking of indices during a mutation. Tracking is lost if the `AttributedString` is completely replaced by another `AttributedString`, for example:
 
 ```swift
 myAttrStr.transform(updating: someRange) {
@@ -89,7 +102,28 @@ myAttrStr.transform(updating: someRange) {
 }
 ```
 
-In this case, the `AttributedString` at the end of the mutation closure is an entirely different `AttributedString` than the original provided (not mutated, but rather completely replaced) and therefore it is not possible to keep track of the provided indices. In this situation, `transform(updating:_:)` will return `nil` to indicate that the caller should perform fallback behavior appropriate to the caller's situation.
+In this case, the `AttributedString` at the end of the mutation closure is an entirely different `AttributedString` than the original provided (not mutated, but rather completely replaced) and therefore it is not possible to keep track of the provided indices. In this situation, `inout` variants of `transform(updating:_:)` will `fatalError` and non-`inout` variants will return `nil` to indicate that the caller should perform fallback behavior appropriate to the caller's situation.
+
+#### Diagnostics for incorrect variant usage
+
+It's possible that a developer may accidentally use the incorrect variant of the `transform(updating:)` function (for example, passing a non-`inout` parameter an expecting it to update in-place or passing an `inout` parameter but also expecting a return value). In these situations, the compiler warns the developer that while the syntax is technically valid it likely isn't what the developer meant:
+
+```swift
+var str: AttributedString
+var range: Range<AttributedString.Index>
+
+// Providing non-inout range without reading return value
+str.transform(updating: range) { // warning: Result of call to 'transform(updating:_:)' is unused
+    $0.insert("Wow!", at: $0.startIndex)
+}
+
+// Providing inout range while attempting to read return value
+let updatedRange = str.transform(updating: &range) { // warning: Constant 'updatedRange' inferred to have type '()', which may be unexpected
+    $0.insert("Wow!", at: $0.startIndex)
+}
+```
+
+These warnings will indicate to the developer that their usage of the function may be incorrect so that the developer can update their code accordingly.
 
 #### Collapsing ranges
 
@@ -98,12 +132,12 @@ In this case, the `AttributedString` at the end of the mutation closure is an en
 ```swift
 var myAttrStr = AttributedString("Hello World")
 let rangeOfHello = myAttrStr.range(of: "Hello")!
-myAttrStr.transform(updating: rangeOfHello) {
+myAttrStr.transform(updating: &rangeOfHello) {
     $0.removeSubrange(rangeOfHello)
 }
 ```
 
-In this case, the mutation removed the range of "Hello" and therefore the returned range will be a zero-length range at a location located just before `startIndex`. Therefore, `transform(updating:_:)` would return `myAttrStr.startIndex ..< myAttrStr.startIndex`. Callers can use this to find the location in the string where removed text used to exist relative to the still-existing surrounding text. Tracking these types of mutations is important for use cases like a user's selection which may be a single cursor position that does not select any ranges of text (which is distinct from a range selecting a single character).
+In this case, the mutation removed the range of "Hello" and therefore the returned range will be a zero-length range at a location located just before `startIndex`. Therefore, `transform(updating:_:)` would update the range to `myAttrStr.startIndex ..< myAttrStr.startIndex`. Callers can use this to find the location in the string where removed text used to exist relative to the still-existing surrounding text. Tracking these types of mutations is important for use cases like a user's selection which may be a single cursor position that does not select any ranges of text (which is distinct from a range selecting a single character).
 
 ### `AttributedString.Index` Validity
 
@@ -232,15 +266,6 @@ Previously, I designed the `transform(updating:_:)` API to use a `RangeSet` inst
 
 Additionally, we found the semantics of `Array<Range>` to align closer to the desired behavior of this function over `RangeSet`. For example, if a string contains the text "Hello world" where you are tracking the range of the word "Hello", you might mutate the string by inserting characters in between the two Ls. Since a `RangeSet` semantically represents a set of indices, you might expect the resulting `RangeSet` to represent the same set of indices (i.e. the indices of "H", "e", "l", "l", and "o"). However, when modeling concepts like user selection and locations in the string, we actually want to track the full range from the start to end point. In other words, the return value of this API should return the range "Hel_lo" instead of the discontiguous ranges "Hel" and "lo" (where _ represents inserted characters) and I feel that using an array of `Range` better aligns with this behavior than `RangeSet` which represents a collection of individual indices.
 
-### `inout` Ranges instead of returning new values in `transform(updating:_:)`
-
-I also previously investigated using an `inout` parameter instead of a function that returns updated indices. However, the problem with this approach lies in the optional return value. It's possible for tracking indices to fail and therefore the result of this opertion _must_ be an optional index/range/list of ranges. If using an `inout` value, this would require the provided `inout` value to also be optional, which leads to two problems:
-
-- Ergonomic issues: when passing a value to this function as a reference to some mutable variable, it's unlikely for that variable to be an `Optional`. In many cases, this would require the caller to copy to an optional value and provide that as an `inout` variable instead which is effectively equivalent to just returning a new value
-- Behavioral issues: this also means it's possible for the input indices to track to be `nil` which could be ambiguous. It's unclear whether this should simply perform the mutation and leave the value as `nil` or if the caller would expect the value to be populated in some way
-
-Instead, I found it much clearer to use a return value instead to clearly distinguish between the non-optional input value and the optional return value.
-
 ### `transform(updating: AttributedString.Index, _:)` in addition to `Range`-based APIs
 
 Originally I had considered whether we should offer a third overload to `transform(updating:_:)` that accepts an `Index` instead of a `Range`. However, we found this to be potentially ambiguous in regards to whether this was equivalent to tracking the location just before this index (i.e. `idx ..< idx` - an empty range indicating a location just before `idx`) or equivalent to tracking a range that contained this index (i.e. `idx ..< indexAfterIdx`). Furthermore, the latter behavior is still ambiguous as to whether the created range should encapsulate the full grapheme cluster at `idx`, just the first unicode scalar, or a single UTF-8 scalar as `AttributedString` is not a collection itself. To avoid this ambiguity without introducing a very verbose, explicitly-named overload, I chose not to offer this API and instead direct callers to create a range themselves (either empty or containing a single character/unicode scalar as desired).
@@ -250,9 +275,9 @@ Originally I had considered whether we should offer a third overload to `transfo
 During Foundation evolution review, we had discussed the naming of `transform(updating:_:)` to determine whether it was a suitable name. I had originally proposed this naming for the following reasons:
 
 - "transform": indicates that the receiver (the `AttributedString`) is being mutated, aligns with existing APIs such as `transformingAttributes` to indicate a mutation, and does not use the -ing suffix to indicate that the mutation is done in-place
-- "updating": indicates that the provided value is going to be updated, uses the -ing suffix to indicate that the updated value is being returned to the caller rather than being mutated in-place via an `inout` parameter
+- "updating": indicates that the provided value is going to be updated to a new value (either returning a new copy or in-place via the combination with `&` indicating the parameter is `inout` depending on the caller)
 
-We considered additional names for this api such as `tracking:` and `reindexing:` instead of `updating:` for added clarity and to avoid confusion with other usages of the word "updating" in Foundation such as the "autoupdating" locale/timezone/etc. However I believe that `updating:` is still the right choice of name for this label because words like "tracking"/"reindexing" are not sufficiently clearer in my opinion and do not have precedent in existing APIs to rely on whereas "updating" has precedent in existing APIs and can be differentiated from other different Foundation APIs due to the lack of the "auto" prefix indicating that the update is performed automatically without additional API calls.
+We considered additional names for this api such as `tracking:` and `reindexing:` instead of `updating:` for added clarity and to avoid confusion with other usages of the word "updating" in Foundation such as the "autoupdating" locale/timezone/etc. However I believe that `updating:` is still the right choice of name for this label because words like "tracking"/"reindexing" are not sufficiently clearer in my opinion and do not have precedent in existing APIs to rely on whereas "updating" has precedent in existing APIs and can be differentiated from other different Foundation APIs due to the lack of the "auto" prefix indicating that the update is performed automatically without additional API calls. I also considered whether the non-`inout` variant should not use the -ing suffix, however I felt that `transform(update:)` presented the word "update" as a noun rather than a verb describing what was happening, and I think the presence or lack thereof of the `&` token indicating whether the value is `inout` along with the compiler warnings for incorrect usage are significant enough to discern between an in-place, `inout` update vs. a returned, updated value.
 
 ## Acknowledgments
 
