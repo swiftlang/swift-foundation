@@ -1,9 +1,9 @@
 # `AttributeContainer` Filtering
 
-* Proposal: [SF-NNNN](NNNN-attribute-container-filtering.md)
+* Proposal: [SF-0019](0019-attribute-container-filtering.md)
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
-* Review Manager: TBD
-* Status: **Pitch**
+* Review Manager: [Tina L](https://github.com/itingliu)
+* Status: **Accepted**
 * Implementation: [swiftlang/swift-foundation#1182](https://github.com/swiftlang/swift-foundation/pull/1182)
 * Review: ([pitch](https://forums.swift.org/t/pitch-attributecontainer-filtering/77890))
 
