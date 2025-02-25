@@ -12,7 +12,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.25)
 
 if(POLICY CMP0156)
     # Deduplicate linked libraries where appropriate
@@ -70,18 +70,27 @@ else()
         GIT_REPOSITORY https://github.com/apple/swift-foundation-icu.git
         GIT_TAG 0.0.9)
 endif()
+FetchContent_MakeAvailable(SwiftFoundationICU)
 
-if (_SwiftCollections_SourceDIR)
-    message(STATUS "_SwiftCollections_SourceDIR provided, using swift-foundation-icu checkout at ${_SwiftCollections_SourceDIR}")
-    FetchContent_Declare(SwiftCollections
-        SOURCE_DIR ${_SwiftCollections_SourceDIR})
-else()
-    message(STATUS "_SwiftCollections_SourceDIR not provided, checking out local copy of swift-collections")
-    FetchContent_Declare(SwiftCollections
-        GIT_REPOSITORY https://github.com/apple/swift-collections.git
-        GIT_TAG 1.1.2)
-endif()
-FetchContent_MakeAvailable(SwiftFoundationICU SwiftCollections)
+block(SCOPE_FOR POLICIES)
+    # swift-collections does not build properly without swift-driver, which
+    # may not be available during the toolchain build. Set CMP0157 to OLD to
+    # work around this issue.
+    if(POLICY CMP0157)
+        cmake_policy(SET CMP0157 OLD)
+    endif()
+    if (_SwiftCollections_SourceDIR)
+        message(STATUS "_SwiftCollections_SourceDIR provided, using swift-collections checkout at ${_SwiftCollections_SourceDIR}")
+        FetchContent_Declare(SwiftCollections
+            SOURCE_DIR ${_SwiftCollections_SourceDIR})
+    else()
+        message(STATUS "_SwiftCollections_SourceDIR not provided, checking out local copy of swift-collections")
+        FetchContent_Declare(SwiftCollections
+            GIT_REPOSITORY https://github.com/apple/swift-collections.git
+            GIT_TAG 1.1.2)
+    endif()
+    FetchContent_MakeAvailable(SwiftCollections)
+endblock()
 
 list(APPEND CMAKE_MODULE_PATH ${SwiftFoundation_SOURCE_DIR}/cmake/modules)
 
