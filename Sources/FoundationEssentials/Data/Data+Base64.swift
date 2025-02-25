@@ -491,17 +491,17 @@ extension Base64 {
         let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
         var length = outputLength
         if options.contains(.ignoreUnknownCharacters) {
-            try Self._decodeChromiumIgnoringErrors(from: inBuffer, into: target, length: &length, options: options)
+            try Self._decodeIgnoringErrors(from: inBuffer, into: target, length: &length, options: options)
         } else {
             // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
             // branch prediction?
-            try self._decodeChromium(from: inBuffer, into: target, length: &length, options: options)
+            try self._decode(from: inBuffer, into: target, length: &length, options: options)
         }
 
         return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
     }
 
-    static func _decodeChromium(
+    static func _decode(
         from inBuffer: UnsafeBufferPointer<UInt8>,
         into outBuffer: UnsafeMutableBufferPointer<UInt8>,
         length: inout Int,
@@ -581,7 +581,7 @@ extension Base64 {
         }
     }
 
-    static func _decodeChromiumIgnoringErrors(
+    static func _decodeIgnoringErrors(
         from inBuffer: UnsafeBufferPointer<UInt8>,
         into outBuffer: UnsafeMutableBufferPointer<UInt8>,
         length: inout Int,
