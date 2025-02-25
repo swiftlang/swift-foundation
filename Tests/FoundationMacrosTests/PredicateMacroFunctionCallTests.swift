@@ -345,6 +345,72 @@ final class PredicateMacroFunctionCallTests: XCTestCase {
             """,
             diagnostics: ["2:19: This key path is not supported here in this predicate. Use an explicit closure instead."]
         )
+      
+        #if !FOUNDATION_FRAMEWORK
+        // Ensure key path methods and initializers are correctly handled in filter.
+        AssertPredicateExpansion(
+          """
+          #Predicate<Object> { inputA in
+              inputA.filter(\\.method())
+          }
+          """,
+          """
+          \(foundationModuleName).Predicate<Object>({ inputA in
+              PredicateExpressions.build_filter(
+                  PredicateExpressions.build_Arg(inputA),
+                  {
+                      PredicateExpressions.build_KeyPath(
+                          root: PredicateExpressions.build_Arg($0),
+                          keyPath: \\.method
+                      )
+                  }
+              )
+          })
+          """
+        )
+      
+        AssertPredicateExpansion(
+          """
+          #Predicate<Object> { inputA in
+              inputA.filter(\\.method().description)
+          }
+          """,
+          """
+          \(foundationModuleName).Predicate<Object>({ inputA in
+              PredicateExpressions.build_filter(
+                  PredicateExpressions.build_Arg(inputA),
+                  {
+                      PredicateExpressions.build_KeyPath(
+                          root: PredicateExpressions.build_Arg($0),
+                          keyPath: \\.method
+                      )
+                  }
+              )
+          })
+          """
+        )
+      
+        AssertPredicateExpansion(
+          """
+          #Predicate<Object> { inputA in
+              inputA.filter(\\Object.init(val:))
+          }
+          """,
+          """
+          \(foundationModuleName).Predicate<Object>({ inputA in
+              PredicateExpressions.build_filter(
+                  PredicateExpressions.build_Arg(inputA),
+                  {
+                      PredicateExpressions.build_KeyPath(
+                          root: PredicateExpressions.build_Arg($0),
+                          keyPath: \\.init(val:)
+                      )
+                  }
+              )
+          })
+          """
+        )
+        #endif
     }
     
     func testStartsWith() {

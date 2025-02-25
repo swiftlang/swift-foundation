@@ -40,6 +40,10 @@ let concurrencyChecking: [SwiftSetting] = [
     .enableUpcomingFeature("InferSendableFromCaptures")
 ]
 
+let keypathWithMethodMembers: [SwiftSetting] = [
+    .enableExperimentalFeature("keypathWithMethodMembers")
+]
+
 var dependencies: [Package.Dependency] {
     if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] != nil {
         [
@@ -198,7 +202,7 @@ let package = Package(
             exclude: ["CMakeLists.txt"],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros + concurrencyChecking
+            ] + availabilityMacros + concurrencyChecking + keypathWithMethodMembers
         ),
     ]
 )
@@ -217,3 +221,5 @@ package.targets.append(contentsOf: [
     )
 ])
 #endif
+
+
