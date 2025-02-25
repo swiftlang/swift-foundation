@@ -85,11 +85,11 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            Index(runs.startIndex._stringIndex!)
+            Index(runs.startIndex._stringIndex!, version: runs._guts.version)
         }
 
         public var endIndex: Index {
-            Index(runs.endIndex._stringIndex!)
+            Index(runs.endIndex._stringIndex!, version: runs._guts.version)
         }
 
         public func index(before i: Index) -> Index {
@@ -223,11 +223,11 @@ extension AttributedString.Runs {
         }
         
         public var startIndex: Index {
-            Index(runs.startIndex._stringIndex!)
+            Index(runs.startIndex._stringIndex!, version: runs._guts.version)
         }
         
         public var endIndex: Index {
-            Index(runs.endIndex._stringIndex!)
+            Index(runs.endIndex._stringIndex!, version: runs._guts.version)
         }
 
         public func index(before i: Index) -> Index {
@@ -385,11 +385,11 @@ extension AttributedString.Runs {
         }
         
         public var startIndex: Index {
-            Index(runs.startIndex._stringIndex!)
+            Index(runs.startIndex._stringIndex!, version: runs._guts.version)
         }
         
         public var endIndex: Index {
-            Index(runs.endIndex._stringIndex!)
+            Index(runs.endIndex._stringIndex!, version: runs._guts.version)
         }
 
         public func index(before i: Index) -> Index {
@@ -557,11 +557,11 @@ extension AttributedString.Runs {
         }
         
         public var startIndex: Index {
-            Index(runs.startIndex._stringIndex!)
+            Index(runs.startIndex._stringIndex!, version: runs._guts.version)
         }
         
         public var endIndex: Index {
-            Index(runs.endIndex._stringIndex!)
+            Index(runs.endIndex._stringIndex!, version: runs._guts.version)
         }
 
         public func index(before i: Index) -> Index {
@@ -745,11 +745,11 @@ extension AttributedString.Runs {
         }
         
         public var startIndex: Index {
-            Index(runs.startIndex._stringIndex!)
+            Index(runs.startIndex._stringIndex!, version: runs._guts.version)
         }
         
         public var endIndex: Index {
-            Index(runs.endIndex._stringIndex!)
+            Index(runs.endIndex._stringIndex!, version: runs._guts.version)
         }
 
         public func index(before i: Index) -> Index {
@@ -895,11 +895,11 @@ extension AttributedString.Runs {
         }
 
         public var startIndex: Index {
-            Index(_runs.startIndex._stringIndex!)
+            Index(_runs.startIndex._stringIndex!, version: _runs._guts.version)
         }
 
         public var endIndex: Index {
-            Index(_runs.endIndex._stringIndex!)
+            Index(_runs.endIndex._stringIndex!, version: _runs._guts.version)
         }
 
         public func index(before i: Index) -> Index {

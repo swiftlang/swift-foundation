@@ -60,8 +60,8 @@ extension AttributedString.Runs.Run: CustomStringConvertible {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs.Run {
     public var range: Range<AttributedString.Index> {
-        let lower = AttributedString.Index(_range.lowerBound)
-        let upper = AttributedString.Index(_range.upperBound)
+        let lower = AttributedString.Index(_range.lowerBound, version: _guts.version)
+        let upper = AttributedString.Index(_range.upperBound, version: _guts.version)
         return Range(uncheckedBounds: (lower, upper))
     }
 
