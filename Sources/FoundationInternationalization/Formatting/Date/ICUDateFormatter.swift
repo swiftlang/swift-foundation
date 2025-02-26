@@ -19,11 +19,11 @@ internal import _FoundationICU
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #endif
 
 typealias UChar = UInt16

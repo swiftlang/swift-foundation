@@ -16,11 +16,11 @@ import FoundationEssentials
 internal import _FoundationICU
 
 #if canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Darwin)
 import Darwin
 #endif
