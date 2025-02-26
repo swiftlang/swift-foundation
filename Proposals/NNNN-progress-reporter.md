@@ -912,6 +912,7 @@ There should be no impact on existing code, as this is an additive change.
 However, this new progress reporting API, `ProgressReporter`, which is compatible with Swift's async/await style concurrency, will be favored over the existing `Progress` API going forward. Depending on how widespread the adoption of `ProgressReporter` is, we may consider deprecating the existing `Progress` API. 
 
 ## Future Directions 
+
 ### Additional Overloads to APIs within UI Frameworks 
 To enable the usage of `ProgressReporter` for app development, we can add overloads to APIs within UI frameworks that has previously worked with `Progress`, such as `ProgressView` in SwiftUI. Adding support to existing progress-related APIs within UI Frameworks will enable adoption of `ProgressReporter` for app developers who wish to do extensive progress reporting and show progress on the User Interface using `ProgressReporter`. 
 
