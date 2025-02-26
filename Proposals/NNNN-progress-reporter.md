@@ -30,7 +30,7 @@
         * [`Progress` \(Parent\) \- `ProgressReporter` \(Child\)](#progress-parent---progressreporter-child)
 * [Impact on Existing Code](#impact-on-existing-code)
 * [Future Directions](#future-directions)
-    * [ProgressView Overload in SwiftUI](#progressview-overload-in-swiftui)
+    * [Additional Overloads to APIs within UI Frameworks](#additional-overloads-to-apis-within-ui- frameworks)
     * [Distributed ProgressReporter](#distributed-progressreporter)
 * [Alternatives Considered](#alternatives-considered)
     * [Alternative Names](#alternative-names)
@@ -99,7 +99,7 @@ let vegetables = ["spinach", "carrots", "celeries"]
 public func makeSalad() async {
     let progress = Progress(totalUnitCount: 2)
     
-    let choppingProgress = Progress()
+    let subprogress = Progress()
     progress.addChild(subprogress, withPendingUnitCount: 1)
     
     await chopFruits(progress: subprogress)
@@ -912,9 +912,8 @@ There should be no impact on existing code, as this is an additive change.
 However, this new progress reporting API, `ProgressReporter`, which is compatible with Swift's async/await style concurrency, will be favored over the existing `Progress` API going forward. Depending on how widespread the adoption of `ProgressReporter` is, we may consider deprecating the existing `Progress` API. 
 
 ## Future Directions 
-
-### `ProgressView` Overload in SwiftUI
-To enable the usage of `ProgressReporter` for app development, an overload for SwiftUI's `ProgressView` will be added. SwiftUI's `ProgressView` currently can be intitialized using a `Double` or the existing `Progress` instance. Adding support to allow for use of `ProgressView` with `ProgressReporter` will enable adoption of `ProgressReporter` for app developers who wish to take advantage of `ProgressReporter` to do relatively extensive progress reporting and show progress on the User Interface. 
+### Additional Overloads to APIs within UI Frameworks 
+To enable the usage of `ProgressReporter` for app development, we can add overloads to APIs within UI frameworks that has previously worked with `Progress`, such as `ProgressView` in SwiftUI. Adding support to existing progress-related APIs within UI Frameworks will enable adoption of `ProgressReporter` for app developers who wish to do extensive progress reporting and show progress on the User Interface using `ProgressReporter`. 
 
 ### Distributed `ProgressReporter`
 To enable inter-process progress reporting, we would like to introduce distributed `ProgressReporter` in the future, which would functionally be similar to how Foundation's `Progress` mechanism for reporting progress across processes.
