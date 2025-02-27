@@ -908,7 +908,7 @@ However, this new progress reporting API, `ProgressReporter`, which is compatibl
 ## Future Directions 
 
 ### Additional Overloads to APIs within UI Frameworks 
-To enable the usage of `ProgressReporter` for app development, we can add overloads to APIs within UI frameworks that has previously worked with `Progress`, such as `ProgressView` in SwiftUI. Adding support to existing progress-related APIs within UI Frameworks will enable adoption of `ProgressReporter` for app developers who wish to do extensive progress reporting and show progress on the User Interface using `ProgressReporter`. 
+To enable the usage of `ProgressReporter` for app development, we can add overloads to APIs within UI frameworks that has been using Foundation's `Progress`, such as `ProgressView` in SwiftUI. Adding support to existing progress-related APIs within UI Frameworks will enable adoption of `ProgressReporter` for app developers who wish to do extensive progress reporting and show progress on the User Interface using `ProgressReporter`. 
 
 ### Distributed `ProgressReporter`
 To enable inter-process progress reporting, we would like to introduce distributed `ProgressReporter` in the future, which would functionally be similar to how Foundation's `Progress` mechanism for reporting progress across processes.
