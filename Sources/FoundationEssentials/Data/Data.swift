@@ -2887,6 +2887,14 @@ extension Data {
         public static let endLineWithCarriageReturn = Base64EncodingOptions(rawValue: 1 << 4)
         /// When a maximum line length is set, specify that the line ending to insert should include a line feed.
         public static let endLineWithLineFeed       = Base64EncodingOptions(rawValue: 1 << 5)
+
+        /// Use the base64url alphabet to encode the data
+        @available(FoundationPreview 6.2, *)
+        public static let base64URLAlphabet = Base64EncodingOptions(rawValue: 1 << 6)
+
+        /// Omit the `=` padding characters in the end of the base64 encoded result
+        @available(FoundationPreview 6.2, *)
+        public static let omitPaddingCharacter = Base64EncodingOptions(rawValue: 1 << 7)
     }
 
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
