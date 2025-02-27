@@ -393,10 +393,8 @@ extension KeyPathExprSyntax {
                 }
             case .subscript(let sub):
                 result = ExprSyntax(SubscriptCallExprSyntax(calledExpression: result, arguments: sub.arguments))
-#if FOUNDATION_FRAMEWORK
-            default:
+            @unknown default:
                 return nil
-#endif
             }
         }
         return result
