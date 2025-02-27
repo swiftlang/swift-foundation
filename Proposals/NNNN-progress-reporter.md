@@ -568,24 +568,22 @@ public struct BasicProgressProperties : ProgressProperties {
     /// Returns `self`. This is because there are no properties in `BasicProgressProperties`.
     /// - Parameter children: An array of children of the same `Type`.
     /// - Returns: `self`
-    public func reduce(children: [Self]) -> Self {
-        return self
-    }
+    public func reduce(children: [Self]) -> Self
 
     /// A struct containing all options to choose in specifying how localized description should be generated.
     public struct LocalizedDescriptionOptions: Sendable, Hashable, Equatable {
         
         /// Option to include formatted `fractionCompleted` in localized description.
         /// Example: 20% completed.
-        /// - Parameter style: A `FloatingPointFormatStyle<Double>.Percent` instance that should be used to format `fractionCompleted`.
+        /// - Parameter style: A `FloatingPointFormatStyle<Double>.Percent` used to format `fractionCompleted`.
         /// - Returns: A `LocalizedStringResource` for formatted `fractionCompleted`.
-        public static func percentage(_ style: FloatingPointFormatStyle<Double>.Percent?) -> LocalizedDescriptionOptions
+        public static func fractionCompleted(format style: FloatingPointFormatStyle<Double>.Percent = FloatingPointFormatStyle<Double>.Percent()) -> LocalizedDescriptionOptions
         
         /// Option to include formatted `completedCount` / `totalCount` in localized description.
         /// Example: 5 of 10
-        /// - Parameter style: An `IntegerFormatStyle<Int>` instance that should be used to format `completedCount` and `totalCount`.
+        /// - Parameter style: An `IntegerFormatStyle<Int>` instance used to format `completedCount` and `totalCount`.
         /// - Returns: A `LocalizedStringResource` for formatted `completedCount` / `totalCount`.
-        public static func count(_ style: IntegerFormatStyle<Int>?) -> LocalizedDescriptionOptions
+        public static func count(format style: IntegerFormatStyle<Int> = IntegerFormatStyle<Int>()) -> LocalizedDescriptionOptions
     }
 
     /// Returns a `LocalizedStringResource` based on options provided.
@@ -605,8 +603,8 @@ public struct BasicProgressProperties : ProgressProperties {
 
 #### `FileProgressProperties`
 
-```swift 
-/// A custom `ProgressProperties` to incorporate additional properties such as `totalFileCount` to 
+```swift
+/// A custom `ProgressProperties` to incorporate additional properties such as `totalFileCount` to
 /// ProgressReporter, which itself tracks only general properties such as `totalCount`.
 @available(FoundationPreview 6.2, *)
 public struct FileProgressProperties : ProgressProperties {
@@ -652,43 +650,39 @@ public struct FileProgressProperties : ProgressProperties {
         
         /// Option to include formatted `fractionCompleted` in localized description.
         /// Example: 20% completed.
-        /// - Parameter style: A `FloatingPointFormatStyle<Double>.Percent` instance that should be used to format `fractionCompleted`.
+        /// - Parameter style: A `FloatingPointFormatStyle<Double>.Percent` instance used to format `fractionCompleted`.
         /// - Returns: A `LocalizedStringResource` for formatted `fractionCompleted`.
-        public static func percentage(_ style: FloatingPointFormatStyle<Double>.Percent?) -> LocalizedDescriptionOptions {
-            return LocalizedDescriptionOptions("Percentage", formatPercentage: style, formatCount: nil)
-        }
+        public static func fractionCompleted(format style: FloatingPointFormatStyle<Double>.Percent = FloatingPointFormatStyle<Double>.Percent()) -> LocalizedDescriptionOptions 
         
         /// Option to include formatted `completedCount` / `totalCount` in localized description.
         /// Example: 5 of 10
-        /// - Parameter style: An `IntegerFormatStyle<Int>` instance that should be used to format `completedCount` and `totalCount`.
+        /// - Parameter style: An `IntegerFormatStyle<Int>` instance used to format `completedCount` and `totalCount`.
         /// - Returns: A `LocalizedStringResource` for formatted `completedCount` / `totalCount`.
-        public static func count(_ style: IntegerFormatStyle<Int>?) -> LocalizedDescriptionOptions {
-            return LocalizedDescriptionOptions("Percentage", formatPercentage: nil, formatCount: style)
-        }
+        public static func count(format style: IntegerFormatStyle<Int> = IntegerFormatStyle<Int>()) -> LocalizedDescriptionOptions
 
         /// Option to include `completedFileCount` / `totalFileCount` in localized description.
         /// Example: 1 of 5 files
-        /// - Parameter style: An `IntegerFormatStyle<UInt64>` instance that should be used to format `completedFileCount` and `totalFileCount`.
+        /// - Parameter style: An `IntegerFormatStyle<Int>` instance used to format `completedFileCount` and `totalFileCount`.
         /// - Returns: A `LocalizedStringResource` for formatted `completedFileCount` / `totalFileCount`.
-        public static func files(_ style: IntegerFormatStyle<UInt64>?) -> LocalizedDescriptionOptions
+        public static func fileCount(format style: IntegerFormatStyle<Int> = IntegerFormatStyle<Int>()) -> LocalizedDescriptionOptions
         
         /// Option to include formatted `completedByteCount` / `totalByteCount` in localized description.
         /// Example: Zero kB of 123.5 MB
-        /// - Parameter style: A `ByteCountFormatStyle` instance that should be used to format `completedByteCount` and `totalByteCount`. If this is `nil`, it defaults to `ByteCountFormatStyle(style: .file, allowedUnits: .all, spellsOutZero: true, includesActualByteCount: false, locale: .autoupdatingCurrent)`.
+        /// - Parameter style: A `ByteCountFormatStyle` instance used to format `completedByteCount` and `totalByteCount`.
         /// - Returns: A `LocalizedDescriptionOption` for formatted `completedByteCount` / `totalByteCount`.
-        public static func bytes(_ style: ByteCountFormatStyle?) -> LocalizedDescriptionOptions
+        public static func byteCount(format style: ByteCountFormatStyle = ByteCountFormatStyle()) -> LocalizedDescriptionOptions
         
         /// Option to include formatted `throughput` (bytes per second) in localized description.
         /// Example: 10 MB/s
-        /// - Parameter style:  `ByteCountFormatStyle` instance used to format `completedByteCount` and `totalByteCount`. If this is `nil`, it defaults to `ByteCountFormatStyle(style: .file, allowedUnits: .all, spellsOutZero: true, includesActualByteCount: false, locale: .autoupdatingCurrent)`.
+        /// - Parameter style: A `ByteCountFormatStyle` instance used to format `throughput`.
         /// - Returns: A `LocalizedDescriptionOption` for formatted `throughput`.
-        public static func throughput(_ style: ByteCountFormatStyle?) -> LocalizedDescriptionOptions
+        public static func throughput(format style: ByteCountFormatStyle = ByteCountFormatStyle()) -> LocalizedDescriptionOptions
         
-        /// Option to include formatted `estimatedTimeRemaining` in localized description.
+        /// Option to include `estimatedTimeRemaining` in localized description.
         /// Example: 5 minutes remaining
-        /// - Parameter style: `Duration.UnitsFormatStyle` instance used to format `estimatedTimeRemaining`, which is of `Duration` Type. If this is `nil`, it defaults to `Duration.UnitsFormatStyle(allowedUnits: Set(arrayLiteral: .hours, .minutes), width: .wide)`.
+        /// - Parameter style: `Duration.UnitsFormatStyle` instance used to format `estimatedTimeRemaining`, which is of `Duration` Type.
         /// - Returns: A `LocalizedDescriptionOption` for formatted `estimatedTimeRemaining`.
-        public static func estimatedTimeRemaining(_ style: Duration.UnitsFormatStyle?) -> LocalizedDescriptionOptions
+        public static func estimatedTimeRemaining(format style: Duration.UnitsFormatStyle = Duration.UnitsFormatStyle(allowedUnits: Set(arrayLiteral: .hours, .minutes), width: .wide)) -> LocalizedDescriptionOptions
     }
 
     /// Returns a custom `LocalizedStringResource` for file-related `ProgressReporter` of `FileProgressProperties` based on the selected `LocalizedDescriptionOptions`.
@@ -992,4 +986,5 @@ extension Progress {
 This method would mean that we are altering the usage pattern of pre-existing `Progress` API, which may introduce more confusions to developers in their efforts to move from non-async functions to async functions.
 
 ## Acknowledgements 
+
 Thanks to [Tony Parker](https://github.com/parkera) and [Tina Liu](https://github.com/itingliu) for constant feedback and guidance throughout to help shape this API and proposal. I would also like to thank [Jeremy Schonfeld](https://github.com/jmschonfeld), [Cassie Jones](https://github.com/porglezomp), [Konrad Malawski](https://github.com/ktoso), [Philippe Hausler](https://github.com/phausler), Julia Vashchenko for valuable feedback on this proposal and its previous versions. 
