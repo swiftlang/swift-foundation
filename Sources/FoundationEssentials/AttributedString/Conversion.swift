@@ -446,7 +446,7 @@ extension Range where Bound == AttributedString.Index {
         let end = bstr.utf16.index(start, offsetBy: range.length)
 
         guard start >= string.startIndex._value, end <= string.endIndex._value else { return nil }
-        self.init(uncheckedBounds: (.init(start), .init(end)))
+        self.init(uncheckedBounds: (.init(start, version: string.__guts.version), .init(end, version: string.__guts.version)))
     }
 #endif // FOUNDATION_FRAMEWORK
 

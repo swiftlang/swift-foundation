@@ -299,7 +299,7 @@ extension AttributedStringProtocol {
         let start = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8Start)
         let end = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8End)
 
-        return AttributedString.Index(start) ..< AttributedString.Index(end)
+        return AttributedString.Index(start, version: self.__guts.version) ..< AttributedString.Index(end, version: self.__guts.version)
 #else
         // TODO: Implement localized AttributedStringProtocol.range(of:) for FoundationPreview
         return _range(of: stringToFind, options: options)
