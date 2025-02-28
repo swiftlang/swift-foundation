@@ -60,11 +60,10 @@ extension AttributedString.Index {
 @available(FoundationPreview 6.2, *)
 extension Range<AttributedString.Index> {
     public func isValid(within text: some AttributedStringProtocol) -> Bool {
+        // Note: By nature of Range's lowerBound <= upperBound requirement, this is also sufficient to determine that lowerBound <= endIndex && upperBound >= startIndex
         self.lowerBound._version == text.__guts.version &&
         self.lowerBound >= text.startIndex &&
-        self.lowerBound <= text.endIndex &&
         self.upperBound._version == text.__guts.version &&
-        self.upperBound >= text.startIndex &&
         self.upperBound <= text.endIndex
     }
     
