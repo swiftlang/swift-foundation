@@ -944,6 +944,19 @@ internal struct RFC3986Parser: URLParserProtocol {
 
 // MARK: - Encoding Extensions
 
+extension StringProtocol {
+    func addingPercentEncoding(isAllowedCodeUnit isAllowed: (UTF8.CodeUnit) -> Bool) -> String {
+        let fastResult = utf8.withContiguousStorageIfAvailable {
+            addingPercentEncoding(utf8Buffer: $0, isAllowedCodeUnit: isAllowed)
+        }
+        if let fastResult {
+            return fastResult
+        } else {
+            return addingPercentEncoding(utf8Buffer: utf8, isAllowedCodeUnit: isAllowed)
+        }
+    }
+}
+
 fileprivate extension StringProtocol {
 
     func hexToAscii(_ hex: UInt8) -> UInt8 {
@@ -986,22 +999,15 @@ fileprivate extension StringProtocol {
     }
 
     func addingPercentEncoding(forURLComponent component: URLComponentSet) -> String {
-        let fastResult = utf8.withContiguousStorageIfAvailable {
-            addingPercentEncoding(utf8Buffer: $0, component: component)
-        }
-        if let fastResult {
-            return fastResult
-        } else {
-            return addingPercentEncoding(utf8Buffer: utf8, component: component)
-        }
+        addingPercentEncoding(isAllowedCodeUnit: { $0.isAllowedIn(component) })
     }
 
-    func addingPercentEncoding(utf8Buffer: some Collection<UInt8>, component: URLComponentSet) -> String {
+    func addingPercentEncoding(utf8Buffer: some Collection<UInt8>, isAllowedCodeUnit isAllowed: (UTF8.CodeUnit) -> Bool) -> String {
         let maxLength = utf8Buffer.count * 3
         let result = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: maxLength + 1) { _buffer in
             var buffer = OutputBuffer(initializing: _buffer.baseAddress!, capacity: _buffer.count)
             for v in utf8Buffer {
-                if v.isAllowedIn(component) {
+                if isAllowed(v) {
                     buffer.appendElement(v)
                 } else {
                     buffer.appendElement(UInt8(ascii: "%"))
