@@ -56,7 +56,7 @@ extension AttributedString.Guts {
                 lowerBound = string.utf8.index(string.startIndex, offsetBy: lowerBound.utf8Offset + utf8LengthDelta)
             } else {
                 // Form new indices even if the offsets don't change to ensure the indices are valid in the newly-mutated rope
-                string.formIndex(&lowerBound, offsetBy: 0)
+                string.utf8.formIndex(&lowerBound, offsetBy: 0)
             }
             // Shift the upper bound if either:
             //      - The upper bound is greater than the start of the mutation (meaning it must be after the mutation due to the prepare step)
@@ -65,7 +65,7 @@ extension AttributedString.Guts {
                 upperBound = string.utf8.index(string.startIndex, offsetBy: upperBound.utf8Offset + utf8LengthDelta)
             } else {
                 // Form new indices even if the offsets don't change to ensure the indices are valid in the newly-mutated rope
-                string.formIndex(&lowerBound, offsetBy: 0)
+                string.utf8.formIndex(&lowerBound, offsetBy: 0)
             }
             
             trackedRanges[idx] = Range(uncheckedBounds: (lowerBound, upperBound))
