@@ -45,6 +45,14 @@ final class TestAttributedStringCOW: XCTestCase {
         XCTAssertNotEqual(str, copy, "Mutation operation did not copy when multiple references exist", file: file, line: line)
     }
     
+    func assertCOWCopyManual(file: StaticString = #filePath, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
+        var str = createAttributedString()
+        let gutsPtr = Unmanaged.passUnretained(str._guts)
+        operation(&str)
+        let newGutsPtr = Unmanaged.passUnretained(str._guts)
+        XCTAssertNotEqual(gutsPtr.toOpaque(), newGutsPtr.toOpaque(), "Mutation operation with manual copy did not perform copy", file: file, line: line)
+    }
+    
     func assertCOWNoCopy(file: StaticString = #filePath, line: UInt = #line, _ operation: (inout AttributedString) -> Void) {
         var str = createAttributedString()
         let gutsPtr = Unmanaged.passUnretained(str._guts)
@@ -202,5 +210,61 @@ final class TestAttributedStringCOW: XCTestCase {
         assertCOWBehavior {
             $0[makeSubrange($0)].genericSetAttribute()
         }
+    }
+    
+    func testIndexTracking() {
+        assertCOWBehavior {
+            _ = $0.transform(updating: $0.startIndex ..< $0.endIndex) {
+                $0.testInt = 2
+            }
+        }
+        assertCOWBehavior {
+            _ = $0.transform(updating: $0.startIndex ..< $0.endIndex) {
+                $0.insert(AttributedString("_"), at: $0.startIndex)
+            }
+        }
+        assertCOWBehavior {
+            _ = $0.transform(updating: [$0.startIndex ..< $0.endIndex]) {
+                $0.testInt = 2
+            }
+        }
+        assertCOWBehavior {
+            _ = $0.transform(updating: [$0.startIndex ..< $0.endIndex]) {
+                $0.insert(AttributedString("_"), at: $0.startIndex)
+            }
+        }
+        
+        // Ensure that creating a reference in the transformation closure still causes a copy to happen during post-mutation index updates
+        var storage = AttributedString()
+        assertCOWCopyManual {
+            _ = $0.transform(updating: $0.startIndex ..< $0.endIndex) {
+                $0.insert(AttributedString("_"), at: $0.startIndex)
+                // Store a reference after performing the mutation so the mutation doesn't cause an inherent copy
+                storage = $0
+            }
+        }
+        XCTAssertNotEqual(storage, "")
+        
+        storage = AttributedString()
+        assertCOWCopyManual {
+            _ = try? $0.transform(updating: $0.startIndex ..< $0.endIndex) {
+                $0.insert(AttributedString("_"), at: $0.startIndex)
+                // Store a reference after performing the mutation so the mutation doesn't cause an inherent copy
+                storage = $0
+                throw CocoaError(.fileReadUnknown)
+            }
+        }
+        XCTAssertNotEqual(storage, "")
+        
+        storage = AttributedString()
+        assertCOWCopyManual {
+            _ = try? $0.transform(updating: $0.startIndex ..< $0.endIndex) {
+                $0.insert(AttributedString("_"), at: $0.startIndex)
+                // Store a reference after performing the mutation so the mutation doesn't cause an inherent copy
+                storage = $0
+                throw CocoaError(.fileReadUnknown)
+            }
+        }
+        XCTAssertNotEqual(storage, "")
     }
 }
