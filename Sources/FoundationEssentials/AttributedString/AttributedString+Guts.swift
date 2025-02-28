@@ -29,12 +29,14 @@ extension AttributedString {
         typealias _AttributeValue = AttributedString._AttributeValue
         typealias _AttributeStorage = AttributedString._AttributeStorage
 
+        var version: Version
         var string: BigString
         var runs: _InternalRuns
 
         // Note: the caller is responsible for performing attribute fix-ups if needed based on the source of the runs
         init(string: BigString, runs: _InternalRuns) {
             precondition(string.isEmpty == runs.isEmpty, "An empty attributed string should not contain any runs")
+            self.version = Self.createNewVersion()
             self.string = string
             self.runs = runs
         }

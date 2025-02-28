@@ -106,11 +106,11 @@ extension AttributedString.CharacterView: BidirectionalCollection {
     public typealias Index = AttributedString.Index
 
     public var startIndex: AttributedString.Index {
-        .init(_range.lowerBound)
+        .init(_range.lowerBound, version: _guts.version)
     }
 
     public var endIndex: AttributedString.Index {
-        .init(_range.upperBound)
+        .init(_range.upperBound, version: _guts.version)
     }
 
     @_alwaysEmitIntoClient
@@ -131,14 +131,14 @@ extension AttributedString.CharacterView: BidirectionalCollection {
 
     public func index(before i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.index(before: i._value))
+        let j = Index(_guts.string.index(before: i._value), version: _guts.version)
         precondition(j >= startIndex, "Can't advance AttributedString index before start index")
         return j
     }
 
     public func index(after i: AttributedString.Index) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.index(after: i._value))
+        let j = Index(_guts.string.index(after: i._value), version: _guts.version)
         precondition(j <= endIndex, "Can't advance AttributedString index after end index")
         return j
     }
@@ -157,7 +157,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
     @usableFromInline
     internal func _index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
-        let j = Index(_guts.string.index(i._value, offsetBy: distance))
+        let j = Index(_guts.string.index(i._value, offsetBy: distance), version: _guts.version)
         precondition(j >= startIndex && j <= endIndex, "AttributedString index out of bounds")
         return j
     }
@@ -192,7 +192,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         }
         precondition(j >= startIndex._value && j <= endIndex._value,
                      "AttributedString index out of bounds")
-        return Index(j)
+        return Index(j, version: _guts.version)
     }
 
     @_alwaysEmitIntoClient

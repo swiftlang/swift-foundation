@@ -486,22 +486,22 @@ extension AttributedString.Runs {
         let currentRange = _strBounds.ranges[currentRangeIdx]
         if strIndexEnd < currentRange.upperBound {
             // The coalesced run ends within the current range, so just look for the next break in the coalesced run
-            return .init(_guts.string._firstConstraintBreak(in: i._value ..< strIndexEnd, with: constraints))
+            return .init(_guts.string._firstConstraintBreak(in: i._value ..< strIndexEnd, with: constraints), version: _guts.version)
         } else {
             // The coalesced run extends beyond our range
             // First determine if there's a constraint break to handle
             let constraintBreak = _guts.string._firstConstraintBreak(in: i._value ..< currentRange.upperBound, with: constraints)
             if constraintBreak == currentRange.upperBound {
-                if endOfCurrent { return .init(currentRange.upperBound) }
+                if endOfCurrent { return .init(currentRange.upperBound, version: _guts.version) }
                 // No constraint break, return the next subrange start or the end index
                 if currentRangeIdx == _strBounds.ranges.count - 1 {
-                    return .init(currentRange.upperBound)
+                    return .init(currentRange.upperBound, version: _guts.version)
                 } else {
-                    return .init(_strBounds.ranges[currentRangeIdx + 1].lowerBound)
+                    return .init(_strBounds.ranges[currentRangeIdx + 1].lowerBound, version: _guts.version)
                 }
             } else {
                 // There is a constraint break before the end of the subrange, so return that break
-                return .init(constraintBreak)
+                return .init(constraintBreak, version: _guts.version)
             }
         }
         
@@ -533,7 +533,7 @@ extension AttributedString.Runs {
             currentRangeIdx -= 1
             currentRange = _strBounds.ranges[currentRangeIdx]
             currentStringIdx = currentRange.upperBound
-            if endOfPrevious { return .init(currentStringIdx) }
+            if endOfPrevious { return .init(currentStringIdx, version: _guts.version) }
         }
         let beforeStringIdx = _guts.string.utf8.index(before: currentStringIdx)
         let r = _guts.runs.index(atUTF8Offset: beforeStringIdx.utf8Offset)
@@ -541,10 +541,10 @@ extension AttributedString.Runs {
         if startRun.utf8Offset >= currentRange.lowerBound.utf8Offset {
             // The coalesced run begins within the current range, so just look for the next break in the coalesced run
             let runStartStringIdx = _guts.string.utf8.index(beforeStringIdx, offsetBy: startRun.utf8Offset - beforeStringIdx.utf8Offset)
-            return .init(_guts.string._lastConstraintBreak(in: runStartStringIdx ..< currentStringIdx, with: constraints))
+            return .init(_guts.string._lastConstraintBreak(in: runStartStringIdx ..< currentStringIdx, with: constraints), version: _guts.version)
         } else {
             // The coalesced run starts before the current range, and we've already looked back once so we shouldn't look back again
-            return .init(_guts.string._lastConstraintBreak(in: currentRange.lowerBound ..< currentStringIdx, with: constraints))
+            return .init(_guts.string._lastConstraintBreak(in: currentRange.lowerBound ..< currentStringIdx, with: constraints), version: _guts.version)
         }
     }
 
@@ -569,7 +569,7 @@ extension AttributedString.Runs {
 
         let j = _guts.string.unicodeScalars.index(after: i._value)
         let last = _guts.string._lastConstraintBreak(in: stringStart ..< j, with: constraints)
-        return (.init(last), r.runIndex)
+        return (.init(last, version: _guts.version), r.runIndex)
     }
 }
 
