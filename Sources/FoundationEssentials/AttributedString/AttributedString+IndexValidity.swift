@@ -19,22 +19,22 @@ extension AttributedString.Guts {
     
     #if canImport(Synchronization)
     private static let _nextVersion = Atomic<Version>(0)
-    
-    static func createNewVersion() -> Version {
-        _nextVersion.wrappingAdd(1, ordering: .relaxed).oldValue
-    }
     #else
     private static let _nextVersion = LockedState<Version>(initialState: 0)
+    #endif
     
     static func createNewVersion() -> Version {
+        #if canImport(Synchronization)
+        _nextVersion.wrappingAdd(1, ordering: .relaxed).oldValue
+        #else
         _nextVersion.withLock { value in
             defer {
                 value &+= 1
             }
             return value
         }
+        #endif
     }
-    #endif
     
     func incrementVersion() {
         self.version = Self.createNewVersion()
