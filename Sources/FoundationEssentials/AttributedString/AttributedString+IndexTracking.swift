@@ -49,7 +49,7 @@ extension AttributedString.Guts {
             var lowerBound = trackedRanges[idx].lowerBound
             var upperBound = trackedRanges[idx].upperBound
             
-            // Shift the lower bound if either:
+            // Shift the lower bound if the mutation changed the length of the string and either of the following are true:
             //      A) The lower bound is greater than the start of the mutation (meaning it must be after the mutation due to the prepare step)
             //      B) The lower bound is equal to the start of the mutation, but the mutation is an insertion (meaning the text is inserted before the start offset)
             if lowerBound.utf8Offset > mutationStartOffset || (lowerBound.utf8Offset == mutationStartOffset && isInsertion), utf8LengthDelta != 0 {
@@ -58,9 +58,9 @@ extension AttributedString.Guts {
                 // Form new indices even if the offsets don't change to ensure the indices are valid in the newly-mutated rope
                 string.utf8.formIndex(&lowerBound, offsetBy: 0)
             }
-            // Shift the upper bound if either:
-            //      - The upper bound is greater than the start of the mutation (meaning it must be after the mutation due to the prepare step)
-            //      - The lower bound is shifted in any way (which therefore requires the upper bound to be shifted). This is the case when the tracked range is empty and is at the location of an insertion mutation
+            // Shift the upper bound if the mutation changed the length of the string and either of the following are true:
+            //      A) The upper bound is greater than the start of the mutation (meaning it must be after the mutation due to the prepare step)
+            //      B) The lower bound is shifted in any way (which therefore requires the upper bound to be shifted). This is the case when the tracked range is empty and is at the location of an insertion mutation
             if upperBound.utf8Offset > mutationStartOffset || lowerBound != trackedRanges[idx].lowerBound, utf8LengthDelta != 0 {
                 upperBound = string.utf8.index(string.startIndex, offsetBy: upperBound.utf8Offset + utf8LengthDelta)
             } else {
