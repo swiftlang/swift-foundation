@@ -245,17 +245,7 @@ final class TestAttributedStringCOW: XCTestCase {
         }
         XCTAssertNotEqual(storage, "")
         
-        storage = AttributedString()
-        assertCOWCopyManual {
-            _ = try? $0.transform(updating: $0.startIndex ..< $0.endIndex) {
-                $0.insert(AttributedString("_"), at: $0.startIndex)
-                // Store a reference after performing the mutation so the mutation doesn't cause an inherent copy
-                storage = $0
-                throw CocoaError(.fileReadUnknown)
-            }
-        }
-        XCTAssertNotEqual(storage, "")
-        
+        // Ensure the same semantics hold even when the closure throws
         storage = AttributedString()
         assertCOWCopyManual {
             _ = try? $0.transform(updating: $0.startIndex ..< $0.endIndex) {
