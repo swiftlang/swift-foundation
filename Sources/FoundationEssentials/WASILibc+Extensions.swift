@@ -11,7 +11,7 @@
 
 #if os(WASI)
 
-import WASILibc
+@preconcurrency import WASILibc
 internal import _FoundationCShims
 
 // MARK: - Clock
