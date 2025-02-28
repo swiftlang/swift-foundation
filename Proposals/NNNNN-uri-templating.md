@@ -3,16 +3,15 @@
 * Proposal: [SF-00019](00019-uri-templating.md)
 * Authors: [Daniel Eggert](https://github.com/danieleggert)
 * Review Manager: TBD
-* Status: **Awaiting implementation** or **Awaiting review**
+* Status: **Awaiting implementation**
 * Implementation: [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/pull/NNNNN)
 * Review: ([pitch](https://forums.swift.org/...))
 
 ## Introduction
 
-This adds [RFC 6570](https://datatracker.ietf.org/doc/html/rfc6570) _URI templates_ to the Swift `URL` type.
+This proposal adds support for [RFC 6570](https://datatracker.ietf.org/doc/html/rfc6570) _URI templates_ to the Swift URL type.
 
-While there are various kinds and levels of expansion, the core concept is that you can define a _template_ such
-as
+Although there are multiple levels of expansion, the core concept is that you can define a _template_ such as
 ```
 http://example.com/~{username}/
 http://example.com/dictionary/{term:1}/{term}
@@ -27,11 +26,13 @@ The templating has a rich set of options for substituting various parts of URLs.
 
 [RFC 6570](https://datatracker.ietf.org/doc/html/rfc6570) provides a simple, yet powerful way to allow for variable expansion in URLs.
 
-Imagine building applications in Swift that interact with web services or APIs. Often, these interactions rely on constructing URLs to access specific resources. Manually crafting these URLs, especially when they involve dynamic parts like user IDs or search terms, can become messy, error-prone, and hard to maintain.
+This provides a mechanism for a server to convey to clients how to construct URLs for specific resources. In the [RFC 8620 JMAP protocol](https://datatracker.ietf.org/doc/html/rfc8620) for example, the server sends it client a template such as 
+```
+https://jmap.example.com/download/{accountId}/{blobId}/{name}?accept={type}
+```
+and the client can then use variable expansion to construct a URL for resources. The API contract between the server and the client defines which variables this specific template has, and which ones are optional.
 
-URI Templates address this challenge by providing a clean and powerful way to define URL patterns with placeholders for variable data. Instead of concatenating strings and manually encoding parameters, you can define a template that clearly outlines the structure of your URL, highlighting the parts that will change based on your application's logic.
-
-An example use case is the server sending a template string to a client, to inform the client how to construct URLs for accessing resources.
+Since URI templates provide a powerful way to define URL patterns with placeholders, they are adopted in various standards.
 
 ## Proposed solution
 
@@ -92,7 +93,7 @@ All new API is guarded by `@available(FoundationPreview 6.2, *)`.
 Its sole API is its initializer:
 ```swift
 extension URL {
-    /// A template for creating a URL.
+    /// A template for constructing a URL from variable expansions.
     ///
     /// This is an template that can be expanded into
     /// a ``URL`` by calling ``URL(template:variables:)``.
@@ -167,7 +168,7 @@ extension URL.Template.Value {
     /// A list value (an array of `String`s) to be used with a ``URL.Template``.
     public static func list(_ list: some Sequence<String>) -> URL.Template.Value
     
-    /// An associate list value (ordered key-value pairs) to be used with a ``URL.Template``.
+    /// An associative list value (ordered key-value pairs) to be used with a ``URL.Template``.
     public static func associativeList(_ list: some Sequence<(key: String, value: String)>) -> URL.Template.Value
 }
 ```
@@ -194,6 +195,9 @@ Finally, `URL.Template` has this factory method:
 extension URL.Template {
     /// Creates a new `URL` by expanding the RFC 6570 template and variables.
     ///
+    /// This will return `nil` if variable expansion does not produce a valid,
+    /// well-formed URL.
+    ///
     /// All text will be converted to NFC (Unicode Normalization Form C) and UTF-8
     /// before being percent-encoded if needed.
     public func makeURL(
@@ -203,6 +207,8 @@ extension URL.Template {
 ```
 
 This will only fail (return `nil`) if `URL.init?(string:)` fails.
+
+It may seem counterintuitive when and how this could fail, but a string such as `http://example.com:bad%port/` would cause `URL.init?(string:)` to fail, and URI Templates do not provide a way to prevent this. It is also worth noting that it is valid to not provide values for all variables in the template. Expansion will still succeed, generating a string. If this string is a valid URL, depends on the exact details of the template. Determining which variables exist in a template, which are required for expansion, and whether the resulting URL is valid is part of the API contract between the server providing the template and the client generating the URL.
 
 Additionally, the new types `URL.Template`, `URL.Template.VariableName`, and `URL.Template.Value` all conform to `CustomStringConvertible`.
 
@@ -228,8 +234,12 @@ Since this proposal covers all of RFC 6570, the current expectation is for it to
 
 ## Alternatives considered
 
-Instead of `URL.Template.makeURL(variables:)`, the API could have a (failable) inititializer `URL.init?(template:variables:)`. The `makeURL(variables:)` (factory) method would be easier to discover through autocomplete, and when looking at the `URL.Template` type’s documentation is it easier to discover. The `URL.init?` approach would be less discoverable.
+Instead of `URL.Template.makeURL(variables:)`, the API could have a (failable) inititializer `URL.init?(template:variables:)`. The `makeURL(variables:)` (factory) method would be easier to discover through autocomplete, and when looking at the `URL.Template` type’s documentation is it easier to discover. The `URL.init?` approach would be less discoverable. There was some feedback to the initial pitch, though, that preferred the `URL.init?` method which aligns with the existing `URL.init?(string:)` initializer.
 
 Additionally, the API _could_ expose a (non-failing!) `URL.Template.expand(variables:)` (or other naming) that returns a `String`. But since the purpose is very clearly to create URLs, it feels like that would just add noise.
 
-A DSL (domain-specific language) for `URL.Template` could improve type safety. However, since servers typically send templates as strings for client-side population and subsequent request URL generation, the added complexity of a DSL outweighs its benefits in this common scenario.
+Using a DSL (domain-specific language) for `URL.Template` could improve type safety. However, because servers typically send templates as strings for client-side processing and request generation, the added complexity of a DSL outweighs its benefits. The proposed implementation is string-based (_stringly typed_) because that is what the RFC 6570 mandates.
+
+There was a lot of interest during the pitch to have an API that lends itself to _routing_, providing a way to go back-and-forth between a route and its variables. But that’s a very different use case than the RFC 6570 templates provide, and it would be better suited to have a web server routing specific API, either in Foundation or in a web server specific package. [pointfreeco/swift-url-routing](https://github.com/pointfreeco/swift-url-routing) is one such example.
+
+Instead of using the `text`, `list` and `associativeList` names (which are _terms of art_ in RFC 6570), the names `string`, `array`, and `orderedDictioary` would align better with normal Swift naming conventions. The proposal favors the _terms of art_, but there was some interest in using changing this.
