@@ -17,6 +17,7 @@ target_sources(FoundationEssentials PRIVATE
     AttributedString+AttributeTransformation.swift
     AttributedString+CharacterView.swift
     AttributedString+Guts.swift
+    AttributedString+IndexTracking.swift
     AttributedString+IndexValidity.swift
     AttributedString+Runs+AttributeSlices.swift
     AttributedString+Runs+Run.swift
