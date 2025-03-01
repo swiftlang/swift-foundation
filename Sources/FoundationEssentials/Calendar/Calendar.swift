@@ -93,9 +93,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case dangi
         
         @available(FoundationPreview 6.2, *)
-        case thai
-        
-        @available(FoundationPreview 6.2, *)
         case vietnamese
 
         package static let cldrKeywordKey = "ca"
@@ -135,7 +132,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case "telugu": self = .telugu
             case "vikram": self = .vikram
             case "dangi": self = .dangi
-            case "thai": self = .thai
             case "vietnamese": self = .vietnamese
             default: return nil
             }
@@ -169,7 +165,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .telugu: return "telugu"
             case .vikram: return "vikram"
             case .dangi: return "dangi"
-            case .thai: return "thai"
             case .vietnamese: return "vietnamese"
             }
         }
@@ -203,7 +198,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .telugu: return "telugu"
             case .vikram: return "vikram"
             case .dangi: return "dangi"
-            case .thai: return "thai"
             case .vietnamese: return "vietnamese"
             }
         }
@@ -1404,8 +1398,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return .vikram
         case .dangi: 
             return .dangi
-        case .thai:
-            return .thai
         case .vietnamese:
             return .vietnamese
         }
@@ -1465,8 +1457,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return .vikram
         case .dangi:
             return .dangi
-        case .thai:
-            return .thai
         case .vietnamese:
             return .vietnamese
         default:
