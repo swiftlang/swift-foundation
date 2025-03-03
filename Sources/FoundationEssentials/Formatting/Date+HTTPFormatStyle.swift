@@ -115,13 +115,6 @@ extension RegexComponent where Self == Date.HTTPFormatStyle {
 // MARK: - Components
 
 @available(FoundationPreview 6.2, *)
-extension DateComponents {
-    public func HTTPComponentsFormat(_ style: HTTPFormatStyle = .init()) -> String {
-        return style.format(self)
-    }
-}
-
-@available(FoundationPreview 6.2, *)
 public extension FormatStyle where Self == DateComponents.HTTPFormatStyle {
     static var http: Self {
         return DateComponents.HTTPFormatStyle()
@@ -338,7 +331,7 @@ extension DateComponents {
                 throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now))
             }
             
-            if maybeWeekday1 >= UInt8(ascii: "0") && maybeWeekday1 <= UInt8(ascii: "9") {
+            if isASCIIDigit(maybeWeekday1) {
                 // This is the first digit of the day. Weekday is not present.
             } else {
                 // Anything else must be a day-name (Mon, Tue, ... Sun)
@@ -366,8 +359,8 @@ extension DateComponents {
                 }
                 
                 // Move past , and space to weekday
-                try it.expectCharacter(UInt8(ascii: ","), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-                try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
+                try it.expectCharacter(UInt8(ascii: ","), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing , after weekday")
+                try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing space after weekday")
             }
 
             dc.day = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing or malformed day")
@@ -427,7 +420,7 @@ extension DateComponents {
             
             try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
             let second = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            // second '60' is supported in the spec for leap seconds, but Foundation does not support leap seconds. 60 is adjusted to 0.
+            // second '60' is supported in the spec for leap seconds, but Foundation does not support leap seconds. 60 is adjusted to 59.
             if second < 0 || second > 60 {
                 throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Second \(second) is out of bounds")
             }
