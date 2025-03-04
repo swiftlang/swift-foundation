@@ -4,8 +4,8 @@
 * Authors: [Daniel Eggert](https://github.com/danieleggert)
 * Review Manager: TBD
 * Status: **Awaiting implementation**
-* Implementation: [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/pull/NNNNN)
-* Review: ([pitch](https://forums.swift.org/...))
+* Implementation: [swiftlang/swift-foundation#1198](https://github.com/swiftlang/swift-foundation/pull/1198)
+* Review: ([pitch](https://forums.swift.org/t/pitch-uri-templating/78030))
 
 ## Introduction
 
