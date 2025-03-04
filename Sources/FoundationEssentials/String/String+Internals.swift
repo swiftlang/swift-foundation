@@ -233,7 +233,16 @@ extension UnsafeBufferPointer {
             if nullTerminated {
                 // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
                 // At this point, the buffer is known to be non-empty, so it must have space for at least a null terminating byte (even if it overwrites the final output byte in the buffer)
-                buffer[buffer.count - 1] = 0
+                if bufferIdx < bufferLength {
+                    // We still have space left in the buffer - if we haven't already null-terminated then add a null byte to the buffer
+                    // Since we have space, we only want to write the null byte when/where we have to since some clients provide buffer sizes that don't match the true buffer length
+                    if bufferIdx == buffer.startIndex || buffer[bufferIdx - 1] != 0 {
+                        buffer[bufferIdx] = 0
+                    }
+                } else {
+                    // The buffer is non-empty but we've completely filled it, overwrite the last written byte with a null byte to ensure null termination
+                    buffer[buffer.count - 1] = 0
+                }
             }
         }
         
@@ -347,21 +356,20 @@ extension NSString {
             } else if self.fastestEncoding == NSASCIIStringEncoding, let fastUTF8 = self._fastCStringContents(false) {
                 // If we have quick access to ASCII contents, no need to decompose
                 let utf8Buffer = UnsafeBufferPointer(start: fastUTF8, count: self.length)
-                defer {
-                    // Ensure buffer is always null-terminated even on failure to prevent buffer over-reads
-                    // At this point, the buffer is known to be non-empty, so it must have space for at least a null terminating byte (even if it overwrites the final output byte in the buffer)
-                    buffer[buffer.count - 1] = 0
-                }
                 
                 // We only allow embedded nulls if there are no non-null characters following the first null character
                 if let embeddedNullIdx = utf8Buffer.firstIndex(of: 0) {
                     if !utf8Buffer[embeddedNullIdx...].allSatisfy({ $0 == 0 }) {
+                        // Ensure the buffer is always null-terminated even on failure to prevent buffer over-reads - at this point we know the buffer is non-empty
+                        buffer[0] = 0
                         return false
                     }
                 }
                 
                 var (leftoverIterator, next) = buffer.initialize(from: utf8Buffer)
                 guard leftoverIterator.next() == nil && next < buffer.endIndex else {
+                    // Ensure the buffer is always null-terminated even on failure to prevent buffer over-reads
+                    buffer[buffer.endIndex - 1] = 0
                     return false
                 }
                 buffer[next] = 0
