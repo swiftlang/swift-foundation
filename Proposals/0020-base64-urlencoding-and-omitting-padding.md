@@ -1,12 +1,11 @@
 # Adding base64 urlencoding and omitting padding option to base64 encoding and decoding
 
-* Proposal: SF-NNNN
+* Proposal: [SF-0020](0020-base64-urlencoding-and-omitting-padding.md)
 * Authors: [Fabian Fett](https://github.com/fabianfett)
 * Review Manager: TBD
-* Status: **Awaiting implementation**
-* Bug: *if applicable* [apple/swift#NNNNN](https://github.com/apple/swift-foundation/issues/NNNNN)
-* Implementation: [apple/swift-foundation#NNNNN](https://github.com/apple/swift-foundation/pull/NNNNN)
-* Review: ([pitch](https://forums.swift.org/...))
+* Status: **Awaiting review**
+* Implementation: [apple/swift-foundation#1195](https://github.com/swiftlang/swift-foundation/pull/1195) [apple/swift-foundation#1196](https://github.com/swiftlang/swift-foundation/pull/1196)
+* Review: [pitch](https://forums.swift.org/t/pitch-adding-base64-urlencoding-and-omitting-padding-options-to-base64-encoding-and-decoding/77659)
 
 ## Revision history
 
