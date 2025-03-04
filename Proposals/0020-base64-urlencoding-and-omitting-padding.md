@@ -33,7 +33,7 @@ We propose to add additional options to `Data.Base64EncodingOptions`:
 extension Data.Base64EncodingOptions {
     /// Use the base64url alphabet to encode the data
     @available(FoundationPreview 6.2, *)
-    public static var base64UrlAlphabet: Base64EncodingOptions { get }
+    public static var base64URLAlphabet: Base64EncodingOptions { get }
 
     /// Omit the `=` padding characters in the end of the base64 encoded result
     @available(FoundationPreview 6.2, *)
@@ -48,8 +48,8 @@ extension Data.Base64DecodingOptions {
     /// Modify the decoding algorithm so that it ignores unknown non-Base-64 bytes, including line ending characters.
     /// 
     /// - Warning: Using `ignoreUnknownCharacters` might allow the decoding of base64url data, even when the 
-    ///            `base64UrlAlphabet` is not selected. It might also allow using the base64 alphabet when the
-    ///            `base64UrlAlphabet` is selected.
+    ///            `base64URLAlphabet` is not selected. It might also allow using the base64 alphabet when the
+    ///            `base64URLAlphabet` is selected.
     ///            Consider using the `ignoreWhitespaceCharacters` option if possible.
     public static let ignoreUnknownCharacters = Base64DecodingOptions(rawValue: 1 << 0)
 
@@ -61,7 +61,7 @@ extension Data.Base64DecodingOptions {
 
     /// Modify the decoding algorithm so that it expects base64 encoded data that uses base64url alphabet.
     @available(FoundationPreview 6.2, *)
-    public static var base64UrlAlphabet: Base64EncodingOptions { get }
+    public static var base64URLAlphabet: Base64EncodingOptions { get }
 
     /// Modify the decoding algorithm so that it expects no padding characters at the end of the encoded data.
     ///
