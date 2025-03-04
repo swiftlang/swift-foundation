@@ -24,7 +24,7 @@ import TestSupport
 #endif
 
 #if canImport(Android)
-import Android
+@preconcurrency import Android
 #endif
 
 extension FileManager {

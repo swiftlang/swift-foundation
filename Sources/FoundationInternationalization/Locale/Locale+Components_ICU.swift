@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 #if canImport(FoundationEssentials)

@@ -24,7 +24,7 @@ private func autoreleasepool<T>(_ block: () -> T) -> T { block() }
 #endif
 
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 #if canImport(Darwin)
 import Darwin

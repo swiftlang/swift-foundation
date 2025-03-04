@@ -22,7 +22,7 @@
 import CRT
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 #if FOUNDATION_FRAMEWORK

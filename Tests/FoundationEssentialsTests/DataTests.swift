@@ -15,7 +15,7 @@ import TestSupport
 #endif
 
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
