@@ -179,7 +179,7 @@ final class URLTests : XCTestCase {
             }
             #endif
 
-            let url = URL(string: test.key, relativeTo: base)
+            let url = URL(stringOrEmpty: test.key, relativeTo: base)
             XCTAssertNotNil(url, "Got nil url for string: \(test.key)")
             XCTAssertEqual(url?.absoluteString, test.value, "Failed test for string: \(test.key)")
         }
@@ -242,7 +242,7 @@ final class URLTests : XCTestCase {
             "http:g"        :  "g", // For strict parsers
         ]
         for test in tests {
-            let url = URL(string: test.key, relativeTo: base)!
+            let url = URL(stringOrEmpty: test.key, relativeTo: base)!
             XCTAssertEqual(url.path(), test.value)
             if (url.hasDirectoryPath && url.path().count > 1) {
                 // The trailing slash is stripped in .path for file system compatibility
@@ -607,11 +607,13 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
         XCTAssertEqual(appended.relativePath, "relative/no:slash")
 
-        // `appending(component:)` should explicitly treat `component` as a single
-        // path component, meaning "/" should be encoded to "%2F" before appending
+        // .appending(component:) should explicitly treat slashComponent as a single
+        // path component, meaning "/" should be encoded to "%2F" before appending.
+        // However, the old behavior didn't do this for file URLs, so we maintain the
+        // old behavior to prevent breakage.
         appended = url.appending(component: slashComponent, directoryHint: .notDirectory)
-        checkBehavior(appended.absoluteString, new: "file:///var/mobile/relative/%2Fwith:slash", old: "file:///var/mobile/relative/with:slash")
-        checkBehavior(appended.relativePath, new: "relative/%2Fwith:slash", old: "relative/with:slash")
+        XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/with:slash")
+        XCTAssertEqual(appended.relativePath, "relative/with:slash")
 
         appended = url.appendingPathComponent(component, isDirectory: false)
         XCTAssertEqual(appended.absoluteString, "file:///var/mobile/relative/no:slash")
@@ -687,7 +689,7 @@ final class URLTests : XCTestCase {
         checkBehavior(relative.path, new: "/", old: "/..")
 
         relative = URL(filePath: "", relativeTo: absolute)
-        checkBehavior(relative.relativePath, new: "", old: ".")
+        XCTAssertEqual(relative.relativePath, ".")
         XCTAssertTrue(relative.hasDirectoryPath)
         XCTAssertEqual(relative.path, "/absolute")
 
@@ -962,6 +964,21 @@ final class URLTests : XCTestCase {
         // Old behavior appends to the string, but is missing the path
         checkBehavior(schemeOnly.path(), new: "foo", old: "")
         XCTAssertEqual(schemeOnly.absoluteString, "scheme:foo")
+    }
+
+    func testURLEmptySchemeCompatibility() throws {
+        var url = try XCTUnwrap(URL(string: ":memory:"))
+        XCTAssertEqual(url.scheme, "")
+
+        let base = try XCTUnwrap(URL(string: "://home"))
+        XCTAssertEqual(base.host(), "home")
+
+        url = try XCTUnwrap(URL(string: "/path", relativeTo: base))
+        XCTAssertEqual(url.scheme, "")
+        XCTAssertEqual(url.host(), "home")
+        XCTAssertEqual(url.path, "/path")
+        XCTAssertEqual(url.absoluteString, "://home/path")
+        XCTAssertEqual(url.absoluteURL.scheme, "")
     }
 
     func testURLComponentsPercentEncodedUnencodedProperties() throws {
@@ -1345,6 +1362,29 @@ final class URLTests : XCTestCase {
         comp = try XCTUnwrap(URLComponents(string: legalURLString))
         XCTAssertEqual(comp.string, legalURLString)
         XCTAssertEqual(comp.percentEncodedPath, colonFirstPath)
+
+        // Colons should be percent-encoded by URLComponents.string if
+        // they could be misinterpreted as a scheme separator.
+
+        comp = URLComponents()
+        comp.percentEncodedPath = "not%20a%20scheme:"
+        XCTAssertEqual(comp.string, "not%20a%20scheme%3A")
+
+        // These would fail if we did not percent-encode the colon.
+        // .string should always produce a valid URL string, or nil.
+
+        XCTAssertNotNil(URL(string: comp.string!))
+        XCTAssertNotNil(URLComponents(string: comp.string!))
+
+        // In rare cases, an app might rely on URL allowing an empty scheme,
+        // but then take that string and pass it to URLComponents to modify
+        // other components of the URL. We shouldn't percent-encode the colon
+        // in these cases.
+
+        let url = try XCTUnwrap(URL(string: "://host/path"))
+        comp = try XCTUnwrap(URLComponents(string: url.absoluteString))
+        comp.query = "key=value"
+        XCTAssertEqual(comp.string, "://host/path?key=value")
     }
 
     func testURLComponentsInvalidPaths() {
@@ -1423,6 +1463,12 @@ final class URLTests : XCTestCase {
         let comp = URLComponents(string: "http://example.com/my\u{0}path")!
         XCTAssertEqual(comp.percentEncodedPath, "/my%00path")
         XCTAssertEqual(comp.path, "/my\u{0}path")
+    }
+
+    func testURLStandardizedEmptyString() {
+        let url = URL(string: "../../../")!
+        let standardized = url.standardized
+        XCTAssertTrue(standardized.path().isEmpty)
     }
 
 #if FOUNDATION_FRAMEWORK

@@ -142,10 +142,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             return nil
         }
 
-        mutating func setScheme(_ newValue: String?) throws {
+        mutating func setScheme(_ newValue: String?, force: Bool = false) throws {
             reset(.scheme)
-            guard Parser.validate(newValue, component: .scheme) else {
-                throw InvalidComponentError.scheme
+            if !force {
+                guard Parser.validate(newValue, component: .scheme) else {
+                    throw InvalidComponentError.scheme
+                }
             }
             _scheme = newValue
             if encodedHost != nil {
@@ -364,6 +366,26 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             return ""
         }
 
+        private var percentEncodedPathNoColon: String {
+            let p = percentEncodedPath
+            guard p.utf8.first(where: { $0 == ._colon || $0 == ._slash }) == ._colon else {
+                return p
+            }
+            if p.utf8.first == ._colon {
+                // In the rare case that an app relies on URL allowing an empty
+                // scheme and passes its URL string directly to URLComponents
+                // to modify other components, we need to return the path without
+                // encoding the colons.
+                return p
+            }
+            let firstSlash = p.utf8.firstIndex(of: ._slash) ?? p.endIndex
+            let colonEncodedSegment = Array(p[..<firstSlash].utf8).replacing(
+                [._colon],
+                with: [UInt8(ascii: "%"), UInt8(ascii: "3"), UInt8(ascii: "A")]
+            )
+            return String(decoding: colonEncodedSegment, as: UTF8.self) + p[firstSlash...]
+        }
+
         mutating func setPercentEncodedPath(_ newValue: String) throws {
             reset(.path)
             guard Parser.validate(newValue, component: .path) else {
@@ -451,7 +473,13 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 // The parser already validated a special-case (e.g. addressbook:).
                 result += ":\(portString)"
             }
-            result += percentEncodedPath
+            if result.isEmpty {
+                // We must percent-encode colons in the first path segment
+                // as they could be misinterpreted as a scheme separator.
+                result += percentEncodedPathNoColon
+            } else {
+                result += percentEncodedPath
+            }
             if let percentEncodedQuery {
                 result += "?\(percentEncodedQuery)"
             }
@@ -676,7 +704,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             return CFURLCreateWithString(kCFAllocatorDefault, string as CFString, nil) as URL?
         }
         #endif
-        return URL(string: string)
+        return URL(stringOrEmpty: string, relativeTo: nil)
     }
 
     /// Returns a URL created from the URLComponents relative to a base URL.
@@ -690,7 +718,7 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             return CFURLCreateWithString(kCFAllocatorDefault, string as CFString, base as CFURL) as URL?
         }
         #endif
-        return URL(string: string, relativeTo: base)
+        return URL(stringOrEmpty: string, relativeTo: base)
     }
 
     /// Returns a URL string created from the URLComponents.
@@ -714,6 +742,11 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 fatalError("Attempting to set scheme with invalid characters")
             }
         }
+    }
+
+    /// Used by `URL` to allow empty scheme for compatibility.
+    internal mutating func forceScheme(_ scheme: String) {
+        try? components.setScheme(scheme, force: true)
     }
 
 #if FOUNDATION_FRAMEWORK
