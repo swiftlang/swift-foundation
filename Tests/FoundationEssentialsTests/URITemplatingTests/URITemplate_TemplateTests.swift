@@ -1,3 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
 #endif
@@ -59,7 +71,7 @@ private func assertReplacing(template: String, result: String, sourceLocation: S
 }
 
 @Suite
-enum TemplateTests {
+private enum TemplateTests {
     @Test(arguments: [
         "a",
         "a{count}b",
@@ -94,12 +106,10 @@ enum TemplateTests {
 
         // Use Normalization Form C (NFC)
 
-#if FOUNDATION_FRAMEWORK
         assertReplacing(template: "fooäbar", result: "foo%C3%A4bar")
         assertReplacing(template: "\u{00e2}", result: "%C3%A2")
         assertReplacing(template: "\u{0061}\u{0302}", result: "%C3%A2")
         assertReplacing(template: "\u{fb01}", result: "%EF%AC%81")
-#endif
     }
 
     @Test

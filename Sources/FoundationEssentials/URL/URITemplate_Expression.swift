@@ -132,7 +132,6 @@ extension URL.Template {
         let operatorRegex: Regex<(Substring, Substring?)>
         let separatorRegex: Regex<(Substring)>
         let elementRegex: Regex<(Substring, Substring, Substring?, Substring??)>
-        let percentEscapedRegex: Regex<(Substring)>
         let uriTemplateRegex: Regex<Regex<(Substring, Regex<OneOrMore<Substring>.RegexOutput>.RegexOutput)>.RegexOutput>
 
         private init() {
@@ -170,14 +169,6 @@ extension URL.Template {
                         }
                     }
                 }
-            }
-            .asciiOnlyWordCharacters()
-            .asciiOnlyDigits()
-            .asciiOnlyCharacterClasses()
-            self.percentEscapedRegex = Regex {
-                "%"
-                One(.hexDigit)
-                One(.hexDigit)
             }
             .asciiOnlyWordCharacters()
             .asciiOnlyDigits()
