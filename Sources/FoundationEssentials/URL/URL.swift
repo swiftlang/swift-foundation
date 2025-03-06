@@ -13,8 +13,18 @@
 public struct URLResourceKey {}
 #endif
 
-#if os(Windows)
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Android)
+@preconcurrency import Android
+#elseif canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif os(Windows)
 import WinSDK
+#elseif os(WASI)
+@preconcurrency import WASILibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -2200,16 +2210,28 @@ extension URL {
 #if !NO_FILESYSTEM
     private static func isDirectory(_ path: String) -> Bool {
         #if os(Windows)
+        guard !path.isEmpty else { return false }
         let path = path.replacing(._slash, with: ._backslash)
-        #endif
-        #if !FOUNDATION_FRAMEWORK
-        var isDirectory: Bool = false
-        _ = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
-        return isDirectory
+        return path.withNTPathRepresentation { pwszPath in
+            // If path points to a symlink (reparse point), get a handle to
+            // the symlink itself using FILE_FLAG_OPEN_REPARSE_POINT.
+            let handle = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nil)
+            guard handle != INVALID_HANDLE_VALUE else { return false }
+            defer { CloseHandle(handle) }
+            var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
+            guard GetFileInformationByHandle(handle, &info) else { return false }
+            return (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY
+        }
         #else
-        var isDirectory: ObjCBool = false
-        _ = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
-        return isDirectory.boolValue
+        // FileManager uses stat() to check if the file exists.
+        // URL historically won't follow a symlink at the end
+        // of the path, so use lstat() here instead.
+        path.withFileSystemRepresentation { fsRep in
+            guard let fsRep else { return false }
+            var fileInfo = stat()
+            guard lstat(fsRep, &fileInfo) == 0 else { return false }
+            return (mode_t(fileInfo.st_mode) & S_IFMT) == S_IFDIR
+        }
         #endif
     }
 #endif // !NO_FILESYSTEM
