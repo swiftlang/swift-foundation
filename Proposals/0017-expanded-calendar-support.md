@@ -14,7 +14,7 @@
 
 
 
-This proposal is for adding expanded support for several calendars used in South Asia, lunisolar and solar calendars used in regions in India, as well as Thai, Vietnamese and Korean calendars based on the Chinese lunisolar calendar. Swift-foundation-icu repository will support these too, so users of Foundation on any platform will get these new calendars.
+This proposal is for adding expanded support for several lunisolar and solar calendars used in South Asia, as well as Vietnamese and Korean calendars that based on the Chinese lunisolar calendar. Swift-foundation-icu repository will support these too, so users of Foundation on any platform will get these new calendars.
 
 Some of these calendars are astronomical calendars, which means they are using true positions of sun (solar) or both sun and moon. For that reason, when specific set of events happen, the dates in these calendars can have both leap months and leap days.  
 
@@ -75,10 +75,6 @@ Foundation will add new string constants for new calendar identifiers for NSCale
       @available(FoundationPreview 6.2, *)
       case vikram
 
-      // Thai lunisolar calendar
-      @available(FoundationPreview 6.2, *)
-      case thai
-
       // Vietnamese lunisolar calendar
       @available(FoundationPreview 6.2, *)
       case vietnamese
@@ -106,7 +102,7 @@ public enum Component : Sendable {
 
 ## Impact on existing code
 
-Thai, Vietnamese and Korean calendars have no special considerations.
+Vietnamese and Korean calendars have no special considerations.
 
 Calendars used in India are introducing the new field for the leap day. Clients using existing calendars won't be affected by this change. For new clients that use these calendars, we will handle the newly added leap day in the following places:
 
