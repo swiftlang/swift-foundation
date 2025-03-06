@@ -162,11 +162,11 @@ internal final class _LocaleUnlocalized : _LocaleProtocol, @unchecked Sendable {
     }
     
     var numberingSystem: Locale.NumberingSystem {
-        .latn
+        .latin
     }
     
     var availableNumberingSystems: [Locale.NumberingSystem] {
-        [.latn]
+        [.latin]
     }
     
     var firstDayOfWeek: Locale.Weekday {
