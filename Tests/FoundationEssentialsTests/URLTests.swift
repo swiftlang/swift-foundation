@@ -432,7 +432,7 @@ final class URLTests : XCTestCase {
             symlinkURL = URL(filePath: symlinkURL.path, directoryHint: .checkFileSystem)
             XCTAssertFalse(symlinkURL.hasDirectoryPath)
 
-            symlinkURL = baseURL.appending(path: "symlink", directoryHint: .checkFileSystem)
+            symlinkURL = dirURL.appending(path: "symlink", directoryHint: .checkFileSystem)
             XCTAssertFalse(symlinkURL.hasDirectoryPath)
         }
     }

@@ -2212,7 +2212,7 @@ extension URL {
         #if os(Windows)
         guard !path.isEmpty else { return false }
         let path = path.replacing(._slash, with: ._backslash)
-        return path.withNTPathRepresentation { pwszPath in
+        return (try? path.withNTPathRepresentation { pwszPath in
             // If path points to a symlink (reparse point), get a handle to
             // the symlink itself using FILE_FLAG_OPEN_REPARSE_POINT.
             let handle = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nil)
@@ -2221,12 +2221,12 @@ extension URL {
             var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
             guard GetFileInformationByHandle(handle, &info) else { return false }
             return (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY
-        }
+        }) ?? false
         #else
         // FileManager uses stat() to check if the file exists.
         // URL historically won't follow a symlink at the end
         // of the path, so use lstat() here instead.
-        path.withFileSystemRepresentation { fsRep in
+        return path.withFileSystemRepresentation { fsRep in
             guard let fsRep else { return false }
             var fileInfo = stat()
             guard lstat(fsRep, &fileInfo) == 0 else { return false }
