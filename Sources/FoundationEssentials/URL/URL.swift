@@ -2220,6 +2220,7 @@ extension URL {
             defer { CloseHandle(handle) }
             var info: BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION()
             guard GetFileInformationByHandle(handle, &info) else { return false }
+            if (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT { return false }
             return (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY
         }) ?? false
         #else
