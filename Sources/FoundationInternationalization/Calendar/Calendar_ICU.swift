@@ -1468,8 +1468,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return Date(timeIntervalSinceReferenceDate: -60645542400.0)
             case .dangi:
                 fallthrough
-            case .thai:
-                fallthrough
             case .vietnamese:
                 // TODO: This is copied from `.chinese` and needs to be revisited for each new calendar.
                 if time < -146325744000.0 { return nil }
@@ -1589,8 +1587,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 if time < -60645542400.0 { return nil }
                 return DateInterval(start: Date(timeIntervalSinceReferenceDate: -60645542400.0), duration: inf_ti)
             case .dangi:
-                fallthrough
-            case .thai:
                 fallthrough
             case .vietnamese:
                 // TODO: This is copied from `.chinese` and needs to be revisited for each new calendar.
