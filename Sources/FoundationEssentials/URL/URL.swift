@@ -2209,8 +2209,8 @@ extension URL {
 
 #if !NO_FILESYSTEM
     private static func isDirectory(_ path: String) -> Bool {
-        #if os(Windows)
         guard !path.isEmpty else { return false }
+        #if os(Windows)
         let path = path.replacing(._slash, with: ._backslash)
         return (try? path.withNTPathRepresentation { pwszPath in
             // If path points to a symlink (reparse point), get a handle to
