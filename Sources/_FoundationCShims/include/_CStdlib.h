@@ -156,6 +156,8 @@
 #ifndef TZDEFAULT
 #define TZDEFAULT    "/etc/localtime"
 #endif /* !defined TZDEFAULT */
+#else
+#error "define TZDIR and TZDEFAULT for this platform
 #endif /* TARGET_OS_MAC || TARGET_OS_LINUX || TARGET_OS_BSD */
 
 #endif
