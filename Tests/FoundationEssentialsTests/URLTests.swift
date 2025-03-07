@@ -399,6 +399,44 @@ final class URLTests : XCTestCase {
         }
     }
 
+    func testURLFilePathDoesNotFollowLastSymlink() throws {
+        try FileManagerPlayground {
+            Directory("dir") {
+                "Foo"
+                SymbolicLink("symlink", destination: "../dir")
+            }
+        }.test {
+            let currentDirectoryPath = $0.currentDirectoryPath
+            let baseURL = URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
+
+            let dirURL = baseURL.appending(path: "dir", directoryHint: .checkFileSystem)
+            XCTAssertTrue(dirURL.hasDirectoryPath)
+
+            var symlinkURL = dirURL.appending(path: "symlink", directoryHint: .notDirectory)
+
+            // FileManager uses stat(), which will follow the symlink to the directory.
+
+            #if FOUNDATION_FRAMEWORK
+            var isDirectory: ObjCBool = false
+            XCTAssertTrue(FileManager.default.fileExists(atPath: symlinkURL.path, isDirectory: &isDirectory))
+            XCTAssertTrue(isDirectory.boolValue)
+            #else
+            var isDirectory = false
+            XCTAssertTrue(FileManager.default.fileExists(atPath: symlinkURL.path, isDirectory: &isDirectory))
+            XCTAssertTrue(isDirectory)
+            #endif
+
+            // URL uses lstat(), which will not follow the symlink at the end of the path.
+            // Check that URL(filePath:) and .appending(path:) preserve this behavior.
+
+            symlinkURL = URL(filePath: symlinkURL.path, directoryHint: .checkFileSystem)
+            XCTAssertFalse(symlinkURL.hasDirectoryPath)
+
+            symlinkURL = dirURL.appending(path: "symlink", directoryHint: .checkFileSystem)
+            XCTAssertFalse(symlinkURL.hasDirectoryPath)
+        }
+    }
+
     func testURLRelativeDotDotResolution() throws {
         let baseURL = URL(filePath: "/docs/src/")
         var result = URL(filePath: "../images/foo.png", relativeTo: baseURL)
