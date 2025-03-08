@@ -71,7 +71,7 @@ extension String : _ObjectiveCBridgeable {
                 }
             } else if tag == OBJC_TAG_NSAtom {
                 var len = UInt16(0)
-                let contentsPtr = _CFIndirectTaggedPointerStringGetContents(source, &len, nil)
+                let contentsPtr = _CFIndirectTaggedPointerStringGetContents(source, &len)
                 if len == 0 {
                     return ""
                 }
