@@ -2777,6 +2777,15 @@ extension Data {
         }
         /// Modify the decoding algorithm so that it ignores unknown non-Base-64 bytes, including line ending characters.
         public static let ignoreUnknownCharacters = Base64DecodingOptions(rawValue: 1 << 0)
+
+        /// Modify the decoding algorithm so that it expects the base64url alphabet instead of the default base64 alphabet
+        @available(FoundationPreview 6.2, *)
+        public static let base64URLAlphabet = Base64DecodingOptions(rawValue: 1 << 2)
+
+        /// Modify the decoding algorithm so that it does not expect a padding character at the end of the base64 encoded result.
+        /// If the base64 encoded data, has a padding character, `nil` will be returned.
+        @available(FoundationPreview 6.2, *)
+        public static let omitPaddingCharacter = Base64DecodingOptions(rawValue: 1 << 3)
     }
 }
 #else

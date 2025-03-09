@@ -1915,7 +1915,6 @@ extension DataTests {
              AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
              """
         )
-        print([UInt8](Data(repeating: 0, count: 96).base64EncodedString(options: .lineLength64Characters).utf8))
 
         XCTAssertEqual(
             Data(repeating: 0, count: 57).base64EncodedString(options: .lineLength76Characters),
@@ -2097,6 +2096,27 @@ extension DataTests {
         XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAUG    ", options: .ignoreUnknownCharacters))
     }
 
+    func test_base64Decode_testOmittingPaddingCharacters() {
+        XCTAssertNil(Data(base64Encoded: "AQIDBA==", options: [.omitPaddingCharacter]))
+        XCTAssertNil(Data(base64Encoded: "AQIDBAU=", options: [.omitPaddingCharacter]))
+        XCTAssertNil(Data(base64Encoded: "AQIDBA==", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+        XCTAssertNil(Data(base64Encoded: "AQIDBAU=", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAUG", options: .omitPaddingCharacter))
+
+        XCTAssertNil(Data(base64Encoded: "AQIDBA"))
+        XCTAssertNil(Data(base64Encoded: "AQIDBAU"))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAUG"))
+
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA", options: .omitPaddingCharacter))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU", options: .omitPaddingCharacter))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAUG", options: .omitPaddingCharacter))
+
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAUG", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+    }
+
     func test_base64Decode_test1MBDataGoing0to255OverAndOver() {
         let oneMBTestData = createTestData(count: 1000 * 1024)
         func createTestData(count: Int) -> Data {
@@ -2108,7 +2128,8 @@ extension DataTests {
         }
 
         let base64DataString = oneMBTestData.base64EncodedString(options: .lineLength64Characters)
-        XCTAssertEqual(oneMBTestData, Data(base64Encoded: base64DataString, options: .ignoreUnknownCharacters))
+        let result = Data(base64Encoded: base64DataString, options: .ignoreUnknownCharacters)
+        XCTAssertEqual(oneMBTestData, result)
     }
 
     func test_base64Data_small() {
