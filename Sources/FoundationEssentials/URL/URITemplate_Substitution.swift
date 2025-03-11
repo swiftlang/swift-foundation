@@ -6,18 +6,23 @@ internal import OrderedCollections
 internal import _FoundationCollections
 #endif
 
-extension URL.Template {
+extension URL {
     /// Creates a new `URL` by expanding the RFC 6570 template and variables.
     ///
-    /// This will return `nil` if variable expansion does not produce a valid,
+    /// This will fail if variable expansion does not produce a valid,
     /// well-formed URL.
     ///
     /// All text will be converted to NFC (Unicode Normalization Form C) and UTF-8
     /// before being percent-encoded if needed.
-    public func makeURL(
+    ///
+    /// - Parameters:
+    ///   - template: The RFC 6570 template to be expanded.
+    ///   - variables: Variables to expand in the template.
+    public init?(
+        template: URL.Template,
         variables: [URL.Template.VariableName: URL.Template.Value]
-    ) -> URL? {
-        URL(string: expand(variables))
+    ) {
+        self.init(string: template.expand(variables))
     }
 }
 
