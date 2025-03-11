@@ -37,21 +37,27 @@ Since URI templates provide a powerful way to define URL patterns with placehold
 ## Proposed solution
 
 ```swift
-let template = URL.Template("http://www.example.com/foo{?query,number}")
-let url = template?.makeURL(variables: [
-    "query": "bar baz",
-    "number": "234",
-])
+guard
+    let template = URL.Template("http://www.example.com/foo{?query,number}"),
+    let url = URL(
+        template: template,
+        variables: [
+            "query": "bar baz",
+            "number": "234",
+        ]
+    )
+else { return }
 ```
 
 The RFC 6570 template gets parsed as part of the `URL.Template(_:)` initializer. It will return `nil` if the passed in string is not a valid template.
 
 The `Template` can then be expanded with _variables_ to create a URL:
 ```swift
-extension URL.Template {
-    public makeURL(
+extension URL {
+    public init?(
+        template: URL.Template,
         variables: [URL.Template.VariableName: URL.Template.Value]
-    ) -> URL?
+    )
 }
 ```
 
@@ -192,17 +198,22 @@ extension URL.Template.Value: ExpressibleByDictionaryLiteral {
 
 Finally, `URL.Template` has this factory method:
 ```swift
-extension URL.Template {
+extension URL {
     /// Creates a new `URL` by expanding the RFC 6570 template and variables.
-    ///
-    /// This will return `nil` if variable expansion does not produce a valid,
+    /// 
+    /// This will fail if variable expansion does not produce a valid,
     /// well-formed URL.
-    ///
+    /// 
     /// All text will be converted to NFC (Unicode Normalization Form C) and UTF-8
     /// before being percent-encoded if needed.
-    public func makeURL(
+    ///
+    /// - Parameters:
+    ///   - template: The RFC 6570 template to be expanded.
+    ///   - variables: Variables to expand in the template.
+    public init?(
+        template: URL.Template,
         variables: [URL.Template.VariableName: URL.Template.Value]
-    ) -> URL?
+    )
 }
 ```
 
@@ -234,7 +245,7 @@ Since this proposal covers all of RFC 6570, the current expectation is for it to
 
 ## Alternatives considered
 
-Instead of `URL.Template.makeURL(variables:)`, the API could have a (failable) inititializer `URL.init?(template:variables:)`. The `makeURL(variables:)` (factory) method would be easier to discover through autocomplete, and when looking at the `URL.Template` type’s documentation is it easier to discover. The `URL.init?` approach would be less discoverable. There was some feedback to the initial pitch, though, that preferred the `URL.init?` method which aligns with the existing `URL.init?(string:)` initializer.
+Instead of `URL.init?(template:variables)`, the API could have used a method on `URL.Template`, e.g. `URL.Template.makeURL(variables:)`. The `URL.init?` approach would be less discoverable. There was some feedback to the initial pitch, though, that preferred the `URL.init?` method which aligns with the existing `URL.init?(string:)` initializer. This initializer approach aligns more with existing `URL.init?(string:)` and `String.init(format:)`.
 
 Additionally, the API _could_ expose a (non-failing!) `URL.Template.expand(variables:)` (or other naming) that returns a `String`. But since the purpose is very clearly to create URLs, it feels like that would just add noise.
 
