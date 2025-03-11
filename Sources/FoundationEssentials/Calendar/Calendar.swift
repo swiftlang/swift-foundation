@@ -601,7 +601,14 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return nil
         }
         
-        return self.date(byAdding: dc, to: date.capped, wrappingComponents: wrappingComponents)
+        let result = self.date(byAdding: dc, to: date.capped, wrappingComponents: wrappingComponents)
+#if FOUNDATION_FRAMEWORK
+        // Compatibility path - we found some apps depending on the result being non-nil
+        if Calendar.compatibility2 {
+            return result ?? date
+        }
+#endif
+        return result
     }
 
     /// Returns a sequence of `Date`s, calculated by adding a scaled amount of `Calendar.Component`s to a starting `Date`.
