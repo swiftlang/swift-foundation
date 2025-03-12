@@ -243,6 +243,7 @@ extension AttributedString: AttributedStringProtocol {
     }
     
     @preconcurrency
+    @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
     ) -> K.Value? where K.Value: Sendable {

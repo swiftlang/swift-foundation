@@ -81,6 +81,7 @@ extension AttributedString.Runs.Run {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs.Run {
     @preconcurrency
+    @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
     ) -> K.Value?
