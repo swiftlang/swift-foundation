@@ -1,9 +1,9 @@
 # URI Templating
 
-* Proposal: [SF-00019](00019-uri-templating.md)
+* Proposal: [SF-00020](00020-uri-templating.md)
 * Authors: [Daniel Eggert](https://github.com/danieleggert)
-* Review Manager: TBD
-* Status: **Awaiting review**
+* Review Manager: [Tina L](https://github.com/itingliu)
+* Status: **Review: March 14, 2025...March 21, 2025**
 * Implementation: [swiftlang/swift-foundation#1198](https://github.com/swiftlang/swift-foundation/pull/1198)
 * Review: ([pitch](https://forums.swift.org/t/pitch-uri-templating/78030))
 
