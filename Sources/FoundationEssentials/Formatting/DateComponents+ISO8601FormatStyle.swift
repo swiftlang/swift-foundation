@@ -132,18 +132,6 @@ extension DateComponents {
 
         // MARK: -
 
-        @_disfavoredOverload
-        public init(dateSeparator: Date.ISO8601FormatStyle.DateSeparator = .dash, dateTimeSeparator: Date.ISO8601FormatStyle.DateTimeSeparator = .standard, timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!) {
-            self.dateSeparator = dateSeparator
-            self.dateTimeSeparator = dateTimeSeparator
-            self.timeZone = timeZone
-            self.timeSeparator = .colon
-            self.timeZoneSeparator = .omitted
-            self.includingFractionalSeconds = false
-            _calendar = Calendar(identifier: .iso8601)
-            _calendar.timeZone = timeZone
-        }
-
         // The default is the format of RFC 3339 with no fractional seconds: "yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"
         public init(dateSeparator: Date.ISO8601FormatStyle.DateSeparator = .dash, dateTimeSeparator: Date.ISO8601FormatStyle.DateTimeSeparator = .standard, timeSeparator: Date.ISO8601FormatStyle.TimeSeparator = .colon, timeZoneSeparator: Date.ISO8601FormatStyle.TimeZoneSeparator = .omitted, includingFractionalSeconds: Bool = false, timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!) {
             self.dateSeparator = dateSeparator
@@ -623,32 +611,52 @@ extension DateComponents.ISO8601FormatStyle {
                 }
     
                 if !skipDigits {
-                    // Theoretically we would disallow or require the presence of a `:` here. However, the original implementation of this style with ICU accidentally allowed either the presence or absence of the `:` to be parsed regardless of the setting. We preserve that behavior now.
+                    // The parser is tolerant to the presence or absence of the `:` in the time zone, as well as the presence or absence of minutes.
 
                     // parse Time Zone: ISO8601 extended hms?, with Z
                     // examples: -08:00, -07:52:58, Z
                     let hours = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
                     
-                    // Expect a colon, or not
-                    if let maybeColon = it.peek(), maybeColon == UInt8(ascii: ":") {
-                        // Throw it away
-                        it.advance()
-                    }
-                    
-                    let minutes = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
-                    
-                    if let maybeColon = it.peek(), maybeColon == UInt8(ascii: ":") {
-                        // Throw it away
-                        it.advance()
-                    }
-
-                    if let secondsTens = it.peek(), isASCIIDigit(secondsTens) {
-                        // We have seconds
-                        let seconds = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
-                        tzOffset = (hours * 3600) + (minutes * 60) + seconds
+                    // Expect a colon, or a minutes value, or the end.
+                    let expectMinutes: Bool
+                    if let next = it.peek() {
+                        if next == UInt8(ascii: ":") {
+                            // Throw it away
+                            it.advance()
+                            
+                            // But we should have minutes after this
+                            expectMinutes = true
+                        } else if isASCIIDigit(next) {
+                            // This should be minutes
+                            expectMinutes = true
+                        } else {
+                            // Not a :, not a digit - end of the string
+                            expectMinutes = false
+                        }
                     } else {
-                        // If the next character is missing, that's allowed - the time can be something like just -0852 and then the string can end
-                        tzOffset = (hours * 3600) + (minutes * 60)
+                        expectMinutes = false
+                    }
+                    
+                    if !expectMinutes {
+                        // We reached the end of the string
+                        tzOffset = hours * 3600
+                    } else {
+                        // Continue on
+                        let minutes = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                        
+                        if let maybeColon = it.peek(), maybeColon == UInt8(ascii: ":") {
+                            // Throw it away
+                            it.advance()
+                        }
+
+                        if let secondsTens = it.peek(), isASCIIDigit(secondsTens) {
+                            // We have seconds
+                            let seconds = try it.digits(maxDigits: 2, input: inputString, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                            tzOffset = (hours * 3600) + (minutes * 60) + seconds
+                        } else {
+                            // If the next character is missing, that's allowed - the time can be something like just -0852 and then the string can end
+                            tzOffset = (hours * 3600) + (minutes * 60)
+                        }
                     }
                 }
                 

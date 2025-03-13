@@ -222,6 +222,7 @@ final class ISO8601FormatStyleParsingTests: XCTestCase {
             ("2020-03-05T12:00:00UTC", Date.ISO8601FormatStyle().year().month().day().time(includingFractionalSeconds: false).timeSeparator(.colon).timeZone(separator: .colon)), // allow UTC
             ("2020-03-05T12:00:00GMT", Date.ISO8601FormatStyle().year().month().day().time(includingFractionalSeconds: false).timeSeparator(.colon).timeZone(separator: .colon)), // allow GMT
             ("2020-03-05T13:00:00UTC+1:00", Date.ISO8601FormatStyle().year().month().day().time(includingFractionalSeconds: false).timeSeparator(.colon).timeZone(separator: .colon)), // allow UTC offsets
+            ("2020-03-05T13:00:00UTC+01", Date.ISO8601FormatStyle().year().month().day().time(includingFractionalSeconds: false).timeSeparator(.colon).timeZone(separator: .colon)), // allow hours-only (2 digit)
             ("2020-03-05T11:00:00GMT-1:00", Date.ISO8601FormatStyle().year().month().day().time(includingFractionalSeconds: false).timeSeparator(.colon).timeZone(separator: .colon)), // allow GMT offsets
             ("2020-03-05 12:00:00+0000", Date.ISO8601FormatStyle().year().month().day().dateTimeSeparator(.space).time(includingFractionalSeconds: false).timeZone(separator: .omitted)),
             ("2020-03-05 11:00:00-0100", Date.ISO8601FormatStyle().year().month().day().dateTimeSeparator(.space).time(includingFractionalSeconds: false).timeZone(separator: .omitted)),
@@ -336,6 +337,7 @@ final class DateISO8601FormatStylePatternMatchingTests : XCTestCase {
             verify("2021-07-01T23:56:32",       .iso8601(timeZone: gmt))
             verify("2021-07-01T23:56:32Z",      .iso8601(timeZone: gmt))
             verify("2021-07-01T15:56:32Z",      .iso8601(timeZone: pst))
+            verify("2021-07-01T15:56:32+00",    .iso8601(timeZone: pst))
             verify("2021-07-01T15:56:32+0000",  .iso8601(timeZone: pst))
             verify("2021-07-01T15:56:32+00:00", .iso8601(timeZone: pst))
         }

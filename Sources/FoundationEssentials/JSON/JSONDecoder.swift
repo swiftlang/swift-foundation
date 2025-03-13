@@ -357,7 +357,7 @@ open class JSONDecoder {
     open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C : DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, configuration: C.decodingConfiguration)
     }
-    
+
     private func _decode<T>(_ unwrap: (JSONDecoderImpl, JSONMap.Value) throws -> T, from data: Data) throws -> T {
         do {
             return try Self.withUTF8Representation(of: data) { utf8Buffer -> T in
