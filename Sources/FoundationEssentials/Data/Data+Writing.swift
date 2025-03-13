@@ -12,7 +12,9 @@
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
+#if !NO_FILESYSTEM
 internal import DarwinPrivate // for VREG
+#endif
 #endif
 
 internal import _FoundationCShims
