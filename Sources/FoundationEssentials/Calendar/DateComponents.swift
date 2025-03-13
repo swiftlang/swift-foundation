@@ -75,6 +75,56 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         self.yearForWeekOfYear = yearForWeekOfYear
         self.dayOfYear = nil
     }
+    
+    /// Same as the public initializer, but with the dayOfYear field, and skipping the 'conversion' for callers who expect ObjC behavior (Int.max -> nil).
+    @inline(__always)
+    internal init(calendar: Calendar? = nil,
+         timeZone: TimeZone? = nil,
+         rawEra: Int? = nil,
+         rawYear: Int? = nil,
+         rawMonth: Int? = nil,
+         rawDay: Int? = nil,
+         rawHour: Int? = nil,
+         rawMinute: Int? = nil,
+         rawSecond: Int? = nil,
+         rawNanosecond: Int? = nil,
+         rawWeekday: Int? = nil,
+         rawWeekdayOrdinal: Int? = nil,
+         rawQuarter: Int? = nil,
+         rawWeekOfMonth: Int? = nil,
+         rawWeekOfYear: Int? = nil,
+         rawYearForWeekOfYear: Int? = nil,
+         rawDayOfYear: Int? = nil,
+         isLeapMonth: Bool? = nil) {
+
+        // Be sure to set the time zone of the calendar if appropriate
+        if var calendar, let timeZone {
+            calendar.timeZone = timeZone
+            _calendar = calendar
+            _timeZone = timeZone
+        } else if let calendar {
+            _calendar = calendar
+        } else if let timeZone {
+            _timeZone = timeZone
+        }
+        
+        _era = rawEra
+        _year = rawYear
+        _month = rawMonth
+        _day = rawDay
+        _hour = rawHour
+        _minute = rawMinute
+        _second = rawSecond
+        _nanosecond = rawNanosecond
+        _weekday = rawWeekday
+        _weekdayOrdinal = rawWeekdayOrdinal
+        _quarter = rawQuarter
+        _weekOfMonth = rawWeekOfMonth
+        _weekOfYear = rawWeekOfYear
+        _yearForWeekOfYear = rawYearForWeekOfYear
+        _dayOfYear = rawDayOfYear
+        _isLeapMonth = isLeapMonth
+    }
 
     package init?(component: Calendar.Component, value: Int) {
         switch component {
@@ -116,10 +166,12 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     public var timeZone: TimeZone? {
         get { _timeZone }
         set {
-            _timeZone = newValue
-            // Also changes the time zone of the calendar
-            if let newValue {
-                _calendar?.timeZone = newValue
+            if _timeZone != newValue {
+                _timeZone = newValue
+                // Also changes the time zone of the calendar
+                if let newValue {
+                    _calendar?.timeZone = newValue
+                }
             }
         }
     }

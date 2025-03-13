@@ -418,6 +418,10 @@ struct TimeZoneCache : Sendable, ~Copyable {
         lock.withLock { $0.fixed(identifier) }
     }
 
+    var gmt: (any _TimeZoneProtocol) = {
+        _timeZoneGMTClass().init(secondsFromGMT: 0)!
+    }()
+    
     func offsetFixed(_ seconds: Int) -> (any _TimeZoneProtocol)? {
         lock.withLock { $0.offsetFixed(seconds) }
     }

@@ -17,6 +17,9 @@ package protocol _TimeZoneProtocol : AnyObject, Sendable, CustomDebugStringConve
     
     var identifier: String { get }
     func secondsFromGMT(for date: Date) -> Int
+    
+    /// If the time zone does not observe daylight savings, then return the constant offset from GMT. Otherwise, returns nil.
+    var fixedOffsetFromGMT: Int? { get }
 
     /// Essentially this is equivalent to adjusting `date` to this time zone using `rawOffset`, then passing the adjusted date to `daylightSavingTimeOffset(for: <adjusted date>)`.
     /// This also handles the skipped time frame on DST start day differently from `daylightSavingTimeOffset(:)`, where dates in the skipped time frame are considered *not* in DST here, hence the DST offset would be 0.
@@ -45,6 +48,10 @@ extension _TimeZoneProtocol {
     
     package var isAutoupdating: Bool {
         false
+    }
+    
+    package var fixedOffsetFromGMT: Int? {
+        nil
     }
     
     package var debugDescription: String {
