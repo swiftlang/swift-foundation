@@ -2135,10 +2135,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     /// - parameter options: Options for the read operation. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if `url` cannot be read.
     public init(contentsOf url: __shared URL, options: ReadingOptions = []) throws {
-#if NO_FILESYSTEM
-        let d = try NSData(contentsOf: url, options: NSData.ReadingOptions(rawValue: options.rawValue))
-        self.init(referencing: d)
-#else
         if url.isFileURL {
             self = try readDataFromFile(path: .url(url), reportProgress: true, options: options)
         } else {
@@ -2150,16 +2146,10 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             try self.init(_contentsOfRemote: url, options: options)
             #endif
         }
-#endif
     }
     
     internal init(contentsOfFile path: String, options: ReadingOptions = []) throws {
-#if NO_FILESYSTEM
-        let d = try NSData(contentsOfFile: path, options: NSData.ReadingOptions(rawValue: options.rawValue))
-        self.init(referencing: d)
-#else
         self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
-#endif
     }
     
     // -----------------------------------

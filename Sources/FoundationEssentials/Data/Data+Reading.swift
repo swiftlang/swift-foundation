@@ -31,6 +31,10 @@ import WinSDK
 @preconcurrency import WASILibc
 #endif
 
+#if FOUNDATION_FRAMEWORK && NO_FILESYSTEM
+@_spi(ENABLE_EXCLAVE_STORAGE) import C
+#endif
+
 func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutableRawPointer!, _ size: Int, _ position: UInt32, _ options: Int32) -> Int {
 #if canImport(Darwin)
     return fgetxattr(fd, name, value, size, position, options)
@@ -329,13 +333,13 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     }
     
     let fileSize = min(Int(clamping: filestat.st_size), maxLength ?? Int.max)
-    let fileType = mode_t(filestat.st_mode) & S_IFMT
+    let fileType = mode_t(filestat.st_mode) & mode_t(S_IFMT)
 #if !NO_FILESYSTEM
     let shouldMap = shouldMapFileDescriptor(fd, path: inPath, options: options)
 #else
     let shouldMap = false
 #endif
-        
+
     if fileType != S_IFREG {
         // EACCES is still an odd choice, but at least we have a better error for directories.
         let code = (fileType == S_IFDIR) ? EISDIR : EACCES
