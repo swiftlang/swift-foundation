@@ -24,12 +24,6 @@ target_compile_options(_FoundationCShims INTERFACE
 
 set_property(GLOBAL APPEND PROPERTY SWIFT_FOUNDATION_EXPORTS _FoundationCShims)
 
-if(BUILD_SHARED_LIBS)
-    set(install_directory swift)
-else()
-    set(install_directory swift_static)
-endif()
-
 # Copy Headers to known directory for direct client (XCTest) test builds
 file(COPY
         include/
@@ -40,13 +34,12 @@ file(COPY
 install(DIRECTORY
             include/
         DESTINATION
-            lib/${install_directory}/_FoundationCShims)
+            lib/swift$<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:_static>/_FoundationCShims)
 
 if(NOT BUILD_SHARED_LIBS)
-    get_swift_host_os(swift_os)
     install(TARGETS _FoundationCShims
-        ARCHIVE DESTINATION lib/${install_directory}/${swift_os}
-        LIBRARY DESTINATION lib/${install_directory}/${swift_os}
+        ARCHIVE DESTINATION lib/swift$<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:_static>/${Foundation_PLATFORM_SUBDIR}
+        LIBRARY DESTINATION lib/swift$<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:_static>/${Foundation_PLATFORM_SUBDIR}
         RUNTIME DESTINATION bin)
 endif()
 
