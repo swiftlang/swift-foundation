@@ -72,9 +72,6 @@ extension String : _ObjectiveCBridgeable {
             } else if tag == OBJC_TAG_NSAtom {
                 var len = UInt16(0)
                 let contentsPtr = _CFIndirectTaggedPointerStringGetContents(source, &len)
-                if len == 0 {
-                    return ""
-                }
                 let contents = UnsafeBufferPointer(start: contentsPtr, count: Int(len))
                 // Will only fail if contents aren't valid UTF8/ASCII
                 if let result = _SwiftCreateImmortalString_ForFoundation(buffer: contents, isASCII: true) {
