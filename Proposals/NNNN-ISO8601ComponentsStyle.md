@@ -2,7 +2,7 @@
 
 * Proposal: SF-0021
 * Author(s): Tony Parker <anthony.parker@apple.com>
-* Status: **Draft**
+* Status: **Review: March 14, 2025...March 21, 2025**
 * Intended Release:  _Swift 6.2_
 
 *_Related issues_*
