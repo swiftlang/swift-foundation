@@ -1,0 +1,244 @@
+internal import RegexBuilder
+
+extension String {
+    /// Convert to NFC and percent-escape.
+    func normalizedAddingPercentEncoding(
+        withAllowedCharacters allowed: URL.Template.Expression.Operator.AllowedCharacters
+    ) -> String {
+        switch allowed {
+        case .unreserved:
+            return addingPercentEncodingToNFC(
+                allowed: allowed
+            )
+        case .unreservedReserved:
+            return withContiguousNFCAndOutputBuffer(allowed: allowed) { input -> String in
+                switch input {
+                case .noConversionNorEncodedNeeded: return self
+                case .needsEncoding(input: let inputBuffer, outputCount: let outputCount):
+                    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: outputCount + 1) { outputBuffer -> String in
+                        addPercentEscapesForUnreservedReserved(
+                            inputBuffer: inputBuffer,
+                            outputBuffer: outputBuffer
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// For the `unreserved / reserved / pct-encoded` case, create a String by percent encoding the NFC input as needed.
+fileprivate func addPercentEscapesForUnreservedReserved(
+    inputBuffer: UnsafeBufferPointer<UTF8.CodeUnit>,
+    outputBuffer: UnsafeMutableBufferPointer<UTF8.CodeUnit>
+) -> String {
+    let allowed = URL.Template.Expression.Operator.AllowedCharacters.unreservedReserved
+
+    var remainingInput = inputBuffer[...]
+    var outputIndex = 0
+
+    func write(_ a: UInt8) {
+        outputBuffer[outputIndex] = a
+        outputIndex += 1
+    }
+
+    while let next = remainingInput.popFirst() {
+        // Any (valid) existing escape sequences need to be copied to the output verbatim.
+        // But any `%` that are not part of a valid escape sequence, need to be encoded.
+        guard
+            next != UInt8(ascii: "%") || remainingInput.count < 2
+        else {
+            // Is this a valid escape sequence?
+            func isHex(_ a: UInt8) -> Bool {
+                (0x30 <= a && a <= 0x39) ||
+                (0x41 <= a && a <= 0x46) ||
+                (0x61 <= a && a <= 0x66)
+            }
+            if isHex(remainingInput[remainingInput.startIndex]) && isHex(remainingInput[remainingInput.startIndex + 1]) {
+                write(next)
+            } else {
+                write(UInt8(ascii: "%"))
+                write(UInt8(ascii: "2"))
+                write(UInt8(ascii: "5"))
+            }
+            continue
+        }
+        if allowed.isAllowedCodeUnit(next) {
+            write(next)
+        } else {
+            write(UInt8(ascii: "%"))
+            write(hexToAscii(next >> 4))
+            write(hexToAscii(next & 0xf))
+        }
+    }
+    write(0)
+    return String(cString: outputBuffer.baseAddress!)
+}
+
+extension String {
+    func addingPercentEncodingToNFC(
+        allowed: URL.Template.Expression.Operator.AllowedCharacters
+    ) -> String {
+        withContiguousNFCAndOutputBuffer(allowed: allowed) { input -> String in
+            switch input {
+            case .noConversionNorEncodedNeeded: return self
+            case .needsEncoding(input: let inputBuffer, outputCount: let outputCount):
+                return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: outputCount + 1) { outputBuffer -> String in
+                    var index = 0
+                    for v in inputBuffer {
+                        if allowed.isAllowedCodeUnit(v) {
+                            outputBuffer[index] = v
+                            index += 1
+                        } else {
+                            outputBuffer[index + 0] = UInt8(ascii: "%")
+                            outputBuffer[index + 1] = hexToAscii(v >> 4)
+                            outputBuffer[index + 2] = hexToAscii(v & 0xF)
+                            index += 3
+                        }
+                    }
+                    outputBuffer[index] = 0
+                    return String(cString: outputBuffer.baseAddress!)
+                }
+            }
+        }
+    }
+}
+
+fileprivate enum NeededConversion: Comparable {
+    case none
+    case encodeOnly(outputCount: Int)
+    case convertAndEncode
+}
+
+fileprivate enum AllowedNFCResult {
+    case noConversionNorEncodedNeeded
+    case needsEncoding(input: UnsafeBufferPointer<String.UTF8View.Element>, outputCount: Int)
+}
+
+extension String {
+    /// Runs the given closure with a UTF-8 buffer that is the NFC normalized version of the string.
+    ///
+    /// If the input is already NFC _and_ it only contains allowed characters, the given closure will
+    /// be called with ``NeededConversion.noConversionNorEncodedNeeded`.
+    fileprivate func withContiguousNFCAndOutputBuffer<R>(
+        allowed: URL.Template.Expression.Operator.AllowedCharacters,
+        _ body: (AllowedNFCResult) -> R
+    ) -> R {
+        // We’ll do a quick check. If the input is valid UTF-8 and bytes are less than
+        // 0xcc, then it’s NFC. Since most input will be ASCII, this allows us to
+        // be more efficient in those common cases.
+        // At the same, we’ll do a check if there are any characters that need
+        // encoding. If the input (is likely) already NFC, and nothing needs
+        // percent encoding, we can just use the original input.
+
+        func cheapCheck(utf8Buffer: some Collection<UInt8>) -> NeededConversion {
+            // The number of code units that need percent encoding:
+            var needsEncoding = 0
+            var count = 0
+            for v in utf8Buffer {
+                count += 1
+                switch (v < 0xcc, allowed.isAllowedCodeUnit(v)) {
+                case (false, _):
+                    // Input might not be NFC. Need to convert.
+                    return .convertAndEncode
+                case (true, false):
+                    needsEncoding += 1
+                case (true, true):
+                    break
+                }
+            }
+            return (needsEncoding == 0) ? .none : .encodeOnly(outputCount: count + 2 * needsEncoding)
+        }
+
+        let fastResult: R?? = utf8.withContiguousStorageIfAvailable {
+            switch cheapCheck(utf8Buffer: $0) {
+            case .none:
+                return body(.noConversionNorEncodedNeeded)
+            case .encodeOnly(outputCount: let c):
+                return body(.needsEncoding(input: $0, outputCount: c))
+            case .convertAndEncode:
+                return nil
+            }
+        }
+        switch fastResult {
+        case .some(.some(let r)):
+            return r
+        case .some(.none):
+            // We have a continguous UTF-8 buffer, but it’s (probably) not NFC
+            break
+        case .none:
+            // Contiguous UTF-8 storage is not available:
+            switch cheapCheck(utf8Buffer: utf8) {
+            case .none:
+                return body(.noConversionNorEncodedNeeded)
+            case .encodeOnly(outputCount: let c):
+                return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: utf8.count) { buffer in
+                    _ = buffer.initialize(from: utf8)
+                    return body(.needsEncoding(input: UnsafeBufferPointer(buffer), outputCount: c))
+                }
+            case .convertAndEncode:
+                break
+            }
+        }
+        // Convert to NFC:
+        return _nfcCodeUnits.withUnsafeBufferPointer { input in
+            let outputCount = input.reduce(into: 0) {
+                $0 += allowed.isAllowedCodeUnit($1) ? 1 : 3
+            }
+            return body(.needsEncoding(input: input, outputCount: outputCount))
+        }
+    }
+}
+
+extension URL.Template.Expression.Operator.AllowedCharacters {
+    func isAllowedCodeUnit(_ unit: UTF8.CodeUnit) -> Bool {
+        switch self {
+        case .unreserved:
+            // unreserved     =  ALPHA / DIGIT / "-" / "." / "_" / "~"
+            switch unit {
+            case 0x61...0x7a /* "a"..."z" */: true
+            case 0x41...0x5a /* "A"..."Z" */: true
+            case 0x30...0x39 /* "0"..."9" */: true
+            case 0x2d, 0x2e, 0x5f, 0x7e /* `-` `.` `_` `~` */: true
+            default: false
+            }
+        case .unreservedReserved:
+            // unreserved / reserved / pct-encoded
+            // reserved       =  gen-delims / sub-delims
+            // gen-delims     =  ":" / "/" / "?" / "#" / "[" / "]" / "@"
+            // sub-delims     =  "!" / "$" / "&" / "'" / "(" / ")"
+            //                /  "*" / "+" / "," / ";" / "="
+            switch unit {
+            case 0x61...0x7a /* "a"..."z" */: true
+            case 0x41...0x5a /* "A"..."Z" */: true
+            case 0x30...0x39 /* "0"..."9" */: true
+            case 0x2d, 0x2e, 0x5f, 0x7e /* `-` `.` `_` `~` */: true
+            case 0x3a, 0x2f, 0x3f, 0x23, 0x5b, 0x5d, 0x40  /* `:` `/` `?` `#` `[` `]` `@` */: true
+            case 0x21, 0x24, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x3b, 0x3d  /* `!` `$` `&` `'` `(` `)` `*` `+` `,` `;` `=` */: true
+            default: false
+            }
+        }
+    }
+}
+
+private func hexToAscii(_ hex: UInt8) -> UInt8 {
+    switch hex {
+    case 0x0: UInt8(ascii: "0")
+    case 0x1: UInt8(ascii: "1")
+    case 0x2: UInt8(ascii: "2")
+    case 0x3: UInt8(ascii: "3")
+    case 0x4: UInt8(ascii: "4")
+    case 0x5: UInt8(ascii: "5")
+    case 0x6: UInt8(ascii: "6")
+    case 0x7: UInt8(ascii: "7")
+    case 0x8: UInt8(ascii: "8")
+    case 0x9: UInt8(ascii: "9")
+    case 0xA: UInt8(ascii: "A")
+    case 0xB: UInt8(ascii: "B")
+    case 0xC: UInt8(ascii: "C")
+    case 0xD: UInt8(ascii: "D")
+    case 0xE: UInt8(ascii: "E")
+    case 0xF: UInt8(ascii: "F")
+    default: fatalError("Invalid hex digit: \(hex)")
+    }
+}
