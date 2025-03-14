@@ -1,6 +1,6 @@
 # ISO8601 Components Formatting and Parsing
 
-* Proposal: SF-NNNN
+* Proposal: SF-0021
 * Author(s): Tony Parker <anthony.parker@apple.com>
 * Status: **Draft**
 * Intended Release:  _Swift 6.2_
