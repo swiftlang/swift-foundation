@@ -966,12 +966,16 @@ enum _FileOperations {
             // if we don't have permission to list attributes in system namespace, this returns -1 and skips it
             var size = extattr_list_fd(srcFD, namespace, nil, 0)
             if size > 0 {
+                // we are allocating size + 1 bytes here such that we have room for the last null terminator
                 try withUnsafeTemporaryAllocation(of: CChar.self, capacity: size + 1) { keyList in
                     // The list of entry returns by `extattr_list_*` contains the length(1 byte) of the attribute name, follow by the Non-NULL terminated attribute name. (See exattr(2))
                     size = extattr_list_fd(srcFD, namespace, keyList.baseAddress!, size)
+
+                    guard size > 0 else { continue }
+
                     var keyLength = Int(keyList.baseAddress!.pointee)
                     var current = keyList.baseAddress!.advanced(by: 1)
-                    let end = keyList.baseAddress!.advanced(by: keyList.count)
+                    let end = keyList.baseAddress!.advanced(by: size)
                     keyList.baseAddress!.advanced(by: size).pointee = 0
 
                     while current < end {
