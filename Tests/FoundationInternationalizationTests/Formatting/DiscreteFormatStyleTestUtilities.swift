@@ -15,11 +15,11 @@ import TestSupport
 #endif
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif
 
 #if canImport(FoundationInternationalization)
-@testable import FoundationInternationalization
+import FoundationInternationalization
 #endif
 
 extension DiscreteFormatStyle where FormatInput : Comparable {

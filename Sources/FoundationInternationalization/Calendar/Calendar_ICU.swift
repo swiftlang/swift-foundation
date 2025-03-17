@@ -2276,7 +2276,7 @@ extension Calendar.Component {
 }
 
 extension Calendar {
-    static func localeIdentifierWithCalendar(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> String? {
+    package static func localeIdentifierWithCalendar(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> String? {
         var comps = Locale.Components(identifier: localeIdentifier)
         comps.calendar = calendarIdentifier
         return comps.icuIdentifier

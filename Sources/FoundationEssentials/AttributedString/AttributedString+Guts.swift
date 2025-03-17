@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_spi(Unstable) internal import CollectionsInternal
+@_spi(Unstable) package import CollectionsInternal
 #elseif canImport(_RopeModule)
-internal import _RopeModule
+package import _RopeModule
 #elseif canImport(_FoundationCollections)
-internal import _FoundationCollections
+package import _FoundationCollections
 #endif
 
 extension AttributedString {
-    internal final class Guts : @unchecked Sendable {
+    package final class Guts : @unchecked Sendable {
         typealias Index = AttributedString.Index
         typealias Runs = AttributedString.Runs
         typealias AttributeMergePolicy = AttributedString.AttributeMergePolicy
@@ -30,7 +30,7 @@ extension AttributedString {
         typealias _AttributeStorage = AttributedString._AttributeStorage
 
         var version: Version
-        var string: BigString
+        package var string: BigString
         var runs: _InternalRuns
         var trackedRanges: [Range<BigString.Index>]
 

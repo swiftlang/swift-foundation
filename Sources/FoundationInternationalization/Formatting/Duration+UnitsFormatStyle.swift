@@ -431,7 +431,7 @@ extension Duration {
         }
 
         // Returns the units that are going to show up in the final string, sorted from largest to smallest
-        static func unitsToUse(duration: Duration, allowedUnits: Set<Unit>, maximumUnitCount: Int?, roundSmallerParts: FloatingPointRoundingRule, trailingFractionalPartLength: Int, roundingIncrement: Double?, dropZeroUnits: Bool) -> (units: [Unit], values: [Double]) {
+        package static func unitsToUse(duration: Duration, allowedUnits: Set<Unit>, maximumUnitCount: Int?, roundSmallerParts: FloatingPointRoundingRule, trailingFractionalPartLength: Int, roundingIncrement: Double?, dropZeroUnits: Bool) -> (units: [Unit], values: [Double]) {
 
             var units = allowedUnits.sorted { $0.unit.rawValue < $1.unit.rawValue }
             var values = duration.valuesForUnits(units, trailingFractionalLength: trailingFractionalPartLength, smallestUnitRounding: roundSmallerParts, roundingIncrement: roundingIncrement)
@@ -497,7 +497,7 @@ extension Duration {
     }
 
     // For testing purpose. See notes about String._Encoding
-    internal typealias _UnitsFormatStyle = UnitsFormatStyle
+    package typealias _UnitsFormatStyle = UnitsFormatStyle
 }
 
 // `FormatStyle` static membership lookup

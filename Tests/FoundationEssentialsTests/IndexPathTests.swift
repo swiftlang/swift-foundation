@@ -12,7 +12,7 @@ import TestSupport
 #endif
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif
 
 class TestIndexPath: XCTestCase {

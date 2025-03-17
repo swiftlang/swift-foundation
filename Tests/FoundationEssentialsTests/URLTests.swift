@@ -16,11 +16,11 @@ import TestSupport
 #endif // canImport(TestSupport)
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #endif
 
 private func checkBehavior<T: Equatable>(_ result: T, new: T, old: T, file: StaticString = #filePath, line: UInt = #line) {

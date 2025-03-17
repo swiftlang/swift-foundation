@@ -13,7 +13,7 @@
 // MARK: Rounding
 
 extension Duration {
-    func rounded(increment: Duration, rule: FloatingPointRoundingRule = .toNearestOrEven) -> Duration {
+    package func rounded(increment: Duration, rule: FloatingPointRoundingRule = .toNearestOrEven) -> Duration {
         rounded(rule, toMultipleOf: increment).value
     }
 
@@ -148,6 +148,6 @@ extension Duration {
 
 // MARK: Utility
 
-func abs(_ duration: Duration) -> Duration {
+package func abs(_ duration: Duration) -> Duration {
     duration < .zero ? Duration.zero - duration : duration
 }

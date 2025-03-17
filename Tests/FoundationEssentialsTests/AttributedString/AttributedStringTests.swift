@@ -15,11 +15,11 @@ import TestSupport
 #endif
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
 #if FOUNDATION_FRAMEWORK
-@testable @_spi(AttributedString) import Foundation
+@_spi(AttributedString) import Foundation
 // For testing default attribute scope conversion
 #if canImport(Accessibility)
 import Accessibility

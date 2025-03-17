@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #else
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
 #if canImport(TestSupport)

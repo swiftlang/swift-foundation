@@ -28,7 +28,7 @@ import Darwin
 
 typealias UChar = UInt16
 
-final class ICUDateFormatter : @unchecked Sendable {
+package final class ICUDateFormatter : @unchecked Sendable {
 
     /// `Sendable` notes: `UDateFormat` is safe to use from multiple threads after initialization. The `UCal` using API clones the calendar before using it.
     var udateFormat: UnsafeMutablePointer<UDateFormat?>
@@ -104,7 +104,7 @@ final class ICUDateFormatter : @unchecked Sendable {
 
     // MARK: -
 
-    func format(_ date: Date) -> String? {
+    package func format(_ date: Date) -> String? {
         return _withResizingUCharBuffer { buffer, size, status in
             udat_formatForFields(udateFormat, date.udate, buffer, Int32(size), nil, &status)
         }
@@ -277,7 +277,7 @@ final class ICUDateFormatter : @unchecked Sendable {
         var datePatternOverride: String?
     }
 
-    static func cachedFormatter(for format: Date.FormatStyle) -> ICUDateFormatter? {
+    package static func cachedFormatter(for format: Date.FormatStyle) -> ICUDateFormatter? {
         cachedFormatter(for: .init(format))
     }
 

@@ -16,11 +16,11 @@ import TestSupport
 #endif // canImport(TestSupport)
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #endif
 
 #if canImport(Android)

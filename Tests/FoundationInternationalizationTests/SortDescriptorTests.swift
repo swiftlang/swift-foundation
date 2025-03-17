@@ -15,10 +15,10 @@ import TestSupport
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #else
-@testable import FoundationEssentials
-@testable import FoundationInternationalization
+import FoundationEssentials
+import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
 class Hello {

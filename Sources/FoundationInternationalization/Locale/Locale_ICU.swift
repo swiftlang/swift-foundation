@@ -1592,7 +1592,7 @@ extension Locale {
         return ICULegacyKey(legacyKey)
     }
 
-    internal static func keywordValue(identifier: String, key: String) -> String? {
+    package static func keywordValue(identifier: String, key: String) -> String? {
         // Unlike other many ICU variables, `ULOC_KEYWORD_AND_VALUES_CAPACITY` does not include null-termination.
         // Manually add one here.
         return _withFixedCharBuffer(size: ULOC_KEYWORD_AND_VALUES_CAPACITY + 1) { buffer, size, status in

@@ -29,7 +29,7 @@ extension Decimal {
     public struct ParseStrategy<Format> : FoundationEssentials.ParseStrategy, Codable, Hashable where Format : FoundationEssentials.FormatStyle, Format.FormatInput == Decimal {
         public var formatStyle: Format
         public var lenient: Bool
-        internal init(formatStyle: Format, lenient: Bool) {
+        package init(formatStyle: Format, lenient: Bool) {
             self.formatStyle = formatStyle
             self.lenient = lenient
         }

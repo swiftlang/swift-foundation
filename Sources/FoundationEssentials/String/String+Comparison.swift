@@ -231,7 +231,7 @@ extension _StringCompareOptionsIterable {
         return result == .orderedSame ? compareResult : result
     }
 
-    func _range<S: BidirectionalCollection>(of strToFind: S, toHalfWidth: Bool, diacriticsInsensitive: Bool, caseFold: Bool, anchored: Bool, backwards: Bool) -> Range<Index>? where S.Index == Index, S.Element == Element {
+    package func _range<S: BidirectionalCollection>(of strToFind: S, toHalfWidth: Bool, diacriticsInsensitive: Bool, caseFold: Bool, anchored: Bool, backwards: Bool) -> Range<Index>? where S.Index == Index, S.Element == Element {
 
         if !toHalfWidth && !diacriticsInsensitive && !caseFold {
             return _range(of: strToFind, anchored: anchored, backwards: backwards)
@@ -599,7 +599,7 @@ extension Substring {
         return unicodeScalars._rangeOfCharacter(anchored: options.contains(.anchored), backwards: options.contains(.backwards), matchingPredicate: set.contains)
     }
 
-    func _range(of strToFind: Substring, options: String.CompareOptions) throws -> Range<Index>? {
+    package func _range(of strToFind: Substring, options: String.CompareOptions) throws -> Range<Index>? {
         #if !NO_REGEX
         if options.contains(.regularExpression) {
             guard let regex = try RegexPatternCache.cache.regex(for: String(strToFind), caseInsensitive: options.contains(.caseInsensitive)) else {

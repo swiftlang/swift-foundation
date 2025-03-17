@@ -15,9 +15,9 @@ import TestSupport
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #else
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif
 
 extension AttributedStringProtocol {

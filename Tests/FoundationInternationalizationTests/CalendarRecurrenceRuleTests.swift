@@ -15,10 +15,10 @@ import TestSupport
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #else
-@testable import FoundationInternationalization
-@testable import FoundationEssentials
+import FoundationInternationalization
+import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
 final class CalendarRecurrenceRuleTests: XCTestCase {

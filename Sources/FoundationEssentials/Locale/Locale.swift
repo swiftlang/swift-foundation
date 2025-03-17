@@ -57,7 +57,7 @@ public struct Locale : Hashable, Equatable, Sendable {
         case cldr
     }
 
-    internal var _locale: any _LocaleProtocol
+    package var _locale: any _LocaleProtocol
 
     /// Returns a locale which tracks the user's current preferences.
     ///
@@ -79,7 +79,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
     
     /// Unlocalized locale (`en_001`).
-    internal static var unlocalized : Locale {
+    package static var unlocalized : Locale {
         Locale(inner: LocaleCache.unlocalized)
     }
 
@@ -90,7 +90,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 #endif
     /// This returns an instance of `Locale` that's set up exactly like it would be if the user changed the current locale to that identifier, set the preferences keys in the overrides dictionary, then called `current`.
-    internal static func localeAsIfCurrent(name: String?, overrides: LocalePreferences? = nil, disableBundleMatching: Bool = false) -> Locale {
+    package static func localeAsIfCurrent(name: String?, overrides: LocalePreferences? = nil, disableBundleMatching: Bool = false) -> Locale {
         // On Darwin, this overrides are applied on top of CFPreferences.
         return LocaleCache.cache.localeAsIfCurrent(name: name, overrides: overrides, disableBundleMatching: disableBundleMatching)
     }

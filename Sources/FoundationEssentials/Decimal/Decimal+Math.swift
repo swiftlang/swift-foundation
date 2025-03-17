@@ -68,15 +68,15 @@ private let powerOfTen: [Decimal.VariableLengthInteger] = [
 
 // MARK: - Mathmatics
 extension Decimal {
-    internal static let maxSize: UInt32 = 8
+    package static let maxSize: UInt32 = 8
 
-    internal enum _CalculationError: Error {
+    package enum _CalculationError: Error {
         case overflow
         case underflow
         case divideByZero
     }
 
-    internal func _add(
+    package func _add(
         rhs: Decimal,
         roundingMode: RoundingMode
     ) throws -> (result: Decimal, lossOfPrecision: Bool) {
@@ -154,7 +154,7 @@ extension Decimal {
         return (result: result, lossOfPrecision: lossOfPrecision)
     }
 
-    internal func _add(_ amount: UInt16) throws -> Decimal {
+    package func _add(_ amount: UInt16) throws -> Decimal {
         var result = self
         var carry: UInt32 = UInt32(amount)
         var index: UInt32 = 0
@@ -175,7 +175,7 @@ extension Decimal {
         return result
     }
 
-    internal func _subtract(
+    package func _subtract(
         rhs: Decimal,
         roundingMode: RoundingMode
     ) throws -> Decimal {
@@ -215,7 +215,7 @@ extension Decimal {
         return result
     }
 
-    internal func _multiply(
+    package func _multiply(
         by multiplicand: Decimal,
         roundingMode: RoundingMode
     ) throws -> Decimal {
@@ -250,7 +250,7 @@ extension Decimal {
         return result
     }
 
-    internal func _multiplyByPowerOfTen(
+    package func _multiplyByPowerOfTen(
         power: Int, roundingMode: RoundingMode
     ) throws -> Decimal {
         if self.isNaN {
@@ -294,7 +294,7 @@ extension Decimal {
         return (result: result, remainder: UInt16(remainder))
     }
 
-    internal func _divide(
+    package func _divide(
         by divisor: Decimal,
         roundingMode: RoundingMode
     ) throws -> Decimal {
@@ -366,7 +366,7 @@ extension Decimal {
         return result
     }
 
-    internal func _power(
+    package func _power(
         exponent: Int, roundingMode: RoundingMode
     ) throws -> Decimal {
         if self.isNaN {
@@ -410,7 +410,7 @@ extension Decimal {
         return result
     }
 
-    internal static func _compare(lhs: Decimal, rhs: Decimal) -> ComparisonResult {
+    package static func _compare(lhs: Decimal, rhs: Decimal) -> ComparisonResult {
         if lhs.isNaN {
             if rhs.isNaN {
                 return .orderedSame
@@ -457,7 +457,7 @@ extension Decimal {
         return result
     }
 
-    internal static func _normalize(a: inout Decimal, b: inout Decimal, roundingMode: RoundingMode) throws -> Bool {
+    package static func _normalize(a: inout Decimal, b: inout Decimal, roundingMode: RoundingMode) throws -> Bool {
         var diffExp = Int(a._exponent - b._exponent)
         // If the two numbers share the same exponents,
         // the normalization is already done
@@ -529,7 +529,7 @@ extension Decimal {
         }
     }
 
-    internal mutating func compact() {
+    package mutating func compact() {
         var secureExponent = self._exponent
         if self._isCompact != 0 || self.isNaN || self._length == 0 {
             // No need to compact
@@ -564,7 +564,7 @@ extension Decimal {
         self._isCompact = 1
     }
 
-    internal func _round(
+    package func _round(
         scale: Int, roundingMode: RoundingMode
     ) throws -> Decimal {
         var s = scale + Int(self._exponent)
@@ -654,7 +654,7 @@ extension Decimal {
 
 // MARK: - Numeric Values
 extension Decimal {
-    internal var doubleValue: Double {
+    package var doubleValue: Double {
         if _length == 0 {
             return _isNegative == 1 ? Double.nan : 0
         }
@@ -701,7 +701,7 @@ extension Decimal {
         return UInt64(value._mantissa.3) << 48 | UInt64(value._mantissa.2) << 32 | UInt64(value._mantissa.1) << 16 | UInt64(value._mantissa.0)
     }
 
-    internal var int64Value: Int64 {
+    package var int64Value: Int64 {
         let uint64Value = self._unsignedInt64Value
         if self._isNegative > 0 {
             if uint64Value == Int64.max.magnitude + 1 {
@@ -716,7 +716,7 @@ extension Decimal {
         return Int64(bitPattern: uint64Value)
     }
 
-    internal var uint64Value: UInt64 {
+    package var uint64Value: UInt64 {
         let value = self._unsignedInt64Value
         if self._isNegative == 0 {
             return value

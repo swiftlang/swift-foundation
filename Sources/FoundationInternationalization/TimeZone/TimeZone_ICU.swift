@@ -39,8 +39,8 @@ private func _timeZoneIdentifier_ICU(forWindowsIdentifier windowsIdentifier: Str
 }
 #endif
 
-internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
-    init?(secondsFromGMT: Int) {
+package final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
+    package init?(secondsFromGMT: Int) {
         fatalError("Unexpected init")
     }
     
@@ -84,7 +84,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
     }
 
-    required init?(identifier: String) {
+    required package init?(identifier: String) {
         guard !identifier.isEmpty else {
             return nil
         }
@@ -104,15 +104,15 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
     }
     
     // MARK: -
-    var identifier: String {
+    package var identifier: String {
         self.name
     }
     
-    var data: Data? {
+    package var data: Data? {
         nil
     }
 
-    func secondsFromGMT(for date: Date) -> Int {
+    package func secondsFromGMT(for date: Date) -> Int {
         return lock.withLock {
             let udate = date.udate
             guard let c = $0.calendar(identifier) else {
@@ -136,7 +136,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
     }
 
-    func abbreviation(for date: Date) -> String? {
+    package func abbreviation(for date: Date) -> String? {
         let dst = daylightSavingTimeOffset(for: date) != 0.0
         return lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }
@@ -144,11 +144,11 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
     }
 
-    func isDaylightSavingTime(for date: Date) -> Bool {
+    package func isDaylightSavingTime(for date: Date) -> Bool {
         return daylightSavingTimeOffset(for: date) != 0.0
     }
 
-    func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
+    package func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
         lock.withLock {
             let udate = date.udate
 
@@ -164,14 +164,14 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
     }
 
-    func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
+    package func nextDaylightSavingTimeTransition(after date: Date) -> Date? {
         lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }
             return Self.nextDaylightSavingTimeTransition(forLocked: c, startingAt: date, limit: Date.validCalendarRange.upperBound)
         }
     }
 
-    func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
+    package func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
         return lock.withLock {
             guard let calendar = $0.calendar(identifier) else { return (0, 0) }
             var rawOffset: Int32 = 0
@@ -205,7 +205,7 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
     }
 
-    func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
+    package func localizedName(for style: TimeZone.NameStyle, locale: Locale?) -> String? {
         let locID = locale?.identifier ?? ""
         return lock.withLock {
             guard let c = $0.calendar(identifier) else { return nil }

@@ -15,7 +15,7 @@ internal import _FoundationCShims
 // Represents sets of unicode scalars of those whose bitmap data we own.
 // whitespace, whitespaceAndNewline, and newline are not included since they're not stored with bitmaps
 // This only contains a subset of predefined CFCharacterSet that are in use for now.
-internal struct BuiltInUnicodeScalarSet {
+package struct BuiltInUnicodeScalarSet {
     enum SetType {
         case lowercaseLetter
         case uppercaseLetter
@@ -51,7 +51,7 @@ internal struct BuiltInUnicodeScalarSet {
     }
 
     // CFUniCharIsMemberOf
-    func contains(_ scalar: Unicode.Scalar) -> Bool {
+    package func contains(_ scalar: Unicode.Scalar) -> Bool {
         let planeNo = Int((scalar.value >> 16) & 0xFF)
         let bitmp = _bitmapPtrForPlane(planeNo)
         return _isMemberOfBitmap(scalar, bitmp)
@@ -86,11 +86,11 @@ internal struct BuiltInUnicodeScalarSet {
         return new
     }
 
-    static let uppercaseLetters = Self.init(type: .uppercaseLetter)
-    static let lowercaseLetters = Self.init(type: .lowercaseLetter)
-    static let caseIgnorables = Self.init(type: .caseIgnorable)
-    static let hfsPlusDecomposables = Self.init(type: .hfsPlusDecomposable)
-    static let graphemeExtends = Self.init(type: .graphemeExtend)
-    static let canonicalDecomposables = Self.init(type: .canonicalDecomposable)
+    package static let uppercaseLetters = Self.init(type: .uppercaseLetter)
+    package static let lowercaseLetters = Self.init(type: .lowercaseLetter)
+    package static let caseIgnorables = Self.init(type: .caseIgnorable)
+    package static let hfsPlusDecomposables = Self.init(type: .hfsPlusDecomposable)
+    package static let graphemeExtends = Self.init(type: .graphemeExtend)
+    package static let canonicalDecomposables = Self.init(type: .canonicalDecomposable)
 }
 

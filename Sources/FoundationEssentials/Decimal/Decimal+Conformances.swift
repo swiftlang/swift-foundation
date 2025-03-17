@@ -444,7 +444,7 @@ extension Decimal : ExpressibleByIntegerLiteral {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal: Hashable {
-    internal subscript(index: UInt32) -> UInt16 {
+    package subscript(index: UInt32) -> UInt16 {
         get {
             switch index {
             case 0: return _mantissa.0

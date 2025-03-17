@@ -15,12 +15,12 @@ import TestSupport
 #endif
 
 #if canImport(FoundationInternationalization)
-@testable import FoundationEssentials
-@testable import FoundationInternationalization
+import FoundationEssentials
+import FoundationInternationalization
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #endif
 
 class ListFormatStyleTests : XCTestCase {

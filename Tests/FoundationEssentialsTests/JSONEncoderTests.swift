@@ -22,11 +22,11 @@ import TestSupport
 
 #if canImport(FoundationEssentials)
 @_spi(SwiftCorelibsFoundation)
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #endif
 
 // MARK: - Test Suite

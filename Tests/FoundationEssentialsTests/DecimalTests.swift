@@ -15,10 +15,10 @@ import TestSupport
 #endif  // canImport(TestSupport)
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #else
 @_spi(SwiftCorelibsFoundation)
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif
 
 final class DecimalTests : XCTestCase {

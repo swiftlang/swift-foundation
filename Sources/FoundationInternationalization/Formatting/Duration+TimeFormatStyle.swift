@@ -149,7 +149,7 @@ extension Duration {
     }
 
     // For testing purpose. See notes about String._Encoding
-    internal typealias _TimeFormatStyle = TimeFormatStyle
+    package typealias _TimeFormatStyle = TimeFormatStyle
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)

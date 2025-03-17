@@ -15,10 +15,10 @@ import TestSupport
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #elseif canImport(FoundationInternationalization)
-@testable import FoundationEssentials
-@testable import FoundationInternationalization
+import FoundationEssentials
+import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
 final class LocaleLanguageComponentsTests : XCTestCase {

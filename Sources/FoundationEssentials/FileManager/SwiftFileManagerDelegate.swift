@@ -35,7 +35,7 @@ public protocol FileManagerDelegate : AnyObject, Sendable {
 }
 
 // Default implementations for String-based requirements
-extension FileManagerDelegate {
+package extension FileManagerDelegate {
     func fileManager(_ fileManager: FileManager, shouldCopyItemAtPath srcPath: String, toPath dstPath: String) -> Bool { return true }
     func fileManager(_ fileManager: FileManager, shouldProceedAfterError error: Error, copyingItemAtPath srcPath: String, toPath dstPath: String) -> Bool { return false }
     func fileManager(_ fileManager: FileManager, shouldMoveItemAtPath srcPath: String, toPath dstPath: String) -> Bool { return true }
@@ -47,7 +47,7 @@ extension FileManagerDelegate {
 }
 
 // Default implementations for URL-based requirements
-extension FileManagerDelegate {
+package extension FileManagerDelegate {
     func fileManager(_ fileManager: FileManager, shouldCopyItemAt srcURL: URL, to dstURL: URL) -> Bool {
         self.fileManager(fileManager, shouldCopyItemAtPath: srcURL.relativePath, toPath: dstURL.relativePath)
     }

@@ -593,7 +593,7 @@ private class __PlistReferencingEncoderXML : __PlistEncoderXML {
 
 // MARK: - Format
 
-struct _XMLPlistEncodingFormat : PlistEncodingFormat {
+package struct _XMLPlistEncodingFormat : PlistEncodingFormat {
     enum Reference: PlistEncodingReference {
         
         class Box<T> {
@@ -703,9 +703,9 @@ struct _XMLPlistEncodingFormat : PlistEncodingFormat {
         }
     }
     
-    struct Writer : PlistWriting {
-        
-        static let header: StaticString =
+    package struct Writer : PlistWriting {
+
+        package static let header: StaticString =
 """
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

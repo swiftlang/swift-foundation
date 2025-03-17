@@ -52,7 +52,7 @@ extension String {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
-    func _capitalized() -> String {
+    package func _capitalized() -> String {
         var new = ""
         new.reserveCapacity(utf8.count)
 

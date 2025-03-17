@@ -46,7 +46,7 @@ extension String {
 
     // MARK: - Non-filesystem String Extensions
 
-    internal var pathComponents: [String] {
+    package var pathComponents: [String] {
         _convertingSlashesIfNeeded()._pathComponents
     }
 
@@ -76,7 +76,7 @@ extension String {
         return result
     }
 
-    internal func deletingLastPathComponent() -> String {
+    package func deletingLastPathComponent() -> String {
         _convertingSlashesIfNeeded()._deletingLastPathComponent()
     }
     
@@ -113,7 +113,7 @@ extension String {
         return String(self[...previousNonSlash])
     }
         
-    internal func appendingPathComponent(_ component: String) -> String {
+    package func appendingPathComponent(_ component: String) -> String {
         _convertingSlashesIfNeeded()._appendingPathComponent(component)
     }
     
@@ -129,7 +129,7 @@ extension String {
         return (self + "/" + component)._standardizingSlashes
     }
 
-    internal var lastPathComponent: String {
+    package var lastPathComponent: String {
         _convertingSlashesIfNeeded()._lastPathComponent
     }
     
@@ -162,7 +162,7 @@ extension String {
     }
 
     // Internal for testing purposes
-    internal static let invalidExtensionScalars = Set<Unicode.Scalar>([
+    package static let invalidExtensionScalars = Set<Unicode.Scalar>([
         " ",
         "/",
         "\u{061c}", // ARABIC LETTER MARK
@@ -179,7 +179,7 @@ extension String {
         "\u{2069}", // POP DIRECTIONAL ISOLATE
     ])
 
-    internal func deletingPathExtension() -> String {
+    package func deletingPathExtension() -> String {
         guard !pathExtension.isEmpty else {
             return self
         }
@@ -206,7 +206,7 @@ extension String {
         }
     }
 
-    internal func appendingPathExtension(_ pathExtension: String) -> String {
+    package func appendingPathExtension(_ pathExtension: String) -> String {
         guard !pathExtension.isEmpty, validatePathExtension(pathExtension) else {
             return self
         }
@@ -222,7 +222,7 @@ extension String {
         return result
     }
 
-    internal var pathExtension: String {
+    package var pathExtension: String {
         let lastComponent = lastPathComponent.utf8
         guard lastComponent.last != ._dot,
               !lastComponent.starts(with: [._dot, ._dot]),
@@ -251,7 +251,7 @@ extension String {
         return self[...basePathEnd] + relativePath
     }
 
-    internal var removingDotSegments: String {
+    package var removingDotSegments: String {
         _convertingSlashesIfNeeded()._removingDotSegments
     }
     
@@ -371,7 +371,7 @@ extension String {
     /// characters with a single `/`
     /// NOTE: Internal so it's testable
     /// - Returns: The replaced String
-    internal func _compressingSlashes() -> String {
+    package func _compressingSlashes() -> String {
         guard utf8.count > 1 else {
             return self
         }
@@ -546,7 +546,7 @@ extension String {
     }
     
     // From swift-corelibs-foundation's NSTemporaryDirectory. Internal for now, pending a better public API.
-    internal static var temporaryDirectoryPath: String {
+    package static var temporaryDirectoryPath: String {
         func normalizedPath(with path: String) -> String {
             let result = path._convertingSlashesIfNeeded()
             guard result.utf8.last != ._slash else {
@@ -655,7 +655,7 @@ extension String {
         return result
     }
 
-    var standardizingPath: String {
+    package var standardizingPath: String {
         expandingTildeInPath._standardizingPath
     }
 
@@ -713,7 +713,7 @@ extension String {
         #endif // canImport(Darwin)
     }
     
-    func _resolvingSymlinksInPath() -> String? {
+    package func _resolvingSymlinksInPath() -> String? {
         guard !isEmpty else { return nil }
         #if os(Windows)
         return try? self.withNTPathRepresentation {
@@ -868,7 +868,7 @@ extension StringProtocol {
     }
 
     // Internal for testing purposes
-    internal func _hasDotDotComponent() -> Bool {
+    package func _hasDotDotComponent() -> Bool {
         guard utf8.count >= 2 else {
             return false
         }

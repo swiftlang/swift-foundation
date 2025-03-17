@@ -84,7 +84,7 @@ func _SearchPathURLs(for directory: FileManager.SearchPathDirectory, in domain: 
 #if FOUNDATION_FRAMEWORK
 @_cdecl("_NSSearchPathsForDirectoryInDomain")
 #endif
-func _DarwinSearchPaths(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, expandTilde: Bool) -> [String] {
+package func _DarwinSearchPaths(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, expandTilde: Bool) -> [String] {
     let basic = _DarwinSearchPathsSequence(directory: directory, domainMask: domain.intersection(.valid)).lazy.map {
         if expandTilde {
             $0.expandingTildeInPath

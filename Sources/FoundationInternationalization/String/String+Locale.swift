@@ -14,14 +14,14 @@ import FoundationEssentials
 #endif
 
 extension String {
-    func _lowercased(with locale: Locale?) -> String {
+    package func _lowercased(with locale: Locale?) -> String {
         guard let casemap = ICU.CaseMap.caseMappingForLocale(locale?.identifier), let lowered = casemap.lowercase(self) else {
             return lowercased()
         }
         return lowered
     }
 
-    func _capitalized(with locale: Locale?) -> String {
+    package func _capitalized(with locale: Locale?) -> String {
         guard let casemap = ICU.CaseMap.caseMappingForLocale(locale?.identifier) else {
             return capitalized
         }
@@ -38,7 +38,7 @@ extension String {
         return result
     }
 
-    func _uppercased(with locale: Locale?) -> String {
+    package func _uppercased(with locale: Locale?) -> String {
         guard let casemap = ICU.CaseMap.caseMappingForLocale(locale?.identifier), let uppered = casemap.uppercase(self) else {
             return uppercased()
         }

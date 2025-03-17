@@ -38,7 +38,7 @@ extension Date {
         timeIntervalSinceReferenceDate / 86400 + Self.julianDayAtDateReference
     }
 
-    func julianDay() throws (GregorianCalendarError) -> Int {
+    package func julianDay() throws (GregorianCalendarError) -> Int {
         let jd = (julianDate + 0.5).rounded(.down)
         guard jd <= Double(Self.maxJulianDay), jd >= Double(Self.minJulianDay) else {
             throw .overflow(nil, self, nil)
@@ -51,7 +51,7 @@ extension Date {
         self.init(julianDate: Double(julianDay))
     }
 
-    init(julianDate: Double) {
+    package init(julianDate: Double) {
         let secondsSinceJulianReference = (julianDate - Self.julianDayAtDateReference) * 86400
         self.init(timeIntervalSinceReferenceDate: secondsSinceJulianReference)
     }
@@ -165,13 +165,13 @@ enum ResolvedDateComponents {
 
 
 /// Internal-use error for indicating unexpected situations when finding dates.
-enum GregorianCalendarError : Error {
+package enum GregorianCalendarError : Error {
     case overflow(Calendar.Component?, Date? /* failing start date */, Date? /* failing end date */)
     case notAdvancing(Date /* next */, Date /* previous */)
 }
 
 /// This class is a placeholder and work-in-progress to provide an implementation of the Gregorian calendar.
-internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
+package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
 #if canImport(os)
     internal static let logger: Logger = {
@@ -191,7 +191,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     let inf_ti : TimeInterval = 4398046511104.0
 
-    init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
+    package init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
 
         // ISO8601 has different default values for time zone, locale, firstWeekday, and minimumDaysInFirstWeek
         let defaultTimeZone: TimeZone
@@ -250,14 +250,14 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         self.identifier = identifier
     }
 
-    let identifier: Calendar.Identifier
+    package let identifier: Calendar.Identifier
 
-    var locale: Locale?
+    package var locale: Locale?
 
-    var timeZone: TimeZone
+    package var timeZone: TimeZone
 
     var _firstWeekday: Int?
-    var firstWeekday: Int {
+    package var firstWeekday: Int {
         set {
             precondition(newValue >= 1 && newValue <= 7, "Weekday should be in the range of 1...7")
             _firstWeekday = newValue
@@ -275,7 +275,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     var _minimumDaysInFirstWeek: Int?
-    var minimumDaysInFirstWeek: Int {
+    package var minimumDaysInFirstWeek: Int {
         set {
             if newValue < 1 {
                 _minimumDaysInFirstWeek = 1
@@ -298,7 +298,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
     }
 
-    func copy(changingLocale: Locale?, changingTimeZone: TimeZone?, changingFirstWeekday: Int?, changingMinimumDaysInFirstWeek: Int?) -> _CalendarProtocol {
+    package func copy(changingLocale: Locale?, changingTimeZone: TimeZone?, changingFirstWeekday: Int?, changingMinimumDaysInFirstWeek: Int?) -> _CalendarProtocol {
         let newTimeZone = changingTimeZone ?? self.timeZone
         let newLocale = changingLocale ?? self.locale
 
@@ -323,7 +323,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return _CalendarGregorian.init(identifier: identifier, timeZone: newTimeZone, locale: newLocale, firstWeekday: newFirstWeekday, minimumDaysInFirstWeek: newMinDays, gregorianStartDate: nil)
     }
 
-    func hash(into hasher: inout Hasher) {
+    package func hash(into hasher: inout Hasher) {
         hasher.combine(identifier)
         hasher.combine(timeZone)
         hasher.combine(firstWeekday)
@@ -337,7 +337,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     // Returns the range of a component in Gregorian Calendar.
     // When there are multiple possible upper bounds, the smallest one is returned.
-    func minimumRange(of component: Calendar.Component) -> Range<Int>? {
+    package func minimumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
         case .era: 0..<2
         case .year: 1..<140743
@@ -362,7 +362,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     // Returns the range of a component in Gregorian Calendar.
     // When there are multiple possible upper bounds, the largest one is returned.
-    func maximumRange(of component: Calendar.Component) -> Range<Int>? {
+    package func maximumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
         case .era: return 0..<2
         case .year: return 1..<144684
@@ -497,7 +497,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return ord1..<(ord2 + 1)
     }
 
-    func range(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Range<Int>? {
+    package func range(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Range<Int>? {
         func isValidComponent(_ c: Calendar.Component) -> Bool {
             return !(c == .calendar || c == .timeZone || c == .weekdayOrdinal || c == .nanosecond)
         }
@@ -865,7 +865,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     // FIXME: This is almost the same with Calendar_ICU's _locked_start(of:).
     // There is a chance of refactoring Calendar_ICU to use this one
-    func start(of unit: Calendar.Component, at: Date) -> Date? {
+    package func start(of unit: Calendar.Component, at: Date) -> Date? {
         let time = at.timeIntervalSinceReferenceDate
 
         var effectiveUnit = unit
@@ -922,7 +922,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return (work, daysAdded)
     }
 
-    func ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Int? {
+    package func ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Int? {
         let result: Int?
         do {
             result = try _ordinality(of: smaller, in: larger, for: date)
@@ -1445,7 +1445,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         // No return here to ensure we've covered all cases in switch statements above, even via `default`.
     }
 
-    func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
+    package func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
         let time = date.timeIntervalSinceReferenceDate
         var effectiveUnit = component
         switch effectiveUnit {
@@ -1582,7 +1582,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return TimeInterval(totalSecond)
     }
 
-    func isDateInWeekend(_ date: Date) -> Bool {
+    package func isDateInWeekend(_ date: Date) -> Bool {
         let weekendRange: WeekendRange
         if let localeWeekendRange = locale?.weekendRange {
             weekendRange = localeWeekendRange
@@ -1595,7 +1595,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
     // For testing purpose
-    internal func isDateInWeekend(_ date: Date, weekendRange: WeekendRange) -> Bool {
+    package func isDateInWeekend(_ date: Date, weekendRange: WeekendRange) -> Bool {
 
         // First, compare the day of the week
         let dayOfWeek = dateComponent(.weekday, from: date)
@@ -1660,7 +1660,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return true
     }
 
-    func date(from components: DateComponents) -> Date? {
+    package func date(from components: DateComponents) -> Date? {
         guard _CalendarGregorian.isComponentsInSupportedRange(components) else {
 
             // One or more values exceeds supported date range
@@ -1682,7 +1682,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return relativeWeekday
     }
 
-    func numberOfDaysInMonth(_ month: Int, year: Int) -> Int {
+    package func numberOfDaysInMonth(_ month: Int, year: Int) -> Int {
         var month = month
         var year = year
         if month > 12 {
@@ -1978,7 +1978,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return weekNo
     }
 
-    func dateComponents(_ components: Calendar.ComponentSet, from d: Date, in timeZone: TimeZone) -> DateComponents {
+    package func dateComponents(_ components: Calendar.ComponentSet, from d: Date, in timeZone: TimeZone) -> DateComponents {
         let timezoneOffset = timeZone.secondsFromGMT(for: d)
         let localDate = d + Double(timezoneOffset)
 
@@ -2132,11 +2132,11 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return dc
     }
 
-    func dateComponents(_ components: Calendar.ComponentSet, from date: Date) -> DateComponents {
+    package func dateComponents(_ components: Calendar.ComponentSet, from date: Date) -> DateComponents {
         dateComponents(components, from: date, in: timeZone)
     }
 
-    func dateComponent(_ component: Calendar.Component, from date: Date) -> Int {
+    package func dateComponent(_ component: Calendar.Component, from date: Date) -> Int {
         guard let value = dateComponents(.init(single: component), from: date, in: timeZone).value(for: component) else {
             preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
         }
@@ -2227,7 +2227,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return nil
     }
 
-    func add(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) throws (GregorianCalendarError) -> Date {
+    package func add(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) throws (GregorianCalendarError) -> Date {
 
         guard amount != 0 else {
             return date
@@ -2406,7 +2406,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return newValue
     }
 
-    func addAndWrap(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) throws (GregorianCalendarError) -> Date {
+    package func addAndWrap(_ field: Calendar.Component, to date: Date, amount: Int, inTimeZone timeZone: TimeZone) throws (GregorianCalendarError) -> Date {
 
         guard amount != 0 else {
             return date
@@ -2851,7 +2851,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         return result
     }
 
-    func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
+    package func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
         do {
             if wrappingComponents {
                 return try self.date(byAddingAndWrapping: components, to: date)
@@ -2866,7 +2866,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     // MARK: Differences
 
     // Calendar::fieldDifference
-    func difference(inComponent component: Calendar.Component, from start: Date, to end: Date) throws (GregorianCalendarError) -> (difference: Int, newStart: Date) {
+    package func difference(inComponent component: Calendar.Component, from start: Date, to end: Date) throws (GregorianCalendarError) -> (difference: Int, newStart: Date) {
         guard end != start else {
             return (0, start)
         }
@@ -2944,7 +2944,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     }
 
 
-    func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
+    package func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
 
         var diffsInNano: Int
         var curr: Date

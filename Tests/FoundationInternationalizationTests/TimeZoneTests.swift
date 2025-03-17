@@ -15,9 +15,9 @@ import TestSupport
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #elseif canImport(FoundationInternationalization)
-@testable import FoundationInternationalization
+import FoundationInternationalization
 #endif
 
 final class TimeZoneTests : XCTestCase {

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal struct BufferViewIndex<Element> {
+package struct BufferViewIndex<Element> {
     let _rawValue: UnsafeRawPointer
 
     @inline(__always)
@@ -29,22 +29,22 @@ extension BufferViewIndex: Equatable {}
 extension BufferViewIndex: Hashable {}
 
 extension BufferViewIndex: Strideable {
-    typealias Stride = Int
+    package typealias Stride = Int
 
     @inline(__always)
-    func distance(to other: BufferViewIndex) -> Int {
+    package func distance(to other: BufferViewIndex) -> Int {
         _rawValue.distance(to: other._rawValue) / MemoryLayout<Element>.stride
     }
 
     @inline(__always)
-    func advanced(by n: Int) -> BufferViewIndex {
+    package func advanced(by n: Int) -> BufferViewIndex {
         .init(rawValue: _rawValue.advanced(by: n &* MemoryLayout<Element>.stride))
     }
 }
 
 extension BufferViewIndex: Comparable {
     @inline(__always)
-    static func < (lhs: BufferViewIndex, rhs: BufferViewIndex) -> Bool {
+    package static func < (lhs: BufferViewIndex, rhs: BufferViewIndex) -> Bool {
         lhs._rawValue < rhs._rawValue
     }
 }

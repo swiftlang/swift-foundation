@@ -19,7 +19,7 @@ public struct IntegerFormatStyle<Value: BinaryInteger>: Codable, Hashable, Senda
     public typealias Configuration = NumberFormatStyleConfiguration
 
     public var locale: Locale
-    internal var collection: Configuration.Collection = Configuration.Collection()
+    package var collection: Configuration.Collection = Configuration.Collection()
 
     public init(locale: Locale = .autoupdatingCurrent) {
         self.locale = locale

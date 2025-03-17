@@ -106,7 +106,7 @@ extension Duration {
     }
 
     // Returns an array of values corresponding to each unit in `units`
-    func valuesForUnits(
+    package func valuesForUnits(
         _ units: [UnitsFormatStyle.Unit],
         trailingFractionalLength: Int,
         smallestUnitRounding: FloatingPointRoundingRule,

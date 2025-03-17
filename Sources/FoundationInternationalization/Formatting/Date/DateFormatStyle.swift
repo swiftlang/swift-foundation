@@ -39,7 +39,7 @@ extension Date {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
-    internal struct DateFieldCollection : Codable, Hashable {
+    package struct DateFieldCollection : Codable, Hashable {
         var era: Symbol.SymbolType.EraOption?
         var year: Symbol.SymbolType.YearOption?
         var quarter: Symbol.SymbolType.QuarterOption?
@@ -54,6 +54,38 @@ extension Date.FormatStyle {
         var second: Symbol.SymbolType.SecondOption?
         var secondFraction: Symbol.SymbolType.SecondFractionOption?
         var timeZoneSymbol: Symbol.SymbolType.TimeZoneSymbolOption?
+
+        package init(
+            era: Date.FormatStyle.Symbol.SymbolType.EraOption? = nil,
+            year: Date.FormatStyle.Symbol.SymbolType.YearOption? = nil,
+            quarter: Date.FormatStyle.Symbol.SymbolType.QuarterOption? = nil,
+            month: Date.FormatStyle.Symbol.SymbolType.MonthOption? = nil,
+            week: Date.FormatStyle.Symbol.SymbolType.WeekOption? = nil,
+            day: Date.FormatStyle.Symbol.SymbolType.DayOption? = nil,
+            dayOfYear: Date.FormatStyle.Symbol.SymbolType.DayOfYearOption? = nil,
+            weekday: Date.FormatStyle.Symbol.SymbolType.WeekdayOption? = nil,
+            dayPeriod: Date.FormatStyle.Symbol.SymbolType.DayPeriodOption? = nil,
+            hour: Date.FormatStyle.Symbol.SymbolType.HourOption? = nil,
+            minute: Date.FormatStyle.Symbol.SymbolType.MinuteOption? = nil,
+            second: Date.FormatStyle.Symbol.SymbolType.SecondOption? = nil,
+            secondFraction: Date.FormatStyle.Symbol.SymbolType.SecondFractionOption? = nil,
+            timeZoneSymbol: Date.FormatStyle.Symbol.SymbolType.TimeZoneSymbolOption? = nil
+        ) {
+            self.era = era
+            self.year = year
+            self.quarter = quarter
+            self.month = month
+            self.week = week
+            self.day = day
+            self.dayOfYear = dayOfYear
+            self.weekday = weekday
+            self.dayPeriod = dayPeriod
+            self.hour = hour
+            self.minute = minute
+            self.second = second
+            self.secondFraction = secondFraction
+            self.timeZoneSymbol = timeZoneSymbol
+        }
 
         // Swap regular hour for conversational-style hour option if needed
         func preferredHour(withLocale locale: Locale?) -> Symbol.SymbolType.HourOption? {

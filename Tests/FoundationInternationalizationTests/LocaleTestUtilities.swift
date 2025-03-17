@@ -15,10 +15,10 @@
 // REQUIRES: objc_interop
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #else
-@testable import FoundationEssentials
-@testable import FoundationInternationalization
+import FoundationEssentials
+import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
 // MARK: - Stubs

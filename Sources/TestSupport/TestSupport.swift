@@ -15,7 +15,7 @@
 // See this issue for more info on this file: https://github.com/apple/swift-foundation/issues/40
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 
 public typealias Calendar = Foundation.Calendar
 public typealias TimeZone = Foundation.TimeZone
@@ -115,8 +115,8 @@ public typealias Expression = Foundation.Expression
 #else
 
 #if DEBUG
-@_exported @testable import FoundationEssentials
-@_exported @testable import FoundationInternationalization
+@_exported import FoundationEssentials
+@_exported import FoundationInternationalization
 // XCTest implicitly imports Foundation
 #else
 @_exported import FoundationEssentials

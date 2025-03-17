@@ -67,7 +67,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz = cached
     }
 
-    internal init?(name: String) {
+    package init?(name: String) {
         // Try the cache first
         if let cached = TimeZoneCache.cache.fixed(name) {
             _tz = cached

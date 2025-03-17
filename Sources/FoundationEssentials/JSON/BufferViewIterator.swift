@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal struct BufferViewIterator<Element> {
+package struct BufferViewIterator<Element> {
     var curPointer: UnsafeRawPointer
     let endPointer: UnsafeRawPointer
 
@@ -26,7 +26,7 @@ internal struct BufferViewIterator<Element> {
 
 extension BufferViewIterator: IteratorProtocol {
 
-    mutating func next() -> Element? {
+    mutating package func next() -> Element? {
         guard curPointer < endPointer else { return nil }
         defer {
             curPointer = curPointer.advanced(by: MemoryLayout<Element>.stride)

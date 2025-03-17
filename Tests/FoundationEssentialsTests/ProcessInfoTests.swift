@@ -15,9 +15,9 @@ import TestSupport
 #endif
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
 #else
-@testable import Foundation
+import Foundation
 #endif
 
 #if canImport(Darwin)

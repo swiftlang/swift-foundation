@@ -15,11 +15,11 @@ import TestSupport
 #endif
 
 #if canImport(FoundationInternationalization)
-@testable import FoundationInternationalization
+import FoundationInternationalization
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #endif
 
 let week = 604800

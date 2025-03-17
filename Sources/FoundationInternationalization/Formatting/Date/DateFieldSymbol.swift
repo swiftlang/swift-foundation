@@ -43,7 +43,7 @@ extension Date.FormatStyle {
         public struct VerbatimHour : Hashable, Sendable { let option: SymbolType.VerbatimHourOption }
 
         static let maxPadding = 10
-        enum SymbolType : Hashable {
+        package enum SymbolType : Hashable {
             case era(EraOption)
             case year(YearOption)
             case yearForWeekOfYear(YearForWeekOfYearOption)
@@ -64,20 +64,20 @@ extension Date.FormatStyle {
             case secondFraction(SecondFractionOption)
             case timeZone(TimeZoneSymbolOption)
 
-            enum EraOption : String, Codable, Hashable {
+            package enum EraOption : String, Codable, Hashable {
                 case abbreviated = "G"
                 case wide = "GGGG"
                 case narrow = "GGGGG"
             }
 
-            enum YearOption : RawRepresentable, Codable, Hashable {
+            package enum YearOption : RawRepresentable, Codable, Hashable {
                 case defaultDigits
                 case twoDigits
                 case padded(Int)
                 case relatedGregorian(Int)
                 case extended(Int)
 
-                var rawValue: String {
+                package var rawValue: String {
                     let raw: String
                     switch self {
                     case .defaultDigits:
@@ -94,7 +94,7 @@ extension Date.FormatStyle {
                     return raw
                 }
 
-                init?(rawValue: String) {
+                package init?(rawValue: String) {
                     guard let begin = rawValue.first else {
                         return nil
                     }
@@ -119,12 +119,12 @@ extension Date.FormatStyle {
                 }
             }
 
-            enum YearForWeekOfYearOption : RawRepresentable, Codable, Hashable {
+            package enum YearForWeekOfYearOption : RawRepresentable, Codable, Hashable {
                 case defaultDigits
                 case twoDigits
                 case padded(Int)
 
-                var rawValue: String {
+                package var rawValue: String {
                     let raw: String
                     switch self {
                     case .defaultDigits:
@@ -137,7 +137,7 @@ extension Date.FormatStyle {
                     return raw
                 }
 
-                init?(rawValue: String) {
+                package init?(rawValue: String) {
                     if rawValue.allSatisfy({ $0 == "Y" }) {
                         if rawValue.count == 1 {
                             self = .defaultDigits
@@ -152,13 +152,13 @@ extension Date.FormatStyle {
                 }
             }
 
-            enum CyclicYearOption : String, Codable, Hashable {
+            package enum CyclicYearOption : String, Codable, Hashable {
                 case abbreviated = "U"
                 case wide = "UUUU"
                 case narrow = "UUUUU"
             }
 
-            enum QuarterOption : String, Codable, Hashable {
+            package enum QuarterOption : String, Codable, Hashable {
                 case oneDigit = "Q"
                 case twoDigits = "QQ"
                 case abbreviated = "QQQ"
@@ -166,7 +166,7 @@ extension Date.FormatStyle {
                 case narrow = "QQQQQ"
             }
 
-            enum StandaloneQuarterOption : String, Codable, Hashable {
+            package enum StandaloneQuarterOption : String, Codable, Hashable {
                 case oneDigit = "q"
                 case twoDigits = "qq"
                 case abbreviated = "qqq"
@@ -174,7 +174,7 @@ extension Date.FormatStyle {
                 case narrow = "qqqqq"
             }
 
-            enum MonthOption : String, Codable, Hashable {
+            package enum MonthOption : String, Codable, Hashable {
                 case defaultDigits = "M"
                 case twoDigits = "MM"
                 case abbreviated = "MMM"
@@ -182,7 +182,7 @@ extension Date.FormatStyle {
                 case narrow = "MMMMM"
             }
 
-            enum StandaloneMonthOption : String, Codable, Hashable {
+            package enum StandaloneMonthOption : String, Codable, Hashable {
                 case defaultDigits = "L"
                 case twoDigits = "LL"
                 case abbreviated = "LLL"
@@ -190,25 +190,25 @@ extension Date.FormatStyle {
                 case narrow = "LLLLL"
             }
 
-            enum WeekOption : String, Codable, Hashable {
+            package enum WeekOption : String, Codable, Hashable {
                 case defaultDigits = "w"
                 case twoDigits = "ww"
                 case weekOfMonth = "W"
             }
 
-            enum DayOfYearOption : String, Codable, Hashable {
+            package enum DayOfYearOption : String, Codable, Hashable {
                 case defaultDigits = "D"
                 case twoDigits = "DD"
                 case threeDigits = "DDD"
             }
 
-            enum DayOption : RawRepresentable, Codable, Hashable {
+            package enum DayOption : RawRepresentable, Codable, Hashable {
                 case defaultDigits
                 case twoDigits
                 case ordinalOfDayInMonth
                 case julianModified(Int)
 
-                var rawValue: String {
+                package var rawValue: String {
                     let raw: String
                     switch self {
                     case .defaultDigits:
@@ -223,7 +223,7 @@ extension Date.FormatStyle {
                     return raw
                 }
 
-                init?(rawValue: String) {
+                package init?(rawValue: String) {
                     switch rawValue {
                     case "d":
                         self = .defaultDigits
@@ -241,7 +241,7 @@ extension Date.FormatStyle {
                 }
             }
 
-            enum WeekdayOption : String, Codable, Hashable {
+            package enum WeekdayOption : String, Codable, Hashable {
                 case abbreviated = "EEE"
                 case wide = "EEEE"
                 case narrow = "EEEEE"
@@ -250,7 +250,7 @@ extension Date.FormatStyle {
                 case twoDigits = "ee"
             }
 
-            enum StandaloneWeekdayOption : String, Codable, Hashable {
+            package enum StandaloneWeekdayOption : String, Codable, Hashable {
                 case oneDigit = "c"
                 case abbreviated = "ccc"
                 case wide = "cccc"
@@ -258,7 +258,7 @@ extension Date.FormatStyle {
                 case short = "cccccc"
             }
 
-            enum DayPeriodOption : String, Codable, Hashable {
+            package enum DayPeriodOption : String, Codable, Hashable {
                 case abbreviated = "a"
                 case wide = "aaaa"
                 case narrow = "aaaaa"
@@ -270,7 +270,7 @@ extension Date.FormatStyle {
                 case conversationalWide = "BBBBB"
             }
 
-            enum HourOption : String, Codable, Hashable {
+            package enum HourOption : String, Codable, Hashable {
                 case defaultDigitsWithAbbreviatedAMPM = "j"
                 case twoDigitsWithAbbreviatedAMPM = "jj"
                 case defaultDigitsWithWideAMPM = "jjj"
@@ -289,7 +289,7 @@ extension Date.FormatStyle {
                 case conversationalTwoDigitsWithNarrowAMPM = "CCCCCC"
             }
 
-            enum VerbatimHourOption : String, Codable, Hashable {
+            package enum VerbatimHourOption : String, Codable, Hashable {
                 case twelveHourDefaultDigitsOneBased = "h"
                 case twelveHourTwoDigitsOneBased = "hh"
                 case twentyFourHourDefaultDigitsZeroBased = "H"
@@ -301,19 +301,19 @@ extension Date.FormatStyle {
                 case twentyFourHourTwoDigitsOneBased = "kk"
             }
 
-            enum MinuteOption : String, Codable, Hashable {
+            package enum MinuteOption : String, Codable, Hashable {
                 case defaultDigits = "m"
                 case twoDigits = "mm"
             }
 
-            enum SecondOption : String, Codable, Hashable {
+            package enum SecondOption : String, Codable, Hashable {
                 case defaultDigits = "s"
                 case twoDigits = "ss"
             }
 
-            enum SecondFractionOption : RawRepresentable, Codable, Hashable {
+            package enum SecondFractionOption : RawRepresentable, Codable, Hashable {
 
-                init?(rawValue: String) {
+                package init?(rawValue: String) {
                     guard let first = rawValue.first else { return nil }
                     guard rawValue.allSatisfy({ $0 == first }) else { return nil }
                     switch first {
@@ -364,7 +364,7 @@ extension Date.FormatStyle {
 
             }
 
-            enum TimeZoneSymbolOption : String, Codable, Hashable {
+            package enum TimeZoneSymbolOption : String, Codable, Hashable {
                 case shortSpecificName = "z"
                 case longSpecificName = "zzzz"
                 case iso8601Basic = "Z"
