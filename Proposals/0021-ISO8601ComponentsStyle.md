@@ -2,7 +2,7 @@
 
 * Proposal: SF-0021
 * Author(s): Tony Parker <anthony.parker@apple.com>
-* Status: **Review: March 17, 2025...March 24, 2025**
+* Status: **Review: March 19, 2025...March 26, 2025**
 * Intended Release:  _Swift 6.2_
 * Review: ([pitch](https://forums.swift.org/t/pitch-iso8601-components-format-style/77990))
 *_Related issues_*
