@@ -46,6 +46,12 @@ if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL Windows)
     endif()
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL Linux)
+    # Pass -fno-omit-frame-pointer while compiling for better backtraces
+    add_compile_options("$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fno-omit-frame-pointer>")
+    add_compile_options("$<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:SHELL:-fno-omit-frame-pointer>")
+endif()
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
