@@ -1336,7 +1336,9 @@ final class StringTests : XCTestCase {
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
             "0123456789",
             "!\"#$%&'()*+,-./",
-            "¡¶ÅÖæöÿ\u{00A0}~"
+            "¡¶ÅÖæöÿ\u{0080}\u{00A0}~",
+            "Hello\nworld",
+            "Hello\r\nworld"
         ], invalid: [
             "🎺",
             "מ",
