@@ -1,6 +1,6 @@
 # URI Templating
 
-* Proposal: [SF-00020](00020-uri-templating.md)
+* Proposal: [SF-0020](0020-uri-templating.md)
 * Authors: [Daniel Eggert](https://github.com/danieleggert)
 * Review Manager: [Tina L](https://github.com/itingliu)
 * Status: **Review: March 14, 2025...March 21, 2025**
