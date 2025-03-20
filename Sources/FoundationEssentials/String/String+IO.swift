@@ -18,33 +18,6 @@ internal import _FoundationCShims
 
 fileprivate let stringEncodingAttributeName = "com.apple.TextEncoding"
 
-private struct ExtendingToUTF16Sequence<Base: Sequence<UInt8>> : Sequence {
-    typealias Element = UInt16
-    
-    struct Iterator : IteratorProtocol {
-        private var base: Base.Iterator
-        
-        init(_ base: Base.Iterator) {
-            self.base = base
-        }
-        
-        mutating func next() -> Element? {
-            guard let value = base.next() else { return nil }
-            return UInt16(value)
-        }
-    }
-    
-    private let base: Base
-    
-    init(_ base: Base) {
-        self.base = base
-    }
-    
-    func makeIterator() -> Iterator {
-        Iterator(base.makeIterator())
-    }
-}
-
 #if !FOUNDATION_FRAMEWORK
 @_spi(SwiftCorelibsFoundation)
 dynamic public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: UInt) -> String? {
@@ -192,12 +165,9 @@ extension String {
             }
         #if !FOUNDATION_FRAMEWORK
         case .isoLatin1:
-            guard bytes.allSatisfy(\.isValidISOLatin1) else {
-                return nil
-            }
-            // isoLatin1 is an 8-bit encoding that represents a subset of UTF-16
-            // Map to 16-bit values and decode as UTF-16
-            self.init(_validating: ExtendingToUTF16Sequence(bytes), as: UTF16.self)
+            // ISO Latin 1 bytes are always valid since it's an 8-bit encoding that maps scalars 0x0 through 0xFF
+            // Simply extend each byte to 16 bits and decode as UTF-16
+            self.init(decoding: bytes.lazy.map { UInt16($0) }, as: UTF16.self)
         case .macOSRoman:
             func buildString(_ bytes: UnsafeBufferPointer<UInt8>) -> String {
                 String(unsafeUninitializedCapacity: bytes.count * 3) { buffer in

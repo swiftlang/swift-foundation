@@ -21,12 +21,6 @@ import Darwin
 
 internal import _FoundationCShims
 
-extension BinaryInteger {
-    var isValidISOLatin1: Bool {
-        (0x20 <= self && self <= 0x7E) || (0xA0 <= self && self <= 0xFF)
-    }
-}
-
 extension UInt8 {
     private typealias UTF8Representation = (UInt8, UInt8, UInt8)
     private static func withMacRomanMap<R>(_ body: (UnsafeBufferPointer<UTF8Representation>) -> R) -> R {
@@ -236,12 +230,14 @@ extension String {
             return data + swapped
 #if !FOUNDATION_FRAMEWORK
         case .isoLatin1:
-            return try? Data(capacity: self.utf16.count) { buffer in
-                for scalar in self.utf16 {
-                    guard scalar.isValidISOLatin1 else {
+            // ISO Latin 1 encodes code points 0x0 through 0xFF (a maximum of 2 UTF-8 scalars per ISO Latin 1 Scalar)
+            // The UTF-8 count is a cheap, reasonable starting capacity as it is precise for the all-ASCII case and it will only over estimate by 1 byte per non-ASCII character
+            return try? Data(capacity: self.utf8.count) { buffer in
+                for scalar in self.unicodeScalars {
+                    guard let valid = UInt8(exactly: scalar.value) else {
                         throw CocoaError(.fileWriteInapplicableStringEncoding)
                     }
-                    buffer.appendElement(UInt8(scalar & 0xFF))
+                    buffer.appendElement(valid)
                 }
             }
         case .macOSRoman:
