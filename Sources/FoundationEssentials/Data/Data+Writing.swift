@@ -226,12 +226,14 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
             }
         }
         
+        let updatedOptions = _NSDataWritingOptionsForRelocatedAtomicWrite(options, destinationPath)
+        
         let auxFile = temporaryDirectoryPath.appendingPathComponent(destinationPath.lastPathComponent)
         return try auxFile.withFileSystemRepresentation { auxFileFileSystemRep in
             guard let auxFileFileSystemRep else {
                 throw CocoaError(.fileWriteInvalidFileName)
             }
-            let fd = openFileDescriptorProtected(path: auxFileFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options)
+            let fd = openFileDescriptorProtected(path: auxFileFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: updatedOptions)
             if fd >= 0 {
                 return (fd, auxFile, temporaryDirectoryPath)
             } else {
