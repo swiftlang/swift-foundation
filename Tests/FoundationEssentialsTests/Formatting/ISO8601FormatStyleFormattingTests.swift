@@ -14,14 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 final class ISO8601FormatStyleFormattingTests: XCTestCase {
 
     func test_ISO8601Format() throws {

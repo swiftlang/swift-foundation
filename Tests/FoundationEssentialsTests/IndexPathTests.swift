@@ -11,10 +11,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
 class TestIndexPath: XCTestCase {
     func testEmpty() {
         let ip = IndexPath()

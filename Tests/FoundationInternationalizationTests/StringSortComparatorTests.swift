@@ -14,13 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-import FoundationInternationalization
-#endif // FOUNDATION_FRAMEWORK
-
 class StringSortComparatorTests: XCTestCase {
 #if FOUNDATION_FRAMEWORK
     // TODO: Until we support String.compare(_:options:locale:) in FoundationInternationalization, only support unlocalized comparisons

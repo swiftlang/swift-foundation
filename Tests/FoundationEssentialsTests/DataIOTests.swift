@@ -18,12 +18,6 @@ import TestSupport
 @preconcurrency import Glibc
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
 class DataIOTests : XCTestCase {
     
     // MARK: - Helpers

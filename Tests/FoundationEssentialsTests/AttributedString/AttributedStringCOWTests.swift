@@ -14,12 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-#endif
-
 extension AttributedStringProtocol {
     fileprivate mutating func genericSetAttribute() {
         self.testInt = 3

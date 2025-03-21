@@ -14,15 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationInternationalization)
-import FoundationEssentials
-import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 class ListFormatStyleTests : XCTestCase {
     func test_orList() {
         var style: ListFormatStyle<StringStyle, [String]> = .list(type: .or, width: .standard)

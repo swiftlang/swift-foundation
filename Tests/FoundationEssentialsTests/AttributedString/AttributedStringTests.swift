@@ -14,10 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
 #if FOUNDATION_FRAMEWORK
 @_spi(AttributedString) import Foundation
 // For testing default attribute scope conversion

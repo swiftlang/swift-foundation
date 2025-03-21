@@ -14,13 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationInternationalization
-import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
 extension DateComponents {
     fileprivate static func differenceBetween(_ d1: DateComponents?, _ d2: DateComponents?, compareQuarter: Bool, within nanosecondAccuracy: Int = 5000) -> String? {
         let components: [Calendar.Component] = [.era, .year, .month, .day, .dayOfYear, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .weekOfMonth, .timeZone, .isLeapMonth, .calendar, .quarter, .nanosecond]

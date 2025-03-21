@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
 #if canImport(TestSupport)
 import TestSupport
 #endif

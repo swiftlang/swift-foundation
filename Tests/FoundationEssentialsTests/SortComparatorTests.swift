@@ -14,12 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
 class SortComparatorTests: XCTestCase {
     func test_comparable_descriptors() {
         let intDesc: ComparableComparator<Int> = ComparableComparator<Int>()

@@ -14,13 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-import FoundationInternationalization
-#endif // FOUNDATION_FRAMEWORK
-
 class Hello {
     var str: NSMutableString = "hi"
 }

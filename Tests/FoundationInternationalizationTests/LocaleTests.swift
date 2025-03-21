@@ -20,13 +20,6 @@
 // REQUIRES: executable_test
 // REQUIRES: objc_interop
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#elseif canImport(FoundationInternationalization)
-import FoundationEssentials
-import FoundationInternationalization
-#endif // FOUNDATION_FRAMEWORK
-
 #if canImport(TestSupport)
 import TestSupport
 #endif

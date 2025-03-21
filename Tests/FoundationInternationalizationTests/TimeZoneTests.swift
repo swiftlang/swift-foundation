@@ -14,12 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#elseif canImport(FoundationInternationalization)
-import FoundationInternationalization
-#endif
-
 final class TimeZoneTests : XCTestCase {
 
     func test_timeZoneBasics() {

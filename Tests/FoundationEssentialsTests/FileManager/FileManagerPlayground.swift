@@ -14,12 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-#endif
-
 private protocol Buildable {
     func build(in path: String, using fileManager: FileManager) throws
 }

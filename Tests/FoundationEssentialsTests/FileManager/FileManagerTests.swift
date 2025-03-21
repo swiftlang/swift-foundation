@@ -15,14 +15,6 @@
 import TestSupport
 #endif // canImport(TestSupport)
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 #if canImport(Android)
 @preconcurrency import Android
 #endif

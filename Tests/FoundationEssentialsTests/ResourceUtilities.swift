@@ -20,12 +20,6 @@ import TestSupport
 #endif
 
 #if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
-#if FOUNDATION_FRAMEWORK
 // Always compiled into the Tests project
 final internal class Canary { }
 #endif

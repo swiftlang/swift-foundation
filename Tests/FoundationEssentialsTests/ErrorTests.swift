@@ -14,10 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
 final class ErrorTests : XCTestCase {
     func thisThrows() throws {
         throw CocoaError(CocoaError.Code(rawValue: 42), userInfo: ["hi" : "there"])

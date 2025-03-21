@@ -25,10 +25,6 @@ import TestSupport
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 // MARK: - Test Suite
 
 final class JSONEncoderTests : XCTestCase {

@@ -15,14 +15,6 @@
 import TestSupport
 #endif // canImport(TestSupport)
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 private func checkBehavior<T: Equatable>(_ result: T, new: T, old: T, file: StaticString = #filePath, line: UInt = #line) {
     #if FOUNDATION_FRAMEWORK
     if foundation_swift_url_enabled() {

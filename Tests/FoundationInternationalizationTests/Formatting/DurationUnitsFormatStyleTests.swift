@@ -14,14 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationInternationalization)
-import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 let week = 604800
 let day = 86400
 let hour = 3600

@@ -14,12 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
 final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
     /// A Gregorian calendar in GMT with no time zone changes
     var gregorian: Calendar = {

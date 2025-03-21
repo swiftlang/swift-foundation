@@ -18,12 +18,6 @@ import TestSupport
 @preconcurrency import Glibc
 #endif
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
 extension Data {
     func withUnsafeUInt8Bytes<R>(_ c: (UnsafePointer<UInt8>) throws -> R) rethrows -> R {
         return try self.withUnsafeBytes { (ptr) in

@@ -14,14 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
-#if canImport(FoundationInternationalization)
-import FoundationInternationalization
-#endif
-
 extension DiscreteFormatStyle where FormatInput : Comparable {
     /// Produces a sequence that generates all outputs of a discrete format style from a given start to a given end.
     func evaluate(from initialInput: FormatInput, to end: FormatInput, _ advance: @escaping (FormatInput, FormatInput) -> FormatInput? = { prev, next in next }) -> LazySequence<DiscreteFormatStyleSequence<Self>> {

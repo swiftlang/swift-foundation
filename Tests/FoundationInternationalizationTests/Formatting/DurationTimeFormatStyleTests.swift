@@ -14,17 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationInternationalization)
-import FoundationEssentials
-import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
-
-
 extension Duration {
     init(weeks: Int64 = 0, days: Int64 = 0, hours: Int64 = 0, minutes: Int64 = 0, seconds: Int64 = 0, milliseconds: Int64 = 0, microseconds: Int64 = 0) {
         self = .init(secondsComponent: Int64(weeks * 604800 + days * 86400 + hours * 3600 + minutes * 60 + seconds),

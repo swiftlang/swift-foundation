@@ -14,14 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#endif
 
 final class DateFormatStyleTests : XCTestCase {
     let referenceDate = Date(timeIntervalSinceReferenceDate: 0)

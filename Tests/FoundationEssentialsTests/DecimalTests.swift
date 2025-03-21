@@ -14,9 +14,7 @@
 import TestSupport
 #endif  // canImport(TestSupport)
 
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#else
+#if canImport(FoundationEssentials)
 @_spi(SwiftCorelibsFoundation)
 import FoundationEssentials
 #endif

@@ -14,15 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationInternationalization)
-import FoundationEssentials
-import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
-import Foundation
-#endif
-
 final class DateRelativeFormatStyleTests: XCTestCase {
 
     let oneHour: TimeInterval = 60 * 60

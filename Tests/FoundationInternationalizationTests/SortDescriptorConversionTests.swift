@@ -15,12 +15,6 @@ import TestSupport
 #endif
 
 #if FOUNDATION_FRAMEWORK
-import Foundation
-#else
-import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
-#if FOUNDATION_FRAMEWORK
 
 /// Tests interop with Objective-C `NSSortDescriptor`.
 class SortDescriptorConversionTests: XCTestCase {
