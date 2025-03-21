@@ -32,7 +32,7 @@ dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
 #endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
-struct LocaleCache : Sendable, ~Copyable {
+package struct LocaleCache : Sendable, ~Copyable {
     // MARK: - State
 
     struct State {
@@ -117,7 +117,7 @@ struct LocaleCache : Sendable, ~Copyable {
 
     let lock: LockedState<State>
 
-    static let cache = LocaleCache()
+    package static let cache = LocaleCache()
     private let _currentCache = LockedState<(any _LocaleProtocol)?>(initialState: nil)
 
 #if FOUNDATION_FRAMEWORK
@@ -131,7 +131,7 @@ struct LocaleCache : Sendable, ~Copyable {
 
     /// For testing of `autoupdatingCurrent` only. If you want to test `current`, create a custom `Locale` with the appropriate settings using `localeAsIfCurrent(name:overrides:disableBundleMatching:)` and use that instead.
     /// This mutates global state of the current locale, so it is not safe to use in concurrent testing.
-    func resetCurrent(to preferences: LocalePreferences) {
+    package func resetCurrent(to preferences: LocalePreferences) {
         // Disable bundle matching so we can emulate a non-English main bundle during test
         let newLocale = _localeICUClass().init(name: nil, prefs: preferences, disableBundleMatching: true)
         _currentCache.withLock {
@@ -142,7 +142,7 @@ struct LocaleCache : Sendable, ~Copyable {
 #endif
     }
 
-    func reset() {
+    package func reset() {
         _currentCache.withLock { $0 = nil }
 #if FOUNDATION_FRAMEWORK
         _currentNSCache.withLock { $0 = nil }

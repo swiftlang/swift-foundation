@@ -14,12 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
-@testable import FoundationEssentials
-#else
-@testable import Foundation
-#endif
-
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)

@@ -296,7 +296,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
         return format(components, appendingTimeZoneOffset: secondsFromGMT)
     }
 
-    func format(_ components: DateComponents, appendingTimeZoneOffset timeZoneOffset: Int?) -> String {
+    package func format(_ components: DateComponents, appendingTimeZoneOffset timeZoneOffset: Int?) -> String {
         var needSeparator = false
         let capacity = 128 // It is believed no ISO8601 date can exceed this size
         let result = withUnsafeTemporaryAllocation(of: CChar.self, capacity: capacity + 1) { _buffer in

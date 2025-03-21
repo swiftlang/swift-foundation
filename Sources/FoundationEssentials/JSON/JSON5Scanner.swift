@@ -1180,16 +1180,16 @@ extension FixedWidthInteger {
     }
 }
 
-internal extension UInt8 {
-    static var _verticalTab: UInt8 { UInt8(0x0b) }
-    static var _formFeed: UInt8 { UInt8(0x0c) }
-    static var _nbsp: UInt8 { UInt8(0xa0) }
-    static var _asterisk: UInt8 { UInt8(ascii: "*") }
-    static var _slash: UInt8 { UInt8(ascii: "/") }
-    static var _singleQuote: UInt8 { UInt8(ascii: "'") }
-    static var _dollar: UInt8 { UInt8(ascii: "$") }
-    static var _underscore: UInt8 { UInt8(ascii: "_") }
-    static var _dot: UInt8 { UInt8(ascii: ".") }
+extension UInt8 {
+    internal static var _verticalTab: UInt8 { UInt8(0x0b) }
+    internal static var _formFeed: UInt8 { UInt8(0x0c) }
+    internal static var _nbsp: UInt8 { UInt8(0xa0) }
+    internal static var _asterisk: UInt8 { UInt8(ascii: "*") }
+    package static var _slash: UInt8 { UInt8(ascii: "/") }
+    internal static var _singleQuote: UInt8 { UInt8(ascii: "'") }
+    internal static var _dollar: UInt8 { UInt8(ascii: "$") }
+    internal static var _underscore: UInt8 { UInt8(ascii: "_") }
+    internal static var _dot: UInt8 { UInt8(ascii: ".") }
 }
 
 var _json5Infinity: StaticString { "Infinity" }

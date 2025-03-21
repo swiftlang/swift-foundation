@@ -11,11 +11,11 @@ import TestSupport
 #endif
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@testable import Foundation
+import Foundation
 #endif
 
 final class ISO8601FormatStyleParsingTests: XCTestCase {

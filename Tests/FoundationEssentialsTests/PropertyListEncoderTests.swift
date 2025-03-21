@@ -11,12 +11,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#elseif canImport(FoundationEssentials)
-@testable import FoundationEssentials
-#endif
-
 // MARK: - Test Suite
 
 class TestPropertyListEncoder : XCTestCase {

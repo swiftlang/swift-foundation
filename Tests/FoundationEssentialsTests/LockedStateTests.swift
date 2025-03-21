@@ -14,12 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#else
-@testable import FoundationEssentials
-#endif
-
 final class LockedStateTests : XCTestCase {
     final class TestObject {
         var deinitBlock: () -> Void = {}

@@ -28,7 +28,7 @@ public struct FloatingPointFormatStyle<Value: BinaryFloatingPoint>: Codable, Has
     }
 
     public typealias Configuration = NumberFormatStyleConfiguration
-    internal var collection: Configuration.Collection = Configuration.Collection()
+    package var collection: Configuration.Collection = Configuration.Collection()
 
     public func grouping(_ group: Configuration.Grouping) -> Self {
         var new = self

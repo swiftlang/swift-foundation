@@ -90,15 +90,35 @@ public struct FormatStyleCapitalizationContext : Codable, Hashable, Sendable {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public enum NumberFormatStyleConfiguration {
-    internal struct Collection : Codable, Hashable, Sendable {
-        var scale: Double?
-        var precision: Precision?
-        var group: Grouping?
-        var signDisplayStrategy: SignDisplayStrategy?
-        var decimalSeparatorStrategy: DecimalSeparatorDisplayStrategy?
-        var rounding: RoundingRule?
-        var roundingIncrement: RoundingIncrement?
-        var notation: Notation?
+    package struct Collection : Codable, Hashable, Sendable {
+        package var scale: Double?
+        package var precision: Precision?
+        package var group: Grouping?
+        package var signDisplayStrategy: SignDisplayStrategy?
+        package var decimalSeparatorStrategy: DecimalSeparatorDisplayStrategy?
+        package var rounding: RoundingRule?
+        package var roundingIncrement: RoundingIncrement?
+        package var notation: Notation?
+
+        package init(
+            scale: Double? = nil,
+            precision: NumberFormatStyleConfiguration.Precision? = nil,
+            group: NumberFormatStyleConfiguration.Grouping? = nil,
+            signDisplayStrategy: NumberFormatStyleConfiguration.SignDisplayStrategy? = nil,
+            decimalSeparatorStrategy: NumberFormatStyleConfiguration.DecimalSeparatorDisplayStrategy? = nil,
+            rounding: NumberFormatStyleConfiguration.RoundingRule? = nil,
+            roundingIncrement: NumberFormatStyleConfiguration.RoundingIncrement? = nil,
+            notation: NumberFormatStyleConfiguration.Notation? = nil
+        ) {
+            self.scale = scale
+            self.precision = precision
+            self.group = group
+            self.signDisplayStrategy = signDisplayStrategy
+            self.decimalSeparatorStrategy = decimalSeparatorStrategy
+            self.rounding = rounding
+            self.roundingIncrement = roundingIncrement
+            self.notation = notation
+        }
     }
 
     public typealias RoundingRule = FloatingPointRoundingRule
@@ -132,11 +152,11 @@ public enum NumberFormatStyleConfiguration {
 
     public struct Precision : Codable, Hashable, Sendable {
 
-        enum Option: Hashable {
+        package enum Option: Hashable {
             case significantDigits(min: Int, max: Int?)
             case integerAndFractionalLength(minInt: Int?, maxInt: Int?, minFraction: Int?, maxFraction: Int?)
         }
-        var option: Option
+        package var option: Option
 
         // The maximum total length that ICU allows is 999.
         // We take one off to reserve one character for the non-zero digit skeleton (the "0" skeleton in the number format)
@@ -289,11 +309,11 @@ public enum NumberFormatStyleConfiguration {
         }
     }
 
-    internal enum RoundingIncrement: Hashable, CustomStringConvertible {
+    package enum RoundingIncrement: Hashable, CustomStringConvertible {
         case integer(value: Int)
         case floatingPoint(value: Double)
 
-        var description: String {
+        package var description: String {
             switch self {
             case .integer(let value):
                 return String(value)
@@ -511,7 +531,7 @@ extension NumberFormatStyleConfiguration.RoundingIncrement: Codable {
         case floatingPoint
     }
 
-    init(from decoder: Decoder) throws {
+    package init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let value = try container.decodeIfPresent(Int.self, forKey: .integer) {
             self = .integer(value: value)
@@ -522,7 +542,7 @@ extension NumberFormatStyleConfiguration.RoundingIncrement: Codable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    package func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
         case .integer(let value):
@@ -544,7 +564,7 @@ extension NumberFormatStyleConfiguration.Precision.Option : Codable {
         case maxFractionalLength
     }
 
-    init(from decoder: Decoder) throws {
+    package init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let minSignificantDigits = try container.decodeIfPresent(Int.self, forKey: .minSignificantDigits), let maxSignificantDigits = try container.decodeIfPresent(Int.self, forKey: .maxSignificantDigits) {
             self = .significantDigits(min: minSignificantDigits, max: maxSignificantDigits)
@@ -556,7 +576,7 @@ extension NumberFormatStyleConfiguration.Precision.Option : Codable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    package func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
         case .significantDigits(let min, let max):
@@ -576,7 +596,7 @@ extension NumberFormatStyleConfiguration.Precision.Option : Codable {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.Collection {
-    var skeleton: String {
+    package var skeleton: String {
         var s = ""
         if let scale = scale {
             s += scale.skeleton + " "
@@ -693,7 +713,7 @@ extension NumberFormatStyleConfiguration.Precision {
         return incrementStem
     }
 
-    var skeleton : String {
+    package var skeleton : String {
         switch self.option {
         case .significantDigits(let min, let max):
             return significantDigitsSkeleton(min: min, max: max)
@@ -751,7 +771,7 @@ extension NumberFormatStyleConfiguration.Grouping {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension NumberFormatStyleConfiguration.SignDisplayStrategy {
-    var skeleton : String {
+    package var skeleton : String {
         let stem: String
         switch positive {
         case .always:
@@ -891,7 +911,7 @@ extension CurrencyFormatStyleConfiguration.Collection {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension CurrencyFormatStyleConfiguration.SignDisplayStrategy {
-    var skeleton: String {
+    package var skeleton: String {
         var stem: String
         if accounting {
             switch positive {

@@ -170,7 +170,7 @@ extension Date {
              })
          }
 
-         internal func _format(_ destDate: Date, refDate: Date) -> String {
+        package func _format(_ destDate: Date, refDate: Date) -> String {
              guard let (component, value) = _largestNonZeroComponent(destDate, reference: refDate, adjustComponent: componentAdjustmentStrategy) else {
                  return ""
              }

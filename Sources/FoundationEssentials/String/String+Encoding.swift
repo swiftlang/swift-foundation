@@ -55,7 +55,7 @@ extension String {
     // - Swift doesn't allow typealias to builtin types like String
     // We therefore rename String.Encoding to String._Encoding for package
     // internal use so we can use `String._Encoding` to disambiguate.
-    internal typealias _Encoding = Encoding
+    package typealias _Encoding = Encoding
 
 #if FOUNDATION_FRAMEWORK
     public typealias EncodingConversionOptions = NSString.EncodingConversionOptions

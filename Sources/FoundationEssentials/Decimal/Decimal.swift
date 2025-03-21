@@ -41,7 +41,7 @@ public struct Decimal: Sendable {
     internal var storage: Storage
 
     // Int8
-    internal var _exponent: Int32 {
+    package var _exponent: Int32 {
         get {
             return Int32(self.storage.exponent)
         }
@@ -51,7 +51,7 @@ public struct Decimal: Sendable {
     }
 
     // 4 bits
-    internal var _length: UInt32 {
+    package var _length: UInt32 {
         get {
             return UInt32(self.storage.lengthFlagsAndReserved >> 4)
         }
@@ -63,7 +63,7 @@ public struct Decimal: Sendable {
     }
     
     // Bool
-    internal var _isNegative: UInt32 {
+    package var _isNegative: UInt32 {
         get {
             return UInt32((self.storage.lengthFlagsAndReserved >> 3) & 0x01)
         }
@@ -77,7 +77,7 @@ public struct Decimal: Sendable {
     }
     
     // Bool
-    internal var _isCompact: UInt32 {
+    package var _isCompact: UInt32 {
         get {
             return UInt32((self.storage.lengthFlagsAndReserved >> 2) & 0x01)
         }
@@ -91,7 +91,7 @@ public struct Decimal: Sendable {
     }
     
     // Only 18 bits
-    internal var _reserved: UInt32 {
+    package var _reserved: UInt32 {
         get {
             return (UInt32(self.storage.lengthFlagsAndReserved & 0x03) << 16) | UInt32(self.storage.reserved)
         }
@@ -103,7 +103,7 @@ public struct Decimal: Sendable {
         }
     }
 
-    internal var _mantissa: Mantissa {
+    package var _mantissa: Mantissa {
         get {
             return self.storage.mantissa
         }
@@ -206,7 +206,7 @@ extension Decimal {
         _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString).asOptional
     }
 #endif
-    internal func _toString(withDecimalSeparator separator: String) -> String {
+    package func _toString(withDecimalSeparator separator: String) -> String {
         if self.isNaN {
             return "NaN"
         }

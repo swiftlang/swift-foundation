@@ -142,7 +142,7 @@ extension UInt8 {
     internal static var _newline: UInt8 { UInt8(ascii: "\n") }
     internal static var _tab: UInt8 { UInt8(ascii: "\t") }
 
-    internal static var _colon: UInt8 { UInt8(ascii: ":") }
+    package static var _colon: UInt8 { UInt8(ascii: ":") }
     internal static let _semicolon = UInt8(ascii: ";")
     internal static var _comma: UInt8 { UInt8(ascii: ",") }
 
@@ -175,7 +175,7 @@ extension UInt8 {
         return Int(self &- UInt8(ascii: "0"))
     }
 
-    internal var isLetter: Bool? {
+    package var isLetter: Bool? {
         return (0x41 ... 0x5a) ~= self || (0x61 ... 0x7a) ~= self
     }
 }

@@ -19,7 +19,7 @@ internal import _FoundationICU
 typealias ICUNumberFormatterSkeleton = String
 
 /// For testing purposes, remove all caches from below formatters.
-internal func resetAllNumberFormatterCaches() {
+package func resetAllNumberFormatterCaches() {
     ICUNumberFormatter.cache.removeAllObjects()
     ICUCurrencyNumberFormatter.cache.removeAllObjects()
     ICUPercentNumberFormatter.cache.removeAllObjects()
@@ -27,11 +27,11 @@ internal func resetAllNumberFormatterCaches() {
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-internal class ICUNumberFormatterBase : @unchecked Sendable {
+package class ICUNumberFormatterBase : @unchecked Sendable {
     /// `Sendable` notes: ICU's `UNumberFormatter` itself is thread safe. The result type is not, but we create that each time we format.
-    internal let uformatter: OpaquePointer
+    package let uformatter: OpaquePointer
     /// Stored for testing purposes only
-    internal let skeleton: String
+    package let skeleton: String
 
     init?(skeleton: String, localeIdentifier: String) {
         self.skeleton = skeleton
@@ -140,11 +140,11 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
         }
     }
 
-    func format(_ v: Int64) -> String? {
+    package func format(_ v: Int64) -> String? {
         try? FormatResult(formatter: uformatter, value: v).string
     }
 
-    func format(_ v: Double) -> String? {
+    package func format(_ v: Double) -> String? {
         try? FormatResult(formatter: uformatter, value: v).string
     }
 
@@ -220,7 +220,7 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
 
 // MARK: - Integer
 
-final class ICUNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
+package final class ICUNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
     fileprivate struct Signature : Hashable {
         let skeleton: String
         let localeIdentifier: String
@@ -234,15 +234,15 @@ final class ICUNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
         }
     }
 
-    static func create<T: BinaryInteger>(for style: IntegerFormatStyle<T>) -> ICUNumberFormatter? {
+    package static func create<T: BinaryInteger>(for style: IntegerFormatStyle<T>) -> ICUNumberFormatter? {
         _create(with: .init(skeleton: style.collection.skeleton, localeIdentifier: style.locale.identifierCapturingPreferences))
     }
 
-    static func create(for style: Decimal.FormatStyle) -> ICUNumberFormatter? {
+    package static func create(for style: Decimal.FormatStyle) -> ICUNumberFormatter? {
         _create(with: .init(skeleton: style.collection.skeleton, localeIdentifier: style.locale.identifierCapturingPreferences))
     }
 
-    static func create<T: BinaryFloatingPoint>(for style: FloatingPointFormatStyle<T>) -> ICUNumberFormatter? {
+    package static func create<T: BinaryFloatingPoint>(for style: FloatingPointFormatStyle<T>) -> ICUNumberFormatter? {
         _create(with: .init(skeleton: style.collection.skeleton, localeIdentifier: style.locale.identifierCapturingPreferences))
     }
 
@@ -256,7 +256,7 @@ final class ICUNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
 
 // MARK: - Currency
 
-final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
+package final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
     fileprivate struct Signature : Hashable {
         let skeleton: String
         let currencyCode: String
@@ -282,15 +282,15 @@ final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase, @unchecked Send
         }
     }
 
-    static func create<T: BinaryInteger>(for style: IntegerFormatStyle<T>.Currency) -> ICUCurrencyNumberFormatter? {
+    package static func create<T: BinaryInteger>(for style: IntegerFormatStyle<T>.Currency) -> ICUCurrencyNumberFormatter? {
         _create(with: .init(skeleton: style.collection.skeleton, currencyCode: style.currencyCode, localeIdentifier: style.locale.identifierCapturingPreferences))
     }
 
-    static func create(for style: Decimal.FormatStyle.Currency) -> ICUCurrencyNumberFormatter? {
+    package static func create(for style: Decimal.FormatStyle.Currency) -> ICUCurrencyNumberFormatter? {
         _create(with: .init(skeleton: style.collection.skeleton, currencyCode: style.currencyCode, localeIdentifier: style.locale.identifierCapturingPreferences))
     }
 
-    static func create<T: BinaryFloatingPoint>(for style: FloatingPointFormatStyle<T>.Currency) -> ICUCurrencyNumberFormatter? {
+    package static func create<T: BinaryFloatingPoint>(for style: FloatingPointFormatStyle<T>.Currency) -> ICUCurrencyNumberFormatter? {
         _create(with: .init(skeleton: style.collection.skeleton, currencyCode: style.currencyCode, localeIdentifier: style.locale.identifierCapturingPreferences))
     }
 

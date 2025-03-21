@@ -23,7 +23,7 @@ internal import _FoundationICU
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Components {
     // Returns an ICU-style identifier like "de_DE@calendar=gregorian"
-    internal var icuIdentifier: String {
+    package var icuIdentifier: String {
         var keywords: [ICULegacyKey: String] = [:]
         if let id = calendar?.cldrIdentifier { keywords[Calendar.Identifier.legacyKeywordKey] = id }
         if let id = collation?._normalizedIdentifier { keywords[Locale.Collation.legacyKeywordKey] = id }
@@ -180,7 +180,7 @@ extension Locale.LanguageCode {
     }
     
     // This is sorted
-    internal static let _isoLanguageCodeStrings: [String] = {
+    package static let _isoLanguageCodeStrings: [String] = {
         var result: [String] = []
         let langs = uloc_getISOLanguages()
         guard var langs else { return [] }
@@ -276,7 +276,7 @@ extension Locale.Region {
     }
 
     /// Used for deprecated ISO Country Code
-    internal static let isoCountries: [String] = {
+    package static let isoCountries: [String] = {
         var result: [String] = []
         let langs = uloc_getISOCountries()
         guard var langs else { return [] }

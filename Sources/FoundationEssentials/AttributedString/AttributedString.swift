@@ -21,7 +21,7 @@ internal import _FoundationCollections
 @dynamicMemberLookup
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public struct AttributedString : Sendable {
-    internal var _guts: Guts
+    package var _guts: Guts
 
     internal init(_ guts: Guts) {
         _guts = guts

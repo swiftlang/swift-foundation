@@ -14,15 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationInternationalization)
-@testable import FoundationEssentials
-@testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#endif
-
 final class DateIntervalFormatStyleTests: XCTestCase {
 
     let minute: TimeInterval = 60

@@ -619,11 +619,11 @@ extension URLResourceValues : Sendable {}
 #endif // FOUNDATION_FRAMEWORK
 
 #if FOUNDATION_FRAMEWORK
-internal func foundation_swift_url_enabled() -> Bool {
+package func foundation_swift_url_enabled() -> Bool {
     return _foundation_swift_url_feature_enabled()
 }
 #else
-internal func foundation_swift_url_enabled() -> Bool { return true }
+package func foundation_swift_url_enabled() -> Bool { return true }
 #endif
 
 #if canImport(os)
@@ -805,7 +805,7 @@ public struct URL: Equatable, Sendable, Hashable {
     /// an empty string, such as when `.deletingLastPathComponent()` of a single path
     /// component. This previously worked since `URL` just wrapped an `NSURL`, which
     /// allows the empty string.
-    internal init?(stringOrEmpty: String, relativeTo url: URL? = nil) {
+    package init?(stringOrEmpty: String, relativeTo url: URL? = nil) {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
             guard let inner = NSURL(string: stringOrEmpty, relativeTo: url) else { return nil }
@@ -1470,7 +1470,7 @@ public struct URL: Equatable, Sendable, Hashable {
         #endif
     }
 
-    var fileSystemPath: String {
+    package var fileSystemPath: String {
         return URL.fileSystemPath(for: path())
     }
 

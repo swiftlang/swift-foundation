@@ -14,13 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#elseif canImport(FoundationInternationalization)
-@testable import FoundationEssentials
-@testable import FoundationInternationalization
-#endif // FOUNDATION_FRAMEWORK
-
 final class LocaleLanguageComponentsTests : XCTestCase {
 
     func verifyComponents(_ identifier: String,

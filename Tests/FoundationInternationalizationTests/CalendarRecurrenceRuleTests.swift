@@ -14,13 +14,6 @@
 import TestSupport
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#else
-@testable import FoundationInternationalization
-@testable import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
 final class CalendarRecurrenceRuleTests: XCTestCase {
     /// A Gregorian calendar with a time zone set to California
     var gregorian: Calendar = {

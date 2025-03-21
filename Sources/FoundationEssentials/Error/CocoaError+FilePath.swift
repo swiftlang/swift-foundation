@@ -90,7 +90,7 @@ extension CocoaError {
         }
     }
     
-    static func errorWithFilePath(_ path: String, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
+    package static func errorWithFilePath(_ path: String, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil) -> CocoaError {
         CocoaError(Code(fileErrno: errno, reading: reading), path: path, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination)
     }
     

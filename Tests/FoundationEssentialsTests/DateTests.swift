@@ -14,10 +14,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
-@testable import FoundationEssentials
-#endif
-
 final class DateTests : XCTestCase {
 
     func testDateComparison() {

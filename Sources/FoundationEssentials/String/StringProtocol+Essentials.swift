@@ -389,7 +389,7 @@ extension StringProtocol {
 
 extension StringProtocol {
     @inline(never)
-    internal func _lineBounds(
+    package func _lineBounds(
         around range: some RangeExpression<Index>
     ) -> (start: Index, end: Index, contentsEnd: Index) {
         // Avoid generic paths in the common case by manually specializing on `String` and
@@ -428,7 +428,7 @@ extension StringProtocol {
     }
 
     @inline(never)
-    internal func _paragraphBounds(
+    package func _paragraphBounds(
         around range: some RangeExpression<Index>
     ) -> (start: Index, end: Index, contentsEnd: Index) {
         // Avoid generic paths in the common case by manually specializing on `String` and

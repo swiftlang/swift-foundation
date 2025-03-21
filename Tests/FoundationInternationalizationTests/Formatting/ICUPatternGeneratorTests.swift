@@ -10,15 +10,6 @@
 import TestSupport
 #endif
 
-#if canImport(FoundationInternationalization)
-@testable import FoundationEssentials
-@testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#endif
-
 final class ICUPatternGeneratorTests: XCTestCase {
 
     typealias DateFieldCollection = Date.FormatStyle.DateFieldCollection

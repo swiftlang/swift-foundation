@@ -48,7 +48,7 @@ extension BinaryInteger {
 ///   - words: The binary integer's words (least-significant word first).
 ///   - isSigned: The binary integer's signedness.  If true, `words` must be in two's complement form.
 ///
-internal func numericStringRepresentationForBinaryInteger(words: some Collection<UInt>, isSigned: Bool) -> String {
+package func numericStringRepresentationForBinaryInteger(words: some Collection<UInt>, isSigned: Bool) -> String {
     // Copies the words and then passes them to a non-generic, mutating, word-based algorithm.
     withUnsafeTemporaryAllocation(of: UInt.self, capacity: words.count) {
         let initializedEndIndex = $0.initialize(fromContentsOf: words)

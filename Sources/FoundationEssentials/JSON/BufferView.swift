@@ -13,9 +13,9 @@
 // A BufferView<Element> represents a span of memory which
 // contains initialized `Element` instances.
 
-internal struct BufferView<Element> {
+package struct BufferView<Element> {
     let start: BufferViewIndex<Element>
-    let count: Int
+    package let count: Int
 
     private var baseAddress: UnsafeRawPointer { start._rawValue }
 
@@ -34,11 +34,11 @@ internal struct BufferView<Element> {
         self.init(_unchecked: (index, count))
     }
 
-    init(unsafeBaseAddress: UnsafeRawPointer, count: Int) {
+    package init(unsafeBaseAddress: UnsafeRawPointer, count: Int) {
         self.init(start: .init(rawValue: unsafeBaseAddress), count: count)
     }
 
-    init?(unsafeBufferPointer buffer: UnsafeBufferPointer<Element>) {
+    package init?(unsafeBufferPointer buffer: UnsafeBufferPointer<Element>) {
         guard let baseAddress = UnsafeRawPointer(buffer.baseAddress) else { return nil }
         self.init(unsafeBaseAddress: baseAddress, count: buffer.count)
     }
@@ -46,7 +46,7 @@ internal struct BufferView<Element> {
 
 extension BufferView /*where Element: BitwiseCopyable*/ {
 
-    init?(unsafeRawBufferPointer buffer: UnsafeRawBufferPointer) {
+    package init?(unsafeRawBufferPointer buffer: UnsafeRawBufferPointer) {
         guard _isPOD(Element.self) else { fatalError() }
         guard let p = buffer.baseAddress else { return nil }
         let (q, r) = buffer.count.quotientAndRemainder(dividingBy: MemoryLayout<Element>.stride)
@@ -59,12 +59,12 @@ extension BufferView /*where Element: BitwiseCopyable*/ {
 
 extension BufferView: Sequence {
 
-    func makeIterator() -> BufferViewIterator<Element> {
+    package func makeIterator() -> BufferViewIterator<Element> {
         .init(from: startIndex, to: endIndex)
     }
 
     //FIXME: mark closure parameter as non-escaping
-    func withContiguousStorageIfAvailable<R>(
+    package func withContiguousStorageIfAvailable<R>(
         _ body: (UnsafeBufferPointer<Element>) throws -> R
     ) rethrows -> R? {
         try baseAddress.withMemoryRebound(to: Element.self, capacity: count) {
@@ -102,18 +102,18 @@ extension BufferView:
     BidirectionalCollection,
     RandomAccessCollection {
 
-    typealias Element = Element
-    typealias Index = BufferViewIndex<Element>
-    typealias SubSequence = Self
+    package typealias Element = Element
+    package typealias Index = BufferViewIndex<Element>
+    package typealias SubSequence = Self
 
     @inline(__always)
-    var startIndex: Index { start }
+    package var startIndex: Index { start }
 
     @inline(__always)
-    var endIndex: Index { start.advanced(by: count) }
+    package var endIndex: Index { start.advanced(by: count) }
 
     @inline(__always)
-    var indices: Range<Index> {
+    package var indices: Range<Index> {
         .init(uncheckedBounds: (startIndex, endIndex))
     }
 
@@ -165,27 +165,27 @@ extension BufferView:
     }
 
     @inline(__always)
-    func index(after i: Index) -> Index {
+    package func index(after i: Index) -> Index {
         i.advanced(by: +1)
     }
 
     @inline(__always)
-    func index(before i: Index) -> Index {
+    package func index(before i: Index) -> Index {
         i.advanced(by: -1)
     }
 
     @inline(__always)
-    func formIndex(after i: inout Index) {
+    package func formIndex(after i: inout Index) {
         i = index(after: i)
     }
 
     @inline(__always)
-    func formIndex(before i: inout Index) {
+    package func formIndex(before i: inout Index) {
         i = index(before: i)
     }
 
     @inline(__always)
-    func index(_ i: Index, offsetBy distance: Int) -> Index {
+    package func index(_ i: Index, offsetBy distance: Int) -> Index {
         i.advanced(by: distance)
     }
 
@@ -195,12 +195,12 @@ extension BufferView:
     }
 
     @inline(__always)
-    func distance(from start: Index, to end: Index) -> Int {
+    package func distance(from start: Index, to end: Index) -> Int {
         start.distance(to: end)
     }
 
     @inline(__always)
-    subscript(position: Index) -> Element {
+    package subscript(position: Index) -> Element {
         get {
             _checkBounds(position)
             return self[unchecked: position]
@@ -208,7 +208,7 @@ extension BufferView:
     }
 
     @inline(__always)
-    subscript(unchecked position: Index) -> Element {
+    package subscript(unchecked position: Index) -> Element {
         get {
             if _isPOD(Element.self) {
                 return position._rawValue.loadUnaligned(as: Element.self)
@@ -219,7 +219,7 @@ extension BufferView:
     }
 
     @inline(__always)
-    subscript(bounds: Range<Index>) -> Self {
+    package subscript(bounds: Range<Index>) -> Self {
         get {
             _checkBounds(bounds)
             return self[unchecked: bounds]
@@ -227,7 +227,7 @@ extension BufferView:
     }
 
     @inline(__always)
-    subscript(unchecked bounds: Range<Index>) -> Self {
+    package subscript(unchecked bounds: Range<Index>) -> Self {
         get { BufferView(_unchecked: (bounds.lowerBound, bounds.count)) }
     }
 
@@ -237,7 +237,7 @@ extension BufferView:
         }
     }
 
-    subscript(unchecked bounds: some RangeExpression<Index>) -> Self {
+    package subscript(unchecked bounds: some RangeExpression<Index>) -> Self {
         get {
             self[unchecked: bounds.relative(to: self)]
         }
@@ -254,14 +254,14 @@ extension BufferView:
 extension BufferView /* where Element: BitwiseCopyable */ {
 
     //FIXME: mark closure parameter as non-escaping
-    func withUnsafeRawPointer<R>(
+    package func withUnsafeRawPointer<R>(
         _ body: (_ pointer: UnsafeRawPointer, _ count: Int) throws -> R
     ) rethrows -> R {
         try body(baseAddress, count * MemoryLayout<Element>.stride)
     }
 
     //FIXME: mark closure parameter as non-escaping
-    func withUnsafeBytes<R>(
+    package func withUnsafeBytes<R>(
         _ body: (_ buffer: UnsafeRawBufferPointer) throws -> R
     ) rethrows -> R {
         try body(.init(start: baseAddress, count: count))
@@ -272,7 +272,7 @@ extension BufferView /* where Element: BitwiseCopyable */ {
 extension BufferView {
 
     //FIXME: mark closure parameter as non-escaping
-    func withUnsafePointer<R>(
+    package func withUnsafePointer<R>(
         _ body: (
             _ pointer: UnsafePointer<Element>,
             _ capacity: Int
@@ -284,7 +284,7 @@ extension BufferView {
     }
 
     //FIXME: mark closure parameter as non-escaping
-    func withUnsafeBufferPointer<R>(
+    package func withUnsafeBufferPointer<R>(
         _ body: (UnsafeBufferPointer<Element>) throws -> R
     ) rethrows -> R {
         try baseAddress.withMemoryRebound(to: Element.self, capacity: count) {
@@ -296,7 +296,7 @@ extension BufferView {
 //MARK: load and store
 extension BufferView /* where Element: BitwiseCopyable */ {
 
-    func load<T>(
+    package func load<T>(
         fromByteOffset offset: Int = 0, as: T.Type
     ) -> T {
         guard _isPOD(Element.self) else { fatalError() }
@@ -310,12 +310,12 @@ extension BufferView /* where Element: BitwiseCopyable */ {
         return baseAddress.load(fromByteOffset: offset, as: T.self)
     }
 
-    func load<T>(from index: Index, as: T.Type) -> T {
+    package func load<T>(from index: Index, as: T.Type) -> T {
         let o = distance(from: startIndex, to: index) * MemoryLayout<Element>.stride
         return load(fromByteOffset: o, as: T.self)
     }
 
-    func loadUnaligned<T /*: BitwiseCopyable */>(
+    package func loadUnaligned<T /*: BitwiseCopyable */>(
         fromByteOffset offset: Int = 0, as: T.Type
     ) -> T {
         guard _isPOD(Element.self) && _isPOD(T.self) else { fatalError() }
@@ -329,7 +329,7 @@ extension BufferView /* where Element: BitwiseCopyable */ {
         return baseAddress.loadUnaligned(fromByteOffset: offset, as: T.self)
     }
 
-    func loadUnaligned<T /*: BitwiseCopyable */>(
+    package func loadUnaligned<T /*: BitwiseCopyable */>(
         from index: Index, as: T.Type
     ) -> T {
         let o = distance(from: startIndex, to: index) * MemoryLayout<Element>.stride
@@ -342,7 +342,7 @@ extension BufferView /* where Element: BitwiseCopyable */ {
 extension BufferView {
 
     @inline(__always)
-    subscript(offset offset: Int) -> Element {
+    package subscript(offset offset: Int) -> Element {
         get {
             precondition(0 <= offset && offset < count)
             return self[uncheckedOffset: offset]
