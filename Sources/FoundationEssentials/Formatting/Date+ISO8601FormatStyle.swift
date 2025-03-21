@@ -348,7 +348,7 @@ extension RegexComponent where Self == Date.ISO8601FormatStyle {
     /// - Parameters:
     ///   - timeZone: The time zone to create the captured `Date` with.
     ///   - dateSeparator: The separator between date components.
-    /// - Returns:  A `RegexComponent` to match an ISO 8601 date string, including time zone.
+    /// - Returns:  A `RegexComponent` to match an ISO 8601 date string, not any time zone that may be in the string.
     public static func iso8601Date(timeZone: TimeZone, dateSeparator: Self.DateSeparator = .dash) -> Self {
         return Date.ISO8601FormatStyle(dateSeparator: dateSeparator, timeZone: timeZone).year().month().day()
     }

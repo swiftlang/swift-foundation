@@ -83,12 +83,12 @@ final class ISO8601FormatStyleFormattingTests: XCTestCase {
     func test_ISO8601ComponentsFormatMissingPieces() throws {
         // Example code from the proposal
         let components = DateComponents(year: 1999, month: 12, day: 31)
-        let formatted = components.formatted(.iso8601Components)
+        let formatted = components.formatted(.iso8601)
         XCTAssertEqual(formatted, "1999-12-31T00:00:00Z")
 
 
         let emptyComponents = DateComponents()
-        let emptyFormatted = emptyComponents.formatted(.iso8601Components)
+        let emptyFormatted = emptyComponents.formatted(.iso8601)
         XCTAssertEqual(emptyFormatted, "1970-01-01T00:00:00Z")
     }
     

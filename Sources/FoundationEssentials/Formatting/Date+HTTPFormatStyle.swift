@@ -112,14 +112,27 @@ extension RegexComponent where Self == Date.HTTPFormatStyle {
     }
 }
 
-// MARK: - Components
-
 @available(FoundationPreview 6.2, *)
-extension DateComponents {
-    public func HTTPComponentsFormat(_ style: HTTPFormatStyle = .init()) -> String {
-        return style.format(self)
+extension DateComponents.HTTPFormatStyle : CustomConsumingRegexComponent {
+    public typealias RegexOutput = DateComponents
+    public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: DateComponents)? {
+        guard index < bounds.upperBound else {
+            return nil
+        }
+        // It's important to return nil from parse in case of a failure, not throw. That allows things like the firstMatch regex to work.
+        return self.parse(input, in: index..<bounds.upperBound)
     }
 }
+
+@available(FoundationPreview 6.2, *)
+extension RegexComponent where Self == DateComponents.HTTPFormatStyle {
+    /// Creates a regex component to match an HTTP date and time, such as "2015-11-14'T'15:05:03'Z'", and capture the string as a `DateComponents` using the time zone as specified in the string.
+    public static var httpComponents: DateComponents.HTTPFormatStyle {
+        return DateComponents.HTTPFormatStyle()
+    }
+}
+
+// MARK: - Components
 
 @available(FoundationPreview 6.2, *)
 public extension FormatStyle where Self == DateComponents.HTTPFormatStyle {
@@ -152,6 +165,7 @@ extension DateComponents.HTTPFormatStyle : ParseStrategy {
 extension DateComponents {
     /// Converts `DateComponents` into RFC 9110-compatible "HTTP date" `String`, and parses in the reverse direction.
     /// This parser does not do validation on the individual values of the components. An optional date can be created from the result using `Calendar(identifier: .gregorian).date(from: ...)`.
+    /// When formatting, missing or invalid fields are filled with default values: `Sun`, `01`, `Jan`, `2000`, `00:00:00`, `GMT`. Note that missing fields may result in an invalid date or time. Other values in the `DateComponents` are ignored.
     public struct HTTPFormatStyle : Sendable, Hashable, Codable, ParseableFormatStyle {
         public init() {
         }
@@ -164,10 +178,6 @@ extension DateComponents {
                 var buffer = OutputBuffer(initializing: _buffer.baseAddress!, capacity: _buffer.count)
                 
                 switch components.weekday {
-                case 1:
-                    buffer.appendElement(CChar(UInt8(ascii: "S")))
-                    buffer.appendElement(CChar(UInt8(ascii: "u")))
-                    buffer.appendElement(CChar(UInt8(ascii: "n")))
                 case 2:
                     buffer.appendElement(CChar(UInt8(ascii: "M")))
                     buffer.appendElement(CChar(UInt8(ascii: "o")))
@@ -192,8 +202,13 @@ extension DateComponents {
                     buffer.appendElement(CChar(UInt8(ascii: "S")))
                     buffer.appendElement(CChar(UInt8(ascii: "a")))
                     buffer.appendElement(CChar(UInt8(ascii: "t")))
+                case 1:
+                    // Sunday, or default / missing
+                    fallthrough
                 default:
-                    preconditionFailure("Invalid weekday \(String(describing: components.weekday))")
+                    buffer.appendElement(CChar(UInt8(ascii: "S")))
+                    buffer.appendElement(CChar(UInt8(ascii: "u")))
+                    buffer.appendElement(CChar(UInt8(ascii: "n")))
                 }
                 
                 buffer.appendElement(CChar(UInt8(ascii: ",")))
@@ -204,10 +219,6 @@ extension DateComponents {
                 buffer.appendElement(CChar(UInt8(ascii: " ")))
                 
                 switch components.month {
-                case 1:
-                    buffer.appendElement(CChar(UInt8(ascii: "J")))
-                    buffer.appendElement(CChar(UInt8(ascii: "a")))
-                    buffer.appendElement(CChar(UInt8(ascii: "n")))
                 case 2:
                     buffer.appendElement(CChar(UInt8(ascii: "F")))
                     buffer.appendElement(CChar(UInt8(ascii: "e")))
@@ -252,8 +263,13 @@ extension DateComponents {
                     buffer.appendElement(CChar(UInt8(ascii: "D")))
                     buffer.appendElement(CChar(UInt8(ascii: "e")))
                     buffer.appendElement(CChar(UInt8(ascii: "c")))
+                case 1:
+                    // Jan or default value
+                    fallthrough
                 default:
-                    preconditionFailure("Invalid month \(String(describing: components.month))")
+                    buffer.appendElement(CChar(UInt8(ascii: "J")))
+                    buffer.appendElement(CChar(UInt8(ascii: "a")))
+                    buffer.appendElement(CChar(UInt8(ascii: "n")))
                 }
                 buffer.appendElement(CChar(UInt8(ascii: " ")))
                 
@@ -261,9 +277,9 @@ extension DateComponents {
                 buffer.append(year, zeroPad: 4)
                 buffer.appendElement(CChar(UInt8(ascii: " ")))
                 
-                let h = components.hour!
-                let m = components.minute!
-                let s = components.second!
+                let h = components.hour ?? 0
+                let m = components.minute ?? 0
+                let s = components.second ?? 0 
                 
                 buffer.append(h, zeroPad: 2)
                 buffer.appendElement(CChar(UInt8(ascii: ":")))
@@ -335,7 +351,7 @@ extension DateComponents {
                 throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now))
             }
             
-            if maybeWeekday1 >= UInt8(ascii: "0") && maybeWeekday1 <= UInt8(ascii: "9") {
+            if isASCIIDigit(maybeWeekday1) {
                 // This is the first digit of the day. Weekday is not present.
             } else {
                 // Anything else must be a day-name (Mon, Tue, ... Sun)
@@ -363,8 +379,8 @@ extension DateComponents {
                 }
                 
                 // Move past , and space to weekday
-                try it.expectCharacter(UInt8(ascii: ","), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-                try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
+                try it.expectCharacter(UInt8(ascii: ","), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing , after weekday")
+                try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing space after weekday")
             }
 
             dc.day = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing or malformed day")
@@ -424,12 +440,13 @@ extension DateComponents {
             
             try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
             let second = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            // second '60' is supported in the spec for leap seconds, but Foundation does not support leap seconds. 60 is adjusted to 0.
+            // second '60' is supported in the spec for leap seconds, but Foundation does not support leap seconds. 60 is adjusted to 59.
             if second < 0 || second > 60 {
                 throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Second \(second) is out of bounds")
             }
+            // Foundation does not support leap seconds. We convert 60 seconds into 59 seconds.
             if second == 60 {
-                dc.second = 0
+                dc.second = 59
             } else {
                 dc.second = second
             }

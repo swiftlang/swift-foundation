@@ -45,16 +45,7 @@ extension DateComponents {
             }
         }
         
-        internal private(set) var _formatFields: Fields = []
-        
-        /// This is a cache of the Gregorian Calendar, updated if the time zone changes.
-        /// In the future we can eliminate this by moving the calculations for the gregorian calendar into static functions there.
-        internal private(set) var _calendar: Calendar
-        
-        private mutating func insertFormatFields(_ fields: Fields) {
-            _formatFields.insert(fields)
-        }
-
+        private var _formatFields: Fields = []
         // Used from Date.ISO8601FormatStyle's format
         internal var formatFields: Fields {
             if _formatFields.isEmpty {
@@ -62,6 +53,14 @@ extension DateComponents {
             } else {
                 return _formatFields
             }
+        }
+
+        /// This is a cache of the Gregorian Calendar, updated if the time zone changes.
+        /// In the future we can eliminate this by moving the calculations for the gregorian calendar into static functions there.
+        internal private(set) var _calendar: Calendar
+        
+        private mutating func insertFormatFields(_ fields: Fields) {
+            _formatFields.insert(fields)
         }
         
         enum CodingKeys : String, CodingKey {
@@ -408,7 +407,7 @@ extension DateComponents.ISO8601FormatStyle {
         var components: DateComponents
     }
     
-    private func components(from inputString: String, fillMissingUnits: Bool, in view: borrowing BufferView<UInt8>) throws -> ComponentsParseResult {
+    private func components(from inputString: String, fillMissingUnits: Bool, defaultTimeZone: TimeZone, in view: borrowing BufferView<UInt8>) throws -> ComponentsParseResult {
         let fields = formatFields
         
         var it = view.makeIterator()
@@ -426,7 +425,7 @@ extension DateComponents.ISO8601FormatStyle {
         var minute: Int?
         var second: Int?
         var nanosecond: Int?
-        var timeZone: TimeZone?
+        var timeZone = defaultTimeZone
 
         if fields.contains(.year) {
             let max = dateSeparator == .omitted ? 4 : nil
@@ -702,7 +701,7 @@ extension DateComponents.ISO8601FormatStyle {
 
 @available(FoundationPreview 6.2, *)
 public extension FormatStyle where Self == DateComponents.ISO8601FormatStyle {
-    static var iso8601Components: Self {
+    static var iso8601: Self {
         return DateComponents.ISO8601FormatStyle()
     }
 }
@@ -713,23 +712,23 @@ public extension FormatStyle where Self == DateComponents.ISO8601FormatStyle {
 
 @available(FoundationPreview 6.2, *)
 public extension ParseableFormatStyle where Self == DateComponents.ISO8601FormatStyle {
-    static var iso8601Components: Self { .init() }
+    static var iso8601: Self { .init() }
 }
 
 @available(FoundationPreview 6.2, *)
 public extension ParseStrategy where Self == DateComponents.ISO8601FormatStyle {
     @_disfavoredOverload
-    static var iso8601Components: Self { .init() }
+    static var iso8601: Self { .init() }
 }
 
 
 @available(FoundationPreview 6.2, *)
 extension DateComponents.ISO8601FormatStyle : ParseStrategy {
     public func parse(_ value: String) throws -> DateComponents {
-        guard let (_, date) = parse(value, fillMissingUnits: false, in: value.startIndex..<value.endIndex) else {
+        guard let (_, components) = parse(value, fillMissingUnits: false, in: value.startIndex..<value.endIndex) else {
             throw parseError(value, exampleFormattedString: Date.ISO8601FormatStyle(self).format(Date.now))
         }
-        return date
+        return components
     }
     
     internal func parse(_ value: String, fillMissingUnits: Bool, in range: Range<String.Index>) -> (String.Index, DateComponents)? {
@@ -741,7 +740,7 @@ extension DateComponents.ISO8601FormatStyle : ParseStrategy {
         let result = v.withUTF8 { buffer -> (Int, DateComponents)? in
             let view = BufferView(unsafeBufferPointer: buffer)!
 
-            guard let comps = try? components(from: value, fillMissingUnits: fillMissingUnits, in: view) else {
+            guard let comps = try? components(from: value, fillMissingUnits: fillMissingUnits, defaultTimeZone: timeZone, in: view) else {
                 return nil
             }
             
@@ -814,8 +813,8 @@ extension RegexComponent where Self == DateComponents.ISO8601FormatStyle {
     /// - Parameters:
     ///   - timeZone: The time zone to create the captured `Date` with.
     ///   - dateSeparator: The separator between date components.
-    /// - Returns:  A `RegexComponent` to match an ISO 8601 date string, including time zone.
-    public static func iso8601Components(timeZone: TimeZone, dateSeparator: Date.ISO8601FormatStyle.DateSeparator = .dash) -> Self {
+    /// - Returns:  A `RegexComponent` to match an ISO 8601 date string, not any time zone that may be in the string.
+    public static func iso8601DateComponents(timeZone: TimeZone, dateSeparator: Date.ISO8601FormatStyle.DateSeparator = .dash) -> Self {
         return DateComponents.ISO8601FormatStyle(dateSeparator: dateSeparator, timeZone: timeZone).year().month().day()
     }
 }

@@ -45,40 +45,50 @@ let benchmarks = {
     
     let preformatted = formats.map { ($0, $0.format(date)) }
 
-    Benchmark("iso860-format", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        for fmt in formats {
-            blackHole(fmt.format(date))
+    Benchmark("iso8601-format", configuration: .init(scalingFactor: .kilo)) { benchmark in
+        for _ in benchmark.scaledIterations {
+            for fmt in formats {
+                blackHole(fmt.format(date))
+            }
         }
     }
 
-    Benchmark("iso860-parse", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        for fmt in preformatted {
-            let result = try? fmt.0.parse(fmt.1)
-            blackHole(result)
+    Benchmark("iso8601-parse", configuration: .init(scalingFactor: .kilo)) { benchmark in
+        for _ in benchmark.scaledIterations {
+            for fmt in preformatted {
+                let result = try? fmt.0.parse(fmt.1)
+                blackHole(result)
+            }
         }
     }
 
     Benchmark("parallel-number-formatting", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        DispatchQueue.concurrentPerform(iterations: 1000) { _ in
-            let result = 10.123.formatted()
-            blackHole(result)
-        }
-    }
-
-    Benchmark("parallel-and-serialized-number-formatting", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        DispatchQueue.concurrentPerform(iterations: 10) { _ in
-            // Reuse the values on this thread a bunch
-            for _ in 0..<100 {
+        for _ in benchmark.scaledIterations {
+            DispatchQueue.concurrentPerform(iterations: 1000) { _ in
                 let result = 10.123.formatted()
                 blackHole(result)
             }
         }
     }
 
+    Benchmark("parallel-and-serialized-number-formatting", configuration: .init(scalingFactor: .kilo)) { benchmark in
+        for _ in benchmark.scaledIterations {
+            DispatchQueue.concurrentPerform(iterations: 10) { _ in
+                // Reuse the values on this thread a bunch
+                for _ in 0..<100 {
+                    let result = 10.123.formatted()
+                    blackHole(result)
+                }
+            }
+        }
+    }
+
     Benchmark("serialized-number-formatting", configuration: .init(scalingFactor: .kilo)) { benchmark in
-        for _ in 0..<1000 {
-            let result = 10.123.formatted()
-            blackHole(result)
+        for _ in benchmark.scaledIterations {
+            for _ in 0..<1000 {
+                let result = 10.123.formatted()
+                blackHole(result)
+            }
         }
     }
 
