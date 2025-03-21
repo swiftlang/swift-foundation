@@ -414,12 +414,21 @@ let benchmarks = {
 #endif
     
     let manyAttributesString2 = createManyAttributesString()
+    let manyAttributesString3 =  {
+        var str = createManyAttributesString()
+        str.characters.append("a")
+        return str
+    }()
     let manyAttributesStringRange = manyAttributesString.characters.index(manyAttributesString.startIndex, offsetBy: manyAttributesString.characters.count / 2)...
     let manyAttributesSubstring = manyAttributesString[manyAttributesStringRange]
     let manyAttributes2Substring = manyAttributesString2[manyAttributesStringRange]
 
     Benchmark("equality") { benchmark in
         blackHole(manyAttributesString == manyAttributesString2)
+    }
+    
+    Benchmark("equalityDifferingCharacters") { benchmark in
+        blackHole(manyAttributesString == manyAttributesString3)
     }
     
     Benchmark("substringEquality") { benchmark in

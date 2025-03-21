@@ -78,7 +78,11 @@ extension AttributedString.Guts {
         _ left: AttributedString.Guts,
         to right: AttributedString.Guts
     ) -> Bool {
-        characterwiseIsEqual(left, in: left.stringBounds, to: right, in: right.stringBounds)
+        _characterwiseIsEqual(
+            AttributedString.Runs(left, in: Range(uncheckedBounds: (left.string.startIndex, left.string.endIndex))),
+            to: AttributedString.Runs(right, in: Range(uncheckedBounds: (right.string.startIndex, right.string.endIndex))),
+            fullString: true
+        )
     }
 
     internal static func characterwiseIsEqual(
@@ -87,12 +91,13 @@ extension AttributedString.Guts {
     ) -> Bool {
         let leftRuns = AttributedString.Runs(left, in: leftRange)
         let rightRuns = AttributedString.Runs(right, in: rightRange)
-        return _characterwiseIsEqual(leftRuns, to: rightRuns)
+        return _characterwiseIsEqual(leftRuns, to: rightRuns, fullString: false)
     }
 
     internal static func _characterwiseIsEqual(
         _ left: AttributedString.Runs,
-        to right: AttributedString.Runs
+        to right: AttributedString.Runs,
+        fullString: Bool
     ) -> Bool {
         // To decide if two attributed strings are equal, we need to logically split them up on
         // run boundaries, then check that each pair of pieces contains the same attribute values
@@ -110,6 +115,27 @@ extension AttributedString.Guts {
 
         guard left.count == right.count else { return false }
         guard !left.isEmpty else { return true }
+        
+        if fullString {
+            // For a full BigString, we can get the grapheme cluster count in constant time since
+            // the grapheme cluster count is cached at the node level in the tree. It is not
+            // possible for two AttributedStrings with differing character counts to be equal,
+            // so bail early if we detect that
+            //
+            // Note: we should not perform this check for cases where we are not knowingly working
+            // with the full string. Since character counts are only cached at the node level,
+            // to get the character count of a substring you would need to run the grapheme
+            // breaking algorithm over the partial first and last chunks. While this is
+            // technically done in constant time as chunks have a max of 255 UTF-8 scalars, grapheme
+            // breaking up to 510 UTF-8 scalars would not be cheap. In the future we can
+            // investigate best effort short cuts by comparing the counts of just the "middle"
+            // chunks that we can determine cheaply along with the knowledge that the partial
+            // first and last chunks have a character count no more than their UTF-8 counts.
+            guard left._guts.string.count == right._guts.string.count else {
+                return false
+            }
+        }
+        
 
         guard var leftIndex = left._strBounds.ranges.first?.lowerBound, var rightIndex = right._strBounds.ranges.first?.lowerBound else { return false }
 
