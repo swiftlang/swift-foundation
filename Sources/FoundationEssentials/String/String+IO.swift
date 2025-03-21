@@ -18,6 +18,13 @@ internal import _FoundationCShims
 
 fileprivate let stringEncodingAttributeName = "com.apple.TextEncoding"
 
+#if !FOUNDATION_FRAMEWORK
+@_spi(SwiftCorelibsFoundation)
+dynamic public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: UInt) -> String? {
+    // Provide swift-corelibs-foundation with an entry point to convert some bytes into a String
+    return nil
+}
+#endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
@@ -195,7 +202,12 @@ extension String {
                 return nil
             }
 #else
-            return nil
+            if let string = (bytes.withContiguousStorageIfAvailable({ _cfMakeStringFromBytes($0, encoding: encoding.rawValue) }) ??
+                             Array(bytes).withUnsafeBufferPointer({ _cfMakeStringFromBytes($0, encoding: encoding.rawValue) })) {
+                self = string
+            } else {
+                return nil
+            }
 #endif
         }
     }
