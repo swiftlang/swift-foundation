@@ -96,8 +96,14 @@
     - `Executable`:
         - Renamed `.named` to `.name`.
         - Renamed `.at` to `.path`.
-    - Split `Subprocess` into two modules: `Subprocess` with no `Foundation` dependency and `SubprocessFoundation` with `Foundation` dependency
+    - Split `Subprocess` into main and `SubprocessFoundation` Traits:
+        - `SubprocessFoundation` traits adds `Foundation` dependency and interop.
     - Introduce `struct Buffer`
+- **v8**: Removing `ManagedInputProtocol` and `ManagedOutputProtocol`
+    - Revise `InputProtocol` and `OutputProtocol` to not expose `FileDescriptor` directly
+    - Added `SubprocessSpan` trait
+    - Removed the opaque `Pipe`
+    - Introduce a cross platform TeardownStep.gracefulShutDown(alloweDurationToNextStep:) and add Windows support
 
 ## Introduction
 
@@ -208,9 +214,13 @@ The latest API documentation can be viewed by running the following command:
 swift package --disable-sandbox preview-documentation --target Subprocess
 ```
 
-### `Subprocess` and `SubprocessFoundation` Modules
+### `SubprocessFoundation` and `SubprocessSpan` Traits
 
-Within this package, we propose two modules: `Subprocess` and `SubprocessFoundation`. `Subprocess` serves as the “core” module, relying solely on `swift-system` and the standard library. `SubprocessFoundation` extends `Subprocess` by depending on and incorporating types from `Foundation`.
+The core `Subprocess` package is designed to only depend the standard library and [swift-system](https://github.com/apple/swift-system) (for `FileDescriptor` and `FilePath`). Starting with Swift 6.1 or later, we propose using the new [`traits` feature](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0450-swiftpm-package-traits.md) to introduce a `SubprocessFoundation` trait, which will be on by default. When this trait is on, `Subprocess` includes a dependency on `Foundation` and adds extensions on Foundation types like `Data`.
+
+We also propose a `SubprocessSpan` trait that makes Subprocess’ API, mainly `OutputProtocol`, `RawSpan` based. This trait is on whenever `Span` is available and should only be deactivated when `Span` is not available.
+
+For Swift 6.0 and earlier versions, `SubprocessFoundation` is essentially always enabled, and `SubprocessSpan` is essentially always disabled.
 
 
 ### The `run()` Family of Methods
@@ -218,8 +228,8 @@ Within this package, we propose two modules: `Subprocess` and `SubprocessFoundat
 We propose several `run()` functions that allow developers to asynchronously execute a subprocess.
 
 ```swift
-/// Run a executable with given parameters and a custom closure
-/// to manage the running subprocess' lifetime and its IOs.
+/// Run a executable with given parameters asynchrously and returns
+/// a `CollectedResult` containing the output of the child process.
 /// - Parameters:
 ///   - executable: The executable to run.
 ///   - arguments: The arguments to pass to the executable.
@@ -230,9 +240,10 @@ We propose several `run()` functions that allow developers to asynchronously exe
 ///   - input: The input to send to the executable.
 ///   - output: The method to use for redirecting the standard output.
 ///   - error: The method to use for redirecting the standard error.
-///   - body: The custom execution body to manually control the running process
 /// - Returns a CollectedResult containing the result of the run.
-@available(macOS 9999, *) // Span availability
+#if SubprocessSpan
+@available(SubprocessSpan, *)
+#endif
 public func run<
     Input: InputProtocol,
     Output: OutputProtocol,
@@ -248,8 +259,8 @@ public func run<
     error: Error = .discarded
 ) async throws -> CollectedResult<Output, Error>
 
-/// Run a executable with given parameters and a custom closure
-/// to manage the running subprocess' lifetime and its IOs.
+/// Run a executable with given parameters asynchrously and returns
+/// a `CollectedResult` containing the output of the child process.
 /// - Parameters:
 ///   - executable: The executable to run.
 ///   - arguments: The arguments to pass to the executable.
@@ -257,12 +268,12 @@ public func run<
 ///   - workingDirectory: The working directory in which to run the executable.
 ///   - platformOptions: The platform specific options to use
 ///     when running the executable.
-///   - input: span to write to subprocess' standard input.
+///   - input: The input to send to the executable.
 ///   - output: The method to use for redirecting the standard output.
 ///   - error: The method to use for redirecting the standard error.
-///   - body: The custom execution body to manually control the running process
 /// - Returns a CollectedResult containing the result of the run.
-@available(macOS 9999, *) // Span availability
+#if SubprocessSpan
+@available(SubprocessSpan, *)
 public func run<
     InputElement: BitwiseCopyable,
     Output: OutputProtocol,
@@ -277,6 +288,7 @@ public func run<
     output: Output = .string,
     error: Error = .discarded
 ) async throws -> CollectedResult<Output, Error>
+#endif
 
 /// Run a executable with given parameters and a custom closure
 /// to manage the running subprocess' lifetime and its IOs.
@@ -293,6 +305,9 @@ public func run<
 ///   - body: The custom execution body to manually control the running process
 /// - Returns a ExecutableResult type containing the return value
 ///     of the closure.
+#if SubprocessSpan
+@available(SubprocessSpan, *)
+#endif
 public func run<Result, Input: InputProtocol, Output: OutputProtocol, Error: OutputProtocol>(
     _ executable: Executable,
     arguments: Arguments = [],
@@ -303,7 +318,7 @@ public func run<Result, Input: InputProtocol, Output: OutputProtocol, Error: Out
     output: Output,
     error: Error,
     isolation: isolated (any Actor)? = #isolation,
-    body: (@escaping (Execution<Output, Error>) async throws -> Result)
+    body: ((Execution<Output, Error>) async throws -> Result)
 ) async throws -> ExecutionResult<Result> where Output.OutputType == Void, Error.OutputType == Void
 
 
@@ -322,6 +337,9 @@ public func run<Result, Input: InputProtocol, Output: OutputProtocol, Error: Out
 ///   - body: The custom execution body to manually control the running process
 /// - Returns a ExecutableResult type containing the return value
 ///     of the closure.
+#if SubprocessSpan
+@available(SubprocessSpan, *)
+#endif
 public func run<Result, Output: OutputProtocol, Error: OutputProtocol>(
     _ executable: Executable,
     arguments: Arguments = [],
@@ -331,18 +349,20 @@ public func run<Result, Output: OutputProtocol, Error: OutputProtocol>(
     output: Output,
     error: Error,
     isolation: isolated (any Actor)? = #isolation,
-    body: (@escaping (Execution<Output, Error>, StandardInputWriter) async throws -> Result)
+    body: ((Execution<Output, Error>, StandardInputWriter) async throws -> Result)
 ) async throws -> ExecutionResult<Result> where Output.OutputType == Void, Error.OutputType == Void
 
-/// Run a executable with given parameters and a custom closure
-/// to manage the running subprocess' lifetime and its IOs.
+/// Run a `Configuration` asynchrously and returns
+/// a `CollectedResult` containing the output of the child process.
 /// - Parameters:
 ///   - configuration: The `Subprocess` configuration to run.
 ///   - input: The input to send to the executable.
 ///   - output: The method to use for redirecting the standard output.
 ///   - error: The method to use for redirecting the standard error.
 /// - Returns a CollectedResult containing the result of the run.
-@available(macOS 9999, *)
+#if SubprocessSpan
+@available(SubprocessSpan, *)
+#endif
 public func run<
     Input: InputProtocol,
     Output: OutputProtocol,
@@ -362,10 +382,13 @@ public func run<
 ///       the running process and write to its standard input.
 /// - Returns a ExecutableResult type containing the return value
 ///     of the closure.
+#if SubprocessSpan
+@available(SubprocessSpan, *)
+#endif
 public func run<Result>(
     _ configuration: Configuration,
     isolation: isolated (any Actor)? = #isolation,
-    body: (@escaping (Execution<SequenceOutput, DiscardedOutput>, StandardInputWriter) async throws -> Result)
+    body: ((Execution<SequenceOutput, DiscardedOutput>, StandardInputWriter) async throws -> Result)
 ) async throws -> ExecutionResult<Result>
 ```
 
@@ -520,8 +543,6 @@ extension Execution where Error == SequenceOutput {
 public struct ProcessIdentifier: Sendable, Hashable, Codable {
     /// Windows specifc process identifier value
     public let value: DWORD
-    /// Windows specific thread identifier associated with process
-    public let threadID: DWORD
 }
 #else
 /// A platform independent identifier for a Subprocess.
@@ -611,23 +632,36 @@ extension Execution {
 #endif // canImport(Glibc) || canImport(Darwin)
 ```
 
-#### Teardown Sequence (macOS and Linux)
+#### Teardown Sequence
 
-`Subprocess` provides a graceful shutdown mechanism for child processes using the `.teardown(using:)` method. This method allows for a sequence of teardown steps to be executed, with the final step always sending a `.kill` signal.
+`Subprocess` provides a graceful shutdown mechanism for child processes using the `.teardown(using:)` method. This method allows for a sequence of teardown steps to be executed, with the final step always sending a `.kill` signal on Unix or forcefully terminating the process on Windows.
 
 ```swift
-#if canImport(Glibc) || canImport(Darwin)
 /// A step in the graceful shutdown teardown sequence.
-/// It consists of a signal to send to the child process and the
+/// It consists of an action to perform on the child process and the
 /// duration allowed for the child process to exit before proceeding
 /// to the next step.
 public struct TeardownStep: Sendable, Hashable {
-    /// Sends `signal` to the process and allows `allowedDurationToExit`
+#if !os(Windows)
+    /// Sends `signal` to the process and allows `allowedDurationToNextStep`
     /// for the process to exit before proceeding to the next step.
     /// The final step in the sequence will always send a `.kill` signal.
     public static func sendSignal(
         _ signal: Signal,
-        allowedDurationToExit: Duration
+        allowedDurationToNextStep: Duration
+    ) -> Self
+#endif
+
+    /// Attempt to perform a graceful shutdown and allows
+    /// `alloweDurationToNextStep` for the process to exit
+    /// before proceeding to the next step:
+    /// - On Unix: send `SIGTERM`
+    /// - On Windows:
+    ///   1. Attempt to send `VM_CLOSE` if the child process is a GUI process;
+    ///   2. Attempt to send `CTRL_C_EVENT` to console;
+    ///   3. Attempt to send `CTRL_BREAK_EVENT` to process group.
+    public static func gracefulShutDown(
+        alloweDurationToNextStep: Duration
     ) -> Self
 }
 
@@ -635,12 +669,11 @@ extension Execution {
     /// Performs a sequence of teardown steps on the Subprocess.
     /// Teardown sequence always ends with a `.kill` signal
     /// - Parameter sequence: The  steps to perform.
-    public func teardown(using sequence: [TeardownStep]) async
+    public func teardown(using sequence: some Sequence<TeardownStep> & Sendable) async
 }
-#endif // canImport(Glibc) || canImport(Darwin)
 ```
 
-A teardown sequence is a series of signals sent to the child process, accompanied by a specified time limit for the child process to terminate before proceeding to the next step. For instance, it may be appropriate to initially send `.quit` and `.terminate` signals to the child process to facilitate a graceful shutdown before sending `.kill`.
+A teardown sequence involves a set of actions taken on the child process, with a set time limit for it to wrap up before moving on. On platforms like Darwin and Linux, developers can also send signals directly to the child process. For example, it might be wise to start with `.quit` and `.terminate` signals to ensure a smooth shutdown before resorting to `.kill`.
 
 ```swift
 let result = try await run(
@@ -649,8 +682,8 @@ let result = try await run(
 ) { execution in
     // ... more work
     await execution.teardown(using: [
-        .sendSignal(.quit, allowedDurationToExit: .milliseconds(100)),
-        .sendSignal(.terminate, allowedDurationToExit: .milliseconds(100)),
+        .sendSignal(.quit, allowedDurationToNextStep: .milliseconds(100)),
+        .sendSignal(.terminate, allowedDurationToNextStep: .milliseconds(100)),
     ])
 }
 ```
@@ -728,6 +761,16 @@ public final actor StandardInputWriter {
         _ array: [UInt8]
     ) async throws -> Int
 
+    /// Write a `RawSpan` to the standard input of the subprocess.
+    /// - Parameter span: The span to write
+    /// - Returns number of bytes written
+#if SubprocessSpan
+    @available(SubprocessSpan, *)
+    public func write(
+        _ span: borrowing RawSpan
+    ) async throws -> Int
+#endif
+
     /// Write a StringProtocol to the standard input of the subprocess.
     /// - Parameters:
     ///   - string: The string to write.
@@ -743,9 +786,10 @@ public final actor StandardInputWriter {
 }
 ```
 
-`SubprocessFoundation` extends `StandardInputWriter` to work with `Data`:
+`SubprocessFoundation` trait extends `StandardInputWriter` to work with `Data`:
 
 ```swift
+#if SubprocessFoundation
 import Foundation
 
 extension StandardInputWriter {
@@ -763,6 +807,7 @@ extension StandardInputWriter {
         _ asyncSequence: AsyncSendableSequence
     ) async throws -> Int where AsyncSendableSequence.Element == Data
 }
+#endif
 ```
 
 
@@ -988,6 +1033,11 @@ public struct PlatformOptions: Sendable, Hashable {
     /// The process identifier of the new process group
     /// is the same as the process identifier.
     public var createProcessGroup: Bool = false
+    /// An ordered list of steps in order to tear down the child
+    /// process in case the parent task is cancelled before
+    /// the child proces terminates.
+    /// Always ends in forcefully terminate at the end.
+    public var teardownSequence: [TeardownStep] = []
     /// A closure to configure platform-specific
     /// spawning constructs. This closure enables direct
     /// configuration or override of underlying platform-specific
@@ -1035,7 +1085,7 @@ _(For more information on these values, checkout Microsoft's documentation [here
 
 ### `InputProtocol`
 
-`InputProtocol` defines a set of methods that a type must implement to serve as the input source for a subprocess. In most cases, developers should utilize the concrete input types provided by `Subprocess`. However, developers have the option to create their own input types by conforming to `ManagedInputProtocol` and implementing the `write(into:)` method.
+`InputProtocol` defines the `write(with:)` method that a type must implement to serve as the input source for a subprocess. In most cases, developers should utilize the concrete input types provided by `Subprocess`.
 
 The core `Subprocess` module is distributed with the following concrete input types:
 
@@ -1047,36 +1097,12 @@ The core `Subprocess` module is distributed with the following concrete input ty
 
 
 ```swift
-/// `InputProtocol` specifies the set of methods that a type
+/// `InputProtocol` defines the `write(with:)` method that a type
 /// must implement to serve as the input source for a subprocess.
-/// Instead of developing custom implementations of `InputProtocol`,
-/// it is recommended to utilize the default implementations provided
-/// by the `Subprocess` library to specify the input handling requirements.
 public protocol InputProtocol: Sendable {
-    /// Lazily create and return the FileDescriptor for reading
-    func readFileDescriptor() throws -> FileDescriptor?
-    /// Lazily create and return the FileDescriptor for writing
-    func writeFileDescriptor() throws -> FileDescriptor?
-
-    /// Close the FileDescriptor for reading
-    func closeReadFileDescriptor() throws
-    /// Close the FileDescriptor for writing
-    func closeWriteFileDescriptor() throws
-
     /// Asynchronously write the input to the subprocess using the
     /// write file descriptor
-    func write(into writeFileDescriptor: FileDescriptor) async throws
-}
-
-/// `ManagedInputProtocol` is managed by `Subprocess` and
-/// utilizes its `Pipe` type to facilitate input writing.
-/// Developers have the option to implement custom
-/// input types by conforming to `ManagedInputProtocol`
-/// and implementing the `write(into:)` method.
-public protocol ManagedInputProtocol: InputProtocol {
-    /// The underlying pipe used by this input in order to
-    /// write input to child process
-    var pipe: Pipe { get }
+    func write(with writer: StandardInputWriter) async throws
 }
 
 /// A concrete `Input` type for subprocesses that indicates
@@ -1084,31 +1110,31 @@ public protocol ManagedInputProtocol: InputProtocol {
 /// `NoInput` redirects the standard input of the subprocess
 /// to `/dev/null`, while on Windows, it does not bind any
 /// file handle to the subprocess standard input handle.
-public final class NoInput: InputProtocol { }
+public struct NoInput: InputProtocol { }
 
 /// A concrete `Input` type for subprocesses that
 /// reads input from a specified `FileDescriptor`.
 /// Developers have the option to instruct the `Subprocess` to
 /// automatically close the provided `FileDescriptor`
 /// after the subprocess is spawned.
-public final class FileDescriptorInput: InputProtocol { }
+public struct FileDescriptorInput: InputProtocol { }
 
 /// A concrete `Input` type for subprocesses that reads input
 /// from a given type conforming to `StringProtocol`.
 /// Developers can specify the string encoding to use when
 /// encoding the string to data, which defaults to UTF-8.
-public final class StringInput<
+public struct StringInput<
     InputString: StringProtocol & Sendable,
     Encoding: Unicode.Encoding
->: ManagedInputProtocol { }
+>: InputProtocol { }
 
 /// A concrete `Input` type for subprocesses that reads input
 /// from a given `UInt8` Array.
-public final class ArrayInput: ManagedInputProtocol { }
+public struct ArrayInput: InputProtocol { }
 
 /// A concrete `Input` type for subprocess that indicates that
 /// the Subprocess should read its input from `StandardInputWriter`.
-public struct CustomWriteInput: ManagedInputProtocol { }
+public struct CustomWriteInput: InputProtocol { }
 
 extension InputProtocol where Self == NoInput {
     /// Create a Subprocess input that specfies there is no input
@@ -1149,18 +1175,19 @@ extension InputProtocol {
 }
 ```
 
-`SubprocessFoundation` adds the following concrete input types that work with `Data`:
+`SubprocessFoundation` trait adds the following concrete input types that work with `Data`:
 
 - `DataInput`: reads input from a given `Data`.
 - `DataSequenceInput`: reads input from a given sequence of `Data`.
 - `DataAsyncSequenceInput`: reads input from a given async sequence of `Data`.
 
 ```swift
+#if SubprocessFoundation
 import Foundation
 
 /// A concrete `Input` type for subprocesses that reads input
 /// from a given `Data`.
-public final class DataInput: ManagedInputProtocol { }
+public struct DataInput: ManagedInputProtocol { }
 
 /// A concrete `Input` type for subprocesses that accepts input
 /// from a specified sequence of `Data`. This type should be preferred
@@ -1191,6 +1218,7 @@ extension InputProtocol {
         _ asyncSequence: InputSequence
     ) -> Self where Self == DataAsyncSequenceInput<InputSequence>
 }
+#endif
 ```
 
 Here are some examples:
@@ -1218,7 +1246,9 @@ let exe = try await run(.path("/some/executable"), input: .sequence(sequence))
 ### `OutputProtocol`
 
 
-`OutputProtocol` defines the set of methods that a type must implement to serve as the output target for a subprocess. Similarly to `InputProtocol`, developers should utilize the built-in concrete `Output` types provided with `Subprocess` whenever feasible; alternatively, they can create a type that conforms to `ManagedOutputProtocol` and implements `func output(from:) throws -> OutputType` for custom outputs.
+`OutputProtocol` defines the set of methods that a type must implement to serve as the output target for a subprocess. Similarly to `InputProtocol`, developers should utilize the built-in concrete `Output` types provided with `Subprocess` whenever feasible.
+
+`OutputProtocol` was primarily designed with `RawSpan` as the primary "currency type". When `RawSpan` is not available, or when the `SubprocessSpan` trait is off, `OutputProtocol` falls back to `Sequence<UInt8>`.
 
 The core `Subprocess` module comes with the following concrete output types:
 
@@ -1235,42 +1265,35 @@ The core `Subprocess` module comes with the following concrete output types:
 /// Instead of developing custom implementations of `OutputProtocol`,
 /// it is recommended to utilize the default implementations provided
 /// by the `Subprocess` library to specify the output handling requirements.
+#if SubprocessSpan
+@available(SubprocessSpan, *)
+#endif
 public protocol OutputProtocol: Sendable {
     associatedtype OutputType: Sendable
-    /// Lazily create and return the FileDescriptor for reading
-    func readFileDescriptor() throws -> FileDescriptor?
-    /// Lazily create and return the FileDescriptor for writing
-    func writeFileDescriptor() throws -> FileDescriptor?
-    /// Return the read `FileDescriptor` and remove it from the output
-    /// such that the next call to `consumeReadFileDescriptor` will
-    /// return `nil`.
-    func consumeReadFileDescriptor() -> FileDescriptor?
 
-    /// Close the FileDescriptor for reading
-    func closeReadFileDescriptor() throws
-    /// Close the FileDescriptor for writing
-    func closeWriteFileDescriptor() throws
-
-    /// Capture the output from the subprocess
-    func captureOutput() async throws -> OutputType
-}
-
-/// `ManagedOutputProtocol` is managed by `Subprocess` and
-/// utilizes its `Pipe` type to facilitate output reading.
-/// Developers have the option to implement custom input types
-/// by conforming to `ManagedOutputProtocol`
-/// and implementing the `output(from:)` method.
-@available(macOS 9999, *) // Span equivelent
-public protocol ManagedOutputProtocol: OutputProtocol {
-    /// The underlying pipe used by this output in order to
-    /// read from the child process
-    var pipe: Pipe { get }
-
-    /// Convert the output from Data to expected output type
+#if SubprocessSpan
+    /// Convert the output from span to expected output type
     func output(from span: RawSpan) throws -> OutputType
+#endif
+
+    /// Convert the output from buffer to expected output type
+    func output(from buffer: some Sequence<UInt8>) throws -> OutputType
+
     /// The max amount of data to collect for this output.
     var maxSize: Int { get }
 }
+
+extension OutputProtocol {
+    /// Default implementation provided
+    public var maxSize: Int { 128 * 1024 }
+}
+
+#if SubprocessSpan
+extension OutputProtocol {
+    // Default implementation provided
+    public func output(from buffer: some Sequence<UInt8>) throws -> OutputType { ... }
+}
+#endif
 
 /// A concrete `Output` type for subprocesses that indicates that
 /// the `Subprocess` should not collect or redirect output
@@ -1291,14 +1314,12 @@ public struct FileDescriptorOutput: OutputProtocol { }
 /// from the subprocess as `String` with the given encoding.
 /// This option must be used with he `run()` method that
 /// returns a `CollectedResult`.
-@available(macOS 9999, *) // Span equivelent
-public struct StringOutput<Encoding: Unicode.Encoding>: ManagedOutputProtocol { }
+public struct StringOutput<Encoding: Unicode.Encoding>: OutputProtocol { }
 
 /// A concrete `Output` type for subprocesses that collects output
 /// from the subprocess as `[UInt8]`. This option must be used with
 /// the `run()` method that returns a `CollectedResult`
-@available(macOS 9999, *)
-public final class BytesOutput: ManagedOutputProtocol { }
+public struct BytesOutput: OutputProtocol { }
 
 /// A concrete `Output` type for subprocesses that redirects
 /// the child output to the `.standardOutput` or `.standardError`
@@ -1328,12 +1349,13 @@ extension OutputProtocol where Self == SequenceOutput {
     public static var sequence: Self { .init() }
 }
 
-@available(macOS 9999, *) // Span equivelent
-extension OutputProtocol {
+extension OutputProtocol where Self == StringOutput<UTF8> {
     /// Create a `Subprocess` output that collects output as
     /// UTF8 String with 128kb limit.
-    public static func string() -> Self where Self == StringOutput<UTF8>
+    public static var string: Self
+}
 
+extension OutputProtocol {
     /// Create a `Subprocess` output that collects output as
     /// `String` using the given encoding up to limit it bytes.
     public static func string<Encoding: Unicode.Encoding>(
@@ -1342,7 +1364,6 @@ extension OutputProtocol {
     ) -> Self where Self == StringOutput<Encoding>
 }
 
-@available(macOS 9999, *) // Span equivelent
 extension OutputProtocol where Self == BytesOutput {
     /// Create a `Subprocess` output that collects output as
     /// `Buffer` with 128kb limit.
@@ -1355,21 +1376,20 @@ extension OutputProtocol where Self == BytesOutput {
 ```
 
 
-`SubprocessFoundation` adds one additional concrete input:
+`SubprocessFoundation` trait adds one additional concrete input:
 
 - `DataOutput`: collects output from the subprocess as `Data`.
 
 
 ```swift
+#if SubprocessFoundation
 import Foundation
 
 /// A concrete `Output` type for subprocesses that collects output
 /// from the subprocess as `Data`. This option must be used with
 /// the `run()` method that returns a `CollectedResult`
-@available(macOS 9999, *) // Span equivelent
-public struct DataOutput: ManagedOutputProtocol { }
+public struct DataOutput: OutputProtocol { }
 
-@available(macOS 9999, *) // Span equivelent
 extension OutputProtocol where Self == DataOutput {
     /// Create a `Subprocess` output that collects output as `Data`
     /// up to 128kb.
@@ -1383,6 +1403,7 @@ extension OutputProtocol where Self == DataOutput {
         return .init(limit: limit)
     }
 }
+#endif
 ```
 
 Here are some examples of using different outputs:
@@ -1434,9 +1455,11 @@ extension SequenceOutput {
             _ body: (UnsafeRawBufferPointer) throws -> ResultType
         ) rethrows -> ResultType
 
+#if SubprocessSpan
         /// Access the bytes stored in this buffer as `RawSpan`
-        @available(macOS 9999, *) // Span equivalent
+        @available(SubprocessSpan, *)
         var bytes: RawSpan { get }
+#endif
     }
 }
 
@@ -1456,7 +1479,7 @@ let catResult = try await Subprocess.run(
         if value.contains("Done") {
             await execution.teardown(
                 using: [
-                    .sendSignal(.quit, allowedDurationToExit: .milliseconds(500)),
+                    .sendSignal(.quit, allowedDurationToNextStep: .milliseconds(500)),
                 ]
             )
             return true
@@ -1717,18 +1740,6 @@ extension SubprocessError {
         public let rawValue: RawValue
         public init(rawValue: RawValue)
     }
-}
-```
-
-
-### `Pipe`
-
-`Subprocess` provides an opaque `Pipe` type that creates and manages Unix-like pipes (file descriptor pairs for read and write operations) used by `Subprocess` for communication with child processes. The `Pipe` type is designed to be exclusively utilized by `ManagedInputProtocol` and `ManagedOutputProtocol` as an implementation detail.
-
-```swift
-/// A managed, opaque UNIX pipe used by `PipeOutputProtocol` and `PipeInputProtocol`
-public final class Pipe: Sendable {
-    public init() {}
 }
 ```
 
