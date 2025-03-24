@@ -92,7 +92,7 @@ extension AttributedString.Guts {
 
     internal static func _characterwiseIsEqual(
         _ left: AttributedString.Runs,
-        to right: AttributedString.Runs,
+        to right: AttributedString.Runs
     ) -> Bool {
         // To decide if two attributed strings are equal, we need to logically split them up on
         // run boundaries, then check that each pair of pieces contains the same attribute values
