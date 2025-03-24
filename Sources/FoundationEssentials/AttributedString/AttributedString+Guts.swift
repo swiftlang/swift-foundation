@@ -78,11 +78,7 @@ extension AttributedString.Guts {
         _ left: AttributedString.Guts,
         to right: AttributedString.Guts
     ) -> Bool {
-        _characterwiseIsEqual(
-            AttributedString.Runs(left, in: Range(uncheckedBounds: (left.string.startIndex, left.string.endIndex))),
-            to: AttributedString.Runs(right, in: Range(uncheckedBounds: (right.string.startIndex, right.string.endIndex))),
-            fullString: true
-        )
+        characterwiseIsEqual(left, in: left.stringBounds, to: right, in: right.stringBounds)
     }
 
     internal static func characterwiseIsEqual(
@@ -91,13 +87,12 @@ extension AttributedString.Guts {
     ) -> Bool {
         let leftRuns = AttributedString.Runs(left, in: leftRange)
         let rightRuns = AttributedString.Runs(right, in: rightRange)
-        return _characterwiseIsEqual(leftRuns, to: rightRuns, fullString: false)
+        return _characterwiseIsEqual(leftRuns, to: rightRuns)
     }
 
     internal static func _characterwiseIsEqual(
         _ left: AttributedString.Runs,
         to right: AttributedString.Runs,
-        fullString: Bool
     ) -> Bool {
         // To decide if two attributed strings are equal, we need to logically split them up on
         // run boundaries, then check that each pair of pieces contains the same attribute values
@@ -116,7 +111,7 @@ extension AttributedString.Guts {
         guard left.count == right.count else { return false }
         guard !left.isEmpty else { return true }
         
-        if fullString {
+        if !left._isPartial && !right._isPartial {
             // For a full BigString, we can get the grapheme cluster count in constant time since
             // the grapheme cluster count is cached at the node level in the tree. It is not
             // possible for two AttributedStrings with differing character counts to be equal,

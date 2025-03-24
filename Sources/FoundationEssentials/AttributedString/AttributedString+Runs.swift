@@ -31,6 +31,16 @@ extension AttributedString {
         internal let _strBounds: RangeSet<BigString.Index>
         internal let _isDiscontiguous: Bool
         
+        internal var _isPartial: Bool {
+            guard !_isDiscontiguous else {
+                return true
+            }
+            guard let lower = _bounds.lowerBound._stringIndex, let upper = _bounds.upperBound._stringIndex else {
+                preconditionFailure("AttributedString.Runs created with bounds that have un-set string indices")
+            }
+            return _guts.string.startIndex != lower || _guts.string.endIndex != upper
+        }
+        
         internal init(_ guts: Guts, in bounds: Range<BigString.Index>) {
             self.init(guts, in: RangeSet(bounds))
         }

@@ -57,7 +57,7 @@ extension DiscontiguousAttributedSubstring : CustomStringConvertible {
 @available(FoundationPreview 6.2, *)
 extension DiscontiguousAttributedSubstring : Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        AttributedString.Guts._characterwiseIsEqual(lhs.runs, to: rhs.runs, fullString: false)
+        AttributedString.Guts._characterwiseIsEqual(lhs.runs, to: rhs.runs)
     }
 }
 
