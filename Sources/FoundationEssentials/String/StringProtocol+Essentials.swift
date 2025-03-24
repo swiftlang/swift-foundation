@@ -85,6 +85,14 @@ extension UInt16 {
 
 // These provides concrete implementations for String and Substring, enhancing performance over generic StringProtocol.
 
+#if !FOUNDATION_FRAMEWORK
+@_spi(SwiftCorelibsFoundation)
+dynamic public func _cfStringEncodingConvert(string: String, using encoding: UInt, allowLossyConversion: Bool) -> Data? {
+    // Dynamically replaced by swift-corelibs-foundation to implement encodings that we do not have Swift replacements for, yet
+    return nil
+}
+#endif
+
 @available(FoundationPreview 0.4, *)
 extension String {
     public func data(using encoding: String.Encoding, allowLossyConversion: Bool = false) -> Data? {
@@ -220,7 +228,7 @@ extension String {
             }
             
             return data + swapped
-        #if !FOUNDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK
         case .isoLatin1:
             // ISO Latin 1 encodes code points 0x0 through 0xFF (a maximum of 2 UTF-8 scalars per ISO Latin 1 Scalar)
             // The UTF-8 count is a cheap, reasonable starting capacity as it is precise for the all-ASCII case and it will only over estimate by 1 byte per non-ASCII character
@@ -241,13 +249,14 @@ extension String {
                     buffer.appendElement(value)
                 }
             }
-        #endif
+#endif
         default:
 #if FOUNDATION_FRAMEWORK
             // Other encodings, defer to the CoreFoundation implementation
             return _ns.data(using: encoding.rawValue, allowLossyConversion: allowLossyConversion)
 #else
-            return nil
+            // Attempt an up-call into swift-corelibs-foundation, which can defer to the CoreFoundation implementation
+            return _cfStringEncodingConvert(string: self, using: encoding.rawValue, allowLossyConversion: allowLossyConversion)
 #endif
         }
     }
