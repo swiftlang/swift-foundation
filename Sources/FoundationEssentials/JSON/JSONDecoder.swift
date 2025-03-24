@@ -679,7 +679,7 @@ extension JSONDecoderImpl: Decoder {
             var data: Data?
             if isSimple {
                 data = withBuffer(for: region) { buffer, _ in
-                    Data(decodingBase64: buffer)
+                    try? Base64.decode(bytes: buffer)
                 }
             }
             if data == nil {
