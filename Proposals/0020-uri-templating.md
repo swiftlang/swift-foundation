@@ -3,7 +3,7 @@
 * Proposal: [SF-0020](0020-uri-templating.md)
 * Authors: [Daniel Eggert](https://github.com/danieleggert)
 * Review Manager: [Tina L](https://github.com/itingliu)
-* Status: **Review: March 14, 2025...March 21, 2025**
+* Status: **Accepted**
 * Implementation: [swiftlang/swift-foundation#1198](https://github.com/swiftlang/swift-foundation/pull/1198)
 * Review: ([pitch](https://forums.swift.org/t/pitch-uri-templating/78030))
 
