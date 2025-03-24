@@ -110,6 +110,27 @@ extension AttributedString.Guts {
 
         guard left.count == right.count else { return false }
         guard !left.isEmpty else { return true }
+        
+        if !left._isPartial && !right._isPartial {
+            // For a full BigString, we can get the grapheme cluster count in constant time since
+            // the grapheme cluster count is cached at the node level in the tree. It is not
+            // possible for two AttributedStrings with differing character counts to be equal,
+            // so bail early if we detect that
+            //
+            // Note: we should not perform this check for cases where we are not knowingly working
+            // with the full string. Since character counts are only cached at the node level,
+            // to get the character count of a substring you would need to run the grapheme
+            // breaking algorithm over the partial first and last chunks. While this is
+            // technically done in constant time as chunks have a max of 255 UTF-8 scalars, grapheme
+            // breaking up to 510 UTF-8 scalars would not be cheap. In the future we can
+            // investigate best effort short cuts by comparing the counts of just the "middle"
+            // chunks that we can determine cheaply along with the knowledge that the partial
+            // first and last chunks have a character count no more than their UTF-8 counts.
+            guard left._guts.string.count == right._guts.string.count else {
+                return false
+            }
+        }
+        
 
         guard var leftIndex = left._strBounds.ranges.first?.lowerBound, var rightIndex = right._strBounds.ranges.first?.lowerBound else { return false }
 
