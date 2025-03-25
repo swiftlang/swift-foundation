@@ -481,7 +481,7 @@ extension _ProcessInfo {
         GetSystemInfo(&sysInfo)
         return sysInfo.dwActiveProcessorMask.nonzeroBitCount
 #else
-        return 0
+        return 1
 #endif
     }
     
