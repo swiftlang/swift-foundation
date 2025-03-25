@@ -464,6 +464,43 @@ let benchmarks = {
         blackHole(hasher.finalize())
     }
 #endif
+    
+    let manyAttributesWithParagraph = {
+        var str = createManyAttributesString()
+        str.testParagraphConstrained = 2
+        return str
+    }()
+    
+    Benchmark("paragraphBoundSliceEnumeration-shortRuns") { benchmark in
+        for (value, range) in manyAttributesWithParagraph.runs[\.testParagraphConstrained] {
+            blackHole(value)
+        }
+    }
+    
+    Benchmark("paragraphBoundSliceEnumeration-shortRuns-reversed") { benchmark in
+        for (value, range) in manyAttributesWithParagraph.runs[\.testParagraphConstrained].reversed() {
+            blackHole(value)
+        }
+    }
+    
+    let longParagraphsString = {
+        var str = String(repeating: "a", count: 10000) + "\n"
+        str += String(repeating: "b", count: 10000) + "\n"
+        str += String(repeating: "c", count: 10000)
+        return AttributedString(str, attributes: AttributeContainer.testParagraphConstrained(1).testInt(2))
+    }()
+    
+    Benchmark("paragraphBoundSliceEnumeration-longRuns") { benchmark in
+        for (value, range) in longParagraphsString.runs[\.testParagraphConstrained] {
+            blackHole(value)
+        }
+    }
+    
+    Benchmark("paragraphBoundSliceEnumeration-longRuns-reversed") { benchmark in
+        for (value, range) in longParagraphsString.runs[\.testParagraphConstrained].reversed() {
+            blackHole(value)
+        }
+    }
 }
 
 
