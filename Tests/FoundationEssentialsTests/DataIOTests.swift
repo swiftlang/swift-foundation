@@ -93,6 +93,9 @@ class DataIOTests : XCTestCase {
 
     // Atomic writing is a very different code path
     func test_readWriteAtomic() throws {
+        #if os(WASI)
+        try XCTSkip("atomic writing is not supported on WASI")
+        #else
         let url = testURL()
         // Perform an atomic write to a file that does not exist
         try writeAndVerifyTestData(to: url, writeOptions: [.atomic])
@@ -101,6 +104,7 @@ class DataIOTests : XCTestCase {
         try writeAndVerifyTestData(to: url, writeOptions: [.atomic])
 
         cleanup(at: url)
+        #endif
     }
 
     func test_readWriteMapped() throws {

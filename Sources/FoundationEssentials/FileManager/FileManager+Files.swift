@@ -260,6 +260,9 @@ extension _FileManagerImpl {
             }
             attr?[.protectionKey] = nil
         }
+        #elseif os(WASI)
+        // `.atomic` is unavailable on WASI
+        let opts: Data.WritingOptions = []
         #else
         let opts = Data.WritingOptions.atomic
         #endif
