@@ -30,6 +30,7 @@ extension URL {
     /// - Parameters:
     ///   - template: The RFC 6570 template to be expanded.
     ///   - variables: Variables to expand in the template.
+    @available(FoundationPreview 6.2, *)
     public init?(
         template: URL.Template,
         variables: [URL.Template.VariableName: URL.Template.Value]
