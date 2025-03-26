@@ -78,12 +78,10 @@ extension URL.Template {
             }
 
             while let match = remainder.firstMatch(of: URL.Template.Global.shared.uriTemplateRegex) {
-                defer {
-                    remainder = remainder[match.range.upperBound..<remainder.endIndex]
-                }
                 copyLiteral(upTo: match.range.lowerBound)
                 let expression = try Expression(String(match.output.1))
                 elements.append(.expression(expression))
+                remainder = remainder[match.range.upperBound..<remainder.endIndex]
             }
             copyLiteral(upTo: remainder.endIndex)
         } catch {
