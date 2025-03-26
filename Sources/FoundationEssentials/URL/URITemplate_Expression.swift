@@ -56,7 +56,7 @@ private struct InvalidTemplateExpression: Swift.Error {
 }
 
 extension Substring {
-    mutating func popPrefixMatch<Output>(_ regex: Regex<Output>) throws -> Regex<Output>.Match? {
+    fileprivate mutating func popPrefixMatch<Output>(_ regex: Regex<Output>) throws -> Regex<Output>.Match? {
         guard
             let match = try regex.prefixMatch(in: self)
         else { return nil }
