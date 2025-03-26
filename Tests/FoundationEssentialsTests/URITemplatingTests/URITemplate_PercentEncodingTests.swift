@@ -125,7 +125,7 @@ private enum PercentEncodingTests {
     static func convertToNFCAndPercentEncode() {
         // Percent-encode everything to make tests easier to read:
         func encodeAll(_ input: String) -> String {
-            input.addingPercentEncodingToNFC(allowed: .unreserved)
+            input.normalizedAddingPercentEncoding(withAllowedCharacters: .unreserved)
         }
 
         #expect(encodeAll("") == "")

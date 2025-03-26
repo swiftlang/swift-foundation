@@ -17,16 +17,18 @@ extension String {
     func normalizedAddingPercentEncoding(
         withAllowedCharacters allowed: URL.Template.Expression.Operator.AllowedCharacters
     ) -> String {
-        switch allowed {
-        case .unreserved:
-            return addingPercentEncodingToNFC(
-                allowed: allowed
-            )
-        case .unreservedReserved:
-            return withContiguousNFCAndOutputBuffer(allowed: allowed) { input -> String in
-                switch input {
-                case .noConversionNorEncodedNeeded: return self
-                case .needsEncoding(input: let inputBuffer, outputCount: let outputCount):
+        return withContiguousNFCAndOutputBuffer(allowed: allowed) { input -> String in
+            switch input {
+            case .noConversionNorEncodedNeeded: return self
+            case .needsEncoding(input: let inputBuffer, outputCount: let outputCount):
+                switch allowed {
+                case .unreserved:
+                    return addingPercentEncodingToNFC(
+                        input: inputBuffer,
+                        outputCount: outputCount,
+                        allowed: allowed
+                    )
+                case .unreservedReserved:
                     return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: outputCount + 1) { outputBuffer -> String in
                         addPercentEscapesForUnreservedReserved(
                             inputBuffer: inputBuffer,
@@ -40,7 +42,7 @@ extension String {
 }
 
 /// For the `unreserved / reserved / pct-encoded` case, create a String by percent encoding the NFC input as needed.
-fileprivate func addPercentEscapesForUnreservedReserved(
+private func addPercentEscapesForUnreservedReserved(
     inputBuffer: UnsafeBufferPointer<UTF8.CodeUnit>,
     outputBuffer: UnsafeMutableBufferPointer<UTF8.CodeUnit>
 ) -> String {
@@ -82,32 +84,26 @@ fileprivate func addPercentEscapesForUnreservedReserved(
     return String(cString: outputBuffer.baseAddress!)
 }
 
-extension String {
-    func addingPercentEncodingToNFC(
-        allowed: URL.Template.Expression.Operator.AllowedCharacters
-    ) -> String {
-        withContiguousNFCAndOutputBuffer(allowed: allowed) { input -> String in
-            switch input {
-            case .noConversionNorEncodedNeeded: return self
-            case .needsEncoding(input: let inputBuffer, outputCount: let outputCount):
-                return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: outputCount + 1) { outputBuffer -> String in
-                    var index = 0
-                    for v in inputBuffer {
-                        if allowed.isAllowedCodeUnit(v) {
-                            outputBuffer[index] = v
-                            index += 1
-                        } else {
-                            outputBuffer[index + 0] = UInt8(ascii: "%")
-                            outputBuffer[index + 1] = hexToAscii(v >> 4)
-                            outputBuffer[index + 2] = hexToAscii(v & 0xF)
-                            index += 3
-                        }
-                    }
-                    outputBuffer[index] = 0
-                    return String(cString: outputBuffer.baseAddress!)
-                }
+private func addingPercentEncodingToNFC(
+    input inputBuffer: UnsafeBufferPointer<String.UTF8View.Element>,
+    outputCount: Int,
+    allowed: URL.Template.Expression.Operator.AllowedCharacters
+) -> String {
+    return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: outputCount + 1) { outputBuffer -> String in
+        var index = 0
+        for v in inputBuffer {
+            if allowed.isAllowedCodeUnit(v) {
+                outputBuffer[index] = v
+                index += 1
+            } else {
+                outputBuffer[index + 0] = UInt8(ascii: "%")
+                outputBuffer[index + 1] = hexToAscii(v >> 4)
+                outputBuffer[index + 2] = hexToAscii(v & 0xF)
+                index += 3
             }
         }
+        outputBuffer[index] = 0
+        return String(cString: outputBuffer.baseAddress!)
     }
 }
 
