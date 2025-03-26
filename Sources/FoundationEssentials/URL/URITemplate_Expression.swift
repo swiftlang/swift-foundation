@@ -51,8 +51,10 @@ extension URL.Template {
     }
 }
 
-private struct InvalidTemplateExpression: Swift.Error {
-    var text: String
+extension URL.Template {
+    fileprivate struct InvalidExpression: Swift.Error {
+        var text: String
+    }
 }
 
 extension Substring {
@@ -82,12 +84,12 @@ extension URL.Template.Expression {
         var remainder = input[...]
         guard
             let opString = try remainder.popPrefixMatch(URL.Template.Global.shared.operatorRegex)
-        else { throw InvalidTemplateExpression(text: input) }
+        else { throw URL.Template.InvalidExpression(text: input) }
 
         let op = try opString.1.map {
             guard
                 let o = Operator(rawValue: String($0))
-            else { throw InvalidTemplateExpression(text: input) }
+            else { throw URL.Template.InvalidExpression(text: input) }
             return o
         }
         var elements: [Element] = []
@@ -95,7 +97,7 @@ extension URL.Template.Expression {
         func popElement() throws {
             guard
                 let match = try remainder.popPrefixMatch(URL.Template.Global.shared.elementRegex)
-            else { throw InvalidTemplateExpression(text: input) }
+            else { throw URL.Template.InvalidExpression(text: input) }
 
             let name: Substring = match.output.1
             let maximumLength: Int?
@@ -122,7 +124,7 @@ extension URL.Template.Expression {
         while !remainder.isEmpty {
             guard
                 try remainder.popPrefixMatch(URL.Template.Global.shared.separatorRegex) != nil
-            else { throw InvalidTemplateExpression(text: input) }
+            else { throw URL.Template.InvalidExpression(text: input) }
 
             try popElement()
         }
