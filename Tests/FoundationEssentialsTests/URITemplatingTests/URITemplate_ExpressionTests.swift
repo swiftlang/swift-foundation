@@ -18,15 +18,17 @@ import struct FoundationEssentials.URL
 @testable import Foundation
 import struct Foundation.URL
 #endif
-import XCTest
+import Testing
 
 private typealias Expression = URL.Template.Expression
 private typealias Element = URL.Template.Expression.Element
 
-final class ExpressionTests: XCTestCase {
-    func testParsingWithSingleName() {
-        XCTAssertEqual(
-            try Expression("var"),
+@Suite("URL.Template Expression")
+private enum ExpressionTests {
+    @Test
+    static func parsingWithSingleName() throws {
+        #expect(
+            try Expression("var") ==
             Expression(
                 operator: nil,
                 elements: [
@@ -38,8 +40,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("+var"),
+        #expect(
+            try Expression("+var") ==
             Expression(
                 operator: .reserved,
                 elements: [
@@ -51,8 +53,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("#hello"),
+        #expect(
+            try Expression("#hello") ==
             Expression(
                 operator: .fragment,
                 elements: [
@@ -64,8 +66,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression(".list"),
+        #expect(
+            try Expression(".list") ==
             Expression(
                 operator: .nameLabel,
                 elements: [
@@ -77,8 +79,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("/foo"),
+        #expect(
+            try Expression("/foo") ==
             Expression(
                 operator: .pathSegment,
                 elements: [
@@ -90,8 +92,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression(";name"),
+        #expect(
+            try Expression(";name") ==
             Expression(
                 operator: .pathParameter,
                 elements: [
@@ -103,8 +105,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("?count"),
+        #expect(
+            try Expression("?count") ==
             Expression(
                 operator: .queryComponent,
                 elements: [
@@ -116,8 +118,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("&max"),
+        #expect(
+            try Expression("&max") ==
             Expression(
                 operator: .continuation,
                 elements: [
@@ -129,8 +131,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("var:30"),
+        #expect(
+            try Expression("var:30") ==
             Expression(
                 operator: nil,
                 elements: [
@@ -142,8 +144,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("+var:30"),
+        #expect(
+            try Expression("+var:30") ==
             Expression(
                 operator: .reserved,
                 elements: [
@@ -155,8 +157,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("list*"),
+        #expect(
+            try Expression("list*") ==
             Expression(
                 operator: nil,
                 elements: [
@@ -168,8 +170,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("&list*"),
+        #expect(
+            try Expression("&list*") ==
             Expression(
                 operator: .continuation,
                 elements: [
@@ -183,9 +185,10 @@ final class ExpressionTests: XCTestCase {
         )
     }
 
-    func testParsingWithMultipleNames() {
-        XCTAssertEqual(
-            try Expression("x,y"),
+    @Test
+    static func parsingWithMultipleNames() throws {
+        #expect(
+            try Expression("x,y") ==
             Expression(
                 operator: nil,
                 elements: [
@@ -202,8 +205,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("&x,y,empty"),
+        #expect(
+            try Expression("&x,y,empty") ==
             Expression(
                 operator: .continuation,
                 elements: [
@@ -225,8 +228,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("?q,lang"),
+        #expect(
+            try Expression("?q,lang") ==
             Expression(
                 operator: .queryComponent,
                 elements: [
@@ -243,8 +246,8 @@ final class ExpressionTests: XCTestCase {
                 ]
             )
         )
-        XCTAssertEqual(
-            try Expression("/list*,path:4"),
+        #expect(
+            try Expression("/list*,path:4") ==
             Expression(
                 operator: .pathSegment,
                 elements: [

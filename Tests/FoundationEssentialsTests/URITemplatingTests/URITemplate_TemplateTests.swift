@@ -70,7 +70,7 @@ private func assertReplacing(template: String, result: String, sourceLocation: S
     }
 }
 
-@Suite
+@Suite("URL.Template Template")
 private enum TemplateTests {
     @Test(arguments: [
         "a",

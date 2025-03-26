@@ -18,7 +18,7 @@ import struct FoundationEssentials.URL
 @testable import Foundation
 import struct Foundation.URL
 #endif
-import XCTest
+import Testing
 #if FOUNDATION_FRAMEWORK
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
@@ -27,38 +27,41 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-final class ValueTests: XCTestCase {
-    func testCreating() {
-        XCTAssertEqual(
-            URL.Template.Value.text("foo").underlying,
+@Suite("URL.Template Value")
+private enum ValueTests {
+    @Test
+    static func creating() {
+        #expect(
+            URL.Template.Value.text("foo").underlying ==
             URL.Template.Value.Underlying.text("foo")
         )
-        XCTAssertEqual(
-            URL.Template.Value.list(["bar", "baz"]).underlying,
+        #expect(
+            URL.Template.Value.list(["bar", "baz"]).underlying ==
             URL.Template.Value.Underlying.list(["bar", "baz"])
         )
-        XCTAssertEqual(
-            URL.Template.Value.associativeList(["bar": "baz"]).underlying,
+        #expect(
+            URL.Template.Value.associativeList(["bar": "baz"]).underlying ==
             URL.Template.Value.Underlying.associativeList(["bar": "baz"])
         )
     }
 
-    func testExpressibleByLiteral() {
+    @Test
+    static func expressibleByLiteral() {
         let a: URL.Template.Value = "foo"
-        XCTAssertEqual(
-            a.underlying,
+        #expect(
+            a.underlying ==
             URL.Template.Value.Underlying.text("foo")
         )
 
         let b: URL.Template.Value = "1234"
-        XCTAssertEqual(
-            b.underlying,
+        #expect(
+            b.underlying ==
             URL.Template.Value.Underlying.text("1234")
         )
 
         let c: URL.Template.Value = ["bar", "baz"]
-        XCTAssertEqual(
-            c.underlying,
+        #expect(
+            c.underlying ==
             URL.Template.Value.Underlying.list(["bar", "baz"])
         )
 
@@ -66,8 +69,8 @@ final class ValueTests: XCTestCase {
             "bar": "baz",
             "qux": "2"
         ]
-        XCTAssertEqual(
-            d.underlying,
+        #expect(
+            d.underlying ==
             URL.Template.Value.Underlying.associativeList(["bar": "baz", "qux": "2"])
         )
     }

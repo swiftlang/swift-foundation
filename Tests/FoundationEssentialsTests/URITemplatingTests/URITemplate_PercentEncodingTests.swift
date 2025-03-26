@@ -33,7 +33,7 @@ extension String {
     }
 }
 
-@Suite
+@Suite("URL.Template PercentEncoding")
 private enum PercentEncodingTests {
     @Test
     static func normalizedAddingPercentEncoding_unreservedReserved() {
