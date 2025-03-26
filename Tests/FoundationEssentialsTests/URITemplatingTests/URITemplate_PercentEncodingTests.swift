@@ -36,6 +36,42 @@ extension String {
 @Suite("URL.Template PercentEncoding")
 private enum PercentEncodingTests {
     @Test
+    static func allowedUnreserved() {
+        // unreserved     =  ALPHA / DIGIT / "-" / "." / "_" / "~"
+        let expected: Set<UInt8> = {
+            var expected = Set<UInt8>()
+            expected.formUnion(0x61...0x7a) // "a"..."z"
+            expected.formUnion(0x41...0x5a) // "A"..."Z"
+            expected.formUnion(0x30...0x39) // "0"..."9"
+            expected.formUnion([0x2d, 0x2e, 0x5f, 0x7e]) // `-` `.` `_` `~`
+            return expected
+        }()
+        let unreserved = URL.Template.Expression.Operator.AllowedCharacters.unreserved
+        for c in UInt8.min...UInt8.max {
+            #expect(unreserved.isAllowedCodeUnit(c) == expected.contains(c), "\(c)")
+        }
+    }
+
+    @Test
+    static func allowedUnreservedReserved() {
+        // unreserved     =  ALPHA / DIGIT / "-" / "." / "_" / "~"
+        let expected: Set<UInt8> = {
+            var expected = Set<UInt8>()
+            expected.formUnion(0x61...0x7a) // "a"..."z"
+            expected.formUnion(0x41...0x5a) // "A"..."Z"
+            expected.formUnion(0x30...0x39) // "0"..."9"
+            expected.formUnion([0x2d, 0x2e, 0x5f, 0x7e]) // `-` `.` `_` `~`
+            expected.formUnion([0x3a, 0x2f, 0x3f, 0x23, 0x5b, 0x5d, 0x40]) // `:` `/` `?` `#` `[` `]` `@`
+            expected.formUnion([0x21, 0x24, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x3b, 0x3d]) // `!` `$` `&` `'` `(` `)` `*` `+` `,` `;` `=`
+            return expected
+        }()
+        let unreservedReserved = URL.Template.Expression.Operator.AllowedCharacters.unreservedReserved
+        for c in UInt8.min...UInt8.max {
+            #expect(unreservedReserved.isAllowedCodeUnit(c) == expected.contains(c), "\(c)")
+        }
+    }
+
+    @Test
     static func normalizedAddingPercentEncoding_unreservedReserved() {
         #expect("".encoded(.unreservedReserved) == "")
         #expect("a".encoded(.unreservedReserved) == "a")

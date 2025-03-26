@@ -1132,8 +1132,8 @@ fileprivate struct URLComponentSet: OptionSet {
     static let queryItem        = URLComponentSet(rawValue: 1 << 7)
 }
 
-fileprivate extension UTF8.CodeUnit {
-    func isAllowedIn(_ component: URLComponentSet) -> Bool {
+extension UTF8.CodeUnit {
+    fileprivate func isAllowedIn(_ component: URLComponentSet) -> Bool {
         return allowedURLComponents & component.rawValue != 0
     }
 
@@ -1163,7 +1163,7 @@ fileprivate extension UTF8.CodeUnit {
     // let queryItemAllowed         = queryAllowed.subtracting(CharacterSet(charactersIn: "=&"))
     // let fragmentAllowed          = CharacterSet(charactersIn: pchar + "/?")
     // ===------------------------------------------------------------------------------------=== //
-    var allowedURLComponents: URLComponentSet.RawValue {
+    fileprivate var allowedURLComponents: URLComponentSet.RawValue {
         switch self {
         case UInt8(ascii: "!"):
             return 0b11110110
@@ -1214,8 +1214,8 @@ fileprivate extension UTF8.CodeUnit {
         }
     }
 
-    // let urlAllowed = CharacterSet(charactersIn: unreserved + reserved)
-    var isValidURLCharacter: Bool {
+    /// Is the character in `unreserved + reserved` from RFC 3986.
+    internal var isValidURLCharacter: Bool {
         guard self < 128 else { return false }
         if self < 64 {
             let allowed = UInt64(12682136387466559488)
@@ -1224,5 +1224,12 @@ fileprivate extension UTF8.CodeUnit {
             let allowed = UInt64(5188146765093666815)
             return (allowed & (UInt64(1) << (self - 64))) != 0
         }
+    }
+
+    /// Is the character in `unreserved + reserved` from RFC 3986.
+    internal var isUnreservedURLCharacter: Bool {
+        guard self < 128 else { return false }
+        let allowed: UInt128 = 0x47fffffe87fffffe03ff600000000000
+        return allowed & (UInt128(1) << self) != 0
     }
 }

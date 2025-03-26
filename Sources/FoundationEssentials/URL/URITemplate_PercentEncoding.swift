@@ -201,29 +201,9 @@ extension URL.Template.Expression.Operator.AllowedCharacters {
     func isAllowedCodeUnit(_ unit: UTF8.CodeUnit) -> Bool {
         switch self {
         case .unreserved:
-            // unreserved     =  ALPHA / DIGIT / "-" / "." / "_" / "~"
-            switch unit {
-            case 0x61...0x7a /* "a"..."z" */: true
-            case 0x41...0x5a /* "A"..."Z" */: true
-            case 0x30...0x39 /* "0"..."9" */: true
-            case 0x2d, 0x2e, 0x5f, 0x7e /* `-` `.` `_` `~` */: true
-            default: false
-            }
+            return unit.isUnreservedURLCharacter
         case .unreservedReserved:
-            // unreserved / reserved / pct-encoded
-            // reserved       =  gen-delims / sub-delims
-            // gen-delims     =  ":" / "/" / "?" / "#" / "[" / "]" / "@"
-            // sub-delims     =  "!" / "$" / "&" / "'" / "(" / ")"
-            //                /  "*" / "+" / "," / ";" / "="
-            switch unit {
-            case 0x61...0x7a /* "a"..."z" */: true
-            case 0x41...0x5a /* "A"..."Z" */: true
-            case 0x30...0x39 /* "0"..."9" */: true
-            case 0x2d, 0x2e, 0x5f, 0x7e /* `-` `.` `_` `~` */: true
-            case 0x3a, 0x2f, 0x3f, 0x23, 0x5b, 0x5d, 0x40  /* `:` `/` `?` `#` `[` `]` `@` */: true
-            case 0x21, 0x24, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x3b, 0x3d  /* `!` `$` `&` `'` `(` `)` `*` `+` `,` `;` `=` */: true
-            default: false
-            }
+            return unit.isValidURLCharacter
         }
     }
 }
