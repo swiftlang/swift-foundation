@@ -61,12 +61,7 @@ fileprivate func addPercentEscapesForUnreservedReserved(
             next != UInt8(ascii: "%") || remainingInput.count < 2
         else {
             // Is this a valid escape sequence?
-            func isHex(_ a: UInt8) -> Bool {
-                (0x30 <= a && a <= 0x39) ||
-                (0x41 <= a && a <= 0x46) ||
-                (0x61 <= a && a <= 0x66)
-            }
-            if isHex(remainingInput[remainingInput.startIndex]) && isHex(remainingInput[remainingInput.startIndex + 1]) {
+            if remainingInput[remainingInput.startIndex].isValidHexDigit && remainingInput[remainingInput.startIndex + 1].isValidHexDigit {
                 write(next)
             } else {
                 write(UInt8(ascii: "%"))
