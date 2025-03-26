@@ -56,7 +56,7 @@ private var variables: [URL.Template.VariableName: URL.Template.Value] {
 
 private func assertReplacing(template: String, result: String, sourceLocation: SourceLocation = #_sourceLocation) {
     do {
-        let t = try URL.Template(template)
+        let t = try #require(URL.Template(template))
         #expect(
             t.expand(variables) == result,
             #"template: "\#(template)""#,
@@ -82,7 +82,7 @@ private enum TemplateTests {
     static func stringRoundTrip(
         template: String
     ) throws {
-        let t = try URL.Template(template)
+        let t = try #require(URL.Template(template))
         #expect("\(t)" == template, "original: '\(template)'")
     }
 

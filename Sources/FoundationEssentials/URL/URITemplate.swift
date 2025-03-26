@@ -62,31 +62,35 @@ extension URL.Template {
     /// The template string needs to be a valid RFC 6570 template.
     ///
     /// This will parse the template and throw an error if the template is invalid.
-    public init(_ template: String) throws {
-        self.init()
+    public init?(_ template: String) {
+        do {
+            self.init()
 
-        var remainder = template[...]
+            var remainder = template[...]
 
-        func copyLiteral(upTo end: String.Index) {
-            guard
-                remainder.startIndex < end
-            else { return }
-            let literal = remainder[remainder.startIndex..<end]
-            let escaped = String(literal).normalizedAddingPercentEncoding(
-                withAllowedCharacters: .unreservedReserved
-            )
-            elements.append(.literal(escaped))
-        }
-
-        while let match = remainder.firstMatch(of: URL.Template.Global.shared.uriTemplateRegex) {
-            defer {
-                remainder = remainder[match.range.upperBound..<remainder.endIndex]
+            func copyLiteral(upTo end: String.Index) {
+                guard
+                    remainder.startIndex < end
+                else { return }
+                let literal = remainder[remainder.startIndex..<end]
+                let escaped = String(literal).normalizedAddingPercentEncoding(
+                    withAllowedCharacters: .unreservedReserved
+                )
+                elements.append(.literal(escaped))
             }
-            copyLiteral(upTo: match.range.lowerBound)
-            let expression = try Expression(String(match.output.1))
-            elements.append(.expression(expression))
+
+            while let match = remainder.firstMatch(of: URL.Template.Global.shared.uriTemplateRegex) {
+                defer {
+                    remainder = remainder[match.range.upperBound..<remainder.endIndex]
+                }
+                copyLiteral(upTo: match.range.lowerBound)
+                let expression = try Expression(String(match.output.1))
+                elements.append(.expression(expression))
+            }
+            copyLiteral(upTo: remainder.endIndex)
+        } catch {
+            return nil
         }
-        copyLiteral(upTo: remainder.endIndex)
     }
 }
 
