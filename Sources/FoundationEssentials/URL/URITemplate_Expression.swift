@@ -82,22 +82,22 @@ extension URL.Template.Expression.Element: CustomStringConvertible {
 extension URL.Template.Expression {
     init(_ input: String) throws {
         var remainder = input[...]
-        guard
-            let opString = try remainder.popPrefixMatch(URL.Template.Global.shared.operatorRegex)
-        else { throw URL.Template.InvalidExpression(text: input) }
+        guard let opString = try remainder.popPrefixMatch(URL.Template.Global.shared.operatorRegex) else {
+            throw URL.Template.InvalidExpression(text: input)
+        }
 
         let op = try opString.1.map {
-            guard
-                let o = Operator(rawValue: String($0))
-            else { throw URL.Template.InvalidExpression(text: input) }
+            guard let o = Operator(rawValue: String($0)) else {
+                throw URL.Template.InvalidExpression(text: input)
+            }
             return o
         }
         var elements: [Element] = []
 
         func popElement() throws {
-            guard
-                let match = try remainder.popPrefixMatch(URL.Template.Global.shared.elementRegex)
-            else { throw URL.Template.InvalidExpression(text: input) }
+            guard let match = try remainder.popPrefixMatch(URL.Template.Global.shared.elementRegex) else {
+                throw URL.Template.InvalidExpression(text: input)
+            }
 
             let name: Substring = match.output.1
             let maximumLength: Int?
@@ -122,9 +122,9 @@ extension URL.Template.Expression {
         try popElement()
 
         while !remainder.isEmpty {
-            guard
-                try remainder.popPrefixMatch(URL.Template.Global.shared.separatorRegex) != nil
-            else { throw URL.Template.InvalidExpression(text: input) }
+            guard try remainder.popPrefixMatch(URL.Template.Global.shared.separatorRegex) != nil else {
+                throw URL.Template.InvalidExpression(text: input)
+            }
 
             try popElement()
         }

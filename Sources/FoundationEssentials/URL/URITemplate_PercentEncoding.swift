@@ -59,9 +59,7 @@ private func addPercentEscapesForUnreservedReserved(
     while let next = remainingInput.popFirst() {
         // Any (valid) existing escape sequences need to be copied to the output verbatim.
         // But any `%` that are not part of a valid escape sequence, need to be encoded.
-        guard
-            next != UInt8(ascii: "%") || remainingInput.count < 2
-        else {
+        guard next != UInt8(ascii: "%") || remainingInput.count < 2 else {
             // Is this a valid escape sequence?
             if remainingInput[remainingInput.startIndex].isValidHexDigit && remainingInput[remainingInput.startIndex + 1].isValidHexDigit {
                 write(next)

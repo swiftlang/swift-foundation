@@ -69,9 +69,7 @@ extension URL.Template {
             var remainder = template[...]
 
             func copyLiteral(upTo end: String.Index) {
-                guard
-                    remainder.startIndex < end
-                else { return }
+                guard remainder.startIndex < end else { return }
                 let literal = remainder[remainder.startIndex..<end]
                 let escaped = String(literal).normalizedAddingPercentEncoding(
                     withAllowedCharacters: .unreservedReserved
