@@ -80,8 +80,8 @@ private func addPercentEscapesForUnreservedReserved(
             write(hexToAscii(next & 0xf))
         }
     }
-    write(0)
-    return String(cString: outputBuffer.baseAddress!)
+
+    return String(decoding: outputBuffer[..<outputIndex], as: UTF8.self)
 }
 
 private func addingPercentEncodingToNFC(
@@ -102,8 +102,7 @@ private func addingPercentEncodingToNFC(
                 index += 3
             }
         }
-        outputBuffer[index] = 0
-        return String(cString: outputBuffer.baseAddress!)
+        return String(decoding: outputBuffer[..<index], as: UTF8.self)
     }
 }
 
