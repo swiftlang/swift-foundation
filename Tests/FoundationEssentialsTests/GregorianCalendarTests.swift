@@ -3886,7 +3886,6 @@ final class GregorianCalendarTests : XCTestCase {
         
         XCTAssertEqual(calendar1.firstWeekday, 2)
         XCTAssertEqual(calendar1.minimumDaysInFirstWeek, 4)
-        XCTAssertEqual(calendar1.timeZone, .gmt)
         XCTAssertEqual(calendar1.locale, .unlocalized)
         
         // Verify that the properties are still mutable

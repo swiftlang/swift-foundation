@@ -193,25 +193,22 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
 
-        // ISO8601 has different default values for time zone, locale, firstWeekday, and minimumDaysInFirstWeek
-        let defaultTimeZone: TimeZone
+        // ISO8601 has different default values locale, firstWeekday, and minimumDaysInFirstWeek
         let defaultLocale: Locale?
         let defaultFirstWeekday: Int?
         let defaultMinimumDaysInFirstWeek: Int?
         
         if identifier == .iso8601 {
-            defaultTimeZone = .gmt
             defaultLocale = Locale.unlocalized
             defaultFirstWeekday = 2
             defaultMinimumDaysInFirstWeek = 4
         } else {
-            defaultTimeZone = .default
             defaultLocale = nil
             defaultFirstWeekday = nil
             defaultMinimumDaysInFirstWeek = nil
         }
                 
-        self.timeZone = timeZone ?? defaultTimeZone
+        self.timeZone = timeZone ?? .default
         if let gregorianStartDate {
             self.gregorianStartDate = gregorianStartDate
             do {
