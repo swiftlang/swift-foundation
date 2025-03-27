@@ -971,7 +971,7 @@ enum _FileOperations {
                     // The list of entry returns by `extattr_list_*` contains the length(1 byte) of the attribute name, follow by the Non-NULL terminated attribute name. (See exattr(2))
                     size = extattr_list_fd(srcFD, namespace, keyList.baseAddress!, size)
 
-                    guard size > 0 else { continue }
+                    guard size > 0 else { return }
 
                     var keyLength = Int(keyList.baseAddress!.pointee)
                     var current = keyList.baseAddress!.advanced(by: 1)
