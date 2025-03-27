@@ -301,7 +301,8 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         guard let inPathFileSystemRep else {
             throw CocoaError(.fileReadInvalidFileName)
         }
-        return open(inPathFileSystemRep, O_RDONLY, 0o666)
+        // Do not block on opening the file here. If the file is not a regular one, we will produce an error below after `fstat`.
+        return open(inPathFileSystemRep, O_RDONLY | O_NONBLOCK, 0o666)
     }
         
     guard fd >= 0 else {
