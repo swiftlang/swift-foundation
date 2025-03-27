@@ -28,6 +28,7 @@ extension URL.Template {
 // MARK: -
 
 extension String {
+    @available(FoundationPreview 6.2, *)
     public init(_ key: URL.Template.VariableName) {
         self = key.key
     }
