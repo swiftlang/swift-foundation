@@ -24,13 +24,13 @@ extension AttributedString.Runs {
 
         let runs: Runs
         let _names: [String]
-        let _constraints: [AttributeRunBoundaries]
+        let _constraints: Set<AttributeRunBoundaries?>
 
         init(runs: Runs) {
             self.runs = runs
             // FIXME: ☠️ Get these from a proper cache in runs._guts.
             _names = [T.name]
-            _constraints = T._constraintsInvolved
+            _constraints = [T.runBoundaries]
         }
 
         public struct Iterator: IteratorProtocol, Sendable {
@@ -162,13 +162,13 @@ extension AttributedString.Runs {
 
         let runs : Runs
         let _names: [String]
-        let _constraints: [AttributeRunBoundaries]
+        let _constraints: Set<AttributeRunBoundaries?>
 
         init(runs: Runs) {
             self.runs = runs
             // FIXME: ☠️ Get these from a proper cache in runs._guts.
             _names = [T.name, U.name]
-            _constraints = Array(_contents: T.runBoundaries, U.runBoundaries)
+            _constraints = [T.runBoundaries, U.runBoundaries]
         }
 
         public struct Iterator: IteratorProtocol, Sendable {
@@ -320,13 +320,13 @@ extension AttributedString.Runs {
 
         let runs : Runs
         let _names: [String]
-        let _constraints: [AttributeRunBoundaries]
+        let _constraints: Set<AttributeRunBoundaries?>
 
         init(runs: Runs) {
             self.runs = runs
             // FIXME: ☠️ Get these from a proper cache in runs._guts.
             _names = [T.name, U.name, V.name]
-            _constraints = Array(_contents: T.runBoundaries, U.runBoundaries, V.runBoundaries)
+            _constraints = [T.runBoundaries, U.runBoundaries, V.runBoundaries]
         }
 
         public struct Iterator: IteratorProtocol, Sendable {
@@ -490,14 +490,13 @@ extension AttributedString.Runs {
 
         let runs : Runs
         let _names: [String]
-        let _constraints: [AttributeRunBoundaries]
+        let _constraints: Set<AttributeRunBoundaries?>
 
         init(runs: Runs) {
             self.runs = runs
             // FIXME: ☠️ Get these from a proper cache in runs._guts.
             _names = [T.name, U.name, V.name, W.name]
-            _constraints = Array(
-                _contents: T.runBoundaries, U.runBoundaries, V.runBoundaries, W.runBoundaries)
+            _constraints = [T.runBoundaries, U.runBoundaries, V.runBoundaries, W.runBoundaries]
         }
 
         public struct Iterator: IteratorProtocol, Sendable {
@@ -675,18 +674,19 @@ extension AttributedString.Runs {
 
         let runs : Runs
         let _names: [String]
-        let _constraints: [AttributeRunBoundaries]
+        let _constraints: Set<AttributeRunBoundaries?>
 
         init(runs: Runs) {
             self.runs = runs
             // FIXME: ☠️ Get these from a proper cache in runs._guts.
             _names = [T.name, U.name, V.name, W.name]
-            _constraints = Array(
-                _contents: T.runBoundaries,
+            _constraints = [
+                T.runBoundaries,
                 U.runBoundaries,
                 V.runBoundaries,
                 W.runBoundaries,
-                X.runBoundaries)
+                X.runBoundaries
+            ]
         }
 
         public struct Iterator: IteratorProtocol, Sendable {
@@ -955,75 +955,3 @@ extension AttributedString.Runs {
 }
 
 #endif // FOUNDATION_FRAMEWORK
-
-extension RangeReplaceableCollection {
-    internal init(_contents item1: Element?) {
-        self.init()
-        if let item1 { self.append(item1) }
-    }
-
-    internal init(_contents item1: Element?, _ item2: Element?) {
-        self.init()
-        var c = 0
-        if item1 != nil { c &+= 1 }
-        if item2 != nil { c &+= 1 }
-        guard c > 0 else { return }
-        self.reserveCapacity(c)
-        if let item1 { self.append(item1) }
-        if let item2 { self.append(item2) }
-    }
-
-    internal init(_contents item1: Element?, _ item2: Element?, _ item3: Element?) {
-        self.init()
-        var c = 0
-        if item1 != nil { c &+= 1 }
-        if item2 != nil { c &+= 1 }
-        if item3 != nil { c &+= 1 }
-        guard c > 0 else { return }
-        self.reserveCapacity(c)
-        if let item1 { self.append(item1) }
-        if let item2 { self.append(item2) }
-        if let item3 { self.append(item3) }
-    }
-
-    internal init(
-        _contents item1: Element?, _ item2: Element?, _ item3: Element?, _ item4: Element?
-    ) {
-        self.init()
-        var c = 0
-        if item1 != nil { c &+= 1 }
-        if item2 != nil { c &+= 1 }
-        if item3 != nil { c &+= 1 }
-        if item4 != nil { c &+= 1 }
-        guard c > 0 else { return }
-        self.reserveCapacity(c)
-        if let item1 { self.append(item1) }
-        if let item2 { self.append(item2) }
-        if let item3 { self.append(item3) }
-        if let item4 { self.append(item4) }
-    }
-
-    internal init(
-        _contents item1: Element?,
-        _ item2: Element?,
-        _ item3: Element?,
-        _ item4: Element?,
-        _ item5: Element?
-    ) {
-        self.init()
-        var c = 0
-        if item1 != nil { c &+= 1 }
-        if item2 != nil { c &+= 1 }
-        if item3 != nil { c &+= 1 }
-        if item4 != nil { c &+= 1 }
-        if item5 != nil { c &+= 1 }
-        guard c > 0 else { return }
-        self.reserveCapacity(c)
-        if let item1 { self.append(item1) }
-        if let item2 { self.append(item2) }
-        if let item3 { self.append(item3) }
-        if let item4 { self.append(item4) }
-        if let item5 { self.append(item5) }
-    }
-}
-

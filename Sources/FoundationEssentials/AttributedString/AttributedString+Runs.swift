@@ -481,7 +481,7 @@ extension AttributedString.Runs {
     internal func _slicedRunBoundary(
         after i: AttributedString.Index,
         attributeNames: [String],
-        constraints: [AttributeRunBoundaries],
+        constraints: Set<AttributeRunBoundaries?>,
         endOfCurrent: Bool
     ) -> AttributedString.Index {
         precondition(
@@ -489,11 +489,28 @@ extension AttributedString.Runs {
             "AttributedString index is out of bounds")
         precondition(!attributeNames.isEmpty)
         let r = _guts.findRun(at: i._value)
+        let currentRangeIdx = _strBounds.rangeIdx(containing: i._value)
+        let currentRange = _strBounds.ranges[currentRangeIdx]
+        
+        guard constraints.count != 1 || constraints.contains(nil) else {
+            // We have a single constraint and attributes are guaranteed to be consistent between constraint boundaries
+            // This means that we will not break until the next constraint boundary, so we don't need to enumerate the actual run contents
+            let constraintBreak = _guts.string._firstConstraintBreak(in: i._value ..< currentRange.upperBound, with: constraints)
+            if !endOfCurrent && constraintBreak == currentRange.upperBound {
+                // No constraint break, return the next subrange start or the end index
+                if currentRangeIdx == _strBounds.ranges.count - 1 {
+                    return .init(currentRange.upperBound, version: _guts.version)
+                } else {
+                    return .init(_strBounds.ranges[currentRangeIdx + 1].lowerBound, version: _guts.version)
+                }
+            } else {
+                return .init(constraintBreak, version: _guts.version)
+            }
+        }
+        
         let endRun = _lastOfMatchingRuns(with: r.runIndex, comparing: attributeNames)
         let utf8End = endRun.utf8Offset + _guts.runs[endRun].length
         let strIndexEnd = _guts.string.utf8.index(r.start, offsetBy: utf8End - r.start.utf8Offset)
-        let currentRangeIdx = _strBounds.rangeIdx(containing: i._value)
-        let currentRange = _strBounds.ranges[currentRangeIdx]
         if strIndexEnd < currentRange.upperBound {
             // The coalesced run ends within the current range, so just look for the next break in the coalesced run
             return .init(_guts.string._firstConstraintBreak(in: i._value ..< strIndexEnd, with: constraints), version: _guts.version)
@@ -520,7 +537,7 @@ extension AttributedString.Runs {
     internal func _slicedRunBoundary(
         before i: AttributedString.Index,
         attributeNames: [String],
-        constraints: [AttributeRunBoundaries],
+        constraints: Set<AttributeRunBoundaries?>,
         endOfPrevious: Bool
     ) -> AttributedString.Index {
         precondition(
@@ -545,6 +562,11 @@ extension AttributedString.Runs {
             currentStringIdx = currentRange.upperBound
             if endOfPrevious { return .init(currentStringIdx, version: _guts.version) }
         }
+        
+        guard constraints.count != 1 || constraints.contains(nil) else {
+            return .init(_guts.string._lastConstraintBreak(in: currentRange.lowerBound ..< currentStringIdx, with: constraints), version: _guts.version)
+        }
+        
         let beforeStringIdx = _guts.string.utf8.index(before: currentStringIdx)
         let r = _guts.runs.index(atUTF8Offset: beforeStringIdx.utf8Offset)
         let startRun = _firstOfMatchingRuns(with: r.index, comparing: attributeNames)
@@ -561,7 +583,7 @@ extension AttributedString.Runs {
     internal func _slicedRunBoundary(
         roundingDown i: AttributedString.Index,
         attributeNames: [String],
-        constraints: [AttributeRunBoundaries]
+        constraints: Set<AttributeRunBoundaries?>
     ) -> (index: AttributedString.Index, runIndex: AttributedString._InternalRuns.Index) {
         precondition(
             _strBounds.contains(i._value) || i._value == endIndex._stringIndex,
@@ -571,8 +593,22 @@ extension AttributedString.Runs {
         if r.runIndex.offset == endIndex._runOffset {
             return (i, r.runIndex)
         }
-        let startRun = _firstOfMatchingRuns(with: r.runIndex, comparing: attributeNames)
         let currentRange = _strBounds.ranges[_strBounds.rangeIdx(containing: i._value)]
+        
+        guard constraints.count != 1 || constraints.contains(nil) else {
+            let nextIndex = _guts.string.unicodeScalars.index(after: i._value)
+            let constraintBreak = _guts.string._lastConstraintBreak(in: currentRange.lowerBound ..< nextIndex, with: constraints)
+            var runIdx = r.runIndex
+            while runIdx.utf8Offset > constraintBreak.utf8Offset {
+                _guts.runs.formIndex(before: &runIdx)
+            }
+            return (
+                .init(constraintBreak, version: _guts.version),
+                runIdx
+            )
+        }
+        
+        let startRun = _firstOfMatchingRuns(with: r.runIndex, comparing: attributeNames)
         let stringStart = Swift.max(
             _guts.string.utf8.index(r.start, offsetBy: startRun.utf8Offset - r.start.utf8Offset),
             currentRange.lowerBound)
@@ -587,9 +623,9 @@ extension AttributedString.Runs {
 extension BigString {
     internal func _firstConstraintBreak(
         in range: Range<Index>,
-        with constraints: [AttributedString.AttributeRunBoundaries]
+        with constraints: Set<AttributedString.AttributeRunBoundaries?>
     ) -> Index {
-        guard !constraints.isEmpty, !range.isEmpty else { return range.upperBound }
+        guard !range.isEmpty else { return range.upperBound }
 
         var r = range
         if
@@ -602,7 +638,7 @@ extension BigString {
         if constraints._containsScalarConstraint {
             // Note: we need to slice runs on matching scalars even if they don't carry
             // the attributes we're looking for.
-            let scalars: [UnicodeScalar] = constraints.compactMap { $0._constrainedScalar }
+            let scalars: [UnicodeScalar] = constraints.compactMap { $0?._constrainedScalar }
             if let firstBreak = self.unicodeScalars[r]._findFirstScalarBoundary(for: scalars) {
                 r = r.lowerBound ..< firstBreak
             }
@@ -613,9 +649,9 @@ extension BigString {
 
     internal func _lastConstraintBreak(
         in range: Range<Index>,
-        with constraints: [AttributedString.AttributeRunBoundaries]
+        with constraints: Set<AttributedString.AttributeRunBoundaries?>
     ) -> Index {
-        guard !constraints.isEmpty, !range.isEmpty else { return range.lowerBound }
+        guard !range.isEmpty else { return range.lowerBound }
 
         var r = range
         if
@@ -628,7 +664,7 @@ extension BigString {
         if constraints._containsScalarConstraint {
             // Note: we need to slice runs on matching scalars even if they don't carry
             // the attributes we're looking for.
-            let scalars: [UnicodeScalar] = constraints.compactMap { $0._constrainedScalar }
+            let scalars: [UnicodeScalar] = constraints.compactMap { $0?._constrainedScalar }
             if let lastBreak = self.unicodeScalars[r]._findLastScalarBoundary(for: scalars) {
                 r = lastBreak ..< r.upperBound
             }

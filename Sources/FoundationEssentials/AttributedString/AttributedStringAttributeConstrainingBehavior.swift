@@ -83,6 +83,13 @@ extension Collection where Element == AttributedString.AttributeRunBoundaries {
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Collection where Element == AttributedString.AttributeRunBoundaries? {
+    var _containsScalarConstraint: Bool {
+        self.contains { $0?._isScalarConstrained ?? false }
+    }
+}
+
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Guts {
     
