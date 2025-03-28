@@ -69,6 +69,16 @@ extension String : _ObjectiveCBridgeable {
                 return String(unsafeUninitializedCapacity: SMALL_STRING_CAPACITY) {
                     _NSTaggedPointerStringGetBytes(source, $0.baseAddress!)
                 }
+            } else if tag == OBJC_TAG_NSAtom {
+                var len = UInt16(0)
+                let contentsPtr = _CFIndirectTaggedPointerStringGetContents(source, &len)
+                let contents = UnsafeBufferPointer(start: contentsPtr, count: Int(len))
+                // Will only fail if contents aren't valid UTF8/ASCII
+                if let result = _SwiftCreateImmortalString_ForFoundation(buffer: contents, isASCII: true) {
+                    return result
+                }
+                // Since our contents are invalid, force a real copy of the string and bridge that instead. This should basically never be hit in practice
+                return source.mutableCopy() as! String
             } else if tag.rawValue == 22 /* OBJC_TAG_Foundation_1 */ {
                 let cStr = source.utf8String!
                 return String.init(utf8String: cStr)!
@@ -88,6 +98,9 @@ extension String : _ObjectiveCBridgeable {
 
             if constant {
                 if ascii {
+                    // We would like to use _SwiftCreateImmortalString_ForFoundation here, but we can't because we need to maintain the invariant
+                    // (constantString as String as NSString) === constantString
+                    // and using _SwiftCreateImmortalString_ForFoundation would make an indirect tagged string instead on the way back
                     return String(_immortalCocoaString: source, count: len, encoding: Unicode.ASCII.self)
                 } else {
                     return String(_immortalCocoaString: source, count: len, encoding: Unicode.UTF16.self)
