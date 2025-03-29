@@ -469,7 +469,7 @@ extension _ProcessInfo {
             return 0
         }
         return Int(count)
-#elseif os(Linux) || os(FreeBSD) || canImport(Android)
+#elseif os(Linux) || os(FreeBSD) || os(OpenBSD) || canImport(Android)
         #if os(Linux)
         if let fsCount = Self.fsCoreCount() {
             return fsCount
