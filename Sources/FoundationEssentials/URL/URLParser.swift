@@ -1226,7 +1226,7 @@ extension UTF8.CodeUnit {
         }
     }
 
-    /// Is the character in `unreserved + reserved` from RFC 3986.
+    /// Is the character in `unreserved` from RFC 3986.
     internal var isUnreservedURLCharacter: Bool {
         guard self < 128 else { return false }
         let allowed: UInt128 = 0x47fffffe87fffffe03ff600000000000
