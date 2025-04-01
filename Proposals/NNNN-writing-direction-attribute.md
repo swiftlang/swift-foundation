@@ -164,6 +164,39 @@ Other definitions of writing direction types, e.g. [UIKit's `NSWritingDirection`
 
 If a package, framework, or project offers multiple strategies to determine the effective writing direction of a paragraph, it should define a separate setting - as an `AttributedStringKey` or otherwise - that defines how the absence of the `writingDirection` value is to be interpreted.
 
+### Adding more WritingDirection cases for vertical script
+
+Often times, "writing direction" is used with a broader definition than here, basically encompassing all aspects of a script's layout, including line layout and character direction. We have decided to use a narrower definition, because of a number of reasons:
+
+The [`lineLayoutDirection`](https://developer.apple.com/documentation/foundation/locale/language/4020200-linelayoutdirection) as defined by Foundation is of type  [`LanguageDirection`](https://developer.apple.com/documentation/foundation/nslocale/languagedirection). The line layout direction is the direction in which a sequence of lines is placed in. E.g. English text is usually displayed with a line layout direction of `topToBottom`. Other frameworks, e.g. [CSS](https://developer.mozilla.org/en-US/docs/Web/CSS/writing-mode), refer to this concept as "writing mode".
+
+There is a difference in scope between `lineLayoutDirection`/writing mode, and `writingDirection` as defined here. The former is always defined for a whole "layout", whereas `writingDirection` is defined on a part of the layout where line contents flow together, i.e. a paragraph. That is why `lineLayoutDirection` should not be a property of a subrange of an `AttributedString`, but should be defined on a UI component/document level. In short, you cannot change the `lineLayoutDirection` mid-page, so it should be kept separate from the `WritingDirectionAttribute`. To account for the fact that the `writingDirection` must always be orthogonal to the `lineLayoutDirection`, I only propose two cases with documented meaning for both horizontal and vertical script, avoiding the possibility for invalid configurations (e.g. a `topToBottom` `lineLayoutDefinition` (meaning text within a line has to flow horizontally) paired with a `topToBottom` `writingDirection`.
+
+Based on that definition, `lineLayoutDirection` + `writingDirection` only cover the 2x2x2 matrix of "regular" layouts, but not irregular layouts such as "Boustrophedon".
+
+For "Boustrophedon" , the reality to acknowledge there is that it just isn't part of the widely supported scripts in modern computer systems. E.g. the writing direction attribute used by [CSS](https://developer.mozilla.org/en-US/docs/Web/CSS/direction) also only lists `ltr` and `rtl`. If we wanted to add support for switching line flow direction within a paragraph at some point in the future, I think this should be expressed as a separate attribute that integrates with `writingDirection`. E.g. `writingDirection` would specify the direction for the first line, and the separate attribute could specify the pattern for when to switch line flow direction.
+
+Other scripts, such as Hieroglyphic and Mayan script, use variable writing directions. They are again not widely supported by modern computer systems and the layout there even requires some amount of artistic intent, so one would probably carefully lay out each line as its own paragraph with separate writing direction anyway.
+
+Therefore, the proposed definition satisfies all use-cases commonly supported by modern computer systems, and is even extensible where it could provide support for more niche scripts in the future.
+
+### Naming of the WritingDirection cases
+
+The naming for the two cases of `WritingDirection`, `leftToRight` and `rightToLeft`, was chosen mostly because this is the industry standard. [Existing definitions on Apple's platforms](https://developer.apple.com/documentation/uikit/nswritingdirection), as well as [CSS](https://developer.mozilla.org/en-US/docs/Web/CSS/direction) use this terminology. I don't think diverging from this industry standard in favor of terms neutral to the axis of the script (vertical vs horizontal) would be a win for developers. I also wanted to avoid situations where one can specify a `writingDirection` that is not orthogonal to the `lineLayoutDirection`.
+
+Ideally, I would have preferred a solution where `topToBottom` and `bottomToTop` could have been provided as alternative case _names_ for `leftToRight` and `rightToLeft` respectively, so one can use those names e.g. in a `switch` statement that is written in the context of a vertical script. However, Swift doesn't support having two names for the same enum `case` at the moment. Adding additional static members like this would have been possible:
+
+```swift
+extension AttributedString.WritingDirection {
+    public static let topToBottom: Self = .leftToRight
+    public static let bottomToTop: Self = .rightToLeft
+}
+```
+
+However, if you try using `topToBottom` and `bottomToTop` defined like this in a `switch` statement, Swift will produce a compiler error because the cases `leftToRight` and `rightToLeft` are not covered by the `switch` statement.
+
+Therefore, the best solution seemed to be using the names that are industry standard, and clearly documenting their interpretation in vertical scripts.
+
 ### Invalidating `WritingDirection` on text changes
 
 The `AttributeScopes.FoundationAttributes.WritingDirectionAttribute` may be added by an applicaiton or framework as the result of character analysis. In that case it would be great if the writing direction was removed again automatically whenever the characters of the paragraph changed.
