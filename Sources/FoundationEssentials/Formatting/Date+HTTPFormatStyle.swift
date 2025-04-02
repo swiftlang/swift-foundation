@@ -112,6 +112,26 @@ extension RegexComponent where Self == Date.HTTPFormatStyle {
     }
 }
 
+@available(FoundationPreview 6.2, *)
+extension DateComponents.HTTPFormatStyle : CustomConsumingRegexComponent {
+    public typealias RegexOutput = DateComponents
+    public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: DateComponents)? {
+        guard index < bounds.upperBound else {
+            return nil
+        }
+        // It's important to return nil from parse in case of a failure, not throw. That allows things like the firstMatch regex to work.
+        return self.parse(input, in: index..<bounds.upperBound)
+    }
+}
+
+@available(FoundationPreview 6.2, *)
+extension RegexComponent where Self == DateComponents.HTTPFormatStyle {
+    /// Creates a regex component to match an HTTP date and time, such as "2015-11-14'T'15:05:03'Z'", and capture the string as a `DateComponents` using the time zone as specified in the string.
+    public static var httpComponents: DateComponents.HTTPFormatStyle {
+        return DateComponents.HTTPFormatStyle()
+    }
+}
+
 // MARK: - Components
 
 @available(FoundationPreview 6.2, *)
