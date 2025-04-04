@@ -13,7 +13,7 @@
 @available(FoundationPreview 6.2, *)
 extension DateComponents {
     /// Options for generating and parsing string representations of dates following the ISO 8601 standard.
-    public struct ISO8601FormatStyle : Sendable, Codable {
+    public struct ISO8601FormatStyle : Hashable, Sendable, Codable {
         public internal(set) var timeSeparator: Date.ISO8601FormatStyle.TimeSeparator
         /// If set, fractional seconds will be present in formatted output. Fractional seconds may be present in parsing regardless of the setting of this property.
         public internal(set) var includingFractionalSeconds: Bool
