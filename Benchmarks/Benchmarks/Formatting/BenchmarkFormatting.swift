@@ -45,7 +45,7 @@ let benchmarks = {
     
     let preformatted = formats.map { ($0, $0.format(date)) }
 
-    Benchmark("iso860-format", configuration: .init(scalingFactor: .kilo)) { benchmark in
+    Benchmark("iso8601-format", configuration: .init(scalingFactor: .kilo)) { benchmark in
         for _ in benchmark.scaledIterations {
             for fmt in formats {
                 blackHole(fmt.format(date))
@@ -53,7 +53,7 @@ let benchmarks = {
         }
     }
 
-    Benchmark("iso860-parse", configuration: .init(scalingFactor: .kilo)) { benchmark in
+    Benchmark("iso8601-parse", configuration: .init(scalingFactor: .kilo)) { benchmark in
         for _ in benchmark.scaledIterations {
             for fmt in preformatted {
                 let result = try? fmt.0.parse(fmt.1)

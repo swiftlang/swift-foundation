@@ -31,6 +31,10 @@ package final class _TimeZoneGMT : _TimeZoneProtocol, @unchecked Sendable {
         self.name
     }
     
+    package var fixedOffsetFromGMT: Int? {
+        offset
+    }
+
     package func secondsFromGMT(for date: Date) -> Int {
         offset
     }
