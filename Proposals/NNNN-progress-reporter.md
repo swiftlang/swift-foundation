@@ -261,9 +261,7 @@ extension ImageProcessor {
         // Initialize file-related properties on the reporter
         reporter.withProperties { properties in
             properties.totalFileCount = images.count
-            properties.completedFileCount = 0
             properties.totalByteCount = images.map { $0.bytes }.reduce(0, +)
-            properties.completedByteCount = 0
         }
         
         for image in images {
@@ -271,13 +269,8 @@ extension ImageProcessor {
             reporter.complete(count: 1)
             // Update each file-related property
             reporter.withProperties { properties in
-                if let completedFileCount = properties.completedFileCount, let completedByteCount = properties.completedByteCount {
-                    properties.completedFileCount = completedFileCount + 1
-                    properties.completedByteCount = completedByteCount + image.bytes
-                } else {
-                    properties.completedFileCount = 1
-                    properties.completedByteCount = image.bytes
-                }
+                properties.completedFileCount += 1
+                properties.completedByteCount += image.bytes
             }
         }
     }
@@ -474,6 +467,9 @@ func progressParentReporterChildInterop() {
     public protocol Property {
 
         associatedtype T : Sendable
+        
+        /// The default value to return when property is not set to a specific value.
+        static var defaultValue: T { get }
 
         /// Aggregates an array of `T` into a single value `T`.
         /// - Parameter all: Array of `T` to be aggregated.
@@ -482,7 +478,7 @@ func progressParentReporterChildInterop() {
     }
 
     /// A container that holds values for properties that convey information about progress.
-    @dynamicMemberLookup public struct Values : Sendable {
+    @dynamicMemberLookup public struct Values : Sendable, CustomStringDebugConvertible {
 
         /// The total units of work.
         public var totalCount: Int? { mutating get set }
@@ -490,8 +486,11 @@ func progressParentReporterChildInterop() {
         /// The completed units of work. 
         public var completedCount: Int { mutating get set }
         
-        /// Returns a property value that a key path indicates.
-        public subscript<P>(dynamicMember key: KeyPath<ProgressReporter.Properties, P.Type>) -> P.T? where P : ProgressReporter.ProgressReporter.Property { get set }
+        /// Returns a property value that a key path indicates. If value is not defined, returns property's `defaultValue`. 
+        public subscript<P>(dynamicMember key: KeyPath<ProgressReporter.Properties, P.Type>) -> P.T where P : ProgressReporter.Property { get set }
+        
+        /// Returns a debug description. 
+        public static var debugDescription: String { get }
     }
 
     /// Initializes `self` with `totalCount`.
@@ -512,6 +511,9 @@ func progressParentReporterChildInterop() {
 
     /// Accesses or mutates any properties that convey additional information about progress.
     public func withProperties<T>(_ closure: @Sendable (inout Values) throws -> T) rethrows -> T
+
+    /// Returns a debug description. 
+    public static var debugDescription: String { get }
 }
 
 /// Default implementation for `reduce` where T is `AdditiveArithmetic`. 
@@ -538,6 +540,8 @@ For developers that would like to report additional metadata or properties as th
 @available(FoundationPreview 6.2, *)
 extension ProgressReporter {
 
+extension ProgressReporter {
+
     public struct Properties {
 
         /// The total number of files.
@@ -546,6 +550,8 @@ extension ProgressReporter {
         public struct TotalFileCount : Property {
 
             public typealias T = Int
+
+            public static var defaultValue: Int { get }
         }
 
         /// The number of completed files.
@@ -554,6 +560,8 @@ extension ProgressReporter {
         public struct CompletedFileCount : Property {
 
             public typealias T = Int
+
+            public static var defaultValue: Int { get }
         }
 
         /// The total number of bytes.
@@ -562,6 +570,8 @@ extension ProgressReporter {
         public struct TotalByteCount : Property {
 
             public typealias T = UInt64
+
+            public static var defaultValue: UInt64 { get }
         }
 
         /// The number of completed bytes.
@@ -570,6 +580,8 @@ extension ProgressReporter {
         public struct CompletedByteCount : Property {
 
             public typealias T = UInt64
+
+            public static var defaultValue: UInt64 { get }
         }
 
         /// The throughput, in bytes per second.
@@ -578,6 +590,8 @@ extension ProgressReporter {
         public struct Throughput : Property {
 
             public typealias T = UInt64
+
+            public static var defaultValue: UInt64 { get }
         }
 
         /// The amount of time remaining in the processing of files.
@@ -586,6 +600,8 @@ extension ProgressReporter {
         public struct EstimatedTimeRemaining : Property {
 
             public typealias T = Duration
+
+            public static var defaultValue: Duration { get }
         }
     }
 }
@@ -858,7 +874,7 @@ Thanks to
 - [Cassie Jones](https://github.com/porglezomp), 
 - [Konrad Malawski](https://github.com/ktoso), 
 - [Philippe Hausler](https://github.com/phausler), 
-- [Julia Vashchenko]  
+- Julia Vashchenko 
 for valuable feedback on this proposal and its previous versions.
     
 Thanks to 
