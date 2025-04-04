@@ -334,27 +334,27 @@ final class URLTests : XCTestCase {
         // .absoluteString and .path() use the RFC 8089 URL path
         XCTAssertEqual(url.absoluteString, "file:///C:/test/path")
         XCTAssertEqual(url.path(), "/C:/test/path")
-        // .path and .fileSystemPath strip the leading slash
+        // .path and .fileSystemPath() strip the leading slash
         XCTAssertEqual(url.path, "C:/test/path")
-        XCTAssertEqual(url.fileSystemPath, "C:/test/path")
+        XCTAssertEqual(url.fileSystemPath(), "C:/test/path")
 
         url = URL(filePath: #"C:\"#, directoryHint: .isDirectory)
         XCTAssertEqual(url.absoluteString, "file:///C:/")
         XCTAssertEqual(url.path(), "/C:/")
         XCTAssertEqual(url.path, "C:/")
-        XCTAssertEqual(url.fileSystemPath, "C:/")
+        XCTAssertEqual(url.fileSystemPath(), "C:/")
 
         url = URL(filePath: #"C:\\\"#, directoryHint: .isDirectory)
         XCTAssertEqual(url.absoluteString, "file:///C:///")
         XCTAssertEqual(url.path(), "/C:///")
         XCTAssertEqual(url.path, "C:/")
-        XCTAssertEqual(url.fileSystemPath, "C:/")
+        XCTAssertEqual(url.fileSystemPath(), "C:/")
 
         url = URL(filePath: #"\C:\"#, directoryHint: .isDirectory)
         XCTAssertEqual(url.absoluteString, "file:///C:/")
         XCTAssertEqual(url.path(), "/C:/")
         XCTAssertEqual(url.path, "C:/")
-        XCTAssertEqual(url.fileSystemPath, "C:/")
+        XCTAssertEqual(url.fileSystemPath(), "C:/")
 
         let base = URL(filePath: #"\d:\path\"#, directoryHint: .isDirectory)
         url = URL(filePath: #"%43:\fake\letter"#, directoryHint: .notDirectory, relativeTo: base)
@@ -362,7 +362,7 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.relativeString, "%2543%3A/fake/letter")
         XCTAssertEqual(url.path(), "/d:/path/%2543%3A/fake/letter")
         XCTAssertEqual(url.path, "d:/path/%43:/fake/letter")
-        XCTAssertEqual(url.fileSystemPath, "d:/path/%43:/fake/letter")
+        XCTAssertEqual(url.fileSystemPath(), "d:/path/%43:/fake/letter")
 
         let cwd = URL.currentDirectory()
         var iter = cwd.path().utf8.makeIterator()
@@ -372,7 +372,7 @@ final class URLTests : XCTestCase {
             let path = #"\\?\"# + "\(Unicode.Scalar(driveLetter))" + #":\"#
             url = URL(filePath: path, directoryHint: .isDirectory)
             XCTAssertEqual(url.path.last, "/")
-            XCTAssertEqual(url.fileSystemPath.last, "/")
+            XCTAssertEqual(url.fileSystemPath().last, "/")
         }
     }
     #endif
