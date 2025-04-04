@@ -874,7 +874,7 @@ Thanks to
 - [Cassie Jones](https://github.com/porglezomp), 
 - [Konrad Malawski](https://github.com/ktoso), 
 - [Philippe Hausler](https://github.com/phausler), 
-- Julia Vashchenko 
+- Julia Vashchenko  
 for valuable feedback on this proposal and its previous versions.
     
 Thanks to 
