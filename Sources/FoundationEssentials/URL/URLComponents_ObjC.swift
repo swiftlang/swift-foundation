@@ -34,8 +34,8 @@ extension NSURLComponents {
         return _NSSwiftURLComponents(components: components)
     }
 
-    static func _parseString(_ string: String, encodingInvalidCharacters: Bool, compatibility: URLParserCompatibility.RawValue) -> String? {
-        return RFC3986Parser.parse(urlString: string, encodingInvalidCharacters: encodingInvalidCharacters, compatibility: .init(rawValue: compatibility))?.urlString
+    static func _parseString(_ string: String, encodingInvalidCharacters: Bool, allowEmptyScheme: Bool) -> String? {
+        return RFC3986Parser.parse(urlString: string, encodingInvalidCharacters: encodingInvalidCharacters, allowEmptyScheme: allowEmptyScheme)?.urlString
     }
 }
 

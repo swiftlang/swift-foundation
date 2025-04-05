@@ -489,6 +489,56 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             return result
         }
 
+        internal func _uncheckedString(original: Bool) -> String {
+            let componentsToDecode = original ? urlParseInfo?.encodedComponents ?? [] : []
+            var result = ""
+            if let scheme {
+                result += "\(scheme):"
+            }
+            if hasAuthority {
+                result += "//"
+            }
+            if componentsToDecode.contains(.user), let user {
+                result += user
+            } else if let percentEncodedUser {
+                result += percentEncodedUser
+            }
+            if componentsToDecode.contains(.password), let password {
+                result += ":\(password)"
+            } else if let percentEncodedPassword {
+                result += ":\(percentEncodedPassword)"
+            }
+            if percentEncodedUser != nil || percentEncodedPassword != nil {
+                result += "@"
+            }
+            if componentsToDecode.contains(.host), let host {
+                result += host
+            } else if let encodedHost {
+                result += encodedHost
+            }
+            if parseInfoIsValidForPort, let portString = urlParseInfo?.portString {
+                result += ":\(portString)"
+            } else if let port {
+                result += ":\(port)"
+            }
+            if componentsToDecode.contains(.path) {
+                result += path
+            } else {
+                result += percentEncodedPath
+            }
+            if componentsToDecode.contains(.query), let query {
+                result += "?\(query)"
+            } else if let percentEncodedQuery {
+                result += "?\(percentEncodedQuery)"
+            }
+            if componentsToDecode.contains(.fragment), let fragment {
+                result += "#\(fragment)"
+            } else if let percentEncodedFragment {
+                result += "#\(percentEncodedFragment)"
+            }
+            return result
+        }
+
         func rangeOf(_ component: Component) -> Range<String.Index>? {
             if let urlParseInfo, parseInfoIsValidForAllRanges {
                 switch component {
@@ -694,6 +744,21 @@ public struct URLComponents: Hashable, Equatable, Sendable {
         self.components = _URLComponents(parseInfo: parseInfo)
     }
 
+    #if FOUNDATION_FRAMEWORK
+    internal init?(url: _BridgedURL, resolvingAgainstBaseURL resolve: Bool) {
+        let string: String
+        if resolve {
+            string = url.absoluteString
+        } else {
+            string = url.relativeString
+        }
+        guard let components = _URLComponents(string: string) else {
+            return nil
+        }
+        self.components = components
+    }
+    #endif
+
     /// Returns a URL created from the URLComponents.
     ///
     /// If the URLComponents has an authority component (user, password, host or port) and a path component, then the path must either begin with "/" or be an empty string. If the NSURLComponents does not have an authority component (user, password, host or port) and has a path component, the path component must not start with "//". If those requirements are not met, nil is returned.
@@ -727,6 +792,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public var string: String? {
         components.string
+    }
+
+    /// For use by URL to get a non-nil string, potentially decoding components to return an original string.
+    /// This does not provide any validation, since URL is historically less strict than URLComponents.
+    internal func _uncheckedString(original: Bool) -> String {
+        components._uncheckedString(original: original)
     }
 
     /// The scheme subcomponent of the URL.
