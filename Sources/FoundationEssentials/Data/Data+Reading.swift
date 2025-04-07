@@ -40,6 +40,8 @@ func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutab
     return fgetxattr(fd, name, value, size, position, options)
 #elseif os(FreeBSD)
     return extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, name, value, size)
+#elseif os(OpenBSD)
+    return -1
 #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fgetxattr(fd, name, value, size)
 #else
