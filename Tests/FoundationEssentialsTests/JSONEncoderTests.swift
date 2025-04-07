@@ -2492,13 +2492,19 @@ extension JSONEncoderTests {
         prettyPrintEncoder.outputFormatting = .prettyPrinted
 
         for encoder in [JSONEncoder(), prettyPrintEncoder] {
-            let reencodedData = try! encoder.encode(decoded)
-            let redecodedObjects = try! decoder.decode(T.self, from: reencodedData)
-            XCTAssertEqual(decoded, redecodedObjects)
+            do {
+                let reencodedData = try encoder.encode(decoded)
+                let redecodedObjects = try decoder.decode(T.self, from: reencodedData)
+                XCTAssertEqual(decoded, redecodedObjects)
 
-            if let plistData {
-                let decodedPlistObjects = try! PropertyListDecoder().decode(T.self, from: plistData)
-                XCTAssertEqual(decoded, decodedPlistObjects)
+                if let plistData {
+                        let decodedPlistObjects = try PropertyListDecoder().decode(T.self, from: plistData)
+                        XCTAssertEqual(decoded, decodedPlistObjects)
+                    
+                }
+            }
+            catch {
+                XCTFail("Pass test \"\(name) failed with error: \(error)")
             }
         }
     }
@@ -2523,6 +2529,7 @@ extension JSONEncoderTests {
         _run_passTest(name: "pass13", type: JSONPass.Test13.self)
         _run_passTest(name: "pass14", type: JSONPass.Test14.self)
         _run_passTest(name: "pass15", type: JSONPass.Test15.self)
+        _run_passTest(name: "pass16", type: JSONPass.Test16.self)
     }
 
     func test_json5PassJSONFiles() {
@@ -4365,6 +4372,12 @@ extension JSONPass {
                 case errors, eventData, gatewayTimestamp, gid, id, mpid, properties, type, version
             }
         }
+    }
+}
+
+extension JSONPass {
+    struct Test16: Codable, Equatable {
+        var nestedArray: [Test16]?
     }
 }
 
