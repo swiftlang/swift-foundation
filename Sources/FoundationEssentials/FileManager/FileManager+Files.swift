@@ -485,7 +485,7 @@ extension _FileManagerImpl {
 #endif
     }
 
-#if !os(Windows) && !os(WASI)
+#if !os(Windows) && !os(WASI) && !os(OpenBSD)
     private func _extendedAttribute(_ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data? {
         #if canImport(Darwin)
         var size = getxattr(path, key, nil, 0, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
@@ -647,7 +647,7 @@ extension _FileManagerImpl {
             
             var attributes = statAtPath.fileAttributes
             try? Self._catInfo(for: URL(filePath: path, directoryHint: .isDirectory), statInfo: statAtPath, into: &attributes)
-            #if !os(WASI) // WASI does not support extended attributes
+            #if !os(WASI) && !os(OpenBSD)
             if let extendedAttrs = try? _extendedAttributes(at: fsRep, followSymlinks: false) {
                 attributes[._extendedAttributes] = extendedAttrs
             }
@@ -735,6 +735,9 @@ extension _FileManagerImpl {
             
             #if canImport(Darwin)
             let fsNumber = result.f_fsid.val.0
+            let blockSize = UInt64(result.f_bsize)
+            #elseif os(OpenBSD)
+            let fsNumber = result.f_fsid
             let blockSize = UInt64(result.f_bsize)
             #else
             let fsNumber = result.f_fsid
@@ -950,7 +953,7 @@ extension _FileManagerImpl {
             try Self._setCatInfoAttributes(attributes, path: path)
             
             if let extendedAttrs = attributes[.init("NSFileExtendedAttributes")] as? [String : Data] {
-                #if os(WASI)
+                #if os(WASI) || os(OpenBSD)
                 // WASI does not support extended attributes
                 throw CocoaError.errorWithFilePath(.featureUnsupported, path)
                 #elseif canImport(Android)
