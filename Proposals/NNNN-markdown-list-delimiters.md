@@ -4,6 +4,7 @@
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: TBD
 * Status: **Pitch**
+* Review: ([pitch](https://forums.swift.org/t/pitch-markdown-list-delimiters/79174))
 
 ## Revision history
 
