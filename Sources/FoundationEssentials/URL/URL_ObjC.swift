@@ -326,7 +326,7 @@ internal class _NSSwiftURL: _NSURLBridge, @unchecked Sendable {
         guard hasPath else {
             return ""
         }
-        let result = url.relativePath.lastPathComponent
+        let result = url.lastPathComponent
         if result == "/" && url._parseInfo.path != "/" { return "" }
         return result
     }

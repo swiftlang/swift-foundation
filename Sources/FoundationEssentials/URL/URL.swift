@@ -1345,6 +1345,7 @@ public struct URL: Equatable, Sendable, Hashable {
     internal var _swiftURL: _SwiftURL? {
         #if FOUNDATION_FRAMEWORK
         if let swift = _url as? _SwiftURL { return swift }
+        if let bridged = _url as? _BridgedNSSwiftURL { return bridged._wrapped.url }
         if foundation_swift_nsurl_enabled(), let swift = ns._trueSelf()._url as? _SwiftURL {
             return swift
         }

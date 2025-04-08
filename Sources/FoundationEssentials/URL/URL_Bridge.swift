@@ -424,7 +424,7 @@ internal final class _BridgedURL: _URLProtocol, @unchecked Sendable {
 /// should return `self`, or `.baseURL` should return a pointer to the same `NSURL` from initialization.
 /// At the same time, this allows us to use the new `_SwiftURL` for `NSURL`s bridged to Swift.
 internal final class _BridgedNSSwiftURL: _URLProtocol, @unchecked Sendable {
-    private let _wrapped: _NSSwiftURL
+    internal let _wrapped: _NSSwiftURL
     internal init(_ url: _NSSwiftURL) {
         _wrapped = url
     }

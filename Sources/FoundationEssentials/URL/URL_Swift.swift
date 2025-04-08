@@ -340,7 +340,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
 
     private var absoluteSwiftURL: _SwiftURL {
         guard baseURL != nil else { return self }
-        return _SwiftURL(stringOrEmpty: absoluteString(original: true), encoding: _encoding, compatibility: true) ?? self
+        return _SwiftURL(stringOrEmpty: absoluteString(original: false), encoding: _encoding, compatibility: true) ?? self
     }
 
     var absoluteURL: URL? {
