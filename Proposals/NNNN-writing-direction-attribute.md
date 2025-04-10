@@ -2,8 +2,9 @@
 
 * Proposal: [SF-NNNN](NNNN-writing-direction-attribute.md)
 * Authors: [Max Obermeier](https://github.com/themomax)
-* Review Manager: TBD
-* Status: **Awaiting implementation**
+* Review Manager: [Tina L](https://github.com/itingliu)
+* Status: **Approved and Implemented**
+* Implementation: [swiftlang/swift-foundation#1245](https://github.com/swiftlang/swift-foundation/pull/1245)
 * Review: ([pitch](https://forums.swift.org/t/pitch-writing-direction-attribute/78924))
 
 ## Introduction
