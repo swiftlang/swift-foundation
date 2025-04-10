@@ -448,8 +448,8 @@ extension _FileManagerImpl {
     func isExecutableFile(atPath path: String) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
-            var dwBinaryType: DWORD = 0
-            return GetBinaryTypeW($0, &dwBinaryType)
+            // Use SHGetFileInfo instead of GetBinaryType because the latter returns the wrong answer for x86 binaries running under emulation on ARM systems.
+            return (SHGetFileInfoW($0, 0, nil, 0, SHGFI_EXETYPE) & 0xFFFF) != 0
         }) ?? false
 #else
         _fileAccessibleForMode(path, X_OK)
