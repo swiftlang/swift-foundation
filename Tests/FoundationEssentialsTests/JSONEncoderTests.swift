@@ -2594,6 +2594,7 @@ extension JSONEncoderTests {
         _run_failTest(name: "fail39", type: JSONFail.Test39.self)
         _run_failTest(name: "fail40", type: JSONFail.Test40.self)
         _run_failTest(name: "fail41", type: JSONFail.Test41.self)
+        _run_failTest(name: "fail42", type: JSONFail.Test42.self)
 
     }
 
@@ -4422,6 +4423,7 @@ enum JSONFail {
     typealias Test39 = [String:String]
     typealias Test40 = [String:String]
     typealias Test41 = [String:String]
+    typealias Test42 = JSONPass.Test16
 }
 
 enum JSON5Pass { }
