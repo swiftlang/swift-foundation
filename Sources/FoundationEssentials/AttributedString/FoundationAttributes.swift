@@ -523,7 +523,7 @@ extension AttributeScopes.FoundationAttributes {
     @frozen
     public enum WritingDirectionAttribute: CodableAttributedStringKey {
         public typealias Value = AttributedString.WritingDirection
-        public static let name: String = "Foundation.WritingDirection"
+        public static let name: String = "Foundation.WritingDirectionAttribute"
 
         public static let runBoundaries: AttributedString.AttributeRunBoundaries? = .paragraph
         public static let inheritedByAddedText = false
