@@ -654,6 +654,13 @@ public struct URL: Equatable, Sendable, Hashable {
     }
 #endif
 
+#if os(Linux)
+    // Workaround to fix a Linux-only crash in swift_release.
+    // Add padding to return struct URL to its original size
+    // before the _SwiftURL refactor.
+    private var _padding: URLParseInfo?
+#endif
+
 #if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
     public typealias BookmarkResolutionOptions = NSURL.BookmarkResolutionOptions
     public typealias BookmarkCreationOptions = NSURL.BookmarkCreationOptions
@@ -683,6 +690,18 @@ public struct URL: Equatable, Sendable, Hashable {
     ///
     /// Returns `nil` if a `URL` cannot be formed with the string (for example, if the string contains characters that are illegal in a URL, or is an empty string).
     public init?(string: __shared String, relativeTo url: __shared URL?) {
+        #if os(Linux)
+        // Workaround for a Linux-only crash where swift-corelibs-foundation's
+        // NSURL.baseURL.getter returns a value of 0x1 when briding to URL.
+        // Crash doesn't occur when swift-corelibs-foundation is rebuilt with
+        // the new swift-foundation URL code, so this is temporary to get
+        // swift-foundation CI to pass.
+        if unsafeBitCast(url, to: (UnsafeRawPointer, UnsafeRawPointer).self) == (UnsafeRawPointer(bitPattern: 0x1), UnsafeRawPointer(bitPattern: 0x0)) {
+            guard let inner = URL._type.init(string: string, relativeTo: nil) else { return nil }
+            _url = inner.convertingFileReference()
+            return
+        }
+        #endif
         guard let inner = URL._type.init(string: string, relativeTo: url) else { return nil }
         _url = inner.convertingFileReference()
     }
