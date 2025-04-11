@@ -692,7 +692,7 @@ public struct URL: Equatable, Sendable, Hashable {
     public init?(string: __shared String, relativeTo url: __shared URL?) {
         #if os(Linux)
         // Workaround for a Linux-only crash where swift-corelibs-foundation's
-        // NSURL.baseURL.getter returns a value of 0x1 when briding to URL.
+        // NSURL.baseURL.getter returns a value of 0x1 when bridging to URL.
         // Crash doesn't occur when swift-corelibs-foundation is rebuilt with
         // the new swift-foundation URL code, so this is temporary to get
         // swift-foundation CI to pass.
