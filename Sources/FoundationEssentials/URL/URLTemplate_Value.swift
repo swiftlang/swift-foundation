@@ -21,8 +21,7 @@ internal import _FoundationCollections
 extension URL.Template {
     /// The value of a variable used for expanding a template.
     ///
-    /// A ``Value`` can either be represented by a ``Swift/String``, an ``Swift/Array<String>``
-    /// of ``Swift/String``, or a ``Collections/OrderedDictionary``.
+    /// A value can either be some text, a list, or an associate list (a dictionary).
     ///
     /// ### Examples
     /// ```swift
@@ -44,7 +43,6 @@ extension URL.Template {
     ///     "dot": ".",
     ///     "comma": ",",
     /// ]
-    /// let x: URL.Template.Value = 1024
     /// ```
     public struct Value: Sendable, Hashable {
         let underlying: Underlying
