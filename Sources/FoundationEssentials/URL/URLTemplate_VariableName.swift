@@ -39,11 +39,3 @@ extension URL.Template.VariableName: CustomStringConvertible {
         String(self)
     }
 }
-
-// MARK: -
-
-extension URL.Template.VariableName: ExpressibleByStringLiteral {
-    public init(stringLiteral value: String) {
-        self.init(value)
-    }
-}
