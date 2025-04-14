@@ -13,7 +13,25 @@
 #if !FOUNDATION_FRAMEWORK
 
 // stub
-public struct Measurement<UnitType> {}
+public struct Measurement<UnitType: Hashable>: Hashable {
+    public var value: Double
+    public var unit: UnitType
+    
+    public init(value: Double, unit: UnitType) {
+        self.value = value
+        self.unit = unit
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(value)
+        hasher.combine(unit)
+    }
+    
+    public static func == (lhs: Measurement<UnitType>, rhs: Measurement<UnitType>) -> Bool {
+        return lhs.value == rhs.value && lhs.unit == rhs.unit
+    }
+}
+
 public class Dimension {}
 public class UnitDuration: Dimension {}
 
