@@ -11,10 +11,10 @@ Currently, `Locale.Region` offers a few functionalities to query information abo
 
 ```swift
 extension Locale.Region {
-     /// An array of regions defined by ISO.
+    /// An array of regions defined by ISO.
     public static var isoRegions: [Locale.Region]
     
-    // The region that contains this region, if any.
+    /// The region that contains this region, if any.
     public var containingRegion: Locale.Region? { get }
     
     /// The continent that contains this region, if any.
@@ -68,15 +68,18 @@ extension Locale.Region {
     public struct Category: Codable, Sendable, Hashable {
         /// Category representing the whole world.
         public static let world: Category
-        
+
         /// Category representing a continent, regions contained directly by world.
         public static let continent: Category
-        
+
         /// Category representing a sub-continent, regions contained directly by a continent. 
         public static let subcontinent: Category
-        
+
         /// Category representing a territory.
         public static let territory: Category
+
+        /// Category representing a grouping, regions that has a well defined membership.
+        public static let grouping: Category
     }
     
     /// An array of regions matching the specified categories.
@@ -98,7 +101,7 @@ extension Locale.Region {
 
 This type represents the territory containment levels as defined in [Unicode LDML #35](https://www.unicode.org/reports/tr35/tr35-35/tr35-info.html#Territory_Data). An overview of the latest categorization is available [here](https://www.unicode.org/cldr/charts/46/supplemental/territory_containment_un_m_49.html). 
 
-Currently, `.world` is only associated with `Locale.Region("001")`. `.territory` includes, but is not limited to, countries, as it also includes regions such as Antarctica (code "AQ").
+Currently, `.world` is only associated with `Locale.Region("001")`. `.territory` includes, but is not limited to, countries, as it also includes regions such as Antarctica (code "AQ"). `.grouping` is a region that has well defined membership, such as European Union (code "EU") and Eurozone (code "EZ"). It isn't part of the hierarchy formed by other categories. 
 
 ### Getting sub-regions matching the specified category
 
@@ -125,6 +128,8 @@ _ = americas.subRegions(ofCategory: .territory) // All territories in Americas
 ## Impact on existing code
 
 Code using the existing functions won't be affected as everything proposed is additional.
+
+Note that currently `Locale.Region.isoRegions` does not return regions that fall into the `.grouping` category. It was designed that way because those fall under the grouping category are often used differently from the other regions. The behavior of this method will remain unchanged. Those who wish to retrieve a list of ISO regions including those of the "grouping" category can do so with `Locale.Region.isoRegions(of: .grouping)`.
 
 ## Alternatives considered
 
@@ -153,7 +158,7 @@ Developers would use it like this:
 // The continent containing Argentina, equivalent to `argentina.continent`
 _ = argentina.containingRegion(ofCategory: .continent) // "019" (Americas)
 
-// The sub-continent containing Argentina, equivalent to `equivalent.subcontinent`
+// The sub-continent containing Argentina, equivalent to `argentina.subcontinent`
 _ = argentina.containingRegion(ofCategory: .subcontinent) // "005" (South America)
 ```
 
@@ -173,7 +178,7 @@ would become
 public func subRegions(of category: Category) -> [Locale.Region]
 ```
 
-However, this reads less fluent from the callsite:
+However, this reads less fluent from the call-site:
 
 ```swift
 let continent = Locale.Region(<some continentCode>)
