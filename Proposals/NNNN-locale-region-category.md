@@ -127,9 +127,13 @@ _ = americas.subRegions(ofCategory: .territory) // All territories in Americas
 
 ## Impact on existing code
 
-Code using the existing functions won't be affected as everything proposed is additional.
+### `Locale.Region.isoRegions` starts to include regions of the "grouping" category
 
-Note that currently `Locale.Region.isoRegions` does not return regions that fall into the `.grouping` category. It was designed that way because those fall under the grouping category are often used differently from the other regions. The behavior of this method will remain unchanged. Those who wish to retrieve a list of ISO regions including those of the "grouping" category can do so with `Locale.Region.isoRegions(of: .grouping)`.
+Currently `Locale.Region.isoRegions` does not return regions that fall into the `.grouping` category. Those fall under the grouping category don't fit into the tree-structured containment hierarchy like the others. Given that it is not yet possible to filter ISO regions by category, these regions are not included in the return values of API.
+
+With the introduction of `Locale.Region.isoRegions(ofCategory:)`, we propose changing the behavior of `Locale.Region.isoRegions` to include all ISO regions, including those of the grouping category. Those who wish to exclude those of the "grouping" category can do so with `Locale.Region.isoRegions(of:)`.
+
+Please refer to the Alternative Considered section for more discussion.
 
 ## Alternatives considered
 
@@ -137,7 +141,7 @@ Note that currently `Locale.Region.isoRegions` does not return regions that fall
 
 ICU uses `URegionType` to represent the categories, while Unicode uses the term "territory containment (level)". We considered introducing `Category` as `Type`, `Containment`, `ContainmentLevel`, or `GroupingLevel`. 
 
-`Type` was not the optimal choice because not only it is a language keyword, but also overloaded. `Containment`, `ContainmentLevel` or `GroupingLevel` would all be good fits for modeling regions as a tree hierarchy, but we never intend to force the hierarchy idea onto `Locale.Region`.
+`Type` was not the optimal choice because not only it is a language keyword, but also overloaded. `Containment`, `ContainmentLevel` or `GroupingLevel` would all be good fits for modeling regions as a tree hierarchy, but we never intend to force the hierarchy idea onto `Locale.Region`, and the "grouping" category is not strictly a containment level either.
 
 `Category` shares similar meanings to `Type`, with less strict containment notion, and is typically used in API names. 
 
@@ -186,3 +190,7 @@ let territories = continent.subRegions(of: .territory)
 ```
 
 It seems to indicate `territories` is "the continent's subregions of (some) territory", as opposed to the intended "the content's subregions **of category** 'territory'". Therefore it is left in place to promote fluent usage.
+
+### Do not change the behavior of `Locale.Region.isoRegions`
+
+It was considered to continue to omit regions that fall into the "grouping" category from `Locale.Region.isoRegions` for compatibility. However, just like all the other Locale related API, the list of ISO regions is never guaranteed to be constant. We do not expect users to rely on its exact values, so compatibility isn't a concern.
