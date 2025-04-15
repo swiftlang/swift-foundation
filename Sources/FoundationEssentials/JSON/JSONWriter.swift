@@ -13,7 +13,7 @@
 internal struct JSONWriter {
 
     // Structures with container nesting deeper than this limit are not valid.
-    private static let maximumRecursionDepth = 512
+    internal static let maximumRecursionDepth = 512
 
     private var indent = 0
     private let pretty: Bool
