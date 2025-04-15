@@ -1,6 +1,6 @@
 # Writing Direction Attribute
 
-* Proposal: [SF-NNNN](NNNN-writing-direction-attribute.md)
+* Proposal: [SF-0022](NNNN-writing-direction-attribute.md)
 * Authors: [Max Obermeier](https://github.com/themomax)
 * Review Manager: [Tina L](https://github.com/itingliu)
 * Status: **Approved and Implemented**
