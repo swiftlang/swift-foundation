@@ -65,7 +65,7 @@ _ = Locale.Region.isoRegions(ofCategory: .continent) // All continents: ["002", 
 extension Locale.Region {
 
     /// Categories of a region. See https://www.unicode.org/reports/tr35/tr35-35/tr35-info.html#Territory_Data
-    public struct Category: Codable, Sendable, Hashable {
+    public struct Category: Codable, Sendable, Hashable, CustomDebugStringConvertible {
         /// Category representing the whole world.
         public static let world: Category
 
@@ -85,8 +85,8 @@ extension Locale.Region {
     /// An array of regions matching the specified categories.
     public static func isoRegions(ofCategory category: Category) -> [Locale.Region]
     
-    /// The category of the region.
-    public var category: Category { get }
+    /// The category of the region, if any.
+    public var category: Category? { get }
 
     /// An array of the sub-regions, matching the specified category of the region.
     /// If `category` is higher in the hierarchy than `self`, returns an empty array.
