@@ -33,7 +33,7 @@ private enum ExpressionTests {
                 operator: nil,
                 elements: [
                     Element(
-                        name: "var",
+                        name: .init("var"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -46,7 +46,7 @@ private enum ExpressionTests {
                 operator: .reserved,
                 elements: [
                     Element(
-                        name: "var",
+                        name: .init("var"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -59,7 +59,7 @@ private enum ExpressionTests {
                 operator: .fragment,
                 elements: [
                     Element(
-                        name: "hello",
+                        name: .init("hello"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -72,7 +72,7 @@ private enum ExpressionTests {
                 operator: .nameLabel,
                 elements: [
                     Element(
-                        name: "list",
+                        name: .init("list"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -85,7 +85,7 @@ private enum ExpressionTests {
                 operator: .pathSegment,
                 elements: [
                     Element(
-                        name: "foo",
+                        name: .init("foo"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -98,7 +98,7 @@ private enum ExpressionTests {
                 operator: .pathParameter,
                 elements: [
                     Element(
-                        name: "name",
+                        name: .init("name"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -111,7 +111,7 @@ private enum ExpressionTests {
                 operator: .queryComponent,
                 elements: [
                     Element(
-                        name: "count",
+                        name: .init("count"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -124,7 +124,7 @@ private enum ExpressionTests {
                 operator: .continuation,
                 elements: [
                     Element(
-                        name: "max",
+                        name: .init("max"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -137,7 +137,7 @@ private enum ExpressionTests {
                 operator: nil,
                 elements: [
                     Element(
-                        name: "var",
+                        name: .init("var"),
                         maximumLength: 30,
                         explode: false
                     ),
@@ -150,7 +150,7 @@ private enum ExpressionTests {
                 operator: .reserved,
                 elements: [
                     Element(
-                        name: "var",
+                        name: .init("var"),
                         maximumLength: 30,
                         explode: false
                     ),
@@ -163,7 +163,7 @@ private enum ExpressionTests {
                 operator: nil,
                 elements: [
                     Element(
-                        name: "list",
+                        name: .init("list"),
                         maximumLength: nil,
                         explode: true
                     ),
@@ -176,7 +176,7 @@ private enum ExpressionTests {
                 operator: .continuation,
                 elements: [
                     Element(
-                        name: "list",
+                        name: .init("list"),
                         maximumLength: nil,
                         explode: true
                     ),
@@ -193,12 +193,12 @@ private enum ExpressionTests {
                 operator: nil,
                 elements: [
                     Element(
-                        name: "x",
+                        name: .init("x"),
                         maximumLength: nil,
                         explode: false
                     ),
                     Element(
-                        name: "y",
+                        name: .init("y"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -211,17 +211,17 @@ private enum ExpressionTests {
                 operator: .continuation,
                 elements: [
                     Element(
-                        name: "x",
+                        name: .init("x"),
                         maximumLength: nil,
                         explode: false
                     ),
                     Element(
-                        name: "y",
+                        name: .init("y"),
                         maximumLength: nil,
                         explode: false
                     ),
                     Element(
-                        name: "empty",
+                        name: .init("empty"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -234,12 +234,12 @@ private enum ExpressionTests {
                 operator: .queryComponent,
                 elements: [
                     Element(
-                        name: "q",
+                        name: .init("q"),
                         maximumLength: nil,
                         explode: false
                     ),
                     Element(
-                        name: "lang",
+                        name: .init("lang"),
                         maximumLength: nil,
                         explode: false
                     ),
@@ -252,12 +252,12 @@ private enum ExpressionTests {
                 operator: .pathSegment,
                 elements: [
                     Element(
-                        name: "list",
+                        name: .init("list"),
                         maximumLength: nil,
                         explode: true
                     ),
                     Element(
-                        name: "path",
+                        name: .init("path"),
                         maximumLength: 4,
                         explode: false
                     ),
