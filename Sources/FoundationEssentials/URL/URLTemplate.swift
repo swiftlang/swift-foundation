@@ -136,7 +136,7 @@ extension URL.Template {
     ///
     /// The template string needs to be a valid RFC 6570 template.
     ///
-    /// This will parse the template and throw an error if the template is invalid.
+    /// This will parse the template and return `nil` if the template is invalid.
     public init?(_ template: String) {
         do {
             self.init()
