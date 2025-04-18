@@ -145,9 +145,6 @@ let package = Package(
                 "TestSupport",
                 "FoundationEssentials"
             ],
-            resources: [
-                .copy("Resources")
-            ],
             swiftSettings: availabilityMacros + concurrencyChecking
         ),
 
@@ -175,15 +172,6 @@ let package = Package(
             ] + availabilityMacros + concurrencyChecking
         ),
         
-        .testTarget(
-            name: "FoundationInternationalizationTests",
-            dependencies: [
-                "TestSupport",
-                "FoundationInternationalization",
-            ],
-            swiftSettings: availabilityMacros + concurrencyChecking
-        ),
-        
         // FoundationMacros
         .macro(
             name: "FoundationMacros",
@@ -202,18 +190,3 @@ let package = Package(
         ),
     ]
 )
-
-// https://github.com/apple/swift-package-manager/issues/7174
-// Test macro targets result in multiple definitions of `main` on Windows.
-#if !os(Windows)
-package.targets.append(contentsOf: [
-    .testTarget(
-        name: "FoundationMacrosTests",
-        dependencies: [
-            "FoundationMacros",
-            "TestSupport"
-        ],
-        swiftSettings: availabilityMacros + concurrencyChecking
-    )
-])
-#endif

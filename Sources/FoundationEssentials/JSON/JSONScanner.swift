@@ -261,6 +261,8 @@ extension JSONMap.Value {
 
 
 internal struct JSONScanner {
+    internal static let maximumRecursionDepth = JSONWriter.maximumRecursionDepth
+
     let options: Options
     var reader: DocumentReader
     var depth: Int = 0
@@ -412,7 +414,7 @@ internal struct JSONScanner {
     mutating func scanArray() throws {
         let firstChar = reader.read()
         precondition(firstChar == ._openbracket)
-        guard self.depth < 512 else {
+        guard self.depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries(location: reader.sourceLocation(atOffset: 1))
         }
         self.depth &+= 1
@@ -470,7 +472,7 @@ internal struct JSONScanner {
     mutating func scanObject() throws {
         let firstChar = self.reader.read()
         precondition(firstChar == ._openbrace)
-        guard self.depth < 512 else {
+        guard self.depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries(location: reader.sourceLocation(atOffset: -1))
         }
         try scanObject(withoutBraces: false)

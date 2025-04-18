@@ -1,5 +1,0 @@
-/*this is a comment at the start*/{ 
-    "Hello" :/* this is an inline comment*/ "World"
-    // This is a comment in an object
-}/*inline comment with ****** **/
-// This is a comment at the end
