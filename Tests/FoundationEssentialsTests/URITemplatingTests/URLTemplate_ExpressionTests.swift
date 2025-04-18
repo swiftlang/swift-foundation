@@ -265,4 +265,14 @@ private enum ExpressionTests {
             )
         )
     }
+
+    @Test(arguments: [
+        "path:a",
+        "path:-1",
+    ])
+    static func invalid(
+        input: String
+    ) {
+        #expect((try? Expression(input)) == nil, "Should fail to parse, but not crash.")
+    }
 }

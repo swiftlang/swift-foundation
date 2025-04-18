@@ -103,7 +103,10 @@ extension URL.Template.Expression {
             let maximumLength: Int?
             let explode: Bool
             if let max = match.output.3 {
-                maximumLength = Int(max!)!
+                guard
+                    let m = max.map({ Int($0) })
+                else { throw URL.Template.InvalidExpression(text: "Invalid maximum length '\(input[match.range])'") }
+                maximumLength = m
                 explode = false
             } else if match.output.2 != nil {
                 maximumLength = nil
