@@ -639,6 +639,8 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0, 0)
 #elseif os(FreeBSD)
             _ = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, key, valueBuf.baseAddress!, valueBuf.count)
+#elseif os(OpenBSD)
+            return
 #elseif canImport(Glibc) || canImport(Musl)
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0)
 #endif
