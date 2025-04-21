@@ -21,15 +21,15 @@ internal import _ForSwiftFoundation
 // Actual ProgressReporter Child
 extension Progress {
     
-    /// Returns a ProgressReporter.Progress which can be passed to any method that reports progress
+    /// Returns a Subprogress which can be passed to any method that reports progress
     /// and can be initialized into a child `ProgressReporter` to the `self`.
     ///
     /// Delegates a portion of totalUnitCount to a future child `ProgressReporter` instance.
     ///
     /// - Parameter count: Number of units delegated to a child instance of `ProgressReporter`
-    /// which may be instantiated by `ProgressReporter.Progress` later when `reporter(totalCount:)` is called.
-    /// - Returns: A `ProgressReporter.Progress` instance.
-    public func makeChild(withPendingUnitCount count: Int) -> ProgressReporter.Progress {
+    /// which may be instantiated by `Subprogress` later when `reporter(totalCount:)` is called.
+    /// - Returns: A `Subprogress` instance.
+    public func makeChild(withPendingUnitCount count: Int) -> Subprogress {
         
         // Make ghost parent & add it to actual parent's children list
         let ghostProgressParent = Progress(totalUnitCount: Int64(count))
@@ -42,7 +42,7 @@ extension Progress {
         let observation = _ProgressParentProgressReporterChild(ghostParent: ghostProgressParent, ghostChild: ghostReporterChild)
         
         // Make actual child with ghost child being parent
-        var actualProgress = ghostReporterChild.assign(count: count)
+        var actualProgress = ghostReporterChild.subprogress(assigningCount: count)
         actualProgress.observation = observation
         actualProgress.ghostReporter = ghostReporterChild
         actualProgress.interopWithProgressParent = true
@@ -88,7 +88,7 @@ extension ProgressReporter {
     /// - Parameters:
     ///   - count: Number of units delegated from `self`'s `totalCount`.
     ///   - progress: `Progress` which receives the delegated `count`.
-    public func assign(count: Int, to progress: Foundation.Progress) {
+    public func subprogress(assigningCount count: Int, to progress: Foundation.Progress) {
         let parentBridge = _NSProgressParentBridge(reporterParent: self)
         progress._setParent(parentBridge, portion: Int64(count))
 
