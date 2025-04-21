@@ -10,7 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+// For feature flag
 internal import _ForSwiftFoundation
+#endif
 
 @_spi(Progress)
 @available(FoundationPreview 6.2, *)
