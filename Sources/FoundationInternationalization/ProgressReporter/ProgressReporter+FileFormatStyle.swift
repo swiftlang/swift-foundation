@@ -28,9 +28,7 @@ extension ProgressReporter {
             
             fileprivate var rawOption: RawOption
             
-            private init(
-                _ rawOption: RawOption,
-            ) {
+            private init(_ rawOption: RawOption) {
                 self.rawOption = rawOption
             }
         }
