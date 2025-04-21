@@ -435,41 +435,6 @@ internal struct RFC3986Parser {
         return validate(string: password, component: .password, percentEncodingAllowed: percentEncodingAllowed)
     }
 
-    private static func isIPvFuture(_ innerHost: some StringProtocol) -> Bool {
-        // precondition: IP-literal == "[" innerHost [ "%25" zoneID ] "]"
-        var iter = innerHost.utf8.makeIterator()
-        guard iter.next() == UInt8(ascii: "v") else { return false }
-        guard let second = iter.next(), second.isValidHexDigit else { return false }
-        while let next = iter.next() {
-            if next.isValidHexDigit { continue }
-            if next == ._dot { return true }
-            return false
-        }
-        return false
-    }
-
-    /// Only checks that the characters are allowed in an IPv6 address.
-    /// Does not validate the format of the IPv6 address.
-    private static func validateIPv6Address(_ address: some StringProtocol) -> Bool {
-        let isValid = address.utf8.withContiguousStorageIfAvailable {
-            $0.allSatisfy { $0.isValidHexDigit || $0 == UInt8(ascii: ":") || $0 == UInt8(ascii: ".") }
-        }
-        if let isValid {
-            return isValid
-        }
-        #if FOUNDATION_FRAMEWORK
-        if let fastCharacters = address._ns._fastCharacterContents() {
-            let charsBuffer = UnsafeBufferPointer(start: fastCharacters, count: address._ns.length)
-            return charsBuffer.allSatisfy {
-                guard $0 < 128 else { return false }
-                let v = UInt8($0)
-                return v.isValidHexDigit || v == UInt8(ascii: ":") || v == UInt8(ascii: ".")
-            }
-        }
-        #endif
-        return address.utf8.allSatisfy { $0.isValidHexDigit || $0 == UInt8(ascii: ":") || $0 == UInt8(ascii: ".") }
-    }
-
     /// Validates an IP-literal host string that has leading and trailing brackets.
     /// If the host string contains a zone ID delimiter "%", this must be percent encoded to "%25" to be valid.
     /// The zone ID may contain any `reg_name` characters, including percent-encoding.
@@ -483,11 +448,7 @@ internal struct RFC3986Parser {
 
         guard let percentIndex = utf8.firstIndex(of: UInt8(ascii: "%")) else {
             // There is no zoneID, so the whole innerHost must be the IP-literal address.
-            if isIPvFuture(innerHost) {
-                return validate(string: innerHost, component: .hostIPvFuture, percentEncodingAllowed: false)
-            } else {
-                return validateIPv6Address(innerHost)
-            }
+            return validate(string: innerHost, component: .hostIPvFuture, percentEncodingAllowed: false)
         }
 
         // The first "%" in an IP-literal must be the zone ID delimiter.
@@ -503,11 +464,7 @@ internal struct RFC3986Parser {
             return false
         }
 
-        if isIPvFuture(innerHost) {
-            return validate(string: innerHost[..<percentIndex], component: .hostIPvFuture, percentEncodingAllowed: false) && validate(string: innerHost[innerHost.index(after: twoAfterIndex)...], component: .hostZoneID)
-        } else {
-            return validateIPv6Address(innerHost[..<percentIndex]) && validate(string: innerHost[innerHost.index(after: twoAfterIndex)...], component: .hostZoneID)
-        }
+        return validate(string: innerHost[..<percentIndex], component: .hostIPvFuture, percentEncodingAllowed: false) && validate(string: innerHost[innerHost.index(after: twoAfterIndex)...], component: .hostZoneID)
     }
 
     private static func validate(host: some StringProtocol, knownIPLiteral: Bool = false) -> Bool {
