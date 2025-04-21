@@ -367,7 +367,7 @@ class TestProgressReporter: XCTestCase {
     }
 }
 
-
+#if FOUNDATION_FRAMEWORK
 /// Unit tests for interop methods that support building Progress trees with both Progress and ProgressReporter
 class TestProgressReporterInterop: XCTestCase {
     func doSomethingWithProgress(expectation1: XCTestExpectation, expectation2: XCTestExpectation) async -> Progress {
@@ -469,4 +469,4 @@ class TestProgressReporterInterop: XCTestCase {
         XCTAssertEqual(overallProgress2.totalUnitCount, 0)
     }
 }
-
+#endif
