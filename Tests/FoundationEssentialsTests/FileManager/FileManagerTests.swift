@@ -1072,4 +1072,92 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual($0.contents(atPath: "a\u{301}/test"), data)
         }
     }
+
+    /// Tests that Foundation can correctly handle "long paths" (paths of 260 to 32767 chacters long) on Windows.
+    func testWindowsLongPathSupport() throws {
+        #if !os(Windows)
+        throw XCTSkip("This test is not applicable for this platform")
+        #else
+        // Create a directory with the absolute maximum path _component_ length of 255;
+        // this will guarantee the full playground path is well over 260 characters.
+        // Throw some Unicode in there for good measure, since only wide-character APIs support it.
+        let dirName = String(repeating: UUID().uuidString, count: 7) + "你好！"
+        XCTAssertEqual(dirName.count, 255)
+        XCTAssertEqual(dirName.utf16.count, 255)
+
+        try FileManagerPlayground {
+            Directory(dirName) {
+            }
+        }.test {
+            // Call every function that can call into withNTPathRepresentation with an overlong path and ensure it succeeds.
+            let fileName = UUID().uuidString
+            let cwd = try XCTUnwrap($0.currentDirectoryPath)
+
+            XCTAssertTrue($0.createFile(atPath: dirName + "/" + fileName, contents: nil))
+
+            let dirURL = URL(filePath: dirName, directoryHint: .checkFileSystem)
+            XCTAssertTrue(dirURL.hasDirectoryPath)
+
+            let fileURL = URL(filePath: dirName + "/" + fileName, directoryHint: .checkFileSystem)
+            XCTAssertFalse(fileURL.hasDirectoryPath)
+
+            XCTAssertTrue($0.fileExists(atPath: dirName + "/" + fileName))
+            XCTAssertTrue($0.isReadableFile(atPath: dirName + "/" + fileName))
+            XCTAssertTrue($0.isWritableFile(atPath: dirName + "/" + fileName))
+
+            // SHGetFileInfoW is documented to be limited to MAX_PATH, but appears to support long paths anyways (or at least does for SHGFI_EXETYPE).
+            // https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shgetfileinfow
+            XCTAssertNoThrow(try Data().write(to: URL(fileURLWithPath: dirName + "/" + fileName + ".bat")))
+            XCTAssertTrue($0.isExecutableFile(atPath: dirName + "/" + fileName + ".bat"))
+            XCTAssertFalse($0.isExecutableFile(atPath: dirName + "/" + fileName))
+
+            XCTAssertNoThrow(try $0.attributesOfItem(atPath: dirName + "/" + fileName))
+            XCTAssertNoThrow(try $0.setAttributes([.modificationDate: Date()], ofItemAtPath: dirName + "/" + fileName))
+            XCTAssertNoThrow(try $0.attributesOfFileSystem(forPath: dirName + "/" + fileName))
+
+            XCTAssertNoThrow(try Data(contentsOf: URL(fileURLWithPath: dirName + "/" + fileName)))
+
+            XCTAssertNoThrow(try Data("hello".utf8).write(to: URL(fileURLWithPath: dirName + "/" + fileName)))
+            XCTAssertNoThrow(try Data("hello".utf8).write(to: URL(fileURLWithPath: dirName + "/" + fileName), options: .atomic))
+
+            XCTAssertNoThrow(try Data("hello".utf8).write(to: URL(fileURLWithPath: dirName + "/" + fileName + ".v2")))
+            XCTAssertTrue($0.contentsEqual(atPath: dirName + "/" + fileName, andPath: dirName + "/" + fileName + ".v2"))
+
+            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: dirName).sorted(), [
+                fileName,
+                fileName + ".bat",
+                fileName + ".v2"
+            ])
+
+            XCTAssertNoThrow(try $0.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir1"), withIntermediateDirectories: false))
+
+            // SHCreateDirectoryExW's path argument is limited to 248 characters, and the \\?\ prefix doesn't help.
+            // https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shcreatedirectoryexw
+            XCTAssertThrowsError(try $0.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3"), withIntermediateDirectories: true))
+
+            // SetCurrentDirectory seems to be limited to MAX_PATH unconditionally, counter to the documentation.
+            // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setcurrentdirectory
+            // https://github.com/MicrosoftDocs/feedback/issues/1441
+            XCTAssertFalse($0.changeCurrentDirectoryPath(dirName + "/" + "subdir1"))
+
+            XCTAssertNoThrow(try $0.createSymbolicLink(atPath: dirName + "/" + "lnk", withDestinationPath: fileName))
+            XCTAssertNoThrow(try $0.createSymbolicLink(atPath: dirName + "/" + "lnk2", withDestinationPath: cwd + "/" + dirName + "/" + fileName))
+            XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: dirName + "/" + "lnk"), fileName)
+            XCTAssertEqual(try $0.destinationOfSymbolicLink(atPath: dirName + "/" + "lnk2"), cwd + "\\" + dirName + "\\" + fileName)
+
+            XCTAssertEqual((cwd + "/" + dirName + "/" + "lnk").resolvingSymlinksInPath, (cwd + "/" + dirName + "/" + fileName).resolvingSymlinksInPath)
+
+            XCTAssertNoThrow(try $0.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2"), withIntermediateDirectories: false))
+            XCTAssertNoThrow(try $0.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3"), withIntermediateDirectories: false))
+            XCTAssertNoThrow(try Data().write(to: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile")))
+            XCTAssertNoThrow(try Data().write(to: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile2")))
+            XCTAssertNoThrow(try $0.moveItem(atPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile2", toPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile3"))
+            XCTAssertNoThrow(try $0.moveItem(atPath: dirName + "/" + "subdir2" + "/" + "subdir3", toPath: dirName + "/" + "subdir2" + "/" + "subdir3.delete"))
+            XCTAssertNoThrow(try $0.linkItem(atPath: dirName + "/" + "subdir2" + "/" + "subdir3.delete", toPath: dirName + "/" + "subdir2" + "/" + "subdir3.delete.lnk"))
+            XCTAssertNoThrow(try $0.linkItem(atPath: dirName + "/" + "subdir2", toPath: dirName + "/" + "subdir2.lnk"))
+            XCTAssertNoThrow(try $0.removeItem(atPath: dirName + "/" + "subdir2" + "/" + "subdir3.delete" + "/" + "somefile3"))
+            XCTAssertNoThrow(try $0.removeItem(atPath: dirName + "/" + "subdir2"))
+        }
+        #endif
+    }
 }
