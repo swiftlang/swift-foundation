@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 // ProgressReporter.Progress
 extension ProgressReporter {
