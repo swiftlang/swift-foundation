@@ -9,7 +9,6 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 extension ProgressReporter {
     // Namespace for properties specific to operations reported on

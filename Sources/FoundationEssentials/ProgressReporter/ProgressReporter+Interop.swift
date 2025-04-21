@@ -11,11 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-// For feature flag
 internal import _ForSwiftFoundation
-#endif
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 //MARK: Progress Parent - ProgressReporter Child Interop
 // Actual Progress Parent
@@ -83,7 +80,6 @@ private final class _ProgressParentProgressReporterChild: Sendable {
     }
 }
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 //MARK: ProgressReporter Parent - Progress Child Interop
 extension ProgressReporter {
@@ -118,3 +114,4 @@ internal final class _NSProgressParentBridge: Progress, @unchecked Sendable {
         actualParent.updateChildFraction(from: _ProgressFraction(nsProgressFraction: fraction.previous), to: _ProgressFraction(nsProgressFraction: fraction.next), portion: Int(portion))
     }
 }
+#endif
