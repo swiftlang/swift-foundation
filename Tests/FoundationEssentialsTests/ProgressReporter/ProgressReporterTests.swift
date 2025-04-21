@@ -20,7 +20,7 @@ import XCTest
 /// Unit tests for basic functionalities of ProgressReporter
 class TestProgressReporter: XCTestCase {
     /// MARK: Helper methods that report progress
-    func doBasicOperationV1(reportTo progress: consuming ProgressReporter.Progress) async {
+    func doBasicOperationV1(reportTo progress: consuming Subprogress) async {
         let reporter = progress.reporter(totalCount: 8)
         for i in 1...8 {
             reporter.complete(count: 1)
@@ -29,7 +29,7 @@ class TestProgressReporter: XCTestCase {
         }
     }
     
-    func doBasicOperationV2(reportTo progress: consuming ProgressReporter.Progress) async {
+    func doBasicOperationV2(reportTo progress: consuming Subprogress) async {
         let reporter = progress.reporter(totalCount: 7)
         for i in 1...7 {
             reporter.complete(count: 1)
@@ -38,7 +38,7 @@ class TestProgressReporter: XCTestCase {
         }
     }
     
-    func doBasicOperationV3(reportTo progress: consuming ProgressReporter.Progress) async {
+    func doBasicOperationV3(reportTo progress: consuming Subprogress) async {
         let reporter = progress.reporter(totalCount: 11)
         for i in 1...11 {
             reporter.complete(count: 1)
@@ -47,7 +47,7 @@ class TestProgressReporter: XCTestCase {
         }
     }
     
-    func doFileOperation(reportTo progress: consuming ProgressReporter.Progress) async {
+    func doFileOperation(reportTo progress: consuming Subprogress) async {
         let reporter = progress.reporter(totalCount: 100)
         reporter.withProperties { properties in
             properties.totalFileCount = 100
@@ -114,7 +114,7 @@ class TestProgressReporter: XCTestCase {
         XCTAssertTrue(overall.isIndeterminate)
         XCTAssertFalse(overall.isFinished)
         
-        let progress1 = overall.assign(count: 2)
+        let progress1 = overall.subprogress(assigningCount: 2)
         let reporter1 = progress1.reporter(totalCount: 1)
         
         reporter1.complete(count: 1)
@@ -144,7 +144,7 @@ class TestProgressReporter: XCTestCase {
         let overall = ProgressReporter(totalCount: 10)
         overall.complete(count: 5)
         
-        let progress1 = overall.assign(count: 8)
+        let progress1 = overall.subprogress(assigningCount: 8)
         let reporter1 = progress1.reporter(totalCount: 1)
         reporter1.complete(count: 1)
         
@@ -158,7 +158,7 @@ class TestProgressReporter: XCTestCase {
     /// MARK: Tests single-level tree
     func testDiscreteReporter() async throws {
         let reporter = ProgressReporter(totalCount: 3)
-        await doBasicOperationV1(reportTo: reporter.assign(count: 3))
+        await doBasicOperationV1(reportTo: reporter.subprogress(assigningCount: 3))
         XCTAssertEqual(reporter.fractionCompleted, 1.0)
         XCTAssertEqual(reporter.completedCount, 3)
         XCTAssertTrue(reporter.isFinished)
@@ -166,7 +166,7 @@ class TestProgressReporter: XCTestCase {
     
     func testDiscreteReporterWithFileProperties() async throws {
         let fileReporter = ProgressReporter(totalCount: 3)
-        await doFileOperation(reportTo: fileReporter.assign(count: 3))
+        await doFileOperation(reportTo: fileReporter.subprogress(assigningCount: 3))
         XCTAssertEqual(fileReporter.fractionCompleted, 1.0)
         XCTAssertEqual(fileReporter.completedCount, 3)
         XCTAssertTrue(fileReporter.isFinished)
@@ -183,7 +183,7 @@ class TestProgressReporter: XCTestCase {
         XCTAssertFalse(reporter.isIndeterminate)
         XCTAssertEqual(reporter.totalCount, 10)
         
-        await doBasicOperationV1(reportTo: reporter.assign(count: 10))
+        await doBasicOperationV1(reportTo: reporter.subprogress(assigningCount: 10))
         XCTAssertEqual(reporter.fractionCompleted, 1.0)
         XCTAssertEqual(reporter.completedCount, 10)
         XCTAssertTrue(reporter.isFinished)
@@ -192,7 +192,7 @@ class TestProgressReporter: XCTestCase {
     func testTwoLevelTreeWithOneChildWithFileProperties() async throws {
         let overall = ProgressReporter(totalCount: 2)
         
-        let progress1 = overall.assign(count: 1)
+        let progress1 = overall.subprogress(assigningCount: 1)
         let reporter1 = progress1.reporter(totalCount: 10)
         reporter1.withProperties { properties in
             properties.totalFileCount = 10
@@ -208,7 +208,7 @@ class TestProgressReporter: XCTestCase {
     func testTwoLevelTreeWithTwoChildrenWithFileProperties() async throws {
         let overall = ProgressReporter(totalCount: 2)
         
-        let progress1 = overall.assign(count: 1)
+        let progress1 = overall.subprogress(assigningCount: 1)
         let reporter1 = progress1.reporter(totalCount: 10)
         
         reporter1.withProperties { properties in
@@ -216,7 +216,7 @@ class TestProgressReporter: XCTestCase {
             properties.completedFileCount = 0
         }
         
-        let progress2 = overall.assign(count: 1)
+        let progress2 = overall.subprogress(assigningCount: 1)
         let reporter2 = progress2.reporter(totalCount: 10)
         
         reporter2.withProperties { properties in
@@ -242,16 +242,16 @@ class TestProgressReporter: XCTestCase {
     func testThreeLevelTreeWithFileProperties() async throws {
         let overall = ProgressReporter(totalCount: 1)
         
-        let progress1 = overall.assign(count: 1)
+        let progress1 = overall.subprogress(assigningCount: 1)
         let reporter1 = progress1.reporter(totalCount: 5)
         
-        let childProgress1 = reporter1.assign(count: 3)
+        let childProgress1 = reporter1.subprogress(assigningCount: 3)
         let childReporter1 = childProgress1.reporter(totalCount: nil)
         childReporter1.withProperties { properties in
             properties.totalFileCount = 10
         }
         
-        let childProgress2 = reporter1.assign(count: 2)
+        let childProgress2 = reporter1.subprogress(assigningCount: 2)
         let childReporter2 = childProgress2.reporter(totalCount: nil)
         childReporter2.withProperties { properties in
             properties.totalFileCount = 10
@@ -266,13 +266,13 @@ class TestProgressReporter: XCTestCase {
     func testTwoLevelTreeWithTwoChildren() async throws {
         let overall = ProgressReporter(totalCount: 2)
         
-        await doBasicOperationV1(reportTo: overall.assign(count: 1))
+        await doBasicOperationV1(reportTo: overall.subprogress(assigningCount: 1))
         XCTAssertEqual(overall.fractionCompleted, 0.5)
         XCTAssertEqual(overall.completedCount, 1)
         XCTAssertFalse(overall.isFinished)
         XCTAssertFalse(overall.isIndeterminate)
         
-        await doBasicOperationV2(reportTo: overall.assign(count: 1))
+        await doBasicOperationV2(reportTo: overall.subprogress(assigningCount: 1))
         XCTAssertEqual(overall.fractionCompleted, 1.0)
         XCTAssertEqual(overall.completedCount, 2)
         XCTAssertTrue(overall.isFinished)
@@ -282,11 +282,11 @@ class TestProgressReporter: XCTestCase {
     func testTwoLevelTreeWithTwoChildrenWithOneFileProperty() async throws {
         let overall = ProgressReporter(totalCount: 2)
         
-        let progress1 = overall.assign(count: 1)
+        let progress1 = overall.subprogress(assigningCount: 1)
         let reporter1 = progress1.reporter(totalCount: 5)
         reporter1.complete(count: 5)
         
-        let progress2 = overall.assign(count: 1)
+        let progress2 = overall.subprogress(assigningCount: 1)
         let reporter2 = progress2.reporter(totalCount: 5)
         reporter2.withProperties { properties in
             properties.totalFileCount = 10
@@ -300,15 +300,15 @@ class TestProgressReporter: XCTestCase {
     func testTwoLevelTreeWithMultipleChildren() async throws {
         let overall = ProgressReporter(totalCount: 3)
         
-        await doBasicOperationV1(reportTo: overall.assign(count:1))
+        await doBasicOperationV1(reportTo: overall.subprogress(assigningCount:1))
         XCTAssertEqual(overall.fractionCompleted, Double(1) / Double(3))
         XCTAssertEqual(overall.completedCount, 1)
         
-        await doBasicOperationV2(reportTo: overall.assign(count:1))
+        await doBasicOperationV2(reportTo: overall.subprogress(assigningCount:1))
         XCTAssertEqual(overall.fractionCompleted, Double(2) / Double(3))
         XCTAssertEqual(overall.completedCount, 2)
         
-        await doBasicOperationV3(reportTo: overall.assign(count:1))
+        await doBasicOperationV3(reportTo: overall.subprogress(assigningCount:1))
         XCTAssertEqual(overall.fractionCompleted, Double(3) / Double(3))
         XCTAssertEqual(overall.completedCount, 3)
     }
@@ -317,10 +317,10 @@ class TestProgressReporter: XCTestCase {
         let overall = ProgressReporter(totalCount: 100)
         XCTAssertEqual(overall.fractionCompleted, 0.0)
         
-        let child1 = overall.assign(count: 100)
+        let child1 = overall.subprogress(assigningCount: 100)
         let reporter1 = child1.reporter(totalCount: 100)
         
-        let grandchild1 = reporter1.assign(count: 100)
+        let grandchild1 = reporter1.subprogress(assigningCount: 100)
         let grandchildReporter1 = grandchild1.reporter(totalCount: 100)
         
         XCTAssertEqual(overall.fractionCompleted, 0.0)
@@ -342,16 +342,16 @@ class TestProgressReporter: XCTestCase {
         let overall = ProgressReporter(totalCount: 100)
         XCTAssertEqual(overall.fractionCompleted, 0.0)
         
-        let child1 = overall.assign(count: 100)
+        let child1 = overall.subprogress(assigningCount: 100)
         let reporter1 = child1.reporter(totalCount: 100)
         
-        let grandchild1 = reporter1.assign(count: 100)
+        let grandchild1 = reporter1.subprogress(assigningCount: 100)
         let grandchildReporter1 = grandchild1.reporter(totalCount: 100)
         
         XCTAssertEqual(overall.fractionCompleted, 0.0)
         
         
-        let greatGrandchild1 = grandchildReporter1.assign(count: 100)
+        let greatGrandchild1 = grandchildReporter1.subprogress(assigningCount: 100)
         let greatGrandchildReporter1 = greatGrandchild1.reporter(totalCount: 100)
         
         greatGrandchildReporter1.complete(count: 50)
@@ -381,7 +381,7 @@ class TestProgressReporterInterop: XCTestCase {
         return p
     }
     
-    func doSomethingWithReporter(progress: consuming ProgressReporter.Progress?) async {
+    func doSomethingWithReporter(progress: consuming Subprogress?) async {
         let reporter = progress?.reporter(totalCount: 4)
         reporter?.complete(count: 2)
         reporter?.complete(count: 2)
@@ -417,7 +417,7 @@ class TestProgressReporterInterop: XCTestCase {
         let overallReporter = ProgressReporter(totalCount: 10)
         
         // Add ProgressReporter as Child
-        await doSomethingWithReporter(progress: overallReporter.assign(count: 5))
+        await doSomethingWithReporter(progress: overallReporter.subprogress(assigningCount: 5))
         
         // Check if ProgressReporter values propagate to ProgressReporter parent
         XCTAssertEqual(overallReporter.fractionCompleted, 0.5)
@@ -427,7 +427,7 @@ class TestProgressReporterInterop: XCTestCase {
         let expectation1 = XCTestExpectation(description: "Set completed unit count to 1")
         let expectation2 = XCTestExpectation(description: "Set completed unit count to 2")
         let p2 = await doSomethingWithProgress(expectation1: expectation1, expectation2: expectation2)
-        overallReporter.assign(count: 5, to: p2)
+        overallReporter.subprogress(assigningCount: 5, to: p2)
         
         await fulfillment(of: [expectation1, expectation2], timeout: 10.0)
         
@@ -441,19 +441,19 @@ class TestProgressReporterInterop: XCTestCase {
         return Progress(totalUnitCount: 5)
     }
     
-    func receiveProgress(progress: consuming ProgressReporter.Progress) {
+    func receiveProgress(progress: consuming Subprogress) {
         let _ = progress.reporter(totalCount: 5)
     }
     
     func testInteropProgressReporterParentProgressChildConsistency() async throws {
         let overallReporter = ProgressReporter(totalCount: nil)
-        let child = overallReporter.assign(count: 5)
+        let child = overallReporter.subprogress(assigningCount: 5)
         receiveProgress(progress: child)
         XCTAssertNil(overallReporter.totalCount)
         
         let overallReporter2 = ProgressReporter(totalCount: nil)
         let interopChild = getProgressWithTotalCountInitialized()
-        overallReporter2.assign(count: 5, to: interopChild)
+        overallReporter2.subprogress(assigningCount: 5, to: interopChild)
         XCTAssertNil(overallReporter2.totalCount)
     }
     
