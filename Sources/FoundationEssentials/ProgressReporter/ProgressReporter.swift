@@ -269,16 +269,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     
-    /// Returns a `ProgressReporter.Progress` representing a portion of `self`which can be passed to any method that reports progress.
+    /// Returns a `Subprogress` representing a portion of `self`which can be passed to any method that reports progress.
     ///
-    /// - Parameter count: Units, which is a portion of `totalCount`delegated to an instance of `ProgressReporter.Progress`.
-    /// - Returns: A `ProgressReporter.Progress` instance.
-    public func assign(count portionOfParent: Int) -> Progress {
+    /// - Parameter count: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
+    /// - Returns: A `Subprogress` instance.
+    public func subprogress(assigningCount portionOfParent: Int) -> Subprogress {
         precondition(portionOfParent > 0, "Giving out zero units is not a valid operation.")
-        let childProgress = Progress(parent: self, portionOfParent: portionOfParent)
-        return childProgress
+        let subprogress = Subprogress(parent: self, portionOfParent: portionOfParent)
+        return subprogress
     }
-    
     
     /// Increases `completedCount` by `count`.
     /// - Parameter count: Units of work.
