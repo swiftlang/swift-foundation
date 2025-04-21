@@ -9,7 +9,10 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
+#if FOUNDATION_FRAMEWORK
+// For feature flag
 internal import _ForSwiftFoundation
+#endif
 
 internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConvertible {
     var completed : Int
