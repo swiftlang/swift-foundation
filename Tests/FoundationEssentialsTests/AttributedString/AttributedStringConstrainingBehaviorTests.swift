@@ -509,6 +509,14 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("Hello, world", 1, 2), ("ABC", 1, nil)], for: \.testInt, \.testCharacterDependent)
         
         result = str
+        result.characters.insert("A", at: result.startIndex)
+        verify(string: result, matches: [("A", 1, nil), ("Hello, world", 1, 2)], for: \.testInt, \.testCharacterDependent)
+        
+        result = str
+        result.characters.insert("A", at: result.index(afterCharacter: result.startIndex))
+        verify(string: result, matches: [("HAello, world", 1, nil)], for: \.testInt, \.testCharacterDependent)
+        
+        result = str
         result.characters.removeSubrange(result.index(afterCharacter: result.startIndex) ..< result.index(beforeCharacter: result.endIndex))
         verify(string: result, matches: [("Hd", 1, nil)], for: \.testInt, \.testCharacterDependent)
 
@@ -566,5 +574,13 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         result[result.startIndex ..< result.index(afterCharacter: result.startIndex)] = replacement[replacement.startIndex ..< replacement.index(afterCharacter: str.startIndex)]
         verify(string: result, matches: [("H", nil, nil, "Hello"), ("ello, world", 1, nil, nil)], for: \.testInt, \.testCharacterDependent, \.testString)
     }
-
+    
+    func testInvalidationCharacterInsertionBetweenRuns() {
+        var str = AttributedString("Hello", attributes: .init().testInt(1).testCharacterDependent(2))
+        str += AttributedString("World", attributes: .init().testInt(1).testCharacterDependent(3))
+        
+        // Inserting text between two runs should not invalidate text dependent attributes in either of the surrounding runs
+        str.characters.insert("|", at: str.index(str.startIndex, offsetByCharacters: 5))
+        verify(string: str, matches: [("Hello", 1, 2), ("|", 1, nil), ("World", 1, 3)], for: \.testInt, \.testCharacterDependent)
+    }
 }
