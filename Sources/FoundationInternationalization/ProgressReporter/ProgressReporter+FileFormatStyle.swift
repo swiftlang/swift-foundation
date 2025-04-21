@@ -57,6 +57,7 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
         switch self.option.rawOption {
       
         case .file:
+            #if FOUNDATION_FRAMEWORK
             var fileCountLSR: LocalizedStringResource?
             var byteCountLSR: LocalizedStringResource?
             var throughputLSR: LocalizedStringResource?
@@ -88,6 +89,42 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
             \(String(localized: throughputLSR ?? "")) 
             \(String(localized: timeRemainingLSR ?? ""))
             """
+            #else
+            
+            var fileCountString: String?
+            var byteCountString: String?
+            var throughputString: String?
+            var timeRemainingString: String?
+                        
+            let properties = reporter.withProperties(\.self)
+            
+            if let totalFileCount = properties.totalFileCount {
+                let completedFileCount = properties.completedFileCount ?? 0
+                fileCountString = "\(completedFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale))) / \(totalFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale)))"
+            }
+            
+            if let totalByteCount = properties.totalByteCount {
+                let completedByteCount = properties.completedByteCount ?? 0
+                byteCountString = "\(completedByteCount.formatted(ByteCountFormatStyle(locale: self.locale))) / \(totalByteCount.formatted(ByteCountFormatStyle(locale: self.locale)))"
+            }
+            
+            if let throughput = properties.throughput {
+                throughputString = "\(throughput.formatted(ByteCountFormatStyle(locale: self.locale)))/s"
+            }
+            
+            if let timeRemaining = properties.estimatedTimeRemaining {
+                var formatStyle = Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .wide)
+                formatStyle.locale = self.locale
+                timeRemainingString = "\(timeRemaining.formatted(formatStyle)) remaining"
+            }
+            
+            return """
+            \(fileCountString ?? "")
+            \(byteCountString ?? "")
+            \(throughputString ?? "")
+            \(timeRemainingString ?? "")
+            """
+            #endif
         }
     }
 }

@@ -21,13 +21,12 @@ extension ProgressReporter {
         // Outlines the options available to format ProgressReporter
         internal struct Option: Sendable, Codable, Hashable, Equatable {
             
-            #if FOUNDATION_FRAMEWORK
             /// Option specifying`fractionCompleted`.
             ///
             /// For example, 20% completed.
             /// - Parameter style: A `FloatingPointFormatStyle<Double>.Percent` instance that should be used to format `fractionCompleted`.
             /// - Returns: A `LocalizedStringResource` for formatted `fractionCompleted`.
-            internal static func fractionCompleted(format style: Foundation.FloatingPointFormatStyle<Double>.Percent = Foundation.FloatingPointFormatStyle<Double>.Percent()
+            internal static func fractionCompleted(format style: FloatingPointFormatStyle<Double>.Percent = FloatingPointFormatStyle<Double>.Percent()
             ) -> Option {
                 return Option(.fractionCompleted(style))
             }
@@ -37,33 +36,11 @@ extension ProgressReporter {
             /// For example, 5 of 10.
             /// - Parameter style: An `IntegerFormatStyle<Int>` instance that should be used to format `completedCount` and `totalCount`.
             /// - Returns: A `LocalizedStringResource` for formatted `completedCount` / `totalCount`.
-            internal static func count(format style: Foundation.IntegerFormatStyle<Int> = Foundation.IntegerFormatStyle<Int>()
+            internal static func count(format style: IntegerFormatStyle<Int> = IntegerFormatStyle<Int>()
             ) -> Option {
                 return Option(.count(style))
             }
-            #else
-            /// Option specifying`fractionCompleted`.
-            ///
-            /// For example, 20% completed.
-            /// - Parameter style: A `FloatingPointFormatStyle<Double>.Percent` instance that should be used to format `fractionCompleted`.
-            /// - Returns: A `LocalizedStringResource` for formatted `fractionCompleted`.
-            internal static func fractionCompleted(format style: FoundationInternationalization.FloatingPointFormatStyle<Double>.Percent = FoundationInternationalization.FloatingPointFormatStyle<Double>.Percent()
-            ) -> Option {
-                return Option(.fractionCompleted(style))
-            }
-            
-            /// Option specifying `completedCount` / `totalCount`.
-            ///
-            /// For example, 5 of 10.
-            /// - Parameter style: An `IntegerFormatStyle<Int>` instance that should be used to format `completedCount` and `totalCount`.
-            /// - Returns: A `LocalizedStringResource` for formatted `completedCount` / `totalCount`.
-            internal static func count(format style: FoundationInternationalization.IntegerFormatStyle<Int> = FoundationInternationalization.IntegerFormatStyle<Int>()
-            ) -> Option {
-                return Option(.count(style))
-            }
-            #endif // FOUNDATION_FRAMEWORK
-            
-            
+
             fileprivate enum RawOption: Codable, Hashable, Equatable {
                 case count(IntegerFormatStyle<Int>)
                 case fractionCompleted(FloatingPointFormatStyle<Double>.Percent)
@@ -99,12 +76,20 @@ extension ProgressReporter.FormatStyle: FormatStyle {
             let count = reporter.withProperties { p in
                 return (p.completedCount, p.totalCount)
             }
+            #if FOUNDATION_FRAMEWORK
             let countLSR = LocalizedStringResource("\(count.0, format: countStyle) of \(count.1 ?? 0, format: countStyle)", locale: self.locale, bundle: .forClass(ProgressReporter.self))
             return String(localized: countLSR)
+            #else
+            return "\(count.0.formatted(countStyle.locale(self.locale))) / \((count.1 ?? 0).formatted(countStyle.locale(self.locale)))"
+            #endif
             
         case .fractionCompleted(let fractionStyle):
+            #if FOUNDATION_FRAMEWORK
             let fractionLSR = LocalizedStringResource("\(reporter.fractionCompleted, format: fractionStyle) completed", locale: self.locale, bundle: .forClass(ProgressReporter.self))
             return String(localized: fractionLSR)
+            #else
+            return "\(reporter.fractionCompleted.formatted(fractionStyle.locale(self.locale)))"
+            #endif
         }
     }
 }
@@ -123,7 +108,6 @@ extension ProgressReporter {
     }
 #endif // FOUNDATION_FRAMEWORK
     
-
     public func formatted() -> String {
         self.formatted(.fractionCompleted())
     }
@@ -133,31 +117,15 @@ extension ProgressReporter {
 @available(FoundationPreview 6.2, *)
 extension FormatStyle where Self == ProgressReporter.FormatStyle {
     
-#if FOUNDATION_FRAMEWORK
     public static func fractionCompleted(
-        format: Foundation.FloatingPointFormatStyle<Double>.Percent = Foundation.FloatingPointFormatStyle<Double>.Percent()
+        format: FloatingPointFormatStyle<Double>.Percent = FloatingPointFormatStyle<Double>.Percent()
     ) -> Self {
         .init(.fractionCompleted(format: format))
     }
 
     public static func count(
-        format: Foundation.IntegerFormatStyle<Int> = Foundation.IntegerFormatStyle<Int>()
+        format: IntegerFormatStyle<Int> = IntegerFormatStyle<Int>()
     ) -> Self {
         .init(.count(format: format))
     }
-#else
-    public static func fractionCompleted(
-        format: FoundationInternationalization.FloatingPointFormatStyle<Double>.Percent = FoundationInternationalization.FloatingPointFormatStyle<Double>.Percent()
-    ) -> Self {
-        .init(.fractionCompleted(format: format))
-    }
-
-    public static func count(
-        format: FoundationInternationalization.IntegerFormatStyle<Int> = FoundationInternationalization.IntegerFormatStyle<Int>()
-    ) -> Self {
-        .init(.count(format: format))
-    }
-#endif
-    
-
 }
