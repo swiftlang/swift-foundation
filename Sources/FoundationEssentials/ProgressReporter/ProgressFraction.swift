@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 #if FOUNDATION_FRAMEWORK
-// For feature flag
 internal import _ForSwiftFoundation
 #endif
 
@@ -50,10 +49,13 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
     
     // ----
     
+#if FOUNDATION_FRAMEWORK
     // Glue code for _NSProgressFraction and _ProgressFraction
     init(nsProgressFraction: _NSProgressFraction) {
         self.init(completed: Int(nsProgressFraction.completed), total: Int(nsProgressFraction.total))
     }
+#endif
+
     
     internal mutating func simplify() {
         if self.total == 0 {

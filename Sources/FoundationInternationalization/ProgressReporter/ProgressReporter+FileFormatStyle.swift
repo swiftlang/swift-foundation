@@ -9,7 +9,10 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-@_spi(Progress)
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 @available(FoundationPreview 6.2, *)
 extension ProgressReporter {
     //TODO: rdar://149092406 Manual Codable Conformance
@@ -43,7 +46,6 @@ extension ProgressReporter {
 }
 
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 extension ProgressReporter.FileFormatStyle: FormatStyle {
     
@@ -90,7 +92,6 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
     }
 }
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 // Make access easier to format ProgressReporter
 extension ProgressReporter {
@@ -99,7 +100,6 @@ extension ProgressReporter {
     }
 }
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 extension FormatStyle where Self == ProgressReporter.FileFormatStyle {
     public static var file: Self {

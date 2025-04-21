@@ -34,7 +34,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
 }
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 // ProgressReporter
 /// An object that conveys ongoing progress to the user for a specified task.
@@ -54,8 +53,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Interop properties - Just kept alive
     internal let interopObservation: (any Sendable)? // set at init
+    #if FOUNDATION_FRAMEWORK
     internal let parentBridge: LockedState<Foundation.Progress?> = LockedState(initialState: nil) // dummy, set upon calling setParentBridge
-    
+    #endif
     // Interop properties - Actually set and called
     internal let ghostReporter: ProgressReporter? // set at init, used to call notify observers
     internal let observers: LockedState<[@Sendable (ObserverState) -> Void]> = LockedState(initialState: [])// storage for all observers, set upon calling addObservers
@@ -430,11 +430,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     //MARK: Internal methods to mutate locked context
+#if FOUNDATION_FRAMEWORK
     internal func setParentBridge(parentBridge: Foundation.Progress) {
         self.parentBridge.withLock { bridge in
             bridge = parentBridge
         }
     }
+#endif
     
     internal func setInteropChild(interopChild: ProgressReporter) {
         state.withLock { state in
@@ -449,7 +451,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
 }
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 // Default Implementation for reduce
 extension ProgressReporter.Property where T : AdditiveArithmetic {
@@ -464,7 +465,6 @@ extension ProgressReporter.Property where T : AdditiveArithmetic {
     }
 }
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 // Hashable & Equatable Conformance
 extension ProgressReporter: Hashable, Equatable {
@@ -478,7 +478,6 @@ extension ProgressReporter: Hashable, Equatable {
     }
 }
 
-@_spi(Progress)
 @available(FoundationPreview 6.2, *)
 extension ProgressReporter: CustomDebugStringConvertible {
     /// The description for `completedCount` and `totalCount`.
