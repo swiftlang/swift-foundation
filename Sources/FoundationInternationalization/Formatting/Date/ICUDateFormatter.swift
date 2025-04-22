@@ -580,7 +580,8 @@ extension String {
     ///
     /// E.g.: `"'hello, it''s 'hh':'mm"` is turned into `"hhmm"`.
     fileprivate func purgingStringLiterals() -> String {
-        self.split(separator: "'", omittingEmptySubsequences: false)
+        // Explicitly specify Character("'") to avoid accidentally using an implicit RegexBuilder overload
+        self.split(separator: Character("'"), omittingEmptySubsequences: false)
             .enumerated()
             .filter { offset, _ in offset.isMultiple(of: 2) }
             .map(\.element)
