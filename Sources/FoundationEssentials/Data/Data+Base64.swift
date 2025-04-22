@@ -639,8 +639,8 @@ extension Base64 {
                 var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
 
                 if x >= Self.badCharacter {
-                    if a3 == Self.encodePaddingCharacter {
-                        break // the loop
+                    if a3 == Self.encodePaddingCharacter || a2 == Self.encodePaddingCharacter || a1 == Self.encodePaddingCharacter || a0 == Self.encodePaddingCharacter {
+                        break fastLoop // the loop
                     }
 
                     // error fast path. we assume that illeagal errors are at the boundary.
@@ -721,19 +721,11 @@ extension Base64 {
             }
 
             guard inIndex + 3 < inBuffer.count else {
-                if options.contains(.ignoreUnknownCharacters) {
-                    // ensure that all remaining characters are unknown
-                    while inIndex < inBuffer.count {
-                        let value = inBuffer[inIndex]
-                        if self.isValidBase64Byte(value, options: options) || value == Self.encodePaddingCharacter {
-                            throw DecodingError.invalidCharacter(inBuffer[inIndex])
-                        }
-                        inIndex &+= 1
-                    }
-                    length = outIndex
-                    return
-                }
-                throw DecodingError.invalidLength
+                // ensure that all remaining characters are unknown or padding
+                try Self.validateRemainingBytesAreInvalidOrPadding(in: inBuffer, from: inIndex, options: options)
+                if outIndex == 0 && inBuffer.count > 0 { throw DecodingError.invalidLength }
+                length = outIndex
+                return
             }
 
             let a0 = inBuffer[inIndex]
@@ -780,10 +772,14 @@ extension Base64 {
                             break scanForValidCharacters
                         }
                     } else if value == Self.encodePaddingCharacter {
-                        guard b0 != nil, b1 != nil else {
+                        if b0 == nil {
+                            try Self.validateRemainingBytesAreInvalidOrPadding(in: inBuffer, from: inIndex, options: options)
+                            if outIndex == 0 && inBuffer.count > 0 { throw DecodingError.invalidLength }
+                            length = outIndex
+                            return
+                        } else if b1 == nil {
                             throw DecodingError.invalidLength
-                        }
-                        if b2 == nil {
+                        } else if b2 == nil {
                             padding2 = true
                             b2 = 65
                         } else if b3 == nil {
@@ -822,6 +818,22 @@ extension Base64 {
             }
 
             length = outIndex
+        }
+    }
+
+    static func validateRemainingBytesAreInvalidOrPadding(
+        in inBuffer: UnsafeBufferPointer<UInt8>,
+        from index: Int,
+        options: Data.Base64DecodingOptions
+    ) throws(DecodingError) {
+        var inIndex = index
+        // ensure that all remaining characters are unknown or padding
+        while inIndex < inBuffer.count {
+            let value = inBuffer[inIndex]
+            if self.isValidBase64Byte(value, options: options) {
+                throw DecodingError.invalidCharacter(inBuffer[inIndex])
+            }
+            inIndex &+= 1
         }
     }
 
