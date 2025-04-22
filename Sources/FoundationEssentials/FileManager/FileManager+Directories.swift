@@ -19,17 +19,17 @@ internal import os
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 import unistd
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 internal import _FoundationCShims
@@ -201,7 +201,7 @@ extension _FileManagerImpl {
             }
         }
         return results
-#elseif os(WASI)
+#elseif os(WASI) || os(OpenBSD)
         // wasi-libc does not support FTS for now
         throw CocoaError.errorWithFilePath(.featureUnsupported, path)
 #else

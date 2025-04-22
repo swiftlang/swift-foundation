@@ -33,6 +33,7 @@ extension AttributeContainer {
     }
 
     @preconcurrency
+    @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable {
         get { self[K.self] }
         set { self[K.self] = newValue }
@@ -102,5 +103,33 @@ extension AttributeContainer: CustomStringConvertible {
 extension AttributeContainer {
     internal var _hasConstrainedAttributes: Bool {
         storage.hasConstrainedAttributes
+    }
+}
+
+@available(FoundationPreview 6.2, *)
+extension AttributeContainer {
+    /// Returns an attribute container storing only the attributes in `self` with the `inheritedByAddedText` property set to `true`
+    public func filter(inheritedByAddedText: Bool) -> AttributeContainer {
+        var storage = self.storage
+        for (key, value) in storage.contents {
+            let inherited = value.inheritedByAddedText && !value.isInvalidatedOnTextChange
+            if inherited != inheritedByAddedText {
+                storage[key] = nil
+            }
+        }
+        return AttributeContainer(storage)
+    }
+    
+    /// Returns an attribute container storing only the attributes in `self` with a matching run boundary property
+    ///
+    /// Note: if `nil` is provided then only attributes not bound to any particular boundary will be returned
+    public func filter(runBoundaries: AttributedString.AttributeRunBoundaries?) -> AttributeContainer {
+        var storage = self.storage
+        for (key, value) in storage.contents {
+            if value.runBoundaries != runBoundaries {
+                storage[key] = nil
+            }
+        }
+        return AttributeContainer(storage)
     }
 }

@@ -13,16 +13,16 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -921,7 +921,7 @@ enum _FileOperations {
         }
         var current: off_t = 0
         
-        #if os(WASI)
+        #if os(WASI) || os(OpenBSD)
         // WASI doesn't have sendfile, so we need to do it in user space with read/write
         try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: chunkSize) { buffer in
             while current < total {
@@ -958,8 +958,51 @@ enum _FileOperations {
     
     #if !canImport(Darwin)
     private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
-        #if !os(WASI) && !os(Android)
+        #if !os(WASI) && !os(Android) && !os(OpenBSD)
         // Copy extended attributes
+        #if os(FreeBSD)
+        // FreeBSD uses the `extattr_*` calls for setting extended attributes. Unlike like, the namespace for the extattrs are not determined by prefix of the attribute
+        for namespace in [EXTATTR_NAMESPACE_SYSTEM, EXTATTR_NAMESPACE_USER] {
+            // if we don't have permission to list attributes in system namespace, this returns -1 and skips it
+            var size = extattr_list_fd(srcFD, namespace, nil, 0)
+            if size > 0 {
+                // we are allocating size + 1 bytes here such that we have room for the last null terminator
+                try withUnsafeTemporaryAllocation(of: CChar.self, capacity: size + 1) { keyList in
+                    // The list of entry returns by `extattr_list_*` contains the length(1 byte) of the attribute name, follow by the Non-NULL terminated attribute name. (See exattr(2))
+                    size = extattr_list_fd(srcFD, namespace, keyList.baseAddress!, size)
+
+                    guard size > 0 else { return }
+
+                    var keyLength = Int(keyList.baseAddress!.pointee)
+                    var current = keyList.baseAddress!.advanced(by: 1)
+                    let end = keyList.baseAddress!.advanced(by: size)
+                    keyList.baseAddress!.advanced(by: size).pointee = 0
+
+                    while current < end {
+                        let nextEntry = current.advanced(by: keyLength)
+                        // get the length of next key, if this is the last entry, this points to the explicitly zerod byte at `end`.
+                        keyLength = Int(nextEntry.pointee)
+                        // zero the length field of the next name, so current name can pass in as a null-terminated string
+                        nextEntry.pointee = 0
+                        // this also set `current` to `end` after iterating all entries
+                        defer { current = nextEntry.advanced(by: 1) }
+
+                        var valueSize = extattr_get_fd(srcFD, namespace, current, nil, 0)
+                        if valueSize >= 0 {
+                            try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: valueSize) { valueBuffer in
+                                valueSize = extattr_get_fd(srcFD, namespace, current, valueBuffer.baseAddress!, valueSize)
+                                if valueSize >= 0 {
+                                    if extattr_set_fd(srcFD, namespace, current, valueBuffer.baseAddress!, valueSize) != 0 {
+                                        try delegate.throwIfNecessary(errno, srcPath(), dstPath())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #else
         var size = flistxattr(srcFD, nil, 0)
         if size > 0 {
             try withUnsafeTemporaryAllocation(of: CChar.self, capacity: size) { keyList in
@@ -984,6 +1027,7 @@ enum _FileOperations {
                 }
             }
         }
+        #endif
         #endif
         var statInfo = stat()
         if fstat(srcFD, &statInfo) == 0 {

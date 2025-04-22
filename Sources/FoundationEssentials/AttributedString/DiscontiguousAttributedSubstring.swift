@@ -152,11 +152,11 @@ extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
 @available(FoundationPreview 6.2, *)
 extension DiscontiguousAttributedSubstring {
     public var characters: DiscontiguousSlice<AttributedString.CharacterView> {
-        AttributedString.CharacterView(_guts)[_indices._attributedStringIndices]
+        AttributedString.CharacterView(_guts)[_indices._attributedStringIndices(version: _guts.version)]
     }
     
     public var unicodeScalars: DiscontiguousSlice<AttributedString.UnicodeScalarView> {
-        AttributedString.UnicodeScalarView(_guts)[_indices._attributedStringIndices]
+        AttributedString.UnicodeScalarView(_guts)[_indices._attributedStringIndices(version: _guts.version)]
     }
     
     public var runs: AttributedString.Runs {
@@ -194,6 +194,7 @@ extension DiscontiguousAttributedSubstring {
         }
     }
     
+    @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
     ) -> K.Value? where K.Value : Sendable {

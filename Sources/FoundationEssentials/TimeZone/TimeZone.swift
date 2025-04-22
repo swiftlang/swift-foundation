@@ -13,7 +13,7 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 internal import _FoundationCShims
@@ -60,11 +60,15 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     /// - parameter seconds: The number of seconds from GMT.
     /// - returns: A time zone, or `nil` if a valid time zone could not be created from `seconds`.
     public init?(secondsFromGMT seconds: Int) {
-        guard let cached = TimeZoneCache.cache.offsetFixed(seconds) else {
-            return nil
+        if seconds == 0 {
+            _tz = TimeZoneCache.cache.gmt
+        } else {
+            guard let cached = TimeZoneCache.cache.offsetFixed(seconds) else {
+                return nil
+            }
+            
+            _tz = cached
         }
-
-        _tz = cached
     }
 
     internal init?(name: String) {
@@ -170,6 +174,11 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     public func secondsFromGMT(for date: Date = Date()) -> Int {
         _tz.secondsFromGMT(for: date)
     }
+    
+    /// If the time zone does not observe daylight savings, then return the constant offset from GMT. Otherwise, returns nil.
+    internal var fixedOffsetFromGMT: Int? {
+        _tz.fixedOffsetFromGMT
+    }
 
     internal func rawAndDaylightSavingTimeOffset(for date: Date, repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, skippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
         _tz.rawAndDaylightSavingTimeOffset(for: date, repeatedTimePolicy: repeatedTimePolicy, skippedTimePolicy: skippedTimePolicy)
@@ -240,6 +249,10 @@ public struct TimeZone : Hashable, Equatable, Sendable {
     }
 
     public static func ==(lhs: TimeZone, rhs: TimeZone) -> Bool {
+        if lhs._tz === rhs._tz {
+            return true
+        }
+        
         // Autoupdating is only ever equal to autoupdating. Other time zones compare their values.
         if lhs._tz.isAutoupdating && rhs._tz.isAutoupdating {
             return true

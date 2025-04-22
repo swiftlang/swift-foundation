@@ -13,9 +13,9 @@
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -166,6 +166,7 @@ extension UInt8 {
     internal static var _exclamation: UInt8 { UInt8(ascii: "!") }
     internal static var _ampersand: UInt8 { UInt8(ascii: "&") }
     internal static var _pipe: UInt8 { UInt8(ascii: "|") }
+    internal static var _percent: UInt8 { UInt8(ascii: "%") }
     internal static var _period: UInt8 { UInt8(ascii: ".") }
     internal static var _e: UInt8 { UInt8(ascii: "e") }
     internal static var _E: UInt8 { UInt8(ascii: "E") }

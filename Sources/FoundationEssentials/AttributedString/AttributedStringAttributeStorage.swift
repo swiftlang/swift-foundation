@@ -186,12 +186,15 @@ extension AttributedString._AttributeStorage {
             invalidatableKeys.remove(key)
         }
 
-        guard old != new else { return }
+        // Lazy to ensure we only check if the value changed when we actually need to because we found a dependent attribute
+        // Unboxing the attribute value to call its == implementation can be expensive, so for text that doesn't contain dependent attributes avoid it when possible
+        lazy var valueChanged = { old != new }()
 
         for k in invalidatableKeys {
             guard k != key else { continue }
             guard let value = contents[k] else { continue }
             guard value.isInvalidatedOnChange(of: key) else { continue }
+            guard valueChanged else { return }
             // FIXME: ☠️ This subscript assignment is recursively calling this same method.
             // FIXME: Collect invalidated keys into a temporary set instead, and progressively
             // FIXME: extend that set until all its keys are gone.

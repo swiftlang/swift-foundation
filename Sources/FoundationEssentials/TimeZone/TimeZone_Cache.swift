@@ -15,9 +15,9 @@ import Darwin
 #elseif canImport(Android)
 import unistd
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(ucrt)
 import ucrt
 #endif
@@ -418,6 +418,10 @@ struct TimeZoneCache : Sendable, ~Copyable {
         lock.withLock { $0.fixed(identifier) }
     }
 
+    var gmt: (any _TimeZoneProtocol) = {
+        _timeZoneGMTClass().init(secondsFromGMT: 0)!
+    }()
+    
     func offsetFixed(_ seconds: Int) -> (any _TimeZoneProtocol)? {
         lock.withLock { $0.offsetFixed(seconds) }
     }

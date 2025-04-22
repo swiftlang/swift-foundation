@@ -12,7 +12,9 @@
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
+#if !NO_FILESYSTEM
 internal import DarwinPrivate // for VREG
+#endif
 #endif
 
 internal import _FoundationCShims
@@ -20,17 +22,17 @@ internal import _FoundationCShims
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 import unistd
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 #if !NO_FILESYSTEM
@@ -140,6 +142,9 @@ private func cleanupTemporaryDirectory(at inPath: String?) {
 }
 
 /// Caller is responsible for calling `close` on the `Int32` file descriptor.
+#if os(WASI)
+@available(*, unavailable, message: "WASI does not have temporary directories")
+#endif
 private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, prefix: String, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String) {
 #if os(WASI)
     // WASI does not have temp directories
@@ -204,7 +209,14 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
 
 /// Returns `(file descriptor, temporary file path, temporary directory path)`
 /// Caller is responsible for calling `close` on the `Int32` file descriptor and calling `cleanupTemporaryDirectory` on the temporary directory path. The temporary directory path may be nil, if it does not need to be cleaned up.
+#if os(WASI)
+@available(*, unavailable, message: "WASI does not have temporary directories")
+#endif
 private func createProtectedTemporaryFile(at destinationPath: String, inPath: PathOrURL, options: Data.WritingOptions, variant: String? = nil) throws -> (Int32, String, String?) {
+#if os(WASI)
+    // WASI does not have temp directories
+    throw CocoaError(.featureUnsupported)
+#else
 #if FOUNDATION_FRAMEWORK
     if _foundation_sandbox_check(getpid(), nil) != 0 {
         // Convert the path back into a string
@@ -224,12 +236,14 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
             }
         }
         
+        let updatedOptions = _NSDataWritingOptionsForRelocatedAtomicWrite(options, destinationPath)
+        
         let auxFile = temporaryDirectoryPath.appendingPathComponent(destinationPath.lastPathComponent)
         return try auxFile.withFileSystemRepresentation { auxFileFileSystemRep in
             guard let auxFileFileSystemRep else {
                 throw CocoaError(.fileWriteInvalidFileName)
             }
-            let fd = openFileDescriptorProtected(path: auxFileFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: options)
+            let fd = openFileDescriptorProtected(path: auxFileFileSystemRep, flags: O_CREAT | O_EXCL | O_RDWR, options: updatedOptions)
             if fd >= 0 {
                 return (fd, auxFile, temporaryDirectoryPath)
             } else {
@@ -244,6 +258,7 @@ private func createProtectedTemporaryFile(at destinationPath: String, inPath: Pa
     let temporaryDirectoryPath = destinationPath.deletingLastPathComponent()
     let (fd, auxFile) = try createTemporaryFile(at: temporaryDirectoryPath, inPath: inPath, prefix: ".dat.nosync", options: options, variant: variant)
     return (fd, auxFile, nil)
+#endif // os(WASI)
 }
 
 private func write(buffer: UnsafeRawBufferPointer, toFileDescriptor fd: Int32, path: PathOrURL, parentProgress: Progress?) throws {
@@ -318,15 +333,26 @@ internal func writeToFile(path inPath: PathOrURL, data: Data, options: Data.Writ
 }
 
 internal func writeToFile(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data] = [:], reportProgress: Bool = false) throws {
+#if os(WASI) // `.atomic` is unavailable on WASI
+    try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
+#else
     if options.contains(.atomic) {
         try writeToFileAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
     } else {
         try writeToFileNoAux(path: inPath, buffer: buffer, options: options, attributes: attributes, reportProgress: reportProgress)
     }
+#endif
 }
 
 /// Create a new file out of `Data` at a path, using atomic writing.
+#if os(WASI)
+@available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
+#endif
 private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+#if os(WASI)
+    // `.atomic` is unavailable on WASI
+    throw CocoaError(.featureUnsupported)
+#else
     assert(options.contains(.atomic))
     
     // TODO: Somehow avoid copying back and forth to a String to hold the path
@@ -499,7 +525,6 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
                 
                 cleanupTemporaryDirectory(at: temporaryDirectoryPath)
                 
-#if !os(WASI) // WASI does not support fchmod for now
                 if let mode {
                     // Try to change the mode if the path has not changed. Do our best, but don't report an error.
 #if FOUNDATION_FRAMEWORK
@@ -523,16 +548,18 @@ private func writeToFileAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPoint
                     fchmod(fd, mode)
 #endif
                 }
-#endif // os(WASI)
             }
         }
     }
 #endif
+#endif // os(WASI)
 }
 
 /// Create a new file out of `Data` at a path, not using atomic writing.
 private func writeToFileNoAux(path inPath: PathOrURL, buffer: UnsafeRawBufferPointer, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
+#if !os(WASI) // `.atomic` is unavailable on WASI
     assert(!options.contains(.atomic))
+#endif
 
 #if os(Windows)
     try inPath.path.withNTPathRepresentation { pwszPath in
@@ -612,6 +639,8 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0, 0)
 #elseif os(FreeBSD)
             _ = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, key, valueBuf.baseAddress!, valueBuf.count)
+#elseif os(OpenBSD)
+            return
 #elseif canImport(Glibc) || canImport(Musl)
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0)
 #endif

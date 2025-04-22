@@ -314,7 +314,7 @@ extension AttributedString.Index {
         }
         let j = target.__guts.string.index(roundingDown: i)
         guard j == i else { return nil }
-        self.init(j)
+        self.init(j, version: target.__guts.version)
     }
 }
 
@@ -446,7 +446,7 @@ extension Range where Bound == AttributedString.Index {
         let end = bstr.utf16.index(start, offsetBy: range.length)
 
         guard start >= string.startIndex._value, end <= string.endIndex._value else { return nil }
-        self.init(uncheckedBounds: (.init(start), .init(end)))
+        self.init(uncheckedBounds: (.init(start, version: string.__guts.version), .init(end, version: string.__guts.version)))
     }
 #endif // FOUNDATION_FRAMEWORK
 
@@ -485,7 +485,7 @@ extension Range where Bound == AttributedString.Index {
         else {
             return nil
         }
-        self.init(uncheckedBounds: (.init(lower), .init(upper)))
+        self.init(uncheckedBounds: (.init(lower, version: attributedString.__guts.version), .init(upper, version: attributedString.__guts.version)))
     }
 }
 
@@ -498,14 +498,20 @@ extension AttributedString {
         typealias Element = Index
         
         let string: Substring
-        init(_ string: Substring) { self.string = string }
+        let version: Guts.Version
+        
+        init(_ string: Substring, version: Guts.Version) {
+            self.string = string
+            self.version = version
+        }
+        
         subscript(position: Index) -> Index { position }
-        var startIndex: Index { Index(BigString.Index(_utf8Offset: string.startIndex._utf8Offset)) }
-        var endIndex: Index { Index(BigString.Index(_utf8Offset: string.endIndex._utf8Offset)) }
+        var startIndex: Index { Index(BigString.Index(_utf8Offset: string.startIndex._utf8Offset), version: version) }
+        var endIndex: Index { Index(BigString.Index(_utf8Offset: string.endIndex._utf8Offset), version: version) }
         func index(after i: Index) -> Index {
             let j = String.Index(_utf8Offset: i._value.utf8Offset)
             let k = string.index(after: j)
-            return Index(BigString.Index(_utf8Offset: k._utf8Offset))
+            return Index(BigString.Index(_utf8Offset: k._utf8Offset), version: version)
         }
     }
 }
@@ -525,7 +531,8 @@ extension Range where Bound == String.Index {
             return
         }
         let str = Substring(string)
-        let dummy = AttributedString._IndexConverterFromAttributedString(str)
+        // Due to the FIXME notes above, we do not have a valid version to supply here since we have no AttributedString, so instead we use a newly created version to maintain existing behavior
+        let dummy = AttributedString._IndexConverterFromAttributedString(str, version: AttributedString.Guts.createNewVersion())
         let range = region.relative(to: dummy)
         self.init(_range: range, in: str)
     }

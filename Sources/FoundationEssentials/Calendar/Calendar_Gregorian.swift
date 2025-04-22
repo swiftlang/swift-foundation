@@ -13,15 +13,15 @@
 #if canImport(os)
 internal import os
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(CRT)
 import CRT
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 
@@ -193,25 +193,22 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
 
-        // ISO8601 has different default values for time zone, locale, firstWeekday, and minimumDaysInFirstWeek
-        let defaultTimeZone: TimeZone
+        // ISO8601 has different default values locale, firstWeekday, and minimumDaysInFirstWeek
         let defaultLocale: Locale?
         let defaultFirstWeekday: Int?
         let defaultMinimumDaysInFirstWeek: Int?
         
         if identifier == .iso8601 {
-            defaultTimeZone = .gmt
             defaultLocale = Locale.unlocalized
             defaultFirstWeekday = 2
             defaultMinimumDaysInFirstWeek = 4
         } else {
-            defaultTimeZone = .default
             defaultLocale = nil
             defaultFirstWeekday = nil
             defaultMinimumDaysInFirstWeek = nil
         }
                 
-        self.timeZone = timeZone ?? defaultTimeZone
+        self.timeZone = timeZone ?? .default
         if let gregorianStartDate {
             self.gregorianStartDate = gregorianStartDate
             do {
@@ -2076,36 +2073,49 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             isLeapYear = false
         }
 
-        var dc = DateComponents()
-        if components.contains(.calendar) {
-            var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = timeZone
-            dc.calendar = calendar
-        }
-        if components.contains(.timeZone) { dc.timeZone = timeZone }
+        var dcCalendar: Calendar?
+        var dcTimeZone: TimeZone?
+        var dcEra: Int?
+        var dcYear: Int?
+        var dcMonth: Int?
+        var dcDay: Int?
+        var dcDayOfYear: Int?
+        var dcHour: Int?
+        var dcMinute: Int?
+        var dcSecond: Int?
+        var dcWeekday: Int?
+        var dcWeekdayOrdinal: Int?
+        var dcQuarter: Int?
+        var dcWeekOfMonth: Int?
+        var dcWeekOfYear: Int?
+        var dcYearForWeekOfYear: Int?
+        var dcNanosecond: Int?
+        var dcIsLeapMonth: Bool?
+        
+        // DateComponents sets the time zone on the calendar if appropriate
+        if components.contains(.calendar) { dcCalendar = Calendar(identifier: identifier) }
+        if components.contains(.timeZone) { dcTimeZone = timeZone }
         if components.contains(.era) {
-            let era: Int
             if year < 1 {
-                era = 0
+                dcEra = 0
             } else {
-                era = 1
+                dcEra = 1
             }
-            dc.era = era
         }
         if components.contains(.year) {
             if year < 1 {
                 year = 1 - year
             }
-            dc.year = year
+            dcYear = year
         }
-        if components.contains(.month) { dc.month = month }
-        if components.contains(.day) { dc.day = day }
-        if components.contains(.dayOfYear) { dc.dayOfYear = dayOfYear }
-        if components.contains(.hour) { dc.hour = hour }
-        if components.contains(.minute) { dc.minute = minute }
-        if components.contains(.second) { dc.second = second }
-        if components.contains(.weekday) { dc.weekday = weekday }
-        if components.contains(.weekdayOrdinal) { dc.weekdayOrdinal = weekdayOrdinal }
+        if components.contains(.month) { dcMonth = month }
+        if components.contains(.day) { dcDay = day }
+        if components.contains(.dayOfYear) { dcDayOfYear = dayOfYear }
+        if components.contains(.hour) { dcHour = hour }
+        if components.contains(.minute) { dcMinute = minute }
+        if components.contains(.second) { dcSecond = second }
+        if components.contains(.weekday) { dcWeekday = weekday }
+        if components.contains(.weekdayOrdinal) { dcWeekdayOrdinal = weekdayOrdinal }
         if components.contains(.quarter) {
             let quarter = if !isLeapYear {
                 if dayOfYear < 90 { 1 }
@@ -2121,15 +2131,16 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                 else { fatalError() }
             }
 
-            dc.quarter = quarter
+            dcQuarter = quarter
         }
-        if components.contains(.weekOfMonth) { dc.weekOfMonth = weekOfMonth }
-        if components.contains(.weekOfYear) { dc.weekOfYear = weekOfYear }
-        if components.contains(.yearForWeekOfYear) { dc.yearForWeekOfYear = yearForWeekOfYear }
-        if components.contains(.nanosecond) { dc.nanosecond = nanosecond }
+        if components.contains(.weekOfMonth) { dcWeekOfMonth = weekOfMonth }
+        if components.contains(.weekOfYear) { dcWeekOfYear = weekOfYear }
+        if components.contains(.yearForWeekOfYear) { dcYearForWeekOfYear = yearForWeekOfYear }
+        if components.contains(.nanosecond) { dcNanosecond = nanosecond }
 
-        if components.contains(.isLeapMonth) || components.contains(.month) { dc.isLeapMonth = false }
-        return dc
+        if components.contains(.isLeapMonth) || components.contains(.month) { dcIsLeapMonth = false }
+        
+        return DateComponents(calendar: dcCalendar, timeZone: dcTimeZone, rawEra: dcEra, rawYear: dcYear, rawMonth: dcMonth, rawDay: dcDay, rawHour: dcHour, rawMinute: dcMinute, rawSecond: dcSecond, rawNanosecond: dcNanosecond, rawWeekday: dcWeekday, rawWeekdayOrdinal: dcWeekdayOrdinal, rawQuarter: dcQuarter, rawWeekOfMonth: dcWeekOfMonth, rawWeekOfYear: dcWeekOfYear, rawYearForWeekOfYear: dcYearForWeekOfYear, rawDayOfYear: dcDayOfYear, isLeapMonth: dcIsLeapMonth)
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date) -> DateComponents {

@@ -816,7 +816,7 @@ final class StringTests : XCTestCase {
     func testAppendingPathExtension() {
         XCTAssertEqual("".appendingPathExtension("foo"), ".foo")
         XCTAssertEqual("/".appendingPathExtension("foo"), "/.foo")
-        XCTAssertEqual("//".appendingPathExtension("foo"), "//.foo")
+        XCTAssertEqual("//".appendingPathExtension("foo"), "/.foo/")
         XCTAssertEqual("/path".appendingPathExtension("foo"), "/path.foo")
         XCTAssertEqual("/path.zip".appendingPathExtension("foo"), "/path.zip.foo")
         XCTAssertEqual("/path/".appendingPathExtension("foo"), "/path.foo/")
@@ -1335,7 +1335,9 @@ final class StringTests : XCTestCase {
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
             "0123456789",
             "!\"#$%&'()*+,-./",
-            "¡¶ÅÖæöÿ\u{00A0}~"
+            "¡¶ÅÖæöÿ\u{0080}\u{00A0}~",
+            "Hello\nworld",
+            "Hello\r\nworld"
         ], invalid: [
             "🎺",
             "מ",

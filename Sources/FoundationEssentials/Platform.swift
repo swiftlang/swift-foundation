@@ -29,13 +29,13 @@ fileprivate let _pageSize: Int = {
 // WebAssembly defines a fixed page size
 fileprivate let _pageSize: Int = 65_536
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(C)
 fileprivate let _pageSize: Int = Int(getpagesize())
@@ -224,7 +224,7 @@ extension Platform {
 // MARK: - Environment Variables
 extension Platform {
     static func getEnvSecure(_ name: String) -> String? {
-        #if canImport(Glibc)
+        #if canImport(Glibc) && !os(OpenBSD)
         if let value = secure_getenv(name) {
             return String(cString: value)
         } else {

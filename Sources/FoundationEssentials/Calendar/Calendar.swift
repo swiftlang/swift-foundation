@@ -13,15 +13,15 @@
 #if canImport(Darwin)
 internal import os
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(CRT)
 import CRT
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -93,9 +93,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case dangi
         
         @available(FoundationPreview 6.2, *)
-        case thai
-        
-        @available(FoundationPreview 6.2, *)
         case vietnamese
 
         package static let cldrKeywordKey = "ca"
@@ -135,7 +132,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case "telugu": self = .telugu
             case "vikram": self = .vikram
             case "dangi": self = .dangi
-            case "thai": self = .thai
             case "vietnamese": self = .vietnamese
             default: return nil
             }
@@ -169,7 +165,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .telugu: return "telugu"
             case .vikram: return "vikram"
             case .dangi: return "dangi"
-            case .thai: return "thai"
             case .vietnamese: return "vietnamese"
             }
         }
@@ -203,7 +198,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .telugu: return "telugu"
             case .vikram: return "vikram"
             case .dangi: return "dangi"
-            case .thai: return "thai"
             case .vietnamese: return "vietnamese"
             }
         }
@@ -607,7 +601,14 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return nil
         }
         
-        return self.date(byAdding: dc, to: date.capped, wrappingComponents: wrappingComponents)
+        let result = self.date(byAdding: dc, to: date.capped, wrappingComponents: wrappingComponents)
+#if FOUNDATION_FRAMEWORK
+        // Compatibility path - we found some apps depending on the result being non-nil
+        if Calendar.compatibility2 {
+            return result ?? date
+        }
+#endif
+        return result
     }
 
     /// Returns a sequence of `Date`s, calculated by adding a scaled amount of `Calendar.Component`s to a starting `Date`.
@@ -671,6 +672,19 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
     internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
         var dc = _calendar.dateComponents(components, from: date.capped)
+
+        // Fill out the Calendar field of dateComponents, if requested.
+        if components.contains(.calendar) {
+            dc.calendar = self
+        }
+
+        return dc
+    }
+
+    /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
+    /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
+    internal func _dateComponents(_ components: ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {
+        var dc = _calendar.dateComponents(components, from: date.capped, in: timeZone)
 
         // Fill out the Calendar field of dateComponents, if requested.
         if components.contains(.calendar) {
@@ -1404,8 +1418,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return .vikram
         case .dangi: 
             return .dangi
-        case .thai:
-            return .thai
         case .vietnamese:
             return .vietnamese
         }
@@ -1465,8 +1477,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
             return .vikram
         case .dangi:
             return .dangi
-        case .thai:
-            return .thai
         case .vietnamese:
             return .vietnamese
         default:

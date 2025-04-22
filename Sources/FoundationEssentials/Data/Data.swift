@@ -18,7 +18,7 @@
 @usableFromInline let memcpy = ucrt.memcpy
 @usableFromInline let memcmp = ucrt.memcmp
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 @usableFromInline let calloc = Bionic.calloc
 @usableFromInline let malloc = Bionic.malloc
 @usableFromInline let free = Bionic.free
@@ -71,13 +71,13 @@ internal func malloc_good_size(_ size: Int) -> Int {
 #endif
 
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(ucrt)
 import ucrt
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 #if os(Windows)
@@ -2099,6 +2099,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         public init(rawValue: UInt) { self.rawValue = rawValue }
 
         /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
+#if os(WASI)
+        @available(*, unavailable, message: "atomic writing is unavailable in WASI because temporary files are not supported")
+#endif
         public static let atomic = WritingOptions(rawValue: 1 << 0)
         
         /// An option that attempts to write data to a file and fails with an error if the destination file already exists.
@@ -2135,10 +2138,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     /// - parameter options: Options for the read operation. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if `url` cannot be read.
     public init(contentsOf url: __shared URL, options: ReadingOptions = []) throws {
-#if NO_FILESYSTEM
-        let d = try NSData(contentsOf: url, options: NSData.ReadingOptions(rawValue: options.rawValue))
-        self.init(referencing: d)
-#else
         if url.isFileURL {
             self = try readDataFromFile(path: .url(url), reportProgress: true, options: options)
         } else {
@@ -2150,16 +2149,10 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             try self.init(_contentsOfRemote: url, options: options)
             #endif
         }
-#endif
     }
     
     internal init(contentsOfFile path: String, options: ReadingOptions = []) throws {
-#if NO_FILESYSTEM
-        let d = try NSData(contentsOfFile: path, options: NSData.ReadingOptions(rawValue: options.rawValue))
-        self.init(referencing: d)
-#else
         self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
-#endif
     }
     
     // -----------------------------------
@@ -2484,9 +2477,11 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     /// - parameter options: Options for writing the data. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
     public func write(to url: URL, options: Data.WritingOptions = []) throws {
+#if !os(WASI) // `.atomic` is unavailable on WASI
         if options.contains(.withoutOverwriting) && options.contains(.atomic) {
             fatalError("withoutOverwriting is not supported with atomic")
         }
+#endif
         
         guard url.isFileURL else {
             throw CocoaError(.fileWriteUnsupportedScheme)

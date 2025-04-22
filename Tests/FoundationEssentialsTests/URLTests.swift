@@ -99,7 +99,7 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(relativeURLWithBase.password(), baseURL.password())
         XCTAssertEqual(relativeURLWithBase.host(), baseURL.host())
         XCTAssertEqual(relativeURLWithBase.port, baseURL.port)
-        checkBehavior(relativeURLWithBase.path(), new: "/base/relative/path", old: "relative/path")
+        XCTAssertEqual(relativeURLWithBase.path(), "/base/relative/path")
         XCTAssertEqual(relativeURLWithBase.relativePath, "relative/path")
         XCTAssertEqual(relativeURLWithBase.query(), "query")
         XCTAssertEqual(relativeURLWithBase.fragment(), "fragment")
@@ -237,12 +237,12 @@ final class URLTests : XCTestCase {
         ]
         for test in tests {
             let url = URL(stringOrEmpty: test.key, relativeTo: base)!
-            XCTAssertEqual(url.path(), test.value)
-            if (url.hasDirectoryPath && url.path().count > 1) {
+            XCTAssertEqual(url.absolutePath(), test.value)
+            if (url.hasDirectoryPath && url.absolutePath().count > 1) {
                 // The trailing slash is stripped in .path for file system compatibility
-                XCTAssertEqual(String(url.path().dropLast()), url.path)
+                XCTAssertEqual(String(url.absolutePath().dropLast()), url.path)
             } else {
-                XCTAssertEqual(url.path(), url.path)
+                XCTAssertEqual(url.absolutePath(), url.path)
             }
         }
     }
@@ -334,27 +334,27 @@ final class URLTests : XCTestCase {
         // .absoluteString and .path() use the RFC 8089 URL path
         XCTAssertEqual(url.absoluteString, "file:///C:/test/path")
         XCTAssertEqual(url.path(), "/C:/test/path")
-        // .path and .fileSystemPath strip the leading slash
+        // .path and .fileSystemPath() strip the leading slash
         XCTAssertEqual(url.path, "C:/test/path")
-        XCTAssertEqual(url.fileSystemPath, "C:/test/path")
+        XCTAssertEqual(url.fileSystemPath(), "C:/test/path")
 
         url = URL(filePath: #"C:\"#, directoryHint: .isDirectory)
         XCTAssertEqual(url.absoluteString, "file:///C:/")
         XCTAssertEqual(url.path(), "/C:/")
         XCTAssertEqual(url.path, "C:/")
-        XCTAssertEqual(url.fileSystemPath, "C:/")
+        XCTAssertEqual(url.fileSystemPath(), "C:/")
 
         url = URL(filePath: #"C:\\\"#, directoryHint: .isDirectory)
         XCTAssertEqual(url.absoluteString, "file:///C:///")
         XCTAssertEqual(url.path(), "/C:///")
         XCTAssertEqual(url.path, "C:/")
-        XCTAssertEqual(url.fileSystemPath, "C:/")
+        XCTAssertEqual(url.fileSystemPath(), "C:/")
 
         url = URL(filePath: #"\C:\"#, directoryHint: .isDirectory)
         XCTAssertEqual(url.absoluteString, "file:///C:/")
         XCTAssertEqual(url.path(), "/C:/")
         XCTAssertEqual(url.path, "C:/")
-        XCTAssertEqual(url.fileSystemPath, "C:/")
+        XCTAssertEqual(url.fileSystemPath(), "C:/")
 
         let base = URL(filePath: #"\d:\path\"#, directoryHint: .isDirectory)
         url = URL(filePath: #"%43:\fake\letter"#, directoryHint: .notDirectory, relativeTo: base)
@@ -362,7 +362,7 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.relativeString, "%2543%3A/fake/letter")
         XCTAssertEqual(url.path(), "/d:/path/%2543%3A/fake/letter")
         XCTAssertEqual(url.path, "d:/path/%43:/fake/letter")
-        XCTAssertEqual(url.fileSystemPath, "d:/path/%43:/fake/letter")
+        XCTAssertEqual(url.fileSystemPath(), "d:/path/%43:/fake/letter")
 
         let cwd = URL.currentDirectory()
         var iter = cwd.path().utf8.makeIterator()
@@ -372,7 +372,7 @@ final class URLTests : XCTestCase {
             let path = #"\\?\"# + "\(Unicode.Scalar(driveLetter))" + #":\"#
             url = URL(filePath: path, directoryHint: .isDirectory)
             XCTAssertEqual(url.path.last, "/")
-            XCTAssertEqual(url.fileSystemPath.last, "/")
+            XCTAssertEqual(url.fileSystemPath().last, "/")
         }
     }
     #endif
@@ -396,6 +396,44 @@ final class URLTests : XCTestCase {
             // directoryHint is `.inferFromPath` by default
             let url3 = URL(filePath: relativePath + "/", relativeTo: baseURL)
             XCTAssertEqual(url1, url3, "\(url1) was not equal to \(url3)")
+        }
+    }
+
+    func testURLFilePathDoesNotFollowLastSymlink() throws {
+        try FileManagerPlayground {
+            Directory("dir") {
+                "Foo"
+                SymbolicLink("symlink", destination: "../dir")
+            }
+        }.test {
+            let currentDirectoryPath = $0.currentDirectoryPath
+            let baseURL = URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
+
+            let dirURL = baseURL.appending(path: "dir", directoryHint: .checkFileSystem)
+            XCTAssertTrue(dirURL.hasDirectoryPath)
+
+            var symlinkURL = dirURL.appending(path: "symlink", directoryHint: .notDirectory)
+
+            // FileManager uses stat(), which will follow the symlink to the directory.
+
+            #if FOUNDATION_FRAMEWORK
+            var isDirectory: ObjCBool = false
+            XCTAssertTrue(FileManager.default.fileExists(atPath: symlinkURL.path, isDirectory: &isDirectory))
+            XCTAssertTrue(isDirectory.boolValue)
+            #else
+            var isDirectory = false
+            XCTAssertTrue(FileManager.default.fileExists(atPath: symlinkURL.path, isDirectory: &isDirectory))
+            XCTAssertTrue(isDirectory)
+            #endif
+
+            // URL uses lstat(), which will not follow the symlink at the end of the path.
+            // Check that URL(filePath:) and .appending(path:) preserve this behavior.
+
+            symlinkURL = URL(filePath: symlinkURL.path, directoryHint: .checkFileSystem)
+            XCTAssertFalse(symlinkURL.hasDirectoryPath)
+
+            symlinkURL = dirURL.appending(path: "symlink", directoryHint: .checkFileSystem)
+            XCTAssertFalse(symlinkURL.hasDirectoryPath)
         }
     }
 
@@ -760,15 +798,15 @@ final class URLTests : XCTestCase {
         var url = URL(filePath: "/path/slashes///")
         XCTAssertEqual(url.path(), "/path/slashes///")
         // TODO: Update this once .fileSystemPath uses backslashes for Windows
-        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+        XCTAssertEqual(url.fileSystemPath(), "/path/slashes")
 
         url = URL(filePath: "/path/slashes/")
         XCTAssertEqual(url.path(), "/path/slashes/")
-        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+        XCTAssertEqual(url.fileSystemPath(), "/path/slashes")
 
         url = URL(filePath: "/path/slashes")
         XCTAssertEqual(url.path(), "/path/slashes")
-        XCTAssertEqual(url.fileSystemPath, "/path/slashes")
+        XCTAssertEqual(url.fileSystemPath(), "/path/slashes")
     }
 
     func testURLNotDirectoryHintStripsTrailingSlash() throws {

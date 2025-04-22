@@ -24,7 +24,7 @@ private func autoreleasepool<T>(_ block: () -> T) -> T { block() }
 #endif
 
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 #if canImport(Darwin)
 import Darwin
@@ -88,9 +88,11 @@ let benchmarks = {
         try data.write(to: testPath)
     }
     
+#if !os(WASI) // atomic writing is unavailable on WASI
     Benchmark("write-regularFile-atomic", configuration: .cleanupTestPathConfig) { benchmark in
         try data.write(to: testPath, options: .atomic)
     }
+#endif
     
     Benchmark("write-regularFile-alreadyExists",
               configuration: .init(
@@ -103,6 +105,7 @@ let benchmarks = {
         try? data.write(to: testPath)
     }
     
+#if !os(WASI) // atomic writing is unavailable on WASI
     Benchmark("write-regularFile-alreadyExists-atomic",
               configuration: .init(
                 setup: {
@@ -113,6 +116,7 @@ let benchmarks = {
     ) { benchmark in
         try? data.write(to: testPath, options: .atomic)
     }
+#endif
     
     Benchmark("read-regularFile", 
               configuration: .init(

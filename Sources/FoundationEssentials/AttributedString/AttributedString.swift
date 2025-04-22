@@ -203,9 +203,11 @@ extension AttributedString { // AttributedStringAttributeMutation
 extension AttributedString: AttributedStringProtocol {
     public struct Index : Comparable, Sendable {
         internal var _value: BigString.Index
+        internal var _version: AttributedString.Guts.Version
 
-        internal init(_ value: BigString.Index) {
+        internal init(_ value: BigString.Index, version: AttributedString.Guts.Version) {
             self._value = value
+            self._version = version
         }
 
         public static func == (left: Self, right: Self) -> Bool {
@@ -218,11 +220,11 @@ extension AttributedString: AttributedStringProtocol {
     }
     
     public var startIndex : Index {
-        Index(_guts.string.startIndex)
+        Index(_guts.string.startIndex, version: _guts.version)
     }
     
     public var endIndex : Index {
-        Index(_guts.string.endIndex)
+        Index(_guts.string.endIndex, version: _guts.version)
     }
     
     @preconcurrency
@@ -241,6 +243,7 @@ extension AttributedString: AttributedStringProtocol {
     }
     
     @preconcurrency
+    @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
     ) -> K.Value? where K.Value: Sendable {
@@ -276,6 +279,7 @@ extension AttributedString {
         if !isKnownUniquelyReferenced(&_guts) {
             _guts = _guts.copy()
         }
+        _guts.incrementVersion()
     }
 
     public mutating func append(_ s: some AttributedStringProtocol) {
@@ -379,8 +383,10 @@ extension RangeSet where Bound == AttributedString.Index {
 }
 
 extension RangeSet where Bound == BigString.Index {
-    internal var _attributedStringIndices: RangeSet<AttributedString.Index> {
-        RangeSet<AttributedString.Index>(self.ranges.map(\._attributedStringRange))
+    internal func _attributedStringIndices(version: AttributedString.Guts.Version) -> RangeSet<AttributedString.Index> {
+        RangeSet<AttributedString.Index>(self.ranges.lazy.map {
+            $0._attributedStringRange(version: version)
+        })
     }
 }
 
@@ -390,7 +396,7 @@ extension Range where Bound == BigString.Index {
         Range<Int>(uncheckedBounds: (lowerBound.utf8Offset, upperBound.utf8Offset))
     }
     
-    internal var _attributedStringRange: Range<AttributedString.Index> {
-        Range<AttributedString.Index>(uncheckedBounds: (AttributedString.Index(lowerBound), AttributedString.Index(upperBound)))
+    internal func _attributedStringRange(version: AttributedString.Guts.Version) -> Range<AttributedString.Index> {
+        Range<AttributedString.Index>(uncheckedBounds: (AttributedString.Index(lowerBound, version: version), AttributedString.Index(upperBound, version: version)))
     }
 }

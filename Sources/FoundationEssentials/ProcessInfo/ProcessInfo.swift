@@ -15,16 +15,16 @@ internal import _FoundationCShims
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Bionic
+@preconcurrency import Bionic
 import unistd
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 #if !NO_PROCESS
@@ -469,7 +469,7 @@ extension _ProcessInfo {
             return 0
         }
         return Int(count)
-#elseif os(Linux) || os(FreeBSD) || canImport(Android)
+#elseif os(Linux) || os(FreeBSD) || os(OpenBSD) || canImport(Android)
         #if os(Linux)
         if let fsCount = Self.fsCoreCount() {
             return fsCount
@@ -481,7 +481,7 @@ extension _ProcessInfo {
         GetSystemInfo(&sysInfo)
         return sysInfo.dwActiveProcessorMask.nonzeroBitCount
 #else
-        return 0
+        return 1
 #endif
     }
     

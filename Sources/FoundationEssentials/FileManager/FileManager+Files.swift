@@ -18,20 +18,20 @@ internal import DarwinPrivate.sys.content_protection
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 import posix_filesystem
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 internal import _FoundationCShims
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 internal import _FoundationCShims
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
 internal import _FoundationCShims
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 extension Date {
@@ -201,7 +201,40 @@ extension stat {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
+extension FileProtectionType {
+    var intValue: Int32? {
+        switch self {
+        case .complete: PROTECTION_CLASS_A
+        case .init(rawValue: "NSFileProtectionWriteOnly"), .completeUnlessOpen: PROTECTION_CLASS_B
+        case .init(rawValue: "NSFileProtectionCompleteUntilUserAuthentication"), .completeUntilFirstUserAuthentication: PROTECTION_CLASS_C
+        case .none: PROTECTION_CLASS_D
+        #if !os(macOS)
+        case .completeWhenUserInactive: PROTECTION_CLASS_CX
+        #endif
+        default: nil
+        }
+    }
+    
+    init?(intValue value: Int32) {
+        switch value {
+        case PROTECTION_CLASS_A: self = .complete
+        case PROTECTION_CLASS_B: self = .completeUnlessOpen
+        case PROTECTION_CLASS_C: self = .completeUntilFirstUserAuthentication
+        case PROTECTION_CLASS_D: self = .none
+        #if !os(macOS)
+        case PROTECTION_CLASS_CX: self = .completeWhenUserInactive
+        #endif
+        default: return nil
+        }
+    }
+}
 #endif
+#endif
+
+extension FileAttributeKey {
+    fileprivate static var _extendedAttributes: Self { Self("NSFileExtendedAttributes") }
+}
 
 extension _FileManagerImpl {
     func createFile(
@@ -227,6 +260,9 @@ extension _FileManagerImpl {
             }
             attr?[.protectionKey] = nil
         }
+        #elseif os(WASI)
+        // `.atomic` is unavailable on WASI
+        let opts: Data.WritingOptions = []
         #else
         let opts = Data.WritingOptions.atomic
         #endif
@@ -412,8 +448,8 @@ extension _FileManagerImpl {
     func isExecutableFile(atPath path: String) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
-            var dwBinaryType: DWORD = 0
-            return GetBinaryTypeW($0, &dwBinaryType)
+            // Use SHGetFileInfo instead of GetBinaryType because the latter returns the wrong answer for x86 binaries running under emulation on ARM systems.
+            return (SHGetFileInfoW($0, 0, nil, 0, SHGFI_EXETYPE) & 0xFFFF) != 0
         }) ?? false
 #else
         _fileAccessibleForMode(path, X_OK)
@@ -449,7 +485,7 @@ extension _FileManagerImpl {
 #endif
     }
 
-#if !os(Windows) && !os(WASI)
+#if !os(Windows) && !os(WASI) && !os(OpenBSD)
     private func _extendedAttribute(_ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data? {
         #if canImport(Darwin)
         var size = getxattr(path, key, nil, 0, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
@@ -611,7 +647,7 @@ extension _FileManagerImpl {
             
             var attributes = statAtPath.fileAttributes
             try? Self._catInfo(for: URL(filePath: path, directoryHint: .isDirectory), statInfo: statAtPath, into: &attributes)
-            #if !os(WASI) // WASI does not support extended attributes
+            #if !os(WASI) && !os(OpenBSD)
             if let extendedAttrs = try? _extendedAttributes(at: fsRep, followSymlinks: false) {
                 attributes[._extendedAttributes] = extendedAttrs
             }
@@ -699,6 +735,9 @@ extension _FileManagerImpl {
             
             #if canImport(Darwin)
             let fsNumber = result.f_fsid.val.0
+            let blockSize = UInt64(result.f_bsize)
+            #elseif os(OpenBSD)
+            let fsNumber = result.f_fsid
             let blockSize = UInt64(result.f_bsize)
             #else
             let fsNumber = result.f_fsid
@@ -914,7 +953,7 @@ extension _FileManagerImpl {
             try Self._setCatInfoAttributes(attributes, path: path)
             
             if let extendedAttrs = attributes[.init("NSFileExtendedAttributes")] as? [String : Data] {
-                #if os(WASI)
+                #if os(WASI) || os(OpenBSD)
                 // WASI does not support extended attributes
                 throw CocoaError.errorWithFilePath(.featureUnsupported, path)
                 #elseif canImport(Android)

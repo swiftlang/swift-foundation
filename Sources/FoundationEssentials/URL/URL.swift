@@ -13,10 +13,6 @@
 public struct URLResourceKey {}
 #endif
 
-#if os(Windows)
-import WinSDK
-#endif
-
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 internal import CoreFoundation_Private.CFURL
@@ -612,6 +608,9 @@ extension URLResourceValues : Sendable {}
 internal func foundation_swift_url_enabled() -> Bool {
     return _foundation_swift_url_feature_enabled()
 }
+internal func foundation_swift_nsurl_enabled() -> Bool {
+    return _foundation_swift_nsurl_feature_enabled()
+}
 #else
 internal func foundation_swift_url_enabled() -> Bool { return true }
 #endif
@@ -634,161 +633,40 @@ public struct URL: Equatable, Sendable, Hashable {
     }()
 #endif
 
-    internal static let fileIDPrefix = Array("/.file/id=".utf8)
+#if FOUNDATION_FRAMEWORK
+    private static var _type: any _URLProtocol.Type {
+        return foundation_swift_url_enabled() ? _SwiftURL.self : _BridgedURL.self
+    }
+#else
+    private static let _type = _SwiftURL.self
+#endif
+
 
 #if FOUNDATION_FRAMEWORK
-
-    private var _url: NSURL
-
-    private static func _nsURL(from parseInfo: URLParseInfo, baseParseInfo: URLParseInfo?) -> NSURL {
-        var baseURL: CFURL?
-        if let baseParseInfo {
-            baseURL = _cfURL(from: baseParseInfo, baseURL: nil)
-        }
-        return _cfURL(from: parseInfo, baseURL: baseURL) as NSURL
+    internal let _url: any _URLProtocol & AnyObject
+    internal init(_ url: any _URLProtocol & AnyObject) {
+        _url = url
     }
-
-    struct _CFURLFlags: OptionSet {
-        let rawValue: UInt32
-
-        // These must match the CFURL flags defined in CFURL.m
-        static let hasScheme            = _CFURLFlags(rawValue: 0x00000001)
-        static let hasUser              = _CFURLFlags(rawValue: 0x00000002)
-        static let hasPassword          = _CFURLFlags(rawValue: 0x00000004)
-        static let hasHost              = _CFURLFlags(rawValue: 0x00000008)
-        static let hasPort              = _CFURLFlags(rawValue: 0x00000010)
-        static let hasPath              = _CFURLFlags(rawValue: 0x00000020)
-        static let hasParameters        = _CFURLFlags(rawValue: 0x00000040) // Unused
-        static let hasQuery             = _CFURLFlags(rawValue: 0x00000080)
-        static let hasFragment          = _CFURLFlags(rawValue: 0x00000100)
-        static let isIPLiteral          = _CFURLFlags(rawValue: 0x00000400)
-        static let isDirectory          = _CFURLFlags(rawValue: 0x00000800)
-        static let isCanonicalFileURL   = _CFURLFlags(rawValue: 0x00001000) // Unused
-        static let pathHasFileID        = _CFURLFlags(rawValue: 0x00002000)
-        static let isDecomposable       = _CFURLFlags(rawValue: 0x00004000)
-        static let posixAndURLPathsMatch        = _CFURLFlags(rawValue: 0x00008000)
-        static let originalAndURLStringsMatch   = _CFURLFlags(rawValue: 0x00010000)
-        static let originatedFromSwift          = _CFURLFlags(rawValue: 0x00020000)
+#else
+    private let _url: _SwiftURL
+    internal init(_ url: _SwiftURL) {
+        _url = url
     }
+#endif
 
-    private static func _cfURL(from parseInfo: URLParseInfo, baseURL: CFURL?) -> CFURL {
-        let string = parseInfo.urlString
-        var ranges = [CFRange]()
-        var flags: _CFURLFlags = [
-            .originalAndURLStringsMatch,
-            .originatedFromSwift,
-        ]
+#if os(Linux)
+    // Workaround to fix a Linux-only crash in swift_release.
+    // Add padding to return struct URL to its original size
+    // before the _SwiftURL refactor.
+    private var _padding: URLParseInfo?
+#endif
 
-        // CFURL considers a URL decomposable if it does not have a scheme
-        // or if there is a slash directly following the scheme.
-        if parseInfo.scheme == nil || parseInfo.hasAuthority || parseInfo.path.utf8.first == ._slash {
-            flags.insert(.isDecomposable)
-        }
-
-        if let schemeRange = parseInfo.schemeRange {
-            flags.insert(.hasScheme)
-            let nsRange = string._toRelativeNSRange(schemeRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        }
-
-        if let userRange = parseInfo.userRange {
-            flags.insert(.hasUser)
-            let nsRange = string._toRelativeNSRange(userRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        }
-
-        if let passwordRange = parseInfo.passwordRange {
-            flags.insert(.hasPassword)
-            let nsRange = string._toRelativeNSRange(passwordRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        }
-
-        if parseInfo.portRange != nil {
-            flags.insert(.hasPort)
-        }
-
-        // CFURL considers an empty host nil unless there's another authority component
-        if let hostRange = parseInfo.hostRange,
-           (!hostRange.isEmpty || !flags.isDisjoint(with: [.hasUser, .hasPassword, .hasPort])) {
-            flags.insert(.hasHost)
-            let nsRange = string._toRelativeNSRange(hostRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        }
-
-        if let portRange = parseInfo.portRange {
-            let nsRange = string._toRelativeNSRange(portRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        }
-
-        flags.insert(.hasPath)
-        if let pathRange = parseInfo.pathRange {
-            let nsRange = string._toRelativeNSRange(pathRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        } else {
-            ranges.append(CFRange(location: kCFNotFound, length: 0))
-        }
-
-        if let queryRange = parseInfo.queryRange {
-            flags.insert(.hasQuery)
-            let nsRange = string._toRelativeNSRange(queryRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        }
-
-        if let fragmentRange = parseInfo.fragmentRange {
-            flags.insert(.hasFragment)
-            let nsRange = string._toRelativeNSRange(fragmentRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        }
-
-        let path = parseInfo.path.utf8
-        let isDirectory = path.last == UInt8(ascii: "/")
-
-        if parseInfo.isIPLiteral {
-            flags.insert(.isIPLiteral)
-        }
-        if isDirectory {
-            flags.insert(.isDirectory)
-        }
-        if parseInfo.pathHasFileID {
-            flags.insert(.pathHasFileID)
-        }
-        if !isDirectory && !parseInfo.pathHasPercent {
-            flags.insert(.posixAndURLPathsMatch)
-        }
-
-        return ranges.withUnsafeBufferPointer {
-            _CFURLCreateWithRangesAndFlags(string as CFString, $0.baseAddress!, UInt8($0.count), flags.rawValue, baseURL)
-        }
-    }
-
-#if !NO_FILESYSTEM
+#if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
     public typealias BookmarkResolutionOptions = NSURL.BookmarkResolutionOptions
     public typealias BookmarkCreationOptions = NSURL.BookmarkCreationOptions
-#endif // !NO_FILESYSTEM
+#endif
 
-#endif // FOUNDATION_FRAMEWORK
-
-    typealias Parser = RFC3986Parser
-    internal var _parseInfo: URLParseInfo!
-    private var _baseParseInfo: URLParseInfo?
-
-    private static func parse(urlString: String, encodingInvalidCharacters: Bool = true) -> URLParseInfo? {
-        return Parser.parse(urlString: urlString, encodingInvalidCharacters: encodingInvalidCharacters, compatibility: .allowEmptyScheme)
-    }
-
-    internal init(parseInfo: URLParseInfo, relativeTo url: URL? = nil) {
-        _parseInfo = parseInfo
-        if parseInfo.scheme == nil {
-            _baseParseInfo = url?.absoluteURL._parseInfo
-        }
-        #if FOUNDATION_FRAMEWORK
-        _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
-        if self.isFileURL && _parseInfo.pathHasFileID {
-            // _baseParseInfo cannot have a file ID because it came from `URL`
-            self = URL(reference: _url)
-        }
-        #endif // FOUNDATION_FRAMEWORK
-    }
+    internal static let fileIDPrefix = Array("/.file/id=".utf8)
 
     /// The public initializers don't allow the empty string, and we must maintain that behavior
     /// for compatibility. However, there are cases internally where we need to create a URL with
@@ -796,77 +674,36 @@ public struct URL: Equatable, Sendable, Hashable {
     /// component. This previously worked since `URL` just wrapped an `NSURL`, which
     /// allows the empty string.
     internal init?(stringOrEmpty: String, relativeTo url: URL? = nil) {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            guard let inner = NSURL(string: stringOrEmpty, relativeTo: url) else { return nil }
-            _url = URL._converted(from: inner)
-            return
-        }
-        #endif // FOUNDATION_FRAMEWORK
-        guard let parseInfo = URL.parse(urlString: stringOrEmpty) else {
-            return nil
-        }
-        _parseInfo = parseInfo
-        if parseInfo.scheme == nil {
-            _baseParseInfo = url?.absoluteURL._parseInfo
-        }
-        #if FOUNDATION_FRAMEWORK
-        _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
-        if self.isFileURL && _parseInfo.pathHasFileID {
-            self = URL(reference: _url)
-        }
-        #endif // FOUNDATION_FRAMEWORK
+        guard let inner = URL._type.init(stringOrEmpty: stringOrEmpty, relativeTo: url) else { return nil }
+        _url = inner.convertingFileReference()
     }
 
     /// Initialize with string.
     ///
     /// Returns `nil` if a `URL` cannot be formed with the string (for example, if the string contains characters that are illegal in a URL, or is an empty string).
     public init?(string: __shared String) {
-        guard !string.isEmpty else { return nil }
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            guard let inner = NSURL(string: string) else { return nil }
-            _url = URL._converted(from: inner)
-            return
-        }
-        #endif // FOUNDATION_FRAMEWORK
-        guard let parseInfo = URL.parse(urlString: string) else {
-            return nil
-        }
-        _parseInfo = parseInfo
-        #if FOUNDATION_FRAMEWORK
-        _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
-        if self.isFileURL && _parseInfo.pathHasFileID {
-            self = URL(reference: _url)
-        }
-        #endif // FOUNDATION_FRAMEWORK
+        guard let inner = URL._type.init(string: string) else { return nil }
+        _url = inner.convertingFileReference()
     }
 
     /// Initialize with string, relative to another URL.
     ///
     /// Returns `nil` if a `URL` cannot be formed with the string (for example, if the string contains characters that are illegal in a URL, or is an empty string).
     public init?(string: __shared String, relativeTo url: __shared URL?) {
-        guard !string.isEmpty else { return nil }
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            guard let inner = NSURL(string: string, relativeTo: url) else { return nil }
-            _url = URL._converted(from: inner)
+        #if os(Linux)
+        // Workaround for a Linux-only crash where swift-corelibs-foundation's
+        // NSURL.baseURL.getter returns a value of 0x1 when bridging to URL.
+        // Crash doesn't occur when swift-corelibs-foundation is rebuilt with
+        // the new swift-foundation URL code, so this is temporary to get
+        // swift-foundation CI to pass.
+        if unsafeBitCast(url, to: (UnsafeRawPointer, UnsafeRawPointer).self) == (UnsafeRawPointer(bitPattern: 0x1), UnsafeRawPointer(bitPattern: 0x0)) {
+            guard let inner = URL._type.init(string: string, relativeTo: nil) else { return nil }
+            _url = inner.convertingFileReference()
             return
         }
-        #endif // FOUNDATION_FRAMEWORK
-        guard let parseInfo = URL.parse(urlString: string) else {
-            return nil
-        }
-        _parseInfo = parseInfo
-        if parseInfo.scheme == nil {
-            _baseParseInfo = url?.absoluteURL._parseInfo
-        }
-        #if FOUNDATION_FRAMEWORK
-        _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
-        if self.isFileURL && _parseInfo.pathHasFileID {
-            self = URL(reference: _url)
-        }
-        #endif // FOUNDATION_FRAMEWORK
+        #endif
+        guard let inner = URL._type.init(string: string, relativeTo: url) else { return nil }
+        _url = inner.convertingFileReference()
     }
 
     /// Initialize with a URL string and the option to add (or skip) IDNA- and percent-encoding of invalid characters.
@@ -876,45 +713,21 @@ public struct URL: Equatable, Sendable, Hashable {
     /// If the URL string is still invalid after encoding, `nil` is returned.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public init?(string: __shared String, encodingInvalidCharacters: Bool) {
-        guard !string.isEmpty else { return nil }
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            guard let inner = NSURL(string: string, encodingInvalidCharacters: encodingInvalidCharacters) else { return nil }
-            _url = URL._converted(from: inner)
-            return
-        }
-        #endif // FOUNDATION_FRAMEWORK
-        guard let parseInfo = URL.parse(urlString: string, encodingInvalidCharacters: encodingInvalidCharacters) else {
-            return nil
-        }
-        _parseInfo = parseInfo
-        #if FOUNDATION_FRAMEWORK
-        _url = URL._nsURL(from: _parseInfo, baseParseInfo: _baseParseInfo)
-        if self.isFileURL && _parseInfo.pathHasFileID {
-            self = URL(reference: _url)
-        }
-        #endif // FOUNDATION_FRAMEWORK
+        guard let inner = URL._type.init(string: string, encodingInvalidCharacters: encodingInvalidCharacters) else { return nil }
+        _url = inner.convertingFileReference()
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path, relative to a base URL.
     ///
     /// If an empty string is used for the path, then the path is assumed to be ".".
-    /// - note: This function avoids an extra file system access to check if the file URL is a directory. You should use it if you know the answer already.
+    /// - Note: This function avoids an extra file system access to check if the file URL is a directory. You should use it if you know the answer already.
     @available(macOS, introduced: 10.10, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(iOS, introduced: 8.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(tvOS, introduced: 9.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     public init(fileURLWithPath path: __shared String, isDirectory: Bool, relativeTo base: __shared URL?) {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path, isDirectory: isDirectory, relativeTo: base))
-            self.init(convertedReference: url)
-            return
-        }
-        #endif
-        let directoryHint: DirectoryHint = isDirectory ? .isDirectory : .notDirectory
-        self.init(filePath: path.isEmpty ? "." : path, directoryHint: directoryHint, relativeTo: base)
+        _url = URL._type.init(fileURLWithPath: path, isDirectory: isDirectory, relativeTo: base).convertingFileReference()
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path, relative to a base URL.
@@ -926,14 +739,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     public init(fileURLWithPath path: __shared String, relativeTo base: __shared URL?) {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path, relativeTo: base))
-            self.init(convertedReference: url)
-            return
-        }
-        #endif
-        self.init(filePath: path.isEmpty ? "." : path, directoryHint: .checkFileSystem, relativeTo: base)
+        _url = URL._type.init(fileURLWithPath: path, relativeTo: base).convertingFileReference()
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path.
@@ -946,15 +752,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     public init(fileURLWithPath path: __shared String, isDirectory: Bool) {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path, isDirectory: isDirectory))
-            self.init(convertedReference: url)
-            return
-        }
-        #endif
-        let directoryHint: DirectoryHint = isDirectory ? .isDirectory : .notDirectory
-        self.init(filePath: path.isEmpty ? "." : path, directoryHint: directoryHint)
+        _url = URL._type.init(fileURLWithPath: path, isDirectory: isDirectory).convertingFileReference()
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path.
@@ -966,14 +764,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use init(filePath:directoryHint:relativeTo:) instead")
     public init(fileURLWithPath path: __shared String) {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path))
-            self.init(convertedReference: url)
-            return
-        }
-        #endif
-        self.init(filePath: path.isEmpty ? "." : path, directoryHint: .checkFileSystem)
+        _url = URL._type.init(fileURLWithPath: path).convertingFileReference()
     }
     
     // NSURL(fileURLWithPath:) can return nil incorrectly for some malformed paths
@@ -981,16 +772,16 @@ public struct URL: Equatable, Sendable, Hashable {
     internal init?(_fileManagerFailableFileURLWithPath path: __shared String) {
         #if FOUNDATION_FRAMEWORK
         guard foundation_swift_url_enabled() else {
-            let url = URL._converted(from: NSURL(fileURLWithPath: path.isEmpty ? "." : path, isDirectory: path.utf8.last == ._slash))
+            let url = _BridgedURL(fileURLWithPath: path, isDirectory: path.utf8.last == ._slash)
             guard unsafeBitCast(url, to: UnsafeRawPointer?.self) != nil else {
                 return nil
             }
-            self.init(convertedReference: url)
+            _url = url.convertingFileReference()
             return
         }
         #endif
         // Infer from the path to prevent a file system check for what is likely a non-existant, malformed, or inaccessible path
-        self.init(filePath: path, directoryHint: .inferFromPath)
+        _url = _SwiftURL(filePath: path, directoryHint: .inferFromPath).convertingFileReference()
     }
 
     /// Initializes a newly created URL using the contents of the given data, relative to a base URL.
@@ -998,32 +789,8 @@ public struct URL: Equatable, Sendable, Hashable {
     /// If the data representation is not a legal URL string as ASCII bytes, the URL object may not behave as expected. If the URL cannot be formed then this will return nil.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public init?(dataRepresentation: __shared Data, relativeTo base: __shared URL?, isAbsolute: Bool = false) {
-        guard !dataRepresentation.isEmpty else { return nil }
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            if isAbsolute {
-                _url = URL._converted(from: NSURL(absoluteURLWithDataRepresentation: dataRepresentation, relativeTo: base))
-            } else {
-                _url = URL._converted(from: NSURL(dataRepresentation: dataRepresentation, relativeTo: base))
-            }
-            return
-        }
-        #endif
-        var url: URL?
-        if let string = String(data: dataRepresentation, encoding: .utf8) {
-            url = URL(stringOrEmpty: string, relativeTo: base)
-        }
-        if url == nil, let string = String(data: dataRepresentation, encoding: .isoLatin1) {
-            url = URL(stringOrEmpty: string, relativeTo: base)
-        }
-        guard let url else {
-            return nil
-        }
-        if isAbsolute {
-            self = url.absoluteURL
-        } else {
-            self = url
-        }
+        guard let inner = URL._type.init(dataRepresentation: dataRepresentation, relativeTo: base, isAbsolute: isAbsolute) else { return nil }
+        _url = inner.convertingFileReference()
     }
 
 #if !NO_FILESYSTEM && FOUNDATION_FRAMEWORK
@@ -1031,40 +798,16 @@ public struct URL: Equatable, Sendable, Hashable {
     /// Initializes a URL that refers to a location specified by resolving bookmark data.
     @available(swift, obsoleted: 4.2)
     public init?(resolvingBookmarkData data: __shared Data, options: BookmarkResolutionOptions = [], relativeTo url: __shared URL? = nil, bookmarkDataIsStale: inout Bool) throws {
-        var stale: ObjCBool = false
-        _url = URL._converted(from: try NSURL(resolvingBookmarkData: data, options: options, relativeTo: url, bookmarkDataIsStale: &stale))
-        bookmarkDataIsStale = stale.boolValue
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return
-        }
-        #endif
-        guard let parseInfo = URL.parse(urlString: _url.relativeString) else {
-            return nil
-        }
-        _parseInfo = parseInfo
-        if parseInfo.scheme == nil {
-            _baseParseInfo = url?.absoluteURL._parseInfo
-        }
+        try self.init(resolvingBookmarkData: data, options: options, relativeTo: url, bookmarkDataIsStale: &bookmarkDataIsStale)
     }
 
     /// Initializes a URL that refers to a location specified by resolving bookmark data.
     @available(swift, introduced: 4.2)
     public init(resolvingBookmarkData data: __shared Data, options: BookmarkResolutionOptions = [], relativeTo url: __shared URL? = nil, bookmarkDataIsStale: inout Bool) throws {
         var stale: ObjCBool = false
-        _url = URL._converted(from: try NSURL(resolvingBookmarkData: data, options: options, relativeTo: url, bookmarkDataIsStale: &stale))
+        let nsURL = try NSURL(resolvingBookmarkData: data, options: options, relativeTo: url, bookmarkDataIsStale: &stale)
         bookmarkDataIsStale = stale.boolValue
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return
-        }
-        #endif
-        bookmarkDataIsStale = stale.boolValue
-        let parseInfo = URL.parse(urlString: _url.relativeString)!
-        _parseInfo = parseInfo
-        if parseInfo.scheme == nil {
-            _baseParseInfo = url?.absoluteURL._parseInfo
-        }
+        self.init(reference: nsURL)
     }
 
     /// Creates and initializes a URL that refers to the location specified by resolving the alias file at `url`. If the `url` argument does not refer to an alias file as defined by the `.isAliasFileKey` property, the URL returned is the same as the `url` argument. This method fails and returns `nil` if the `url` argument is unreachable, or if the original file or directory could not be located or is not reachable, or if the original file or directory is on a volume that could not be located or mounted. The `URLBookmarkResolutionWithSecurityScope` option is not supported by this method.
@@ -1076,17 +819,8 @@ public struct URL: Equatable, Sendable, Hashable {
 #endif // !NO_FILESYSTEM && FOUNDATION_FRAMEWORK
 
     /// Initializes a newly created URL referencing the local file or directory at the file system representation of the path. File system representation is a null-terminated C string with canonical UTF-8 encoding.
-    public init(fileURLWithFileSystemRepresentation path: UnsafePointer<Int8>, isDirectory: Bool, relativeTo baseURL: __shared URL?) {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let url = URL._converted(from: NSURL(fileURLWithFileSystemRepresentation: path, isDirectory: isDirectory, relativeTo: baseURL))
-            self.init(convertedReference: url)
-            return
-        }
-        #endif
-        let pathString = String(cString: path)
-        let directoryHint: DirectoryHint = isDirectory ? .isDirectory : .notDirectory
-        self.init(filePath: pathString, directoryHint: directoryHint, relativeTo: baseURL)
+    public init(fileURLWithFileSystemRepresentation path: UnsafePointer<Int8>, isDirectory: Bool, relativeTo base: __shared URL?) {
+        _url = URL._type.init(fileURLWithFileSystemRepresentation: path, isDirectory: isDirectory, relativeTo: base).convertingFileReference()
     }
 
     /// Returns the data representation of the URL's relativeString.
@@ -1094,160 +828,47 @@ public struct URL: Equatable, Sendable, Hashable {
     /// If the URL was initialized with `init?(dataRepresentation:relativeTo:isAbsolute:)`, the data representation returned are the same bytes as those used at initialization; otherwise, the data representation returned are the bytes of the `relativeString` encoded with UTF8 string encoding.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var dataRepresentation: Data {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.dataRepresentation
-        }
-        #endif
-        return Data(_parseInfo.urlString.utf8)
-    }
-
-    private func mergedPath(for relativePath: String) -> String {
-        precondition(relativePath.utf8.first != UInt8(ascii: "/"))
-        guard let _baseParseInfo else {
-            return relativePath
-        }
-        let basePath = String(_baseParseInfo.path)
-        if _baseParseInfo.hasAuthority && basePath.isEmpty {
-            return "/" + relativePath
-        }
-        return basePath.merging(relativePath: relativePath)
-    }
-
-    /// Calculate the "merged" path that is resolved against the base URL
-    private var mergedPath: String {
-        return mergedPath(for: relativePath())
+        return _url.dataRepresentation
     }
 
     /// Returns the absolute string for the URL.
     public var absoluteString: String {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            // This should never fail for non-file reference URLs
-            return _url.absoluteString ?? ""
-        }
-        #endif
-        guard let _baseParseInfo else {
-            return relativeString
-        }
-        var result = URLComponents(parseInfo: _parseInfo)
-
-        if _parseInfo.scheme != nil {
-            result.percentEncodedPath = relativePath().removingDotSegments
-            return result.string ?? relativeString
-        }
-
-        if let baseScheme = _baseParseInfo.scheme {
-            // Scheme might be empty, which URL allows for compatibility,
-            // but URLComponents does not, so we force it internally.
-            result.forceScheme(String(baseScheme))
-        }
-
-        if hasAuthority {
-            return result.string ?? relativeString
-        }
-
-        if let baseUser = _baseParseInfo.user {
-            result.percentEncodedUser = String(baseUser)
-        }
-        if let basePassword = _baseParseInfo.password {
-            result.percentEncodedPassword = String(basePassword)
-        }
-        if let baseHost = _baseParseInfo.host {
-            result.encodedHost = String(baseHost)
-        }
-        if let basePort = _baseParseInfo.port {
-            result.port = basePort
-        }
-
-        if relativePath().isEmpty {
-            result.percentEncodedPath = String(_baseParseInfo.path)
-            if _parseInfo.query == nil, let baseQuery = _baseParseInfo.query {
-                result.percentEncodedQuery = String(baseQuery)
-            }
-        } else {
-            if relativePath().utf8.first == UInt8(ascii: "/") {
-                result.percentEncodedPath = relativePath().removingDotSegments
-            } else {
-                result.percentEncodedPath = mergedPath.removingDotSegments
-            }
-        }
-        return result.string ?? relativeString
+        return _url.absoluteString
     }
 
     /// Returns the relative portion of a URL.
     ///
     /// If `baseURL` is nil, or if the receiver is itself absolute, this is the same as `absoluteString`.
     public var relativeString: String {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.relativeString
-        }
-        #endif
-        return _parseInfo.urlString
+        return _url.relativeString
     }
 
     /// Returns the base URL.
     ///
     /// If the URL is itself absolute, then this value is nil.
     public var baseURL: URL? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.baseURL
-        }
-        #endif
-        guard let _baseParseInfo else {
-            return nil
-        }
-        return URL(parseInfo: _baseParseInfo)
+        return _url.baseURL
     }
 
     /// Returns the absolute URL.
     ///
     /// If the URL is itself absolute, this will return self.
     public var absoluteURL: URL {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            // This should never fail for non-file reference URLs
-            return _url.absoluteURL ?? self
-        }
-        #endif
-        guard _baseParseInfo != nil else {
-            return self
-        }
-        return URL(string: absoluteString) ?? self
+        return _url.absoluteURL ?? self
     }
 
     /// Returns the scheme of the URL.
     public var scheme: String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.scheme
-        }
-        #endif
-        guard let scheme = _parseInfo.scheme ?? _baseParseInfo?.scheme else { return nil }
-        return String(scheme)
+        return _url.scheme
     }
 
     /// Returns true if the scheme is `file:`.
     public var isFileURL: Bool {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.isFileURL
-        }
-        #endif
-        guard let scheme else { return false }
-        return scheme.lowercased() == "file"
+        return _url.isFileURL
     }
 
-    private var hasAuthority: Bool {
-        return _parseInfo.hasAuthority
-    }
-
-    private var encodedHost: String? {
-        let encodedHost = hasAuthority ? _parseInfo.host : _baseParseInfo?.host
-        guard let encodedHost else { return nil }
-        return String(encodedHost)
+    internal var hasAuthority: Bool {
+        return _url.hasAuthority
     }
 
     /// Returns the host component of the URL if present, otherwise returns `nil`.
@@ -1259,12 +880,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use host(percentEncoded:) instead")
     public var host: String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.host
-        }
-        #endif
-        return host(percentEncoded: false)
+        return _url.host
     }
 
     /// Returns the host component of the URL if present, otherwise returns `nil`.
@@ -1274,68 +890,14 @@ public struct URL: Equatable, Sendable, Hashable {
     /// - Returns: The host component of the URL
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func host(percentEncoded: Bool = true) -> String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let cf = _url._cfurl().takeUnretainedValue()
-            if let host = _CFURLCopyHostName(cf, !percentEncoded) {
-                return host.takeRetainedValue() as String
-            }
-            return nil
-        }
-        #endif
-        guard let encodedHost else {
-            return nil
-        }
-
-        // According to RFC 3986, a host always exists if there is an authority
-        // component, it just might be empty. However, the old implementation
-        // of URL.host() returned nil for URLs like "https:///", and apps rely
-        // on this behavior, so keep it for bincompat.
-        if encodedHost.isEmpty, user() == nil, password() == nil, port == nil {
-            return nil
-        }
-
-        func requestedHost() -> String? {
-            let didPercentEncodeHost = hasAuthority ? _parseInfo.didPercentEncodeHost : _baseParseInfo?.didPercentEncodeHost ?? false
-            if percentEncoded {
-                if didPercentEncodeHost {
-                    return encodedHost
-                }
-                guard let decoded = Parser.IDNADecodeHost(encodedHost) else {
-                    return encodedHost
-                }
-                return Parser.percentEncode(decoded, component: .host)
-            } else {
-                if didPercentEncodeHost {
-                    return Parser.percentDecode(encodedHost)
-                }
-                return encodedHost
-            }
-        }
-
-        guard let requestedHost = requestedHost() else {
-            return nil
-        }
-
-        let isIPLiteral = hasAuthority ? _parseInfo.isIPLiteral : _baseParseInfo?.isIPLiteral ?? false
-        if isIPLiteral {
-            // Strip square brackets to be compatible with old URL.host behavior
-            return String(requestedHost.utf8.dropFirst().dropLast())
-        } else {
-            return requestedHost
-        }
+        return _url.host(percentEncoded: percentEncoded)
     }
 
     /// Returns the port component of the URL if present, otherwise returns `nil`.
     ///
     /// - note: This function will resolve against the base `URL`.
     public var port: Int? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.port?.intValue
-        }
-        #endif
-        return hasAuthority ? _parseInfo.port : _baseParseInfo?.port
+        return _url.port
     }
 
     /// Returns the user component of the URL if present, otherwise returns `nil`.
@@ -1347,12 +909,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use user(percentEncoded:) instead")
     public var user: String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.user
-        }
-        #endif
-        return user()
+        return _url.user
     }
 
     /// Returns the user component of the URL if present, otherwise returns `nil`.
@@ -1361,22 +918,7 @@ public struct URL: Equatable, Sendable, Hashable {
     /// - Returns: The user component of the URL.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func user(percentEncoded: Bool = true) -> String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let cf = _url._cfurl().takeUnretainedValue()
-            if let username = _CFURLCopyUserName(cf, !percentEncoded) {
-                return username.takeRetainedValue() as String
-            }
-            return nil
-        }
-        #endif
-        let user = hasAuthority ? _parseInfo.user : _baseParseInfo?.user
-        guard let user else { return nil }
-        if percentEncoded {
-            return String(user)
-        } else {
-            return Parser.percentDecode(user)
-        }
+        return _url.user(percentEncoded: percentEncoded)
     }
 
     /// Returns the password component of the URL if present, otherwise returns `nil`.
@@ -1388,12 +930,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use password(percentEncoded:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use password(percentEncoded:) instead")
     public var password: String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.password
-        }
-        #endif
-        return password()
+        return _url.password
     }
 
     /// Returns the password component of the URL if present, otherwise returns `nil`.
@@ -1402,71 +939,11 @@ public struct URL: Equatable, Sendable, Hashable {
     /// - Returns: The password component of the URL.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func password(percentEncoded: Bool = true) -> String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let cf = _url._cfurl().takeUnretainedValue()
-            if let password = _CFURLCopyPassword(cf, !percentEncoded) {
-                return password.takeRetainedValue() as String
-            }
-            return nil
-        }
-        #endif
-        let password = hasAuthority ? _parseInfo.password : _baseParseInfo?.password
-        guard let password else { return nil }
-        if percentEncoded {
-            return String(password)
-        } else {
-            return Parser.percentDecode(password)
-        }
+        return _url.password(percentEncoded: percentEncoded)
     }
 
-    #if os(Windows)
-    private static func windowsPath(for urlPath: String) -> String {
-        var iter = urlPath.utf8.makeIterator()
-        guard iter.next() == ._slash else {
-            return decodeFilePath(urlPath._droppingTrailingSlashes)
-        }
-        // "C:\" is standardized to "/C:/" on initialization.
-        if let driveLetter = iter.next(), driveLetter.isAlpha,
-           iter.next() == ._colon,
-           iter.next() == ._slash {
-            // Strip trailing slashes from the path, which preserves a root "/".
-            let path = String(Substring(urlPath.utf8.dropFirst(3)))._droppingTrailingSlashes
-            // Don't include a leading slash before the drive letter
-            return "\(Unicode.Scalar(driveLetter)):\(decodeFilePath(path))"
-        }
-        // There are many flavors of UNC paths, so use PathIsRootW to ensure
-        // we don't strip a trailing slash that represents a root.
-        let path = decodeFilePath(urlPath)
-        return path.replacing(._slash, with: ._backslash).withCString(encodedAs: UTF16.self) { pwszPath in
-            guard !PathIsRootW(pwszPath) else {
-                return path
-            }
-            return path._droppingTrailingSlashes
-        }
-    }
-    #endif
-
-    private static func decodeFilePath(_ path: some StringProtocol) -> String {
-        let charsToLeaveEncoded: Set<UInt8> = [._slash, 0]
-        return Parser.percentDecode(path, excluding: charsToLeaveEncoded) ?? ""
-    }
-
-    private static func fileSystemPath(for urlPath: String) -> String {
-        #if os(Windows)
-        return windowsPath(for: urlPath)
-        #else
-        return decodeFilePath(urlPath._droppingTrailingSlashes)
-        #endif
-    }
-
-    var fileSystemPath: String {
-        return URL.fileSystemPath(for: path())
-    }
-
-    /// True if the URL's relative path would resolve against a base URL path
-    private var pathResolvesAgainstBase: Bool {
-        return _parseInfo.scheme == nil && !hasAuthority && relativePath().utf8.first != ._slash
+    internal func absolutePath(percentEncoded: Bool = true) -> String {
+        return _url.absolutePath(percentEncoded: percentEncoded)
     }
 
     /// Returns the path component of the URL if present, otherwise returns an empty string.
@@ -1479,23 +956,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use path(percentEncoded:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use path(percentEncoded:) instead")
     public var path: String {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            if let parameterString = _url._parameterString {
-                if __NSURLSupportDeprecatedParameterComponent(),
-                   let path = _url.path {
-                    return path + ";" + parameterString
-                } else {
-                    return ";" + parameterString
-                }
-            } else if let path = _url.path {
-                return path
-            } else {
-                return ""
-            }
-        }
-        #endif
-        return fileSystemPath
+        return _url.path
     }
 
     /// Returns the path component of the URL if present, otherwise returns an empty string.
@@ -1505,54 +966,18 @@ public struct URL: Equatable, Sendable, Hashable {
     /// - Returns: The path component of the URL.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func path(percentEncoded: Bool = true) -> String {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let cf = _url._cfurl().takeUnretainedValue()
-            if let path = _CFURLCopyPath(cf, !percentEncoded) {
-                return path.takeRetainedValue() as String
-            }
-            return ""
-        }
-        #endif
-        if _baseParseInfo != nil {
-            return absoluteURL.relativePath(percentEncoded: percentEncoded)
-        }
-        if percentEncoded {
-            return String(_parseInfo.path)
-        } else {
-            return Parser.percentDecode(_parseInfo.path) ?? ""
-        }
+        return _url.path(percentEncoded: percentEncoded)
     }
 
     /// Returns the relative path of the URL if present, otherwise returns an empty string. This is the same as `path` if `baseURL` is `nil`.
     ///
     /// - returns: The relative path, or an empty string if the URL has an empty path.
     public var relativePath: String {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            if __NSURLSupportDeprecatedParameterComponent(),
-               let parameterString = _url._parameterString {
-                if let path = _url.relativePath {
-                    return path + ";" + parameterString
-                } else {
-                    return ";" + parameterString
-                }
-            } else if let path = _url.relativePath {
-                return path
-            } else {
-                return ""
-            }
-        }
-        #endif
-        return URL.fileSystemPath(for: relativePath())
+        return _url.relativePath
     }
 
-    private func relativePath(percentEncoded: Bool = true) -> String {
-        if percentEncoded {
-            return String(_parseInfo.path)
-        } else {
-            return Parser.percentDecode(_parseInfo.path) ?? ""
-        }
+    internal func relativePath(percentEncoded: Bool = true) -> String {
+        return _url.relativePath(percentEncoded: percentEncoded)
     }
 
     /// Returns the query component of the URL if present, otherwise returns `nil`.
@@ -1564,12 +989,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use query(percentEncoded:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use query(percentEncoded:) instead")
     public var query: String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.query
-        }
-        #endif
-        return query()
+        return _url.query
     }
 
     /// Returns the password component of the URL if present, otherwise returns `nil`.
@@ -1578,25 +998,7 @@ public struct URL: Equatable, Sendable, Hashable {
     /// - Returns: The query component of the URL.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func query(percentEncoded: Bool = true) -> String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let cf = _url._cfurl().takeUnretainedValue()
-            if let queryString = _CFURLCopyQueryString(cf, !percentEncoded) {
-                return queryString.takeRetainedValue() as String
-            }
-            return nil
-        }
-        #endif
-        var query = _parseInfo.query
-        if query == nil && relativePath().isEmpty {
-            query = _baseParseInfo?.query
-        }
-        guard let query else { return nil }
-        if percentEncoded {
-            return String(query)
-        } else {
-            return Parser.percentDecode(query)
-        }
+        return _url.query(percentEncoded: percentEncoded)
     }
 
     /// Returns the fragment component of the URL if present, otherwise returns `nil`.
@@ -1608,12 +1010,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use fragment(percentEncoded:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use fragment(percentEncoded:) instead")
     public var fragment: String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.fragment
-        }
-        #endif
-        return fragment()
+        return _url.fragment
     }
 
     /// Returns the password component of the URL if present, otherwise returns `nil`.
@@ -1622,21 +1019,7 @@ public struct URL: Equatable, Sendable, Hashable {
     /// - Returns: The fragment component of the URL.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func fragment(percentEncoded: Bool = true) -> String? {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let cf = _url._cfurl().takeUnretainedValue()
-            if let fragment = _CFURLCopyFragment(cf, !percentEncoded) {
-                return fragment.takeRetainedValue() as String
-            }
-            return nil
-        }
-        #endif
-        guard let fragment = _parseInfo.fragment else { return nil }
-        if percentEncoded {
-            return String(fragment)
-        } else {
-            return Parser.percentDecode(fragment)
-        }
+        return _url.fragment(percentEncoded: percentEncoded)
     }
 
     /// Passes the URL's path in file system representation to `block`.
@@ -1645,59 +1028,29 @@ public struct URL: Equatable, Sendable, Hashable {
     /// - note: The pointer is not valid outside the context of the block.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func withUnsafeFileSystemRepresentation<ResultType>(_ block: (UnsafePointer<Int8>?) throws -> ResultType) rethrows -> ResultType {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return try block(_url.fileSystemRepresentation)
-        }
-        #endif
-        return try fileSystemPath.withFileSystemRepresentation { try block($0) }
+        return try _url.withUnsafeFileSystemRepresentation(block)
     }
 
     // MARK: - Path manipulation
     /// Returns true if the URL path represents a directory.
     @available(macOS 10.11, iOS 9.0, watchOS 2.0, tvOS 9.0, *)
     public var hasDirectoryPath: Bool {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.hasDirectoryPath
-        }
-        #endif
-        return path().utf8.last == UInt8(ascii: "/")
+        return _url.hasDirectoryPath
     }
 
     /// Returns the path components of the URL, or an empty array if the path is an empty string.
     public var pathComponents: [String] {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            // In accordance with our change to never return a nil path, here we return an empty array.
-            return _url.pathComponents ?? []
-        }
-        #endif
-        var result = path().pathComponents.map { Parser.percentDecode($0) ?? "" }
-        if result.count > 1 && result.last == "/" {
-            _ = result.popLast()
-        }
-        return result
+        return _url.pathComponents
     }
 
     /// Returns the last path component of the URL, or an empty string if the path is an empty string.
     public var lastPathComponent: String {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.lastPathComponent ?? ""
-        }
-        #endif
-        return fileSystemPath.lastPathComponent
+        return _url.lastPathComponent
     }
 
     /// Returns the path extension of the URL, or an empty string if the path is an empty string.
     public var pathExtension: String {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.pathExtension ?? ""
-        }
-        #endif
-        return fileSystemPath.pathExtension
+        return _url.pathExtension
     }
 
     /// Returns a URL constructed by appending the given path component to self.
@@ -1710,24 +1063,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     public func appendingPathComponent(_ pathComponent: String, isDirectory: Bool) -> URL {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            if let result = _url.appendingPathComponent(pathComponent, isDirectory: isDirectory) {
-                return result
-            }
-            // Now we need to do something more expensive
-            if var c = URLComponents(url: self, resolvingAgainstBaseURL: true) {
-                let path = (c.path as NSString).appendingPathComponent(pathComponent)
-                c.path = isDirectory ? path + "/" : path
-                return c.url ?? self
-            } else {
-                // Ultimate fallback:
-                return self
-            }
-        }
-        #endif
-        let directoryHint: DirectoryHint = isDirectory ? .isDirectory : .notDirectory
-        return appending(path: pathComponent, directoryHint: directoryHint)
+        return _url.appendingPathComponent(pathComponent, isDirectory: isDirectory) ?? self
     }
 
     /// Returns a URL constructed by appending the given path component to self.
@@ -1740,22 +1076,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(watchOS, introduced: 2.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     @available(visionOS, introduced: 1.0, deprecated: 100000.0, message: "Use appending(path:directoryHint:) instead")
     public func appendingPathComponent(_ pathComponent: String) -> URL {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            if let result = _url.appendingPathComponent(pathComponent) {
-                return result
-            }
-            // Now we need to do something more expensive
-            if var c = URLComponents(url: self, resolvingAgainstBaseURL: true) {
-                c.path = (c.path as NSString).appendingPathComponent(pathComponent)
-                return c.url ?? self
-            } else {
-                // Ultimate fallback:
-                return self
-            }
-        }
-        #endif
-        return appending(path: pathComponent, directoryHint: .checkFileSystem)
+        return _url.appendingPathComponent(pathComponent) ?? self
     }
 
     /// Returns a URL constructed by removing the last path component of self.
@@ -1765,45 +1086,7 @@ public struct URL: Equatable, Sendable, Hashable {
     /// (e.g., `http://www.example.com`),
     /// then this function will return the URL unchanged.
     public func deletingLastPathComponent() -> URL {
-        #if FOUNDATION_FRAMEWORK
-        /// Compatibility path for apps that loop on:
-        /// `url = url.deletingPathComponent().standardized` until `url.path.isEmpty`.
-        ///
-        /// This used to work due to a combination of bugs where:
-        /// `URL("/").deletingLastPathComponent == URL("/../")`
-        /// `URL("/../").standardized == URL("")`
-        guard foundation_swift_url_enabled(), !Self.compatibility4 else {
-            // This is a slight behavior change from NSURL, but better than returning "http://www.example.com../".
-            guard !path.isEmpty, let result = _url.deletingLastPathComponent.map({ URL(reference: $0 as NSURL) }) else { return self }
-            return result
-        }
-        #endif
-        let path = relativePath()
-        let shouldAppendDotDot = (
-            pathResolvesAgainstBase && (
-                path.isEmpty
-                || path.lastPathComponent == "."
-                || path.lastPathComponent == ".."
-            )
-        )
-
-        var newPath = path
-        if newPath.lastPathComponent != ".." {
-            newPath = newPath.deletingLastPathComponent()
-        }
-        if shouldAppendDotDot {
-            newPath = newPath.appendingPathComponent("..")
-        }
-        if newPath.isEmpty && pathResolvesAgainstBase {
-            newPath = "."
-        }
-        // .deletingLastPathComponent() removes the trailing "/", but we know it's a directory
-        if !newPath.isEmpty && newPath.utf8.last != ._slash {
-            newPath += "/"
-        }
-        var components = URLComponents(parseInfo: _parseInfo)
-        components.percentEncodedPath = newPath
-        return components.url(relativeTo: baseURL)!
+        return _url.deletingLastPathComponent() ?? self
     }
 
     /// Returns a URL constructed by appending the given path extension to self.
@@ -1813,35 +1096,14 @@ public struct URL: Equatable, Sendable, Hashable {
     /// Certain special characters (for example, Unicode Right-To-Left marks) cannot be used as path extensions. If any of those are contained in `pathExtension`, the function will return the URL unchanged.
     /// - parameter pathExtension: The extension to append.
     public func appendingPathExtension(_ pathExtension: String) -> URL {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            guard !path.isEmpty, let result = _url.appendingPathExtension(pathExtension) else { return self }
-            return result
-        }
-        #endif
-        guard !pathExtension.isEmpty, !relativePath().isEmpty else { return self }
-        var components = URLComponents(parseInfo: _parseInfo)
-        // pathExtension might need to be percent-encoded, so use .path
-        let newPath = components.path.appendingPathExtension(pathExtension)
-        components.path = newPath
-        return components.url(relativeTo: baseURL)!
+        return _url.appendingPathExtension(pathExtension) ?? self
     }
 
     /// Returns a URL constructed by removing any path extension.
     ///
     /// If the URL has an empty path (e.g., `http://www.example.com`), then this function will return the URL unchanged.
     public func deletingPathExtension() -> URL {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            guard !path.isEmpty, let result = _url.deletingPathExtension.map({ URL(reference: $0 as NSURL) }) else { return self }
-            return result
-        }
-        #endif
-        guard !relativePath().isEmpty else { return self }
-        var components = URLComponents(parseInfo: _parseInfo)
-        let newPath = components.percentEncodedPath.deletingPathExtension()
-        components.percentEncodedPath = newPath
-        return components.url(relativeTo: baseURL)!
+        return _url.deletingPathExtension() ?? self
     }
 
     /// Appends a path component to the URL.
@@ -1898,24 +1160,7 @@ public struct URL: Equatable, Sendable, Hashable {
     /// Returns a `URL` with any instances of ".." or "." removed from its path.
     /// - note: This method does not consult the file system.
     public var standardized: URL {
-        #if FOUNDATION_FRAMEWORK
-        /// Compatibility path for apps that loop on:
-        /// `url = url.deletingPathComponent().standardized` until `url.path.isEmpty`.
-        ///
-        /// This used to work due to a combination of bugs where:
-        /// `URL("/").deletingLastPathComponent == URL("/../")`
-        /// `URL("/../").standardized == URL("")`
-        guard foundation_swift_url_enabled(), !Self.compatibility4 else {
-            // NSURL should not return nil here unless this is a file reference URL, which should be impossible
-            guard let result = _url.standardized.map({ URL(reference: $0 as NSURL) }) else { return self }
-            return result
-        }
-        #endif
-        guard !path.isEmpty else { return self }
-        var components = URLComponents(parseInfo: _parseInfo)
-        let newPath = components.percentEncodedPath.removingDotSegments
-        components.percentEncodedPath = newPath
-        return components.url(relativeTo: baseURL) ?? self
+        return _url.standardized ?? self
     }
 
     /// Standardizes the path of a file URL by removing dot segments.
@@ -1930,30 +1175,14 @@ public struct URL: Equatable, Sendable, Hashable {
     /// If the `isFileURL` is false, this method returns `self`.
     /// - note: This method consults the file system.
     public var standardizedFileURL: URL {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            // NSURL should not return nil here unless this is a file reference URL, which should be impossible
-            guard let result = _url.standardizingPath.map({ URL(reference: $0 as NSURL) }) else { return self }
-            return result
-        }
-        #endif
-        guard isFileURL && !fileSystemPath.isEmpty else { return self }
-        return URL(filePath: fileSystemPath.standardizingPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory)
+        return _url.standardizedFileURL ?? self
     }
 
     /// Resolves any symlinks in the path of a file URL.
     ///
     /// If the `isFileURL` is false, this method returns `self`.
     public func resolvingSymlinksInPath() -> URL {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            // NSURL should not return nil here unless this is a file reference URL, which should be impossible
-            guard let result = _url.resolvingSymlinksInPath.map({ URL(reference: $0 as NSURL) }) else { return self }
-            return result
-        }
-        #endif
-        guard isFileURL && !fileSystemPath.isEmpty else { return self }
-        return URL(filePath: fileSystemPath.resolvingSymlinksInPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory)
+        return _url.resolvingSymlinksInPath() ?? self
     }
 
     /// Resolves any symlinks in the path of a file URL.
@@ -1972,7 +1201,7 @@ public struct URL: Equatable, Sendable, Hashable {
     /// This method synchronously checks if the resource's backing store is reachable. Checking reachability is appropriate when making decisions that do not require other immediate operations on the resource, e.g. periodic maintenance of UI state that depends on the existence of a specific document. When performing operations such as opening a file or copying resource properties, it is more efficient to simply try the operation and handle failures. This method is currently applicable only to URLs for file system resources. For other URL types, `false` is returned.
     public func checkResourceIsReachable() throws -> Bool {
         var error: NSError?
-        let result = _url.checkResourceIsReachableAndReturnError(&error)
+        let result = ns.checkResourceIsReachableAndReturnError(&error)
         if let e = error {
             throw e
         } else {
@@ -1986,7 +1215,7 @@ public struct URL: Equatable, Sendable, Hashable {
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func checkPromisedItemIsReachable() throws -> Bool {
         var error: NSError?
-        let result = _url.checkPromisedItemIsReachableAndReturnError(&error)
+        let result = ns.checkPromisedItemIsReachableAndReturnError(&error)
         if let e = error {
             throw e
         } else {
@@ -2002,7 +1231,7 @@ public struct URL: Equatable, Sendable, Hashable {
     ///
     /// `URLResourceValues` keeps track of which of its properties have been set. Those values are the ones used by this function to determine which properties to write.
     public mutating func setResourceValues(_ values: URLResourceValues) throws {
-        try _url.setResourceValues(values._values)
+        try ns.setResourceValues(values._values)
     }
 
     /// Return a collection of resource values identified by the given resource keys.
@@ -2013,7 +1242,7 @@ public struct URL: Equatable, Sendable, Hashable {
     ///
     /// Only the values for the keys specified in `keys` will be populated.
     public func resourceValues(forKeys keys: Set<URLResourceKey>) throws -> URLResourceValues {
-        return URLResourceValues(keys: keys, values: try _url.resourceValues(forKeys: Array(keys)))
+        return URLResourceValues(keys: keys, values: try ns.resourceValues(forKeys: Array(keys)))
     }
 
     /// Sets a temporary resource value on the URL object.
@@ -2023,21 +1252,21 @@ public struct URL: Equatable, Sendable, Hashable {
     /// To remove a temporary resource value from the URL object, use `func removeCachedResourceValue(forKey:)`. Care should be taken to ensure the key that identifies a temporary resource value is unique and does not conflict with system defined keys (using reverse domain name notation in your temporary resource value keys is recommended). This method is currently applicable only to URLs for file system resources.
     @preconcurrency
     public mutating func setTemporaryResourceValue(_ value: Sendable, forKey key: URLResourceKey) {
-        _url.setTemporaryResourceValue(value, forKey: key)
+        ns.setTemporaryResourceValue(value, forKey: key)
     }
 
     /// Removes all cached resource values and all temporary resource values from the URL object.
     ///
     /// This method is currently applicable only to URLs for file system resources.
     public mutating func removeAllCachedResourceValues() {
-        _url.removeAllCachedResourceValues()
+        ns.removeAllCachedResourceValues()
     }
 
     /// Removes the cached resource value identified by a given resource value key from the URL object.
     ///
     /// Removing a cached resource value may remove other cached resource values because some resource values are cached as a set of values, and because some resource values depend on other resource values (temporary resource values have no dependencies). This method is currently applicable only to URLs for file system resources.
     public mutating func removeCachedResourceValue(forKey key: URLResourceKey) {
-        _url.removeCachedResourceValue(forKey: key)
+        ns.removeCachedResourceValue(forKey: key)
     }
 
     /// Get resource values from URLs of 'promised' items.
@@ -2054,7 +1283,7 @@ public struct URL: Equatable, Sendable, Hashable {
     /// Most of the URL resource value keys will work with these APIs. However, there are some that are tied to the item's contents that will not work, such as `contentAccessDateKey` or `generationIdentifierKey`. If one of these keys is used, the method will return a `URLResourceValues` value, but the value for that property will be nil.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func promisedItemResourceValues(forKeys keys: Set<URLResourceKey>) throws -> URLResourceValues {
-        return URLResourceValues(keys: keys, values: try _url.promisedItemResourceValues(forKeys: Array(keys)))
+        return URLResourceValues(keys: keys, values: try ns.promisedItemResourceValues(forKeys: Array(keys)))
     }
 
 #endif // FOUNDATION_FRAMEWORK
@@ -2065,7 +1294,7 @@ public struct URL: Equatable, Sendable, Hashable {
 
     /// Returns bookmark data for the URL, created with specified options and resource values.
     public func bookmarkData(options: BookmarkCreationOptions = [], includingResourceValuesForKeys keys: Set<URLResourceKey>? = nil, relativeTo url: URL? = nil) throws -> Data {
-        let result = try _url.bookmarkData(options: options, includingResourceValuesForKeys: keys.flatMap { Array($0) }, relativeTo: url)
+        let result = try ns.bookmarkData(options: options, includingResourceValuesForKeys: keys.flatMap { Array($0) }, relativeTo: url)
         return result
     }
 
@@ -2089,13 +1318,13 @@ public struct URL: Equatable, Sendable, Hashable {
     /// Given an NSURL created by resolving a bookmark data created with security scope, make the resource referenced by the url accessible to the process. When access to this resource is no longer needed the client must call stopAccessingSecurityScopedResource. Each call to startAccessingSecurityScopedResource must be balanced with a call to stopAccessingSecurityScopedResource (Note: this is not reference counted).
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func startAccessingSecurityScopedResource() -> Bool {
-        return _url.startAccessingSecurityScopedResource()
+        return ns.startAccessingSecurityScopedResource()
     }
 
     /// Revokes the access granted to the url by a prior successful call to startAccessingSecurityScopedResource.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func stopAccessingSecurityScopedResource() {
-        _url.stopAccessingSecurityScopedResource()
+        ns.stopAccessingSecurityScopedResource()
     }
 
 #endif // FOUNDATION_FRAMEWORK
@@ -2105,73 +1334,53 @@ public struct URL: Equatable, Sendable, Hashable {
 
     // MARK: - Bridging Support
 
-    /// We must not store an NSURL without running it through this function. This makes sure that we do not hold a file reference URL, which changes the nullability of many NSURL functions.
-    private static func _converted(from url: NSURL) -> NSURL {
-        #if NO_FILESYSTEM
-        return url
-        #else
-        // Future readers: file reference URL here is not the same as playgrounds "file reference"
-        if url.isFileReferenceURL() {
-            // Convert to a file path URL, or use an invalid scheme
-            return (url.filePathURL ?? URL(string: "com-apple-unresolvable-file-reference-url:")!) as NSURL
-        } else {
-            return url
-        }
-        #endif
-    }
-
-    private init(convertedReference: __shared NSURL) {
-        _url = convertedReference
-    }
-
     private init(reference: __shared NSURL) {
-        _url = URL._converted(from: reference).copy() as! NSURL
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
+        guard foundation_swift_nsurl_enabled() else {
+            _url = _BridgedURL(reference).convertingFileReference()
             return
         }
-        #endif
-        if let parseInfo = RFC3986Parser.parse(urlString: _url.relativeString, encodingInvalidCharacters: true, compatibility: [.allowEmptyScheme, .allowAnyPort]) {
-            _parseInfo = parseInfo
+        if let swift = reference as? _NSSwiftURL {
+            _url = _BridgedNSSwiftURL(swift).convertingFileReference()
         } else {
-            // Go to compatibility jail (allow `URL` as a dummy string container for `NSURL` instead of crashing)
-            _parseInfo = URLParseInfo(urlString: _url.relativeString, urlParser: .RFC3986, schemeRange: nil, userRange: nil, passwordRange: nil, hostRange: nil, portRange: nil, pathRange: nil, queryRange: nil, fragmentRange: nil, isIPLiteral: false, didPercentEncodeHost: false, pathHasPercent: false, pathHasFileID: false)
+            // This is a custom NSURL subclass
+            _url = _BridgedURL(reference).convertingFileReference()
         }
-        _baseParseInfo = reference.baseURL?.absoluteURL._parseInfo
     }
 
-    private var reference: NSURL {
-        return _url
+    internal init(_ url: _NSSwiftURL) {
+        _url = _BridgedNSSwiftURL(url)
+    }
+
+    private var ns: NSURL {
+        return _url.bridgeToNSURL()
+    }
+
+    internal func isFileReferenceURL() -> Bool {
+        return _url.isFileReferenceURL()
     }
 
 #endif // FOUNDATION_FRAMEWORK
 
-    public func hash(into hasher: inout Hasher) {
+    internal var _swiftURL: _SwiftURL? {
         #if FOUNDATION_FRAMEWORK
-        hasher.combine(_url)
-        guard foundation_swift_url_enabled() else {
-            return
+        if let swift = _url as? _SwiftURL { return swift }
+        if let bridged = _url as? _BridgedNSSwiftURL { return bridged._wrapped.url }
+        if foundation_swift_nsurl_enabled(), let swift = ns._trueSelf()._url as? _SwiftURL {
+            return swift
         }
+        return _SwiftURL(stringOrEmpty: _url.relativeString, relativeTo: _url.baseURL)
+        #else
+        return _url
         #endif
-        hasher.combine(_parseInfo.urlString)
-        hasher.combine(_baseParseInfo?.urlString)
     }
 
-    public static func ==(lhs: URL, rhs: URL) -> Bool {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return lhs.reference.isEqual(rhs.reference)
-        }
-        #endif // FOUNDATION_FRAMEWORK
-        let isEqual = (
-            lhs._parseInfo.urlString == rhs._parseInfo.urlString &&
-            lhs._baseParseInfo?.urlString == rhs._baseParseInfo?.urlString
-        )
-        #if FOUNDATION_FRAMEWORK
-        return isEqual && lhs.reference.isEqual(rhs.reference)
-        #else
-        return isEqual
-        #endif // FOUNDATION_FRAMEWORK
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(relativeString)
+    }
+
+    public static func == (lhs: URL, rhs: URL) -> Bool {
+        if lhs._url === rhs._url { return true }
+        return lhs.relativeString == rhs.relativeString && lhs.baseURL == rhs.baseURL
     }
 }
 
@@ -2197,58 +1406,56 @@ extension URL {
     }
 #endif // FOUNDATION_FRAMEWORK
 
-#if !NO_FILESYSTEM
-    private static func isDirectory(_ path: String) -> Bool {
-        #if os(Windows)
-        let path = path.replacing(._slash, with: ._backslash)
-        #endif
-        #if !FOUNDATION_FRAMEWORK
-        var isDirectory: Bool = false
-        _ = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
-        return isDirectory
-        #else
-        var isDirectory: ObjCBool = false
-        _ = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
-        return isDirectory.boolValue
-        #endif
+    internal enum PathStyle: Sendable {
+        case posix
+        case windows
     }
-#endif // !NO_FILESYSTEM
+
+    internal func fileSystemPath(style: URL.PathStyle = URL.defaultPathStyle, resolveAgainstBase: Bool = true, compatibility: Bool = false) -> String {
+        _url.fileSystemPath(style: style, resolveAgainstBase: resolveAgainstBase, compatibility: compatibility)
+    }
+
+    #if os(Windows)
+    internal static let defaultPathStyle = PathStyle.windows
+    #else
+    internal static let defaultPathStyle = PathStyle.posix
+    #endif
 
     /// Checks if a file path is absolute and standardizes the inputted file path on Windows
     /// Assumes the path only contains `/` as the path separator
-    internal static func isAbsolute(standardizing filePath: inout String) -> Bool {
+    internal static func isAbsolute(standardizing filePath: inout String, pathStyle: PathStyle = URL.defaultPathStyle) -> Bool {
         if filePath.utf8.first == ._slash {
             return true
         }
-        #if os(Windows)
-        let utf8 = filePath.utf8
-        guard utf8.count >= 3 else {
-            return false
-        }
-        // Check if this is a drive letter
-        let first = utf8.first!
-        let secondIndex = utf8.index(after: utf8.startIndex)
-        let second = utf8[secondIndex]
-        let thirdIndex = utf8.index(after: secondIndex)
-        let third = utf8[thirdIndex]
-        let isAbsolute = (
-            first.isAlpha
-            && (second == ._colon || second == ._pipe)
-            && third == ._slash
-        )
-        if isAbsolute {
-            // Standardize to "/[drive-letter]:/..."
-            if second == ._pipe {
-                var filePathArray = Array(utf8)
-                filePathArray[1] = ._colon
-                filePathArray.insert(._slash, at: 0)
-                filePath = String(decoding: filePathArray, as: UTF8.self)
-            } else {
-                filePath = "/" + filePath
+        if pathStyle == .windows {
+            let utf8 = filePath.utf8
+            guard utf8.count >= 3 else {
+                return false
             }
+            // Check if this is a drive letter
+            let first = utf8.first!
+            let secondIndex = utf8.index(after: utf8.startIndex)
+            let second = utf8[secondIndex]
+            let thirdIndex = utf8.index(after: secondIndex)
+            let third = utf8[thirdIndex]
+            let isAbsolute = (
+                first.isAlpha
+                && (second == ._colon || second == ._pipe)
+                && third == ._slash
+            )
+            if isAbsolute {
+                // Standardize to "/[drive-letter]:/..."
+                if second == ._pipe {
+                    var filePathArray = Array(utf8)
+                    filePathArray[1] = ._colon
+                    filePathArray.insert(._slash, at: 0)
+                    filePath = String(decoding: filePathArray, as: UTF8.self)
+                } else {
+                    filePath = "/" + filePath
+                }
+            }
+            return isAbsolute
         }
-        return isAbsolute
-        #else // os(Windows)
         #if !NO_FILESYSTEM
         // Expand the tilde if present
         if filePath.utf8.first == UInt8(ascii: "~") {
@@ -2257,7 +1464,6 @@ extension URL {
         #endif
         // Make sure the expanded path is absolute
         return filePath.utf8.first == ._slash
-        #endif // os(Windows)
     }
 
     /// Initializes a newly created file URL referencing the local file or directory at path, relative to a base URL.
@@ -2265,199 +1471,8 @@ extension URL {
     /// If an empty string is used for the path, then the path is assumed to be ".".
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public init(filePath path: String, directoryHint: DirectoryHint = .inferFromPath, relativeTo base: URL? = nil) {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let filePath = path.isEmpty ? "./" : path
-            let url: NSURL
-            switch directoryHint {
-            case .isDirectory:
-                url = URL._converted(from: NSURL(fileURLWithPath: filePath, isDirectory: true, relativeTo: base))
-            case .notDirectory:
-                url = URL._converted(from: NSURL(fileURLWithPath: filePath, isDirectory: false, relativeTo: base))
-            case .checkFileSystem:
-                url = URL._converted(from: NSURL(fileURLWithPath: filePath, relativeTo: base))
-            case .inferFromPath:
-                let isDirectory = filePath.hasSuffix("/")
-                url = URL._converted(from: NSURL(fileURLWithPath: filePath, isDirectory: isDirectory, relativeTo: base))
-            }
-            self.init(convertedReference: url)
-            return
-        }
-        #endif // FOUNDATION_FRAMEWORK
-        var baseURL = base
-        guard !path.isEmpty else {
-            #if !NO_FILESYSTEM
-            baseURL = baseURL ?? .currentDirectoryOrNil()
-            #endif
-            self.init(string: "./", relativeTo: baseURL)!
-            return
-        }
-
-        #if os(Windows)
-        // Convert any "\" to "/" before storing the URL parse info
-        var filePath = path.replacing(._backslash, with: ._slash)
-        #else
-        var filePath = path
-        #endif
-
-        #if FOUNDATION_FRAMEWORK
-        // Linked-on-or-after check for apps which incorrectly pass a full URL
-        // string with a scheme. In the old implementation, this could work
-        // rarely if the app immediately called .appendingPathComponent(_:),
-        // which used to accidentally interpret a relative path starting with
-        // "scheme:" as an absolute "scheme:" URL string.
-        if Self.compatibility1 {
-            if filePath.utf8.starts(with: "file:".utf8) {
-                #if canImport(os)
-                URL.logger.fault("API MISUSE: URL(filePath:) called with a \"file:\" scheme. Input must only contain a path. Dropping \"file:\" scheme.")
-                #endif
-                filePath = String(filePath.dropFirst(5))._compressingSlashes()
-            } else if filePath.utf8.starts(with: "http:".utf8) || filePath.utf8.starts(with: "https:".utf8) {
-                #if canImport(os)
-                URL.logger.fault("API MISUSE: URL(filePath:) called with an HTTP URL string. Using URL(string:) instead.")
-                #endif
-                guard let httpURL = URL(string: filePath) else {
-                    fatalError("API MISUSE: URL(filePath:) called with an HTTP URL string. URL(string:) returned nil.")
-                }
-                self = httpURL
-                return
-            }
-        }
-        #endif
-
-        let isAbsolute = URL.isAbsolute(standardizing: &filePath)
-
-        #if !NO_FILESYSTEM
-        if !isAbsolute {
-            baseURL = baseURL ?? .currentDirectoryOrNil()
-        }
-        #endif
-
-        let isDirectory: Bool
-        switch directoryHint {
-        case .isDirectory:
-            isDirectory = true
-        case .notDirectory:
-            filePath = filePath._droppingTrailingSlashes
-            isDirectory = false
-        case .checkFileSystem:
-            #if !NO_FILESYSTEM
-            func absoluteFilePath() -> String {
-                guard !isAbsolute, let baseURL else {
-                    return filePath
-                }
-                let absolutePath = baseURL.path().merging(relativePath: filePath)
-                return URL.fileSystemPath(for: absolutePath)
-            }
-            isDirectory = URL.isDirectory(absoluteFilePath())
-            #else
-            isDirectory = filePath.utf8.last == ._slash
-            #endif
-        case .inferFromPath:
-            isDirectory = filePath.utf8.last == ._slash
-        }
-
-        if isDirectory && !filePath.isEmpty && filePath.utf8.last != ._slash {
-            filePath += "/"
-        }
-        var components = URLComponents()
-        if isAbsolute {
-            components.scheme = "file"
-            components.encodedHost = ""
-        }
-        components.path = filePath
-
-        if !isAbsolute {
-            self = components.url(relativeTo: baseURL)!
-        } else {
-            // Drop the baseURL if the URL is absolute
-            self = components.url!
-        }
-    }
-
-    private func appending<S: StringProtocol>(path: S, directoryHint: DirectoryHint, encodingSlashes: Bool) -> URL {
-        #if os(Windows)
-        var path = path.replacing(._backslash, with: ._slash)
-        #else
-        var path = String(path)
-        #endif
-
-        var insertedSlash = false
-        if !relativePath().isEmpty && path.utf8.first != ._slash {
-            // Don't treat as first path segment when encoding
-            path = "/" + path
-            insertedSlash = true
-        }
-
-        guard var pathToAppend = Parser.percentEncode(path, component: .path) else {
-            return self
-        }
-        if encodingSlashes {
-            var utf8 = Array(pathToAppend.utf8)
-            utf8[(insertedSlash ? 1 : 0)...].replace([._slash], with: [UInt8(ascii: "%"), UInt8(ascii: "2"), UInt8(ascii: "F")])
-            pathToAppend = String(decoding: utf8, as: UTF8.self)
-        }
-
-        func appendedPath() -> String {
-            var currentPath = relativePath()
-            if currentPath.isEmpty && !hasAuthority {
-                guard _parseInfo.scheme == nil else {
-                    // Scheme only, append directly to the empty path, e.g.
-                    // URL("scheme:").appending(path: "path") == scheme:path
-                    return pathToAppend
-                }
-                // No scheme or authority, treat the empty path as "."
-                currentPath = "."
-            }
-
-            // If currentPath is empty, pathToAppend is relative, and we have an authority,
-            // we must append a slash to separate the path from authority, which happens below.
-
-            if currentPath.utf8.last != ._slash && pathToAppend.utf8.first != ._slash {
-                currentPath += "/"
-            } else if currentPath.utf8.last == ._slash && pathToAppend.utf8.first == ._slash {
-                _ = currentPath.popLast()
-            }
-            return currentPath + pathToAppend
-        }
-
-        var newPath = appendedPath()
-
-        let hasTrailingSlash = newPath.utf8.last == ._slash
-        let isDirectory: Bool
-        switch directoryHint {
-        case .isDirectory:
-            isDirectory = true
-        case .notDirectory:
-            isDirectory = false
-        case .checkFileSystem:
-            #if !NO_FILESYSTEM
-            // We can only check file system if the URL is a file URL
-            if isFileURL {
-                let filePath: String
-                if newPath.utf8.first == ._slash {
-                    filePath = URL.fileSystemPath(for: newPath)
-                } else {
-                    filePath = URL.fileSystemPath(for: mergedPath(for: newPath))
-                }
-                isDirectory = URL.isDirectory(filePath)
-            } else {
-                // For web addresses, trust the trailing slash
-                isDirectory = hasTrailingSlash
-            }
-            #else // !NO_FILESYSTEM
-            isDirectory = hasTrailingSlash
-            #endif // !NO_FILESYSTEM
-        case .inferFromPath:
-            isDirectory = hasTrailingSlash
-        }
-        if isDirectory && newPath.utf8.last != ._slash {
-            newPath += "/"
-        }
-
-        var components = URLComponents(parseInfo: _parseInfo)
-        components.percentEncodedPath = newPath
-        return components.url(relativeTo: baseURL) ?? self
+        let inner = URL._type.init(filePath: path, directoryHint: directoryHint, relativeTo: base)
+        _url = inner.convertingFileReference()
     }
 
     /// Returns a URL constructed by appending the given path to self.
@@ -2466,53 +1481,7 @@ extension URL {
     ///   - directoryHint: A hint to whether this URL will point to a directory
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func appending<S: StringProtocol>(path: S, directoryHint: DirectoryHint = .inferFromPath) -> URL {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let isDirectory: Bool?
-            let hasTrailingSlash = path.hasSuffix("/")
-            switch directoryHint {
-            case .isDirectory:
-                isDirectory = true
-            case .notDirectory:
-                isDirectory = false
-            case .checkFileSystem:
-                // We can only check file system if the URL is a file URL
-                if self.isFileURL {
-                    isDirectory = nil
-                } else {
-                    // For web addresses we'll have to trust the caller to
-                    // do the right ting with the trailing slash
-                    isDirectory = hasTrailingSlash
-                }
-            case .inferFromPath:
-                isDirectory = hasTrailingSlash
-            }
-
-            let result: URL?
-            if let isDirectory {
-                result = _url.appendingPathComponent(String(path), isDirectory: isDirectory)
-            } else {
-                result = _url.appendingPathComponent(String(path))
-            }
-
-            if let result {
-                return result
-            }
-            // Now we need to do something more expensive
-            if var c = URLComponents(url: self, resolvingAgainstBaseURL: true) {
-                let newPath = (c.path as NSString).appendingPathComponent(String(path))
-                c.path = newPath
-                if let isDirectory, isDirectory, !newPath.hasSuffix("/") {
-                    c.path = newPath + "/"
-                }
-                return c.url ?? self
-            } else {
-                // Ultimate fallback:
-                return self
-            }
-        }
-        #endif // FOUNDATION_FRAMEWORK
-        return appending(path: path, directoryHint: directoryHint, encodingSlashes: false)
+        return _url.appending(path: path, directoryHint: directoryHint) ?? self
     }
 
     /// Appends a path to the receiver.
@@ -2532,60 +1501,7 @@ extension URL {
     /// - Returns: The new URL
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func appending<S: StringProtocol>(component: S, directoryHint: DirectoryHint = .inferFromPath) -> URL {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            let pathComponent = String(component)
-            let hasTrailingSlash = pathComponent.hasSuffix("/")
-            let isDirectory: Bool?
-            switch directoryHint {
-            case .isDirectory: isDirectory = true
-            case .notDirectory: isDirectory = false
-            case .inferFromPath: isDirectory = hasTrailingSlash
-            case .checkFileSystem:
-                // We can only check file system if the URL is a file URL
-                if self.isFileURL {
-                    isDirectory = nil
-                } else {
-                    // For web addresses we'll have to trust the caller to
-                    // do the right ting with the trailing slash
-                    isDirectory = hasTrailingSlash
-                }
-            }
-            if let isDirectory {
-                let cf = _url._cfurl().takeUnretainedValue()
-                return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, isDirectory).takeRetainedValue() as URL
-            }
-            // We need to check the file system. This is the same behavior
-            // as `NSURL.URLByAppendingPathComponent`
-            // Crate a new URL without the trailing slash
-            let result = self.appending(component: component, directoryHint: .notDirectory)
-            // See if it refers to a directory
-            #if NO_FILESYSTEM
-            // Fall back to `inferFromPath`
-            let cf = _url._cfurl().takeUnretainedValue()
-            return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, hasTrailingSlash).takeRetainedValue() as URL
-            #else // NO_FILESYSTEM
-            if let resourceValues = try? result.resourceValues(forKeys: [.isDirectoryKey]),
-               let isDirectoryValue = resourceValues.isDirectory {
-                let cf = _url._cfurl().takeUnretainedValue()
-                return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, isDirectoryValue).takeRetainedValue() as URL
-            } else {
-                // Fall back to `inferFromPath`
-                let cf = _url._cfurl().takeUnretainedValue()
-                return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, hasTrailingSlash).takeRetainedValue() as URL
-            }
-            #endif // NO_FILESYSTEM
-        }
-        #endif // FOUNDATION_FRAMEWORK
-
-        // The old .appending(component:) implementation did not actually percent-encode
-        // "/" for file URLs as the documentation suggests. Many apps accidentally use
-        // .appending(component: "path/with/slashes") instead of using .appending(path:),
-        // so changing this behavior would cause breakage.
-        if isFileURL {
-            return appending(path: component, directoryHint: directoryHint, encodingSlashes: false)
-        }
-        return appending(path: component, directoryHint: directoryHint, encodingSlashes: true)
+        return _url.appending(component: component, directoryHint: directoryHint) ?? self
     }
 
     /// Appends a path component to the receiver. The path component is first
@@ -2602,15 +1518,11 @@ extension URL {
     /// - Parameter queryItems: A list of `URLQueryItem` to append to the receiver.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     public func appending(queryItems: [URLQueryItem]) -> URL {
-        if var c = URLComponents(url: self, resolvingAgainstBaseURL: true) {
-            var newItems = c.queryItems ?? []
-            newItems.append(contentsOf: queryItems)
-            c.queryItems = newItems
-            if let url = c.url {
-                return url
-            }
-        }
-        return self
+        guard var c = URLComponents(url: self, resolvingAgainstBaseURL: true) else { return self }
+        var newItems = c.queryItems ?? []
+        newItems.append(contentsOf: queryItems)
+        c.queryItems = newItems
+        return c.url ?? self
     }
 
     /// Appends a list of `URLQueryItem` to the receiver.
@@ -2620,7 +1532,7 @@ extension URL {
         self = appending(queryItems: queryItems)
     }
 
-    /// Returns a URL constructed by appending the given varidic list of path components to self.
+    /// Returns a URL constructed by appending the given variadic list of path components to self.
     ///
     /// - Parameters:
     ///   - components: The list of components to add.
@@ -2630,7 +1542,7 @@ extension URL {
         return _appending(components: components, directoryHint: directoryHint)
     }
 
-    /// Appends a varidic list of path components to the URL.
+    /// Appends a variadic list of path components to the URL.
     ///
     /// - parameter components: The list of components to add.
     /// - parameter directoryHint: A hint to whether this URL will point to a directory.
@@ -2654,20 +1566,6 @@ extension URL {
 
 #if !NO_FILESYSTEM
 extension URL {
-    private static func currentDirectoryOrNil() -> URL? {
-        let path: String? = FileManager.default.currentDirectoryPath
-        guard var filePath = path else {
-            return nil
-        }
-        #if os(Windows)
-        filePath = filePath.replacing(._backslash, with: ._slash)
-        #endif
-        guard URL.isAbsolute(standardizing: &filePath) else {
-            return nil
-        }
-        return URL(filePath: filePath, directoryHint: .isDirectory)
-    }
-
     /// The working directory of the current process.
     /// Calling this property will issue a `getcwd` syscall.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
@@ -2876,7 +1774,7 @@ extension URL: ReferenceConvertible, _ObjectiveCBridgeable {
 
     @_semantics("convertToObjectiveC")
     public func _bridgeToObjectiveC() -> NSURL {
-        return _url
+        return _url.bridgeToNSURL()
     }
 
     public static func _forceBridgeFromObjectiveC(_ source: NSURL, result: inout URL?) {
@@ -2902,30 +1800,11 @@ extension URL: ReferenceConvertible, _ObjectiveCBridgeable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension URL: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.description
-        }
-        #endif
-        let urlString: String
-        if scheme?.lowercased() == "data" && relativeString.count > 128 {
-            urlString = "\(relativeString.prefix(120)) ... \(relativeString.suffix(8))"
-        } else {
-            urlString = relativeString
-        }
-        if let baseURL {
-            return "\(urlString) -- \(baseURL)"
-        }
-        return urlString
+        return _url.description
     }
 
     public var debugDescription: String {
-        #if FOUNDATION_FRAMEWORK
-        guard foundation_swift_url_enabled() else {
-            return _url.debugDescription
-        }
-        #endif
-        return description
+        return _url.debugDescription
     }
 }
 
@@ -2990,14 +1869,3 @@ extension URL: _ExpressibleByFileReferenceLiteral {
 
 public typealias _FileReferenceLiteralType = URL
 #endif // FOUNDATION_FRAMEWORK
-
-fileprivate extension UInt8 {
-    var isAlpha: Bool {
-        switch self {
-        case UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"):
-            return true
-        default:
-            return false
-        }
-    }
-}

@@ -123,14 +123,6 @@ extension AttributedStringKey {
     public static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { nil }
 }
 
-extension AttributedStringKey {
-    // FIXME: ☠️ Allocating an Array here is not a good idea.
-    static var _constraintsInvolved: [AttributedString.AttributeRunBoundaries] {
-        guard let rb = runBoundaries else { return [] }
-        return [rb]
-    }
-}
-
 // MARK: Attribute Scopes
 
 @dynamicMemberLookup @frozen

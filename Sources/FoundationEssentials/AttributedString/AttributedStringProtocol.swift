@@ -152,8 +152,8 @@ extension AttributedSubstring {
     }
     
     internal var _bounds: Range<AttributedString.Index> {
-        let lower = AttributedString.Index(_range.lowerBound)
-        let upper = AttributedString.Index(_range.upperBound)
+        let lower = AttributedString.Index(_range.lowerBound, version: _guts.version)
+        let upper = AttributedString.Index(_range.upperBound, version: _guts.version)
         return Range(uncheckedBounds: (lower, upper))
     }
 
@@ -216,7 +216,7 @@ extension AttributedStringProtocol {
         precondition(i._value < bounds.upperBound, "Can't advance beyond end index")
         let next = guts.index(afterRun: i._value)
         assert(next > i._value)
-        return AttributedString.Index(Swift.min(next, bounds.upperBound))
+        return AttributedString.Index(Swift.min(next, bounds.upperBound), version: guts.version)
     }
 
     public func index(beforeRun i: AttributedString.Index) -> AttributedString.Index {
@@ -229,7 +229,7 @@ extension AttributedStringProtocol {
         precondition(i._value <= bounds.upperBound, "Invalid attributed string index")
         let prev = guts.index(beforeRun: i._value)
         assert(prev < i._value)
-        return AttributedString.Index(Swift.max(prev, bounds.lowerBound))
+        return AttributedString.Index(Swift.max(prev, bounds.lowerBound), version: guts.version)
     }
 
     public func index(_ i: AttributedString.Index, offsetByRuns distance: Int) -> AttributedString.Index {
@@ -253,12 +253,12 @@ extension AttributedStringProtocol {
 
         let result = guts.string.utf8.index(i._value, offsetBy: run.utf8Offset - i._value.utf8Offset)
         let clamped = Swift.min(Swift.max(result, bounds.lowerBound), bounds.upperBound)
-        return AttributedString.Index(clamped)
+        return AttributedString.Index(clamped, version: guts.version)
     }
 
     internal func _utf8Index(at utf8Offset: Int) -> AttributedString.Index {
         let startOffset = self.startIndex._value.utf8Offset
-        return AttributedString.Index(self.__guts.utf8Index(at: startOffset + utf8Offset))
+        return AttributedString.Index(self.__guts.utf8Index(at: startOffset + utf8Offset), version: self.__guts.version)
     }
 }
 
@@ -299,7 +299,7 @@ extension AttributedStringProtocol {
         let start = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8Start)
         let end = bstring.utf8.index(bounds.lowerBound, offsetBy: utf8End)
 
-        return AttributedString.Index(start) ..< AttributedString.Index(end)
+        return AttributedString.Index(start, version: self.__guts.version) ..< AttributedString.Index(end, version: self.__guts.version)
 #else
         // TODO: Implement localized AttributedStringProtocol.range(of:) for FoundationPreview
         return _range(of: stringToFind, options: options)

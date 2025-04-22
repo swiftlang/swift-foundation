@@ -16,11 +16,11 @@ internal import os
 internal import C.os.lock
 #endif
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(WinSDK)
 import WinSDK
 #endif
@@ -31,7 +31,7 @@ package struct LockedState<State> {
     private struct _Lock {
 #if canImport(os)
         typealias Primitive = os_unfair_lock
-#elseif os(FreeBSD)
+#elseif os(FreeBSD) || os(OpenBSD)
         typealias Primitive = pthread_mutex_t?
 #elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl)
         typealias Primitive = pthread_mutex_t

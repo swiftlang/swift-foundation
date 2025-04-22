@@ -19,16 +19,20 @@ internal import _FoundationCShims
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import CRT
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
+#endif
+
+#if FOUNDATION_FRAMEWORK && NO_FILESYSTEM
+@_spi(ENABLE_EXCLAVE_STORAGE) import C
 #endif
 
 func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutableRawPointer!, _ size: Int, _ position: UInt32, _ options: Int32) -> Int {
@@ -36,6 +40,8 @@ func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutab
     return fgetxattr(fd, name, value, size, position, options)
 #elseif os(FreeBSD)
     return extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, name, value, size)
+#elseif os(OpenBSD)
+    return -1
 #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fgetxattr(fd, name, value, size)
 #else
@@ -297,7 +303,8 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
         guard let inPathFileSystemRep else {
             throw CocoaError(.fileReadInvalidFileName)
         }
-        return open(inPathFileSystemRep, O_RDONLY, 0o666)
+        // Do not block on opening the file here. If the file is not a regular one, we will produce an error below after `fstat`.
+        return open(inPathFileSystemRep, O_RDONLY | O_NONBLOCK, 0o666)
     }
         
     guard fd >= 0 else {
@@ -329,13 +336,13 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     }
     
     let fileSize = min(Int(clamping: filestat.st_size), maxLength ?? Int.max)
-    let fileType = mode_t(filestat.st_mode) & S_IFMT
+    let fileType = mode_t(filestat.st_mode) & mode_t(S_IFMT)
 #if !NO_FILESYSTEM
     let shouldMap = shouldMapFileDescriptor(fd, path: inPath, options: options)
 #else
     let shouldMap = false
 #endif
-        
+
     if fileType != S_IFREG {
         // EACCES is still an odd choice, but at least we have a better error for directories.
         let code = (fileType == S_IFDIR) ? EISDIR : EACCES

@@ -275,7 +275,7 @@ private class OptionalChainRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             let visited = self.visit(input)
             let closure = ClosureExprSyntax(statements: [CodeBlockItemSyntax(item: CodeBlockItemSyntax.Item(node))])
             let functionMember = MemberAccessExprSyntax(base: visited, name: "flatMap")
-            let functionCall = FunctionCallExprSyntax(calledExpression: functionMember, arguments: [], trailingClosure: closure)
+            let functionCall = FunctionCallExprSyntax(calledExpression: functionMember, leftParen: .leftParenToken(), arguments: [], rightParen: .rightParenToken(), trailingClosure: closure)
             return ExprSyntax(functionCall)
         }
         return node
@@ -393,10 +393,8 @@ extension KeyPathExprSyntax {
                 }
             case .subscript(let sub):
                 result = ExprSyntax(SubscriptCallExprSyntax(calledExpression: result, arguments: sub.arguments))
-#if FOUNDATION_FRAMEWORK
-            default:
+            @unknown default:
                 return nil
-#endif
             }
         }
         return result

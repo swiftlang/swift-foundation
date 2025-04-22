@@ -13,15 +13,15 @@
 #if canImport(Darwin)
 internal import os
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
 import WinSDK
 #elseif os(WASI)
-import WASILibc
+@preconcurrency import WASILibc
 #endif
 
 internal import _FoundationCShims
@@ -210,10 +210,11 @@ extension String {
         guard !pathExtension.isEmpty, validatePathExtension(pathExtension) else {
             return self
         }
+        if self == "/" { return "/.\(pathExtension)"}
         var result = self._droppingTrailingSlashes
-        guard result != "/" else {
+        if result == "/" {
             // Path was all slashes
-            return self + ".\(pathExtension)"
+            return Substring(self.utf8.dropLast()) + ".\(pathExtension)/"
         }
         result += ".\(pathExtension)"
         if utf8.last == ._slash {
@@ -402,6 +403,13 @@ extension String {
             }
             return i
         }
+    }
+
+    internal var _droppingTrailingSlash: String {
+        guard utf8.last == ._slash, utf8.count > 1 else {
+            return self
+        }
+        return String(Substring(utf8.dropLast()))
     }
 
     internal var _droppingTrailingSlashes: String {

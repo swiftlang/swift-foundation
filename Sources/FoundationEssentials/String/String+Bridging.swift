@@ -69,6 +69,16 @@ extension String : _ObjectiveCBridgeable {
                 return String(unsafeUninitializedCapacity: SMALL_STRING_CAPACITY) {
                     _NSTaggedPointerStringGetBytes(source, $0.baseAddress!)
                 }
+            } else if tag == OBJC_TAG_NSAtom {
+                var len = UInt16(0)
+                let contentsPtr = _CFIndirectTaggedPointerStringGetContents(source, &len)
+                let contents = UnsafeBufferPointer(start: contentsPtr, count: Int(len))
+                // Will only fail if contents aren't valid UTF8/ASCII
+                if let result = _SwiftCreateImmortalString_ForFoundation(buffer: contents, isASCII: true) {
+                    return result
+                }
+                // Since our contents are invalid, force a real copy of the string and bridge that instead. This should basically never be hit in practice
+                return source.mutableCopy() as! String
             } else if tag.rawValue == 22 /* OBJC_TAG_Foundation_1 */ {
                 let cStr = source.utf8String!
                 return String.init(utf8String: cStr)!
@@ -88,6 +98,9 @@ extension String : _ObjectiveCBridgeable {
 
             if constant {
                 if ascii {
+                    // We would like to use _SwiftCreateImmortalString_ForFoundation here, but we can't because we need to maintain the invariant
+                    // (constantString as String as NSString) === constantString
+                    // and using _SwiftCreateImmortalString_ForFoundation would make an indirect tagged string instead on the way back
                     return String(_immortalCocoaString: source, count: len, encoding: Unicode.ASCII.self)
                 } else {
                     return String(_immortalCocoaString: source, count: len, encoding: Unicode.UTF16.self)
@@ -271,65 +284,4 @@ extension BidirectionalCollection where Element == Unicode.Scalar, Index == Stri
 
 }
 
-// START: Workaround for https://github.com/swiftlang/swift/pull/78697
-
-// The extensions below are temporarily relocated to work around a compiler crash.
-// Once that crash is resolved, they should be moved back to their original files.
-
-#if !NO_FILESYSTEM
-
-// Relocated from FileManager+Utilities.swift
-#if FOUNDATION_FRAMEWORK && os(macOS)
-extension URLResourceKey {
-    static var _finderInfoKey: Self { URLResourceKey("_NSURLFinderInfoKey") }
-}
 #endif
-
-// Relocated from FileManager+Files.swift
-#if FOUNDATION_FRAMEWORK
-internal import DarwinPrivate.sys.content_protection
-#endif
-
-#if !os(Windows)
-#if FOUNDATION_FRAMEWORK
-extension FileProtectionType {
-    var intValue: Int32? {
-        switch self {
-        case .complete: PROTECTION_CLASS_A
-        case .init(rawValue: "NSFileProtectionWriteOnly"), .completeUnlessOpen: PROTECTION_CLASS_B
-        case .init(rawValue: "NSFileProtectionCompleteUntilUserAuthentication"), .completeUntilFirstUserAuthentication: PROTECTION_CLASS_C
-        case .none: PROTECTION_CLASS_D
-        #if !os(macOS)
-        case .completeWhenUserInactive: PROTECTION_CLASS_CX
-        #endif
-        default: nil
-        }
-    }
-    
-    init?(intValue value: Int32) {
-        switch value {
-        case PROTECTION_CLASS_A: self = .complete
-        case PROTECTION_CLASS_B: self = .completeUnlessOpen
-        case PROTECTION_CLASS_C: self = .completeUntilFirstUserAuthentication
-        case PROTECTION_CLASS_D: self = .none
-        #if !os(macOS)
-        case PROTECTION_CLASS_CX: self = .completeWhenUserInactive
-        #endif
-        default: return nil
-        }
-    }
-}
-#endif
-#endif
-#endif
-
-#endif
-
-#if !NO_FILESYSTEM
-// Relocated from FileManager+Files.swift. Originally fileprivate.
-extension FileAttributeKey {
-    internal static var _extendedAttributes: Self { Self("NSFileExtendedAttributes") }
-}
-#endif
-
-// END: Workaround for https://github.com/swiftlang/swift/pull/78697

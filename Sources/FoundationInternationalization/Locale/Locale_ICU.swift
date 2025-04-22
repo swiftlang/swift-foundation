@@ -24,7 +24,7 @@ internal import os
 internal import _FoundationICU
 
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #endif
 
 #if !FOUNDATION_FRAMEWORK
