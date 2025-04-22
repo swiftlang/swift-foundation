@@ -197,7 +197,7 @@ let package = Package(
                 "Calendar/CMakeLists.txt",
                 "CMakeLists.txt",
                 "Predicate/CMakeLists.txt",
-                "ProgressReporter/CMakeLists.txt"
+                "ProgressReporter/CMakeLists.txt",
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [
