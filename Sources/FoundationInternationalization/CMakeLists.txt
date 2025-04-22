@@ -37,6 +37,7 @@ target_compile_options(FoundationInternationalization PRIVATE ${_SwiftFoundation
 target_compile_options(FoundationInternationalization PRIVATE -package-name "SwiftFoundation")
 
 target_link_libraries(FoundationInternationalization PUBLIC
+    $<$<PLATFORM_ID:Windows>:swiftRegexBuilder>
     FoundationEssentials
     _FoundationCShims
     _FoundationICU)
