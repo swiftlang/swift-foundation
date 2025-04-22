@@ -523,11 +523,28 @@ extension Base64 {
         length: inout Int,
         options: Data.Base64DecodingOptions
     ) throws(DecodingError) {
-        let remaining = inBuffer.count % 4
-        guard remaining == 0 else { throw DecodingError.invalidLength }
+        guard let lastNonPaddedIndex = inBuffer.lastIndex(where: { $0 != UInt8(ascii: "=") }) else {
+            if inBuffer.count >= 4 {
+                outBuffer[0] = 0
+                length = 1
+                return
+            } else {
+                throw DecodingError.invalidLength
+            }
+        }
+        let base64NonPaddedLength = lastNonPaddedIndex + 1
+        let bytesToParseLength = if base64NonPaddedLength % 4 == 0 {
+            (base64NonPaddedLength / 4) * 4
+        } else {
+            (base64NonPaddedLength / 4) * 4 + 4
+        }
+        if bytesToParseLength > inBuffer.count {
+            throw DecodingError.invalidLength
+        }
 
-        let outputLength = ((inBuffer.count + 3) / 4) * 3
-        let fullchunks = remaining == 0 ? inBuffer.count / 4 - 1 : inBuffer.count / 4
+        let outputLength = ((bytesToParseLength + 3) / 4) * 3
+        let fullchunks = bytesToParseLength / 4 - 1
+
         guard outBuffer.count >= outputLength else {
             preconditionFailure("Expected the out buffer to be at least as long as outputLength")
         }
