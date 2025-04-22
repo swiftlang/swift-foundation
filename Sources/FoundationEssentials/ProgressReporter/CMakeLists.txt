@@ -16,4 +16,4 @@ target_sources(FoundationEssentials PRIVATE
     ProgressReporter.swift
     ProgressReporter+Interop.swift
     ProgressReporter+Properties.swift
-    Subprogress)
+    Subprogress.swift)
