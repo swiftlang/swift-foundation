@@ -20,6 +20,7 @@ import struct Foundation.URL
 #endif
 import Testing
 
+#if FOUNDATION_FRAMEWORK
 @Suite("URL.Template Expression")
 private enum ExpressionTests {
     private typealias Expression = URL.Template.Expression
@@ -276,3 +277,4 @@ private enum ExpressionTests {
         #expect((try? Expression(input)) == nil, "Should fail to parse, but not crash.")
     }
 }
+#endif

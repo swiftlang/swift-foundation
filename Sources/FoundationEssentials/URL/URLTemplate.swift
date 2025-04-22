@@ -130,7 +130,7 @@ extension URL {
 }
 
 // MARK: - Parse
-
+#if FOUNDATION_FRAMEWORK
 extension URL.Template {
     /// Creates a new template from its text form.
     ///
@@ -164,6 +164,7 @@ extension URL.Template {
         }
     }
 }
+#endif
 
 // MARK: -
 

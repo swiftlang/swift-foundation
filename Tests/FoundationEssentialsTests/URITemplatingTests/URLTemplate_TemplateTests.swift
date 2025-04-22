@@ -54,6 +54,7 @@ private var variables: [URL.Template.VariableName: URL.Template.Value] {
     ]
 }
 
+#if FOUNDATION_FRAMEWORK
 private func assertReplacing(template: String, result: String, sourceLocation: SourceLocation = #_sourceLocation) {
     do {
         let t = try #require(URL.Template(template))
@@ -263,3 +264,4 @@ private enum TemplateTests {
         assertReplacing(template: "{&keys*}", result: "&semi=%3B&dot=.&comma=%2C")
     }
 }
+#endif
