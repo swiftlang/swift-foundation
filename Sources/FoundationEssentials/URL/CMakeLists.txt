@@ -21,6 +21,7 @@ target_sources(FoundationEssentials PRIVATE
     URLComponents.swift
     URLComponents_ObjC.swift
     URLParser.swift
+    URLTemplate_Expression.swift
     URLTemplate_PercentEncoding.swift
     URLTemplate_Substitution.swift
     URLTemplate_Value.swift
