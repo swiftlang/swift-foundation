@@ -129,7 +129,7 @@ let package = Package(
             "ProcessInfo/CMakeLists.txt",
             "FileManager/CMakeLists.txt",
             "URL/CMakeLists.txt",
-            "ProgressReporter/CMakeLists.txt"
+            "ProgressReporter/CMakeLists.txt",
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux]))
