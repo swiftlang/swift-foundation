@@ -884,6 +884,11 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(url.host, "fe80::a%100%CustomZone")
         XCTAssertEqual(url.host(percentEncoded: true), "fe80::a%25100%25CustomZone")
         XCTAssertEqual(url.host(percentEncoded: false), "fe80::a%100%CustomZone")
+
+        // Make sure an IP-literal with invalid characters `{` and `}`
+        // returns `nil` even if we can percent-encode the zone-ID.
+        let invalid = URL(string: "http://[{Invalid}%100%EncodableZone]")
+        XCTAssertNil(invalid)
     }
 
     #if !os(Windows)
