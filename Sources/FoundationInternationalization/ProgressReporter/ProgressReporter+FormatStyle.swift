@@ -129,6 +129,3 @@ extension FormatStyle where Self == ProgressReporter.FormatStyle {
         .init(.count(format: format))
     }
 }
-
-
-ProgressReporter.FormatStyle.fractionCompleted().format(<#T##reporter: ProgressReporter##ProgressReporter#>)
