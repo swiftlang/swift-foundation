@@ -21,7 +21,7 @@ extension ProgressReporter {
         // Outlines the options available to format ProgressReporter
         internal struct Option: Sendable, Codable, Hashable, Equatable {
             
-            /// Option specifying`fractionCompleted`.
+            /// Option specifying `fractionCompleted`.
             ///
             /// For example, 20% completed.
             /// - Parameter style: A `FloatingPointFormatStyle<Double>.Percent` instance that should be used to format `fractionCompleted`.
@@ -129,3 +129,6 @@ extension FormatStyle where Self == ProgressReporter.FormatStyle {
         .init(.count(format: format))
     }
 }
+
+
+ProgressReporter.FormatStyle.fractionCompleted().format(<#T##reporter: ProgressReporter##ProgressReporter#>)
