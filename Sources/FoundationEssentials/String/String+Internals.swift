@@ -23,7 +23,12 @@ import Darwin
 import WinSDK
 
 extension String {
-    package func withNTPathRepresentation<Result>(_ body: (UnsafePointer<WCHAR>) throws -> Result) throws -> Result {
+    /// Invokes `body` with a resolved and potentially `\\?\`-prefixed version of the pointee,
+    /// to ensure long paths greater than MAX_PATH (260) characters are handled correctly.
+    ///
+    /// - parameter relative: Returns the original path without transforming through GetFullPathNameW + PathCchCanonicalizeEx, if the path is relative.
+    /// - seealso: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+    package func withNTPathRepresentation<Result>(relative: Bool = false, _ body: (UnsafePointer<WCHAR>) throws -> Result) throws -> Result {
         guard !isEmpty else {
             throw CocoaError.errorWithFilePath(.fileReadInvalidFileName, "")
         }
@@ -35,15 +40,42 @@ extension String {
         // leading slash indicates a rooted path on the drive for the current
         // working directory.
         return try Substring(self.utf8.dropFirst(bLeadingSlash ? 1 : 0)).withCString(encodedAs: UTF16.self) { pwszPath in
+            if relative && PathIsRelativeW(pwszPath) {
+                return try body(pwszPath)
+            }
+
             // 1. Normalize the path first.
+            // Contrary to the documentation, this works on long paths independently
+            // of the registry or process setting to enable long paths (but it will also
+            // not add the \\?\ prefix required by other functions under these conditions).
             let dwLength: DWORD = GetFullPathNameW(pwszPath, 0, nil, nil)
-            return try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
-                guard GetFullPathNameW(pwszPath, DWORD($0.count), $0.baseAddress, nil) > 0 else {
+            return try withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) { pwszFullPath in
+                guard (1..<dwLength).contains(GetFullPathNameW(pwszPath, DWORD(pwszFullPath.count), pwszFullPath.baseAddress, nil)) else {
                     throw CocoaError.errorWithFilePath(self, win32: GetLastError(), reading: true)
                 }
 
-                // 2. Perform the operation on the normalized path.
-                return try body($0.baseAddress!)
+                // 1.5 Leave \\.\ prefixed paths alone since device paths are already an exact representation and PathCchCanonicalizeEx will mangle these.
+                if let base = pwszFullPath.baseAddress,
+                    base[0] == UInt16(UInt8._backslash),
+                    base[1] == UInt16(UInt8._backslash),
+                    base[2] == UInt16(UInt8._period),
+                    base[3] == UInt16(UInt8._backslash) {
+                    return try body(base)
+                }
+
+                // 2. Canonicalize the path.
+                // This will add the \\?\ prefix if needed based on the path's length.
+                var pwszCanonicalPath: LPWSTR?
+                let flags: ULONG = PATHCCH_ALLOW_LONG_PATHS
+                let result = PathAllocCanonicalize(pwszFullPath.baseAddress, flags, &pwszCanonicalPath)
+                if let pwszCanonicalPath {
+                    defer { LocalFree(pwszCanonicalPath) }
+                    if result == S_OK {
+                        // 3. Perform the operation on the normalized path.
+                        return try body(pwszCanonicalPath)
+                    }
+                }
+                throw CocoaError.errorWithFilePath(self, win32: WIN32_FROM_HRESULT(result), reading: true)
             }
         }
     }
