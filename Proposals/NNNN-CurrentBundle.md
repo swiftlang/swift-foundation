@@ -10,6 +10,7 @@
 ## Revision history
 
 * **v1** Initial version
+* **v1.1** Remove `#bundleDescription` and add 2 initializers to `LocalizedStringResource`
 
 ## Introduction
 
@@ -62,16 +63,6 @@ label.text = String(
     )
 ```
 
-We will also introduce an equivalent macro for usage with `LocalizedStringResource.BundleDescription`.
-
-```swift
-let string = LocalizedStringResource(
-    "She didn't clean the camera!",
-    bundle: #bundleDescription,
-    comment: "Comment of astonished bystander"
-    )
-```
-
 ## Detailed design
 
 We propose introducing a `#bundle` macro as follows:
@@ -100,38 +91,12 @@ public macro bundle() -> Bundle = #externalMacro(module: "FoundationMacros", typ
 }()
 ```
 
-We also propose a `#bundleDescription` macro:
-
-```swift
-/// Returns the bundle description most likely to contain resources for the calling code.
-///
-/// Code in an app, app extension, framework, etc. will return the bundle associated with that target.
-/// Code in a Swift Package target will return the resource bundle associated with that target.
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-@freestanding(expression)
-public macro bundleDescription() -> LocalizedStringResource.BundleDescription = #externalMacro(module: "FoundationMacros", type: "CurrentBundleDescriptionMacro")
-```
-
-which would expand to:
-
-```swift
-{
-#if SWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE
-    return LocalizedStringResource.BundleDescription.atURL(Bundle.module.bundleURL)
-#elseif SWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE
-    #error("No resource bundle is available for this module. If resources are included elsewhere, specify the bundle manually.")
-#else
-    return .atURL((Bundle(_dsoHandle: #dsohandle) ?? .main).bundleURL)
-#endif
-}()
-```
-
-Both macros rely on `SWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE `, a new `-D`-defined conditional that will be passed by SwiftBuild, SwiftPM, and potential 3rd party build systems under the same conditions where `Bundle.module` would be generated.
+This macro relies on `SWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE `, a new `-D`-defined conditional that will be passed by SwiftBuild, SwiftPM, and potential 3rd party build systems under the same conditions where `Bundle.module` would be generated.
 
 The preprocessor macro `SWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE` should be set by build systems when `Bundle.module` is not generated and the fallback `#dsohandle` approach would not retrieve the correct bundle for resources. A Swift Package without any resource files would be an example of this. Under this scenario, usage of `#bundle` presents an error.
 
 
-Both macros call into new API on `Bundle`, which will be back-deployed so that using the macro isn't overly limited by the project's deployment target.
+It calls into new API on `Bundle`, which will be back-deployed so that using the macro isn't overly limited by the project's deployment target.
 
 ```swift
 extension Bundle {
@@ -144,7 +109,25 @@ extension Bundle {
     /// different from where resources are stored.
     ///
     /// - Parameter dsoHandle: `dsohandle` of the current binary.
+    @available(FoundationPreview 6.2, *)
+    @_alwaysEmitIntoClient
     public convenience init?(_dsoHandle: UnsafeRawPointer)
+```
+
+The type `LocalizedStringResource` (LSR) doesn't operate on instances of `Bundle`, but `LocalizedStringResource.BundleDescription`. They can easily be converted into each other.  
+To make the new macro work well with LSR, we suggest adding two new initializers. We mark them as `@_alwaysEmitIntoClient` and `@_disfavoredOverload`, to avoid ambiguity over the initializers accepting a `BundleDescription` parameter:
+
+```swift
+@available(FoundationPreview 6.2, *)
+extension LocalizedStringResource {
+    @_alwaysEmitIntoClient
+    @_disfavoredOverload
+    public init(_ keyAndValue: String.LocalizationValue, table: String? = nil, locale: Locale = .current, bundle: Bundle, comment: StaticString? = nil)
+    
+    @_alwaysEmitIntoClient
+    @_disfavoredOverload
+    public init(_ key: StaticString, defaultValue: String.LocalizationValue, table: String? = nil, locale: Locale = .current, bundle: Bundle, comment: StaticString? = nil) 
+}
 ```
 
 ## Impact on existing code
@@ -178,6 +161,12 @@ While `#filePath` and `#line` are unambiguous, `#bundle` could be perceived as a
 However, in the context of loading resources, `#bundle` is more accurate than `Bundle.main`, as it's correct in the majority of scenarios. Developers specifying `Bundle.main` when loading resources often want what `#bundle` offers, and calling the macro `#bundle` makes it easier to discover.
 
 We think that consistency with existing Swift macros overweighs, and that the similarity to `Bundle.main` is an advantage for discoverability.
+
+### Using a separate macro for `LocalizedStringResource.BundleDescription`
+An earlier version of this proposal suggested to add `#bundle` and `#bundleDescription`, to work with `String(localized: ... bundle: Bundle)` and `LocalizedStringResource(... bundle: LocalizedStringResource.BundleDescription)`.
+
+Upon closer inspection, we can make LSR work with an instance of `Bundle` and have the proposed initializer convert it to a `LocalizedStringResource.BundleDescription` internally. This way, we only have to provide one macro, which makes it easier to discover for developers.
+
 
 ## Future Directions
 
