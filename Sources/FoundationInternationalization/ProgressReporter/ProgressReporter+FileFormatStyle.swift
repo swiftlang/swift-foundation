@@ -46,21 +46,27 @@ extension ProgressReporter {
                 self.rawOption = rawOption
             }
         }
-        enum CodingKeys: String, CodingKey {
-            case locale
-            case option
+        
+        struct CodableRepresentation: Codable {
+            let locale: Locale
+            let includeFileDescription: Bool
+        }
+        
+        var codableRepresentation: CodableRepresentation {
+            .init(locale: self.locale, includeFileDescription: option.rawOption == .file)
         }
 
         public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            locale = try container.decode(Locale.self, forKey: .locale)
-            option = try container.decode(Option.self, forKey: .option)
+            //TODO: Fix this later, codableRepresentation is not settable
+            let container = try decoder.singleValueContainer()
+            let rep = try container.decode(CodableRepresentation.self)
+            locale = rep.locale
+            option = .file
         }
-
+        
         public func encode(to encoder: any Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(locale, forKey: .locale)
-            try container.encode(option, forKey: .option)
+            var container = encoder.singleValueContainer()
+            try container.encode(codableRepresentation)
         }
         
         public var locale: Locale
