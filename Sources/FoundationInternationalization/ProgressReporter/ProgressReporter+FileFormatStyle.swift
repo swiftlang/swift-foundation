@@ -20,6 +20,20 @@ extension ProgressReporter {
         
         internal struct Option: Sendable, Codable, Equatable, Hashable {
             
+            enum CodingKeys: String, CodingKey {
+                case rawOption
+            }
+
+            init(from decoder: any Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                rawOption = try container.decode(RawOption.self, forKey: .rawOption)
+            }
+
+            func encode(to encoder: any Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(rawOption, forKey: .rawOption)
+            }
+            
             internal static var file: Option { Option(.file) }
             
             fileprivate enum RawOption: Codable, Equatable, Hashable {
@@ -31,6 +45,22 @@ extension ProgressReporter {
             private init(_ rawOption: RawOption) {
                 self.rawOption = rawOption
             }
+        }
+        enum CodingKeys: String, CodingKey {
+            case locale
+            case option
+        }
+
+        public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            locale = try container.decode(Locale.self, forKey: .locale)
+            option = try container.decode(Option.self, forKey: .option)
+        }
+
+        public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(locale, forKey: .locale)
+            try container.encode(option, forKey: .option)
         }
         
         public var locale: Locale
