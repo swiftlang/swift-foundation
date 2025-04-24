@@ -124,4 +124,23 @@ private struct UUIDTests {
         #expect(uuid2 <= uuid1)
         #expect(uuid2 == uuid1)
     }
+    
+    func testRandomVersionAndVariant() {
+        var generator = SystemRandomNumberGenerator()
+        for _ in 0..<10000 {
+            let uuid = UUID.random(using: &generator)
+            XCTAssertEqual(uuid.versionNumber, 0b0100)
+            XCTAssertEqual(uuid.varint, 0b10)
+        }
+    }
+}
+
+extension UUID {
+    fileprivate var versionNumber: Int {
+        Int(self.uuid.6 >> 4)
+    }
+    
+    fileprivate var varint: Int {
+        Int(self.uuid.8 >> 6 & 0b11)
+    }
 }

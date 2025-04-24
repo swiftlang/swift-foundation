@@ -76,6 +76,50 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
             hasher.combine(bytes: buffer)
         }
     }
+    
+    /// Generates a new random UUID.
+    ///
+    /// - Parameter generator: The random number generator to use when creating the new random value.
+    /// - Returns: A random UUID.
+    @available(FoundationPreview 6.2, *)
+    public static func random(
+        using generator: inout some RandomNumberGenerator
+    ) -> UUID {
+        let first = UInt64.random(in: .min ... .max, using: &generator)
+        let second = UInt64.random(in: .min ... .max, using: &generator)
+
+        var firstBits = first
+        var secondBits = second
+
+        // Set the version to 4 (0100 in binary)
+        firstBits &= 0xFFFFFFFFFFFF0FFF // Clear the last 12 bits
+        firstBits |= 0x0000000000004000 // Set the version bits to '0100' at the correct position
+        
+        // Set the variant to '10' (RFC9562 variant)
+        secondBits &= 0x3FFFFFFFFFFFFFFF // Clear the 2 most significant bits
+        secondBits |= 0x8000000000000000 // Set the two MSB to '10'
+
+        let uuidBytes = (
+            UInt8(truncatingIfNeeded: firstBits >> 56),
+            UInt8(truncatingIfNeeded: firstBits >> 48),
+            UInt8(truncatingIfNeeded: firstBits >> 40),
+            UInt8(truncatingIfNeeded: firstBits >> 32),
+            UInt8(truncatingIfNeeded: firstBits >> 24),
+            UInt8(truncatingIfNeeded: firstBits >> 16),
+            UInt8(truncatingIfNeeded: firstBits >> 8),
+            UInt8(truncatingIfNeeded: firstBits),
+            UInt8(truncatingIfNeeded: secondBits >> 56),
+            UInt8(truncatingIfNeeded: secondBits >> 48),
+            UInt8(truncatingIfNeeded: secondBits >> 40),
+            UInt8(truncatingIfNeeded: secondBits >> 32),
+            UInt8(truncatingIfNeeded: secondBits >> 24),
+            UInt8(truncatingIfNeeded: secondBits >> 16),
+            UInt8(truncatingIfNeeded: secondBits >> 8),
+            UInt8(truncatingIfNeeded: secondBits)
+        )
+
+        return UUID(uuid: uuidBytes)
+    }
 
     public var description: String {
         return uuidString
