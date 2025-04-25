@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import RegexBuilder
-
 extension String {
     /// Convert to NFC and percent-escape.
     func normalizedAddingPercentEncoding(
