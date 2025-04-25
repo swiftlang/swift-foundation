@@ -13,7 +13,7 @@
 import XCTest
 import FoundationMacros
 
-final class BundleTests: XCTestCase {
+final class BundleMacroTests: XCTestCase {
 
     func testSimple() {
         AssertMacroExpansion(

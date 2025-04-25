@@ -14,6 +14,7 @@
 
 add_library(FoundationInternationalization
     BinaryFloatingPoint.swift
+    CurrentBundle.swift
     Date+ICU.swift
     Duration+Utils.swift
     RangeExpression.swift

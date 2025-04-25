@@ -12,18 +12,6 @@
 
 import SwiftSyntax
 import SwiftSyntaxMacros
-import Foundation
-
-#if FOUNDATION_FRAMEWORK
-/// Returns the bundle most likely to contain resources for the calling code.
-///
-/// Code in an app, app extension, framework, etc. will return the bundle associated with that target.
-/// Code in a Swift Package target will return the resource bundle associated with that target.
-@available(macOS 10.0, iOS 2.0, tvOS 9.0, watchOS 2.0, *)
-@freestanding(expression)
-public macro bundle() -> Bundle = #externalMacro(module: "FoundationMacros", type: "BundleMacro")
-#endif
-
 
 public struct BundleMacro: SwiftSyntaxMacros.ExpressionMacro, Sendable {
     public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> ExprSyntax {
