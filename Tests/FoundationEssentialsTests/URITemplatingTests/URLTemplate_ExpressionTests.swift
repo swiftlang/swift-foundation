@@ -22,8 +22,8 @@ import Testing
 
 @Suite("URL.Template Expression")
 private enum ExpressionTests {
-    private typealias Expression = URL.Template.Expression
-    private typealias Element = URL.Template.Expression.Element
+    typealias Expression = URL.Template.Expression
+    typealias Element = URL.Template.Expression.Element
 
     @Test
     static func parsingWithSingleName() throws {
