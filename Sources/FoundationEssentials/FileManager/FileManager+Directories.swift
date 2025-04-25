@@ -257,36 +257,6 @@ extension _FileManagerImpl {
         try fileManager.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
-#if os(Windows)
-    /// If `path` is absolute, this is the same as `path.withNTPathRepresentation`.
-    /// If `path` is relative, this creates an absolute path of `path` relative to `currentDirectoryPath` and runs
-    /// `body` with that path.
-    private func withAbsoluteNTPathRepresentation<Result>(
-        of path: String,
-        _ body: (UnsafePointer<WCHAR>) throws -> Result
-    ) throws -> Result {
-        try path.withNTPathRepresentation { pwszPath in
-            if !PathIsRelativeW(pwszPath) {
-                // We already have an absolute path. Nothing to do
-                return try body(pwszPath)
-            }
-            guard let currentDirectoryPath else {
-                preconditionFailure("We should always have a current directory on Windows")
-            }
-
-            // We have a relateive path. Make it absolute.
-            let absoluteUrl = URL(
-                filePath: path,
-                directoryHint: .isDirectory,
-                relativeTo: URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
-            )
-            return try absoluteUrl.path.withNTPathRepresentation { pwszPath in
-                return try body(pwszPath)
-            }
-        }
-    }
-#endif
-    
     func createDirectory(
         atPath path: String,
         withIntermediateDirectories createIntermediates: Bool,
@@ -301,7 +271,7 @@ extension _FileManagerImpl {
         if createIntermediates {
             // `SHCreateDirectoryExW` requires an absolute path while `CreateDirectoryW` works based on the current working
             // directory.
-            try withAbsoluteNTPathRepresentation(of: path) { pwszPath in
+            try path.withNTPathRepresentation { pwszPath in
                 let errorCode = SHCreateDirectoryExW(nil, pwszPath, &saAttributes)
                 guard let errorCode = DWORD(exactly: errorCode) else {
                     // `SHCreateDirectoryExW` returns `Int` but all error codes are defined in terms of `DWORD`, aka

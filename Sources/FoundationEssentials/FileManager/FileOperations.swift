@@ -829,7 +829,7 @@ enum _FileOperations {
         try src.withNTPathRepresentation { pwszSource in
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
             guard GetFileAttributesExW(pwszSource, GetFileExInfoStandard, &faAttributes) else {
-                throw CocoaError.errorWithFilePath(.fileReadNoSuchFile, src, variant: bCopyFile ? "Copy" : "Link", source: src, destination: dst)
+                throw CocoaError.errorWithFilePath(src, win32: GetLastError(), reading: true, variant: bCopyFile ? "Copy" : "Link", source: src, destination: dst)
             }
 
             guard delegate.shouldPerformOnItemAtPath(src, to: dst) else { return }

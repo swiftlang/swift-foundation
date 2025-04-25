@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
 internal import RegexBuilder
+#endif
 
 extension String {
     /// Convert to NFC and percent-escape.
