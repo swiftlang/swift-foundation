@@ -36,9 +36,6 @@ extension AttributeScopes {
         public let durationField: DurationFieldAttribute
 
         /// The base writing direction of a paragraph.
-        #if FOUNDATION_FRAMEWORK
-        @_spi(AttributedStringWritingDirection)
-        #endif
         @available(FoundationPreview 6.2, *)
         public let writingDirection: WritingDirectionAttribute
 
@@ -516,9 +513,6 @@ extension AttributeScopes.FoundationAttributes {
     }
 
     /// The attribute key for the base writing direction of a paragraph.
-    #if FOUNDATION_FRAMEWORK
-    @_spi(AttributedStringWritingDirection)
-    #endif
     @available(FoundationPreview 6.2, *)
     @frozen
     public enum WritingDirectionAttribute: CodableAttributedStringKey {
@@ -893,9 +887,6 @@ extension AttributedString {
     /// direction. In vertical scripts, a writing direction of ``leftToRight``
     /// is interpreted as top-to-bottom and a writing direction of
     /// ``rightToLeft`` is interpreted as bottom-to-top.
-    #if FOUNDATION_FRAMEWORK
-    @_spi(AttributedStringWritingDirection)
-    #endif
     @available(FoundationPreview 6.2, *)
     @frozen
     public enum WritingDirection: Codable, Hashable, CaseIterable, Sendable {

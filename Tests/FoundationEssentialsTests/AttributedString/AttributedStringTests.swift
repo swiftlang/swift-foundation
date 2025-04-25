@@ -19,7 +19,7 @@ import TestSupport
 #endif // FOUNDATION_FRAMEWORK
 
 #if FOUNDATION_FRAMEWORK
-@testable @_spi(AttributedString) @_spi(AttributedStringWritingDirection) import Foundation
+@testable @_spi(AttributedString) import Foundation
 // For testing default attribute scope conversion
 #if canImport(Accessibility)
 import Accessibility
