@@ -10,10 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
 internal import RegexBuilder
-#endif
-
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
 #elseif canImport(OrderedCollections)
@@ -82,7 +79,6 @@ extension URL.Template.Expression.Element: CustomStringConvertible {
     }
 }
 
-#if FOUNDATION_FRAMEWORK
 extension URL.Template.Expression {
     init(_ input: String) throws {
         var remainder = input[...]
@@ -206,7 +202,6 @@ extension URL.Template {
         }
     }
 }
-#endif
 
 // .------------------------------------------------------------------.
 // |          NUL     +      .       /       ;      ?      &      #   |
