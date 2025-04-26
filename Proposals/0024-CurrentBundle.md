@@ -1,10 +1,10 @@
 # Introduce `#bundle`
 
 
-* Proposal: [SF-NNNN](NNNN-filename.md)
+* Proposal: [SF-0024](0024-filename.md)
 * Authors:[Matt Seaman](https://github.com/matthewseaman), [Andreas Neusuess](https://github.com/Tantalum73)
-* Review Manager: TBD
-* Status: **Awaiting review**
+* Review Manager: [Tina L](https://github.com/itingliu)
+* Status: **Accepted**
 
 
 ## Revision history
