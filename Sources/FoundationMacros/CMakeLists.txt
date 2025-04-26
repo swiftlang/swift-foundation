@@ -63,6 +63,7 @@ target_compile_options(FoundationMacros PRIVATE -parse-as-library)
 
 target_sources(FoundationMacros PRIVATE
     FoundationMacros.swift
+    BundleMacro.swift
     PredicateMacro.swift)
 
 target_compile_options(FoundationMacros PRIVATE
