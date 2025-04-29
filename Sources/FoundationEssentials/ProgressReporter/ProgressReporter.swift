@@ -110,6 +110,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         
         associatedtype T: Sendable
         
+        static var defaultValue: T { get }
+        
         /// Aggregates an array of `T` into a single value `T`.
         /// - Parameter all: Array of `T` to be aggregated.
         /// - Returns: A new instance of `T`.
@@ -166,9 +168,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         
         /// Returns a property value that a key path indicates.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressReporter.Properties, P.Type>) -> P.T? {
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressReporter.Properties, P.Type>) -> P.T {
             get {
-                state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
+                if let val = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T {
+                    return val
+                } else {
+                    return P.Type.defaultValue
+                }
             }
             
             set {
