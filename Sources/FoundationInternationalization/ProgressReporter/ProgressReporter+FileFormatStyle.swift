@@ -99,23 +99,15 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
             
             let properties = reporter.withProperties(\.self)
             
-            if let totalFileCount = properties.totalFileCount {
-                let completedFileCount = properties.completedFileCount ?? 0
-                fileCountLSR = LocalizedStringResource("\(completedFileCount, format: IntegerFormatStyle<Int>()) of \(totalFileCount, format: IntegerFormatStyle<Int>()) files", locale: self.locale, bundle: .forClass(ProgressReporter.self))
-            }
+            fileCountLSR = LocalizedStringResource("\(properties.completedFileCount, format: IntegerFormatStyle<Int>()) of \(properties.totalFileCount, format: IntegerFormatStyle<Int>()) files", locale: self.locale, bundle: .forClass(ProgressReporter.self))
             
-            if let totalByteCount = properties.totalByteCount {
-                let completedByteCount = properties.completedByteCount ?? 0
-                byteCountLSR = LocalizedStringResource("\(completedByteCount, format: ByteCountFormatStyle()) of \(totalByteCount, format: ByteCountFormatStyle())", locale: self.locale, bundle: .forClass(ProgressReporter.self))
-            }
             
-            if let throughput = properties.throughput {
-                throughputLSR = LocalizedStringResource("\(throughput, format: ByteCountFormatStyle())/s", locale: self.locale, bundle: .forClass(ProgressReporter.self))
-            }
+            byteCountLSR = LocalizedStringResource("\(properties.completedByteCount, format: ByteCountFormatStyle()) of \(properties.totalByteCount, format: ByteCountFormatStyle())", locale: self.locale, bundle: .forClass(ProgressReporter.self))
             
-            if let timeRemaining = properties.estimatedTimeRemaining {
-                timeRemainingLSR = LocalizedStringResource("\(timeRemaining, format: Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .wide)) remaining", locale: self.locale, bundle: .forClass(ProgressReporter.self))
-            }
+            
+            throughputLSR = LocalizedStringResource("\(properties.throughput, format: ByteCountFormatStyle())/s", locale: self.locale, bundle: .forClass(ProgressReporter.self))
+            
+            timeRemainingLSR = LocalizedStringResource("\(properties.estimatedTimeRemaining, format: Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .wide)) remaining", locale: self.locale, bundle: .forClass(ProgressReporter.self))
             
             return """
             \(String(localized: fileCountLSR ?? "")) 

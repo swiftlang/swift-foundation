@@ -54,7 +54,6 @@ class TestProgressReporter: XCTestCase {
         }
         
         XCTAssertEqual(reporter.withProperties(\.totalFileCount), 100)
-        XCTAssertNil(reporter.withProperties(\.completedFileCount))
         
         reporter.complete(count: 100)
         XCTAssertEqual(reporter.fractionCompleted, 1.0)
@@ -248,13 +247,13 @@ class TestProgressReporter: XCTestCase {
         let childProgress1 = reporter1.subprogress(assigningCount: 3)
         let childReporter1 = childProgress1.reporter(totalCount: nil)
         childReporter1.withProperties { properties in
-            properties.totalFileCount = 10
+            properties.totalFileCount += 10
         }
         
         let childProgress2 = reporter1.subprogress(assigningCount: 2)
         let childReporter2 = childProgress2.reporter(totalCount: nil)
         childReporter2.withProperties { properties in
-            properties.totalFileCount = 10
+            properties.totalFileCount += 10
         }
         
         XCTAssertEqual(reporter1.withProperties(\.totalFileCount), 20)
