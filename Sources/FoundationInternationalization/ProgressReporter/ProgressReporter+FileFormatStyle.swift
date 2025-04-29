@@ -19,19 +19,15 @@ extension ProgressReporter {
     public struct FileFormatStyle: Sendable, Codable, Equatable, Hashable {
         
         internal struct Option: Sendable, Codable, Equatable, Hashable {
-            
-            enum CodingKeys: String, CodingKey {
-                case rawOption
-            }
 
             init(from decoder: any Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                rawOption = try container.decode(RawOption.self, forKey: .rawOption)
+                let container = try decoder.singleValueContainer()
+                self.rawOption = try container.decode(RawOption.self)
             }
 
             func encode(to encoder: any Encoder) throws {
-                var container = encoder.container(keyedBy: CodingKeys.self)
-                try container.encode(rawOption, forKey: .rawOption)
+                var container = encoder.singleValueContainer()
+                try container.encode(rawOption)
             }
             
             internal static var file: Option { Option(.file) }
@@ -49,19 +45,18 @@ extension ProgressReporter {
         
         struct CodableRepresentation: Codable {
             let locale: Locale
-            let includeFileDescription: Bool
+            let option: Option
         }
         
         var codableRepresentation: CodableRepresentation {
-            .init(locale: self.locale, includeFileDescription: option.rawOption == .file)
+            .init(locale: self.locale, option: .file)
         }
 
         public init(from decoder: any Decoder) throws {
-            //TODO: Fix this later, codableRepresentation is not settable
             let container = try decoder.singleValueContainer()
-            let rep = try container.decode(CodableRepresentation.self)
-            locale = rep.locale
-            option = .file
+            let rawValue = try container.decode(CodableRepresentation.self)
+            self.locale = rawValue.locale
+            self.option = rawValue.option
         }
         
         public func encode(to encoder: any Encoder) throws {
