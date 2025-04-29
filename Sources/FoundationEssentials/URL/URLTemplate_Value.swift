@@ -18,6 +18,7 @@ internal import OrderedCollections
 internal import _FoundationCollections
 #endif
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template {
     /// The value of a variable used for expanding a template.
     ///
@@ -49,6 +50,7 @@ extension URL.Template {
     }
 }
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template.Value {
     /// A text value to be used with a ``URL.Template``.
     public static func text(_ text: String) -> URL.Template.Value {
@@ -68,18 +70,21 @@ extension URL.Template.Value {
 
 // MARK: -
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template.Value: ExpressibleByStringLiteral {
     public init(stringLiteral value: String) {
         self = .text(value)
     }
 }
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template.Value: ExpressibleByArrayLiteral {
     public init(arrayLiteral elements: String...) {
         self.init(underlying: .list(elements))
     }
 }
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template.Value: ExpressibleByDictionaryLiteral {
     public init(dictionaryLiteral elements: (String, String)...) {
         self.init(underlying: .associativeList(OrderedDictionary(uniqueKeysWithValues: elements)))
@@ -88,6 +93,7 @@ extension URL.Template.Value: ExpressibleByDictionaryLiteral {
 
 // MARK: -
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template.Value: CustomStringConvertible {
     public var description: String {
         switch underlying {
