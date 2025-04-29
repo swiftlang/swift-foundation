@@ -49,7 +49,7 @@ extension ProgressReporter {
         }
         
         var codableRepresentation: CodableRepresentation {
-            .init(locale: self.locale, option: .file)
+            .init(locale: self.locale, option: self.option)
         }
 
         public init(from decoder: any Decoder) throws {
