@@ -173,7 +173,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 if let val = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T {
                     return val
                 } else {
-                    return P.Type.defaultValue
+                    return P.defaultValue
                 }
             }
             
