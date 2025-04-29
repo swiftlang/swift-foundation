@@ -124,26 +124,18 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
                         
             let properties = reporter.withProperties(\.self)
             
-            if let totalFileCount = properties.totalFileCount {
-                let completedFileCount = properties.completedFileCount ?? 0
-                fileCountString = "\(completedFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale))) / \(totalFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale)))"
-            }
+
+            fileCountString = "\(properties.completedFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale))) / \(properties.totalFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale)))"
             
-            if let totalByteCount = properties.totalByteCount {
-                let completedByteCount = properties.completedByteCount ?? 0
-                byteCountString = "\(completedByteCount.formatted(ByteCountFormatStyle(locale: self.locale))) / \(totalByteCount.formatted(ByteCountFormatStyle(locale: self.locale)))"
-            }
-            
-            if let throughput = properties.throughput {
-                throughputString = "\(throughput.formatted(ByteCountFormatStyle(locale: self.locale)))/s"
-            }
-            
-            if let timeRemaining = properties.estimatedTimeRemaining {
-                var formatStyle = Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .wide)
-                formatStyle.locale = self.locale
-                timeRemainingString = "\(timeRemaining.formatted(formatStyle)) remaining"
-            }
-            
+  
+            byteCountString = "\(properties.completedByteCount.formatted(ByteCountFormatStyle(locale: self.locale))) / \(properties.totalByteCount.formatted(ByteCountFormatStyle(locale: self.locale)))"
+                
+            throughputString = "\(properties.throughput.formatted(ByteCountFormatStyle(locale: self.locale)))/s"
+        
+            var formatStyle = Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .wide)
+            formatStyle.locale = self.locale
+            timeRemainingString = "\(properties.estimatedTimeRemaining.formatted(formatStyle)) remaining"
+        
             return """
             \(fileCountString ?? "")
             \(byteCountString ?? "")
