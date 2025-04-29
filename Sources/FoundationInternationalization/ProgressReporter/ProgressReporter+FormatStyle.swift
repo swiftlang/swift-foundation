@@ -21,18 +21,14 @@ extension ProgressReporter {
         // Outlines the options available to format ProgressReporter
         internal struct Option: Sendable, Codable, Hashable, Equatable {
             
-            enum CodingKeys: String, CodingKey {
-                case rawOption
-            }
-
             init(from decoder: any Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                rawOption = try container.decode(RawOption.self, forKey: .rawOption)
+                let container = try decoder.singleValueContainer()
+                rawOption = try container.decode(RawOption.self)
             }
 
             func encode(to encoder: any Encoder) throws {
-                var container = encoder.container(keyedBy: CodingKeys.self)
-                try container.encode(rawOption, forKey: .rawOption)
+                var container = encoder.singleValueContainer()
+                try container.encode(rawOption)
             }
             
             /// Option specifying `fractionCompleted`.
@@ -67,21 +63,25 @@ extension ProgressReporter {
             }
         }
         
-        enum CodingKeys: String, CodingKey {
-            case locale
-            case option
+        struct CodableRepresentation: Codable {
+            let locale: Locale
+            let option: Option
+        }
+        
+        var codableRepresentation: CodableRepresentation {
+            .init(locale: self.locale, option: self.option)
         }
 
         public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            locale = try container.decode(Locale.self, forKey: .locale)
-            option = try container.decode(Option.self, forKey: .option)
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(CodableRepresentation.self)
+            self.locale = rawValue.locale
+            self.option = rawValue.option
         }
 
         public func encode(to encoder: any Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(locale, forKey: .locale)
-            try container.encode(option, forKey: .option)
+            var container = encoder.singleValueContainer()
+            try container.encode(codableRepresentation)
         }
 
         public var locale: Locale
