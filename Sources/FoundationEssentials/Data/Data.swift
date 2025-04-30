@@ -49,6 +49,7 @@
 #endif
 
 internal import _FoundationCShims
+import Builtin
 
 #if canImport(Darwin)
 import Darwin
@@ -604,6 +605,7 @@ internal final class __DataStorage : @unchecked Sendable {
 
 @frozen
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+@_addressableForDependencies
 public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollection, RangeReplaceableCollection, MutableDataProtocol, ContiguousBytes, Sendable {
 
     public typealias Index = Int
@@ -2198,7 +2200,105 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     public func withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
         return try _representation.withUnsafeBytes(body)
     }
-    
+
+#if compiler(>=6.2)
+    @available(FoundationSpan 6.2, *)
+    public var bytes: RawSpan {
+        @lifetime(borrow self)
+        borrowing get {
+            let buffer: UnsafeRawBufferPointer
+            switch _representation {
+            case .empty:
+                buffer = UnsafeRawBufferPointer(_empty: ())
+            case .inline:
+                buffer = unsafe UnsafeRawBufferPointer(
+                  start: UnsafeRawPointer(Builtin.addressOfBorrow(self)),
+                  count: _representation.count
+                )
+            case .large(let slice):
+                buffer = unsafe UnsafeRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            case .slice(let slice):
+                buffer = unsafe UnsafeRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            }
+            let span = unsafe RawSpan(_unsafeBytes: buffer)
+            return unsafe _overrideLifetime(span, borrowing: self)
+        }
+    }
+
+    @available(FoundationSpan 6.2, *)
+    public var span: Span<UInt8> {
+        @lifetime(borrow self)
+        borrowing get {
+            let span = unsafe bytes._unsafeView(as: UInt8.self)
+            return _overrideLifetime(span, borrowing: self)
+        }
+    }
+
+    @available(FoundationSpan 6.2, *)
+    public var mutableBytes: MutableRawSpan {
+        @lifetime(&self)
+        mutating get {
+            let buffer: UnsafeMutableRawBufferPointer
+            switch _representation {
+            case .empty:
+                buffer = UnsafeMutableRawBufferPointer(_empty: ())
+            case .inline:
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
+                  count: _representation.count
+                )
+            case .large(let slice):
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            case .slice(let slice):
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            }
+            let span = unsafe MutableRawSpan(_unsafeBytes: buffer)
+            return unsafe _overrideLifetime(span, mutating: &self)
+        }
+    }
+
+    @available(FoundationSpan 6.2, *)
+    public var mutableSpan: MutableSpan<UInt8> {
+        @lifetime(&self)
+        mutating get {
+#if false
+            var bytes = mutableBytes
+            let span = unsafe bytes._unsafeMutableView(as: UInt8.self)
+            return _overrideLifetime(span, mutating: &self)
+#else
+            let buffer: UnsafeMutableRawBufferPointer
+            switch _representation {
+            case .empty:
+                buffer = UnsafeMutableRawBufferPointer(_empty: ())
+            case .inline:
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
+                  count: _representation.count
+                )
+            case .large(let slice):
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            case .slice(let slice):
+                buffer = unsafe UnsafeMutableRawBufferPointer(
+                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
+                )
+            }
+            let span = unsafe MutableSpan<UInt8>(_unsafeBytes: buffer)
+            return unsafe _overrideLifetime(span, mutating: &self)
+#endif
+        }
+    }
+#endif
+
     @_alwaysEmitIntoClient
     public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
         return try _representation.withUnsafeBytes {
@@ -2870,3 +2970,62 @@ extension Data : Codable {
         }
     }
 }
+
+#if compiler(>=6.2)
+// TODO: remove once _overrideLifetime is public in the standard library
+
+/// Unsafely discard any lifetime dependency on the `dependent` argument. Return
+/// a value identical to `dependent` with a lifetime dependency on the caller's
+/// borrow scope of the `source` argument.
+@unsafe
+@_unsafeNonescapableResult
+@_alwaysEmitIntoClient
+@_transparent
+@lifetime(borrow source)
+internal func _overrideLifetime<
+  T: ~Copyable & ~Escapable, U: ~Copyable & ~Escapable
+>(
+  _ dependent: consuming T, borrowing source: borrowing U
+) -> T {
+  // TODO: Remove @_unsafeNonescapableResult. Instead, the unsafe dependence
+  // should be expressed by a builtin that is hidden within the function body.
+  dependent
+}
+
+/// Unsafely discard any lifetime dependency on the `dependent` argument. Return
+/// a value identical to `dependent` that inherits all lifetime dependencies from
+/// the `source` argument.
+@unsafe
+@_unsafeNonescapableResult
+@_alwaysEmitIntoClient
+@_transparent
+@lifetime(copy source)
+internal func _overrideLifetime<
+  T: ~Copyable & ~Escapable, U: ~Copyable & ~Escapable
+>(
+  _ dependent: consuming T, copying source: borrowing U
+) -> T {
+  // TODO: Remove @_unsafeNonescapableResult. Instead, the unsafe dependence
+  // should be expressed by a builtin that is hidden within the function body.
+  dependent
+}
+
+/// Unsafely discard any lifetime dependency on the `dependent` argument.
+/// Return a value identical to `dependent` with a lifetime dependency
+/// on the caller's exclusive borrow scope of the `source` argument.
+@unsafe
+@_unsafeNonescapableResult
+@_alwaysEmitIntoClient
+@_transparent
+@lifetime(&source)
+internal func _overrideLifetime<
+  T: ~Copyable & ~Escapable, U: ~Copyable & ~Escapable
+>(
+  _ dependent: consuming T,
+  mutating source: inout U
+) -> T {
+  // TODO: Remove @_unsafeNonescapableResult. Instead, the unsafe dependence
+  // should be expressed by a builtin that is hidden within the function body.
+  dependent
+}
+#endif
