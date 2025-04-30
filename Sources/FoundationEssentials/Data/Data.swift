@@ -2269,7 +2269,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     public var mutableSpan: MutableSpan<UInt8> {
         @lifetime(&self)
         mutating get {
-#if false
+#if false // see https://github.com/swiftlang/swift/issues/81218
             var bytes = mutableBytes
             let span = unsafe bytes._unsafeMutableView(as: UInt8.self)
             return _overrideLifetime(span, mutating: &self)
