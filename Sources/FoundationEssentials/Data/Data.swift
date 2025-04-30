@@ -2209,7 +2209,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             let buffer: UnsafeRawBufferPointer
             switch _representation {
             case .empty:
-                buffer = UnsafeRawBufferPointer(_empty: ())
+                buffer = UnsafeRawBufferPointer(start: nil, count: 0)
             case .inline:
                 buffer = unsafe UnsafeRawBufferPointer(
                   start: UnsafeRawPointer(Builtin.addressOfBorrow(self)),
@@ -2245,7 +2245,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             let buffer: UnsafeMutableRawBufferPointer
             switch _representation {
             case .empty:
-                buffer = UnsafeMutableRawBufferPointer(_empty: ())
+                buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
             case .inline:
                 buffer = unsafe UnsafeMutableRawBufferPointer(
                   start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
@@ -2277,7 +2277,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             let buffer: UnsafeMutableRawBufferPointer
             switch _representation {
             case .empty:
-                buffer = UnsafeMutableRawBufferPointer(_empty: ())
+                buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
             case .inline:
                 buffer = unsafe UnsafeMutableRawBufferPointer(
                   start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
