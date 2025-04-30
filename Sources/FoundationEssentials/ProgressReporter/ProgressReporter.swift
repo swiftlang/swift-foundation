@@ -173,17 +173,25 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             get {
                 let currentValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
                 let childrenValues: [P.T] = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)] as? [P.T] ?? []
-                print("values passed to reduce \(currentValue) and \(childrenValues)")
                 return P.self.reduce(current: currentValue, children: childrenValues)
             }
             
-            set {
-                let oldValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
-                print("old value is \(oldValue)")
-                state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
-                print("new value is \(newValue)")
-                reporter.parent?.updateChildrenOtherProperties(property: P.self, oldValue: oldValue, newValue: newValue)
-            }
+//            set {
+//                let oldValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
+//                print("old value is \(oldValue)")
+//                state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
+//                print("new value is \(newValue)")
+//                reporter.parent?.updateChildrenOtherProperties(property: P.self, oldValue: oldValue, newValue: newValue)
+//            }
+        }
+    }
+    
+    public func setAdditionalProperty<P: Property>(type: P.Type, value: P.T) {
+        state.withLock { state in
+            var oldValue: P.T? = nil
+            oldValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
+            state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = value
+            parent?.updateChildrenOtherProperties(property: type, oldValue: oldValue, newValue: value)
         }
     }
     
@@ -423,19 +431,22 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, oldValue: P.T?, newValue: P.T) {
         // The point of this is to update my own entry of my children values when one child value changes, and call up to my parent recursively to do so
         state.withLock { state in
+            var oldReducedValue: P.T?
+            var newReducedValue: P.T
             var newEntries: [P.T] = [newValue]
             let oldEntries: [P.T] = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [P.T] ?? []
+            oldReducedValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: oldEntries)
             for entry in oldEntries {
                 newEntries.append(entry)
             }
             if let oldValue = oldValue {
                 if let i = newEntries.firstIndex(of: oldValue) {
-                    print("remove at index \(i)")
                     newEntries.remove(at: i)
                 }
             }
             state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = newEntries
-            print("old entries \(oldEntries) -> new entries \(newEntries)")
+            newReducedValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: newEntries)
+            parent?.updateChildrenOtherProperties(property: metatype, oldValue: oldReducedValue, newValue: newReducedValue)
         }
     }
 }
@@ -444,11 +455,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 // Default Implementation for reduce
 extension ProgressReporter.Property where T : AdditiveArithmetic {
     public static func reduce(current: T?, children: [T]) -> T {
+        print("reducing \(current) and \(children)")
         if current == nil && children.isEmpty {
             return self.defaultValue
         }
         if current != nil {
-            return children.reduce(current ?? 0 as! Self.T, +)
+            return children.reduce(current ?? self.defaultValue, +)
         } else {
             return children.reduce(0 as! Self.T, +)
         }
