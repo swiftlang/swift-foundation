@@ -149,9 +149,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 }
                 //TODO: rdar://149015734 Check throttling
                 reporter.updateFractionCompleted(from: previous, to: state.fractionState.overallFraction)
-                
                 reporter.ghostReporter?.notifyObservers(with: .totalCountUpdated)
-                
             }
         }
         
@@ -174,17 +172,16 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressReporter.Properties, P.Type>) -> P.T {
             get {
                 let currentValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
-                let childrenValues = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)] as? [P.T]
-                if currentValue == nil && childrenValues == [] {
-                    return P.defaultValue
-                } else {
-                    return P.self.reduce(current: currentValue, children: childrenValues ?? [])
-                }
+                let childrenValues: [P.T] = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)] as? [P.T] ?? []
+                print("values passed to reduce \(currentValue) and \(childrenValues)")
+                return P.self.reduce(current: currentValue, children: childrenValues)
             }
             
             set {
                 let oldValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
+                print("old value is \(oldValue)")
                 state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
+                print("new value is \(newValue)")
                 reporter.parent?.updateChildrenOtherProperties(property: P.self, oldValue: oldValue, newValue: newValue)
             }
         }
@@ -424,29 +421,21 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     internal func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, oldValue: P.T?, newValue: P.T) {
+        // The point of this is to update my own entry of my children values when one child value changes, and call up to my parent recursively to do so
         state.withLock { state in
-            var myOldValue: P.T
-            var myNewValue: P.T
-            var newEntries: [P.T] = []
-            let oldEntries = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [P.T]
-            myOldValue = metatype.reduce(current: oldValue, children: oldEntries ?? [])
-            if oldValue == nil {
-                newEntries.append(newValue)
-            } else if let oldEntries = oldEntries {
-                if oldEntries.isEmpty {
-                    newEntries.append(newValue)
-                }
-            } else {
-                if let oldEntries = oldEntries, let old = oldValue {
-                    newEntries = oldEntries.map { $0 }
-                    if let index = oldEntries.firstIndex(of: old) {
-                        newEntries[index] = newValue
-                    }
+            var newEntries: [P.T] = [newValue]
+            let oldEntries: [P.T] = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [P.T] ?? []
+            for entry in oldEntries {
+                newEntries.append(entry)
+            }
+            if let oldValue = oldValue {
+                if let i = newEntries.firstIndex(of: oldValue) {
+                    print("remove at index \(i)")
+                    newEntries.remove(at: i)
                 }
             }
-            myNewValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: newEntries)
             state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = newEntries
-            self.parent?.updateChildrenOtherProperties(property: metatype, oldValue: myOldValue, newValue: myNewValue)
+            print("old entries \(oldEntries) -> new entries \(newEntries)")
         }
     }
 }
@@ -455,13 +444,14 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 // Default Implementation for reduce
 extension ProgressReporter.Property where T : AdditiveArithmetic {
     public static func reduce(current: T?, children: [T]) -> T {
-        guard !children.isEmpty else {
-            return current ?? 0 as! Self.T
+        if current == nil && children.isEmpty {
+            return self.defaultValue
         }
-        guard current != nil else {
+        if current != nil {
+            return children.reduce(current ?? 0 as! Self.T, +)
+        } else {
             return children.reduce(0 as! Self.T, +)
         }
-        return children.reduce(current ?? 0 as! Self.T, +)
     }
 }
 
