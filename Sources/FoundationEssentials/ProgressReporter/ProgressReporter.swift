@@ -43,6 +43,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal struct State {
         var fractionState: FractionState
         var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
+        var childrenOtherProperties: [AnyMetatypeWrapper: [(any Sendable)]]
     }
     
     // Interop states
@@ -108,14 +109,16 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// A type that conveys task-specific information on progress.
     public protocol Property {
         
-        associatedtype T: Sendable
+        associatedtype T: Sendable, Hashable, Equatable
         
         static var defaultValue: T { get }
         
-        /// Aggregates an array of `T` into a single value `T`.
-        /// - Parameter all: Array of `T` to be aggregated.
+        /// Aggregates current `T` and an array of `T` into a single value `T`.
+        /// - Parameters:
+        ///   - current: `T` of self.
+        ///   - children: `T` of children.
         /// - Returns: A new instance of `T`.
-        static func reduce(_ all: [T]) -> T
+        static func reduce(current: T?, children: [T]) -> T
     }
     
     /// A container that holds values for properties that specify information on progress.
@@ -130,7 +133,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             mutating get {
                 reporter.getTotalCount(fractionState: &state.fractionState)
             }
-    
+            
             set {
                 let previous = state.fractionState.overallFraction
                 if state.fractionState.selfFraction.total != newValue && state.fractionState.selfFraction.total > 0 {
@@ -170,56 +173,21 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         /// Returns a property value that a key path indicates.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressReporter.Properties, P.Type>) -> P.T {
             get {
-                if let val = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T {
-                    return val
-                } else {
+                let currentValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
+                let childrenValues = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)] as? [P.T]
+                if currentValue == nil && childrenValues == [] {
                     return P.defaultValue
+                } else {
+                    return P.self.reduce(current: currentValue, children: childrenValues ?? [])
                 }
             }
             
             set {
+                let oldValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
                 state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
-                // Update Parent's P.self value
-                updateParentOtherPropertiesEntry(of: reporter, metatype: P.self, updatedValue: newValue, state: &state)
+                reporter.parent?.updateChildrenOtherProperties(property: P.self, oldValue: oldValue, newValue: newValue)
             }
         }
-        
-        private func updateParentOtherPropertiesEntry<P: Property>(of reporter: ProgressReporter, metatype: P.Type, updatedValue: P.T?, state: inout State) {
-            // Check if parent exists to continue propagating values up
-            if let parent = reporter.parent {
-                parent.children.withLock { children in
-                    // Array containing all children's values to pass into reduce
-                    let childrenValues: LockedState<[P.T]> = LockedState(initialState: [])
-                    // Add self's updatedValue to array
-                    if let updatedValue = updatedValue {
-                        childrenValues.withLock { values in
-                            values.append(updatedValue)
-                        }
-                    }
-                    // Add other children's values to array, skip over existing child's existing value
-                    for child in children {
-                        if child != reporter {
-                            let childValue = child?.state.withLock { $0.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T }
-                            if let childValue = childValue {
-                                childrenValues.withLock { values in
-                                    values.append(childValue)
-                                }
-                            }
-                        }
-                    }
-                    if !childrenValues.withLock(\.self).isEmpty {
-                        parent.state.withLock { state in
-                            // Set property in parent
-                            let reducedValue = metatype.reduce(childrenValues.withLock(\.self))
-                            state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] = reducedValue
-                            // Recursive call to parent's parent
-                            updateParentOtherPropertiesEntry(of: parent, metatype: metatype, updatedValue: reducedValue, state: &state)
-                        }
-                    }
-                }
-            }
-        }
-        
     }
     
     private let portionOfParent: Int
@@ -237,7 +205,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             childFraction: _ProgressFraction(completed: 0, total: 1),
             interopChild: nil
         )
-        let state = State(fractionState: fractionState, otherProperties: [:])
+        let state = State(fractionState: fractionState, otherProperties: [:], childrenOtherProperties: [:])
         self.state = LockedState(initialState: state)
         self.interopObservation = interopObservation
         self.ghostReporter = ghostReporter
@@ -313,7 +281,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         return try state.withLock { state in
             var values = Values(reporter: self, state: state)
             // This is done to avoid copy on write later
-            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:])
+            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:], childrenOtherProperties: [:])
             let result = try closure(&values)
             state = values.state
             return result
@@ -454,19 +422,46 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             children.insert(childReporter)
         }
     }
+    
+    internal func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, oldValue: P.T?, newValue: P.T) {
+        state.withLock { state in
+            var myOldValue: P.T
+            var myNewValue: P.T
+            var newEntries: [P.T] = []
+            let oldEntries = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [P.T]
+            myOldValue = metatype.reduce(current: oldValue, children: oldEntries ?? [])
+            if oldValue == nil {
+                newEntries.append(newValue)
+            } else if let oldEntries = oldEntries {
+                if oldEntries.isEmpty {
+                    newEntries.append(newValue)
+                }
+            } else {
+                if let oldEntries = oldEntries, let old = oldValue {
+                    newEntries = oldEntries.map { $0 }
+                    if let index = oldEntries.firstIndex(of: old) {
+                        newEntries[index] = newValue
+                    }
+                }
+            }
+            myNewValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: newEntries)
+            state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = newEntries
+            self.parent?.updateChildrenOtherProperties(property: metatype, oldValue: myOldValue, newValue: myNewValue)
+        }
+    }
 }
-
+    
 @available(FoundationPreview 6.2, *)
 // Default Implementation for reduce
 extension ProgressReporter.Property where T : AdditiveArithmetic {
-    public static func reduce(_ all: [T]) -> T {
-        precondition(all.isEmpty == false, "Cannot reduce an empty array")
-        let first = all.first!
-        let rest = all.dropFirst()
-        guard !rest.isEmpty else {
-            return first
+    public static func reduce(current: T?, children: [T]) -> T {
+        guard !children.isEmpty else {
+            return current ?? 0 as! Self.T
         }
-        return rest.reduce(first, +)
+        guard current != nil else {
+            return children.reduce(0 as! Self.T, +)
+        }
+        return children.reduce(current ?? 0 as! Self.T, +)
     }
 }
 
