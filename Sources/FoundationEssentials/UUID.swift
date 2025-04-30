@@ -92,7 +92,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         var secondBits = second
 
         // Set the version to 4 (0100 in binary)
-        firstBits &= 0xFFFFFFFFFFFF0FFF // Clear the last 12 bits
+        firstBits &= 0xFFFFFFFFFFFF0FFF // Clear bits 48 through 51
         firstBits |= 0x0000000000004000 // Set the version bits to '0100' at the correct position
         
         // Set the variant to '10' (RFC9562 variant)
