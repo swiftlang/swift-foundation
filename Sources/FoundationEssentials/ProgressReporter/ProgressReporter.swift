@@ -188,8 +188,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     public func setAdditionalProperty<P: Property>(type: P.Type, value: P.T) {
         state.withLock { state in
-            var oldValue: P.T? = nil
-            oldValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
+            let oldValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
             state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = value
             parent?.updateChildrenOtherProperties(property: type, oldValue: oldValue, newValue: value)
         }
@@ -431,11 +430,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, oldValue: P.T?, newValue: P.T) {
         // The point of this is to update my own entry of my children values when one child value changes, and call up to my parent recursively to do so
         state.withLock { state in
-            var oldReducedValue: P.T?
-            var newReducedValue: P.T
             var newEntries: [P.T] = [newValue]
             let oldEntries: [P.T] = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [P.T] ?? []
-            oldReducedValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: oldEntries)
+            let oldReducedValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: oldEntries)
             for entry in oldEntries {
                 newEntries.append(entry)
             }
@@ -445,7 +442,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 }
             }
             state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = newEntries
-            newReducedValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: newEntries)
+            let newReducedValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: newEntries)
             parent?.updateChildrenOtherProperties(property: metatype, oldValue: oldReducedValue, newValue: newReducedValue)
         }
     }
@@ -455,7 +452,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 // Default Implementation for reduce
 extension ProgressReporter.Property where T : AdditiveArithmetic {
     public static func reduce(current: T?, children: [T]) -> T {
-        print("reducing \(current) and \(children)")
         if current == nil && children.isEmpty {
             return self.defaultValue
         }
