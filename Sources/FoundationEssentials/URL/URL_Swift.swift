@@ -1176,12 +1176,14 @@ extension _SwiftURL {
             ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
         }
 
-        flags.insert(.hasPath)
-        if let pathRange = parseInfo.pathRange {
-            let nsRange = string._toRelativeNSRange(pathRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        } else {
-            ranges.append(CFRange(location: kCFNotFound, length: 0))
+        if !parseInfo.path.isEmpty || parseInfo.netLocationRange?.isEmpty == false {
+            flags.insert(.hasPath)
+            if let pathRange = parseInfo.pathRange {
+                let nsRange = string._toRelativeNSRange(pathRange)
+                ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
+            } else {
+                ranges.append(CFRange(location: kCFNotFound, length: 0))
+            }
         }
 
         if let queryRange = parseInfo.queryRange {
