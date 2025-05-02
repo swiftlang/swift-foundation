@@ -24,6 +24,10 @@ import WinSDK
 @preconcurrency import WASILibc
 #endif
 
+#if canImport(os)
+internal import os
+#endif
+
 /// `_SwiftURL` provides the new Swift implementation for `URL`, using the same parser
 /// and `URLParseInfo` as `URLComponents`, but with a few compatibility behaviors.
 ///
