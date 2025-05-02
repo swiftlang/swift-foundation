@@ -44,8 +44,9 @@ public struct Subprogress: ~Copyable, Sendable {
             // Set interop child of ghost reporter so ghost reporter reads from here
             ghostReporter?.setInteropChild(interopChild: childReporter)
         } else {
-            // Add child to parent's _children list
-           parent.addToChildren(childReporter: childReporter)
+            // Add child to parent's _children list & Store in child children's position in parent
+            let childPositionInParent = parent.addToChildren(childReporter: childReporter)
+            childReporter.setPositionInParent(to: childPositionInParent)
         }
         
         return childReporter
