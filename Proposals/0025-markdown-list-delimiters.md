@@ -1,6 +1,6 @@
 # Markdown List Item Delimiters
 
-* Proposal: [SF-NNNN](NNNN-markdown-list-delimiters.md)
+* Proposal: [SF-0025](0025-markdown-list-delimiters.md)
 * Authors: [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Review Manager: TBD
 * Status: **Pitch**
