@@ -41,9 +41,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Stores all the state of properties
     internal struct State {
+        var positionInParent: Int?
         var fractionState: FractionState
         var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
-        var childrenOtherProperties: [AnyMetatypeWrapper: [(any Sendable)]]
+        // Type: Array of Array
+        var childrenOtherProperties: [AnyMetatypeWrapper: [[(any Sendable)]]]
     }
     
     // Interop states
@@ -112,13 +114,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         associatedtype T: Sendable, Hashable, Equatable
         
         static var defaultValue: T { get }
-        
-        /// Aggregates current `T` and an array of `T` into a single value `T`.
-        /// - Parameters:
-        ///   - current: `T` of self.
-        ///   - children: `T` of children.
-        /// - Returns: A new instance of `T`.
-        static func reduce(current: T?, children: [T]) -> T
     }
     
     /// A container that holds values for properties that specify information on progress.
@@ -171,32 +166,32 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         /// Returns a property value that a key path indicates.
         public subscript<P: Property>(dynamicMember key: KeyPath<ProgressReporter.Properties, P.Type>) -> P.T {
             get {
-                let currentValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
-                let childrenValues: [P.T] = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)] as? [P.T] ?? []
-                return P.self.reduce(current: currentValue, children: childrenValues)
+                return state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T ?? P.self.defaultValue
             }
             
-//            set {
-//                let oldValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
-//                print("old value is \(oldValue)")
-//                state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
-//                print("new value is \(newValue)")
-//                reporter.parent?.updateChildrenOtherProperties(property: P.self, oldValue: oldValue, newValue: newValue)
-//            }
-        }
-    }
-    
-    public func setAdditionalProperty<P: Property>(type: P.Type, value: P.T) {
-        state.withLock { state in
-            let oldValue = state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T
-            state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = value
-            parent?.updateChildrenOtherProperties(property: type, oldValue: oldValue, newValue: value)
+            set {
+                // Update my own other properties entry
+                state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
+                // Flatten myself + myChildren to be sent to parent
+                var updateValueForParent: [P.T?] = [newValue]
+                let childrenValues: [[P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)] as? [[P.T?]]
+                let flattenedChildrenValues: [P.T?] = {
+                    guard let values = childrenValues else { return [] }
+                    // Use flatMap to flatten the array but preserve nil values
+                    return values.flatMap { innerArray -> [P.T?] in
+                        // Each inner array element is preserved, including nil values
+                        return innerArray.map { $0 }
+                    }
+                }()
+                updateValueForParent += flattenedChildrenValues
+                reporter.parent?.updateChildrenOtherProperties(property: P.self, idx: state.positionInParent!, value: updateValueForParent)
+            }
         }
     }
     
     private let portionOfParent: Int
     internal let parent: ProgressReporter?
-    private let children: LockedState<Set<ProgressReporter?>>
+    private let children: LockedState<[ProgressReporter?]>
     private let state: LockedState<State>
     
     internal init(total: Int?, parent: ProgressReporter?, portionOfParent: Int, ghostReporter: ProgressReporter?, interopObservation: (any Sendable)?) {
@@ -358,7 +353,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     /// A child progress has been updated, which changes our own fraction completed.
     internal func updateChildFraction(from previous: _ProgressFraction, to next: _ProgressFraction, portion: Int) {
-        // Acquire and release parent's lock
         let updateState = state.withLock { state in
             let previousOverallFraction = state.fractionState.overallFraction
             let multiple = _ProgressFraction(completed: portion, total: state.fractionState.selfFraction.total)
@@ -373,7 +367,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 
                 if next.isFinished {
                     // Remove from children list
-                    _ = children.withLock { $0.remove(self) }
+//                    _ = children.withLock { $0.remove(self) }
                     
                     if portion != 0 {
                         // Update our self completed units
@@ -421,48 +415,93 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    internal func addToChildren(childReporter: ProgressReporter) {
-        _ = children.withLock { children in
-            children.insert(childReporter)
+    // Returns position of child in parent
+    internal func addToChildren(childReporter: ProgressReporter) -> Int {
+        let childPosition = children.withLock { children in
+            children.append(childReporter)
+            return children.count - 1
         }
+        return childPosition
     }
     
-    internal func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, oldValue: P.T?, newValue: P.T) {
-        // The point of this is to update my own entry of my children values when one child value changes, and call up to my parent recursively to do so
+    internal func setPositionInParent(to position: Int) {
         state.withLock { state in
-            var newEntries: [P.T] = [newValue]
-            let oldEntries: [P.T] = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [P.T] ?? []
-            let oldReducedValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: oldEntries)
-            for entry in oldEntries {
-                newEntries.append(entry)
-            }
-            if let oldValue = oldValue {
-                if let i = newEntries.firstIndex(of: oldValue) {
-                    newEntries.remove(at: i)
-                }
-            }
-            state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = newEntries
-            let newReducedValue = metatype.reduce(current: state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T, children: newEntries)
-            parent?.updateChildrenOtherProperties(property: metatype, oldValue: oldReducedValue, newValue: newReducedValue)
+            state.positionInParent = position
         }
+    }
+    
+    internal func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, idx: Int, value: [P.T?]) {
+        state.withLock { state in
+            let myEntries: [[P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [[P.T?]]
+            if let entries = myEntries {
+                // If entries is not nil, make sure it is a valid index, then update my entry of children values
+                let entriesLength = entries.count
+                // Check if entries need resizing
+                if idx >= entriesLength {
+                    // Entries need resizing
+                    state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = resizeArray(array: &state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)], to: idx+1)
+                    state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![idx] = value
+                } else {
+                    // Entries don't need resizing
+                    state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![idx] = value
+                }
+                
+            } else {
+                // If entries is nil
+                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = resizeArray(array: &state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)], to: idx+1)
+                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![idx] = value
+            }
+            // Ask parent to update their entry with my value + new children value
+            let newChildrenValues: [[P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [[P.T?]]
+            let flattenedChildrenValues: [P.T?] = {
+                guard let values = newChildrenValues else { return [] }
+                // Use flatMap to flatten the array but preserve nil values
+                return values.flatMap { innerArray -> [P.T?] in
+                    // Each inner array element is preserved, including nil values
+                    return innerArray.map { $0 }
+                }
+            }()
+            let newValueForParent: [P.T?] = [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T] + flattenedChildrenValues
+            parent?.updateChildrenOtherProperties(property: metatype, idx: state.positionInParent!, value: newValueForParent)
+        }
+    }
+    
+    // Copy elements of array to new array with the correct size
+    private func resizeArray(array: inout [[any Sendable]]?, to size: Int) -> [[any Sendable]] {
+        var newArray: [[any Sendable]] = Array(repeating: [], count: size)
+        if array == nil && size == 1 {
+            return newArray
+        }
+        if let oldArray = array {
+            // Use array.count to avoid invalid index
+            for idx in 0..<oldArray.count {
+                newArray[idx] = oldArray[idx]
+            }
+        }
+        return newArray
+    }
+    
+    public func getAllValues<P: Property>(property metatype: P.Type) -> [P.T?] {
+        return state.withLock { state in
+            let childrenValues: [[P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [[P.T?]]
+            let flattenedChildrenValues: [P.T?] = {
+                guard let values = childrenValues else { return [] }
+                // Use flatMap to flatten the array but preserve nil values
+                return values.flatMap { innerArray -> [P.T?] in
+                    // Each inner array element is preserved, including nil values
+                    return innerArray.map { $0 }
+                }
+            }()
+            return [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T] + flattenedChildrenValues
+        }
+    }
+    
+    public func reduce<P: ProgressReporter.Property>(property: P.Type, values: [P.T?]) -> P.T where P.T: AdditiveArithmetic {
+        let droppedNil = values.compactMap { $0 }
+        return droppedNil.reduce(P.T.zero, +)
     }
 }
     
-@available(FoundationPreview 6.2, *)
-// Default Implementation for reduce
-extension ProgressReporter.Property where T : AdditiveArithmetic {
-    public static func reduce(current: T?, children: [T]) -> T {
-        if current == nil && children.isEmpty {
-            return self.defaultValue
-        }
-        if current != nil {
-            return children.reduce(current ?? self.defaultValue, +)
-        } else {
-            return children.reduce(0 as! Self.T, +)
-        }
-    }
-}
-
 @available(FoundationPreview 6.2, *)
 // Hashable & Equatable Conformance
 extension ProgressReporter: Hashable, Equatable {
