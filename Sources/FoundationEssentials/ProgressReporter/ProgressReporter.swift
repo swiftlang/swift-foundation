@@ -421,12 +421,67 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             children.append(childReporter)
             return children.count - 1
         }
+        // Resizing childrenOtherProperties for all types need to happen here for entry of nil to exist
+        state.withLock { state in
+            for (metatype, _) in state.childrenOtherProperties {
+                state.childrenOtherProperties[metatype] = resizeArray(array: &state.childrenOtherProperties[metatype], to: childPosition + 1)
+                // Propagate my value + my flattened children up to parent
+                var valueForParent: [(any Sendable)?] = [state.otherProperties[metatype]]
+                let newChildrenValues = state.childrenOtherProperties[metatype]
+                let flattenedChildrenValues: [(any Sendable)?] = {
+                    guard let values = newChildrenValues else { return [] }
+                    // Use flatMap to flatten the array but preserve nil values
+                    return values.flatMap { innerArray -> [(any Sendable)?] in
+                        // Each inner array element is preserved, including nil values
+                        return innerArray.map { $0 }
+                    }
+                }()
+                valueForParent += flattenedChildrenValues
+                parent?.updateChildrenOtherPropertiesAnyValue(property: metatype, idx: state.positionInParent!, value: valueForParent)
+                
+            }
+        }
         return childPosition
     }
     
     internal func setPositionInParent(to position: Int) {
         state.withLock { state in
             state.positionInParent = position
+        }
+    }
+    
+    internal func updateChildrenOtherPropertiesAnyValue(property metatype: AnyMetatypeWrapper, idx: Int, value: [any Sendable]) {
+        state.withLock { state in
+            let myEntries: [[(any Sendable)?]]? = state.childrenOtherProperties[metatype]
+            if let entries = myEntries {
+                // If entries is not nil, make sure it is a valid index, then update my entry of children values
+                let entriesLength = entries.count
+                // Check if entries need resizing
+                if idx >= entriesLength {
+                    // Entries need resizing
+                    state.childrenOtherProperties[metatype] = resizeArray(array: &state.childrenOtherProperties[metatype], to: idx+1)
+                    state.childrenOtherProperties[metatype]![idx] = value
+                } else {
+                    // Entries don't need resizing
+                    state.childrenOtherProperties[metatype]![idx] = value
+                }
+            } else {
+                // If entries is nil
+                state.childrenOtherProperties[metatype] = resizeArray(array: &state.childrenOtherProperties[metatype], to: idx+1)
+                state.childrenOtherProperties[metatype]![idx] = value
+            }
+            // Ask parent to update their entry with my value + new children value
+            let newChildrenValues: [[(any Sendable)?]]? = state.childrenOtherProperties[metatype]
+            let flattenedChildrenValues: [(any Sendable)?] = {
+                guard let values = newChildrenValues else { return [] }
+                // Use flatMap to flatten the array but preserve nil values
+                return values.flatMap { innerArray -> [(any Sendable)?] in
+                    // Each inner array element is preserved, including nil values
+                    return innerArray.map { $0 }
+                }
+            }()
+            let newValueForParent: [(any Sendable)?] = [state.otherProperties[metatype]] + flattenedChildrenValues
+            parent?.updateChildrenOtherPropertiesAnyValue(property: metatype, idx: state.positionInParent!, value: newValueForParent)
         }
     }
     
@@ -468,7 +523,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Copy elements of array to new array with the correct size
     private func resizeArray(array: inout [[any Sendable]]?, to size: Int) -> [[any Sendable]] {
-        var newArray: [[any Sendable]] = Array(repeating: [], count: size)
+        var newArray: [[any Sendable]] = Array(repeating: [nil], count: size)
         if array == nil && size == 1 {
             return newArray
         }
