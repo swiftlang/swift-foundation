@@ -35,9 +35,10 @@ let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
     }
 }
 
-let concurrencyChecking: [SwiftSetting] = [
+let featureSettings: [SwiftSetting] = [
     .enableExperimentalFeature("StrictConcurrency"),
-    .enableUpcomingFeature("InferSendableFromCaptures")
+    .enableUpcomingFeature("InferSendableFromCaptures"),
+    .enableUpcomingFeature("MemberImportVisibility")
 ]
 
 var dependencies: [Package.Dependency] {
@@ -98,7 +99,7 @@ let package = Package(
                 "FoundationInternationalization",
             ],
             cSettings: wasiLibcCSettings,
-            swiftSettings: availabilityMacros + concurrencyChecking
+            swiftSettings: availabilityMacros + featureSettings
         ),
 
         // FoundationEssentials
@@ -134,7 +135,7 @@ let package = Package(
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
-          ] + availabilityMacros + concurrencyChecking,
+          ] + availabilityMacros + featureSettings,
           linkerSettings: [
             .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
           ]
@@ -148,7 +149,7 @@ let package = Package(
             resources: [
                 .copy("Resources")
             ],
-            swiftSettings: availabilityMacros + concurrencyChecking
+            swiftSettings: availabilityMacros + featureSettings
         ),
 
         // FoundationInternationalization
@@ -172,7 +173,7 @@ let package = Package(
             cSettings: wasiLibcCSettings,
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros + concurrencyChecking
+            ] + availabilityMacros + featureSettings
         ),
         
         .testTarget(
@@ -181,7 +182,7 @@ let package = Package(
                 "TestSupport",
                 "FoundationInternationalization",
             ],
-            swiftSettings: availabilityMacros + concurrencyChecking
+            swiftSettings: availabilityMacros + featureSettings
         ),
         
         // FoundationMacros
@@ -198,7 +199,7 @@ let package = Package(
             exclude: ["CMakeLists.txt"],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros + concurrencyChecking
+            ] + availabilityMacros + featureSettings
         ),
     ]
 )
@@ -213,7 +214,7 @@ package.targets.append(contentsOf: [
             "FoundationMacros",
             "TestSupport"
         ],
-        swiftSettings: availabilityMacros + concurrencyChecking
+        swiftSettings: availabilityMacros + featureSettings
     )
 ])
 #endif

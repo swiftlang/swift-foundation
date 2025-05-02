@@ -12,6 +12,7 @@
 
 import SwiftSyntax
 import SwiftSyntaxMacros
+internal import SwiftSyntaxBuilder
 
 public struct BundleMacro: SwiftSyntaxMacros.ExpressionMacro, Sendable {
     public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> ExprSyntax {

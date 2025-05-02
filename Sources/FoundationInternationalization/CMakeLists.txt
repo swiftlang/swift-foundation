@@ -31,7 +31,8 @@ add_subdirectory(TimeZone)
 target_compile_options(FoundationInternationalization PRIVATE
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend AccessLevelOnImport>"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend StrictConcurrency>"
-    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-upcoming-feature -Xfrontend InferSendableFromCaptures>")
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-upcoming-feature -Xfrontend InferSendableFromCaptures>"
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-upcoming-feature -Xfrontend MemberImportVisibility>")
 target_compile_options(FoundationInternationalization PRIVATE ${_SwiftFoundation_availability_macros})
 target_compile_options(FoundationInternationalization PRIVATE ${_SwiftFoundation_wasi_libc_flags})
 target_compile_options(FoundationInternationalization PRIVATE -package-name "SwiftFoundation")
