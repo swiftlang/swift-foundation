@@ -489,22 +489,13 @@ extension _FileManagerImpl {
     
     var currentDirectoryPath: String? {
 #if os(Windows)
-        var dwLength: DWORD = GetCurrentDirectoryW(0, nil)
-        guard dwLength > 0 else { return nil }
-
-        for _ in 0 ... 8 {
-            if let szCurrentDirectory = withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength), {
-                let dwResult: DWORD = GetCurrentDirectoryW(dwLength, $0.baseAddress)
-                if dwResult == dwLength - 1 {
-                    return String(decodingCString: $0.baseAddress!, as: UTF16.self)
-                }
-                dwLength = dwResult
-                return nil
-            }) {
-                return szCurrentDirectory
-            }
+        // Make an initial call to GetCurrentDirectoryW to get a buffer size estimate.
+        // This is solely to minimize the number of allocations and number of bytes allocated versus starting with a hardcoded value like MAX_PATH.
+        // We should NOT early-return if this returns 0, in order to avoid TOCTOU issues.
+        let dwSize = GetCurrentDirectoryW(0, nil)
+        return try? FillNullTerminatedWideStringBuffer(initialSize: dwSize >= 0 ? dwSize : DWORD(MAX_PATH), maxSize: DWORD(Int16.max)) {
+            GetCurrentDirectoryW(DWORD($0.count), $0.baseAddress)
         }
-        return nil
 #else
         withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             guard getcwd(buffer.baseAddress!, FileManager.MAX_PATH_SIZE) != nil else {
