@@ -111,7 +111,8 @@ list(APPEND _SwiftFoundation_versions
 list(APPEND _SwiftFoundation_availability_names
     "FoundationPreview"
     "FoundationPredicate"
-    "FoundationPredicateRegex")
+    "FoundationPredicateRegex"
+    "FoundationSpan")
 
 # The aligned availability for each name (in the same order)
 list(APPEND _SwiftFoundation_availability_releases
