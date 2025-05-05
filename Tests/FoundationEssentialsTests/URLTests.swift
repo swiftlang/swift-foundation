@@ -966,8 +966,21 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(example.path(), "/foo")
         XCTAssertEqual(example.absoluteString, "https://example.com/foo")
 
+        // Maintain old behavior, where appending an empty path
+        // to an empty host does not add a slash, but appending
+        // an empty path to a non-empty host does
+        example = try XCTUnwrap(URL(string: "https://example.com"))
+        example.append(path: "")
+        XCTAssertEqual(example.host(), "example.com")
+        XCTAssertEqual(example.path(), "/")
+        XCTAssertEqual(example.absoluteString, "https://example.com/")
+
         var emptyHost = try XCTUnwrap(URL(string: "scheme://"))
-        XCTAssertTrue(emptyHost.host()?.isEmpty ?? true)
+        XCTAssertNil(emptyHost.host())
+        XCTAssertTrue(emptyHost.path().isEmpty)
+
+        emptyHost.append(path: "")
+        XCTAssertNil(emptyHost.host())
         XCTAssertTrue(emptyHost.path().isEmpty)
 
         emptyHost.append(path: "foo")

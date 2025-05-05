@@ -682,6 +682,9 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     }
 
     internal func appending<S: StringProtocol>(path: S, directoryHint: URL.DirectoryHint, encodingSlashes: Bool, compatibility: Bool = false) -> URL? {
+        guard !path.isEmpty || !_parseInfo.path.isEmpty || _parseInfo.netLocationRange?.isEmpty == false else {
+            return nil
+        }
         #if os(Windows)
         var pathToAppend = path.replacing(._backslash, with: ._slash)
         #else
