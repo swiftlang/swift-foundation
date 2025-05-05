@@ -54,6 +54,8 @@ extension AttributeScopes {
         public let presentationIntent: PresentationIntentAttribute
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let markdownSourcePosition: MarkdownSourcePositionAttribute
+        @available(FoundationPreview 6.2, *)
+        public let listItemDelimiter: ListItemDelimiterAttribute
         
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let localizedStringArgumentAttributes: LocalizedStringArgumentAttributes
@@ -435,6 +437,44 @@ extension AttributeScopes.FoundationAttributes {
     public enum MarkdownSourcePositionAttribute: CodableAttributedStringKey {
         public static let name = NSAttributedString.Key.markdownSourcePosition.rawValue
         public typealias Value = AttributedString.MarkdownSourcePosition
+    }
+    
+    @frozen
+    @available(FoundationPreview 6.2, *)
+    public enum ListItemDelimiterAttribute : CodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
+        public typealias Value = Character
+        public typealias ObjectiveCValue = NSString
+        
+        public static let name = NSAttributedString.Key.listItemDelimiter.rawValue
+        
+        public static func objectiveCValue(for value: Character) throws -> NSString {
+            String(value) as NSString
+        }
+        
+        public static func value(for object: NSString) throws -> Character {
+            let stringValue = object as String
+            guard stringValue.count == 1 else {
+                throw CocoaError(.coderInvalidValue)
+            }
+            return stringValue[stringValue.startIndex]
+        }
+        
+        public static func encode(_ value: Character, to encoder: any Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(String(value))
+        }
+        
+        public static func decode(from decoder: any Decoder) throws -> Character {
+            let container = try decoder.singleValueContainer()
+            let text = try container.decode(String.self)
+            guard text.count == 1 else {
+                throw DecodingError.dataCorrupted(DecodingError.Context(
+                    codingPath: container.codingPath,
+                    debugDescription: "List item delimeter encoded value must contain only one character / grapheme cluster"
+                ))
+            }
+            return text[text.startIndex]
+        }
     }
     
 #endif // FOUNDATION_FRAMEWORK
