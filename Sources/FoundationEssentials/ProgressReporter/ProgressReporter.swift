@@ -544,16 +544,26 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 // Use flatMap to flatten the array but preserve nil values
                 return values.flatMap { innerArray -> [P.T?] in
                     // Each inner array element is preserved, including nil values
-                    return innerArray.map { $0 }
+                    return innerArray.map { $0 ?? P.defaultValue }
                 }
             }()
-            return [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T] + flattenedChildrenValues
+            return [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T ?? P.defaultValue] + flattenedChildrenValues
         }
     }
     
     public func reduce<P: ProgressReporter.Property>(property: P.Type, values: [P.T?]) -> P.T where P.T: AdditiveArithmetic {
         let droppedNil = values.compactMap { $0 }
         return droppedNil.reduce(P.T.zero, +)
+    }
+    
+    deinit {
+        if !isFinished {
+            self.withProperties { properties in
+                if let totalCount = properties.totalCount {
+                    properties.completedCount = totalCount
+                }
+            }
+        }
     }
 }
     

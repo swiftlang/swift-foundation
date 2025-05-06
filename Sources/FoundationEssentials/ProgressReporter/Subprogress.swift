@@ -51,5 +51,11 @@ public struct Subprogress: ~Copyable, Sendable {
         
         return childReporter
     }
+    
+    deinit {
+        if !self.isInitializedToProgressReporter {
+            parent.complete(count: portionOfParent)
+        }
+    }
 }
 
