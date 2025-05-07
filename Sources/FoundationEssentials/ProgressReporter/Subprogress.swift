@@ -46,7 +46,7 @@ public struct Subprogress: ~Copyable, Sendable {
         } else {
             // Add child to parent's _children list & Store in child children's position in parent
             parent.addToChildren(childReporter: childReporter)
-            childReporter.addToParents(parentReporter: parent, portionOfParent: portionOfParent)
+            childReporter.addParent(parentReporter: parent, portionOfParent: portionOfParent)
         }
         
         return childReporter

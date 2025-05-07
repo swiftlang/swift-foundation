@@ -437,7 +437,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         _ = children.withLock { children in
             children.insert(childReporter)
         }
-        // Resizing childrenOtherProperties for all types need to happen here for entry of nil to exist
         state.withLock { state in
             for (metatype, _) in state.childrenOtherProperties {
                 state.childrenOtherProperties[metatype] = [self: [nil as (any Sendable)?]]
@@ -460,22 +459,24 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    internal func addToParents(parentReporter: ProgressReporter, portionOfParent: Int) {
+    internal func addParent(parentReporter: ProgressReporter, portionOfParent: Int) {
         parents.withLock { parents in
             parents[parentReporter] = portionOfParent
         }
+        
+        let updates = state.withLock { state in
+            let original = _ProgressFraction(completed: 0, total: 0)
+            let updated = state.fractionState.overallFraction
+            return (original, updated)
+        }
+        
+        parentReporter.updateChildFraction(from: updates.0, to: updates.1, portion: portionOfParent)
     }
-    
-//    internal func setPositionInParent(to position: Int) {
-//        state.withLock { state in
-//            state.positionInParent = position
-//        }
-//    }
     
     internal func updateChildrenOtherPropertiesAnyValue(property metatype: AnyMetatypeWrapper, child: ProgressReporter, value: [any Sendable]) {
         state.withLock { state in
             let myEntries: [ProgressReporter: [(any Sendable)?]]? = state.childrenOtherProperties[metatype]
-            if let entries = myEntries {
+            if myEntries != nil {
                 // If entries is not nil, then update my entry of children values
                 state.childrenOtherProperties[metatype]![child] = value
             } else {
@@ -501,7 +502,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, child: ProgressReporter, value: [P.T?]) {
         state.withLock { state in
             let myEntries: [ProgressReporter: [P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [ProgressReporter: [P.T?]]
-            if let entries = myEntries {
+            if myEntries != nil {
                 // If entries is not nil, then update my entry of children values
                 state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![child] = value
             } else {
@@ -546,8 +547,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         // get the actual progress from within the monitor, then add as children
         let actualReporter = monitor.reporter
         self.addToChildren(childReporter: actualReporter)
-        actualReporter.addToParents(parentReporter: self, portionOfParent: portionOfParent)
-        
+        actualReporter.addParent(parentReporter: self, portionOfParent: portionOfParent)
+//        print("self.children \(children.withLock { $0 })")
+//        print("child's parents list \(actualReporter.parents.withLock { $0 })")
     }
     
     deinit {
