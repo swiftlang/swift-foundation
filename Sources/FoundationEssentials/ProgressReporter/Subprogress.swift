@@ -38,7 +38,7 @@ public struct Subprogress: ~Copyable, Sendable {
     public consuming func reporter(totalCount: Int?) -> ProgressReporter {
         isInitializedToProgressReporter = true
         
-        let childReporter = ProgressReporter(total: totalCount, parent: parent, portionOfParent: portionOfParent, ghostReporter: ghostReporter, interopObservation: observation)
+        let childReporter = ProgressReporter(total: totalCount, ghostReporter: ghostReporter, interopObservation: observation)
         
         if interopWithProgressParent {
             // Set interop child of ghost reporter so ghost reporter reads from here
@@ -47,6 +47,7 @@ public struct Subprogress: ~Copyable, Sendable {
             // Add child to parent's _children list & Store in child children's position in parent
             let childPositionInParent = parent.addToChildren(childReporter: childReporter)
             childReporter.setPositionInParent(to: childPositionInParent)
+            childReporter.addToParents(parentReporter: parent, portionOfParent: portionOfParent)
         }
         
         return childReporter
