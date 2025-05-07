@@ -41,7 +41,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Stores all the state of properties
     internal struct State {
-        var positionInParent: Int?
+//        var positionInParent: Int?
         var fractionState: FractionState
         var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
         // Type: Array of Array
@@ -106,6 +106,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         return state.withLock { state in
             getIsFinished(fractionState: &state.fractionState)
         }
+    }
+    
+    public var monitor: ProgressMonitor {
+        return .init(reporter: self)
     }
     
     /// A type that conveys task-specific information on progress.
@@ -189,14 +193,19 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    private let portionOfParent: Int
-    internal let parent: ProgressReporter?
+//    private let portionOfParent: Int
+//    internal let parent: ProgressReporter?
+    
+    // Parents dictionary maps parent to portionOfParent - my parent to my portion inside that parent & my position in parent's children list
+    
+    internal let parents: LockedState<[ProgressReporter: Int]>
     private let children: LockedState<[ProgressReporter?]>
     private let state: LockedState<State>
     
-    internal init(total: Int?, parent: ProgressReporter?, portionOfParent: Int, ghostReporter: ProgressReporter?, interopObservation: (any Sendable)?) {
-        self.portionOfParent = portionOfParent
-        self.parent = parent
+    internal init(total: Int?, ghostReporter: ProgressReporter?, interopObservation: (any Sendable)?) {
+//        self.portionOfParent = portionOfParent
+//        self.parent = parent
+        self.parents = .init(initialState: [:])
         self.children = .init(initialState: [])
         let fractionState = FractionState(
             indeterminate: total == nil ? true : false,
@@ -215,7 +224,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// If `totalCount` is set to `nil`, `self` is indeterminate.
     /// - Parameter totalCount: Total units of work.
     public convenience init(totalCount: Int?) {
-        self.init(total: totalCount, parent: nil, portionOfParent: 0, ghostReporter: nil, interopObservation: nil)
+        self.init(total: totalCount, ghostReporter: nil, interopObservation: nil)
     }
     
     
@@ -240,7 +249,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             ghostReporter?.notifyObservers(with: .totalCountUpdated)
         }
     }
-    
     
     /// Returns a `Subprogress` representing a portion of `self`which can be passed to any method that reports progress.
     ///
@@ -346,7 +354,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     private func updateFractionCompleted(from: _ProgressFraction, to: _ProgressFraction) {
         _$observationRegistrar.withMutation(of: self, keyPath: \.fractionCompleted) {
             if from != to {
-                parent?.updateChildFraction(from: from, to: to, portion: portionOfParent)
+                parents.withLock { parents in
+                    for (parent, portionOfParent) in parents {
+                        parent.updateChildFraction(from: from, to: to, portion: portionOfParent)
+                    }
+                }
+//                parent?.updateChildFraction(from: from, to: to, portion: portionOfParent)
             }
         }
     }
@@ -442,6 +455,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             }
         }
         return childPosition
+    }
+    
+    internal func addToParents(parentReporter: ProgressReporter, portionOfParent: Int) {
+        parents.withLock { parents in
+            parents[parentReporter] = portionOfParent
+        }
     }
     
     internal func setPositionInParent(to position: Int) {
@@ -554,6 +573,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public func reduce<P: ProgressReporter.Property>(property: P.Type, values: [P.T?]) -> P.T where P.T: AdditiveArithmetic {
         let droppedNil = values.compactMap { $0 }
         return droppedNil.reduce(P.T.zero, +)
+    }
+    
+    // Adds Progress Monitor as a child - a monitor can be added to multiple parents
+    public func addChild(_ monitor: ProgressMonitor, assignedCount portionOfParent: Int) {
+        // get the actual progress from within the monitor, then add as children
+        let actualReporter = monitor.reporter
+        self.addToChildren(childReporter: actualReporter)
+        actualReporter.addToParents(parentReporter: self, portionOfParent: portionOfParent)
+        
     }
     
     deinit {
