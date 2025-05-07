@@ -525,31 +525,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    // Copy elements of array to new array with the correct size
-//    private func resizeArray(array: inout [[any Sendable]]?, to size: Int) -> [[any Sendable]] {
-//        var newArray: [[any Sendable]] = Array(repeating: [nil], count: size)
-//        if array == nil && size == 1 {
-//            return newArray
-//        }
-//        if let oldArray = array {
-//            // Use array.count to avoid invalid index
-//            for idx in 0..<oldArray.count {
-//                newArray[idx] = oldArray[idx]
-//            }
-//        }
-//        return newArray
-//    }
-    
     public func getAllValues<P: Property>(property metatype: P.Type) -> [P.T?] {
         return state.withLock { state in
-            let childrenValues: [[P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [[P.T?]]
+            let childrenValues: [ProgressReporter: [P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [ProgressReporter: [P.T?]]
             let flattenedChildrenValues: [P.T?] = {
                 guard let values = childrenValues else { return [] }
-                // Use flatMap to flatten the array but preserve nil values
-                return values.flatMap { innerArray -> [P.T?] in
-                    // Each inner array element is preserved, including nil values
-                    return innerArray.map { $0 ?? P.defaultValue }
-                }
+                return values.flatMap { $0.value }
             }()
             return [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T ?? P.defaultValue] + flattenedChildrenValues
         }
