@@ -186,20 +186,19 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
                 
                 // Generate an array of myself + children values of the property
-                var updateValueForParent: [P.T?] = [newValue]
                 let childrenValues: OrderedDictionary<ProgressReporter, [any Sendable]>? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)]
                 let flattenedChildrenValues: [P.T?] = {
                     guard let values = childrenValues else { return [] }
-                    // Use flatMap to flatten the array but preserve nil values
-                    return values.flatMap {
+                    // Use compactMap to flatten the array but preserve nil values
+                    return values.compactMap {
                         // Each inner array element is preserved, including nil values
                         $0.value as? P.T
                     }
                 }()
-                updateValueForParent += flattenedChildrenValues
+                let updateValueForParent: [P.T?] = [newValue] + flattenedChildrenValues
                 
-                // Send the array for that property to parents
-                reporter.parents.withLock { parents in
+                // Send the array of myself + children values of property to parents
+                reporter.parents.withLock { [reporter] parents in
                     for (parent, _) in parents {
                         parent.updateChildrenOtherProperties(property: P.self, child: reporter, value: updateValueForParent)
                     }
@@ -235,6 +234,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         self.init(total: totalCount, ghostReporter: nil, interopObservation: nil)
     }
     
+    public convenience init(from monitor: ProgressMonitor) {
+        self.init(total: 1, ghostReporter: nil, interopObservation: nil)
+        self.addChild(monitor, assignedCount: 1)
+        monitor.reporter.addParent(parentReporter: self, portionOfParent: 1)
+    }
     
     /// Sets `totalCount`.
     /// - Parameter newTotal: Total units of work.
