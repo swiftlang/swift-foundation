@@ -12,6 +12,14 @@
 
 import Observation
 
+#if canImport(CollectionsInternal)
+internal import CollectionsInternal
+#elseif canImport(OrderedCollections)
+internal import OrderedCollections
+#elseif canImport(_FoundationCollections)
+internal import _FoundationCollections
+#endif
+
 internal struct FractionState {
     var indeterminate: Bool
     var selfFraction: _ProgressFraction
@@ -45,7 +53,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         var fractionState: FractionState
         var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
         // Type: Metatype maps to dictionary of child to value
-        var childrenOtherProperties: [AnyMetatypeWrapper: [ProgressReporter: [(any Sendable)]]]
+        var childrenOtherProperties: [AnyMetatypeWrapper: OrderedDictionary<ProgressReporter, [(any Sendable)]>]
     }
     
     // Interop states
@@ -179,13 +187,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 
                 // Generate an array of myself + children values of the property
                 var updateValueForParent: [P.T?] = [newValue]
-                let childrenValues: [ProgressReporter: [P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)] as? [ProgressReporter: [P.T?]]
+                let childrenValues: OrderedDictionary<ProgressReporter, [any Sendable]>? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)]
                 let flattenedChildrenValues: [P.T?] = {
                     guard let values = childrenValues else { return [] }
                     // Use flatMap to flatten the array but preserve nil values
                     return values.flatMap {
                         // Each inner array element is preserved, including nil values
-                        $0.value
+                        $0.value as? P.T
                     }
                 }()
                 updateValueForParent += flattenedChildrenValues
@@ -250,7 +258,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    /// Returns a `Subprogress` representing a portion of `self`which can be passed to any method that reports progress.
+    /// Returns a `Subprogress` representing a portion of `self` which can be passed to any method that reports progress.
     ///
     /// - Parameter count: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
     /// - Returns: A `Subprogress` instance.
@@ -258,6 +266,20 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         precondition(portionOfParent > 0, "Giving out zero units is not a valid operation.")
         let subprogress = Subprogress(parent: self, portionOfParent: portionOfParent)
         return subprogress
+    }
+    
+    
+    /// Adds a `ProgressMonitor` as a child, with its progress representing a portion of `self`'s progress.
+    /// - Parameters:
+    ///   - monitor: A `ProgressMonitor` instance.
+    ///   - portionOfParent: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
+    public func addChild(_ monitor: ProgressMonitor, assignedCount portionOfParent: Int) {
+        // get the actual progress from within the monitor, then add as children
+        let actualReporter = monitor.reporter
+        
+        // Add monitor as child + Add self as parent
+        self.addToChildren(childReporter: actualReporter)
+        actualReporter.addParent(parentReporter: self, portionOfParent: portionOfParent)
     }
     
     /// Increases `completedCount` by `count`.
@@ -268,19 +290,25 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         ghostReporter?.notifyObservers(with: .fractionUpdated)
     }
     
-    private struct UpdateState {
-        let previous: _ProgressFraction
-        let current: _ProgressFraction
+    
+    /// Returns an array of values for specified property in subtree.
+    /// - Parameter metatype: Type of property.
+    /// - Returns: Array of values for property.
+    public func values<P: Property>(property metatype: P.Type) -> [P.T?] {
+        return state.withLock { state in
+            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
+            return [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T ?? P.defaultValue] + childrenValues
+        }
     }
     
-    private func updateCompletedCount(count: Int) -> UpdateState {
-        // Acquire and release child's lock
-        let (previous, current) = state.withLock { state in
-            let prev = state.fractionState.overallFraction
-            state.fractionState.selfFraction.completed += count
-            return (prev, state.fractionState.overallFraction)
-        }
-        return UpdateState(previous: previous, current: current)
+    
+    /// Returns the aggregated result of values.
+    /// - Parameters:
+    ///   - property: Type of property.
+    ///   - values:Sum of values.
+    public func total<P: ProgressReporter.Property>(property: P.Type, values: [P.T?]) -> P.T where P.T: AdditiveArithmetic {
+        let droppedNil = values.compactMap { $0 }
+        return droppedNil.reduce(P.T.zero, +)
     }
     
     /// Mutates any settable properties that convey information about progress.
@@ -351,6 +379,21 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     //MARK: FractionCompleted Calculation methods
+    private struct UpdateState {
+        let previous: _ProgressFraction
+        let current: _ProgressFraction
+    }
+    
+    private func updateCompletedCount(count: Int) -> UpdateState {
+        // Acquire and release child's lock
+        let (previous, current) = state.withLock { state in
+            let prev = state.fractionState.overallFraction
+            state.fractionState.selfFraction.completed += count
+            return (prev, state.fractionState.overallFraction)
+        }
+        return UpdateState(previous: previous, current: current)
+    }
+    
     private func updateFractionCompleted(from: _ProgressFraction, to: _ProgressFraction) {
         _$observationRegistrar.withMutation(of: self, keyPath: \.fractionCompleted) {
             if from != to {
@@ -359,7 +402,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                         parent.updateChildFraction(from: from, to: to, portion: portionOfParent)
                     }
                 }
-//                parent?.updateChildFraction(from: from, to: to, portion: portionOfParent)
             }
         }
     }
@@ -445,25 +487,46 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             
             // Update metatype entry in parent
             for (metatype, value) in state.otherProperties {
-                let newChildrenValues: [ProgressReporter: [(any Sendable)?]]? = state.childrenOtherProperties[metatype]
-                let flattenedChildrenValues: [(any Sendable)?] = {
-                    guard let values = newChildrenValues else { return [] }
-                    return values.flatMap { $0.value }
-                }()
-                let newValueForParent: [(any Sendable)?] = [value] + flattenedChildrenValues
-                parentReporter.updateChildrenOtherPropertiesAnyValue(property: metatype, child: self, value: newValueForParent)
+                let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
+                let updatedParentEntry: [(any Sendable)?] = [value] + childrenValues
+                parentReporter.updateChildrenOtherPropertiesAnyValue(property: metatype, child: self, value: updatedParentEntry)
             }
             
             return (original, updated)
         }
         
-        // Update parent's total & completed to include self's values
+        // Update childFraction entry in parent
         parentReporter.updateChildFraction(from: updates.0, to: updates.1, portion: portionOfParent)
     }
     
-    internal func updateChildrenOtherPropertiesAnyValue(property metatype: AnyMetatypeWrapper, child: ProgressReporter, value: [(any Sendable)?]) {
+    // MARK: Propagation of Additional Properties Methods (Dual Mode of Operations)
+    private func getFlattenedChildrenValues<P: Property>(property metatype: P.Type, state: inout State) -> [P.T?] {
+        let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
+        var childrenValues: [P.T?] = []
+        if let dictionary = childrenDictionary {
+            for (_, value) in dictionary {
+                if let value = value as? [P.T] {
+                    childrenValues.append(contentsOf: value)
+                }
+            }
+        }
+        return childrenValues
+    }
+    
+    private func getFlattenedChildrenValues(property metatype: AnyMetatypeWrapper, state: inout State) -> [(any Sendable)?] {
+        let childrenDictionary = state.childrenOtherProperties[metatype]
+        var childrenValues: [(any Sendable)?] = []
+        if let dictionary = childrenDictionary {
+            for (_, value) in dictionary {
+                childrenValues.append(contentsOf: value)
+            }
+        }
+        return childrenValues
+    }
+    
+    private func updateChildrenOtherPropertiesAnyValue(property metatype: AnyMetatypeWrapper, child: ProgressReporter, value: [(any Sendable)?]) {
         state.withLock { state in
-            let myEntries: [ProgressReporter: [(any Sendable)?]]? = state.childrenOtherProperties[metatype]
+            let myEntries = state.childrenOtherProperties[metatype]
             if myEntries != nil {
                 // If entries is not nil, then update my entry of children values
                 state.childrenOtherProperties[metatype]![child] = value
@@ -473,23 +536,19 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.childrenOtherProperties[metatype]![child] = value
             }
             // Ask parent to update their entry with my value + new children value
-            let newChildrenValues: [ProgressReporter: [(any Sendable)?]]? = state.childrenOtherProperties[metatype]
-            let flattenedChildrenValues: [(any Sendable)?] = {
-                guard let values = newChildrenValues else { return [] }
-                return values.flatMap { $0.value }
-            }()
-            let newValueForParent: [(any Sendable)?] = [state.otherProperties[metatype]] + flattenedChildrenValues
+            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
+            let updatedParentEntry: [(any Sendable)?] = [state.otherProperties[metatype]] + childrenValues
             parents.withLock { parents in
                 for (parent, _) in parents {
-                    parent.updateChildrenOtherPropertiesAnyValue(property: metatype, child: child, value: newValueForParent)
+                    parent.updateChildrenOtherPropertiesAnyValue(property: metatype, child: child, value: updatedParentEntry)
                 }
             }
         }
     }
     
-    internal func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, child: ProgressReporter, value: [P.T?]) {
+    private func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, child: ProgressReporter, value: [P.T?]) {
         state.withLock { state in
-            let myEntries: [ProgressReporter: [P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [ProgressReporter: [P.T?]]
+            let myEntries = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
             if myEntries != nil {
                 // If entries is not nil, then update my entry of children values
                 state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![child] = value
@@ -499,44 +558,14 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![child] = value
             }
             // Ask parent to update their entry with my value + new children value
-            let newChildrenValues: [ProgressReporter: [P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [ProgressReporter: [P.T?]]
-            let flattenedChildrenValues: [P.T?] = {
-                guard let values = newChildrenValues else { return [] }
-                return values.flatMap { $0.value }
-            }()
-            let newValueForParent: [P.T?] = [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T] + flattenedChildrenValues
+            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
+            let updatedParentEntry: [P.T?] = [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T] + childrenValues
             parents.withLock { parents in
                 for (parent, _) in parents {
-                    parent.updateChildrenOtherProperties(property: metatype, child: self, value: newValueForParent)
+                    parent.updateChildrenOtherProperties(property: metatype, child: self, value: updatedParentEntry)
                 }
             }
         }
-    }
-    
-    public func getAllValues<P: Property>(property metatype: P.Type) -> [P.T?] {
-        return state.withLock { state in
-            let childrenValues: [ProgressReporter: [P.T?]]? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] as? [ProgressReporter: [P.T?]]
-            let flattenedChildrenValues: [P.T?] = {
-                guard let values = childrenValues else { return [] }
-                return values.flatMap { $0.value }
-            }()
-            return [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T ?? P.defaultValue] + flattenedChildrenValues
-        }
-    }
-    
-    public func reduce<P: ProgressReporter.Property>(property: P.Type, values: [P.T?]) -> P.T where P.T: AdditiveArithmetic {
-        let droppedNil = values.compactMap { $0 }
-        return droppedNil.reduce(P.T.zero, +)
-    }
-    
-    // Adds Progress Monitor as a child - a monitor can be added to multiple parents
-    public func addChild(_ monitor: ProgressMonitor, assignedCount portionOfParent: Int) {
-        // get the actual progress from within the monitor, then add as children
-        let actualReporter = monitor.reporter
-        
-        // Add monitor as child + Add self as parent
-        self.addToChildren(childReporter: actualReporter)
-        actualReporter.addParent(parentReporter: self, portionOfParent: portionOfParent)
     }
     
     deinit {
@@ -563,10 +592,10 @@ extension ProgressReporter: Hashable, Equatable {
     }
 }
 
-//@available(FoundationPreview 6.2, *)
-//extension ProgressReporter: CustomDebugStringConvertible {
-//    /// The description for `completedCount` and `totalCount`.
-//    public var debugDescription: String {
-//        return "\(completedCount) / \(totalCount ?? 0)"
-//    }
-//}
+@available(FoundationPreview 6.2, *)
+extension ProgressReporter: CustomDebugStringConvertible {
+    /// The description for `completedCount` and `totalCount`.
+    public var debugDescription: String {
+        return "\(completedCount) / \(totalCount ?? 0)"
+    }
+}
