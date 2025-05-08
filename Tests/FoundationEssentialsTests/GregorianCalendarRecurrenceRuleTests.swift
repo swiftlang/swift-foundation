@@ -803,4 +803,16 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         ]
         XCTAssertEqual(results, expectedResults)
     }
+    
+    func testDailyRecurrenceRuleWithNonzeroNanosecondComponent() {
+        let start = Date(timeIntervalSince1970: 1746627600.5) // 2025-05-07T07:20:00.500-07:00
+        let rule = Calendar.RecurrenceRule.daily(calendar: gregorian, end: .afterOccurrences(2))
+        let results = Array(rule.recurrences(of: start))
+        
+        let expectedResults: [Date] = [
+            start,
+            Date(timeIntervalSince1970: 1746714000.5), // 2025-05-08T07:20:00.500-07:00
+        ]
+        XCTAssertEqual(results, expectedResults)
+    }
 }
