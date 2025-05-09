@@ -82,12 +82,16 @@ extension _FileManagerImpl {
         if domain == .systemDomainMask {
             domain = ._partitionedSystemDomainMask
         }
-        let lastElement = domain == ._partitionedSystemDomainMask
-        #else
-        let lastElement = false
         #endif
+        
         let urls = Array(_SearchPathURLs(for: directory, in: domain, expandTilde: true))
-        guard let url = lastElement ? urls.last : urls.first else {
+        #if FOUNDATION_FRAMEWORK
+        let url = domain == ._partitionedSystemDomainMask ? urls.last : urls.first
+        #else
+        let url = urls.first
+        #endif
+        
+        guard let url else {
             throw CocoaError(.fileReadUnknown)
         }
         
