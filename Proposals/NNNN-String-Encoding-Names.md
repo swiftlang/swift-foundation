@@ -5,7 +5,7 @@
 * Review Manager: TBD
 * Status: **Awaiting review**
 <!-- * Bug: *if applicable* [apple/swift#NNNN](https://github.com/apple/swift-foundation/issues/NNNNN) -->
-* Implementation: [StringEncodingNameImpl/StringEncodingName.swift](https://github.com/YOCKOW/SF-StringEncodingNameImpl/blob/main/Sources/StringEncodingNameImpl/StringEncodingName.swift) *(Awaiting implementation on [swiftlang/swift-foundation](https://github.com/swiftlang/swift-foundation))*
+* Implementation: [swiftlang/swift-foundation#1286](https://github.com/swiftlang/swift-foundation/pull/1286)
 <!-- * Previous Proposal: *if applicable* [FOU-XXXX](XXXX-filename.md) -->
 <!-- * Previous Revision: *if applicable* [1](https://github.com/apple/swift-evolution/blob/...commit-ID.../proposals/NNNN-filename.md) -->
 * Review: ([Pitch](https://forums.swift.org/t/pitch-foundation-string-encoding-names/74623))
