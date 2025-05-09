@@ -248,26 +248,26 @@ let benchmarks = {
     ]
 
     var variables: [URL.Template.VariableName: URL.Template.Value] = [
-        "count": ["one", "two", "three"],
-        "dom": ["example", "com"],
-        "dub": "me/too",
-        "hello": "Hello World!",
-        "half": "50%",
-        "var": "value",
-        "who": "fred",
-        "base": "http://example.com/home/",
-        "path": "/foo/bar",
-        "list": ["red", "green", "blue"],
-        "keys": [
+        .init("count"): ["one", "two", "three"],
+        .init("dom"): ["example", "com"],
+        .init("dub"): "me/too",
+        .init("hello"): "Hello World!",
+        .init("half"): "50%",
+        .init("var"): "value",
+        .init("who"): "fred",
+        .init("base"): "http://example.com/home/",
+        .init("path"): "/foo/bar",
+        .init("list"): ["red", "green", "blue"],
+        .init("keys"): [
             "semi": ";",
             "dot": ".",
             "comma": ",",
         ],
-        "v": "6",
-        "x": "1024",
-        "y": "768",
-        "empty": "",
-        "empty_keys": [:],
+        .init("v"): "6",
+        .init("x"): "1024",
+        .init("y"): "768",
+        .init("empty"): "",
+        .init("empty_keys"): [:],
     ]
 
     Benchmark("URL-Template-expansion") { benchmark in
