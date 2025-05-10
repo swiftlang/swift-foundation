@@ -24,6 +24,10 @@ import WinSDK
 @preconcurrency import WASILibc
 #endif
 
+#if canImport(os)
+internal import os
+#endif
+
 /// `_SwiftURL` provides the new Swift implementation for `URL`, using the same parser
 /// and `URLParseInfo` as `URLComponents`, but with a few compatibility behaviors.
 ///
@@ -678,6 +682,9 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
     }
 
     internal func appending<S: StringProtocol>(path: S, directoryHint: URL.DirectoryHint, encodingSlashes: Bool, compatibility: Bool = false) -> URL? {
+        guard !path.isEmpty || !_parseInfo.path.isEmpty || _parseInfo.netLocationRange?.isEmpty == false else {
+            return nil
+        }
         #if os(Windows)
         var pathToAppend = path.replacing(._backslash, with: ._slash)
         #else
@@ -1176,12 +1183,14 @@ extension _SwiftURL {
             ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
         }
 
-        flags.insert(.hasPath)
-        if let pathRange = parseInfo.pathRange {
-            let nsRange = string._toRelativeNSRange(pathRange)
-            ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
-        } else {
-            ranges.append(CFRange(location: kCFNotFound, length: 0))
+        if !parseInfo.path.isEmpty || parseInfo.netLocationRange?.isEmpty == false {
+            flags.insert(.hasPath)
+            if let pathRange = parseInfo.pathRange {
+                let nsRange = string._toRelativeNSRange(pathRange)
+                ranges.append(CFRange(location: nsRange.location, length: nsRange.length))
+            } else {
+                ranges.append(CFRange(location: kCFNotFound, length: 0))
+            }
         }
 
         if let queryRange = parseInfo.queryRange {

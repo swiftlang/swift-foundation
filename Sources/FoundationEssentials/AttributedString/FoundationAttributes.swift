@@ -36,9 +36,6 @@ extension AttributeScopes {
         public let durationField: DurationFieldAttribute
 
         /// The base writing direction of a paragraph.
-        #if FOUNDATION_FRAMEWORK
-        @_spi(AttributedStringWritingDirection)
-        #endif
         @available(FoundationPreview 6.2, *)
         public let writingDirection: WritingDirectionAttribute
 
@@ -57,6 +54,8 @@ extension AttributeScopes {
         public let presentationIntent: PresentationIntentAttribute
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let markdownSourcePosition: MarkdownSourcePositionAttribute
+        @available(FoundationPreview 6.2, *)
+        public let listItemDelimiter: ListItemDelimiterAttribute
         
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let localizedStringArgumentAttributes: LocalizedStringArgumentAttributes
@@ -440,6 +439,44 @@ extension AttributeScopes.FoundationAttributes {
         public typealias Value = AttributedString.MarkdownSourcePosition
     }
     
+    @frozen
+    @available(FoundationPreview 6.2, *)
+    public enum ListItemDelimiterAttribute : CodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
+        public typealias Value = Character
+        public typealias ObjectiveCValue = NSString
+        
+        public static let name = NSAttributedString.Key.listItemDelimiter.rawValue
+        
+        public static func objectiveCValue(for value: Character) throws -> NSString {
+            String(value) as NSString
+        }
+        
+        public static func value(for object: NSString) throws -> Character {
+            let stringValue = object as String
+            guard stringValue.count == 1 else {
+                throw CocoaError(.coderInvalidValue)
+            }
+            return stringValue[stringValue.startIndex]
+        }
+        
+        public static func encode(_ value: Character, to encoder: any Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(String(value))
+        }
+        
+        public static func decode(from decoder: any Decoder) throws -> Character {
+            let container = try decoder.singleValueContainer()
+            let text = try container.decode(String.self)
+            guard text.count == 1 else {
+                throw DecodingError.dataCorrupted(DecodingError.Context(
+                    codingPath: container.codingPath,
+                    debugDescription: "List item delimeter encoded value must contain only one character / grapheme cluster"
+                ))
+            }
+            return text[text.startIndex]
+        }
+    }
+    
 #endif // FOUNDATION_FRAMEWORK
     
     @frozen
@@ -516,9 +553,6 @@ extension AttributeScopes.FoundationAttributes {
     }
 
     /// The attribute key for the base writing direction of a paragraph.
-    #if FOUNDATION_FRAMEWORK
-    @_spi(AttributedStringWritingDirection)
-    #endif
     @available(FoundationPreview 6.2, *)
     @frozen
     public enum WritingDirectionAttribute: CodableAttributedStringKey {
@@ -893,9 +927,6 @@ extension AttributedString {
     /// direction. In vertical scripts, a writing direction of ``leftToRight``
     /// is interpreted as top-to-bottom and a writing direction of
     /// ``rightToLeft`` is interpreted as bottom-to-top.
-    #if FOUNDATION_FRAMEWORK
-    @_spi(AttributedStringWritingDirection)
-    #endif
     @available(FoundationPreview 6.2, *)
     @frozen
     public enum WritingDirection: Codable, Hashable, CaseIterable, Sendable {

@@ -16,6 +16,10 @@ internal import _FoundationICU
 internal import os
 #endif
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 enum ICU { }
 
 internal struct ICUError: Error, CustomDebugStringConvertible {

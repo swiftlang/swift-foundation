@@ -12,6 +12,9 @@
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
+#if FOUNDATION_FRAMEWORK
+internal import Foundation_Private
+#endif
 
 internal import _FoundationICU
 

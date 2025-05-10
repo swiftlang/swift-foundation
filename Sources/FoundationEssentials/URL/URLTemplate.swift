@@ -131,6 +131,7 @@ extension URL {
 
 // MARK: - Parse
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template {
     /// Creates a new template from its text form.
     ///
@@ -167,6 +168,7 @@ extension URL.Template {
 
 // MARK: -
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template: CustomStringConvertible {
     public var description: String {
         elements.reduce(into: "") {
@@ -175,6 +177,7 @@ extension URL.Template: CustomStringConvertible {
     }
 }
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template.Element: CustomStringConvertible {
     var description: String {
         switch self {

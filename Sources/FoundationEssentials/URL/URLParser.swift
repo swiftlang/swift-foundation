@@ -12,6 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
+internal import Foundation_Private
 #endif
 
 // Source of truth for a parsed URL
