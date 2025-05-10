@@ -20,11 +20,10 @@ import struct Foundation.URL
 #endif
 import Testing
 
-#if FOUNDATION_FRAMEWORK
 @Suite("URL.Template Expression")
 private enum ExpressionTests {
-    private typealias Expression = URL.Template.Expression
-    private typealias Element = URL.Template.Expression.Element
+    typealias Expression = URL.Template.Expression
+    typealias Element = URL.Template.Expression.Element
 
     @Test
     static func parsingWithSingleName() throws {
@@ -277,4 +276,3 @@ private enum ExpressionTests {
         #expect((try? Expression(input)) == nil, "Should fail to parse, but not crash.")
     }
 }
-#endif

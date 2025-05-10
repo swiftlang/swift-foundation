@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-internal import RegexBuilder
-#endif
-
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
 #elseif canImport(OrderedCollections)
@@ -82,7 +78,6 @@ extension URL.Template.Expression.Element: CustomStringConvertible {
     }
 }
 
-#if FOUNDATION_FRAMEWORK
 extension URL.Template.Expression {
     init(_ input: String) throws {
         var remainder = input[...]
@@ -108,7 +103,7 @@ extension URL.Template.Expression {
             let explode: Bool
             if let max = match.output.3 {
                 guard
-                    let m = max.map({ Int($0) })
+                    let m = Int(max)
                 else { throw URL.Template.InvalidExpression(text: "Invalid maximum length '\(input[match.range])'") }
                 maximumLength = m
                 explode = false
@@ -152,61 +147,26 @@ extension URL.Template {
 
         let operatorRegex: Regex<(Substring, Substring?)>
         let separatorRegex: Regex<(Substring)>
-        let elementRegex: Regex<(Substring, Substring, Substring?, Substring??)>
-        let uriTemplateRegex: Regex<Regex<(Substring, Regex<OneOrMore<Substring>.RegexOutput>.RegexOutput)>.RegexOutput>
+        let elementRegex: Regex<(Substring, Substring, Substring?, Substring?)>
+        let uriTemplateRegex: Regex<(Substring, Substring)>
 
         private init() {
-            self.operatorRegex = Regex {
-                Optionally {
-                    Capture {
-                        One(.anyOf("+#./;?&"))
-                    }
-                }
-            }
+            self.operatorRegex = try! Regex(#"([\+#.\/;\?&])?"#)
             .asciiOnlyWordCharacters()
             .asciiOnlyDigits()
             .asciiOnlyCharacterClasses()
-            self.separatorRegex = Regex {
-                ","
-            }
+            self.separatorRegex = try! Regex(#","#)
             .asciiOnlyWordCharacters()
             .asciiOnlyDigits()
             .asciiOnlyCharacterClasses()
-            self.elementRegex = Regex {
-                Capture {
-                    One(("a"..."z").union("A"..."Z"))
-                    ZeroOrMore(("a"..."z").union("A"..."Z").union("0"..."9").union(.anyOf("_")))
-                }
-                Optionally {
-                    Capture {
-                        ChoiceOf {
-                            Regex {
-                                ":"
-                                Capture {
-                                    ZeroOrMore(.digit)
-                                }
-                            }
-                            "*"
-                        }
-                    }
-                }
-            }
+            self.elementRegex = try! Regex(#"([a-zA-Z][a-zA-Z0-9_]*)(:([0-9]*)|\*)?"#)
             .asciiOnlyWordCharacters()
             .asciiOnlyDigits()
             .asciiOnlyCharacterClasses()
-            self.uriTemplateRegex = Regex {
-                "{"
-                Capture {
-                    OneOrMore {
-                        CharacterClass.any.subtracting(.anyOf("}"))
-                    }
-                }
-                "}"
-            }
+            self.uriTemplateRegex = try! Regex(#"{([^}]+)}"#)
         }
     }
 }
-#endif
 
 // .------------------------------------------------------------------.
 // |          NUL     +      .       /       ;      ?      &      #   |
