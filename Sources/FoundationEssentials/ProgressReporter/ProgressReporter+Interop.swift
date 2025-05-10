@@ -48,6 +48,21 @@ extension Progress {
         actualProgress.interopWithProgressParent = true
         return actualProgress
     }
+    
+//    public func addChild(_ monitor: ProgressReporter.ProgressMonitor, withPendingUnitCount count: Int) {
+//
+//        // Make ghost parent & add it to actual parent's children list
+//        let ghostProgressParent = Progress(totalUnitCount: Int64(monitor.reporter.totalCount ?? 0))
+//        ghostProgressParent.completedUnitCount = Int64(monitor.reporter.completedCount)
+//        print("ghost progress parent \(ghostProgressParent)")
+//        self.addChild(ghostProgressParent, withPendingUnitCount: Int64(count))
+//        
+//        // Make observation instance
+//        let observation = _ProgressParentProgressReporterChild(ghostParent: ghostProgressParent, ghostChild: monitor.reporter)
+//        
+//        monitor.reporter.setInteropObservationForMonitor(observation: observation)
+//        monitor.reporter.setMonitorInterop(to: true)
+//    }
 }
 
 private final class _ProgressParentProgressReporterChild: Sendable {
@@ -67,9 +82,11 @@ private final class _ProgressParentProgressReporterChild: Sendable {
             
             switch observerState {
             case .totalCountUpdated:
+//                print("received totalCountUpdated")
                 self.ghostParent.totalUnitCount = Int64(self.ghostChild.totalCount ?? 0)
                 
             case .fractionUpdated:
+//                print("received fractionUpdated")
                 let count = self.ghostChild.withProperties { p in
                     return (p.completedCount, p.totalCount)
                 }

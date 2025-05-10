@@ -47,25 +47,6 @@ class TestProgressReporter: XCTestCase {
         }
     }
     
-    func doFileOperation(reportTo progress: consuming Subprogress) async {
-        let reporter = progress.reporter(totalCount: 100)
-        reporter.withProperties { properties in
-            properties.totalFileCount = 100
-        }
-        
-        XCTAssertEqual(reporter.withProperties(\.totalFileCount), 100)
-        
-        reporter.complete(count: 100)
-        XCTAssertEqual(reporter.fractionCompleted, 1.0)
-        XCTAssertTrue(reporter.isFinished)
-        
-        reporter.withProperties { properties in
-            properties.completedFileCount = 100
-        }
-        XCTAssertEqual(reporter.withProperties(\.completedFileCount), 100)
-        XCTAssertEqual(reporter.withProperties(\.totalFileCount), 100)
-    }
-    
     /// MARK: Tests calculations based on change in totalCount
     func testTotalCountNil() async throws {
         let overall = ProgressReporter(totalCount: nil)
@@ -163,14 +144,6 @@ class TestProgressReporter: XCTestCase {
         XCTAssertTrue(reporter.isFinished)
     }
     
-    func testDiscreteReporterWithFileProperties() async throws {
-        let fileReporter = ProgressReporter(totalCount: 3)
-        await doFileOperation(reportTo: fileReporter.subprogress(assigningCount: 3))
-        XCTAssertEqual(fileReporter.fractionCompleted, 1.0)
-        XCTAssertEqual(fileReporter.completedCount, 3)
-        XCTAssertTrue(fileReporter.isFinished)
-    }
-    
     /// MARK: Tests multiple-level trees
     func testEmptyDiscreteReporter() async throws {
         let reporter = ProgressReporter(totalCount: nil)
@@ -186,80 +159,6 @@ class TestProgressReporter: XCTestCase {
         XCTAssertEqual(reporter.fractionCompleted, 1.0)
         XCTAssertEqual(reporter.completedCount, 10)
         XCTAssertTrue(reporter.isFinished)
-    }
-    
-    func testTwoLevelTreeWithOneChildWithFileProperties() async throws {
-        let overall = ProgressReporter(totalCount: 2)
-        
-        let progress1 = overall.subprogress(assigningCount: 1)
-        let reporter1 = progress1.reporter(totalCount: 10)
-        reporter1.withProperties { properties in
-            properties.totalFileCount = 10
-            properties.completedFileCount = 0
-        }
-        reporter1.complete(count: 10)
-        
-        XCTAssertEqual(overall.fractionCompleted, 0.5)
-        // This should call reduce and get 10
-        XCTAssertEqual(overall.withProperties(\.totalFileCount), 10)
-    }
-    
-    func testTwoLevelTreeWithTwoChildrenWithFileProperties() async throws {
-        let overall = ProgressReporter(totalCount: 2)
-        
-        let progress1 = overall.subprogress(assigningCount: 1)
-        let reporter1 = progress1.reporter(totalCount: 10)
-        
-        reporter1.withProperties { properties in
-            properties.totalFileCount = 11
-            properties.completedFileCount = 0
-        }
-        
-        let progress2 = overall.subprogress(assigningCount: 1)
-        let reporter2 = progress2.reporter(totalCount: 10)
-        
-        reporter2.withProperties { properties in
-            properties.totalFileCount = 9
-            properties.completedFileCount = 0
-        }
-        
-        XCTAssertEqual(overall.fractionCompleted, 0.0)
-        XCTAssertEqual(overall.withProperties(\.totalFileCount), 20)
-        
-        // Update FileCounts
-        reporter1.withProperties { properties in
-            properties.completedFileCount = 1
-        }
-        
-        reporter2.withProperties { properties in
-            properties.completedFileCount = 1
-        }
-        
-        XCTAssertEqual(overall.withProperties(\.completedFileCount), 2)
-    }
-    
-    func testThreeLevelTreeWithFileProperties() async throws {
-        let overall = ProgressReporter(totalCount: 1)
-        
-        let progress1 = overall.subprogress(assigningCount: 1)
-        let reporter1 = progress1.reporter(totalCount: 5)
-        
-        let childProgress1 = reporter1.subprogress(assigningCount: 3)
-        let childReporter1 = childProgress1.reporter(totalCount: nil)
-        childReporter1.withProperties { properties in
-            properties.totalFileCount += 10
-        }
-        
-        let childProgress2 = reporter1.subprogress(assigningCount: 2)
-        let childReporter2 = childProgress2.reporter(totalCount: nil)
-        childReporter2.withProperties { properties in
-            properties.totalFileCount += 10
-        }
-        
-        XCTAssertEqual(reporter1.withProperties(\.totalFileCount), 20)
-        
-        // Tests that totalFileCount propagates to root level
-        XCTAssertEqual(overall.withProperties(\.totalFileCount), 20)
     }
     
     func testTwoLevelTreeWithTwoChildren() async throws {
@@ -293,7 +192,7 @@ class TestProgressReporter: XCTestCase {
  
         XCTAssertEqual(overall.fractionCompleted, 0.5)
         // Parent is expected to get totalFileCount from one of the children with a totalFileCount
-        XCTAssertEqual(overall.withProperties(\.totalFileCount), 10)
+        XCTAssertEqual(overall.withProperties(\.totalFileCount), 0)
     }
     
     func testTwoLevelTreeWithMultipleChildren() async throws {
@@ -363,6 +262,151 @@ class TestProgressReporter: XCTestCase {
         XCTAssertTrue(grandchildReporter1.isFinished)
         XCTAssertTrue(reporter1.isFinished)
         XCTAssertTrue(overall.isFinished)
+    }
+}
+
+/// Unit tests for propagation of type-safe metadata in ProgressReporter tree.
+class TestProgressReporterAdditionalProperties: XCTestCase {
+    func doFileOperation(reportTo progress: consuming Subprogress) async {
+        let reporter = progress.reporter(totalCount: 100)
+        reporter.withProperties { properties in
+            properties.totalFileCount = 100
+        }
+        
+        XCTAssertEqual(reporter.withProperties(\.totalFileCount), 100)
+        
+        reporter.complete(count: 100)
+        XCTAssertEqual(reporter.fractionCompleted, 1.0)
+        XCTAssertTrue(reporter.isFinished)
+        
+        reporter.withProperties { properties in
+            properties.completedFileCount = 100
+        }
+        XCTAssertEqual(reporter.withProperties(\.completedFileCount), 100)
+        XCTAssertEqual(reporter.withProperties(\.totalFileCount), 100)
+    }
+    
+    func testDiscreteReporterWithFileProperties() async throws {
+        let fileReporter = ProgressReporter(totalCount: 3)
+        await doFileOperation(reportTo: fileReporter.subprogress(assigningCount: 3))
+        XCTAssertEqual(fileReporter.fractionCompleted, 1.0)
+        XCTAssertEqual(fileReporter.completedCount, 3)
+        XCTAssertTrue(fileReporter.isFinished)
+        XCTAssertEqual(fileReporter.withProperties(\.totalFileCount), 0)
+        XCTAssertEqual(fileReporter.withProperties(\.completedFileCount), 0)
+
+        let totalFileValues = fileReporter.values(property: ProgressReporter.Properties.TotalFileCount.self)
+        XCTAssertEqual(totalFileValues, [0, 100])
+        
+        let reducedTotalFileValue = fileReporter.total(property: ProgressReporter.Properties.TotalFileCount.self, values: totalFileValues)
+        XCTAssertEqual(reducedTotalFileValue, 100)
+        
+        let completedFileValues = fileReporter.values(property: ProgressReporter.Properties.CompletedFileCount.self)
+        XCTAssertEqual(completedFileValues, [0, 100])
+        
+        let reducedCompletedFileValue = fileReporter.total(property: ProgressReporter.Properties.CompletedFileCount.self, values: completedFileValues)
+        XCTAssertEqual(reducedCompletedFileValue, 100)
+    }
+    
+    func testTwoLevelTreeWithOneChildWithFileProperties() async throws {
+        let overall = ProgressReporter(totalCount: 2)
+        
+        let progress1 = overall.subprogress(assigningCount: 1)
+        let reporter1 = progress1.reporter(totalCount: 10)
+        reporter1.withProperties { properties in
+            properties.totalFileCount = 10
+            properties.completedFileCount = 0
+        }
+        reporter1.complete(count: 10)
+        
+        XCTAssertEqual(overall.fractionCompleted, 0.5)
+        
+        XCTAssertEqual(overall.withProperties(\.totalFileCount), 0)
+        XCTAssertEqual(reporter1.withProperties(\.totalFileCount), 10)
+        XCTAssertEqual(reporter1.withProperties(\.completedFileCount), 0)
+        
+        let totalFileValues = overall.values(property: ProgressReporter.Properties.TotalFileCount.self)
+        XCTAssertEqual(totalFileValues, [0, 10])
+        
+        let completedFileValues = overall.values(property: ProgressReporter.Properties.CompletedFileCount.self)
+        XCTAssertEqual(completedFileValues, [0, 0])
+    }
+    
+    func testTwoLevelTreeWithTwoChildrenWithFileProperties() async throws {
+        let overall = ProgressReporter(totalCount: 2)
+        
+        let progress1 = overall.subprogress(assigningCount: 1)
+        let reporter1 = progress1.reporter(totalCount: 10)
+        
+        reporter1.withProperties { properties in
+            properties.totalFileCount = 11
+            properties.completedFileCount = 0
+        }
+        
+        let progress2 = overall.subprogress(assigningCount: 1)
+        let reporter2 = progress2.reporter(totalCount: 10)
+        
+        reporter2.withProperties { properties in
+            properties.totalFileCount = 9
+            properties.completedFileCount = 0
+        }
+        
+        XCTAssertEqual(overall.fractionCompleted, 0.0)
+        XCTAssertEqual(overall.withProperties(\.totalFileCount), 0)
+        XCTAssertEqual(overall.withProperties(\.completedFileCount), 0)
+        let totalFileValues = overall.values(property: ProgressReporter.Properties.TotalFileCount.self)
+        XCTAssertEqual(totalFileValues, [0, 11, 9])
+        let completedFileValues = overall.values(property: ProgressReporter.Properties.CompletedFileCount.self)
+        XCTAssertEqual(completedFileValues, [0, 0, 0])
+        
+        // Update FileCounts
+        reporter1.withProperties { properties in
+            properties.completedFileCount = 1
+        }
+        
+        reporter2.withProperties { properties in
+            properties.completedFileCount = 1
+        }
+        
+        XCTAssertEqual(overall.withProperties(\.completedFileCount), 0)
+        let updatedCompletedFileValues = overall.values(property: ProgressReporter.Properties.CompletedFileCount.self)
+        XCTAssertEqual(updatedCompletedFileValues, [0, 1, 1])
+    }
+    
+    func testThreeLevelTreeWithFileProperties() async throws {
+        let overall = ProgressReporter(totalCount: 1)
+        
+        let progress1 = overall.subprogress(assigningCount: 1)
+        let reporter1 = progress1.reporter(totalCount: 5)
+        
+        
+        let childProgress1 = reporter1.subprogress(assigningCount: 3)
+        let childReporter1 = childProgress1.reporter(totalCount: nil)
+        childReporter1.withProperties { properties in
+            properties.totalFileCount += 10
+        }
+        XCTAssertEqual(childReporter1.withProperties(\.totalFileCount), 10)
+        
+        let preTotalFileValues = overall.values(property: ProgressReporter.Properties.TotalFileCount.self)
+        XCTAssertEqual(preTotalFileValues, [0, 0, 10])
+        
+        let childProgress2 = reporter1.subprogress(assigningCount: 2)
+        let childReporter2 = childProgress2.reporter(totalCount: nil)
+        childReporter2.withProperties { properties in
+            properties.totalFileCount += 10
+        }
+        XCTAssertEqual(childReporter2.withProperties(\.totalFileCount), 10)
+
+        // Tests that totalFileCount propagates to root level
+        XCTAssertEqual(overall.withProperties(\.totalFileCount), 0)
+        let totalFileValues = overall.values(property: ProgressReporter.Properties.TotalFileCount.self)
+        XCTAssertEqual(totalFileValues, [0, 0, 10, 10])
+        
+        reporter1.withProperties { properties in
+            properties.totalFileCount += 999
+        }
+        let totalUpdatedFileValues = overall.values(property: ProgressReporter.Properties.TotalFileCount.self)
+        XCTAssertEqual(totalUpdatedFileValues, [0, 999, 10, 10])
     }
 }
 
