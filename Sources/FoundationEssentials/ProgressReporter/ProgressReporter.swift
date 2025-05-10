@@ -64,6 +64,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Interop properties - Just kept alive
     internal let interopObservation: (any Sendable)? // set at init
+//    internal let interopObservationForMonitor: LockedState<(any Sendable)?> = LockedState(initialState: nil)
+//    internal let monitorInterop: LockedState<Bool> = LockedState(initialState: false)
+    
     #if FOUNDATION_FRAMEWORK
     internal let parentBridge: LockedState<Foundation.Progress?> = LockedState(initialState: nil) // dummy, set upon calling setParentBridge
     #endif
@@ -157,6 +160,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 //TODO: rdar://149015734 Check throttling
                 reporter.updateFractionCompleted(from: previous, to: state.fractionState.overallFraction)
                 reporter.ghostReporter?.notifyObservers(with: .totalCountUpdated)
+//                reporter.monitorInterop.withLock { [reporter] interop in
+//                    if interop == true {
+//                        reporter.notifyObservers(with: .totalCountUpdated)
+//                    }
+//                }
             }
         }
         
@@ -172,6 +180,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.fractionState.selfFraction.completed = newValue
                 reporter.updateFractionCompleted(from: prev, to: state.fractionState.overallFraction)
                 reporter.ghostReporter?.notifyObservers(with: .fractionUpdated)
+                
+//                reporter.monitorInterop.withLock { [reporter] interop in
+//                    if interop == true {
+//                        reporter.notifyObservers(with: .fractionUpdated)
+//                    }
+//                }
             }
         }
         
@@ -186,18 +200,21 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
                 
                 // Generate an array of myself + children values of the property
-                let childrenValues: OrderedDictionary<ProgressReporter, [any Sendable]>? = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)]
                 let flattenedChildrenValues: [P.T?] = {
-                    guard let values = childrenValues else { return [] }
-                    // Use compactMap to flatten the array but preserve nil values
-                    return values.compactMap {
-                        // Each inner array element is preserved, including nil values
-                        $0.value as? P.T
+                    let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)]
+                    var childrenValues: [P.T?] = []
+                    if let dictionary = childrenDictionary {
+                        for (_, value) in dictionary {
+                            if let value = value as? [P.T?] {
+                                childrenValues.append(contentsOf: value)
+                            }
+                        }
                     }
+                    return childrenValues
                 }()
-                let updateValueForParent: [P.T?] = [newValue] + flattenedChildrenValues
                 
                 // Send the array of myself + children values of property to parents
+                let updateValueForParent: [P.T?] = [newValue] + flattenedChildrenValues
                 reporter.parents.withLock { [reporter] parents in
                     for (parent, _) in parents {
                         parent.updateChildrenOtherProperties(property: P.self, child: reporter, value: updateValueForParent)
@@ -259,6 +276,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             updateFractionCompleted(from: previous, to: state.fractionState.overallFraction)
             
             ghostReporter?.notifyObservers(with: .totalCountUpdated)
+            
+//            monitorInterop.withLock { [self] interop in
+//                if interop == true {
+//                    print("notifying observers")
+//                    notifyObservers(with: .totalCountUpdated)
+//                }
+//            }
         }
     }
     
@@ -292,6 +316,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         let updateState = updateCompletedCount(count: count)
         updateFractionCompleted(from: updateState.previous, to: updateState.current)
         ghostReporter?.notifyObservers(with: .fractionUpdated)
+        
+//        monitorInterop.withLock { [self] interop in
+//            if interop == true {
+//                print("notifying observers")
+//                notifyObservers(with: .fractionUpdated)
+//            }
+//        }
     }
     
     
@@ -301,7 +332,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public func values<P: Property>(property metatype: P.Type) -> [P.T?] {
         return state.withLock { state in
             let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
-            return [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T ?? P.defaultValue] + childrenValues
+            return [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T ?? P.defaultValue] + childrenValues.map { $0 ?? P.defaultValue }
         }
     }
     
@@ -459,6 +490,18 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
+//    internal func setInteropObservationForMonitor(observation monitorObservation: (any Sendable)) {
+//        interopObservationForMonitor.withLock { observation in
+//            observation = monitorObservation
+//        }
+//    }
+//    
+//    internal func setMonitorInterop(to value: Bool) {
+//        monitorInterop.withLock { monitorInterop in
+//            monitorInterop = value
+//        }
+//    }
+    
     //MARK: Internal methods to mutate locked context
 #if FOUNDATION_FRAMEWORK
     internal func setParentBridge(parentBridge: Foundation.Progress) {
@@ -486,9 +529,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         
         let updates = state.withLock { state in
-            let original = _ProgressFraction(completed: 0, total: 0)
-            let updated = state.fractionState.overallFraction
-            
             // Update metatype entry in parent
             for (metatype, value) in state.otherProperties {
                 let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
@@ -496,6 +536,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 parentReporter.updateChildrenOtherPropertiesAnyValue(property: metatype, child: self, value: updatedParentEntry)
             }
             
+            let original = _ProgressFraction(completed: 0, total: 0)
+            let updated = state.fractionState.overallFraction
             return (original, updated)
         }
         
@@ -509,7 +551,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         var childrenValues: [P.T?] = []
         if let dictionary = childrenDictionary {
             for (_, value) in dictionary {
-                if let value = value as? [P.T] {
+                if let value = value as? [P.T?] {
                     childrenValues.append(contentsOf: value)
                 }
             }
