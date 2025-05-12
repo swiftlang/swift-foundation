@@ -15,8 +15,8 @@ internal import _ForSwiftFoundation
 
 #if canImport(Darwin)
 import Darwin
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
+#elseif canImport(Android)
+@preconcurrency import Android
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
 #elseif canImport(Musl)

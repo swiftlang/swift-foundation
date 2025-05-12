@@ -17,13 +17,6 @@
 @testable import Foundation
 #endif
 import Testing
-#if FOUNDATION_FRAMEWORK
-@_spi(Unstable) internal import CollectionsInternal
-#elseif canImport(_RopeModule)
-internal import _RopeModule
-#elseif canImport(_FoundationCollections)
-internal import _FoundationCollections
-#endif
 
 extension String {
     fileprivate func encoded(

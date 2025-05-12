@@ -19,12 +19,11 @@ import struct FoundationEssentials.URL
 import struct Foundation.URL
 #endif
 import Testing
-#if FOUNDATION_FRAMEWORK
-@_spi(Unstable) internal import CollectionsInternal
-#elseif canImport(_RopeModule)
-internal import _RopeModule
-#elseif canImport(_FoundationCollections)
-internal import _FoundationCollections
+
+#if canImport(CollectionsInternal)
+internal import CollectionsInternal
+#elseif canImport(OrderedCollections)
+internal import OrderedCollections
 #endif
 
 @Suite("URL.Template Value")

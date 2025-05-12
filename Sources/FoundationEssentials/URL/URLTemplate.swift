@@ -131,6 +131,7 @@ extension URL {
 
 // MARK: - Parse
 #if FOUNDATION_FRAMEWORK
+@available(FoundationPreview 6.2, *)
 extension URL.Template {
     /// Creates a new template from its text form.
     ///
@@ -168,6 +169,7 @@ extension URL.Template {
 
 // MARK: -
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template: CustomStringConvertible {
     public var description: String {
         elements.reduce(into: "") {

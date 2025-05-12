@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template {
     /// The name of a variable used for expanding a template.
     public struct VariableName: Sendable, Hashable {
@@ -34,6 +35,7 @@ extension String {
     }
 }
 
+@available(FoundationPreview 6.2, *)
 extension URL.Template.VariableName: CustomStringConvertible {
     public var description: String {
         String(self)

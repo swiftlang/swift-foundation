@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
+internal import Foundation_Private
+#endif
+
 extension Locale {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
