@@ -49,7 +49,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Stores all the state of properties
     internal struct State {
-//        var positionInParent: Int?
         var fractionState: FractionState
         var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
         // Type: Metatype maps to dictionary of child to value
@@ -64,8 +63,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Interop properties - Just kept alive
     internal let interopObservation: (any Sendable)? // set at init
-//    internal let interopObservationForMonitor: LockedState<(any Sendable)?> = LockedState(initialState: nil)
-//    internal let monitorInterop: LockedState<Bool> = LockedState(initialState: false)
+    internal let interopObservationForMonitor: LockedState<(any Sendable)?> = LockedState(initialState: nil)
+    internal let monitorInterop: LockedState<Bool> = LockedState(initialState: false)
     
     #if FOUNDATION_FRAMEWORK
     internal let parentBridge: LockedState<Foundation.Progress?> = LockedState(initialState: nil) // dummy, set upon calling setParentBridge
@@ -160,11 +159,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 //TODO: rdar://149015734 Check throttling
                 reporter.updateFractionCompleted(from: previous, to: state.fractionState.overallFraction)
                 reporter.ghostReporter?.notifyObservers(with: .totalCountUpdated)
-//                reporter.monitorInterop.withLock { [reporter] interop in
-//                    if interop == true {
-//                        reporter.notifyObservers(with: .totalCountUpdated)
-//                    }
-//                }
+                reporter.monitorInterop.withLock { [reporter] interop in
+                    if interop == true {
+                        reporter.notifyObservers(with: .totalCountUpdated)
+                    }
+                }
             }
         }
         
@@ -181,11 +180,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 reporter.updateFractionCompleted(from: prev, to: state.fractionState.overallFraction)
                 reporter.ghostReporter?.notifyObservers(with: .fractionUpdated)
                 
-//                reporter.monitorInterop.withLock { [reporter] interop in
-//                    if interop == true {
-//                        reporter.notifyObservers(with: .fractionUpdated)
-//                    }
-//                }
+                reporter.monitorInterop.withLock { [reporter] interop in
+                    if interop == true {
+                        reporter.notifyObservers(with: .fractionUpdated)
+                    }
+                }
             }
         }
         
@@ -277,12 +276,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             
             ghostReporter?.notifyObservers(with: .totalCountUpdated)
             
-//            monitorInterop.withLock { [self] interop in
-//                if interop == true {
-//                    print("notifying observers")
-//                    notifyObservers(with: .totalCountUpdated)
-//                }
-//            }
+            monitorInterop.withLock { [self] interop in
+                if interop == true {
+                    notifyObservers(with: .totalCountUpdated)
+                }
+            }
         }
     }
     
@@ -317,12 +315,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         updateFractionCompleted(from: updateState.previous, to: updateState.current)
         ghostReporter?.notifyObservers(with: .fractionUpdated)
         
-//        monitorInterop.withLock { [self] interop in
-//            if interop == true {
-//                print("notifying observers")
-//                notifyObservers(with: .fractionUpdated)
-//            }
-//        }
+        monitorInterop.withLock { [self] interop in
+            if interop == true {
+                notifyObservers(with: .fractionUpdated)
+            }
+        }
     }
     
     
@@ -490,17 +487,17 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-//    internal func setInteropObservationForMonitor(observation monitorObservation: (any Sendable)) {
-//        interopObservationForMonitor.withLock { observation in
-//            observation = monitorObservation
-//        }
-//    }
-//    
-//    internal func setMonitorInterop(to value: Bool) {
-//        monitorInterop.withLock { monitorInterop in
-//            monitorInterop = value
-//        }
-//    }
+    internal func setInteropObservationForMonitor(observation monitorObservation: (any Sendable)) {
+        interopObservationForMonitor.withLock { observation in
+            observation = monitorObservation
+        }
+    }
+
+    internal func setMonitorInterop(to value: Bool) {
+        monitorInterop.withLock { monitorInterop in
+            monitorInterop = value
+        }
+    }
     
     //MARK: Internal methods to mutate locked context
 #if FOUNDATION_FRAMEWORK
