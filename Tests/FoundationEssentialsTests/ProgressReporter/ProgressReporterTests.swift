@@ -455,6 +455,63 @@ class TestProgressReporterInterop: XCTestCase {
         XCTAssertEqual(overall.completedUnitCount, 10)
     }
     
+    func testInteropProgressParentProgressMonitorChildWithEmptyProgress() async throws {
+        // Initialize a Progress parent
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        
+        // Add Progress as Child
+        let expectation1 = XCTestExpectation(description: "Set completed unit count to 1")
+        let expectation2 = XCTestExpectation(description: "Set completed unit count to 2")
+        let p1 = await doSomethingWithProgress(expectation1: expectation1, expectation2: expectation2)
+        overall.addChild(p1, withPendingUnitCount: 5)
+        
+        await fulfillment(of: [expectation1, expectation2], timeout: 10.0)
+
+        // Check if ProgressReporter values propagate to Progress parent
+        XCTAssertEqual(overall.fractionCompleted, 0.5)
+        XCTAssertEqual(overall.completedUnitCount, 5)
+        
+        // Add ProgressMonitor as Child
+        let p2 = ProgressReporter(totalCount: 10)
+        let p2Monitor = p2.monitor
+        overall.addChild(p2Monitor, withPendingUnitCount: 5)
+        
+        p2.complete(count: 10)
+        
+        // Check if Progress values propagate to Progress parent
+        XCTAssertEqual(overall.fractionCompleted, 1.0)
+        XCTAssertEqual(overall.completedUnitCount, 10)
+    }
+    
+    func testInteropProgressParentProgressMonitorChildWithExistingProgress() async throws {
+        // Initialize a Progress parent
+        let overall = Progress.discreteProgress(totalUnitCount: 10)
+        
+        // Add Progress as Child
+        let expectation1 = XCTestExpectation(description: "Set completed unit count to 1")
+        let expectation2 = XCTestExpectation(description: "Set completed unit count to 2")
+        let p1 = await doSomethingWithProgress(expectation1: expectation1, expectation2: expectation2)
+        overall.addChild(p1, withPendingUnitCount: 5)
+        
+        await fulfillment(of: [expectation1, expectation2], timeout: 10.0)
+
+        // Check if ProgressReporter values propagate to Progress parent
+        XCTAssertEqual(overall.fractionCompleted, 0.5)
+        XCTAssertEqual(overall.completedUnitCount, 5)
+        
+        // Add ProgressMonitor with CompletedCount 3 as Child
+        let p2 = ProgressReporter(totalCount: 10)
+        p2.complete(count: 3)
+        let p2Monitor = p2.monitor
+        overall.addChild(p2Monitor, withPendingUnitCount: 5)
+        
+        p2.complete(count: 7)
+        
+        // Check if Progress values propagate to Progress parent
+        XCTAssertEqual(overall.fractionCompleted, 1.0)
+        XCTAssertEqual(overall.completedUnitCount, 10)
+    }
+    
     func testInteropProgressReporterParentProgressChild() async throws {
         // Initialize ProgressReporter parent
         let overallReporter = ProgressReporter(totalCount: 10)
@@ -477,6 +534,7 @@ class TestProgressReporterInterop: XCTestCase {
         // Check if Progress values propagate to ProgressRerpoter parent
         XCTAssertEqual(overallReporter.completedCount, 10)
         XCTAssertEqual(overallReporter.totalCount, 10)
+        //TODO: Somehow this sometimes gets updated to 1.25 instead of just 1.0
         XCTAssertEqual(overallReporter.fractionCompleted, 1.0)
     }
     
