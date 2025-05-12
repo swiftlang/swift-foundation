@@ -525,7 +525,7 @@ extension Locale.Language {
     public var minimalIdentifier : String {
         let componentsIdentifier = components.identifier
 
-        if componentsIdentifier == "" {
+        guard !componentsIdentifier.isEmpty else {
             // Just return "". Nothing to reduce.
             return componentsIdentifier
         }
@@ -548,7 +548,7 @@ extension Locale.Language {
     /// Returns a BCP-47 identifier that always includes the script: "zh-Hant-TW", "en-Latn-US"
     public var maximalIdentifier : String {
         let id = components.identifier
-        if id == "" {
+        guard !id.isEmpty else {
             // Just return "" instead of trying to fill it up
             return id
         }
