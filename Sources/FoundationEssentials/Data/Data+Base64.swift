@@ -36,18 +36,10 @@ extension Data {
     /// - parameter base64String: The string to parse.
     /// - parameter options: Encoding options. Default value is `[]`.
     public init?(base64Encoded base64String: __shared String, options: Base64DecodingOptions = []) {
-#if FOUNDATION_FRAMEWORK
-        if let d = NSData(base64Encoded: base64String, options: NSData.Base64DecodingOptions(rawValue: options.rawValue)) {
-            self.init(referencing: d)
-        } else {
-            return nil
-        }
-#else
         guard let result = try? Base64.decode(string: base64String, options: options) else {
             return nil
         }
         self = result
-#endif
     }
 
     /// Initialize a `Data` from a Base-64, UTF-8 encoded `Data`.
@@ -57,18 +49,10 @@ extension Data {
     /// - parameter base64Data: Base-64, UTF-8 encoded input data.
     /// - parameter options: Decoding options. Default value is `[]`.
     public init?(base64Encoded base64Data: __shared Data, options: Base64DecodingOptions = []) {
-#if FOUNDATION_FRAMEWORK
-        if let d = NSData(base64Encoded: base64Data, options: NSData.Base64DecodingOptions(rawValue: options.rawValue)) {
-            self.init(referencing: d)
-        } else {
-            return nil
-        }
-#else
         guard let result = try? Base64.decode(data: base64Data, options: options) else {
             return nil
         }
         self = result
-#endif
     }
 
     // MARK: - Create base64
