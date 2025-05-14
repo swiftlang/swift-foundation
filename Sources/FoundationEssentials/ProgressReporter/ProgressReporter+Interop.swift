@@ -29,7 +29,7 @@ extension Progress {
     /// - Parameter count: Number of units delegated to a child instance of `ProgressReporter`
     /// which may be instantiated by `Subprogress` later when `reporter(totalCount:)` is called.
     /// - Returns: A `Subprogress` instance.
-    public func makeChild(withPendingUnitCount count: Int) -> Subprogress {
+    public func makeChild(withPendingUnitCount count: Int) -> ProgressInput {
         
         // Make ghost parent & add it to actual parent's children list
         let ghostProgressParent = Progress(totalUnitCount: Int64(count))
@@ -49,18 +49,18 @@ extension Progress {
         return actualProgress
     }
     
-    public func addChild(_ monitor: ProgressMonitor, withPendingUnitCount count: Int) {
+    public func addChild(_ output: ProgressOutput, withPendingUnitCount count: Int) {
 
         // Make intermediary & add it to NSProgress parent's children list
-        let ghostProgressParent = Progress(totalUnitCount: Int64(monitor.reporter.totalCount ?? 0))
-        ghostProgressParent.completedUnitCount = Int64(monitor.reporter.completedCount)
+        let ghostProgressParent = Progress(totalUnitCount: Int64(output.reporter.totalCount ?? 0))
+        ghostProgressParent.completedUnitCount = Int64(output.reporter.completedCount)
         self.addChild(ghostProgressParent, withPendingUnitCount: Int64(count))
         
         // Make observation instance
-        let observation = _ProgressParentProgressMonitorChild(intermediary: ghostProgressParent, monitorChild: monitor)
+        let observation = _ProgressParentProgressOutputChild(intermediary: ghostProgressParent, progressOutput: output)
 
-        monitor.reporter.setInteropObservationForMonitor(observation: observation)
-        monitor.reporter.setMonitorInterop(to: true)
+        output.reporter.setInteropObservationForMonitor(observation: observation)
+        output.reporter.setMonitorInterop(to: true)
     }
 }
 
@@ -94,25 +94,25 @@ private final class _ProgressParentProgressReporterChild: Sendable {
     }
 }
 
-private final class _ProgressParentProgressMonitorChild: Sendable {
+private final class _ProgressParentProgressOutputChild: Sendable {
     private let intermediary: Progress
-    private let monitorChild: ProgressMonitor
+    private let progressOutput: ProgressOutput
     
-    fileprivate init(intermediary: Progress, monitorChild: ProgressMonitor) {
+    fileprivate init(intermediary: Progress, progressOutput: ProgressOutput) {
         self.intermediary = intermediary
-        self.monitorChild = monitorChild
+        self.progressOutput = progressOutput
         
-        monitorChild.reporter.addObserver { [weak self] observerState in
+        progressOutput.reporter.addObserver { [weak self] observerState in
             guard let self else {
                 return
             }
             
             switch observerState {
             case .totalCountUpdated:
-                self.intermediary.totalUnitCount = Int64(self.monitorChild.reporter.totalCount ?? 0)
+                self.intermediary.totalUnitCount = Int64(self.progressOutput.reporter.totalCount ?? 0)
                 
             case .fractionUpdated:
-                let count = self.monitorChild.reporter.withProperties { p in
+                let count = self.progressOutput.reporter.withProperties { p in
                     return (p.completedCount, p.totalCount)
                 }
                 self.intermediary.completedUnitCount = Int64(count.0)
