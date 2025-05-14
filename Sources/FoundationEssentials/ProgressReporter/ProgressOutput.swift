@@ -12,7 +12,7 @@
 
 @available(FoundationPreview 6.2, *)
 /// ProgressMonitor is just a wrapper that carries information about ProgressReporter. It is read-only and can be added as a child of something else.
-public final class ProgressMonitor: Sendable {
+public final class ProgressOutput: Sendable {
     internal let reporter: ProgressReporter
     
     internal init(reporter: ProgressReporter) {

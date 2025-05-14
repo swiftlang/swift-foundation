@@ -20,7 +20,7 @@ import XCTest
 /// Unit tests for basic functionalities of ProgressReporter
 class TestProgressReporter: XCTestCase {
     /// MARK: Helper methods that report progress
-    func doBasicOperationV1(reportTo progress: consuming Subprogress) async {
+    func doBasicOperationV1(reportTo progress: consuming ProgressInput) async {
         let reporter = progress.reporter(totalCount: 8)
         for i in 1...8 {
             reporter.complete(count: 1)
@@ -29,7 +29,7 @@ class TestProgressReporter: XCTestCase {
         }
     }
     
-    func doBasicOperationV2(reportTo progress: consuming Subprogress) async {
+    func doBasicOperationV2(reportTo progress: consuming ProgressInput) async {
         let reporter = progress.reporter(totalCount: 7)
         for i in 1...7 {
             reporter.complete(count: 1)
@@ -38,7 +38,7 @@ class TestProgressReporter: XCTestCase {
         }
     }
     
-    func doBasicOperationV3(reportTo progress: consuming Subprogress) async {
+    func doBasicOperationV3(reportTo progress: consuming ProgressInput) async {
         let reporter = progress.reporter(totalCount: 11)
         for i in 1...11 {
             reporter.complete(count: 1)
@@ -267,7 +267,7 @@ class TestProgressReporter: XCTestCase {
 
 /// Unit tests for propagation of type-safe metadata in ProgressReporter tree.
 class TestProgressReporterAdditionalProperties: XCTestCase {
-    func doFileOperation(reportTo progress: consuming Subprogress) async {
+    func doFileOperation(reportTo progress: consuming ProgressInput) async {
         let reporter = progress.reporter(totalCount: 100)
         reporter.withProperties { properties in
             properties.totalFileCount = 100
@@ -424,7 +424,7 @@ class TestProgressReporterInterop: XCTestCase {
         return p
     }
     
-    func doSomethingWithReporter(progress: consuming Subprogress?) async {
+    func doSomethingWithReporter(progress: consuming ProgressInput?) async {
         let reporter = progress?.reporter(totalCount: 4)
         reporter?.complete(count: 2)
         reporter?.complete(count: 2)
@@ -473,7 +473,7 @@ class TestProgressReporterInterop: XCTestCase {
         
         // Add ProgressMonitor as Child
         let p2 = ProgressReporter(totalCount: 10)
-        let p2Monitor = p2.monitor
+        let p2Monitor = p2.output
         overall.addChild(p2Monitor, withPendingUnitCount: 5)
         
         p2.complete(count: 10)
@@ -502,7 +502,7 @@ class TestProgressReporterInterop: XCTestCase {
         // Add ProgressMonitor with CompletedCount 3 as Child
         let p2 = ProgressReporter(totalCount: 10)
         p2.complete(count: 3)
-        let p2Monitor = p2.monitor
+        let p2Monitor = p2.output
         overall.addChild(p2Monitor, withPendingUnitCount: 5)
         
         p2.complete(count: 7)
@@ -542,7 +542,7 @@ class TestProgressReporterInterop: XCTestCase {
         return Progress(totalUnitCount: 5)
     }
     
-    func receiveProgress(progress: consuming Subprogress) {
+    func receiveProgress(progress: consuming ProgressInput) {
         let _ = progress.reporter(totalCount: 5)
     }
     

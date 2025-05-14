@@ -118,7 +118,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    public var monitor: ProgressMonitor {
+    public var output: ProgressOutput {
         return .init(reporter: self)
     }
     
@@ -250,9 +250,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         self.init(total: totalCount, ghostReporter: nil, interopObservation: nil)
     }
     
-    public convenience init(from monitor: ProgressMonitor) {
+    public convenience init(from progress: ProgressOutput) {
         self.init(total: 1, ghostReporter: nil, interopObservation: nil)
-        self.assign(count: 1, to: monitor)
+        self.assign(count: 1, to: progress)
     }
     
     /// Sets `totalCount`.
@@ -287,18 +287,18 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     ///
     /// - Parameter count: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
     /// - Returns: A `Subprogress` instance.
-    public func subprogress(assigningCount portionOfParent: Int) -> Subprogress {
+    public func subprogress(assigningCount portionOfParent: Int) -> ProgressInput {
         precondition(portionOfParent > 0, "Giving out zero units is not a valid operation.")
-        let subprogress = Subprogress(parent: self, portionOfParent: portionOfParent)
+        let subprogress = ProgressInput(parent: self, portionOfParent: portionOfParent)
         return subprogress
     }
     
     
-    /// Adds a `ProgressMonitor` as a child, with its progress representing a portion of `self`'s progress.
+    /// Adds a `ProgressOutput` as a child, with its progress representing a portion of `self`'s progress.
     /// - Parameters:
-    ///   - monitor: A `ProgressMonitor` instance.
+    ///   - monitor: A `ProgressOutput` instance.
     ///   - portionOfParent: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
-    public func assign(count portionOfParent: Int, to monitor: ProgressMonitor) {
+    public func assign(count portionOfParent: Int, to monitor: ProgressOutput) {
         // get the actual progress from within the monitor, then add as children
         let actualReporter = monitor.reporter
         

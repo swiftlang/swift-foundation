@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 @available(FoundationPreview 6.2, *)
-/// Subprogress is a nested ~Copyable struct used to establish parent-child relationship between two instances of ProgressReporter.
+/// ProgressInput is a nested ~Copyable struct used to establish parent-child relationship between two instances of ProgressReporter.
 ///
-/// Subprogress is returned from a call to `subprogress(assigningCount:)` by a parent ProgressReporter.
-/// A child ProgressReporter is then returned by calling`reporter(totalCount:)` on a Subprogress.
-public struct Subprogress: ~Copyable, Sendable {
+/// ProgressInput is returned from a call to `subprogress(assigningCount:)` by a parent ProgressReporter.
+/// A child ProgressReporter is then returned by calling`reporter(totalCount:)` on a ProgressInput.
+public struct ProgressInput: ~Copyable, Sendable {
     internal var parent: ProgressReporter
     internal var portionOfParent: Int
     internal var isInitializedToProgressReporter: Bool
