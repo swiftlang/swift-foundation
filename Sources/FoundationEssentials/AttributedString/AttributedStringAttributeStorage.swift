@@ -54,18 +54,20 @@ extension AttributedString {
         func rawValue<K: AttributedStringKey>(
             as key: K.Type
         ) -> K.Value where K.Value: Sendable {
-            func extractValue<RealValue>(_ value: RealValue) -> K.Value {
-                assert(RealValue.self == K.Value.self, "_AttributeValue raw value can only be retrieved with a key whose value matches the stored attribute value (stored type \(RealValue.self) does not match key value type \(K.Value.self))")
-                return _identityCast(value, to: K.Value.self)
+            // Dynamic cast instead of an identity cast to support bridging between attribute value types like NSColor/UIColor
+            guard let value = self._rawValue as? K.Value else {
+                preconditionFailure("Unable to read \(K.self) attribute: stored value of type \(type(of: self._rawValue)) is not key's value type (\(K.Value.self))")
             }
-            return _openExistential(self._rawValue, do: extractValue)
+            return value
         }
         
         static func ==(left: Self, right: Self) -> Bool {
             func openEquatableLHS<LeftValue: Hashable & Sendable>(_ leftValue: LeftValue) -> Bool {
                 func openEquatableRHS<RightValue: Hashable & Sendable>(_ rightValue: RightValue) -> Bool {
-                    assert(LeftValue.self == RightValue.self, "Two _AttributeValues can only be compared if they are of the same attribute value type")
-                    let rightValueAsLeft = _identityCast(rightValue, to: LeftValue.self)
+                    // Dynamic cast instead of an identity cast to support bridging between attribute value types like NSColor/UIColor
+                    guard let rightValueAsLeft = rightValue as? LeftValue else {
+                        return false
+                    }
                     return rightValueAsLeft == leftValue
                 }
                 return openEquatableRHS(right._rawValue)
