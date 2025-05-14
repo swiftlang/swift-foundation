@@ -9,7 +9,8 @@ import CompilerPluginSupport
 let availabilityTags: [_Availability] = [
     _Availability("FoundationPreview"), // Default FoundationPreview availability,
     _Availability("FoundationPredicate"), // Predicate relies on pack parameter runtime support
-    _Availability("FoundationPredicateRegex") // Predicate regexes rely on new stdlib APIs
+    _Availability("FoundationPredicateRegex"), // Predicate regexes rely on new stdlib APIs
+    _Availability("FoundationSpan"), // Availability of Span types
 ]
 let versionNumbers = ["0.1", "0.2", "0.3", "0.4", "6.0.2", "6.1", "6.2"]
 
@@ -134,6 +135,9 @@ let package = Package(
           ] + wasiLibcCSettings,
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
+            .enableExperimentalFeature("LifetimeDependence"),
+            .enableExperimentalFeature("AddressableTypes"),
+            .enableExperimentalFeature("BuiltinModule"),
             .enableExperimentalFeature("AccessLevelOnImport")
           ] + availabilityMacros + featureSettings,
           linkerSettings: [
