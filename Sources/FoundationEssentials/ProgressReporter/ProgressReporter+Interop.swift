@@ -49,7 +49,7 @@ extension Progress {
         return actualProgress
     }
     
-    public func addChild(_ monitor: ProgressReporter.ProgressMonitor, withPendingUnitCount count: Int) {
+    public func addChild(_ monitor: ProgressMonitor, withPendingUnitCount count: Int) {
 
         // Make intermediary & add it to NSProgress parent's children list
         let ghostProgressParent = Progress(totalUnitCount: Int64(monitor.reporter.totalCount ?? 0))
@@ -96,9 +96,9 @@ private final class _ProgressParentProgressReporterChild: Sendable {
 
 private final class _ProgressParentProgressMonitorChild: Sendable {
     private let intermediary: Progress
-    private let monitorChild: ProgressReporter.ProgressMonitor
+    private let monitorChild: ProgressMonitor
     
-    fileprivate init(intermediary: Progress, monitorChild: ProgressReporter.ProgressMonitor) {
+    fileprivate init(intermediary: Progress, monitorChild: ProgressMonitor) {
         self.intermediary = intermediary
         self.monitorChild = monitorChild
         
