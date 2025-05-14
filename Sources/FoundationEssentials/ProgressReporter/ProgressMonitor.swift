@@ -11,13 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 @available(FoundationPreview 6.2, *)
-extension ProgressReporter {
-    /// ProgressMonitor is just a wrapper that carries information about ProgressReporter. It is read-only and can be added as a child of something else.
-    public struct ProgressMonitor: Sendable {
-        internal let reporter: ProgressReporter
-        
-        internal init(reporter: ProgressReporter) {
-            self.reporter = reporter
-        }
+/// ProgressMonitor is just a wrapper that carries information about ProgressReporter. It is read-only and can be added as a child of something else.
+public final class ProgressMonitor: Sendable {
+    internal let reporter: ProgressReporter
+    
+    internal init(reporter: ProgressReporter) {
+        self.reporter = reporter
     }
 }
