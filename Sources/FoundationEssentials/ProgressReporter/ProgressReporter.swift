@@ -252,8 +252,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     public convenience init(from monitor: ProgressMonitor) {
         self.init(total: 1, ghostReporter: nil, interopObservation: nil)
-        self.addChild(monitor, assignedCount: 1)
-        monitor.reporter.addParent(parentReporter: self, portionOfParent: 1)
+        self.assign(count: 1, to: monitor)
     }
     
     /// Sets `totalCount`.
@@ -299,7 +298,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// - Parameters:
     ///   - monitor: A `ProgressMonitor` instance.
     ///   - portionOfParent: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
-    public func addChild(_ monitor: ProgressMonitor, assignedCount portionOfParent: Int) {
+    public func assign(count portionOfParent: Int, to monitor: ProgressMonitor) {
         // get the actual progress from within the monitor, then add as children
         let actualReporter = monitor.reporter
         
