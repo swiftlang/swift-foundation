@@ -250,11 +250,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         self.init(total: totalCount, ghostReporter: nil, interopObservation: nil)
     }
     
-    public convenience init(from progress: ProgressOutput) {
-        self.init(total: 1, ghostReporter: nil, interopObservation: nil)
-        self.assign(count: 1, to: progress)
-    }
-    
     /// Sets `totalCount`.
     /// - Parameter newTotal: Total units of work.
     public func setTotalCount(_ newTotal: Int?) {
