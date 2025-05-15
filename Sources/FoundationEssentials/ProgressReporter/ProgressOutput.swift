@@ -12,7 +12,37 @@
 
 @available(FoundationPreview 6.2, *)
 /// ProgressMonitor is just a wrapper that carries information about ProgressReporter. It is read-only and can be added as a child of something else.
+@Observable
 public final class ProgressOutput: Sendable {
+    
+    var totalCount: Int? {
+        reporter.totalCount
+    }
+    
+    var completedCount: Int {
+        reporter.completedCount
+    }
+    
+    var fractionCompleted: Double {
+        reporter.fractionCompleted
+    }
+    
+    var isIndeterminate: Bool {
+        reporter.isIndeterminate
+    }
+    
+    var isFinished: Bool {
+        reporter.isFinished
+    }
+    
+    // TODO: Need to figure out how to expose properties such as totalFileCount and completedFileCount
+    var properties: ProgressReporter.Values {
+        reporter.withProperties { properties in
+            return properties
+        }
+    }
+    
+    
     internal let reporter: ProgressReporter
     
     internal init(reporter: ProgressReporter) {
