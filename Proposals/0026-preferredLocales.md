@@ -4,7 +4,7 @@
 * Authors: [करन मिश्र · Karan Miśra](https://github.com/karan-misra)
 * Review Manager: TBD
 * Status: **Awaiting review**
-* Review: ([pitch](https://forums.swift.org/...))
+* Review: ([pitch](https://forums.swift.org/t/pitch-introduce-locale-preferredlocales/79900))
 
 ## Introduction
 
