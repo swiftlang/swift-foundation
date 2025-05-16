@@ -12,13 +12,13 @@
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
-// Outlines the options available to format ProgressReporter
+// Outlines the options available to format ProgressManager
 @available(FoundationPreview 6.2, *)
-extension ProgressReporter {
+extension ProgressManager {
     
     public struct FormatStyle: Sendable, Codable, Equatable, Hashable {
 
-        // Outlines the options available to format ProgressReporter
+        // Outlines the options available to format ProgressManager
         internal struct Option: Sendable, Codable, Hashable, Equatable {
             
             init(from decoder: any Decoder) throws {
@@ -95,20 +95,20 @@ extension ProgressReporter {
 }
 
 @available(FoundationPreview 6.2, *)
-extension ProgressReporter.FormatStyle: FormatStyle {
+extension ProgressManager.FormatStyle: FormatStyle {
     
-    public func locale(_ locale: Locale) -> ProgressReporter.FormatStyle {
+    public func locale(_ locale: Locale) -> ProgressManager.FormatStyle {
         .init(self.option, locale: locale)
     }
     
-    public func format(_ reporter: ProgressReporter) -> String {
+    public func format(_ manager: ProgressManager) -> String {
         switch self.option.rawOption {
         case .count(let countStyle):
-            let count = reporter.withProperties { p in
+            let count = manager.withProperties { p in
                 return (p.completedCount, p.totalCount)
             }
             #if FOUNDATION_FRAMEWORK
-            let countLSR = LocalizedStringResource("\(count.0, format: countStyle) of \(count.1 ?? 0, format: countStyle)", locale: self.locale, bundle: .forClass(ProgressReporter.self))
+            let countLSR = LocalizedStringResource("\(count.0, format: countStyle) of \(count.1 ?? 0, format: countStyle)", locale: self.locale, bundle: .forClass(ProgressManager.self))
             return String(localized: countLSR)
             #else
             return "\(count.0.formatted(countStyle.locale(self.locale))) / \((count.1 ?? 0).formatted(countStyle.locale(self.locale)))"
@@ -116,25 +116,25 @@ extension ProgressReporter.FormatStyle: FormatStyle {
             
         case .fractionCompleted(let fractionStyle):
             #if FOUNDATION_FRAMEWORK
-            let fractionLSR = LocalizedStringResource("\(reporter.fractionCompleted, format: fractionStyle) completed", locale: self.locale, bundle: .forClass(ProgressReporter.self))
+            let fractionLSR = LocalizedStringResource("\(manager.fractionCompleted, format: fractionStyle) completed", locale: self.locale, bundle: .forClass(ProgressManager.self))
             return String(localized: fractionLSR)
             #else
-            return "\(reporter.fractionCompleted.formatted(fractionStyle.locale(self.locale)))"
+            return "\(manager.fractionCompleted.formatted(fractionStyle.locale(self.locale)))"
             #endif
         }
     }
 }
 
 @available(FoundationPreview 6.2, *)
-// Make access easier to format ProgressReporter
-extension ProgressReporter {
+// Make access easier to format ProgressManager
+extension ProgressManager {
     
 #if FOUNDATION_FRAMEWORK
-    public func formatted<F: Foundation.FormatStyle>(_ style: F) -> F.FormatOutput where F.FormatInput == ProgressReporter {
+    public func formatted<F: Foundation.FormatStyle>(_ style: F) -> F.FormatOutput where F.FormatInput == ProgressManager {
         style.format(self)
     }
 #else
-    public func formatted<F: FoundationEssentials.FormatStyle>(_ style: F) -> F.FormatOutput where F.FormatInput == ProgressReporter {
+    public func formatted<F: FoundationEssentials.FormatStyle>(_ style: F) -> F.FormatOutput where F.FormatInput == ProgressManager {
         style.format(self)
     }
 #endif // FOUNDATION_FRAMEWORK
@@ -146,7 +146,7 @@ extension ProgressReporter {
 }
 
 @available(FoundationPreview 6.2, *)
-extension FormatStyle where Self == ProgressReporter.FormatStyle {
+extension FormatStyle where Self == ProgressManager.FormatStyle {
     
     public static func fractionCompleted(
         format: FloatingPointFormatStyle<Double>.Percent = FloatingPointFormatStyle<Double>.Percent()
