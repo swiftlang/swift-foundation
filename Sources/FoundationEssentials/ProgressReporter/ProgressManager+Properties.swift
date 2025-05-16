@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 @available(FoundationPreview 6.2, *)
-extension ProgressReporter {
+extension ProgressManager {
     // Namespace for properties specific to operations reported on
     public struct Properties: Sendable {
+        
+        /// The total number of files.
         public var totalFileCount: TotalFileCount.Type { TotalFileCount.self }
         public struct TotalFileCount: Sendable, Property {
             public static var defaultValue: Int { return 0 }
@@ -20,6 +22,7 @@ extension ProgressReporter {
             public typealias T = Int
         }
         
+        /// The number of completed files.
         public var completedFileCount: CompletedFileCount.Type { CompletedFileCount.self }
         public struct CompletedFileCount: Sendable, Property {
             public static var defaultValue: Int { return 0 }
@@ -27,6 +30,7 @@ extension ProgressReporter {
             public typealias T = Int
         }
         
+        /// The total number of bytes.
         public var totalByteCount: TotalByteCount.Type { TotalByteCount.self }
         public struct TotalByteCount: Sendable, Property {
             public static var defaultValue: Int64 { return 0 }
@@ -34,6 +38,7 @@ extension ProgressReporter {
             public typealias T = Int64
         }
         
+        /// The number of completed bytes.
         public var completedByteCount: CompletedByteCount.Type { CompletedByteCount.self }
         public struct CompletedByteCount: Sendable, Property {
             public static var defaultValue: Int64 { return 0 }
@@ -41,6 +46,7 @@ extension ProgressReporter {
             public typealias T = Int64
         }
         
+        /// The throughput, in bytes per second.
         public var throughput: Throughput.Type { Throughput.self }
         public struct Throughput: Sendable, Property {
             public static var defaultValue: Int64 { return 0 }
@@ -48,6 +54,7 @@ extension ProgressReporter {
             public typealias T = Int64
         }
         
+        /// The amount of time remaining in the processing of files.
         public var estimatedTimeRemaining: EstimatedTimeRemaining.Type { EstimatedTimeRemaining.self }
         public struct EstimatedTimeRemaining: Sendable, Property {
             public static var defaultValue: Duration { return Duration.seconds(0) }

@@ -14,7 +14,7 @@ import FoundationEssentials
 #endif
 
 @available(FoundationPreview 6.2, *)
-extension ProgressReporter {
+extension ProgressManager {
     //TODO: rdar://149092406 Manual Codable Conformance
     public struct FileFormatStyle: Sendable, Codable, Equatable, Hashable {
         
@@ -76,13 +76,13 @@ extension ProgressReporter {
 
 
 @available(FoundationPreview 6.2, *)
-extension ProgressReporter.FileFormatStyle: FormatStyle {
+extension ProgressManager.FileFormatStyle: FormatStyle {
     
-    public func locale(_ locale: Locale) -> ProgressReporter.FileFormatStyle {
+    public func locale(_ locale: Locale) -> ProgressManager.FileFormatStyle {
         .init(self.option, locale: locale)
     }
     
-    public func format(_ reporter: ProgressReporter) -> String {
+    public func format(_ manager: ProgressManager) -> String {
         switch self.option.rawOption {
       
         case .file:
@@ -92,17 +92,17 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
             var throughputLSR: LocalizedStringResource?
             var timeRemainingLSR: LocalizedStringResource?
             
-            let properties = reporter.withProperties(\.self)
+            let properties = manager.withProperties(\.self)
             
-            fileCountLSR = LocalizedStringResource("\(properties.completedFileCount, format: IntegerFormatStyle<Int>()) of \(properties.totalFileCount, format: IntegerFormatStyle<Int>()) files", locale: self.locale, bundle: .forClass(ProgressReporter.self))
-            
-            
-            byteCountLSR = LocalizedStringResource("\(properties.completedByteCount, format: ByteCountFormatStyle()) of \(properties.totalByteCount, format: ByteCountFormatStyle())", locale: self.locale, bundle: .forClass(ProgressReporter.self))
+            fileCountLSR = LocalizedStringResource("\(properties.completedFileCount, format: IntegerFormatStyle<Int>()) of \(properties.totalFileCount, format: IntegerFormatStyle<Int>()) files", locale: self.locale, bundle: .forClass(ProgressManager.self))
             
             
-            throughputLSR = LocalizedStringResource("\(properties.throughput, format: ByteCountFormatStyle())/s", locale: self.locale, bundle: .forClass(ProgressReporter.self))
+            byteCountLSR = LocalizedStringResource("\(properties.completedByteCount, format: ByteCountFormatStyle()) of \(properties.totalByteCount, format: ByteCountFormatStyle())", locale: self.locale, bundle: .forClass(ProgressManager.self))
             
-            timeRemainingLSR = LocalizedStringResource("\(properties.estimatedTimeRemaining, format: Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .wide)) remaining", locale: self.locale, bundle: .forClass(ProgressReporter.self))
+            
+            throughputLSR = LocalizedStringResource("\(properties.throughput, format: ByteCountFormatStyle())/s", locale: self.locale, bundle: .forClass(ProgressManager.self))
+            
+            timeRemainingLSR = LocalizedStringResource("\(properties.estimatedTimeRemaining, format: Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .wide)) remaining", locale: self.locale, bundle: .forClass(ProgressManager.self))
             
             return """
             \(String(localized: fileCountLSR ?? "")) 
@@ -117,7 +117,7 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
             var throughputString: String?
             var timeRemainingString: String?
                         
-            let properties = reporter.withProperties(\.self)
+            let properties = manager.withProperties(\.self)
             
 
             fileCountString = "\(properties.completedFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale))) / \(properties.totalFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale)))"
@@ -143,15 +143,15 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
 }
 
 @available(FoundationPreview 6.2, *)
-// Make access easier to format ProgressReporter
-extension ProgressReporter {
-    public func formatted(_ style: ProgressReporter.FileFormatStyle) -> String {
+// Make access easier to format ProgressManager
+extension ProgressManager {
+    public func formatted(_ style: ProgressManager.FileFormatStyle) -> String {
         style.format(self)
     }
 }
 
 @available(FoundationPreview 6.2, *)
-extension FormatStyle where Self == ProgressReporter.FileFormatStyle {
+extension FormatStyle where Self == ProgressManager.FileFormatStyle {
     public static var file: Self {
         .init(.file)
     }

@@ -14,32 +14,32 @@
 internal import _ForSwiftFoundation
 
 @available(FoundationPreview 6.2, *)
-//MARK: Progress Parent - ProgressReporter Child Interop
+//MARK: Progress Parent - ProgressManager Child Interop
 // Actual Progress Parent
 // Ghost Progress Parent
-// Ghost ProgressReporter Child
-// Actual ProgressReporter Child
+// Ghost ProgressManager Child
+// Actual ProgressManager Child
 extension Progress {
     
     /// Returns a Subprogress which can be passed to any method that reports progress
-    /// and can be initialized into a child `ProgressReporter` to the `self`.
+    /// and can be initialized into a child `ProgressManager` to the `self`.
     ///
-    /// Delegates a portion of totalUnitCount to a future child `ProgressReporter` instance.
+    /// Delegates a portion of totalUnitCount to a future child `ProgressManager` instance.
     ///
-    /// - Parameter count: Number of units delegated to a child instance of `ProgressReporter`
+    /// - Parameter count: Number of units delegated to a child instance of `ProgressManager`
     /// which may be instantiated by `Subprogress` later when `reporter(totalCount:)` is called.
     /// - Returns: A `Subprogress` instance.
-    public func makeChild(withPendingUnitCount count: Int) -> ProgressInput {
+    public func makeChild(withPendingUnitCount count: Int) -> Subprogress {
         
         // Make ghost parent & add it to actual parent's children list
         let ghostProgressParent = Progress(totalUnitCount: Int64(count))
         self.addChild(ghostProgressParent, withPendingUnitCount: Int64(count))
         
         // Make ghost child
-        let ghostReporterChild = ProgressReporter(totalCount: count)
+        let ghostReporterChild = ProgressManager(totalCount: count)
         
         // Make observation instance
-        let observation = _ProgressParentProgressReporterChild(ghostParent: ghostProgressParent, ghostChild: ghostReporterChild)
+        let observation = _ProgressParentProgressManagerChild(ghostParent: ghostProgressParent, ghostChild: ghostReporterChild)
         
         // Make actual child with ghost child being parent
         var actualProgress = ghostReporterChild.subprogress(assigningCount: count)
@@ -49,26 +49,32 @@ extension Progress {
         return actualProgress
     }
     
-    public func addChild(_ output: ProgressOutput, withPendingUnitCount count: Int) {
+    
+    /// Adds a ProgressReporter as a child to a ProgressManager, which constitutes a portion of ProgressManager's totalUnitCount.
+    ///
+    /// - Parameters:
+    ///   - reporter: A `ProgressReporter` instance.
+    ///   - count: Number of units delegated from `self`'s `totalCount`.
+    public func addChild(_ reporter: ProgressReporter, withPendingUnitCount count: Int) {
 
         // Make intermediary & add it to NSProgress parent's children list
-        let ghostProgressParent = Progress(totalUnitCount: Int64(output.reporter.totalCount ?? 0))
-        ghostProgressParent.completedUnitCount = Int64(output.reporter.completedCount)
+        let ghostProgressParent = Progress(totalUnitCount: Int64(reporter.manager.totalCount ?? 0))
+        ghostProgressParent.completedUnitCount = Int64(reporter.manager.completedCount)
         self.addChild(ghostProgressParent, withPendingUnitCount: Int64(count))
         
         // Make observation instance
-        let observation = _ProgressParentProgressOutputChild(intermediary: ghostProgressParent, progressOutput: output)
+        let observation = _ProgressParentProgressReporterChild(intermediary: ghostProgressParent, reporter: reporter)
 
-        output.reporter.setInteropObservationForMonitor(observation: observation)
-        output.reporter.setMonitorInterop(to: true)
+        reporter.manager.setInteropObservationForMonitor(observation: observation)
+        reporter.manager.setMonitorInterop(to: true)
     }
 }
 
-private final class _ProgressParentProgressReporterChild: Sendable {
+private final class _ProgressParentProgressManagerChild: Sendable {
     private let ghostParent: Progress
-    private let ghostChild: ProgressReporter
+    private let ghostChild: ProgressManager
     
-    fileprivate init(ghostParent: Progress, ghostChild: ProgressReporter) {
+    fileprivate init(ghostParent: Progress, ghostChild: ProgressManager) {
         self.ghostParent = ghostParent
         self.ghostChild = ghostChild
         
@@ -94,25 +100,25 @@ private final class _ProgressParentProgressReporterChild: Sendable {
     }
 }
 
-private final class _ProgressParentProgressOutputChild: Sendable {
+private final class _ProgressParentProgressReporterChild: Sendable {
     private let intermediary: Progress
-    private let progressOutput: ProgressOutput
+    private let reporter: ProgressReporter
     
-    fileprivate init(intermediary: Progress, progressOutput: ProgressOutput) {
+    fileprivate init(intermediary: Progress, reporter: ProgressReporter) {
         self.intermediary = intermediary
-        self.progressOutput = progressOutput
+        self.reporter = reporter
         
-        progressOutput.reporter.addObserver { [weak self] observerState in
+        reporter.manager.addObserver { [weak self] observerState in
             guard let self else {
                 return
             }
             
             switch observerState {
             case .totalCountUpdated:
-                self.intermediary.totalUnitCount = Int64(self.progressOutput.reporter.totalCount ?? 0)
+                self.intermediary.totalUnitCount = Int64(self.reporter.manager.totalCount ?? 0)
                 
             case .fractionUpdated:
-                let count = self.progressOutput.reporter.withProperties { p in
+                let count = self.reporter.manager.withProperties { p in
                     return (p.completedCount, p.totalCount)
                 }
                 self.intermediary.completedUnitCount = Int64(count.0)
@@ -124,18 +130,18 @@ private final class _ProgressParentProgressOutputChild: Sendable {
 }
 
 @available(FoundationPreview 6.2, *)
-//MARK: ProgressReporter Parent - Progress Child Interop
-extension ProgressReporter {
+//MARK: ProgressManager Parent - Progress Child Interop
+extension ProgressManager {
 
     /// Adds a Foundation's `Progress` instance as a child which constitutes a certain `count` of `self`'s `totalCount`.
     /// - Parameters:
     ///   - count: Number of units delegated from `self`'s `totalCount`.
     ///   - progress: `Progress` which receives the delegated `count`.
     public func subprogress(assigningCount count: Int, to progress: Foundation.Progress) {
-        let parentBridge = _NSProgressParentBridge(reporterParent: self)
+        let parentBridge = _NSProgressParentBridge(managerParent: self)
         progress._setParent(parentBridge, portion: Int64(count))
 
-        // Save ghost parent in ProgressReporter so it doesn't go out of scope after assign method ends
+        // Save ghost parent in ProgressManager so it doesn't go out of scope after assign method ends
         // So that when NSProgress increases completedUnitCount and queries for parent there is still a reference to ghostParent and parent doesn't show 0x0 (portion: 5)
         self.setParentBridge(parentBridge: parentBridge)
     }
@@ -144,15 +150,15 @@ extension ProgressReporter {
 // Subclass of Foundation.Progress
 internal final class _NSProgressParentBridge: Progress, @unchecked Sendable {
 
-    let actualParent: ProgressReporter
+    let actualParent: ProgressManager
 
-    init(reporterParent: ProgressReporter) {
-        self.actualParent = reporterParent
+    init(managerParent: ProgressManager) {
+        self.actualParent = managerParent
         super.init(parent: nil, userInfo: nil)
     }
 
     // Overrides the _updateChild func that Foundation.Progress calls to update parent
-    // so that the parent that gets updated is the ProgressReporter parent
+    // so that the parent that gets updated is the ProgressManager parent
     override func _updateChild(_ child: Foundation.Progress, fraction: _NSProgressFractionTuple, portion: Int64) {
         actualParent.updateChildFraction(from: _ProgressFraction(nsProgressFraction: fraction.previous), to: _ProgressFraction(nsProgressFraction: fraction.next), portion: Int(portion))
     }
