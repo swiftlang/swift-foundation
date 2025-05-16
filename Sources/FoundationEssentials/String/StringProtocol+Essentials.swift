@@ -91,6 +91,11 @@ dynamic public func _cfStringEncodingConvert(string: String, using encoding: UIn
     // Dynamically replaced by swift-corelibs-foundation to implement encodings that we do not have Swift replacements for, yet
     return nil
 }
+
+dynamic package func _icuStringEncodingConvert(string: String, using encoding: String.Encoding, allowLossyConversion: Bool) -> Data? {
+    // Concrete implementation is provided by FoundationInternationalization.
+    return nil
+}
 #endif
 
 @available(FoundationPreview 0.4, *)
@@ -255,8 +260,12 @@ extension String {
             // Other encodings, defer to the CoreFoundation implementation
             return _ns.data(using: encoding.rawValue, allowLossyConversion: allowLossyConversion)
 #else
-            // Attempt an up-call into swift-corelibs-foundation, which can defer to the CoreFoundation implementation
-            return _cfStringEncodingConvert(string: self, using: encoding.rawValue, allowLossyConversion: allowLossyConversion)
+            return (
+                // Attempt an up-call into swift-corelibs-foundation, which can defer to the CoreFoundation implementation
+                _cfStringEncodingConvert(string: self, using: encoding.rawValue, allowLossyConversion: allowLossyConversion) ??
+                // Or attempt an up-call into ICU via FoundationInternationalization
+                _icuStringEncodingConvert(string: self, using: encoding, allowLossyConversion: allowLossyConversion)
+            )
 #endif
         }
     }

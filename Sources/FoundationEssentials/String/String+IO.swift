@@ -24,6 +24,11 @@ dynamic public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, 
     // Provide swift-corelibs-foundation with an entry point to convert some bytes into a String
     return nil
 }
+
+dynamic package func _icuMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: String.Encoding) -> String? {
+    // Concrete implementation is provided by FoundationInternationalization.
+    return nil
+}
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -202,8 +207,14 @@ extension String {
                 return nil
             }
 #else
-            if let string = (bytes.withContiguousStorageIfAvailable({ _cfMakeStringFromBytes($0, encoding: encoding.rawValue) }) ??
-                             Array(bytes).withUnsafeBufferPointer({ _cfMakeStringFromBytes($0, encoding: encoding.rawValue) })) {
+            func makeString(from bytes: UnsafeBufferPointer<UInt8>) -> String? {
+                return (
+                    _cfMakeStringFromBytes(bytes, encoding: encoding.rawValue) ??
+                    _icuMakeStringFromBytes(bytes, encoding: encoding)
+                )
+            }
+            if let string = (bytes.withContiguousStorageIfAvailable({ makeString(from: $0) }) ??
+                             Array(bytes).withUnsafeBufferPointer({ makeString(from: $0) })) {
                 self = string
             } else {
                 return nil
