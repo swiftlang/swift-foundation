@@ -93,6 +93,9 @@ extension Calendar {
             /// value is used as a lower bound for ``nextBaseRecurrenceDate()``.
             let rangeLowerBound: Date?
             
+            /// The start date's nanoseconds component
+            let startDateNanoseconds: TimeInterval
+            
             /// How many occurrences have been found so far
             var resultsFound = 0
             
@@ -231,6 +234,8 @@ extension Calendar {
                     case .yearly:   [.second, .minute, .hour, .day, .month, .isLeapMonth]
                 }
                 var componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start) 
+                
+                startDateNanoseconds = start.timeIntervalSince1970.remainder(dividingBy: 1)
                 
                 let expansionChangesDay = dayOfYearAction == .expand || dayOfMonthAction == .expand || weekAction == .expand || weekdayAction == .expand
                 let expansionChangesMonth = dayOfYearAction == .expand || monthAction == .expand || weekAction == .expand
@@ -422,6 +427,13 @@ extension Calendar {
                     recurrence._limitTimeComponent(.second, dates: &dates, anchor: anchor)
                 }
                 
+                if startDateNanoseconds > 0 {
+                    // `_dates(startingAfter:)` above returns whole-second dates,
+                    // so we need to restore the nanoseconds value present in the original start date.
+                    for idx in dates.indices {
+                        dates[idx] += startDateNanoseconds
+                    }
+                }
                 dates = dates.filter { $0 >= self.start }
                 
                 if let limit = recurrence.end.date {
