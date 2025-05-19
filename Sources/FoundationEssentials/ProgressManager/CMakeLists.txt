@@ -13,7 +13,8 @@
 ##===----------------------------------------------------------------------===##
 target_sources(FoundationEssentials PRIVATE
     ProgressFraction.swift
+    ProgressManager.swift
+    ProgressManager+Interop.swift
+    ProgressManager+Properties.swift
     ProgressReporter.swift
-    ProgressReporter+Interop.swift
-    ProgressReporter+Properties.swift
     Subprogress.swift)
