@@ -283,7 +283,7 @@ extension AttributedString.CharacterView: RangeReplaceableCollection {
         _guts.runs.replaceUTF8Subrange(utf8Range, with: CollectionOfOne(run))
 
         // Invalidate attributes surrounding the affected range. (Phase 2)
-        _guts._finalizeStringMutation(state)
+        _guts._finalizeStringMutation(state, type: .characters)
     }
 
     public mutating func replaceSubrange(

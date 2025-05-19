@@ -224,6 +224,10 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         verify(string: result, matches: [("HeTestllo, world\n", 1), ("Next Paragraph", 2)], for: \.testParagraphConstrained)
         
         result = str
+        result.characters.insert(contentsOf: "Test", at: result.index(result.startIndex, offsetByCharacters: 13))
+        verify(string: result, matches: [("Hello, world\n", 1), ("TestNext Paragraph", 2)], for: \.testParagraphConstrained)
+        
+        result = str
         result.characters.append(contentsOf: "Test")
         verify(string: result, matches: [("Hello, world\n", 1), ("Next ParagraphTest", 2)], for: \.testParagraphConstrained)
         
@@ -257,7 +261,7 @@ class TestAttributedStringConstrainingBehavior: XCTestCase {
         
         result = str
         result.characters.replaceSubrange(result.index(result.startIndex, offsetByCharacters: 8) ..< result.index(result.startIndex, offsetByCharacters: 15), with: "Test\nReplacement")
-        verify(string: result, matches: [("Hello, wTest\n", 1), ("Replacementxt Paragraph", 1)], for: \.testParagraphConstrained)
+        verify(string: result, matches: [("Hello, wTest\n", 1), ("Replacementxt Paragraph", 2)], for: \.testParagraphConstrained)
     }
     
     func testParagraphAttributedTextMutation() {

@@ -172,6 +172,7 @@ extension AttributedString.Guts {
     enum _MutationType {
         case attributes
         case attributesAndCharacters
+        case characters
     }
     
     /// Removes full runs of any attributes that have declared an
@@ -291,7 +292,7 @@ extension AttributedString.Guts {
             ).updateEach { attributes, _, modified in
                 modified = attributes.matchStyle(of: paragraphStyle, for: .paragraph)
             }
-        } else if type == .attributesAndCharacters {
+        } else {
             // If any character mutations took place, we apply the constrained styles from the start of each paragraph to the remainder of the paragraph
             // The mutation range itself is already fixed-up, so we just need to correct the starting and ending paragraphs
             
@@ -324,8 +325,18 @@ extension AttributedString.Guts {
                     (startParagraph?.upperBound ?? 0) < utf8Range.upperBound,
                     _needsParagraphFixing(from: utf8Range.upperBound - 1, to: utf8Range.upperBound)
                 {
-                    let r = _paragraphExtending(from: string.index(before: strRange.upperBound))
-                    endParagraph = r._utf8OffsetRange
+                    let justInsideIndex = string.index(before: strRange.upperBound)
+                    let r = if type == .characters {
+                        // If a character-only mutation, since we apply to the start of the paragraph we need the full real paragraph range
+                        _paragraph(in: Range(uncheckedBounds: (justInsideIndex, justInsideIndex)))
+                    } else {
+                        // If an attribute + character mutation, we don't need the real start of the paragraph
+                        _paragraphExtending(from: justInsideIndex)
+                    }
+                    // If the ending paragraph starts before the mutation we shouldn't store it here as it will incorrectly overwrite the expansion from startParagraph
+                    if r.lowerBound >= strRange.lowerBound {
+                        endParagraph = r._utf8OffsetRange
+                    }
                 }
             }
             
@@ -336,12 +347,21 @@ extension AttributedString.Guts {
                     from: startParagraph.lowerBound,
                     to: utf8Range.lowerBound ..< startParagraph.upperBound)
             }
-            // If the end paragraph extends beyond the mutation, fixup the range outside the mutation
+            // If the end paragraph extends beyond the mutation, fixup the paragraph
             if let endParagraph, endParagraph.upperBound > utf8Range.upperBound {
-                _applyStyle(
-                    type: .paragraph,
-                    from: endParagraph.lowerBound,
-                    to: utf8Range.upperBound ..< endParagraph.upperBound)
+                if type == .attributesAndCharacters {
+                    // If an attribute + characters mutation, the newly applied attributes expand to cover the remainder of the paragraph
+                    _applyStyle(
+                        type: .paragraph,
+                        from: endParagraph.lowerBound,
+                        to: utf8Range.upperBound ..< endParagraph.upperBound)
+                } else {
+                    // If a character-only mutation, the attributes from the remainder of the paragraph expand to cover the newly inserted text
+                    _applyStyle(
+                        type: .paragraph,
+                        from: utf8Range.upperBound,
+                        to: endParagraph.lowerBound ..< utf8Range.upperBound)
+                }
             }
         }
     }

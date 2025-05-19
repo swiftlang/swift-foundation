@@ -457,7 +457,8 @@ extension AttributedString.Guts {
     }
 
     func _finalizeStringMutation(
-        _ state: (mutationStartUTF8Offset: Int, isInsertion: Bool, oldUTF8Count: Int, invalidationRange: Range<Int>)
+        _ state: (mutationStartUTF8Offset: Int, isInsertion: Bool, oldUTF8Count: Int, invalidationRange: Range<Int>),
+        type: _MutationType
     ) {
         let utf8Delta = self.string.utf8.count - state.oldUTF8Count
         self._finalizeTrackedIndicesUpdate(mutationStartOffset: state.mutationStartUTF8Offset, isInsertion: state.isInsertion, utf8LengthDelta: utf8Delta)
@@ -465,7 +466,7 @@ extension AttributedString.Guts {
         let upper = state.invalidationRange.upperBound + utf8Delta
         self.enforceAttributeConstraintsAfterMutation(
             in: lower ..< upper,
-            type: .attributesAndCharacters)
+            type: type)
     }
 
     func replaceSubrange(
@@ -493,7 +494,7 @@ extension AttributedString.Guts {
             let state = _prepareStringMutation(in: range)
             self.string.unicodeScalars.replaceSubrange(range, with: replacementScalars)
             self.runs.replaceUTF8Subrange(utf8TargetRange, with: replacementRuns)
-            _finalizeStringMutation(state)
+            _finalizeStringMutation(state, type: .attributesAndCharacters)
         } else {
             self.runs.replaceUTF8Subrange(utf8TargetRange, with: replacementRuns)
             self.enforceAttributeConstraintsAfterMutation(in: range._utf8OffsetRange, type: .attributes)
