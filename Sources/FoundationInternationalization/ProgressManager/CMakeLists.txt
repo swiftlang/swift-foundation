@@ -14,5 +14,8 @@
 
 target_include_directories(FoundationInternationalization PRIVATE .)
 target_sources(FoundationInternationalization PRIVATE
+    ProgressFormatting.swift
     ProgressManager+FileFormatStyle.swift
-    ProgressManager+FormatStyle.swift)
+    ProgressManager+FormatStyle.swift
+    ProgressReporter+FileFormatStyle.swift
+    ProgressReporter+FormatStyle.swift)
