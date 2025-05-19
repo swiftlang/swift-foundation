@@ -15,6 +15,7 @@
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
+@dynamicMemberLookup
 @Observable public final class ProgressReporter: Sendable {
     
     var totalCount: Int? {
@@ -37,13 +38,11 @@
         manager.isFinished
     }
     
-    // TODO: Need to figure out how to expose properties such as totalFileCount and completedFileCount
-    var properties: ProgressManager.Values {
+    public subscript<P: ProgressManager.Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.T {
         manager.withProperties { properties in
-            return properties
+            properties[dynamicMember: key]
         }
     }
-    
     
     internal let manager: ProgressManager
     
