@@ -16,7 +16,6 @@ import Observation
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
-@dynamicMemberLookup
 @Observable public final class ProgressReporter: Sendable {
     
     var totalCount: Int? {
@@ -39,10 +38,9 @@ import Observation
         manager.isFinished
     }
     
-    public subscript<P: ProgressManager.Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.T {
-        manager.withProperties { properties in
-            properties[dynamicMember: key]
-        }
+    /// Reads properties that convey additional information about progress.
+    public func withProperties<T>(_ closure: @Sendable (ProgressManager.Values) throws -> T) rethrows -> T {
+        return try manager.getAdditionalProperties(closure)
     }
     
     internal let manager: ProgressManager

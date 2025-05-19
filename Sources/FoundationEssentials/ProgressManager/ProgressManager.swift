@@ -536,6 +536,16 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         parentReporter.updateChildFraction(from: updates.0, to: updates.1, portion: portionOfParent)
     }
     
+    internal func getAdditionalProperties<T>(_ closure: @Sendable (Values) throws -> T) rethrows -> T {
+        try state.withLock { state in
+            let values = Values(manager: self, state: state)
+            // No need to modify state since this is read-only
+            let result = try closure(values)
+            // No state update after closure execution
+            return result
+        }
+    }
+    
     // MARK: Propagation of Additional Properties Methods (Dual Mode of Operations)
     private func getFlattenedChildrenValues<P: Property>(property metatype: P.Type, state: inout State) -> [P.T?] {
         let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
