@@ -14,15 +14,30 @@
 internal import _ForSwiftFoundation
 internal import CoreFoundation_Private.CFURL
 
+#if canImport(os)
+internal import os
+#endif
+
 /// `_BridgedURL` wraps an `NSURL` reference. Its methods use the old implementations, which call directly into `NSURL` methods.
 /// `_BridgedURL` is used when an `NSURL` subclass is bridged to Swift, allowing us to:
 /// 1) Return the same subclass object when bridging back to ObjC.
 /// 2) Call methods that are overridden by the `NSURL` subclass like we did before.
 /// - Note: If the `NSURL` subclass does not override a method, `NSURL` will call into the underlying `_SwiftURL` implementation.
-internal final class _BridgedURL: _URLProtocol, @unchecked Sendable {
+internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
     private let _url: NSURL
     internal init(_ url: NSURL) {
         self._url = url
+    }
+
+    private static let logForwardingErrorOnce: Void = {
+        #if canImport(os)
+        URL.logger.error("struct URL no longer stores an NSURL. Clients should not assume the memory address of a URL will contain an NSURL * or CFURLRef and should not send ObjC messages to it directly. Bridge (url as NSURL) instead.")
+        #endif
+    }()
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        _ = Self.logForwardingErrorOnce
+        return _url
     }
 
     init?(string: String) {
@@ -384,11 +399,11 @@ internal final class _BridgedURL: _URLProtocol, @unchecked Sendable {
     }
 #endif
 
-    var description: String {
+    override var description: String {
         return _url.description
     }
 
-    var debugDescription: String {
+    override var debugDescription: String {
         return _url.debugDescription
     }
 
