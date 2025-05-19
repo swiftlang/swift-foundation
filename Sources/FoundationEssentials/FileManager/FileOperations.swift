@@ -829,7 +829,7 @@ enum _FileOperations {
         try src.withNTPathRepresentation { pwszSource in
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
             guard GetFileAttributesExW(pwszSource, GetFileExInfoStandard, &faAttributes) else {
-                throw CocoaError.errorWithFilePath(.fileReadNoSuchFile, src, variant: bCopyFile ? "Copy" : "Link", source: src, destination: dst)
+                throw CocoaError.errorWithFilePath(src, win32: GetLastError(), reading: true, variant: bCopyFile ? "Copy" : "Link", source: src, destination: dst)
             }
 
             guard delegate.shouldPerformOnItemAtPath(src, to: dst) else { return }
@@ -921,7 +921,7 @@ enum _FileOperations {
         }
         var current: off_t = 0
         
-        #if os(WASI)
+        #if os(WASI) || os(OpenBSD)
         // WASI doesn't have sendfile, so we need to do it in user space with read/write
         try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: chunkSize) { buffer in
             while current < total {
@@ -958,7 +958,7 @@ enum _FileOperations {
     
     #if !canImport(Darwin)
     private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
-        #if !os(WASI) && !os(Android)
+        #if !os(WASI) && !os(Android) && !os(OpenBSD)
         // Copy extended attributes
         #if os(FreeBSD)
         // FreeBSD uses the `extattr_*` calls for setting extended attributes. Unlike like, the namespace for the extattrs are not determined by prefix of the attribute

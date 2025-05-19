@@ -816,7 +816,7 @@ final class StringTests : XCTestCase {
     func testAppendingPathExtension() {
         XCTAssertEqual("".appendingPathExtension("foo"), ".foo")
         XCTAssertEqual("/".appendingPathExtension("foo"), "/.foo")
-        XCTAssertEqual("//".appendingPathExtension("foo"), "//.foo")
+        XCTAssertEqual("//".appendingPathExtension("foo"), "/.foo/")
         XCTAssertEqual("/path".appendingPathExtension("foo"), "/path.foo")
         XCTAssertEqual("/path.zip".appendingPathExtension("foo"), "/path.zip.foo")
         XCTAssertEqual("/path/".appendingPathExtension("foo"), "/path.foo/")

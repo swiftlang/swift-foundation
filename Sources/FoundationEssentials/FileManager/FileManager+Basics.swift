@@ -25,6 +25,10 @@ import WinSDK
 @preconcurrency import WASILibc
 #endif
 
+#if FOUNDATION_FRAMEWORK
+internal import Foundation_Private
+#endif
+
 #if os(Windows)
 extension _FILE_ID_128 /* : @retroactive Equatable */ {
     internal static func _equals(_ lhs: _FILE_ID_128, _ rhs: _FILE_ID_128) -> Bool {

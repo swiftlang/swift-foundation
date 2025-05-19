@@ -231,4 +231,50 @@ let benchmarks = {
         }
     }
 
+    Benchmark("URL-Template-parsing") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(URL.Template("/api/{version}/accounts/{accountId}/transactions/{transactionId}{?expand*,fields*,embed*,format}")!)
+            blackHole(URL.Template("/special/{+a}/details")!)
+            blackHole(URL.Template("/documents/{documentId}{#section,paragraph}")!)
+        }
+    }
+
+    let templates = [
+        URL.Template("/var/{var}/who/{who}/x/{x}{?keys*,count*,list*,y}")!,
+        URL.Template("/special/{+keys}/details")!,
+        URL.Template("x/y/{#path:6}/here")!,
+        URL.Template("a/b{/var,x}/here")!,
+        URL.Template("a{?var,y}")!,
+    ]
+
+    var variables: [URL.Template.VariableName: URL.Template.Value] = [
+        .init("count"): ["one", "two", "three"],
+        .init("dom"): ["example", "com"],
+        .init("dub"): "me/too",
+        .init("hello"): "Hello World!",
+        .init("half"): "50%",
+        .init("var"): "value",
+        .init("who"): "fred",
+        .init("base"): "http://example.com/home/",
+        .init("path"): "/foo/bar",
+        .init("list"): ["red", "green", "blue"],
+        .init("keys"): [
+            "semi": ";",
+            "dot": ".",
+            "comma": ",",
+        ],
+        .init("v"): "6",
+        .init("x"): "1024",
+        .init("y"): "768",
+        .init("empty"): "",
+        .init("empty_keys"): [:],
+    ]
+
+    Benchmark("URL-Template-expansion") { benchmark in
+        for _ in benchmark.scaledIterations {
+            for t in templates {
+                blackHole(URL(template: t, variables: variables))
+            }
+        }
+    }
 }

@@ -40,6 +40,8 @@ func _fgetxattr(_ fd: Int32, _ name: UnsafePointer<CChar>!, _ value: UnsafeMutab
     return fgetxattr(fd, name, value, size, position, options)
 #elseif os(FreeBSD)
     return extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, name, value, size)
+#elseif os(OpenBSD)
+    return -1
 #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fgetxattr(fd, name, value, size)
 #else
@@ -334,7 +336,7 @@ internal func readBytesFromFile(path inPath: PathOrURL, reportProgress: Bool, ma
     }
     
     let fileSize = min(Int(clamping: filestat.st_size), maxLength ?? Int.max)
-    let fileType = mode_t(filestat.st_mode) & mode_t(S_IFMT)
+    let fileType = mode_t(filestat.st_mode) & S_IFMT
 #if !NO_FILESYSTEM
     let shouldMap = shouldMapFileDescriptor(fd, path: inPath, options: options)
 #else

@@ -171,7 +171,7 @@ private func createTemporaryFile(at destinationPath: String, inPath: PathOrURL, 
             guard _mktemp_s(templateFileSystemRep, strlen(templateFileSystemRep) + 1) == 0 else {
                 throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
             }
-            let fd = String(cString: templateFileSystemRep).withCString(encodedAs: UTF16.self) {
+            let fd = try String(cString: templateFileSystemRep).withNTPathRepresentation {
                 openFileDescriptorProtected(path: $0, flags: _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR, options: options)
             }
 #else
@@ -639,6 +639,8 @@ private func writeExtendedAttributes(fd: Int32, attributes: [String : Data]) {
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0, 0)
 #elseif os(FreeBSD)
             _ = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, key, valueBuf.baseAddress!, valueBuf.count)
+#elseif os(OpenBSD)
+            return
 #elseif canImport(Glibc) || canImport(Musl)
             _ = fsetxattr(fd, key, valueBuf.baseAddress!, valueBuf.count, 0)
 #endif

@@ -3,13 +3,14 @@
 * Proposal: SF-0011
 * Author(s): [Philippe Hausler](https://github.com/phausler), [Christopher Thielen](https://github.com/cthielen)
 * Review Manager: [Charles Hu](https://github.com/iCharlesHu)
-* Status: **Accepted**
+* Status: **2nd Review** May. 15, 2025 ... May. 22, 2025
 
 ## Revision history
 
 * **v1** Initial version
 * **v2** Remove `static` from `NotificationCenter.Message.isolation` to better support actor instances
 * **v3** Remove generic isolation pattern in favor of dedicated `MainActorMessage` and `AsyncMessage` types. Apply SE-0299-style static member lookups for `addObserver()`. Provide default value for `Message.name`.
+* **v4** Add `AsyncSequence` APIs for observing. Expand `Message.Subject` conformance to take either `AnyObject` or `Identifiable` where `Identifiable.ID == ObjectIdentifier`. Document `ObservationToken` automatic de-registration behavior. Drop `with` label on `post()` methods in favor of `subject` for clarity.
 
 ## Introduction
 
@@ -162,7 +163,7 @@ And it could be posted using:
 ```swift
 NotificationCenter.default.post(
     NSWorkspace.WillLaunchApplication(application: launchedApplication),
-    with: workspace
+    subject: workspace
 )
 ```
 
@@ -176,7 +177,7 @@ The `NotificationCenter.Message` protocol acts as a base for `NotificationCenter
 @available(FoundationPreview 0.5, *)
 extension NotificationCenter {
     public protocol Message {
-        associatedtype Subject: AnyObject
+        associatedtype Subject
         static var name: Notification.Name { get }
         
         static func makeMessage(_ notification: Notification) -> Self?
@@ -194,9 +195,13 @@ The protocol specifies `makeMessage(:Notification)` and `makeNotification(:Self)
 
 For `Message` types that do not need to interoperate with existing `Notification` uses, the `name` property does not need to be specified, and will default to the fully qualified name of the `Message` type, e.g. `MyModule.MyMessage`. Note that when using this default, renaming the type or relocating it to another module has a similar effect as changing ABI, as any code that was compiled separately will not be aware of the name change until recompiled. Developers can control this effect by explicitly setting the `name` property if needed.
 
+Each `Message` specifies a specific *subject* variable or metatype to observe, similar to the existing `Notification.object`, e.g. an `NSWindow` instance or the `NSWindow.self` metatype. `Message.Subject` has no conformance requirements in its protocol, but `addObserver()` and `post()` both refine `Message.Subject` to either conform to `AnyObject` or confirm to `Identifiable` where `Identifiable.ID == ObjectIdentifier`.
+
 ### Observing messages
 
 Observing messages can be done with new overloads to `addObserver`. Clients do not need to know whether a message conforms to `MainActorMessage` or `AsyncMessage`.
+
+Overloads are provided both for `Message.Subject: AnyObject` and `Message.Subject: Identifiable where ID == ObjectIdentifier`. This allows the observation of both reference types and value types which can provide an `ObjectIdentifier`.
 
 For `MainActorMessage`:
 
@@ -207,7 +212,15 @@ extension NotificationCenter {
     public func addObserver<I: MessageIdentifier, M: MainActorMessage>(of subject: M.Subject,
                                                                        for identifier: I,
                                                                        using observer: @escaping @MainActor (M) -> Void)
-        -> ObservationToken where I.MessageType == M
+        -> ObservationToken where I.MessageType == M,
+                                  M.Subject: AnyObject
+    
+    public func addObserver<I: MessageIdentifier, M: MainActorMessage>(of subject: M.Subject,
+                                                                       for identifier: I,
+                                                                       using observer: @escaping @MainActor (M) -> Void)
+        -> ObservationToken where I.MessageType == M,
+                                  M.Subject: Identifiable,
+                                  M.Subject.ID == ObjectIdentifier
 
     // e.g. addObserver(of: NSWorkspace.self, for: .willLaunchApplication) { message in ... }
     public func addObserver<I: MessageIdentifier, M: MainActorMessage>(of subject: M.Subject.Type,
@@ -215,11 +228,17 @@ extension NotificationCenter {
                                                                        using observer: @escaping @MainActor (M) -> Void)
         -> ObservationToken where I.MessageType == M
 
-    // e.g. addObserver(NSWorkspace.WillLaunchApplication.self) { message in ... }
-    public func addObserver<M: MainActorMessage>(_ messageType: M.Type,
-                                                 subject: M.Subject? = nil,
+    // e.g. addObserver(for: NSWorkspace.WillLaunchApplication.self) { message in ... }
+    public func addObserver<M: MainActorMessage>(of subject: M.Subject? = nil,
+                                                 for messageType: M.Type,
                                                  using observer: @escaping @MainActor (M) -> Void)
-        -> ObservationToken
+        -> ObservationToken where M.Subject: AnyObject
+
+    public func addObserver<M: MainActorMessage>(of subject: M.Subject? = nil,
+                                                 for messageType: M.Type,
+                                                 using observer: @escaping @MainActor (M) -> Void)
+        -> ObservationToken where M.Subject: Identifiable,
+                                  M.Subject.ID == ObjectIdentifier
 }
 ```
 
@@ -231,17 +250,31 @@ extension NotificationCenter {
     public func addObserver<I: MessageIdentifier, M: AsyncMessage>(of subject: M.Subject,
                                                                    for identifier: I,
                                                                    using observer: @escaping @Sendable (M) async -> Void)
-        -> ObservationToken where I.MessageType == M
+        -> ObservationToken where I.MessageType == M,
+                                  M.Subject: AnyObject
+
+    public func addObserver<I: MessageIdentifier, M: AsyncMessage>(of subject: M.Subject,
+                                                                   for identifier: I,
+                                                                   using observer: @escaping @Sendable (M) async -> Void)
+        -> ObservationToken where I.MessageType == M,
+                                  M.Subject: Identifiable,
+                                  M.Subject.ID == ObjectIdentifier
 
     public func addObserver<I: MessageIdentifier, M: AsyncMessage>(of subject: M.Subject.Type,
                                                                    for identifier: I,
                                                                    using observer: @escaping @Sendable (M) async -> Void)
         -> ObservationToken where I.MessageType == M
     
-    public func addObserver<M: AsyncMessage>(_ messageType: M.Type,
-                                             subject: M.Subject? = nil,
+    public func addObserver<M: AsyncMessage>(of subject: M.Subject? = nil,
+                                             for messageType: M.Type,
                                              using observer: @escaping @Sendable (M) async -> Void)
-        -> ObservationToken
+        -> ObservationToken where M.Subject: AnyObject
+    
+    public func addObserver<M: AsyncMessage>(of subject: M.Subject? = nil,
+                                             for messageType: M.Type,
+                                             using observer: @escaping @Sendable (M) async -> Void)
+        -> ObservationToken where M.Subject: Identifiable,
+                                  M.Subject.ID == ObjectIdentifier
 }
 ```
 
@@ -258,6 +291,70 @@ extension NotificationCenter {
 }
 ```
 
+When an `ObservationToken` goes out of scope, the corresponding observer will be removed from its center automatically if it is still registered. This behavior helps prevent memory leaks from tokens which are accidentally dropped by the user.
+
+Messages conforming to `AsyncMessage` can also be observed using a set of `AsyncSequence`-conforming APIs, similar to the existing `notifications(named:object:)` method:
+
+```swift
+@available(macOS 16, iOS 19, tvOS 19, watchOS 12, visionOS 3, *)
+extension NotificationCenter {
+	public func messages<Identifier: MessageIdentifier, Message: AsyncMessage>(
+		of subject: Message.Subject,
+		for identifier: Identifier,
+		bufferSize limit: Int = 10
+	)
+	-> some AsyncSequence<Message, Never> where Identifier.MessageType == Message,
+												Message.Subject: AnyObject
+	
+	public func messages<Identifier: MessageIdentifier, Message: AsyncMessage>(
+		of subject: Message.Subject,
+		for identifier: Identifier,
+		bufferSize limit: Int = 10
+	)
+	-> some AsyncSequence<Message, Never> where Identifier.MessageType == Message,
+												Message.Subject: Identifiable,
+												Message.Subject.ID == ObjectIdentifier {}
+	
+	public func messages<Identifier: MessageIdentifier, Message: AsyncMessage>(
+		of subject: Message.Subject.Type,
+		for identifier: Identifier,
+		bufferSize limit: Int = 10
+	)
+	-> some AsyncSequence<Message, Never> where Identifier.MessageType == Message
+	
+	public func messages<Message: AsyncMessage>(
+		of subject: Message.Subject? = nil,
+		for messageType: Message.Type,
+		bufferSize limit: Int = 10
+	)
+	-> some AsyncSequence<Message, Never> where Message.Subject: AnyObject
+	
+	public func messages<Message: AsyncMessage>(
+		of subject: Message.Subject? = nil,
+		for messageType: Message.Type,
+		bufferSize limit: Int = 10
+	)
+	-> some AsyncSequence<Message, Never> where Message.Subject: Identifiable,
+												Message.Subject.ID == ObjectIdentifier
+}
+```
+
+These allow for the familiar `for await in` syntax:
+
+```swift
+for await message in center.messages(of: anObject, for: .anAsyncMessage) {
+    // ...
+}
+
+for await message in center.messages(for: AnAsyncMessage.self) {
+    // ...
+}
+
+// etc.
+```
+
+The `messages()` sequence uses a reasonably-sized buffer to reduce the likelihood of dropped messages caused by the interaction of synchronous and asynchronous code. When a `Message` is dropped, the implementation will log to aid in debugging. Message frequency in practice is typically 0-2x / second / message type and therefore unlikely to result in dropped messages. Certain UI-related messages can post in practice as often as 40 - 50x / second / message, but these are typically `MainActorMessage` and would not be subject to dropping nor available for use with `messages()`.
+
 ### Posting messages
 
 Posting messages can be done with new overloads on the existing `post` method:
@@ -265,8 +362,31 @@ Posting messages can be done with new overloads on the existing `post` method:
 ```swift
 @available(FoundationPreview 0.5, *)
 extension NotificationCenter {
-    public func post<M: Message>(_ message: M, with subject: M.Subject)
-    public func post<M: Message>(_ message: M, with subject: M.Subject.Type)
+
+    // MainActorMessage post()
+
+    @MainActor
+    public func post<M: MainActorMessage>(_ message: M, subject: M.Subject)
+        where M.Subject: AnyObject
+    
+    @MainActor
+    public func post<M: MainActorMessage>(_ message: M, subject: M.Subject)
+        where M.Subject: Identifiable,
+              M.Subject.ID == ObjectIdentifier
+
+    @MainActor
+    public func post<M: MainActorMessage>(_ message: M, subject: M.Subject.Type = M.Subject.self)
+
+    // AsyncMessage post()
+
+    public func post<M: AsyncMessage>(_ message: M, subject: M.Subject)
+        where M.Subject: AnyObject
+    
+    public func post<M: AsyncMessage>(_ message: M, subject: M.Subject)
+        where M.Subject: Identifiable,
+              M.Subject.ID == ObjectIdentifier
+
+    public func post<M: AsyncMessage>(_ message: M, subject: M.Subject.Type = M.Subject.self)
 }
 ```
 
@@ -289,7 +409,7 @@ struct EventDidOccur: NotificationCenter.Message {
     }
     
     static func makeNotification(_ message: Self) -> Notification {
-        return Notification(name: Self.name, userInfo: ["foo": self.foo])
+        return Notification(name: Self.name, object: object, userInfo: ["foo": self.foo])
     }
 }
 ```
@@ -376,7 +496,7 @@ We could alternatively ferry `subject` in both the observer closure and `post()`
 center.addObserver(of: someSubject, for: .someMessage) { message, subject in ... }
 
 // Nor post() ...
-center.post(SomeMessage(), with: someSubject)
+center.post(SomeMessage(), subject: someSubject)
 ```
 
 However, not all messages have subject instances (e.g. `addObserver(of: NSWindow.self, for: .willMove)`). While `post()` could take a default parameter for an optional `subject`, the `addObserver()` closure would always have to specify a `subject` parameter even for messages without subject instances.

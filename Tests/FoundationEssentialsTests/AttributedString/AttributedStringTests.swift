@@ -2599,4 +2599,30 @@ E {
         XCTAssertEqual(testConstrainedContainer.filter(inheritedByAddedText: true), AttributeContainer.testInt(2).testParagraphConstrained(3).testCharacterConstrained(4))
         XCTAssertEqual(testConstrainedContainer.filter(inheritedByAddedText: false), AttributeContainer.testNonExtended(5))
     }
+
+    func testWritingDirectionBehavior() throws {
+        // Indicate that this sentence is primarily right to left, because the English term "Swift" is embedded into an Arabic sentence.
+        var string = AttributedString("Swift مذهل!", attributes: .init().writingDirection(.rightToLeft))
+
+        XCTAssertEqual(string.writingDirection, .rightToLeft)
+
+        // To remove the information about the writing direction, set it to `nil`:
+        string.writingDirection = nil
+
+        XCTAssertEqual(string.writingDirection, nil)
+
+        let range = try XCTUnwrap(string.range(of: "Swift"))
+
+        // When setting or removing the value from a certain range, the value will always be applied to the entire paragraph(s) that intersect with that range:
+        string[range].writingDirection = .leftToRight
+        XCTAssertEqual(string.runs[\.writingDirection].count, 1)
+
+        string.append(AttributedString(" It is awesome for working with strings!"))
+        XCTAssertEqual(string.runs[\.writingDirection].count, 1)
+        XCTAssertEqual(string.writingDirection, .leftToRight)
+
+        string.append(AttributedString("\nThe new paragraph does not inherit the writing direction."))
+        XCTAssertEqual(string.runs[\.writingDirection].count, 2)
+        XCTAssertEqual(string.runs.last?.writingDirection, nil)
+    }
 }

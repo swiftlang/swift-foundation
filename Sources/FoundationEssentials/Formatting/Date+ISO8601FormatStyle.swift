@@ -19,7 +19,6 @@ extension Date {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
-
     /// Options for generating and parsing string representations of dates following the ISO 8601 standard.
     public struct ISO8601FormatStyle : Sendable {
         public enum TimeZoneSeparator : String, Codable, Sendable {
@@ -41,144 +40,104 @@ extension Date {
             case space = " "
             case standard = "'T'"
         }
-
-        // `package` visibility so Date+ISO8601FormatStyleParsing.swift can see this
-        package struct Fields : Codable, Hashable, OptionSet {
-            package var rawValue: UInt
-            package init(rawValue: UInt) {
-                self.rawValue = rawValue
-            }
-            
-            package static var year: Self { Self(rawValue: 1 << 0) }
-            package static var month: Self { Self(rawValue: 1 << 1) }
-            package static var weekOfYear: Self { Self(rawValue: 1 << 2) }
-            package static var day: Self { Self(rawValue: 1 << 3) }
-            package static var time: Self { Self(rawValue: 1 << 4) }
-            package static var timeZone: Self { Self(rawValue: 1 << 5) }
-            
-            package init(from decoder: any Decoder) throws {
-                let c = try decoder.singleValueContainer()
-                rawValue = try c.decode(UInt.self)
-            }
-            
-            package func encode(to encoder: any Encoder) throws {
-                var c = encoder.singleValueContainer()
-                try c.encode(rawValue)
-            }
-        }
-
-        public private(set) var timeSeparator: TimeSeparator
-        public private(set) var includingFractionalSeconds: Bool
-        public private(set) var timeZoneSeparator: TimeZoneSeparator
-        public private(set) var dateSeparator: DateSeparator
-        public private(set) var dateTimeSeparator: DateTimeSeparator
-        private var _formatFields: Fields = []
         
-        /// This is a cache of the Gregorian Calendar, updated if the time zone changes.
-        /// In the future we can eliminate this by moving the calculations for the gregorian calendar into static functions there.
-        private var _calendar: _CalendarGregorian
-        
-        mutating func insertFormatFields(_ fields: Fields) {
-            _formatFields.insert(fields)
-        }
-
-        // `package` visibility so Date+ISO8601FormatStyleParsing.swift can see this
-        package var formatFields: Fields {
-            if _formatFields.isEmpty {
-                return [ .year, .month, .day, .time, .timeZone]
-            } else {
-                return _formatFields
+        public private(set) var timeSeparator: TimeSeparator {
+            get {
+                componentsFormatStyle.timeSeparator
+            }
+            set {
+                componentsFormatStyle.timeSeparator = newValue
             }
         }
         
-        enum CodingKeys : String, CodingKey {
-            case timeZoneSeparator
-            case timeZone
-            case fields
-            case dateTimeSeparator
-            case includingFractionalSeconds
-            case dateSeparator
-            case timeSeparator
+        /// If set, the style includes fractional seconds when formatting.
+        /// Before Swift 6.2, if true when parsing, fractional seconds must be present. If false when parsing, fractional seconds must not be present.
+        /// After Swift 6.2, fractional seconds may be present in the String regardless of the setting of this property.
+        public private(set) var includingFractionalSeconds: Bool {
+            get {
+                componentsFormatStyle.includingFractionalSeconds
+            }
+            set {
+                componentsFormatStyle.includingFractionalSeconds = newValue
+            }
+        }
+                
+        public private(set) var timeZoneSeparator: TimeZoneSeparator {
+            get {
+                componentsFormatStyle.timeZoneSeparator
+            }
+            set {
+                componentsFormatStyle.timeZoneSeparator = newValue
+            }
+        }
+        public private(set) var dateSeparator: DateSeparator  {
+            get {
+                componentsFormatStyle.dateSeparator
+            }
+            set {
+                componentsFormatStyle.dateSeparator = newValue
+            }
         }
         
-        // Encoding
-        
-        public init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            timeZoneSeparator = try c.decode(TimeZoneSeparator.self, forKey: .timeZoneSeparator)
-            timeZone = try c.decode(TimeZone.self, forKey: .timeZone)
-            _formatFields = try c.decode(Fields.self, forKey: .fields)
-            dateTimeSeparator = try c.decode(DateTimeSeparator.self, forKey: .dateTimeSeparator)
-            includingFractionalSeconds = try c.decode(Bool.self, forKey: .includingFractionalSeconds)
-            dateSeparator = try c.decode(DateSeparator.self, forKey: .dateSeparator)
-            timeSeparator = try c.decode(TimeSeparator.self, forKey: .timeSeparator)
-            
-            _calendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: Locale.unlocalized, firstWeekday: 2, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
-        }
-        
-        public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(timeZoneSeparator, forKey: .timeZoneSeparator)
-            try c.encode(timeZone, forKey: .timeZone)
-            try c.encode(_formatFields, forKey: .fields)
-            try c.encode(dateTimeSeparator, forKey: .dateTimeSeparator)
-            try c.encode(includingFractionalSeconds, forKey: .includingFractionalSeconds)
-            try c.encode(dateSeparator, forKey: .dateSeparator)
-            try c.encode(timeSeparator, forKey: .timeSeparator)
-        }
-        
-        public func hash(into hasher: inout Hasher) {
-            hasher.combine(timeZoneSeparator)
-            hasher.combine(timeZone)
-            hasher.combine(_formatFields)
-            hasher.combine(dateTimeSeparator)
-            hasher.combine(includingFractionalSeconds)
-            hasher.combine(dateSeparator)
-            hasher.combine(timeSeparator)
-        }
-        
-        public static func ==(lhs: ISO8601FormatStyle, rhs: ISO8601FormatStyle) -> Bool {
-            lhs.timeZoneSeparator == rhs.timeZoneSeparator &&
-            lhs.timeZone == rhs.timeZone &&
-            lhs._formatFields == rhs._formatFields &&
-            lhs.dateTimeSeparator == rhs.dateTimeSeparator &&
-            lhs.includingFractionalSeconds == rhs.includingFractionalSeconds &&
-            lhs.dateSeparator == rhs.dateSeparator &&
-            lhs.timeSeparator == rhs.timeSeparator
+        public private(set) var dateTimeSeparator: DateTimeSeparator {
+            get {
+                componentsFormatStyle.dateTimeSeparator
+            }
+            set {
+                componentsFormatStyle.dateTimeSeparator = newValue
+            }
         }
         
         /// The time zone to use to create and parse date representations.
-        public var timeZone: TimeZone = TimeZone(secondsFromGMT: 0)! {
-            didSet {
-                // Locale.unlocalized is `en_001`, which is equivalent to `en_US_POSIX` for our needs.
-                _calendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: Locale.unlocalized, firstWeekday: 2, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+        public var timeZone: TimeZone {
+            get {
+                componentsFormatStyle.timeZone
+            }
+            set {
+                componentsFormatStyle.timeZone = newValue
             }
         }
 
         // MARK: -
+        
+        /// All parsing and formatting is done with the `DateComponents` style.
+        private var componentsFormatStyle: DateComponents.ISO8601FormatStyle
+        
+        // Convenience init to stash a components style inside this one
+        internal init(_ componentsStyle: DateComponents.ISO8601FormatStyle) {
+            componentsFormatStyle = componentsStyle
+        }
+        
+        // MARK: - Encoding
+        
+        public init(from decoder: any Decoder) throws {
+            // Delegate to the DateComponents.ISO8601FormatStyle type
+            componentsFormatStyle = try DateComponents.ISO8601FormatStyle(from: decoder)
+        }
+        
+        public func encode(to encoder: any Encoder) throws {
+            // Delegate to the DateComponents.ISO8601FormatStyle type
+            try componentsFormatStyle.encode(to: encoder)
+        }
+        
+        public func hash(into hasher: inout Hasher) {
+            hasher.combine(componentsFormatStyle)
+        }
+        
+        public static func ==(lhs: ISO8601FormatStyle, rhs: ISO8601FormatStyle) -> Bool {
+            lhs.componentsFormatStyle == rhs.componentsFormatStyle
+        }
+        
+        // MARK: -
 
         @_disfavoredOverload
         public init(dateSeparator: DateSeparator = .dash, dateTimeSeparator: DateTimeSeparator = .standard, timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!) {
-            self.dateSeparator = dateSeparator
-            self.dateTimeSeparator = dateTimeSeparator
-            self.timeZone = timeZone
-            self.timeSeparator = .colon
-            self.timeZoneSeparator = .omitted
-            self.includingFractionalSeconds = false
-            
-            _calendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: Locale.unlocalized, firstWeekday: 2, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+            componentsFormatStyle = DateComponents.ISO8601FormatStyle(dateSeparator: dateSeparator, dateTimeSeparator: dateTimeSeparator, timeZone: timeZone)
         }
 
         // The default is the format of RFC 3339 with no fractional seconds: "yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"
         public init(dateSeparator: DateSeparator = .dash, dateTimeSeparator: DateTimeSeparator = .standard, timeSeparator: TimeSeparator = .colon, timeZoneSeparator: TimeZoneSeparator = .omitted, includingFractionalSeconds: Bool = false, timeZone: TimeZone = TimeZone(secondsFromGMT: 0)!) {
-            self.dateSeparator = dateSeparator
-            self.dateTimeSeparator = dateTimeSeparator
-            self.timeZone = timeZone
-            self.timeSeparator = timeSeparator
-            self.timeZoneSeparator = timeZoneSeparator
-            self.includingFractionalSeconds = includingFractionalSeconds
-            
-            _calendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: Locale.unlocalized, firstWeekday: 2, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+            componentsFormatStyle = DateComponents.ISO8601FormatStyle(dateSeparator: dateSeparator, dateTimeSeparator: dateTimeSeparator, timeSeparator: timeSeparator, timeZoneSeparator: timeZoneSeparator, includingFractionalSeconds: includingFractionalSeconds, timeZone: timeZone)
         }
     }
 }
@@ -186,66 +145,44 @@ extension Date {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.ISO8601FormatStyle {
     public func year() -> Self {
-        var new = self
-        new.insertFormatFields(.year)
-        return new
+        .init(componentsFormatStyle.year())
     }
 
     public func weekOfYear() -> Self {
-        var new = self
-        new.insertFormatFields(.weekOfYear)
-        return new
+        .init(componentsFormatStyle.weekOfYear())
     }
 
     public func month() -> Self {
-        var new = self
-        new.insertFormatFields(.month)
-        return new
+        .init(componentsFormatStyle.month())
     }
 
     public func day() -> Self {
-        var new = self
-        new.insertFormatFields(.day)
-        return new
+        .init(componentsFormatStyle.day())
     }
 
     public func time(includingFractionalSeconds: Bool) -> Self {
-        var new = self
-        new.insertFormatFields(.time)
-        new.includingFractionalSeconds = includingFractionalSeconds
-        return new
+        .init(componentsFormatStyle.time(includingFractionalSeconds: includingFractionalSeconds))
     }
 
     public func timeZone(separator: TimeZoneSeparator) -> Self {
-        var new = self
-        new.insertFormatFields(.timeZone)
-        new.timeZoneSeparator = separator
-        return new
+        .init(componentsFormatStyle.timeZone(separator: separator))
     }
 
     public func dateSeparator(_ separator: DateSeparator) -> Self {
-        var new = self
-        new.dateSeparator = separator
-        return new
+        .init(componentsFormatStyle.dateSeparator(separator))
     }
 
     public func dateTimeSeparator(_ separator: DateTimeSeparator) -> Self {
-        var new = self
-        new.dateTimeSeparator = separator
-        return new
+        .init(componentsFormatStyle.dateTimeSeparator(separator))
     }
 
     public func timeSeparator(_ separator: TimeSeparator) -> Self {
-        var new = self
-        new.timeSeparator = separator
-        return new
+        .init(componentsFormatStyle.timeSeparator(separator))
     }
 
     public func timeZoneSeparator(_ separator: TimeZoneSeparator) -> Self {
-        var new = self
-        new.timeZoneSeparator = separator
-        return new
-    }
+        .init(componentsFormatStyle.timeZoneSeparator(separator))
+    }    
 }
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
@@ -253,7 +190,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
 
     public func format(_ value: Date) -> String {
         var whichComponents = Calendar.ComponentSet()
-        let fields = formatFields
+        let fields = componentsFormatStyle.formatFields
 
         // If we use week of year, don't bother with year
         if fields.contains(.year) && !fields.contains(.weekOfYear) {
@@ -287,7 +224,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
         }
 
         let secondsFromGMT: Int?
-        let components = _calendar.dateComponents(whichComponents, from: value)
+        let components = componentsFormatStyle._calendar._dateComponents(whichComponents, from: value)
         if fields.contains(.timeZone) {
             secondsFromGMT = timeZone.secondsFromGMT(for: value)
         } else {
@@ -297,405 +234,7 @@ extension Date.ISO8601FormatStyle : FormatStyle {
     }
 
     func format(_ components: DateComponents, appendingTimeZoneOffset timeZoneOffset: Int?) -> String {
-        var needSeparator = false
-        let capacity = 128 // It is believed no ISO8601 date can exceed this size
-        let result = withUnsafeTemporaryAllocation(of: CChar.self, capacity: capacity + 1) { _buffer in
-            var buffer = OutputBuffer(initializing: _buffer.baseAddress!, capacity: _buffer.count)
-            
-            let asciiColon = CChar(58)
-            let asciiDash = CChar(45)
-            let asciiSpace = CChar(32)
-            let asciiPeriod = CChar(46)
-            let asciiTimeSeparator = CChar(84)
-            let asciiWeekOfYearSeparator = CChar(87)
-            let asciiZulu = CChar(90)
-            let asciiPlus = CChar(43)
-            let asciiMinus = CChar(45) // Same as dash, renamed for clarity
-            let asciiNull = CChar(0)
-            
-            if formatFields.contains(.year) {
-                if formatFields.contains(.weekOfYear), let y = components.yearForWeekOfYear {
-                    buffer.append(y, zeroPad: 4)
-                } else {
-                    var y = components.year!
-                    if let era = components.era, era == 0 {
-                        y = 1 - y
-                    }
-                    if y < 0 {
-                        buffer.appendElement(asciiMinus)
-                        y = -y
-                    }
-                    buffer.append(y, zeroPad: 4)
-                }
-
-                needSeparator = true
-            }
-            
-            if formatFields.contains(.month) {
-                if needSeparator && dateSeparator == .dash {
-                    buffer.appendElement(asciiDash)
-                }
-                let m = components.month!
-                buffer.append(m, zeroPad: 2)
-                needSeparator = true
-            }
-            
-            if formatFields.contains(.weekOfYear) {
-                if needSeparator && dateSeparator == .dash {
-                    buffer.appendElement(asciiDash)
-                }
-                let woy = components.weekOfYear!
-                buffer.appendElement(asciiWeekOfYearSeparator)
-                buffer.append(woy, zeroPad: 2)
-                needSeparator = true
-            }
-
-            if formatFields.contains(.day) {
-                if needSeparator && dateSeparator == .dash {
-                    buffer.appendElement(asciiDash)
-                }
-                
-                if formatFields.contains(.weekOfYear) {
-                    var weekday = components.weekday!
-                    // Weekday is always less than 10. Our weekdays are offset by 1.
-                    if weekday >= 10 {
-                        weekday = 10
-                    }
-                    buffer.append(weekday - 1, zeroPad: 2)
-                } else if formatFields.contains(.month) {
-                    let day = components.day!
-                    buffer.append(day, zeroPad: 2)
-                } else {
-                    let dayOfYear = components.dayOfYear!
-                    buffer.append(dayOfYear, zeroPad: 3)
-                }
-                
-                needSeparator = true
-            }
-            
-            if formatFields.contains(.time) {
-                if needSeparator {
-                    switch dateTimeSeparator {
-                    case .space: buffer.appendElement(asciiSpace)
-                    case .standard: buffer.appendElement(asciiTimeSeparator)
-                    }
-                }
-                
-                let h = components.hour!
-                let m = components.minute!
-                let s = components.second!
-
-                switch timeSeparator {
-                case .colon:
-                    buffer.append(h, zeroPad: 2)
-                    buffer.appendElement(asciiColon)
-                    buffer.append(m, zeroPad: 2)
-                    buffer.appendElement(asciiColon)
-                    buffer.append(s, zeroPad: 2)
-                case .omitted:
-                    buffer.append(h, zeroPad: 2)
-                    buffer.append(m, zeroPad: 2)
-                    buffer.append(s, zeroPad: 2)
-                }
-                
-                if includingFractionalSeconds {
-                    let ns = components.nanosecond!
-                    let ms = Int((Double(ns) / 1_000_000.0).rounded(.towardZero))
-                    buffer.appendElement(asciiPeriod)
-                    buffer.append(ms, zeroPad: 3)
-                }
-                
-                needSeparator = true
-            }
-
-            if formatFields.contains(.timeZone) {
-                // A time zone name, not the same as the abbreviated name from TimeZone. e.g., that one includes a `:`.
-                var secondsFromGMT: Int
-                if let timeZoneOffset, (-18 * 3600 < timeZoneOffset && timeZoneOffset < 18 * 3600)  {
-                    secondsFromGMT = timeZoneOffset
-                } else {
-                    secondsFromGMT = 0
-                }
-
-                if secondsFromGMT == 0 {
-                    buffer.appendElement(asciiZulu)
-                } else {
-                    let (hour, minuteAndSecond) = abs(secondsFromGMT).quotientAndRemainder(dividingBy: 3600)
-                    let (minute, second) = minuteAndSecond.quotientAndRemainder(dividingBy: 60)
-                    
-                    if secondsFromGMT < 0 {
-                        buffer.appendElement(asciiMinus)
-                    } else {
-                        buffer.appendElement(asciiPlus)
-                    }
-                    buffer.append(hour, zeroPad: 2)
-                    if timeZoneSeparator == .colon {
-                        buffer.appendElement(asciiColon)
-                    }
-                    buffer.append(minute, zeroPad: 2)
-                    if second != 0 {
-                        if timeZoneSeparator == .colon {
-                            buffer.appendElement(asciiColon)
-                        }
-                        buffer.append(second, zeroPad: 2)
-                    }
-                }
-            }
-            
-            // Null-terminate
-            buffer.appendElement(asciiNull)
-            
-            // Make a string
-            let initialized = buffer.relinquishBorrowedMemory()
-            return String(validatingUTF8: initialized.baseAddress!)!
-        }
-        
-        return result
-    }
-}
-
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.ISO8601FormatStyle {
-    private struct ComponentsParseResult {
-        var consumed: Int
-        var components: DateComponents
-    }
-    
-    private func components(from inputString: String, in view: borrowing BufferView<UInt8>) throws -> ComponentsParseResult {
-        let fields = formatFields
-        
-        var it = view.makeIterator()
-        var needsSeparator = false
-        var dc = DateComponents()
-        if fields.contains(.year) {
-            let max = dateSeparator == .omitted ? 4 : nil
-            let value = try it.digits(maxDigits: max, input: inputString, onFailure: self.format(Date.now))
-            if fields.contains(.weekOfYear) {
-                dc.yearForWeekOfYear = value
-            } else {
-                dc.year = value
-            }
-            
-            needsSeparator = true
-        } else {
-            // Support for deprecated formats with missing values
-            dc.year = 1970
-        }
-        
-        if fields.contains(.month) {
-            if needsSeparator && dateSeparator == .dash {
-                try it.expectCharacter(UInt8(ascii: "-"), input: inputString, onFailure: self.format(Date.now))
-            }
-            
-            // parse month digits
-            let max = dateSeparator == .omitted ? 2 : nil
-            let value = try it.digits(maxDigits: max, input: inputString, onFailure: self.format(Date.now))
-            guard _calendar.maximumRange(of: .month)!.contains(value) else {
-                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
-            }
-            dc.month = value
-
-            needsSeparator = true
-        } else if fields.contains(.weekOfYear) {
-            if needsSeparator && dateSeparator == .dash {
-                try it.expectCharacter(UInt8(ascii: "-"), input: inputString, onFailure: self.format(Date.now))
-            }
-            // parse W
-            try it.expectCharacter(UInt8(ascii: "W"), input: inputString, onFailure: self.format(Date.now))
-
-            // parse week of year digits
-            let max = dateSeparator == .omitted ? 2 : nil
-            let value = try it.digits(maxDigits: max, input: inputString, onFailure: self.format(Date.now))
-            guard _calendar.maximumRange(of: .weekOfYear)!.contains(value) else {
-                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
-            }
-            dc.weekOfYear = value
-            
-            needsSeparator = true
-        } else {
-            // Support for deprecated formats with missing values
-            dc.month = 1
-        }
-        
-        if fields.contains(.day) {
-            if needsSeparator && dateSeparator == .dash {
-                try it.expectCharacter(UInt8(ascii: "-"), input: inputString, onFailure: self.format(Date.now))
-            }
-            
-            if fields.contains(.weekOfYear) {
-                // parse day of week ('ee')
-                // ISO8601 "1" is Monday. For our date components, 2 is Monday. Add 1 to account for difference.
-                let max = dateSeparator == .omitted ? 2 : nil
-                let value = (try it.digits(maxDigits: max, input: inputString, onFailure: self.format(Date.now)) % 7) + 1
-                
-                guard _calendar.maximumRange(of: .weekday)!.contains(value) else {
-                    throw parseError(inputString, exampleFormattedString: self.format(Date.now))
-                }
-                dc.weekday = value
-                
-            } else if fields.contains(.month) {
-                // parse day of month ('dd')
-                let max = dateSeparator == .omitted ? 2 : nil
-                let value = try it.digits(maxDigits: max, input: inputString, onFailure: self.format(Date.now))
-                guard _calendar.maximumRange(of: .day)!.contains(value) else {
-                    throw parseError(inputString, exampleFormattedString: self.format(Date.now))
-                }
-
-                dc.day = value
-                
-            } else {
-                // parse 3 digit day of year ('DDD')
-                let max = dateSeparator == .omitted ? 3 : nil
-                let value = try it.digits(maxDigits: max, input: inputString, onFailure: self.format(Date.now))
-                guard _calendar.maximumRange(of: .dayOfYear)!.contains(value) else {
-                    throw parseError(inputString, exampleFormattedString: self.format(Date.now))
-                }
-
-                dc.dayOfYear = value
-            }
-            
-            needsSeparator = true
-        }
-        
-        if fields.contains(.time) {
-            if needsSeparator {
-                switch dateTimeSeparator {
-                case .standard:
-                    // parse T
-                    try it.expectCharacter(UInt8(ascii: "T"), input: inputString, onFailure: self.format(Date.now))
-                case .space:
-                    // parse any number of spaces
-                    try it.expectOneOrMoreCharacters(UInt8(ascii: " "), input: inputString, onFailure: self.format(Date.now))
-                }
-            }
-            
-            switch timeSeparator {
-            case .colon:
-                dc.hour = try it.digits(input: inputString, onFailure: self.format(Date.now))
-                try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: self.format(Date.now))
-                dc.minute = try it.digits(input: inputString, onFailure: self.format(Date.now))
-                try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: self.format(Date.now))
-                dc.second = try it.digits(input: inputString, onFailure: self.format(Date.now))
-            case .omitted:
-                dc.hour = try it.digits(maxDigits: 2, input: inputString, onFailure: self.format(Date.now))
-                dc.minute = try it.digits(maxDigits: 2, input: inputString, onFailure: self.format(Date.now))
-                dc.second = try it.digits(maxDigits: 2, input: inputString, onFailure: self.format(Date.now))
-            }
-            
-            if includingFractionalSeconds {
-                try it.expectCharacter(UInt8(ascii: "."), input: inputString, onFailure: self.format(Date.now))
-                
-                let fractionalSeconds = try it.digits(nanoseconds: true, input: inputString, onFailure: self.format(Date.now))
-                dc.nanosecond = fractionalSeconds
-            }
-            
-            needsSeparator = true
-        }
-        
-        if fields.contains(.timeZone) {
-            // For compatibility with ICU implementation, if the dateTimeSeparator is a space, consume any number (including zero) of spaces here.
-            if dateTimeSeparator == .space {
-                it.expectZeroOrMoreCharacters(UInt8(ascii: " "))
-            }
-            
-            guard let plusOrMinusOrZ = it.next() else {
-                // Expected time zone
-                throw parseError(inputString, exampleFormattedString: self.format(Date.now))
-            }
-
-            let tz: TimeZone
-
-            if plusOrMinusOrZ == UInt8(ascii: "Z") || plusOrMinusOrZ == UInt8(ascii: "z") {
-                tz = .gmt
-            } else {
-                var tzOffset = 0
-                let positive: Bool
-                var skipDigits = false
-                
-                // Allow GMT, or UTC
-                if (plusOrMinusOrZ == UInt8(ascii: "G") || plusOrMinusOrZ == UInt8(ascii: "g")),
-                    let m = it.next(), (m == UInt8(ascii: "M") || m == UInt8(ascii: "m")),
-                    let t = it.next(), (t == UInt8(ascii: "T") || t == UInt8(ascii: "t")) {
-                    // Allow GMT followed by + or -, or end of string, or other
-                    if let next = it.peek(), (next == UInt8(ascii: "+") || next == UInt8(ascii: "-")) {
-                        if next == UInt8(ascii: "+") { positive = true }
-                        else { positive = false }
-                        it.advance()
-                    } else {
-                        positive = true
-                        tzOffset = 0
-                        skipDigits = true
-                    }
-                } else if (plusOrMinusOrZ == UInt8(ascii: "U") || plusOrMinusOrZ == UInt8(ascii: "u")),
-                          let t = it.next(), (t == UInt8(ascii: "T") || t == UInt8(ascii: "t")),
-                          let c = it.next(), (c == UInt8(ascii: "C") || c == UInt8(ascii: "c")) {
-                    // Allow UTC followed by + or -, or end of string, or other
-                    if let next = it.peek(), (next == UInt8(ascii: "+") || next == UInt8(ascii: "-")) {
-                        if next == UInt8(ascii: "+") { positive = true }
-                        else { positive = false }
-                        it.advance()
-                    } else {
-                        positive = true
-                        tzOffset = 0
-                        skipDigits = true
-                    }
-                } else if plusOrMinusOrZ == UInt8(ascii: "+") {
-                    positive = true
-                } else if plusOrMinusOrZ == UInt8(ascii: "-") {
-                    positive = false
-                } else {
-                    // Expected time zone, found garbage
-                    throw parseError(inputString, exampleFormattedString: self.format(Date.now))
-                }
-    
-                if !skipDigits {
-                    // Theoretically we would disallow or require the presence of a `:` here. However, the original implementation of this style with ICU accidentally allowed either the presence or absence of the `:` to be parsed regardless of the setting. We preserve that behavior now.
-
-                    // parse Time Zone: ISO8601 extended hms?, with Z
-                    // examples: -08:00, -07:52:58, Z
-                    let hours = try it.digits(maxDigits: 2, input: inputString, onFailure: self.format(Date.now))
-                    
-                    // Expect a colon, or not
-                    if let maybeColon = it.peek(), maybeColon == UInt8(ascii: ":") {
-                        // Throw it away
-                        it.advance()
-                    }
-                    
-                    let minutes = try it.digits(maxDigits: 2, input: inputString, onFailure: self.format(Date.now))
-                    
-                    if let maybeColon = it.peek(), maybeColon == UInt8(ascii: ":") {
-                        // Throw it away
-                        it.advance()
-                    }
-
-                    if let secondsTens = it.peek(), isASCIIDigit(secondsTens) {
-                        // We have seconds
-                        let seconds = try it.digits(maxDigits: 2, input: inputString, onFailure: self.format(Date.now))
-                        tzOffset = (hours * 3600) + (minutes * 60) + seconds
-                    } else {
-                        // If the next character is missing, that's allowed - the time can be something like just -0852 and then the string can end
-                        tzOffset = (hours * 3600) + (minutes * 60)
-                    }
-                }
-                
-                if tzOffset == 0 {
-                    tz = .gmt
-                } else {
-                    guard let parsedTimeZone = TimeZone(secondsFromGMT: positive ? tzOffset : -tzOffset) else {
-                        // Out of range time zone
-                        throw parseError(inputString, exampleFormattedString: self.format(Date.now))
-                    }
-                    
-                    tz = parsedTimeZone
-                }
-            }
-            
-            dc.timeZone = tz
-        }
-        
-        // Would be nice to see this functionality on BufferView, but for now we calculate it ourselves.
-        let utf8CharactersRead = it.curPointer - view.startIndex._rawValue
-        return ComponentsParseResult(consumed: utf8CharactersRead, components: dc)
+        componentsFormatStyle.format(components, appendingTimeZoneOffset: timeZoneOffset)
     }
 }
 
@@ -734,41 +273,21 @@ extension Date.ISO8601FormatStyle : ParseStrategy {
     }
     
     package func parse(_ value: String, in range: Range<String.Index>) -> (String.Index, Date)? {
-        var v = value[range]
+        let v = value[range]
         guard !v.isEmpty else {
             return nil
         }
         
-        let result = v.withUTF8 { buffer -> (Int, Date)? in
-            let view = BufferView(unsafeBufferPointer: buffer)!
-
-            guard let comps = try? components(from: value, in: view) else {
-                return nil
-            }
-            
-            if let tz = comps.components.timeZone {
-                guard let date = try? _calendar.date(from: comps.components, inTimeZone: tz) else {
-                    return nil
-                }
-                                
-                return (comps.consumed, date)
-            } else {
-                // Use the default time zone of the calendar. Neither date(from:inTimeZone:) nor date(from:) honor the time zone value set in the DateComponents instance.
-                // rdar://122918762 (CalendarGregorian's date(from: components) does not honor the DateComponents time zone)
-                guard let date = _calendar.date(from: comps.components) else {
-                    return nil
-                }
-                
-                return (comps.consumed, date)
-            }
-        }
-        
-        guard let result else {
+        // Date parsing needs missing units filled out, so that we can calculate a date. Instead of filling them here, we do it inside the parse because it calculates which ones are truly needed.
+        guard let (idx, comps) = componentsFormatStyle.parse(value, fillMissingUnits: true, in: range) else {
             return nil
         }
         
-        let endIndex = value.utf8.index(v.startIndex, offsetBy: result.0)
-        return (endIndex, result.1)
+        guard let date = componentsFormatStyle._calendar.date(from: comps) else {
+            return nil
+        }
+            
+        return (idx, date)
     }
 }
 
@@ -829,7 +348,7 @@ extension RegexComponent where Self == Date.ISO8601FormatStyle {
     /// - Parameters:
     ///   - timeZone: The time zone to create the captured `Date` with.
     ///   - dateSeparator: The separator between date components.
-    /// - Returns:  A `RegexComponent` to match an ISO 8601 date string, including time zone.
+    /// - Returns:  A `RegexComponent` to match an ISO 8601 date string, not any time zone that may be in the string.
     public static func iso8601Date(timeZone: TimeZone, dateSeparator: Self.DateSeparator = .dash) -> Self {
         return Date.ISO8601FormatStyle(dateSeparator: dateSeparator, timeZone: timeZone).year().month().day()
     }

@@ -34,7 +34,11 @@ extension AttributeScopes {
         
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let durationField: DurationFieldAttribute
-        
+
+        /// The base writing direction of a paragraph.
+        @available(FoundationPreview 6.2, *)
+        public let writingDirection: WritingDirectionAttribute
+
 #if FOUNDATION_FRAMEWORK
         @available(FoundationPreview 0.1, *)
         public let agreementConcept: AgreementConceptAttribute
@@ -50,6 +54,8 @@ extension AttributeScopes {
         public let presentationIntent: PresentationIntentAttribute
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let markdownSourcePosition: MarkdownSourcePositionAttribute
+        @available(FoundationPreview 6.2, *)
+        public let listItemDelimiter: ListItemDelimiterAttribute
         
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
         public let localizedStringArgumentAttributes: LocalizedStringArgumentAttributes
@@ -433,6 +439,44 @@ extension AttributeScopes.FoundationAttributes {
         public typealias Value = AttributedString.MarkdownSourcePosition
     }
     
+    @frozen
+    @available(FoundationPreview 6.2, *)
+    public enum ListItemDelimiterAttribute : CodableAttributedStringKey, ObjectiveCConvertibleAttributedStringKey {
+        public typealias Value = Character
+        public typealias ObjectiveCValue = NSString
+        
+        public static let name = NSAttributedString.Key.listItemDelimiter.rawValue
+        
+        public static func objectiveCValue(for value: Character) throws -> NSString {
+            String(value) as NSString
+        }
+        
+        public static func value(for object: NSString) throws -> Character {
+            let stringValue = object as String
+            guard stringValue.count == 1 else {
+                throw CocoaError(.coderInvalidValue)
+            }
+            return stringValue[stringValue.startIndex]
+        }
+        
+        public static func encode(_ value: Character, to encoder: any Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(String(value))
+        }
+        
+        public static func decode(from decoder: any Decoder) throws -> Character {
+            let container = try decoder.singleValueContainer()
+            let text = try container.decode(String.self)
+            guard text.count == 1 else {
+                throw DecodingError.dataCorrupted(DecodingError.Context(
+                    codingPath: container.codingPath,
+                    debugDescription: "List item delimeter encoded value must contain only one character / grapheme cluster"
+                ))
+            }
+            return text[text.startIndex]
+        }
+    }
+    
 #endif // FOUNDATION_FRAMEWORK
     
     @frozen
@@ -507,7 +551,18 @@ extension AttributeScopes.FoundationAttributes {
             case nanoseconds
         }
     }
-    
+
+    /// The attribute key for the base writing direction of a paragraph.
+    @available(FoundationPreview 6.2, *)
+    @frozen
+    public enum WritingDirectionAttribute: CodableAttributedStringKey {
+        public typealias Value = AttributedString.WritingDirection
+        public static let name: String = "Foundation.WritingDirectionAttribute"
+
+        public static let runBoundaries: AttributedString.AttributeRunBoundaries? = .paragraph
+        public static let inheritedByAddedText = false
+    }
+
 #if FOUNDATION_FRAMEWORK
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public struct LocalizedStringArgumentAttributes {
@@ -646,6 +701,9 @@ extension AttributeScopes.FoundationAttributes.ByteCountAttribute : Sendable {}
 @available(watchOS, unavailable, introduced: 9.0)
 @available(*, unavailable)
 extension AttributeScopes.FoundationAttributes.DurationFieldAttribute : Sendable {}
+
+@available(*, unavailable)
+extension AttributeScopes.FoundationAttributes.WritingDirectionAttribute: Sendable {}
 
 #if FOUNDATION_FRAMEWORK
 
@@ -819,3 +877,69 @@ extension AttributeScopes.FoundationAttributes.LocalizedNumberFormatAttribute.Va
 }
 
 #endif // FOUNDATION_FRAMEWORK
+
+extension AttributedString {
+    /// The writing direction of a piece of text.
+    ///
+    /// Writing direction defines the base direction in which bidirectional text
+    /// lays out its directional runs. A directional run is a contigous sequence
+    /// of characters that all have the same effective directionality, which can
+    /// be determined using the Unicode BiDi algorithm. The ``leftToRight``
+    /// writing direction puts the directional run that is placed first in the
+    /// storage leftmost, and places subsequent directional runs towards the
+    /// right. The ``rightToLeft`` writing direction puts the directional run
+    /// that is placed first in the storage rightmost, and places subsequent
+    /// directional runs towards the left.
+    ///
+    /// Note that writing direction is a property separate from a text's
+    /// alignment, its line layout direction, or its character direction.
+    /// However, it is often used to determine the default alignment of a
+    /// paragraph. E.g. English (a language with
+    /// ``Locale/LanguageDirection-swift.enum/leftToRight``
+    /// ``Locale/Language-swift.struct/characterDirection``) is usually aligned
+    /// to the left, but may be centered or aligned to the right for special
+    /// effect, or to be visually more appealing in a user interface.
+    ///
+    /// For bidirectional text to be perceived as laid out correctly, make sure
+    /// that the writing direction is set to the value equivalent to the
+    /// ``Locale/Language-swift.struct/characterDirection`` of the primary
+    /// language in the text. E.g. an English sentence that contains some
+    /// Arabic (a language with
+    /// ``Locale/LanguageDirection-swift.enum/rightToLeft``
+    /// ``Locale/Language-swift.struct/characterDirection``) words, should use
+    /// a ``leftToRight`` writing direction. An Arabic sentence that contains
+    /// some English words, should use a ``rightToLeft`` writing direction.
+    ///
+    /// Writing direction is always orthogonoal to the line layout direction
+    /// chosen to display a certain text. The line layout direction is the
+    /// direction in which a sequence of lines is placed in. E.g. English text
+    /// is usually displayed with a line layout direction of
+    /// ``Locale/LanguageDirection-swift.enum/topToBottom``. While languages do
+    /// have an associated line language direction (see
+    /// ``Locale/Language-swift.struct/lineLayoutDirection``), not all displays
+    /// of text follow the line layout direction of the text's primary language.
+    ///
+    /// Horizontal script is script with a line layout direction of either
+    /// ``Locale/LanguageDirection-swift.enum/topToBottom`` or
+    /// ``Locale/LanguageDirection-swift.enum/bottomToTop``. Vertical script
+    /// has a ``Locale/LanguageDirection-swift.enum/leftToRight`` or
+    /// ``Locale/LanguageDirection-swift.enum/rightToLeft`` line layout
+    /// direction. In vertical scripts, a writing direction of ``leftToRight``
+    /// is interpreted as top-to-bottom and a writing direction of
+    /// ``rightToLeft`` is interpreted as bottom-to-top.
+    @available(FoundationPreview 6.2, *)
+    @frozen
+    public enum WritingDirection: Codable, Hashable, CaseIterable, Sendable {
+        /// A left-to-right writing direction in horizontal script.
+        ///
+        /// - Note: In vertical scripts, this equivalent to a top-to-bottom
+        /// writing direction.
+        case leftToRight
+
+        /// A right-to-left writing direction in horizontal script.
+        ///
+        /// - Note: In vertical scripts, this equivalent to a bottom-to-top
+        /// writing direction.
+        case rightToLeft
+    }
+}
