@@ -209,36 +209,37 @@ For `MainActorMessage`:
 @available(FoundationPreview 0.5, *)
 extension NotificationCenter {
     // e.g. addObserver(of: workspace, for: .willLaunchApplication) { message in ... }
-    public func addObserver<I: MessageIdentifier, M: MainActorMessage>(of subject: M.Subject,
-                                                                       for identifier: I,
-                                                                       using observer: @escaping @MainActor (M) -> Void)
-        -> ObservationToken where I.MessageType == M,
-                                  M.Subject: AnyObject
+    public func addObserver<Identifier: MessageIdentifier, Message: MainActorMessage>(
+        of subject: Message.Subject,
+        for identifier: Identifier,
+        using observer: @escaping @MainActor (Message) -> Void
+    ) -> ObservationToken where Identifier.MessageType == Message, Message.Subject: AnyObject
     
-    public func addObserver<I: MessageIdentifier, M: MainActorMessage>(of subject: M.Subject,
-                                                                       for identifier: I,
-                                                                       using observer: @escaping @MainActor (M) -> Void)
-        -> ObservationToken where I.MessageType == M,
-                                  M.Subject: Identifiable,
-                                  M.Subject.ID == ObjectIdentifier
+    public func addObserver<Identifier: MessageIdentifier, Message: MainActorMessage>(
+        of subject: Message.Subject,
+        for identifier: Identifier,
+        using observer: @escaping @MainActor (Message) -> Void
+    ) -> ObservationToken where Identifier.MessageType == Message, Message.Subject: Identifiable, Message.Subject.ID == ObjectIdentifier
 
     // e.g. addObserver(of: NSWorkspace.self, for: .willLaunchApplication) { message in ... }
-    public func addObserver<I: MessageIdentifier, M: MainActorMessage>(of subject: M.Subject.Type,
-                                                                       for identifier: I,
-                                                                       using observer: @escaping @MainActor (M) -> Void)
-        -> ObservationToken where I.MessageType == M
+    public func addObserver<Identifier: MessageIdentifier, Message: MainActorMessage>(
+        of subject: Message.Subject.Type,
+        for identifier: Identifier,
+        using observer: @escaping @MainActor (Message) -> Void
+    ) -> ObservationToken where Identifier.MessageType == Message
 
     // e.g. addObserver(for: NSWorkspace.WillLaunchApplication.self) { message in ... }
-    public func addObserver<M: MainActorMessage>(of subject: M.Subject? = nil,
-                                                 for messageType: M.Type,
-                                                 using observer: @escaping @MainActor (M) -> Void)
-        -> ObservationToken where M.Subject: AnyObject
+    public func addObserver<Message: MainActorMessage>(
+        of subject: Message.Subject? = nil,
+        for messageType: Message.Type,
+        using observer: @escaping @MainActor (Message) -> Void
+    ) -> ObservationToken where Message.Subject: AnyObject
 
-    public func addObserver<M: MainActorMessage>(of subject: M.Subject? = nil,
-                                                 for messageType: M.Type,
-                                                 using observer: @escaping @MainActor (M) -> Void)
-        -> ObservationToken where M.Subject: Identifiable,
-                                  M.Subject.ID == ObjectIdentifier
+    public func addObserver<Message: MainActorMessage>(
+        of subject: Message.Subject? = nil,
+        for messageType: Message.Type,
+        using observer: @escaping @MainActor (Message) -> Void
+    ) -> ObservationToken where Message.Subject: Identifiable, Message.Subject.ID == ObjectIdentifier
 }
 ```
 
@@ -247,34 +248,35 @@ And for `AsyncMessage`:
 ```swift
 @available(FoundationPreview 0.5, *)
 extension NotificationCenter {
-    public func addObserver<I: MessageIdentifier, M: AsyncMessage>(of subject: M.Subject,
-                                                                   for identifier: I,
-                                                                   using observer: @escaping @Sendable (M) async -> Void)
-        -> ObservationToken where I.MessageType == M,
-                                  M.Subject: AnyObject
+    public func addObserver<Identifier: MessageIdentifier, Message: AsyncMessage>(
+        of subject: Message.Subject,
+        for identifier: Identifier,
+        using observer: @escaping @Sendable (Message) async -> Void
+    ) -> ObservationToken where Identifier.MessageType == Message, Message.Subject: AnyObject
 
-    public func addObserver<I: MessageIdentifier, M: AsyncMessage>(of subject: M.Subject,
-                                                                   for identifier: I,
-                                                                   using observer: @escaping @Sendable (M) async -> Void)
-        -> ObservationToken where I.MessageType == M,
-                                  M.Subject: Identifiable,
-                                  M.Subject.ID == ObjectIdentifier
+    public func addObserver<Identifier: MessageIdentifier, Message: AsyncMessage>(
+        of subject: Message.Subject,
+        for identifier: Identifier,
+        using observer: @escaping @Sendable (Message) async -> Void
+    ) -> ObservationToken where Identifier.MessageType == Message, Message.Subject: Identifiable, Message.Subject.ID == ObjectIdentifier
 
-    public func addObserver<I: MessageIdentifier, M: AsyncMessage>(of subject: M.Subject.Type,
-                                                                   for identifier: I,
-                                                                   using observer: @escaping @Sendable (M) async -> Void)
-        -> ObservationToken where I.MessageType == M
+    public func addObserver<Identifier: MessageIdentifier, Message: AsyncMessage>(
+        of subject: Message.Subject.Type,
+        for identifier: Identifier,
+        using observer: @escaping @Sendable (Message) async -> Void
+    ) -> ObservationToken where Identifier.MessageType == Message
     
-    public func addObserver<M: AsyncMessage>(of subject: M.Subject? = nil,
-                                             for messageType: M.Type,
-                                             using observer: @escaping @Sendable (M) async -> Void)
-        -> ObservationToken where M.Subject: AnyObject
+    public func addObserver<Message: AsyncMessage>(
+        of subject: Message.Subject? = nil,
+        for messageType: Message.Type,
+        using observer: @escaping @Sendable (Message) async -> Void
+    ) -> ObservationToken where Message.Subject: AnyObject
     
-    public func addObserver<M: AsyncMessage>(of subject: M.Subject? = nil,
-                                             for messageType: M.Type,
-                                             using observer: @escaping @Sendable (M) async -> Void)
-        -> ObservationToken where M.Subject: Identifiable,
-                                  M.Subject.ID == ObjectIdentifier
+    public func addObserver<Message: AsyncMessage>(
+        of subject: Message.Subject? = nil,
+        for messageType: Message.Type,
+        using observer: @escaping @Sendable (Message) async -> Void
+    ) -> ObservationToken where Message.Subject: Identifiable, Message.Subject.ID == ObjectIdentifier
 }
 ```
 
@@ -302,40 +304,31 @@ extension NotificationCenter {
 		of subject: Message.Subject,
 		for identifier: Identifier,
 		bufferSize limit: Int = 10
-	)
-	-> some AsyncSequence<Message, Never> where Identifier.MessageType == Message,
-												Message.Subject: AnyObject
+	) -> some AsyncSequence<Message, Never> where Identifier.MessageType == Message, Message.Subject: AnyObject
 	
 	public func messages<Identifier: MessageIdentifier, Message: AsyncMessage>(
 		of subject: Message.Subject,
 		for identifier: Identifier,
 		bufferSize limit: Int = 10
-	)
-	-> some AsyncSequence<Message, Never> where Identifier.MessageType == Message,
-												Message.Subject: Identifiable,
-												Message.Subject.ID == ObjectIdentifier {}
+	) -> some AsyncSequence<Message, Never> where Identifier.MessageType == Message, Message.Subject: Identifiable, Message.Subject.ID == ObjectIdentifier {}
 	
 	public func messages<Identifier: MessageIdentifier, Message: AsyncMessage>(
 		of subject: Message.Subject.Type,
 		for identifier: Identifier,
 		bufferSize limit: Int = 10
-	)
-	-> some AsyncSequence<Message, Never> where Identifier.MessageType == Message
+	) -> some AsyncSequence<Message, Never> where Identifier.MessageType == Message
 	
 	public func messages<Message: AsyncMessage>(
 		of subject: Message.Subject? = nil,
 		for messageType: Message.Type,
 		bufferSize limit: Int = 10
-	)
-	-> some AsyncSequence<Message, Never> where Message.Subject: AnyObject
+	) -> some AsyncSequence<Message, Never> where Message.Subject: AnyObject
 	
 	public func messages<Message: AsyncMessage>(
 		of subject: Message.Subject? = nil,
 		for messageType: Message.Type,
 		bufferSize limit: Int = 10
-	)
-	-> some AsyncSequence<Message, Never> where Message.Subject: Identifiable,
-												Message.Subject.ID == ObjectIdentifier
+	) -> some AsyncSequence<Message, Never> where Message.Subject: Identifiable, Message.Subject.ID == ObjectIdentifier
 }
 ```
 
@@ -366,27 +359,25 @@ extension NotificationCenter {
     // MainActorMessage post()
 
     @MainActor
-    public func post<M: MainActorMessage>(_ message: M, subject: M.Subject)
-        where M.Subject: AnyObject
+    public func post<Message: MainActorMessage>(_ message: Message, subject: Message.Subject)
+        where Message.Subject: AnyObject
     
     @MainActor
-    public func post<M: MainActorMessage>(_ message: M, subject: M.Subject)
-        where M.Subject: Identifiable,
-              M.Subject.ID == ObjectIdentifier
+    public func post<Message: MainActorMessage>(_ message: Message, subject: Message.Subject)
+        where Message.Subject: Identifiable, Message.Subject.ID == ObjectIdentifier
 
     @MainActor
-    public func post<M: MainActorMessage>(_ message: M, subject: M.Subject.Type = M.Subject.self)
+    public func post<Message: MainActorMessage>(_ message: Message, subject: Message.Subject.Type = Message.Subject.self)
 
     // AsyncMessage post()
 
-    public func post<M: AsyncMessage>(_ message: M, subject: M.Subject)
-        where M.Subject: AnyObject
+    public func post<Message: AsyncMessage>(_ message: Message, subject: Message.Subject)
+        where Message.Subject: AnyObject
     
-    public func post<M: AsyncMessage>(_ message: M, subject: M.Subject)
-        where M.Subject: Identifiable,
-              M.Subject.ID == ObjectIdentifier
+    public func post<Message: AsyncMessage>(_ message: Message, subject: Message.Subject)
+        where Message.Subject: Identifiable, Message.Subject.ID == ObjectIdentifier
 
-    public func post<M: AsyncMessage>(_ message: M, subject: M.Subject.Type = M.Subject.self)
+    public func post<Message: AsyncMessage>(_ message: Message, subject: Message.Subject.Type = Message.Subject.self)
 }
 ```
 
