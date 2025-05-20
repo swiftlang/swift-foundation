@@ -125,9 +125,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// A type that conveys task-specific information on progress.
     public protocol Property {
         
-        associatedtype T: Sendable, Hashable, Equatable
+        associatedtype Value: Sendable, Hashable, Equatable
         
-        static var defaultValue: T { get }
+        static var defaultValue: Value { get }
     }
     
     /// A container that holds values for properties that specify information on progress.
@@ -189,9 +189,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         
         /// Returns a property value that a key path indicates. If value is not defined, returns property's `defaultValue`.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.T {
+        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value {
             get {
-                return state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.T ?? P.self.defaultValue
+                return state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value ?? P.self.defaultValue
             }
             
             set {
@@ -199,12 +199,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
                 
                 // Generate an array of myself + children values of the property
-                let flattenedChildrenValues: [P.T?] = {
+                let flattenedChildrenValues: [P.Value?] = {
                     let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)]
-                    var childrenValues: [P.T?] = []
+                    var childrenValues: [P.Value?] = []
                     if let dictionary = childrenDictionary {
                         for (_, value) in dictionary {
-                            if let value = value as? [P.T?] {
+                            if let value = value as? [P.Value?] {
                                 childrenValues.append(contentsOf: value)
                             }
                         }
@@ -213,7 +213,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 }()
                 
                 // Send the array of myself + children values of property to parents
-                let updateValueForParent: [P.T?] = [newValue] + flattenedChildrenValues
+                let updateValueForParent: [P.Value?] = [newValue] + flattenedChildrenValues
                 manager.parents.withLock { [manager] parents in
                     for (parent, _) in parents {
                         parent.updateChildrenOtherProperties(property: P.self, child: manager, value: updateValueForParent)
@@ -320,10 +320,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Returns an array of values for specified property in subtree.
     /// - Parameter metatype: Type of property.
     /// - Returns: Array of values for property.
-    public func values<P: Property>(property metatype: P.Type) -> [P.T?] {
+    public func values<P: Property>(of property: P.Type) -> [P.Value?] {
         return state.withLock { state in
-            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
-            return [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T ?? P.defaultValue] + childrenValues.map { $0 ?? P.defaultValue }
+            let childrenValues = getFlattenedChildrenValues(property: property, state: &state)
+            return [state.otherProperties[AnyMetatypeWrapper(metatype: property)] as? P.Value ?? P.defaultValue] + childrenValues.map { $0 ?? P.defaultValue }
         }
     }
     
@@ -331,13 +331,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Returns the aggregated result of values.
     /// - Parameters:
     ///   - property: Type of property.
-    ///   - values:Sum of values.
-    public func total<P: ProgressManager.Property>(property: P.Type, values: [P.T?]) -> P.T where P.T: AdditiveArithmetic {
-        let droppedNil = values.compactMap { $0 }
-        return droppedNil.reduce(P.T.zero, +)
+    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value: AdditiveArithmetic {
+        let droppedNil = values(of: property).compactMap { $0 }
+        return droppedNil.reduce(P.Value.zero, +)
     }
     
     /// Mutates any settable properties that convey information about progress.
+    /// 
     public func withProperties<T>(_ closure: @Sendable (inout Values) throws -> T) rethrows -> T {
         return try state.withLock { state in
             var values = Values(manager: self, state: state)
@@ -348,6 +348,24 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             return result
         }
     }
+    
+//    public func withProperties<T, E: Error>(
+//        _ closure: (inout sending Values) throws(E) -> sending T
+//    ) throws(E) -> sending T {
+//        return try state.withLock { state in
+//            var values = Values(manager: self, state: state)
+//            // This is done to avoid copy on write later
+//            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:], childrenOtherProperties: [:])
+//            
+//            do {
+//                let result = try closure(&values)
+//                state = values.state
+//                return result
+//            } catch let localError {
+//                throw localError as! E
+//            }
+//        }
+//    }
     
     //MARK: ProgressManager Properties getters
     /// Returns nil if `self` was instantiated without total units;
@@ -547,12 +565,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     // MARK: Propagation of Additional Properties Methods (Dual Mode of Operations)
-    private func getFlattenedChildrenValues<P: Property>(property metatype: P.Type, state: inout State) -> [P.T?] {
+    private func getFlattenedChildrenValues<P: Property>(property metatype: P.Type, state: inout State) -> [P.Value?] {
         let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
-        var childrenValues: [P.T?] = []
+        var childrenValues: [P.Value?] = []
         if let dictionary = childrenDictionary {
             for (_, value) in dictionary {
-                if let value = value as? [P.T?] {
+                if let value = value as? [P.Value?] {
                     childrenValues.append(contentsOf: value)
                 }
             }
@@ -593,7 +611,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    private func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, child: ProgressManager, value: [P.T?]) {
+    private func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, child: ProgressManager, value: [P.Value?]) {
         state.withLock { state in
             let myEntries = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
             if myEntries != nil {
@@ -606,7 +624,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             }
             // Ask parent to update their entry with my value + new children value
             let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
-            let updatedParentEntry: [P.T?] = [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.T] + childrenValues
+            let updatedParentEntry: [P.Value?] = [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.Value] + childrenValues
             parents.withLock { parents in
                 for (parent, _) in parents {
                     parent.updateChildrenOtherProperties(property: metatype, child: self, value: updatedParentEntry)
