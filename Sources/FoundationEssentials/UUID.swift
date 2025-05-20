@@ -16,7 +16,7 @@ public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8
 
 /// Represents UUID strings, which can be used to uniquely identify types, interfaces, and other items.
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
-public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
+public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable, LosslessStringConvertible {
     public private(set) var uuid: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
     /* Create a new UUID with RFC 4122 version 4 random bytes */
@@ -56,6 +56,11 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     /// Create a UUID from a `uuid_t`.
     public init(uuid: uuid_t) {
         self.uuid = uuid
+    }
+    
+    /// LosslessStringConvertible initializer
+    public init?(_ description: String) {
+            self.init(uuidString: description)
     }
 
     /// Returns a string created from the UUID, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
