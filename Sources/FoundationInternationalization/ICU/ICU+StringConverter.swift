@@ -155,7 +155,7 @@ extension ICU.StringConverter {
 }
 
 extension ICU.StringConverter {
-    nonisolated(unsafe) static private var _converters: LockedState<[String.Encoding: ICU.StringConverter]> = .init(initialState: [:])
+    private static let _converters: LockedState<[String.Encoding: ICU.StringConverter]> = .init(initialState: [:])
 
     static func converter(for encoding: String.Encoding) -> ICU.StringConverter? {
         return _converters.withLock {
