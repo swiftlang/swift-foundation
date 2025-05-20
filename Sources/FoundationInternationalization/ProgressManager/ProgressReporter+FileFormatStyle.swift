@@ -92,7 +92,7 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
             var throughputLSR: LocalizedStringResource?
             var timeRemainingLSR: LocalizedStringResource?
             
-            let properties = reporter.manager.withProperties(\.self)
+            let properties = reporter.withProperties(\.self)
             
             fileCountLSR = LocalizedStringResource("\(properties.completedFileCount, format: IntegerFormatStyle<Int>()) of \(properties.totalFileCount, format: IntegerFormatStyle<Int>()) files", locale: self.locale, bundle: .forClass(ProgressReporter.self))
             
@@ -117,7 +117,7 @@ extension ProgressReporter.FileFormatStyle: FormatStyle {
             var throughputString: String?
             var timeRemainingString: String?
                         
-            let properties = manager.withProperties(\.self)
+            let properties = reporter.withProperties(\.self)
             
 
             fileCountString = "\(properties.completedFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale))) / \(properties.totalFileCount.formatted(IntegerFormatStyle<Int>(locale: self.locale)))"
