@@ -18,14 +18,12 @@ internal import _FoundationICU
 private extension String.Encoding {
     var _icuConverterName: String? {
         // TODO: Replace this with forthcoming(?) public property such as https://github.com/swiftlang/swift-foundation/pull/1243
+        // Note: UTF-* and US-ASCII are omitted here because they are supposed to be converted upstream.
         switch self {
-        case .utf8: "UTF-8"
-        case .ascii: "US-ASCII"
         case .japaneseEUC: "EUC-JP"
         case .isoLatin1: "ISO-8859-1"
         case .shiftJIS: "Shift_JIS"
         case .isoLatin2: "ISO-8859-2"
-        case .unicode: "UTF-16"
         case .windowsCP1251: "windows-1251"
         case .windowsCP1252: "windows-1252"
         case .windowsCP1253: "windows-1253"
@@ -33,11 +31,6 @@ private extension String.Encoding {
         case .windowsCP1250: "windows-1250"
         case .iso2022JP: "ISO-2022-JP"
         case .macOSRoman: "macintosh"
-        case .utf16BigEndian: "UTF-16BE"
-        case .utf16LittleEndian: "UTF-16LE"
-        case .utf32: "UTF-32"
-        case .utf32BigEndian: "UTF-32BE"
-        case .utf32LittleEndian: "UTF-32LE"
         default: nil
         }
     }
