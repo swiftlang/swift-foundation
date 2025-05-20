@@ -254,18 +254,19 @@ extension String {
                     buffer.appendElement(value)
                 }
             }
+        case .japaneseEUC:
+            // Here we catch encodings that are supported by Foundation Framework
+            // but are not supported by corelibs-foundation.
+            // We delegate conversion to ICU.
+            return _icuStringEncodingConvert(string: self, using: encoding, allowLossyConversion: allowLossyConversion)
 #endif
         default:
 #if FOUNDATION_FRAMEWORK
             // Other encodings, defer to the CoreFoundation implementation
             return _ns.data(using: encoding.rawValue, allowLossyConversion: allowLossyConversion)
 #else
-            return (
-                // Attempt an up-call into swift-corelibs-foundation, which can defer to the CoreFoundation implementation
-                _cfStringEncodingConvert(string: self, using: encoding.rawValue, allowLossyConversion: allowLossyConversion) ??
-                // Or attempt an up-call into ICU via FoundationInternationalization
-                _icuStringEncodingConvert(string: self, using: encoding, allowLossyConversion: allowLossyConversion)
-            )
+            // Attempt an up-call into swift-corelibs-foundation, which can defer to the CoreFoundation implementation
+            return _cfStringEncodingConvert(string: self, using: encoding.rawValue, allowLossyConversion: allowLossyConversion)
 #endif
         }
     }
