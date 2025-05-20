@@ -189,6 +189,17 @@ extension String {
                 }
             }
             self = bytes.withContiguousStorageIfAvailable(buildString) ?? Array(bytes).withUnsafeBufferPointer(buildString)
+        case .japaneseEUC:
+            // Here we catch encodings that are supported by Foundation Framework
+            // but are not supported by corelibs-foundation.
+            // We delegate conversion to ICU.
+            guard let string = (
+                bytes.withContiguousStorageIfAvailable({ _icuMakeStringFromBytes($0, encoding: encoding) }) ??
+                Array(bytes).withUnsafeBufferPointer({ _icuMakeStringFromBytes($0, encoding: encoding) })
+            ) else {
+                return nil
+            }
+            self = string
         #endif
         default:
 #if FOUNDATION_FRAMEWORK
@@ -207,14 +218,8 @@ extension String {
                 return nil
             }
 #else
-            func makeString(from bytes: UnsafeBufferPointer<UInt8>) -> String? {
-                return (
-                    _cfMakeStringFromBytes(bytes, encoding: encoding.rawValue) ??
-                    _icuMakeStringFromBytes(bytes, encoding: encoding)
-                )
-            }
-            if let string = (bytes.withContiguousStorageIfAvailable({ makeString(from: $0) }) ??
-                             Array(bytes).withUnsafeBufferPointer({ makeString(from: $0) })) {
+            if let string = (bytes.withContiguousStorageIfAvailable({ _cfMakeStringFromBytes($0, encoding: encoding.rawValue) }) ??
+                             Array(bytes).withUnsafeBufferPointer({ _cfMakeStringFromBytes($0, encoding: encoding.rawValue) })) {
                 self = string
             } else {
                 return nil
