@@ -10,23 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPreview 6.2, *)
-public protocol ProgressFormatting {}
-
-@available(FoundationPreview 6.2, *)
-extension ProgressManager: ProgressFormatting {}
-
-@available(FoundationPreview 6.2, *)
-extension ProgressReporter: ProgressFormatting {}
-
-protocol ProgressFormatStyle: FormatStyle {
-
-    associatedtype Option: Sendable, Codable, Hashable, Equatable
-    
-    var option: Option { get }
-    
-    func format(_ value: any ProgressFormatting) -> String
-    
-    func locale(_ locale: Locale) -> any ProgressFormatStyle
-}
+//@available(FoundationPreview 6.2, *)
+//public protocol ProgressFormatting {}
+//
+//@available(FoundationPreview 6.2, *)
+//extension ProgressManager: ProgressFormatting {}
+//
+//@available(FoundationPreview 6.2, *)
+//extension ProgressReporter: ProgressFormatting {}
+//
+//protocol ProgressFormatStyle: FormatStyle {
+//
+//    associatedtype Option: Sendable, Codable, Hashable, Equatable
+//    
+//    var option: Option { get }
+//    
+//    func format(_ value: any ProgressFormatting) -> String
+//    
+//    func locale(_ locale: Locale) -> any ProgressFormatStyle
+//}
 
