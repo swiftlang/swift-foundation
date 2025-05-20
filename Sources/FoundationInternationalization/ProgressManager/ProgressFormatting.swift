@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 //@available(FoundationPreview 6.2, *)
-//public protocol ProgressFormatting {}
+//public protocol ProgressFormatting {
+//
+//var fractionCompleted: Double
+//}
 //
 //@available(FoundationPreview 6.2, *)
 //extension ProgressManager: ProgressFormatting {}
@@ -19,7 +22,7 @@
 //@available(FoundationPreview 6.2, *)
 //extension ProgressReporter: ProgressFormatting {}
 //
-//protocol ProgressFormatStyle: FormatStyle {
+//struct GenericProgressFormatStyle: FormatStyle {
 //
 //    associatedtype Option: Sendable, Codable, Hashable, Equatable
 //    
@@ -30,3 +33,4 @@
 //    func locale(_ locale: Locale) -> any ProgressFormatStyle
 //}
 
+//struct FileProgressFormatStyle: FormatStyle

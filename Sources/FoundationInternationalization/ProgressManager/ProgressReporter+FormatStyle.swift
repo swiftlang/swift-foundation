@@ -119,7 +119,7 @@ extension ProgressReporter.FormatStyle: FormatStyle {
             let fractionLSR = LocalizedStringResource("\(reporter.fractionCompleted, format: fractionStyle) completed", locale: self.locale, bundle: .forClass(ProgressReporter.self))
             return String(localized: fractionLSR)
             #else
-            return "\(manager.fractionCompleted.formatted(fractionStyle.locale(self.locale)))"
+            return "\(reporter.fractionCompleted.formatted(fractionStyle.locale(self.locale)))"
             #endif
         }
     }
