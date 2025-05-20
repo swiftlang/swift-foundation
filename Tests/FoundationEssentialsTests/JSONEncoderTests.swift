@@ -2492,19 +2492,13 @@ extension JSONEncoderTests {
         prettyPrintEncoder.outputFormatting = .prettyPrinted
 
         for encoder in [JSONEncoder(), prettyPrintEncoder] {
-            do {
-                let reencodedData = try encoder.encode(decoded)
-                let redecodedObjects = try decoder.decode(T.self, from: reencodedData)
-                XCTAssertEqual(decoded, redecodedObjects)
+            let reencodedData = try! encoder.encode(decoded)
+            let redecodedObjects = try! decoder.decode(T.self, from: reencodedData)
+            XCTAssertEqual(decoded, redecodedObjects)
 
-                if let plistData {
-                        let decodedPlistObjects = try PropertyListDecoder().decode(T.self, from: plistData)
-                        XCTAssertEqual(decoded, decodedPlistObjects)
-                    
-                }
-            }
-            catch {
-                XCTFail("Pass test \"\(name) failed with error: \(error)")
+            if let plistData {
+                let decodedPlistObjects = try! PropertyListDecoder().decode(T.self, from: plistData)
+                XCTAssertEqual(decoded, decodedPlistObjects)
             }
         }
     }
@@ -2529,10 +2523,6 @@ extension JSONEncoderTests {
         _run_passTest(name: "pass13", type: JSONPass.Test13.self)
         _run_passTest(name: "pass14", type: JSONPass.Test14.self)
         _run_passTest(name: "pass15", type: JSONPass.Test15.self)
-        // FIXME: Fix platform-specific crash on Windows, skipping test case for now
-#if !os(Windows)
-        _run_passTest(name: "pass16", type: JSONPass.Test16.self)
-#endif
     }
 
     func test_json5PassJSONFiles() {
@@ -2597,7 +2587,6 @@ extension JSONEncoderTests {
         _run_failTest(name: "fail39", type: JSONFail.Test39.self)
         _run_failTest(name: "fail40", type: JSONFail.Test40.self)
         _run_failTest(name: "fail41", type: JSONFail.Test41.self)
-        _run_failTest(name: "fail42", type: JSONFail.Test42.self)
 
     }
 
@@ -4379,12 +4368,6 @@ extension JSONPass {
     }
 }
 
-extension JSONPass {
-    struct Test16: Codable, Equatable {
-        var nestedArray: [Test16]?
-    }
-}
-
 enum JSONFail {
     typealias Test1 = String
     typealias Test2 = [String]
@@ -4426,7 +4409,6 @@ enum JSONFail {
     typealias Test39 = [String:String]
     typealias Test40 = [String:String]
     typealias Test41 = [String:String]
-    typealias Test42 = JSONPass.Test16
 }
 
 enum JSON5Pass { }

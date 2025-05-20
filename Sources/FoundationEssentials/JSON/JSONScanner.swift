@@ -265,7 +265,6 @@ internal struct JSONScanner {
     var reader: DocumentReader
     var depth: Int = 0
     var partialMap = JSONPartialMapData()
-    private static let maximumRecursionDepth = 512
 
     internal struct Options {
         var assumesTopLevelDictionary = false
@@ -413,7 +412,7 @@ internal struct JSONScanner {
     mutating func scanArray() throws {
         let firstChar = reader.read()
         precondition(firstChar == ._openbracket)
-        guard self.depth < Self.maximumRecursionDepth else {
+        guard self.depth < 512 else {
             throw JSONError.tooManyNestedArraysOrDictionaries(location: reader.sourceLocation(atOffset: 1))
         }
         self.depth &+= 1
@@ -471,7 +470,7 @@ internal struct JSONScanner {
     mutating func scanObject() throws {
         let firstChar = self.reader.read()
         precondition(firstChar == ._openbrace)
-        guard self.depth < Self.maximumRecursionDepth else {
+        guard self.depth < 512 else {
             throw JSONError.tooManyNestedArraysOrDictionaries(location: reader.sourceLocation(atOffset: -1))
         }
         try scanObject(withoutBraces: false)
