@@ -178,6 +178,15 @@ func _icuMakeStringFromBytes_impl(_ bytes: UnsafeBufferPointer<UInt8>, encoding:
           let pointer = bytes.baseAddress else {
         return nil
     }
+
+    // Since we want to avoid unnecessary copy here,
+    // `bytes` is converted to `UnsafeMutableRawPointer`
+    // because `Data(bytesNoCopy:count:deallocator:)` accepts only that type.
+    // This operation is still safe,
+    // as the pointer is just borrowed (not escaped, not mutated)
+    // in `ICU.StringConverter.decode(data:) -> String?`.
+    // In addition to that, `Data` is useful here
+    // because it is `Sendable` (and has CoW behavior).
     let data =  Data(
         bytesNoCopy: UnsafeMutableRawPointer(mutating: pointer),
         count: bytes.count,
