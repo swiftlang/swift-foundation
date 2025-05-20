@@ -29,6 +29,9 @@ internal struct JSONWriter {
     }
 
     mutating func serializeJSON(_ value: JSONEncoderValue, depth: Int = 0) throws {
+        guard depth < Self.maximumRecursionDepth else {
+            throw JSONError.tooManyNestedArraysOrDictionaries()
+        }
         switch value {
         case .string(let str):
             serializeString(str)
@@ -172,10 +175,6 @@ internal struct JSONWriter {
     }
 
     mutating func serializeArray(_ array: [JSONEncoderValue], depth: Int) throws {
-        guard depth < Self.maximumRecursionDepth else {
-            throw JSONError.tooManyNestedArraysOrDictionaries()
-        }
-
         writer(ascii: ._openbracket)
         if pretty {
             writer(ascii: ._newline)
@@ -204,10 +203,6 @@ internal struct JSONWriter {
     }
     
     mutating func serializePreformattedByteArray(_ bytes: [UInt8], _ lengths: [Int], depth: Int) throws {
-        guard depth < Self.maximumRecursionDepth else {
-            throw JSONError.tooManyNestedArraysOrDictionaries()
-        }
-
         writer(ascii: ._openbracket)
         if pretty {
             writer(ascii: ._newline)
@@ -242,10 +237,6 @@ internal struct JSONWriter {
     }
 
     mutating func serializeObject(_ dict: [String:JSONEncoderValue], depth: Int) throws {
-        guard depth < Self.maximumRecursionDepth else {
-            throw JSONError.tooManyNestedArraysOrDictionaries()
-        }
-
         writer(ascii: ._openbrace)
         if pretty {
             writer(ascii: ._newline)
