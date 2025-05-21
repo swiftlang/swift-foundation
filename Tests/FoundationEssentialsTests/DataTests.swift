@@ -1986,6 +1986,36 @@ extension DataTests {
         XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA= =", options: .ignoreUnknownCharacters))
         XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA== ", options: .ignoreUnknownCharacters))
 
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "  AQIDBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "A  QIDBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQ  IDBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQI  DBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQID  BA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDB  A==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA  ==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA=  =", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA==  ", options: .ignoreUnknownCharacters))
+
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "   AQIDBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "A   QIDBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQ   IDBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQI   DBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQID   BA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDB   A==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA   ==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA=   =", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA==   ", options: .ignoreUnknownCharacters))
+
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "    AQIDBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "A    QIDBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQ    IDBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQI    DBA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQID    BA==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDB    A==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA    ==", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA=    =", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4]), Data(base64Encoded: "AQIDBA==    ", options: .ignoreUnknownCharacters))
+
         XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: " AQIDBAU=", options: .ignoreUnknownCharacters))
         XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "A QIDBAU=", options: .ignoreUnknownCharacters))
         XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQ IDBAU=", options: .ignoreUnknownCharacters))
@@ -1996,6 +2026,36 @@ extension DataTests {
         XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU =", options: .ignoreUnknownCharacters))
         XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU= ", options: .ignoreUnknownCharacters))
 
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "  AQIDBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "A  QIDBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQ  IDBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQI  DBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQID  BAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDB  AU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBA  U=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU  =", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU=  ", options: .ignoreUnknownCharacters))
+
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "   AQIDBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "A   QIDBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQ   IDBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQI   DBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQID   BAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDB   AU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBA   U=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU   =", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU=   ", options: .ignoreUnknownCharacters))
+
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "    AQIDBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "A    QIDBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQ    IDBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQI    DBAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQID    BAU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDB    AU=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBA    U=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU    =", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]), Data(base64Encoded: "AQIDBAU=    ", options: .ignoreUnknownCharacters))
+
         XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: " AQIDBAUG", options: .ignoreUnknownCharacters))
         XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "A QIDBAUG", options: .ignoreUnknownCharacters))
         XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQ IDBAUG", options: .ignoreUnknownCharacters))
@@ -2005,6 +2065,36 @@ extension DataTests {
         XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBA UG", options: .ignoreUnknownCharacters))
         XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAU G", options: .ignoreUnknownCharacters))
         XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAUG ", options: .ignoreUnknownCharacters))
+
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "  AQIDBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "A  QIDBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQ  IDBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQI  DBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQID  BAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDB  AUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBA  UG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAU  G", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAUG  ", options: .ignoreUnknownCharacters))
+
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "   AQIDBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "A   QIDBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQ   IDBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQI   DBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQID   BAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDB   AUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBA   UG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAU   G", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAUG   ", options: .ignoreUnknownCharacters))
+
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "    AQIDBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "A    QIDBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQ    IDBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQI    DBAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQID    BAUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDB    AUG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBA    UG", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAU    G", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]), Data(base64Encoded: "AQIDBAUG    ", options: .ignoreUnknownCharacters))
     }
 
     func test_base64Decode_test1MBDataGoing0to255OverAndOver() {
@@ -2030,7 +2120,68 @@ extension DataTests {
     func test_base64Data_bad() {
         XCTAssertNil(Data(base64Encoded: "signature-not-base64-encoded"))
     }
-    
+
+    func test_base64Decode_MorePaddingThanNecessary() {
+        XCTAssertNil(Data(base64Encoded: "="))
+        XCTAssertNil(Data(base64Encoded: "=="))
+        XCTAssertNil(Data(base64Encoded: "==="))
+        for x in 4..<1000 {
+            XCTAssertEqual(Data(base64Encoded: String(repeating: "=", count: x)), Data([0]))
+        }
+
+        XCTAssertEqual(Data(base64Encoded: "AAAA"), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA="), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA=="), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA==="), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA===="), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAA="), Data([0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAA=="), Data([0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAA==="), Data([0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAA===="), Data([0, 0]))
+        XCTAssertNil(Data(base64Encoded: "AA="))
+        XCTAssertEqual(Data(base64Encoded: "AA=="), Data([0]))
+        XCTAssertEqual(Data(base64Encoded: "AA==="), Data([0]))
+        XCTAssertEqual(Data(base64Encoded: "AA===="), Data([0]))
+        XCTAssertNil(Data(base64Encoded: "A="))
+        XCTAssertNil(Data(base64Encoded: "A=="))
+        XCTAssertNil(Data(base64Encoded: "A==="))
+        XCTAssertNil(Data(base64Encoded: "A===="))
+    }
+
+    func test_base64Decode_MorePaddingThanNecessaryIgnoreWhitespace() {
+        XCTAssertEqual(Data(base64Encoded: "", options: .ignoreUnknownCharacters), Data())
+        XCTAssertNil(Data(base64Encoded: "=", options: .ignoreUnknownCharacters))
+        XCTAssertNil(Data(base64Encoded: "==", options: .ignoreUnknownCharacters))
+        XCTAssertNil(Data(base64Encoded: "===", options: .ignoreUnknownCharacters))
+        XCTAssertNil(Data(base64Encoded: "====", options: .ignoreUnknownCharacters))
+        for x in 5..<1000 {
+            XCTAssertNil(Data(base64Encoded: String(repeating: "=", count: x), options: .ignoreUnknownCharacters))
+        }
+
+        XCTAssertEqual(Data(base64Encoded: "AAAA", options: .ignoreUnknownCharacters), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA=", options: .ignoreUnknownCharacters), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA =", options: .ignoreUnknownCharacters), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA==", options: .ignoreUnknownCharacters), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA = =", options: .ignoreUnknownCharacters), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA===", options: .ignoreUnknownCharacters), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA = = = ", options: .ignoreUnknownCharacters), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA====", options: .ignoreUnknownCharacters), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAAA = = =      =", options: .ignoreUnknownCharacters), Data([0, 0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAA=", options: .ignoreUnknownCharacters), Data([0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAA==", options: .ignoreUnknownCharacters), Data([0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAA===", options: .ignoreUnknownCharacters), Data([0, 0]))
+        XCTAssertEqual(Data(base64Encoded: "AAA====", options: .ignoreUnknownCharacters), Data([0, 0]))
+        XCTAssertNil(Data(base64Encoded: "AA=", options: .ignoreUnknownCharacters))
+        XCTAssertEqual(Data(base64Encoded: "AA==", options: .ignoreUnknownCharacters), Data([0]))
+        XCTAssertEqual(Data(base64Encoded: "AA===", options: .ignoreUnknownCharacters), Data([0]))
+        XCTAssertEqual(Data(base64Encoded: "AA====", options: .ignoreUnknownCharacters), Data([0]))
+        XCTAssertNil(Data(base64Encoded: "A=", options: .ignoreUnknownCharacters))
+        XCTAssertNil(Data(base64Encoded: "A==", options: .ignoreUnknownCharacters))
+        XCTAssertNil(Data(base64Encoded: "A===", options: .ignoreUnknownCharacters))
+        XCTAssertNil(Data(base64Encoded: "A====", options: .ignoreUnknownCharacters))
+    }
+
+
     func test_base64Data_medium() {
         let data = Data("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut at tincidunt arcu. Suspendisse nec sodales erat, sit amet imperdiet ipsum. Etiam sed ornare felis. Nunc mauris turpis, bibendum non lectus quis, malesuada placerat turpis. Nam adipiscing non massa et semper. Nulla convallis semper bibendum. Aliquam dictum nulla cursus mi ultricies, at tincidunt mi sagittis. Nulla faucibus at dui quis sodales. Morbi rutrum, dui id ultrices venenatis, arcu urna egestas felis, vel suscipit mauris arcu quis risus. Nunc venenatis ligula at orci tristique, et mattis purus pulvinar. Etiam ultricies est odio. Nunc eleifend malesuada justo, nec euismod sem ultrices quis. Etiam nec nibh sit amet lorem faucibus dapibus quis nec leo. Praesent sit amet mauris vel lacus hendrerit porta mollis consectetur mi. Donec eget tortor dui. Morbi imperdiet, arcu sit amet elementum interdum, quam nisl tempor quam, vitae feugiat augue purus sed lacus. In ac urna adipiscing purus venenatis volutpat vel et metus. Nullam nec auctor quam. Phasellus porttitor felis ac nibh gravida suscipit tempus at ante. Nunc pellentesque iaculis sapien a mattis. Aenean eleifend dolor non nunc laoreet, non dictum massa aliquam. Aenean quis turpis augue. Praesent augue lectus, mollis nec elementum eu, dignissim at velit. Ut congue neque id ullamcorper pellentesque. Maecenas euismod in elit eu vehicula. Nullam tristique dui nulla, nec convallis metus suscipit eget. Cras semper augue nec cursus blandit. Nulla rhoncus et odio quis blandit. Praesent lobortis dignissim velit ut pulvinar. Duis interdum quam adipiscing dolor semper semper. Nunc bibendum convallis dui, eget mollis magna hendrerit et. Morbi facilisis, augue eu fringilla convallis, mauris est cursus dolor, eu posuere odio nunc quis orci. Ut eu justo sem. Phasellus ut erat rhoncus, faucibus arcu vitae, vulputate erat. Aliquam nec magna viverra, interdum est vitae, rhoncus sapien. Duis tincidunt tempor ipsum ut dapibus. Nullam commodo varius metus, sed sollicitudin eros. Etiam nec odio et dui tempor blandit posuere.".utf8)
         let base64 = data.base64EncodedString()
