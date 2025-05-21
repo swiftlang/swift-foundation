@@ -287,6 +287,30 @@ struct LocaleCache : Sendable, ~Copyable {
         }
         return preferredLocaleID
     }
+#elseif os(Linux)
+    func preferences() -> (LocalePreferences, Bool) {
+        var prefs = LocalePreferences()
+        // TODO: Fill other preference values from LC_* and LANGUAGE variables: https://github.com/swiftlang/swift-foundation/issues/717
+        if let lang = ProcessInfo.processInfo.environment["LANG"],
+            !lang.isEmpty
+        {
+            prefs.locale = lang
+            prefs.languages = [fixed(lang).languageCode ?? "en-001"]
+        } else {
+            prefs.locale = "en_001"
+            prefs.languages = ["en-001"]
+        }
+        return (prefs, true)
+    }
+
+    func preferredLanguages(forCurrentUser: Bool) -> [String] {
+        // TODO: Override with LANGUAGE variable: https://github.com/swiftlang/swift-foundation/issues/717
+        [Locale.canonicalLanguageIdentifier(from: current.languageCode ?? "en-001")]
+    }
+
+    func preferredLocale() -> String? {
+        current.identifier
+    }
 #else
     func preferences() -> (LocalePreferences, Bool) {
         var prefs = LocalePreferences()
