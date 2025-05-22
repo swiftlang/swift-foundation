@@ -3,6 +3,8 @@ name: Pull request
 on:
   pull_request:
     types: [opened, reopened, synchronize]
+    paths-ignore:
+      - '**.md'
 
 jobs:
   tests:
