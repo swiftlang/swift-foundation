@@ -18,6 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
+/// A discontiguous portion of an attributed string.
 @dynamicMemberLookup
 @available(FoundationPreview 6.2, *)
 public struct DiscontiguousAttributedSubstring: Sendable {
@@ -42,6 +43,7 @@ public struct DiscontiguousAttributedSubstring: Sendable {
 
 @available(FoundationPreview 6.2, *)
 extension DiscontiguousAttributedSubstring {
+    /// The underlying attributed string that the discontiguous attributed substring derives from.
     public var base: AttributedString {
         return AttributedString(_guts)
     }
@@ -124,6 +126,8 @@ extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
         }
     }
     
+    /// Returns a discontiguous substring of this discontiguous attributed string using a range to indicate the discontiguous substring bounds.
+    /// - Parameter bounds: A range that indicates the bounds of the discontiguous substring to return.
     public subscript(bounds: some RangeExpression<AttributedString.Index>) -> DiscontiguousAttributedSubstring {
         let characterView = AttributedString.CharacterView(_guts)
         let bounds = bounds.relative(to: characterView)._bstringRange
@@ -133,6 +137,8 @@ extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
         preconditionFailure("Attributed string index range \(bounds) is out of bounds")
     }
     
+    /// Returns a discontiguous substring of this discontiguous attributed string using a set of ranges to indicate the discontiguous substring bounds.
+    /// - Parameter bounds: A set of ranges that indicate the bounds of the discontiguous substring to return.
     public subscript(bounds: RangeSet<AttributedString.Index>) -> DiscontiguousAttributedSubstring {
         let bounds = bounds._bstringIndices
         if bounds.ranges.isEmpty {
@@ -151,14 +157,17 @@ extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
 
 @available(FoundationPreview 6.2, *)
 extension DiscontiguousAttributedSubstring {
+    /// The characters of the discontiguous attributed string, as a view into the underlying string.
     public var characters: DiscontiguousSlice<AttributedString.CharacterView> {
         AttributedString.CharacterView(_guts)[_indices._attributedStringIndices(version: _guts.version)]
     }
     
+    /// The Unicode scalars of the discontiguous attributed string, as a view into the underlying string.
     public var unicodeScalars: DiscontiguousSlice<AttributedString.UnicodeScalarView> {
         AttributedString.UnicodeScalarView(_guts)[_indices._attributedStringIndices(version: _guts.version)]
     }
     
+    /// The attributed runs of the discontiguous attributed string, as a view into the underlying string.
     public var runs: AttributedString.Runs {
         AttributedString.Runs(_guts, in: _indices)
     }
@@ -166,6 +175,10 @@ extension DiscontiguousAttributedSubstring {
 
 @available(FoundationPreview 6.2, *)
 extension DiscontiguousAttributedSubstring {
+    /// Returns an attribute value that corresponds to an attributed string key.
+    ///
+    /// This subscript returns `nil` unless the specified attribute exists, and is present and identical for the entire discontiguous attributed substring. To find portions of an attributed string with consistent attributes, use the `runs` property.
+    /// Getting or setting stringwide attributes with this subscript has `O(n)` behavior in the worst case, where n is the number of runs.
     public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {
         get {
             var result: AttributedString._AttributeValue?
@@ -194,6 +207,10 @@ extension DiscontiguousAttributedSubstring {
         }
     }
     
+    /// Returns an attribute value that a key path indicates.
+    ///
+    /// This subscript returns `nil` unless the specified attribute exists, and is present and identical for the entire discontiguous attributed substring. To find portions of an attributed string with consistent attributes, use the `runs` property.
+    /// Getting or setting stringwide attributes with this subscript has `O(n)` behavior in the worst case, where n is the number of runs.
     @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation
     public subscript<K: AttributedStringKey>(
         dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>
@@ -202,6 +219,7 @@ extension DiscontiguousAttributedSubstring {
         set { self[K.self] = newValue }
     }
     
+    /// Returns a scoped attribute container that a key path indicates.
     public subscript<S: AttributeScope>(
         dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>
     ) -> ScopedAttributeContainer<S> {
@@ -247,6 +265,8 @@ extension DiscontiguousAttributedSubstring {
 
 @available(FoundationPreview 6.2, *)
 extension AttributedString {
+    /// Creates an attributed string from a discontiguous attributed substring.
+    /// - Parameter substring: A discontiguous attributed substring to create the new attributed string from.
     public init(_ substring: DiscontiguousAttributedSubstring) {
         let created = AttributedString.Guts()
         for range in substring._indices.ranges {
@@ -261,6 +281,8 @@ extension AttributedString {
 
 @available(FoundationPreview 6.2, *)
 extension AttributedStringProtocol {
+    /// Returns a discontiguous substring of this attributed string using a set of ranges to indicate the discontiguous substring bounds.
+    /// - Parameter indices:  A set of ranges that indicate the bounds of the discontiguous substring to return.
     public subscript(_ indices: RangeSet<AttributedString.Index>) -> DiscontiguousAttributedSubstring {
         let range = Range(uncheckedBounds: (startIndex, endIndex))._bstringRange
         let newIndices = indices._bstringIndices.intersection(RangeSet(range))
@@ -270,6 +292,8 @@ extension AttributedStringProtocol {
 
 @available(FoundationPreview 6.2, *)
 extension AttributedString {
+    /// Returns a discontiguous substring of this discontiguous attributed string using a set of ranges to indicate the discontiguous substring bounds.
+    /// - Parameter indices: A set of ranges that indicate the bounds of the discontiguous substring to return.
     public subscript(_ indices: RangeSet<AttributedString.Index>) -> DiscontiguousAttributedSubstring {
         get {
             let range = Range(uncheckedBounds: (startIndex, endIndex))._bstringRange
@@ -312,6 +336,8 @@ extension AttributedString {
         }
     }
     
+    /// Removes the elements at the given indices.
+    /// - Parameter subranges: The indices of the elements to remove.
     public mutating func removeSubranges(_ subranges: RangeSet<Index>) {
         ensureUniqueReference()
         for range in subranges.ranges.lazy.reversed() {

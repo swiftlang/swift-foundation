@@ -206,6 +206,7 @@ extension AttributeScope {
         Self.scopeDescription.markdownAttributes
     }
     
+    /// A list of all attribute keys contained within this scope and any sub-scopes.
     @available(FoundationPreview 6.2, *)
     public static var attributeKeys: some Sequence<any AttributedStringKey.Type> {
         Self.scopeDescription.attributes.values
