@@ -13,6 +13,7 @@ jobs:
       windows_swift_versions: '["nightly-main"]'
       enable_macos_checks: true
       macos_xcode_versions: '["16.3"]'
+      macos_versions: '["sequoia"]'
 
   soundness:
     name: Soundness
