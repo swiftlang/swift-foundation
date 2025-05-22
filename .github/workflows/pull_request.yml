@@ -11,6 +11,8 @@ jobs:
     with:
       linux_swift_versions: '["nightly-main"]'
       windows_swift_versions: '["nightly-main"]'
+      enable_macos_checks: true
+      macos_xcode_versions: '["16.3"]'
 
   soundness:
     name: Soundness
