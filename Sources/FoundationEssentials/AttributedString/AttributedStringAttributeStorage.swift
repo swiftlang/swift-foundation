@@ -32,6 +32,21 @@ extension AttributedString {
             inheritedByAddedText = K.inheritedByAddedText
             invalidationConditions = K.invalidationConditions
         }
+        
+        #if FOUNDATION_FRAMEWORK
+        @inline(__always)
+        private static func _unsafeAssumeSendableRawValue<T>(_ value: T) -> RawValue {
+            // Perform this cast in a separate function unaware of the T: Hashable constraint to avoid compiler warnings when performing the Hashable --> Hashable & Sendable cast
+            value as! RawValue
+        }
+        
+        fileprivate init<K: AttributedStringKey>(assumingSendable value: K.Value, for key: K.Type) {
+            _rawValue = Self._unsafeAssumeSendableRawValue(value)
+            runBoundaries = K.runBoundaries
+            inheritedByAddedText = K.inheritedByAddedText
+            invalidationConditions = K.invalidationConditions
+        }
+        #endif
 
         var isInvalidatedOnTextChange: Bool {
             invalidationConditions?.contains(.textChanged) ?? false
@@ -60,6 +75,18 @@ extension AttributedString {
             }
             return value
         }
+        
+        #if FOUNDATION_FRAMEWORK
+        fileprivate func rawValueAssumingSendable<K: AttributedStringKey>(
+            as key: K.Type
+        ) -> K.Value {
+            // Dynamic cast instead of an identity cast to support bridging between attribute value types like NSColor/UIColor
+            guard let value = self._rawValue as? K.Value else {
+                preconditionFailure("Unable to read \(K.self) attribute: stored value of type \(type(of: self._rawValue)) is not key's value type (\(K.Value.self))")
+            }
+            return value
+        }
+        #endif
         
         static func ==(left: Self, right: Self) -> Bool {
             func openEquatableLHS<LeftValue: Hashable & Sendable>(_ leftValue: LeftValue) -> Bool {
@@ -193,6 +220,25 @@ extension AttributedString._AttributeStorage {
         get { self[T.name]?.rawValue(as: T.self) }
         set { self[T.name] = .wrapIfPresent(newValue, for: T.self) }
     }
+    
+    #if FOUNDATION_FRAMEWORK
+    /// Stores & retrieves an attribute value bypassing the T.Value : Sendable constraint
+    ///
+    /// In general, callers should _always_ use the subscript that contains a T.Value : Sendable constraint
+    /// This subscript should only be used in contexts when callers are forced to work around the lack of an AttributedStringKey.Value : Sendable constraint and assume the values are Sendable (ex. during NSAttributedString conversion while iterating scopes)
+    subscript <T: AttributedStringKey>(assumingSendable attribute: T.Type) -> T.Value? {
+        get {
+            self[T.name]?.rawValueAssumingSendable(as: T.self)
+        }
+        set {
+            guard let newValue else {
+                self[T.name] = nil
+                return
+            }
+            self[T.name] = _AttributeValue(assumingSendable: newValue, for: T.self)
+        }
+    }
+    #endif
 
     subscript (_ attributeName: String) -> _AttributeValue? {
         get { self.contents[attributeName] }
