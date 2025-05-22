@@ -4,7 +4,8 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
     paths-ignore:
-      - '**.md'
+      - '*.md'
+      - 'Proposals/**'
 
 jobs:
   tests:
