@@ -79,10 +79,12 @@ extension AttributedString.Guts {
 extension AttributedString {
     // MARK: inout API
     
-    /// Tracks the location of the provided range throughout the mutation closure, updating the provided range to one that represents the same effective locations after the mutation. If updating the provided range is not possible (tracking failed) then this function will fatal error. Use the Optional-returning variants to provide custom fallback behavior.
+    /// Tracks the location of the provided range throughout the mutation closure, updating the provided range to one that represents the same effective locations after the mutation.
+    ///
+    /// If updating the provided range is not possible (tracking failed) then this function will fatal error. Use the `Optional`-returning variants to provide custom fallback behavior.
     /// - Parameters:
-    ///   - range: a range to track throughout the `body` closure
-    ///   - body: a mutating operation, or set of operations, to perform on the value of `self`. The value of `self` is provided to the closure as an `inout AttributedString` that the closure should mutate directly. Do not capture the value of `self` in the provided closure - the closure should mutate the provided `inout` copy.
+    ///   - range: A range to track throughout the `body` closure.
+    ///   - body: A mutating operation, or set of operations, to perform on the value of `self`. The value of `self` is provided to the closure as an `inout AttributedString` that the closure should mutate directly. Do not capture the value of `self` in the provided closure - the closure should mutate the provided `inout` copy.
     public mutating func transform<E>(updating range: inout Range<Index>, body: (inout AttributedString) throws(E) -> Void) throws(E) -> Void {
         guard let result = try self.transform(updating: range, body: body) else {
             fatalError("The provided mutation body did not allow for maintaining index tracking. Ensure that your mutation body mutates the provided AttributedString instead of replacing it with a different AttributedString or use the non-inout version of transform(updating:body:) which returns an Optional value to provide fallback behavior.")
@@ -90,10 +92,12 @@ extension AttributedString {
         range = result
     }
     
-    /// Tracks the location of the provided ranges throughout the mutation closure, updating them to new ranges that represent the same effective locations after the mutation. If updating the provided ranges is not possible (tracking failed) then this function will fatal error. Use the Optional-returning variants to provide custom fallback behavior.
+    /// Tracks the location of the provided ranges throughout the mutation closure, updating them to new ranges that represent the same effective locations after the mutation. 
+    ///
+    /// If updating the provided ranges is not possible (tracking failed) then this function will fatal error. Use the `Optional`-returning variants to provide custom fallback behavior.
     /// - Parameters:
-    ///   - ranges: a list of ranges to track throughout the `body` closure. The updated array (after the function is called) is guaranteed to be the same size as the provided array. Updated ranges are located at the same indices as their respective original ranges in the input `ranges` array.
-    ///   - body: a mutating operation, or set of operations, to perform on the value of `self`. The value of `self` is provided to the closure as an `inout AttributedString` that the closure should mutate directly. Do not capture the value of `self` in the provided closure - the closure should mutate the provided `inout` copy.
+    ///   - ranges: A list of ranges to track throughout the `body` closure. The updated array (after the function is called) is guaranteed to be the same size as the provided array. Updated ranges are located at the same indices as their respective original ranges in the input `ranges` array.
+    ///   - body: A mutating operation, or set of operations, to perform on the value of `self`. The value of `self` is provided to the closure as an `inout AttributedString` that the closure should mutate directly. Do not capture the value of `self` in the provided closure - the closure should mutate the provided `inout` copy.
     public mutating func transform<E>(updating ranges: inout [Range<Index>], body: (inout AttributedString) throws(E) -> Void) throws(E) -> Void {
         guard let result = try self.transform(updating: ranges, body: body) else {
             fatalError("The provided mutation body did not allow for maintaining index tracking. Ensure that your mutation body mutates the provided AttributedString instead of replacing it with a different AttributedString or use the non-inout version of transform(updating:body:) which returns an Optional value to provide fallback behavior.")
@@ -103,20 +107,20 @@ extension AttributedString {
     
     // MARK: Optional-returning API
     
-    /// Tracks the location of the provided range throughout the mutation closure, returning a new, updated range that represents the same effective locations after the mutation
+    /// Tracks the location of the provided range throughout the mutation closure, returning a new, updated range that represents the same effective locations after the mutation.
     /// - Parameters:
-    ///   - range: a range to track throughout the `mutation` block
-    ///   - mutation: a mutating operation, or set of operations, to perform on this `AttributedString`
-    /// - Returns: the updated `Range` that is valid after the mutation has been performed, or `nil` if the mutation performed does not allow for tracking to succeed (such as replacing the provided inout variable with an entirely different AttributedString)
+    ///   - range: A range to track throughout the `body` block.
+    ///   - body: A mutating operation, or set of operations, to perform on this `AttributedString`.
+    /// - Returns: the updated `Range` that is valid after the mutation has been performed, or `nil` if the mutation performed does not allow for tracking to succeed (such as replacing the provided inout variable with an entirely different `AttributedString`).
     public mutating func transform<E>(updating range: Range<Index>, body: (inout AttributedString) throws(E) -> Void) throws(E) -> Range<Index>? {
         try self.transform(updating: [range], body: body)?.first
     }
     
     /// Tracks the location of the provided ranges throughout the mutation closure, returning a new, updated range that represents the same effective locations after the mutation
     /// - Parameters:
-    ///   - index: an index to track throughout the `mutation` block
-    ///   - mutation: a mutating operation, or set of operations, to perform on this `AttributedString`
-    /// - Returns: the updated `Range`s that is valid after the mutation has been performed, or `nil` if the mutation performed does not allow for tracking to succeed (such as replacing the provided inout variable with an entirely different AttributedString). When the return value is non-nil, the returned array is guaranteed to be the same size as the provided array with updated ranges at the same Array indices as their respective original ranges in the input array.
+    ///   - ranges: Ranges to track throughout the `body` block.
+    ///   - body: A mutating operation, or set of operations, to perform on this `AttributedString`.
+    /// - Returns: the updated `Range`s that are valid after the mutation has been performed or `nil` if the mutation performed does not allow for tracking to succeed (such as replacing the provided inout variable with an entirely different `AttributedString`). When the return value is non-`nil`, the returned array is guaranteed to be the same size as the provided array with updated ranges at the same indices as their respective original ranges in the input array.
     public mutating func transform<E>(updating ranges: [Range<Index>], body: (inout AttributedString) throws(E) -> Void) throws(E) -> [Range<Index>]? {
         precondition(!ranges.isEmpty, "Cannot update an empty array of ranges")
         

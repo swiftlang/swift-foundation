@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(FoundationPreview 6.2, *)
 extension AttributedString {
+    /// A view of an attributed string’s contents as a collection of UTF-8 code units.
     public struct UTF8View: Sendable {
         internal var _guts: Guts
         internal var _range: Range<BigString.Index>
@@ -34,7 +35,8 @@ extension AttributedString {
             _range = range
         }
     }
-
+    
+    /// A view of the attributed string’s contents as a collection of UTF-8 code units.
     public var utf8: UTF8View {
         UTF8View(_guts)
     }
@@ -42,6 +44,7 @@ extension AttributedString {
 
 @available(FoundationPreview 6.2, *)
 extension AttributedSubstring {
+    /// A view of the attributed substring's contents as a collection of UTF-8 code units.
     public var utf8: AttributedString.UTF8View {
         AttributedString.UTF8View(_guts, in: _range)
     }
