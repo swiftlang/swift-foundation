@@ -1634,8 +1634,9 @@ class DataTests : XCTestCase {
         // source.advanced(by: 5)
     }
 
-    @available(FoundationSpan 6.2, *)
     func test_InlineDataSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
         var source = Data()
         var span = source.span
         XCTAssertTrue(span.isEmpty)
@@ -1647,16 +1648,18 @@ class DataTests : XCTestCase {
         XCTAssertEqual(span[0], 1)
     }
 
-    @available(FoundationSpan 6.2, *)
     func test_InlineSliceDataSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
         let source = Data(0 ... .max)
         let span = source.span
         XCTAssertEqual(span.count, source.count)
         XCTAssertEqual(span[span.indices.last!], .max)
     }
 
-    @available(FoundationSpan 6.2, *)
     func test_LargeSliceDataSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
 #if _pointerBitWidth(_64)
         let count = Int(Int32.max)
 #elseif _pointerBitWidth(_32)
@@ -1671,8 +1674,9 @@ class DataTests : XCTestCase {
         XCTAssertFalse(span.isEmpty)
     }
 
-    @available(FoundationSpan 6.2, *)
     func test_InlineDataMutableSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
         var source = Data()
         var span = source.mutableSpan
         XCTAssertTrue(span.isEmpty)
@@ -1688,8 +1692,9 @@ class DataTests : XCTestCase {
         XCTAssertEqual(source[i], v)
     }
 
-    @available(FoundationSpan 6.2, *)
     func test_InlineSliceDataMutableSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
         var source = Data(0..<100)
         let count = source.count
         var span = source.mutableSpan
@@ -1699,15 +1704,16 @@ class DataTests : XCTestCase {
         XCTAssertEqual(source[i], .max)
     }
 
-    @available(FoundationSpan 6.2, *)
     func test_LargeSliceDataMutableSpan() throws {
-  #if _pointerBitWidth(_64)
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if _pointerBitWidth(_64)
         var count = Int(Int32.max)
-  #elseif _pointerBitWidth(_32)
+#elseif _pointerBitWidth(_32)
         var count = Int(Int16.max)
-  #else
+#else
         #error("This test needs updating")
-  #endif
+#endif
 
         var source = Data(repeating: 0, count: count).dropFirst()
         XCTAssertNotEqual(source.startIndex, 0)
@@ -1720,8 +1726,9 @@ class DataTests : XCTestCase {
         XCTAssertEqual(source[i+1], .max)
     }
 
-    @available(FoundationSpan 6.2, *)
     func test_InlineDataMutableRawSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
         var source = Data()
         var span = source.mutableBytes
         XCTAssertTrue(span.isEmpty)
@@ -1737,8 +1744,9 @@ class DataTests : XCTestCase {
         XCTAssertEqual(source[i], v)
     }
 
-    @available(FoundationSpan 6.2, *)
     func test_InlineSliceDataMutableRawSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
         var source = Data(0..<100)
         let count = source.count
         var span = source.mutableBytes
@@ -1748,8 +1756,9 @@ class DataTests : XCTestCase {
         XCTAssertEqual(source[i], .max)
     }
 
-    @available(FoundationSpan 6.2, *)
     func test_LargeSliceDataMutableRawSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
 #if _pointerBitWidth(_64)
         var count = Int(Int32.max)
 #elseif _pointerBitWidth(_32)

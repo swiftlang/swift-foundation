@@ -605,7 +605,9 @@ internal final class __DataStorage : @unchecked Sendable {
 
 @frozen
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+#if compiler(>=6.2)
 @_addressableForDependencies
+#endif
 public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollection, RangeReplaceableCollection, MutableDataProtocol, ContiguousBytes, Sendable {
 
     public typealias Index = Int
@@ -2201,7 +2203,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         return try _representation.withUnsafeBytes(body)
     }
 
-#if compiler(>=6.2)
     @available(FoundationSpan 6.2, *)
     public var bytes: RawSpan {
         @lifetime(borrow self)
@@ -2297,7 +2298,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 #endif
         }
     }
-#endif
 
     @_alwaysEmitIntoClient
     public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
@@ -2971,7 +2971,6 @@ extension Data : Codable {
     }
 }
 
-#if compiler(>=6.2)
 // TODO: remove once _overrideLifetime is public in the standard library
 
 /// Unsafely discard any lifetime dependency on the `dependent` argument. Return
@@ -3028,4 +3027,3 @@ internal func _overrideLifetime<
   // should be expressed by a builtin that is hidden within the function body.
   dependent
 }
-#endif
