@@ -228,7 +228,8 @@ extension AttributedString : CodableWithConfiguration {
             {
                 let attributeEncoder = attributesContainer.superEncoder(forKey: AttributeKey(stringValue: name)!)
                 func project<K: EncodableAttributedStringKey>(_: K.Type) throws {
-                    try K.encode(attributes[K.self]!, to: attributeEncoder)
+                    // We must assume that the value is Sendable here because we are dynamically iterating a scope and the attribute keys do not statically declare the values are Sendable
+                    try K.encode(attributes[assumingSendable: K.self]!, to: attributeEncoder)
                 }
                 try project(encodableAttributeType)
             } // else: the attribute was not in the provided scope or was not encodable, so drop it
@@ -336,7 +337,8 @@ extension AttributedString : CodableWithConfiguration {
                 let decodableAttributeType = attributeKeyType as? any DecodableAttributedStringKey.Type
             {
                 func project<K: DecodableAttributedStringKey>(_: K.Type) throws {
-                    attributes[K.self] = try K.decode(from: try attributesContainer.superDecoder(forKey: key))
+                    // We must assume that the value is Sendable here because we are dynamically iterating a scope and the attribute keys do not statically declare the values are Sendable
+                    attributes[assumingSendable: K.self] = try K.decode(from: try attributesContainer.superDecoder(forKey: key))
                 }
                 try project(decodableAttributeType)
             }
