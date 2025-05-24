@@ -58,7 +58,8 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable, Los
         self.uuid = uuid
     }
     
-    /// LosslessStringConvertible initializer
+    /// Create a UUID from a string representation conforming to `LosslessStringConvertible`.
+    @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
     public init?(_ description: String) {
             self.init(uuidString: description)
     }
