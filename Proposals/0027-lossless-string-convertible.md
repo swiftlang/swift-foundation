@@ -24,13 +24,11 @@ Adding this conformance would standardize this behavior in the Swift Foundation 
 Extend `UUID` to conform to `LosslessStringConvertible` by implementing:
 
 ```swift
+@available(FoundationPreview 6.2, *)
 extension UUID: LosslessStringConvertible {
+    /// Create a UUID from a string representation conforming to `LosslessStringConvertible`.
     public init?(_ description: String) {
-        self.init(uuidString: description)
-    }
-
-    public var description: String {
-        return self.uuidString
+            self.init(uuidString: description)
     }
 }
 ```
