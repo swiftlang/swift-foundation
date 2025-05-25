@@ -16,7 +16,7 @@ public typealias uuid_string_t = (Int8, Int8, Int8, Int8, Int8, Int8, Int8, Int8
 
 /// Represents UUID strings, which can be used to uniquely identify types, interfaces, and other items.
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
-public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable, LosslessStringConvertible {
+public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     public private(set) var uuid: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
     /* Create a new UUID with RFC 4122 version 4 random bytes */
@@ -58,12 +58,6 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable, Los
         self.uuid = uuid
     }
     
-    /// Create a UUID from a string representation conforming to `LosslessStringConvertible`.
-    @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
-    public init?(_ description: String) {
-            self.init(uuidString: description)
-    }
-
     /// Returns a string created from the UUID, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
     public var uuidString: String {
         var bytes: uuid_string_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -154,5 +148,13 @@ extension UUID : Comparable {
         }
 
         return result < 0
+    }
+}
+
+@available(FoundationPreview 6.2, *)
+extension UUID: LosslessStringConvertible {
+    /// Create a UUID from a string representation conforming to `LosslessStringConvertible`.
+    public init?(_ description: String) {
+            self.init(uuidString: description)
     }
 }
