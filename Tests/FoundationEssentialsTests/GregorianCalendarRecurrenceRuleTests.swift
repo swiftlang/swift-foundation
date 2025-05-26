@@ -805,14 +805,19 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
     }
     
     func testDailyRecurrenceRuleWithNonzeroNanosecondComponent() {
-        let start = Date(timeIntervalSince1970: 1746627600.5) // 2025-05-07T07:20:00.500-07:00
-        let rule = Calendar.RecurrenceRule.daily(calendar: gregorian, end: .afterOccurrences(2))
-        let results = Array(rule.recurrences(of: start))
+        let referenceStart = Date(timeIntervalSinceReferenceDate: 1746627600) // 2025-05-07T07:20:00.000-07:00
+        let referenceEnd = Date(timeIntervalSinceReferenceDate: 1746714000) // 2025-05-08T07:20:00.000-07:00
         
-        let expectedResults: [Date] = [
-            start,
-            Date(timeIntervalSince1970: 1746714000.5), // 2025-05-08T07:20:00.500-07:00
-        ]
-        XCTAssertEqual(results, expectedResults)
+        for nsec in stride(from: 0, through: 1, by: 0.05) {
+            let start = referenceStart.addingTimeInterval(nsec)
+            let rule = Calendar.RecurrenceRule.daily(calendar: gregorian, end: .afterOccurrences(2))
+            let results = Array(rule.recurrences(of: start))
+            
+            let expectedResults: [Date] = [
+                start,
+                referenceEnd.addingTimeInterval(nsec)
+            ]
+            XCTAssertEqual(results, expectedResults, "Failed for nanoseconds \(nsec)")
+        }
     }
 }
