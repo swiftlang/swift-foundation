@@ -597,7 +597,7 @@ final class NumberFormatStyleTests: XCTestCase {
 
     func testCurrency_Codable() throws {
         let gbpInUS = Decimal.FormatStyle.Currency(code: "GBP", locale: enUSLocale)
-        let encoded = try JSONEncoder().encode(gbpInUS)
+        let _ = try JSONEncoder().encode(gbpInUS)
         // Valid JSON presentation of the format style
         let previouslyEncoded = """
         {

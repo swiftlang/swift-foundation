@@ -141,8 +141,8 @@ final class DateComponentsTests : XCTestCase {
 extension DateComponentsTests {
     func date(from string: String, nanoseconds: Int? = nil) -> Date {
         let d = try! Date(string, strategy: Date.ParseStrategy(format: "\(year: .extended(minimumLength: 4))-\(month: .twoDigits)-\(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) \(timeZone: .iso8601(.short))", locale: Locale(identifier: "en_US"), timeZone: TimeZone.gmt))
-        if let nanoseconds {
-            var comps = Calendar(identifier: .gregorian).dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .timeZone, .calendar], from: d)
+        if nanoseconds != nil {
+            let comps = Calendar(identifier: .gregorian).dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .timeZone, .calendar], from: d)
             return Calendar(identifier: .gregorian).date(from: comps)!
         }
         return d

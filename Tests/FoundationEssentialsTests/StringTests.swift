@@ -1319,7 +1319,7 @@ final class StringTests : XCTestCase {
 
     }
     
-    func verifyEncoding(_ encoding: String._Encoding, valid: [String], invalid: [String], file: StaticString = #file, line: UInt = #line) throws {
+    func verifyEncoding(_ encoding: String._Encoding, valid: [String], invalid: [String], file: StaticString = #filePath, line: UInt = #line) throws {
         for string in valid {
             let data = try XCTUnwrap(string.data(using: encoding), "Failed to encode \(string.debugDescription)", file: file, line: line)
             XCTAssertNotNil(String(data: data, encoding: encoding), "Failed to decode \(data) (\(string.debugDescription))", file: file, line: line)
