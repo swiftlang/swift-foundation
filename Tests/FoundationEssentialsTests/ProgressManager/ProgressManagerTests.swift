@@ -295,16 +295,16 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         XCTAssertEqual(fileProgressManager.withProperties(\.totalFileCount), 0)
         XCTAssertEqual(fileProgressManager.withProperties(\.completedFileCount), 0)
 
-        let totalFileValues = fileProgressManager.values(property: ProgressManager.Properties.TotalFileCount.self)
+        let totalFileValues = fileProgressManager.values(of: ProgressManager.Properties.TotalFileCount.self)
         XCTAssertEqual(totalFileValues, [0, 100])
         
-        let reducedTotalFileValue = fileProgressManager.total(property: ProgressManager.Properties.TotalFileCount.self, values: totalFileValues)
+        let reducedTotalFileValue = fileProgressManager.total(of: ProgressManager.Properties.TotalFileCount.self)
         XCTAssertEqual(reducedTotalFileValue, 100)
         
-        let completedFileValues = fileProgressManager.values(property: ProgressManager.Properties.CompletedFileCount.self)
+        let completedFileValues = fileProgressManager.values(of: ProgressManager.Properties.CompletedFileCount.self)
         XCTAssertEqual(completedFileValues, [0, 100])
         
-        let reducedCompletedFileValue = fileProgressManager.total(property: ProgressManager.Properties.CompletedFileCount.self, values: completedFileValues)
+        let reducedCompletedFileValue = fileProgressManager.total(of: ProgressManager.Properties.CompletedFileCount.self)
         XCTAssertEqual(reducedCompletedFileValue, 100)
     }
     
@@ -325,10 +325,10 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         XCTAssertEqual(manager1.withProperties(\.totalFileCount), 10)
         XCTAssertEqual(manager1.withProperties(\.completedFileCount), 0)
         
-        let totalFileValues = overall.values(property: ProgressManager.Properties.TotalFileCount.self)
+        let totalFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
         XCTAssertEqual(totalFileValues, [0, 10])
         
-        let completedFileValues = overall.values(property: ProgressManager.Properties.CompletedFileCount.self)
+        let completedFileValues = overall.values(of: ProgressManager.Properties.CompletedFileCount.self)
         XCTAssertEqual(completedFileValues, [0, 0])
     }
     
@@ -354,9 +354,9 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         XCTAssertEqual(overall.fractionCompleted, 0.0)
         XCTAssertEqual(overall.withProperties(\.totalFileCount), 0)
         XCTAssertEqual(overall.withProperties(\.completedFileCount), 0)
-        let totalFileValues = overall.values(property: ProgressManager.Properties.TotalFileCount.self)
+        let totalFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
         XCTAssertEqual(totalFileValues, [0, 11, 9])
-        let completedFileValues = overall.values(property: ProgressManager.Properties.CompletedFileCount.self)
+        let completedFileValues = overall.values(of: ProgressManager.Properties.CompletedFileCount.self)
         XCTAssertEqual(completedFileValues, [0, 0, 0])
         
         // Update FileCounts
@@ -369,7 +369,7 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         }
         
         XCTAssertEqual(overall.withProperties(\.completedFileCount), 0)
-        let updatedCompletedFileValues = overall.values(property: ProgressManager.Properties.CompletedFileCount.self)
+        let updatedCompletedFileValues = overall.values(of: ProgressManager.Properties.CompletedFileCount.self)
         XCTAssertEqual(updatedCompletedFileValues, [0, 1, 1])
     }
     
@@ -387,7 +387,7 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         }
         XCTAssertEqual(childManager1.withProperties(\.totalFileCount), 10)
         
-        let preTotalFileValues = overall.values(property: ProgressManager.Properties.TotalFileCount.self)
+        let preTotalFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
         XCTAssertEqual(preTotalFileValues, [0, 0, 10])
         
         let childProgress2 = manager1.subprogress(assigningCount: 2)
@@ -399,13 +399,13 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
 
         // Tests that totalFileCount propagates to root level
         XCTAssertEqual(overall.withProperties(\.totalFileCount), 0)
-        let totalFileValues = overall.values(property: ProgressManager.Properties.TotalFileCount.self)
+        let totalFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
         XCTAssertEqual(totalFileValues, [0, 0, 10, 10])
         
         manager1.withProperties { properties in
             properties.totalFileCount += 999
         }
-        let totalUpdatedFileValues = overall.values(property: ProgressManager.Properties.TotalFileCount.self)
+        let totalUpdatedFileValues = overall.values(of: ProgressManager.Properties.TotalFileCount.self)
         XCTAssertEqual(totalUpdatedFileValues, [0, 999, 10, 10])
     }
 }
@@ -571,3 +571,68 @@ class TestProgressManagerInterop: XCTestCase {
     }
 }
 #endif
+
+class TestProgressReporter: XCTestCase {
+    func testObserveProgressReporter() {
+        let manager = ProgressManager(totalCount: 3)
+        
+        let reporter = manager.reporter
+        
+        manager.complete(count: 1)
+        XCTAssertEqual(reporter.completedCount, 1)
+        
+        manager.complete(count: 1)
+        XCTAssertEqual(reporter.completedCount, 2)
+        
+        manager.complete(count: 1)
+        XCTAssertEqual(reporter.completedCount, 3)
+    }
+    
+    func testAddProgressReporterAsChild() {
+        let manager = ProgressManager(totalCount: 2)
+        
+        let reporter = manager.reporter
+        
+        let altManager1 = ProgressManager(totalCount: 4)
+        altManager1.assign(count: 1, to: reporter)
+        
+        let altManager2 = ProgressManager(totalCount: 5)
+        altManager2.assign(count: 2, to: reporter)
+        
+        manager.complete(count: 1)
+        XCTAssertEqual(altManager1.fractionCompleted, 0.125)
+        XCTAssertEqual(altManager2.fractionCompleted, 0.2)
+        
+        manager.complete(count: 1)
+        XCTAssertEqual(altManager1.fractionCompleted, 0.25)
+        XCTAssertEqual(altManager2.fractionCompleted, 0.4)
+    }
+    
+    /// All of these test cases hit the precondition for cycle detection, but currently there's no way to check for hitting precondition in xctest.
+//    func testProgressReporterDirectCycleDetection() {
+//        let manager = ProgressManager(totalCount: 2)
+//        
+//        manager.assign(count: 1, to: manager.reporter)
+//    }
+//    
+//    func testProgressReporterIndirectCycleDetection() {
+//        let manager = ProgressManager(totalCount: 2)
+//                
+//        let altManager = ProgressManager(totalCount: 1)
+//        altManager.assign(count: 1, to: manager.reporter)
+//        
+//        manager.assign(count: 1, to: altManager.reporter)
+//    }
+//    
+//    func testProgressReporterNestedCycleDetection() {
+//        let manager1 = ProgressManager(totalCount: 1)
+//        
+//        let manager2 = ProgressManager(totalCount: 2)
+//        manager1.assign(count: 1, to: manager2.reporter)
+//        
+//        let manager3 = ProgressManager(totalCount: 3)
+//        manager2.assign(count: 1, to: manager3.reporter)
+//        
+//        manager3.assign(count: 1, to: manager1.reporter)
+//    }
+}
