@@ -294,6 +294,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     ///   - reporter: A `ProgressReporter` instance.
     ///   - portionOfParent: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
     public func assign(count portionOfParent: Int, to reporter: ProgressReporter) {
+        precondition(isCycle(reporter: reporter) == false, "Creating a cycle is not allowed.")
+        
         // get the actual progress from within the reporter, then add as children
         let actualManager = reporter.manager
         
@@ -630,6 +632,26 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     parent.updateChildrenOtherProperties(property: metatype, child: self, value: updatedParentEntry)
                 }
             }
+        }
+    }
+    
+    // MARK: Cycle detection
+    func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
+        if reporter.manager === self {
+            return true
+        }
+        
+        let updatedVisited = visited.union([self])
+        
+        return parents.withLock { parents in
+            for (parent, _) in parents {
+                if !updatedVisited.contains(parent) {
+                    if parent.isCycle(reporter: reporter, visited: updatedVisited) {
+                        return true
+                    }
+                }
+            }
+            return false
         }
     }
     
