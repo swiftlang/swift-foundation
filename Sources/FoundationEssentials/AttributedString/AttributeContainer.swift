@@ -108,7 +108,9 @@ extension AttributeContainer {
 
 @available(FoundationPreview 6.2, *)
 extension AttributeContainer {
-    /// Returns an attribute container storing only the attributes in `self` with the `inheritedByAddedText` property set to `true`
+    /// Returns a copy of the attribute container with only attributes that specify the provided inheritance behavior.
+    /// - Parameter inheritedByAddedText: An `inheritedByAddedText` value to filter. Attributes matching this value are included in the returned container.
+    /// - Returns: A copy of the attribute container with only attributes whose `inheritedByAddedText` property matches the provided value.
     public func filter(inheritedByAddedText: Bool) -> AttributeContainer {
         var storage = self.storage
         for (key, value) in storage.contents {
@@ -120,9 +122,9 @@ extension AttributeContainer {
         return AttributeContainer(storage)
     }
     
-    /// Returns an attribute container storing only the attributes in `self` with a matching run boundary property
-    ///
-    /// Note: if `nil` is provided then only attributes not bound to any particular boundary will be returned
+    /// Returns a copy of the attribute container with only attributes that have the provided run boundaries.
+    /// - Parameter runBoundaries: The required `runBoundaries` value of the filtered attributes. If `nil` is provided, only attributes not bound to any specific boundary will be returned.
+    /// - Returns: A copy of the attribute container with only attributes whose `runBoundaries` property matches the provided value.
     public func filter(runBoundaries: AttributedString.AttributeRunBoundaries?) -> AttributeContainer {
         var storage = self.storage
         for (key, value) in storage.contents {

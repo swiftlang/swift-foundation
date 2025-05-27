@@ -111,7 +111,8 @@ extension AttributeContainer {
         for (key, value) in dictionary {
             if let type = attributeTable[key.rawValue] {
                 func project<K: AttributedStringKey>(_: K.Type) throws {
-                    storage[K.self] = try K._convertFromObjectiveCValue(value as AnyObject)
+                    // We must assume that the value is Sendable here because we are dynamically iterating a scope and the attribute keys do not statically declare the values are Sendable
+                    storage[assumingSendable: K.self] = try K._convertFromObjectiveCValue(value as AnyObject)
                 }
                 do {
                     try project(type)
@@ -145,7 +146,8 @@ extension Dictionary where Key == NSAttributedString.Key, Value == Any {
         for key in container.storage.keys {
             if let type = attributeTable[key] {
                 func project<K: AttributedStringKey>(_: K.Type) throws {
-                    self[NSAttributedString.Key(rawValue: key)] = try K._convertToObjectiveCValue(container.storage[K.self]!)
+                    // We must assume that the value is Sendable here because we are dynamically iterating a scope and the attribute keys do not statically declare the values are Sendable
+                    self[NSAttributedString.Key(rawValue: key)] = try K._convertToObjectiveCValue(container.storage[assumingSendable: K.self]!)
                 }
                 do {
                     try project(type)

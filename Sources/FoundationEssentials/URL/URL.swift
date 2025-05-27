@@ -635,12 +635,14 @@ public struct URL: Equatable, Sendable, Hashable {
 
 #if FOUNDATION_FRAMEWORK
     private static var _type: any _URLProtocol.Type {
+        if URL.compatibility2 {
+            return _BridgedURL.self
+        }
         return foundation_swift_url_enabled() ? _SwiftURL.self : _BridgedURL.self
     }
 #else
     private static let _type = _SwiftURL.self
 #endif
-
 
 #if FOUNDATION_FRAMEWORK
     internal let _url: any _URLProtocol & AnyObject
