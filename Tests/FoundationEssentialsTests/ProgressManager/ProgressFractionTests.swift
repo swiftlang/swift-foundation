@@ -43,7 +43,7 @@ final class ProgressFractionTests: XCTestCase {
     
     func test_addDifferent() {
         let f1 = _ProgressFraction(completed: 5, total: 10)
-        let f2 = _ProgressFraction(completed: 300, total: 1000)
+        let f2 = _ProgressFraction(completed : 300, total: 1000)
 
         let r = f1 + f2
         XCTAssertEqual(r.completed, 800)
