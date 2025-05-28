@@ -587,6 +587,8 @@ class TestProgressManagerInterop: XCTestCase {
         XCTAssertEqual(manager.fractionCompleted, 0.25)
         XCTAssertEqual(parentManager1.fractionCompleted, 0.25)
         XCTAssertEqual(parentManager2.fractionCompleted, 0.25)
+        
+//        progress.addChild(parentManager1.reporter, withPendingUnitCount: 1) // this should trigger cycle detection
     }
 }
 #endif
