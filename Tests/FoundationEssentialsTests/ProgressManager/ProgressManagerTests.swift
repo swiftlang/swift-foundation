@@ -455,7 +455,7 @@ class TestProgressManagerInterop: XCTestCase {
         XCTAssertEqual(overall.completedUnitCount, 10)
     }
     
-    func testInteropProgressParentProgressMonitorChildWithEmptyProgress() async throws {
+    func testInteropProgressParentProgressReporterChildWithEmptyProgress() async throws {
         // Initialize a Progress parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)
         
@@ -471,7 +471,7 @@ class TestProgressManagerInterop: XCTestCase {
         XCTAssertEqual(overall.fractionCompleted, 0.5)
         XCTAssertEqual(overall.completedUnitCount, 5)
         
-        // Add ProgressMonitor as Child
+        // Add ProgressReporter as Child
         let p2 = ProgressManager(totalCount: 10)
         let p2Reporter = p2.reporter
         overall.addChild(p2Reporter, withPendingUnitCount: 5)
@@ -483,7 +483,7 @@ class TestProgressManagerInterop: XCTestCase {
         XCTAssertEqual(overall.completedUnitCount, 10)
     }
     
-    func testInteropProgressParentProgressMonitorChildWithExistingProgress() async throws {
+    func testInteropProgressParentProgressReporterChildWithExistingProgress() async throws {
         // Initialize a Progress parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)
         
@@ -499,7 +499,7 @@ class TestProgressManagerInterop: XCTestCase {
         XCTAssertEqual(overall.fractionCompleted, 0.5)
         XCTAssertEqual(overall.completedUnitCount, 5)
         
-        // Add ProgressMonitor with CompletedCount 3 as Child
+        // Add ProgressReporter with CompletedCount 3 as Child
         let p2 = ProgressManager(totalCount: 10)
         p2.complete(count: 3)
         let p2Reporter = p2.reporter
@@ -568,6 +568,25 @@ class TestProgressManagerInterop: XCTestCase {
         let interopChild = overallProgress2.makeChild(withPendingUnitCount: 5)
         receiveProgress(progress: interopChild)
         XCTAssertEqual(overallProgress2.totalUnitCount, 0)
+    }
+    
+    func testIndirectParticipationOfProgressInAcyclicGraph() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        let parentManager1 = ProgressManager(totalCount: 1)
+        parentManager1.assign(count: 1, to: manager.reporter)
+        
+        let parentManager2 = ProgressManager(totalCount: 1)
+        parentManager2.assign(count: 1, to: manager.reporter)
+        
+        let progress = Progress.discreteProgress(totalUnitCount: 4)
+        manager.subprogress(assigningCount: 1, to: progress)
+                
+        progress.completedUnitCount = 2
+        XCTAssertEqual(progress.fractionCompleted, 0.5)
+        XCTAssertEqual(manager.fractionCompleted, 0.25)
+        XCTAssertEqual(parentManager1.fractionCompleted, 0.25)
+        XCTAssertEqual(parentManager2.fractionCompleted, 0.25)
     }
 }
 #endif
