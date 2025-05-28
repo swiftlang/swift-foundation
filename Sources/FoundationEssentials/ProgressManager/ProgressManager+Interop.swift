@@ -56,7 +56,10 @@ extension Progress {
     ///   - reporter: A `ProgressReporter` instance.
     ///   - count: Number of units delegated from `self`'s `totalCount`.
     public func addChild(_ reporter: ProgressReporter, withPendingUnitCount count: Int) {
-
+        
+        // Need to detect cycle here
+        precondition(self.isCycle(reporter: reporter) == false, "Creating a cycle is not allowed.")
+        
         // Make intermediary & add it to NSProgress parent's children list
         let ghostProgressParent = Progress(totalUnitCount: Int64(reporter.manager.totalCount ?? 0))
         ghostProgressParent.completedUnitCount = Int64(reporter.manager.completedCount)
@@ -64,9 +67,40 @@ extension Progress {
         
         // Make observation instance
         let observation = _ProgressParentProgressReporterChild(intermediary: ghostProgressParent, reporter: reporter)
-
+        
         reporter.manager.setInteropObservationForMonitor(observation: observation)
         reporter.manager.setMonitorInterop(to: true)
+    }
+    
+    // MARK: Cycle detection
+    func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
+        if self._parent() == nil {
+            return false
+        }
+        
+        if !(self._parent() is _NSProgressParentBridge) {
+            return self._parent().isCycle(reporter: reporter)
+        }
+        
+        // then check against ProgressManager
+        let unwrappedParent = (self._parent() as? _NSProgressParentBridge)?.actualParent
+        if let unwrappedParent = unwrappedParent {
+            if unwrappedParent === reporter.manager {
+                return true
+            }
+            let updatedVisited = visited.union([unwrappedParent])
+            return unwrappedParent.parents.withLock { parents in
+                for (parent, _) in parents {
+                    if !updatedVisited.contains(parent) {
+                        if parent.isCycle(reporter: reporter, visited: updatedVisited) {
+                            return true
+                        }
+                    }
+                }
+                return false
+            }
+        }
+        return false
     }
 }
 
@@ -152,7 +186,7 @@ extension ProgressManager {
 // Subclass of Foundation.Progress
 internal final class _NSProgressParentBridge: Progress, @unchecked Sendable {
 
-    let actualParent: ProgressManager
+    internal let actualParent: ProgressManager
 
     init(managerParent: ProgressManager) {
         self.actualParent = managerParent
