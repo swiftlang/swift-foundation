@@ -73,7 +73,7 @@ extension Progress {
     }
     
     // MARK: Cycle detection
-    func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
+    private func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
         if self._parent() == nil {
             return false
         }
