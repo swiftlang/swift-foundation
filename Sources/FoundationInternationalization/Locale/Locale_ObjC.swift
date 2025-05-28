@@ -308,7 +308,10 @@ internal class _NSSwiftLocale: _NSLocaleBridge, @unchecked Sendable {
             switch locale.temperatureUnit {
             case .celsius: return NSLocaleTemperatureUnitCelsius
             case .fahrenheit: return NSLocaleTemperatureUnitFahrenheit
+#if !FOUNDATION_FRAMEWORK
+            // On non-framework builds, the enum is non-closed and `package` visibility, so we need a default
             default: return NSLocaleTemperatureUnitCelsius
+#endif
             }
         case .decimalSeparator: return self.decimalSeparator
         case .groupingSeparator: return self.groupingSeparator
