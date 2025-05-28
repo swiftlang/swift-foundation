@@ -50,7 +50,7 @@ extension Progress {
     }
     
     
-    /// Adds a ProgressReporter as a child to a ProgressManager, which constitutes a portion of ProgressManager's totalUnitCount.
+    /// Adds a ProgressReporter as a child to a Progress, which constitutes a portion of Progress's totalUnitCount.
     ///
     /// - Parameters:
     ///   - reporter: A `ProgressReporter` instance.
@@ -138,6 +138,8 @@ extension ProgressManager {
     ///   - count: Number of units delegated from `self`'s `totalCount`.
     ///   - progress: `Progress` which receives the delegated `count`.
     public func subprogress(assigningCount count: Int, to progress: Foundation.Progress) {
+        precondition(progress._parent() == nil, "Cannot assign a progress to more than one parent.")
+        
         let parentBridge = _NSProgressParentBridge(managerParent: self)
         progress._setParent(parentBridge, portion: Int64(count))
 
