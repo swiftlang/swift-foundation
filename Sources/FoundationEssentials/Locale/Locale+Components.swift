@@ -85,6 +85,41 @@ extension Locale {
         public init(languageCode: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil) {
             self.languageComponents = Language.Components(languageCode: languageCode, script: script, region: languageRegion)
         }
+
+        // Returns an ICU-style identifier like "de_DE@calendar=gregorian"
+        package var icuIdentifier: String {
+
+            var keywords = [(ICULegacyKey, String)]()
+            if let id = calendar?.cldrIdentifier { keywords.append((Calendar.Identifier.legacyKeywordKey, id)) }
+            if let id = collation?._normalizedIdentifier { keywords.append((Locale.Collation.legacyKeywordKey, id)) }
+            if let id = currency?._normalizedIdentifier { keywords.append((Locale.Currency.legacyKeywordKey, id)) }
+            if let id = numberingSystem?._normalizedIdentifier { keywords.append((Locale.NumberingSystem.legacyKeywordKey, id)) }
+            if let id = firstDayOfWeek?.rawValue { keywords.append((Locale.Weekday.legacyKeywordKey, id)) }
+            if let id = hourCycle?.rawValue { keywords.append((Locale.HourCycle.legacyKeywordKey, id)) }
+            if let id = measurementSystem?._normalizedIdentifier { keywords.append((Locale.MeasurementSystem.legacyKeywordKey, id)) }
+            // No need for redundant region keyword
+            if let region = region, region != languageComponents.region {
+                // rg keyword value is actually a subdivision code
+                keywords.append((Locale.Region.legacyKeywordKey, Locale.Subdivision.subdivision(for: region)._normalizedIdentifier))
+            }
+            if let id = subdivision?._normalizedIdentifier { keywords.append((Locale.Subdivision.legacyKeywordKey, id)) }
+            if let id = timeZone?.identifier { keywords.append((TimeZone.legacyKeywordKey, id)) }
+            if let id = variant?._normalizedIdentifier { keywords.append((Locale.Variant.legacyKeywordKey, id)) }
+
+            var locID = languageComponents.identifier
+            let keywordCounts = keywords.count
+            if keywordCounts > 0 {
+                locID.append("@")
+            }
+
+            for (i, (key, val)) in keywords.enumerated() {
+                locID.append("\(key.key)=\(val)")
+                if i != keywordCounts - 1 {
+                    locID.append(";")
+                }
+            }
+            return locID
+        }
     }
 }
 

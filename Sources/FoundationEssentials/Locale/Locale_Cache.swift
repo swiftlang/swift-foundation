@@ -45,7 +45,7 @@ struct LocaleCache : Sendable, ~Copyable {
         }
 
         private var cachedFixedLocales: [String : any _LocaleProtocol] = [:]
-        private var cachedFixedComponentsLocales: [Locale.Components : any _LocaleProtocol] = [:]
+        private var cachedFixedComponentsLocales: [String : any _LocaleProtocol] = [:]
 
 #if FOUNDATION_FRAMEWORK
         private var cachedFixedIdentifierToNSLocales: [String : _NSSwiftLocale] = [:]
@@ -99,17 +99,18 @@ struct LocaleCache : Sendable, ~Copyable {
 
 #endif // FOUNDATION_FRAMEWORK
 
-        func fixedComponents(_ comps: Locale.Components) -> (any _LocaleProtocol)? {
+        func fixedComponents(_ comps: String) -> (any _LocaleProtocol)? {
             cachedFixedComponentsLocales[comps]
         }
 
         mutating func fixedComponentsWithCache(_ comps: Locale.Components) -> any _LocaleProtocol {
-            if let l = fixedComponents(comps) {
+            let identifier = comps.icuIdentifier
+            if let l = fixedComponents(identifier) {
                 return l
             } else {
                 let new = _localeICUClass().init(components: comps)
 
-                cachedFixedComponentsLocales[comps] = new
+                cachedFixedComponentsLocales[identifier] = new
                 return new
             }
         }
