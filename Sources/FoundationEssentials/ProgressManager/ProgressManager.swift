@@ -53,6 +53,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
         // Type: Metatype maps to dictionary of child to value
         var childrenOtherProperties: [AnyMetatypeWrapper: OrderedDictionary<ProgressManager, [(any Sendable)]>]
+        var isDirty: Bool
     }
     
     // Interop states
@@ -236,7 +237,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             childFraction: _ProgressFraction(completed: 0, total: 1),
             interopChild: nil
         )
-        let state = State(fractionState: fractionState, otherProperties: [:], childrenOtherProperties: [:])
+        let state = State(fractionState: fractionState, otherProperties: [:], childrenOtherProperties: [:], isDirty: true)
         self.state = LockedState(initialState: state)
         self.interopObservation = interopObservation
         self.ghostReporter = ghostReporter
@@ -309,8 +310,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public func complete(count: Int) {
         let updateState = updateCompletedCount(count: count)
         updateFractionCompleted(from: updateState.previous, to: updateState.current)
-        ghostReporter?.notifyObservers(with: .fractionUpdated)
         
+        // Interop updates stuff
+        ghostReporter?.notifyObservers(with: .fractionUpdated)
         monitorInterop.withLock { [self] interop in
             if interop == true {
                 notifyObservers(with: .fractionUpdated)
@@ -339,12 +341,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     /// Mutates any settable properties that convey information about progress.
-    /// 
     public func withProperties<T>(_ closure: @Sendable (inout Values) throws -> T) rethrows -> T {
         return try state.withLock { state in
             var values = Values(manager: self, state: state)
             // This is done to avoid copy on write later
-            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:], childrenOtherProperties: [:])
+            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:], childrenOtherProperties: [:], isDirty: state.isDirty)
             let result = try closure(&values)
             state = values.state
             return result
@@ -383,7 +384,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    /// Returns nil if `self` has `nil` total units;
+    /// Returns 0 if `self` has `nil` total units;
     /// returns a `Int` value otherwise.
     private func getCompletedCount(fractionState: inout FractionState) -> Int {
         if let interopChild = fractionState.interopChild {
