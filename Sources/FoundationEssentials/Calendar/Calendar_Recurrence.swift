@@ -235,7 +235,7 @@ extension Calendar {
                 }
                 var componentsForEnumerating = recurrence.calendar._dateComponents(components, from: start) 
                 
-                startDateNanoseconds = start.timeIntervalSince1970.remainder(dividingBy: 1)
+                startDateNanoseconds = start.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1)
                 
                 let expansionChangesDay = dayOfYearAction == .expand || dayOfMonthAction == .expand || weekAction == .expand || weekdayAction == .expand
                 let expansionChangesMonth = dayOfYearAction == .expand || monthAction == .expand || weekAction == .expand
