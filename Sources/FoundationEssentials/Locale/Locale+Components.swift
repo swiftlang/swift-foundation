@@ -87,6 +87,7 @@ extension Locale {
         }
 
         // Returns an ICU-style identifier like "de_DE@calendar=gregorian"
+        // Must include every component stored by a `Locale.Components`, and be kept in sync with `init(identifier:)`.
         package var icuIdentifier: String {
 
             var keywords = [(ICULegacyKey, String)]()
