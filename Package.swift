@@ -136,6 +136,14 @@ let package = Package(
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("LifetimeDependence"),
+            .enableExperimentalFeature(
+              "InoutLifetimeDependence",
+              .when(platforms: [.macOS, .iOS, .watchOS, .tvOS, .linux])
+            ),
+            .enableExperimentalFeature(
+              "LifetimeDependenceMutableAccessors",
+              .when(platforms: [.macOS, .iOS, .watchOS, .tvOS, .linux])
+            ),
             .enableExperimentalFeature("AddressableTypes"),
             .enableExperimentalFeature("BuiltinModule"),
             .enableExperimentalFeature("AccessLevelOnImport")
@@ -153,7 +161,16 @@ let package = Package(
             resources: [
                 .copy("Resources")
             ],
-            swiftSettings: availabilityMacros + featureSettings
+            swiftSettings: [
+              .enableExperimentalFeature(
+                "InoutLifetimeDependence",
+                .when(platforms: [.macOS, .iOS, .watchOS, .tvOS, .linux])
+              ),
+              .enableExperimentalFeature(
+                "LifetimeDependenceMutableAccessors",
+                .when(platforms: [.macOS, .iOS, .watchOS, .tvOS, .linux])
+              ),
+            ] + availabilityMacros + featureSettings
         ),
 
         // FoundationInternationalization

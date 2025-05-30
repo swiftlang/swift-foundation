@@ -2239,6 +2239,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
+#if compiler(>=5.9) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
     @available(FoundationSpan 6.2, *)
     public var mutableBytes: MutableRawSpan {
         @lifetime(&self)
@@ -2298,6 +2299,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 #endif
         }
     }
+#endif // $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
 
     @_alwaysEmitIntoClient
     public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
@@ -2986,8 +2988,6 @@ internal func _overrideLifetime<
 >(
   _ dependent: consuming T, borrowing source: borrowing U
 ) -> T {
-  // TODO: Remove @_unsafeNonescapableResult. Instead, the unsafe dependence
-  // should be expressed by a builtin that is hidden within the function body.
   dependent
 }
 
@@ -3004,11 +3004,10 @@ internal func _overrideLifetime<
 >(
   _ dependent: consuming T, copying source: borrowing U
 ) -> T {
-  // TODO: Remove @_unsafeNonescapableResult. Instead, the unsafe dependence
-  // should be expressed by a builtin that is hidden within the function body.
   dependent
 }
 
+#if compiler(>=5.9) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
 /// Unsafely discard any lifetime dependency on the `dependent` argument.
 /// Return a value identical to `dependent` with a lifetime dependency
 /// on the caller's exclusive borrow scope of the `source` argument.
@@ -3023,7 +3022,6 @@ internal func _overrideLifetime<
   _ dependent: consuming T,
   mutating source: inout U
 ) -> T {
-  // TODO: Remove @_unsafeNonescapableResult. Instead, the unsafe dependence
-  // should be expressed by a builtin that is hidden within the function body.
   dependent
 }
+#endif // $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
