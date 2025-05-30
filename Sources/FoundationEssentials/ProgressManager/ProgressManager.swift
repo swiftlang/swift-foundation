@@ -53,15 +53,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
         // Type: Metatype maps to dictionary of child to value
         var childrenOtherProperties: [AnyMetatypeWrapper: OrderedDictionary<ProgressManager, [(any Sendable)]>]
-        
-        // dirty bit for completed count
-        var isDirtyCompleted: Bool
-        var updatedCompletedCount: Int
-        
-        // dirty bit for total count
-        var isDirtyTotal: Bool
-        var updatedTotalCount: Int?
-        
         var children: Set<ProgressManager>
     }
     
@@ -87,10 +78,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var totalCount: Int? {
         _$observationRegistrar.access(self, keyPath: \.totalCount)
         return state.withLock { state in
-            if state.isDirtyTotal {
-                updateDirtiedValues(state: &state)
-            }
-            return getTotalCount(fractionState: &state.fractionState)
+            getTotalCount(fractionState: &state.fractionState)
         }
     }
     
@@ -99,10 +87,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var completedCount: Int {
         _$observationRegistrar.access(self, keyPath: \.completedCount)
         return state.withLock { state in
-            if state.isDirtyCompleted {
-                updateDirtiedValues(state: &state)
-            }
-            return getCompletedCount(fractionState: &state.fractionState)
+            getCompletedCount(fractionState: &state.fractionState)
         }
     }
     
@@ -112,10 +97,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var fractionCompleted: Double {
         _$observationRegistrar.access(self, keyPath: \.fractionCompleted)
         return state.withLock { state in
-            if state.isDirtyTotal || state.isDirtyCompleted {
-                updateDirtiedValues(state: &state)
-            }
-            return getFractionCompleted(fractionState: &state.fractionState)
+            getFractionCompleted(fractionState: &state.fractionState)
         }
     }
     
@@ -124,12 +106,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var isIndeterminate: Bool {
         _$observationRegistrar.access(self, keyPath: \.isIndeterminate)
         return state.withLock { state in
-            if state.isDirtyTotal {
-                if state.isDirtyTotal || state.isDirtyCompleted {
-                    updateDirtiedValues(state: &state)
-                }
-            }
-            return getIsIndeterminate(fractionState: &state.fractionState)
+            getIsIndeterminate(fractionState: &state.fractionState)
         }
     }
     
@@ -138,47 +115,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var isFinished: Bool {
         _$observationRegistrar.access(self, keyPath: \.isFinished)
         return state.withLock { state in
-            if state.isDirtyTotal || state.isDirtyCompleted {
-                updateDirtiedValues(state: &state)
-            }
-            return getIsFinished(fractionState: &state.fractionState)
-        }
-    }
-    
-    /// This is called if the total dirty bit is set
-    private func updateDirtiedValues(state: inout State) {
-        if state.children.isEmpty {
-            // If there are no children, update value directly and don't traverse down anymore
-            let updateState = getPreviousAndCurrentState(state: &state)
-            updateFractionCompleted(from: updateState.previous, to: updateState.current)
-            
-            // mark dirty bit false
-            state.isDirtyTotal = false
-            state.isDirtyCompleted = false
-        } else {
-            // If there are children, traverse down
-            for child in state.children {
-                child.updateDirtiedValues()
-            }
-        }
-    }
-    
-    private func updateDirtiedValues() {
-        state.withLock { state in
-            if state.children.isEmpty {
-                // If there are no children, update value directly and don't traverse down anymore
-                let updateState = getPreviousAndCurrentState(state: &state)
-                updateFractionCompleted(from: updateState.previous, to: updateState.current)
-                
-                // mark dirty bit false
-                state.isDirtyTotal = false
-                state.isDirtyCompleted = false
-            } else {
-                // If there are children, traverse down
-                for child in state.children {
-                    child.updateDirtiedValues()
-                }
-            }
+            getIsFinished(fractionState: &state.fractionState)
         }
     }
     
@@ -204,17 +141,24 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         /// The total units of work.
         public var totalCount: Int? {
             mutating get {
-                if state.isDirtyTotal {
-                    manager.updateDirtiedValues(state: &state)
-                }
-                return manager.getTotalCount(fractionState: &state.fractionState)
+                manager.getTotalCount(fractionState: &state.fractionState)
             }
             
             set {
-                state.updatedTotalCount = newValue
-                manager.markTotalDirty(state: &state)
-                                
-                // Interop updates stuff
+                let previous = state.fractionState.overallFraction
+                if state.fractionState.selfFraction.total != newValue && state.fractionState.selfFraction.total > 0 {
+                    state.fractionState.childFraction = state.fractionState.childFraction * _ProgressFraction(completed: state.fractionState.selfFraction.total, total: newValue ?? 1)
+                }
+                state.fractionState.selfFraction.total = newValue ?? 0
+                
+                // if newValue is nil, reset indeterminate to true
+                if newValue != nil {
+                    state.fractionState.indeterminate = false
+                } else {
+                    state.fractionState.indeterminate = true
+                }
+                //TODO: rdar://149015734 Check throttling
+                manager.updateFractionCompleted(from: previous, to: state.fractionState.overallFraction)
                 manager.ghostReporter?.notifyObservers(with: .totalCountUpdated)
                 manager.monitorInterop.withLock { [manager] interop in
                     if interop == true {
@@ -228,17 +172,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         /// The completed units of work.
         public var completedCount: Int {
             mutating get {
-                if state.isDirtyCompleted {
-                    manager.updateDirtiedValues(state: &state)
-                }
-                return manager.getCompletedCount(fractionState: &state.fractionState)
+                manager.getCompletedCount(fractionState: &state.fractionState)
             }
             
             set {
-                state.updatedCompletedCount = newValue
-                manager.markCompletedDirty(state: &state)
-
+                let prev = state.fractionState.overallFraction
+                state.fractionState.selfFraction.completed = newValue
+                manager.updateFractionCompleted(from: prev, to: state.fractionState.overallFraction)
                 manager.ghostReporter?.notifyObservers(with: .fractionUpdated)
+                
                 manager.monitorInterop.withLock { [manager] interop in
                     if interop == true {
                         manager.notifyObservers(with: .fractionUpdated)
@@ -293,14 +235,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             childFraction: _ProgressFraction(completed: 0, total: 1),
             interopChild: nil
         )
-        let state = State(fractionState: fractionState,
-                          otherProperties: [:],
-                          childrenOtherProperties: [:],
-                          isDirtyCompleted: false,
-                          updatedCompletedCount: 0,
-                          isDirtyTotal: false,
-                          updatedTotalCount: 0,
-                          children: Set())
+        let state = State(fractionState: fractionState, otherProperties: [:], childrenOtherProperties: [:], children: Set())
         self.state = LockedState(initialState: state)
         self.interopObservation = interopObservation
         self.ghostReporter = ghostReporter
@@ -312,6 +247,34 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// - Parameter totalCount: Total units of work.
     public convenience init(totalCount: Int?) {
         self.init(total: totalCount, ghostReporter: nil, interopObservation: nil)
+    }
+    
+    /// Sets `totalCount`.
+    /// - Parameter newTotal: Total units of work.
+    public func setTotalCount(_ newTotal: Int?) {
+        state.withLock { state in
+            let previous = state.fractionState.overallFraction
+            if state.fractionState.selfFraction.total != newTotal && state.fractionState.selfFraction.total > 0 {
+                state.fractionState.childFraction = state.fractionState.childFraction * _ProgressFraction(completed: state.fractionState.selfFraction.total, total: newTotal ?? 1)
+            }
+            state.fractionState.selfFraction.total = newTotal ?? 0
+            
+            // if newValue is nil, reset indeterminate to true
+            if newTotal != nil {
+                state.fractionState.indeterminate = false
+            } else {
+                state.fractionState.indeterminate = true
+            }
+            updateFractionCompleted(from: previous, to: state.fractionState.overallFraction)
+            
+            ghostReporter?.notifyObservers(with: .totalCountUpdated)
+            
+            monitorInterop.withLock { [self] interop in
+                if interop == true {
+                    notifyObservers(with: .totalCountUpdated)
+                }
+            }
+        }
     }
     
     /// Returns a `Subprogress` representing a portion of `self` which can be passed to any method that reports progress.
@@ -343,10 +306,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Increases `completedCount` by `count`.
     /// - Parameter count: Units of work.
     public func complete(count: Int) {
-        state.withLock { state in
-            state.updatedCompletedCount = state.fractionState.selfFraction.completed + count
-            markCompletedDirty(state: &state)
-        }
+        let updateState = updateCompletedCount(count: count)
+        updateFractionCompleted(from: updateState.previous, to: updateState.current)
         
         // Interop updates stuff
         ghostReporter?.notifyObservers(with: .fractionUpdated)
@@ -382,16 +343,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         return try state.withLock { state in
             var values = Values(manager: self, state: state)
             // This is done to avoid copy on write later
-            state = State(fractionState: FractionState(indeterminate: true,
-                                                       selfFraction: _ProgressFraction(),
-                                                       childFraction: _ProgressFraction()),
-                          otherProperties: [:],
-                          childrenOtherProperties: [:],
-                          isDirtyCompleted: false,
-                          updatedCompletedCount: 0,
-                          isDirtyTotal: false,
-                          updatedTotalCount: 0,
-                          children: Set())
+            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:], childrenOtherProperties: [:], children: Set())
             let result = try closure(&values)
             state = values.state
             return result
@@ -405,7 +357,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 //            var values = Values(manager: self, state: state)
 //            // This is done to avoid copy on write later
 //            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:], childrenOtherProperties: [:])
-//            
+//
 //            do {
 //                let result = try closure(&values)
 //                state = values.state
@@ -477,26 +429,14 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         let current: _ProgressFraction
     }
     
-    private func getPreviousAndCurrentState(state: inout State) -> UpdateState {
-        let prev = state.fractionState.overallFraction
-        if state.isDirtyTotal {
-            if state.updatedTotalCount == nil {
-                print("updated total count is nil")
-                state.fractionState.indeterminate = true
-            } else {
-                state.fractionState.indeterminate = false
-            }
-            // actually update totalCount
-            if (state.fractionState.selfFraction.total != (state.updatedTotalCount ?? 0)) && (state.fractionState.selfFraction.total > 0) {
-                state.fractionState.childFraction = state.fractionState.childFraction * _ProgressFraction(completed: state.fractionState.selfFraction.total, total: state.updatedTotalCount ?? 1)
-            }
-            state.fractionState.selfFraction.total = state.updatedTotalCount ?? 0
+    private func updateCompletedCount(count: Int) -> UpdateState {
+        // Acquire and release child's lock
+        let (previous, current) = state.withLock { state in
+            let prev = state.fractionState.overallFraction
+            state.fractionState.selfFraction.completed += count
+            return (prev, state.fractionState.overallFraction)
         }
-        if state.isDirtyCompleted {
-            // actually update completedCount
-            state.fractionState.selfFraction.completed = state.updatedCompletedCount
-        }
-        return UpdateState(previous: prev, current: state.fractionState.overallFraction)
+        return UpdateState(previous: previous, current: current)
     }
     
     private func updateFractionCompleted(from: _ProgressFraction, to: _ProgressFraction) {
@@ -538,60 +478,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     state.fractionState.childFraction = state.fractionState.childFraction  - (multiple * next)
                 }
             }
-            state.isDirtyTotal = false
-            state.isDirtyCompleted = false
             return UpdateState(previous: previousOverallFraction, current: state.fractionState.overallFraction)
         }
         updateFractionCompleted(from: updateState.previous, to: updateState.current)
     }
     
-    
-    /// Update completedCount and mark all ancestors as dirty.
-    private func markCompletedDirty(state: inout State) {
-        state.isDirtyCompleted = true
-        
-        // recursively mark all ancestors as dirty
-        parents.withLock { parents in
-            for (parent, _) in parents {
-                parent.markCompletedDirty()
-            }
-        }
-    }
-    
-    private func markCompletedDirty() {
-        state.withLock { state in
-            state.isDirtyCompleted = true
-        }
-        
-        parents.withLock { parents in
-            for (parent, _) in parents {
-                parent.markCompletedDirty()
-            }
-        }
-    }
-    
-    private func markTotalDirty(state: inout State) {
-        state.isDirtyTotal = true
-        
-        parents.withLock { parents in
-            for (parent, _) in parents {
-                parent.markTotalDirty()
-            }
-        }
-    }
-    
-    private func markTotalDirty() {
-        state.withLock { state in
-            state.isDirtyTotal = true
-        }
-        
-        parents.withLock { parents in
-            for (parent, _) in parents {
-                parent.markTotalDirty()
-            }
-        }
-    }
-        
     //MARK: Interop-related internal methods
     /// Adds `observer` to list of `_observers` in `self`.
     internal func addObserver(observer: @escaping @Sendable (ObserverState) -> Void) {
