@@ -793,6 +793,23 @@ final class FileManagerTests : XCTestCase {
         }
     }
     
+    func testNanosecondModificationDate() throws {
+        try FileManagerPlayground {
+            "foo"
+        }.test {
+            #if os(Windows)
+            // Windows supports 100-nanosecond precision (10 seconds + 300 nano seconds)
+            let date = Date(timeIntervalSince1970: 10.0000003)
+            #else
+            // non-Windows supports nanosecond precision (10 seconds + 3 nano seconds)
+            let date = Date(timeIntervalSince1970: 10.000000003)
+            #endif
+            try $0.setAttributes([.modificationDate : date], ofItemAtPath: "foo")
+            let readDate = try $0.attributesOfItem(atPath: "foo")[.modificationDate] as? Date
+            XCTAssertEqual(readDate, date)
+        }
+    }
+    
     func testImplicitlyConvertibleFileAttributes() throws {
         try FileManagerPlayground {
             File("foo", attributes: [.posixPermissions : UInt16(0o644)])
