@@ -111,13 +111,15 @@ list(APPEND _SwiftFoundation_versions
 list(APPEND _SwiftFoundation_availability_names
     "FoundationPreview"
     "FoundationPredicate"
-    "FoundationPredicateRegex")
+    "FoundationPredicateRegex"
+    "FoundationSpan")
 
 # The aligned availability for each name (in the same order)
 list(APPEND _SwiftFoundation_availability_releases
     ${_SwiftFoundation_BaseAvailability}
     ${_SwiftFoundation_BaseAvailability}
-    ${_SwiftFoundation_BaseAvailability})
+    ${_SwiftFoundation_BaseAvailability}
+    ${_SwiftFoundation_FutureAvailability})
 
 foreach(version ${_SwiftFoundation_versions})
     foreach(name release IN ZIP_LISTS _SwiftFoundation_availability_names _SwiftFoundation_availability_releases)

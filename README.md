@@ -18,7 +18,7 @@ On all other Swift platforms, `swift-foundation` is available as part of the too
 ## Building and Testing
 
 > [!NOTE]
-> Building swift-foundation requires the in-development Swift 6.0 toolchain. You can download the Swift 6.0 nightly toolchain from [the Swift website](https://swift.org/install).
+> Building swift-foundation requires the in-development Swift 6.2 toolchain. You can download the Swift 6.2 nightly toolchain from [the Swift website](https://swift.org/install).
 
 Before building Foundation, first ensure that you have a Swift toolchain installed. Next, check out the _Getting Started_ section of the [Foundation Build Process](Foundation_Build_Process.md#getting-started) guide for detailed steps on building and testing.
 
