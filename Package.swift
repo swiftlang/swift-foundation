@@ -145,6 +145,7 @@ let package = Package(
               .when(platforms: [.macOS, .iOS, .watchOS, .tvOS, .linux])
             ),
             .enableExperimentalFeature("AddressableTypes"),
+            .enableExperimentalFeature("AllowUnsafeAttribute"),
             .enableExperimentalFeature("BuiltinModule"),
             .enableExperimentalFeature("AccessLevelOnImport")
           ] + availabilityMacros + featureSettings,
