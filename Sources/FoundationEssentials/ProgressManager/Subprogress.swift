@@ -35,7 +35,7 @@ public struct Subprogress: ~Copyable, Sendable {
     /// Instantiates a ProgressManager which is a child to the parent from which `self` is returned.
     /// - Parameter totalCount: Total count of returned child `ProgressManager` instance.
     /// - Returns: A `ProgressManager` instance.
-    public consuming func manager(totalCount: Int?) -> ProgressManager {
+    public consuming func start(totalCount: Int?) -> ProgressManager {
         isInitializedToProgressReporter = true
         
         let childManager = ProgressManager(total: totalCount, ghostReporter: ghostReporter, interopObservation: observation)

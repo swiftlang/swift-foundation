@@ -21,7 +21,7 @@ import XCTest
 class TestProgressManager: XCTestCase {
     /// MARK: Helper methods that report progress
     func doBasicOperationV1(reportTo subprogress: consuming Subprogress) async {
-        let manager = subprogress.manager(totalCount: 8)
+        let manager = subprogress.start(totalCount: 8)
         for i in 1...8 {
             manager.complete(count: 1)
             XCTAssertEqual(manager.completedCount, i)
@@ -30,7 +30,7 @@ class TestProgressManager: XCTestCase {
     }
     
     func doBasicOperationV2(reportTo subprogress: consuming Subprogress) async {
-        let manager = subprogress.manager(totalCount: 7)
+        let manager = subprogress.start(totalCount: 7)
         for i in 1...7 {
             manager.complete(count: 1)
             XCTAssertEqual(manager.completedCount, i)
@@ -39,7 +39,7 @@ class TestProgressManager: XCTestCase {
     }
     
     func doBasicOperationV3(reportTo subprogress: consuming Subprogress) async {
-        let manager =  subprogress.manager(totalCount: 11)
+        let manager =  subprogress.start(totalCount: 11)
         for i in 1...11 {
             manager.complete(count: 1)
             XCTAssertEqual(manager.completedCount, i)
@@ -95,7 +95,7 @@ class TestProgressManager: XCTestCase {
         XCTAssertFalse(overall.isFinished)
         
         let progress1 = overall.subprogress(assigningCount: 2)
-        let manager1 = progress1.manager(totalCount: 1)
+        let manager1 = progress1.start(totalCount: 1)
         
         manager1.complete(count: 1)
         XCTAssertEqual(manager1.totalCount, 1)
@@ -125,7 +125,7 @@ class TestProgressManager: XCTestCase {
         overall.complete(count: 5)
         
         let progress1 = overall.subprogress(assigningCount: 8)
-        let manager1 = progress1.manager(totalCount: 1)
+        let manager1 = progress1.start(totalCount: 1)
         manager1.complete(count: 1)
         
         XCTAssertEqual(overall.completedCount, 13)
@@ -181,11 +181,11 @@ class TestProgressManager: XCTestCase {
         let overall = ProgressManager(totalCount: 2)
         
         let progress1 = overall.subprogress(assigningCount: 1)
-        let manager1 = progress1.manager(totalCount: 5)
+        let manager1 = progress1.start(totalCount: 5)
         manager1.complete(count: 5)
         
         let progress2 = overall.subprogress(assigningCount: 1)
-        let manager2 = progress2.manager(totalCount: 5)
+        let manager2 = progress2.start(totalCount: 5)
         manager2.withProperties { properties in
             properties.totalFileCount = 10
         }
@@ -216,10 +216,10 @@ class TestProgressManager: XCTestCase {
         XCTAssertEqual(overall.fractionCompleted, 0.0)
         
         let child1 = overall.subprogress(assigningCount: 100)
-        let manager1 = child1.manager(totalCount: 100)
+        let manager1 = child1.start(totalCount: 100)
         
         let grandchild1 = manager1.subprogress(assigningCount: 100)
-        let grandchildManager1 = grandchild1.manager(totalCount: 100)
+        let grandchildManager1 = grandchild1.start(totalCount: 100)
         
         XCTAssertEqual(overall.fractionCompleted, 0.0)
         
@@ -241,16 +241,16 @@ class TestProgressManager: XCTestCase {
         XCTAssertEqual(overall.fractionCompleted, 0.0)
         
         let child1 = overall.subprogress(assigningCount: 100)
-        let manager1 = child1.manager(totalCount: 100)
+        let manager1 = child1.start(totalCount: 100)
         
         let grandchild1 = manager1.subprogress(assigningCount: 100)
-        let grandchildManager1 = grandchild1.manager(totalCount: 100)
+        let grandchildManager1 = grandchild1.start(totalCount: 100)
         
         XCTAssertEqual(overall.fractionCompleted, 0.0)
         
         
         let greatGrandchild1 = grandchildManager1.subprogress(assigningCount: 100)
-        let greatGrandchildManager1 = greatGrandchild1.manager(totalCount: 100)
+        let greatGrandchildManager1 = greatGrandchild1.start(totalCount: 100)
         
         greatGrandchildManager1.complete(count: 50)
         XCTAssertEqual(overall.fractionCompleted, 0.5)
@@ -268,7 +268,7 @@ class TestProgressManager: XCTestCase {
 /// Unit tests for propagation of type-safe metadata in ProgressManager tree.
 class TestProgressManagerAdditionalProperties: XCTestCase {
     func doFileOperation(reportTo subprogress: consuming Subprogress) async {
-        let manager = subprogress.manager(totalCount: 100)
+        let manager = subprogress.start(totalCount: 100)
         manager.withProperties { properties in
             properties.totalFileCount = 100
         }
@@ -312,7 +312,7 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         let overall = ProgressManager(totalCount: 2)
         
         let progress1 = overall.subprogress(assigningCount: 1)
-        let manager1 = progress1.manager(totalCount: 10)
+        let manager1 = progress1.start(totalCount: 10)
         manager1.withProperties { properties in
             properties.totalFileCount = 10
             properties.completedFileCount = 0
@@ -336,7 +336,7 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         let overall = ProgressManager(totalCount: 2)
         
         let progress1 = overall.subprogress(assigningCount: 1)
-        let manager1 = progress1.manager(totalCount: 10)
+        let manager1 = progress1.start(totalCount: 10)
         
         manager1.withProperties { properties in
             properties.totalFileCount = 11
@@ -344,7 +344,7 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         }
         
         let progress2 = overall.subprogress(assigningCount: 1)
-        let manager2 = progress2.manager(totalCount: 10)
+        let manager2 = progress2.start(totalCount: 10)
         
         manager2.withProperties { properties in
             properties.totalFileCount = 9
@@ -377,11 +377,11 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         let overall = ProgressManager(totalCount: 1)
         
         let progress1 = overall.subprogress(assigningCount: 1)
-        let manager1 = progress1.manager(totalCount: 5)
+        let manager1 = progress1.start(totalCount: 5)
         
         
         let childProgress1 = manager1.subprogress(assigningCount: 3)
-        let childManager1 = childProgress1.manager(totalCount: nil)
+        let childManager1 = childProgress1.start(totalCount: nil)
         childManager1.withProperties { properties in
             properties.totalFileCount += 10
         }
@@ -391,7 +391,7 @@ class TestProgressManagerAdditionalProperties: XCTestCase {
         XCTAssertEqual(preTotalFileValues, [0, 0, 10])
         
         let childProgress2 = manager1.subprogress(assigningCount: 2)
-        let childManager2 = childProgress2.manager(totalCount: nil)
+        let childManager2 = childProgress2.start(totalCount: nil)
         childManager2.withProperties { properties in
             properties.totalFileCount += 10
         }
@@ -425,7 +425,7 @@ class TestProgressManagerInterop: XCTestCase {
     }
     
     func doSomethingWithReporter(subprogress: consuming Subprogress?) async {
-        let manager =  subprogress?.manager(totalCount: 4)
+        let manager =  subprogress?.start(totalCount: 4)
         manager?.complete(count: 2)
         manager?.complete(count: 2)
     }
@@ -543,7 +543,7 @@ class TestProgressManagerInterop: XCTestCase {
     }
     
     func receiveProgress(progress: consuming Subprogress) {
-        let _ = progress.manager(totalCount: 5)
+        let _ = progress.start(totalCount: 5)
     }
     
     func testInteropProgressManagerParentProgressChildConsistency() async throws {
