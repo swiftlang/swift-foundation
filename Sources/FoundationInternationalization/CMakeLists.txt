@@ -25,7 +25,6 @@ add_subdirectory(Formatting)
 add_subdirectory(ICU)
 add_subdirectory(Locale)
 add_subdirectory(Predicate)
-add_subdirectory(ProgressManager)
 add_subdirectory(String)
 add_subdirectory(TimeZone)
 
