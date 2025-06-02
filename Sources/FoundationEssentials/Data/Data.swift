@@ -2709,14 +2709,36 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     /// Returns `true` if the two `Data` arguments are equal.
     @inlinable // This is @inlinable as emission into clients is safe -- the concept of equality on Data will not change.
     public static func ==(d1 : Data, d2 : Data) -> Bool {
+        // See if both are empty
+        switch (d1._representation, d2._representation) {
+        case (.empty, .empty):
+            return true
+        default:
+            // Continue on to checks below
+            break
+        }
+        
         let length1 = d1.count
-        if length1 != d2.count {
+        let length2 = d2.count
+        
+        // Unequal length data can never be equal
+        guard length1 == length2 else {
             return false
         }
+        
         if length1 > 0 {
             return d1.withUnsafeBytes { (b1: UnsafeRawBufferPointer) in
                 return d2.withUnsafeBytes { (b2: UnsafeRawBufferPointer) in
-                    return memcmp(b1.baseAddress!, b2.baseAddress!, b2.count) == 0
+                    // If they have the same base address and same count, it is equal
+                    let b1Address = b1.baseAddress!
+                    let b2Address = b2.baseAddress!
+                    
+                    guard b1Address != b2Address else {
+                        return true
+                    }
+
+                    // Compare the contents
+                    return memcmp(b1Address, b2Address, b2.count) == 0
                 }
             }
         }

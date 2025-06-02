@@ -185,6 +185,7 @@ class DataIOTests : XCTestCase {
     
 #if FOUNDATION_FRAMEWORK
     // String(contentsOf:) is not available outside the framework yet
+    @available(*, deprecated)
     func test_emptyFileString() {
         let data = Data()
         let url = testURL()

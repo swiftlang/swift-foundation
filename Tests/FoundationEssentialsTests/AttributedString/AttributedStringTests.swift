@@ -1882,7 +1882,7 @@ E {
         func check<T: Equatable>(
             _ a: some Sequence<T>,
             _ b: some Sequence<T>,
-            file: StaticString = #file, line: UInt = #line
+            file: StaticString = #filePath, line: UInt = #line
         ) {
             XCTAssertTrue(
                 a.elementsEqual(b),

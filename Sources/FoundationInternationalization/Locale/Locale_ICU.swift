@@ -1209,8 +1209,8 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                     }
                 }
 
-                // Check prefs
-                if let firstWeekdayPref = prefs?.firstWeekday {
+                // Check prefs. The value doesn't matter here - we check it again in the `forceFirstWeekday` function, and it is immutable.
+                if prefs?.firstWeekday != nil {
                     let calendarId = calendarIdentifier
                     if let first = forceFirstWeekday(calendarId) {
                         state.firstDayOfWeek = first

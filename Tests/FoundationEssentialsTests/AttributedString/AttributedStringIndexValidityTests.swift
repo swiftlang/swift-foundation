@@ -140,7 +140,7 @@ final class AttributedStringIndexValidityTests: XCTestCase {
     }
     
     public func testMutationInvalidation() {
-        func checkInPlace(_ mutation: (inout AttributedString) -> (), file: StaticString = #file, line: UInt = #line) {
+        func checkInPlace(_ mutation: (inout AttributedString) -> (), file: StaticString = #filePath, line: UInt = #line) {
             var str = AttributedString("Hello World")
             let idxA = str.startIndex
             let idxB = str.index(afterCharacter: idxA)
@@ -158,7 +158,7 @@ final class AttributedStringIndexValidityTests: XCTestCase {
             XCTAssertFalse(RangeSet(idxA ..< idxB).isValid(within: str), "Initial range set was valid in in-place mutated", file: file, line: line)
         }
         
-        func checkCopy(_ mutation: (inout AttributedString) -> (), file: StaticString = #file, line: UInt = #line) {
+        func checkCopy(_ mutation: (inout AttributedString) -> (), file: StaticString = #filePath, line: UInt = #line) {
             let str = AttributedString("Hello World")
             let idxA = str.startIndex
             let idxB = str.index(afterCharacter: idxA)
@@ -185,7 +185,7 @@ final class AttributedStringIndexValidityTests: XCTestCase {
             XCTAssertFalse(RangeSet(idxA ..< idxB).isValid(within: copy), "Initial range set was valid in copy", file: file, line: line)
         }
         
-        func check(_ mutation: (inout AttributedString) -> (), file: StaticString = #file, line: UInt = #line) {
+        func check(_ mutation: (inout AttributedString) -> (), file: StaticString = #filePath, line: UInt = #line) {
             checkInPlace(mutation, file: file, line: line)
             checkCopy(mutation, file: file, line: line)
         }
