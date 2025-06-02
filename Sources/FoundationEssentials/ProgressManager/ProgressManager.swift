@@ -250,34 +250,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         self.init(total: totalCount, ghostReporter: nil, interopObservation: nil)
     }
     
-    /// Sets `totalCount`.
-    /// - Parameter newTotal: Total units of work.
-    public func setTotalCount(_ newTotal: Int?) {
-        state.withLock { state in
-            let previous = state.fractionState.overallFraction
-            if state.fractionState.selfFraction.total != newTotal && state.fractionState.selfFraction.total > 0 {
-                state.fractionState.childFraction = state.fractionState.childFraction * _ProgressFraction(completed: state.fractionState.selfFraction.total, total: newTotal ?? 1)
-            }
-            state.fractionState.selfFraction.total = newTotal ?? 0
-            
-            // if newValue is nil, reset indeterminate to true
-            if newTotal != nil {
-                state.fractionState.indeterminate = false
-            } else {
-                state.fractionState.indeterminate = true
-            }
-            updateFractionCompleted(from: previous, to: state.fractionState.overallFraction)
-            
-            ghostReporter?.notifyObservers(with: .totalCountUpdated)
-            
-            monitorInterop.withLock { [self] interop in
-                if interop == true {
-                    notifyObservers(with: .totalCountUpdated)
-                }
-            }
-        }
-    }
-    
     /// Returns a `Subprogress` representing a portion of `self` which can be passed to any method that reports progress.
     ///
     /// - Parameter count: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
