@@ -29,6 +29,9 @@
     - Expanded Future Directions
     - Expanded Alternatives Considered
     - Moving `FormatStyle` to separate future proposal
+* **v5** Minor Updates: 
+    - Renamed `manager(totalCount:)` to `start(totalCount)`
+    - Expanded Alternatives Considered
     
 ## Table of Contents 
 
@@ -180,7 +183,7 @@ To begin, let's assume there is a library `FoodProcessor` and a library `Juicer`
 public class FoodProcessor {
     
     func process(ingredients: [Ingredient], subprogress: consuming Subprogress? = nil) async {
-          let manager = subprogress?.manager(totalCount: ingredients.count + 1)
+          let manager = subprogress?.start(totalCount: ingredients.count + 1)
           
           // Do some work in a function
           await chop(manager?.subprogress(assigningCount: ingredients.count))
@@ -197,7 +200,7 @@ public class FoodProcessor {
 public class Juicer {
     
     public func makeJuice(ingredients: [Ingredient], subprogress: consuming Subprogress? = nil) async {
-        let manager = subprogress?.manager(totalCount: ingredients.count)
+        let manager = subprogress?.start(totalCount: ingredients.count)
         
         for ingredient in ingredients {
             await ingredient.blend()
@@ -246,7 +249,7 @@ Here's how you use the proposed API to get the most of its benefits:
 
 1. Pass `Subprogress` as a parameter to functions that report progress.
 
-Inside the function, create a child `ProgressManager` instance to report progress in its own world via `manager(totalCount:)`, as follows: 
+Inside the function, create a child `ProgressManager` instance to report progress in its own world via `start(totalCount:)`, as follows: 
 
 ```swift
 func correctlyUsingSubprogress() async {
@@ -256,14 +259,14 @@ func correctlyUsingSubprogress() async {
 
 func subTask(subprogress: consuming Subprogress? = nil) async {
     let count = 10
-    let manager = subprogress?.manager(totalCount: count) // returns an instance of ProgressManager that can be used to report progress of subtask
+    let manager = subprogress?.start(totalCount: count) // returns an instance of ProgressManager that can be used to report progress of subtask
     for _ in 1...count {
         manager?.complete(count: 1) // reports progress as usual
     }
 }
 ```
 
-If developers accidentally try to report progress to a passed-in `Subprogress`, the compiler can inform developers, as the following. The fix is quite straightforward: The only one function on `Subprogress` is `manager(totalCount:)` which creates a manager to report progress on, so the developer can easily diagnose it.
+If developers accidentally try to report progress to a passed-in `Subprogress`, the compiler can inform developers, as the following. The fix is quite straightforward: The only one function on `Subprogress` is `start(totalCount:)` which creates a manager to report progress on, so the developer can easily diagnose it.
 
 ```swift 
 func subTask(subprogress: consuming Subprogress? = nil) async {
@@ -281,10 +284,10 @@ func correctlyCreatingOneSubprogressForOneSubtask() {
     let overall = ProgressManager(totalCount: 2)
     
     let subprogressOne = overall.subprogress(assigningCount: 1) // create one Subprogress
-    let managerOne = subprogressOne.manager(totalCount: 10) // initialize ProgressManager instance with 10 units
+    let managerOne = subprogressOne.start(totalCount: 10) // initialize ProgressManager instance with 10 units
     
     let subprogressTwo = overall.subprogress(assigningCount: 1) //create one Subprogress
-    let managerTwo = subprogressTwo.manager(totalCount: 8) // initialize ProgressManager instance with 8 units 
+    let managerTwo = subprogressTwo.start(totalCount: 8) // initialize ProgressManager instance with 8 units 
 }
 ```
 
@@ -295,10 +298,10 @@ func incorrectlyCreatingOneSubprogressForMultipleSubtasks() {
     let overall = ProgressManager(totalCount: 2)
     
     let subprogressOne = overall.subprogress(assigningCount: 1) // create one Subprogress
-    let managerOne = subprogressOne.manager(totalCount: 10) // initialize ProgressManager instance with 10 units 
+    let managerOne = subprogressOne.start(totalCount: 10) // initialize ProgressManager instance with 10 units 
 
     // COMPILER ERROR: 'subprogressOne' consumed more than once
-    let managerTwo = subprogressOne.manager(totalCount: 8) // initialize ProgressManager instance with 8 units using same Subprogress 
+    let managerTwo = subprogressOne.start(totalCount: 8) // initialize ProgressManager instance with 8 units using same Subprogress 
 }
 ```
 
@@ -389,7 +392,7 @@ func doSomethingWithProgress() -> Progress {
 
 // Framework code: Function reporting progress with `Subprogress` 
 func doSomethingWithManager(subprogress: consuming Subprogress) async -> Int {
-    let manager = subprogress.manager(totalCount: 2)
+    let manager = subprogress.start(totalCount: 2)
     //do something
     manager.complete(count: 1)
     //do something
@@ -545,21 +548,21 @@ overall.addChild(subprogressThree, withPendingUnitCount: 1)
 
 You call `ProgressManager`'s `subprogress(assigningCount:)` to create a `Subprogress`. It is a `~Copyable` instance that you pass into functions that report progress.
 
-The callee will consume `Subprogress` and get the `ProgressManager` by calling `manager(totalCount:)`. That `ProgressManager` is used for the function's own progress updates.
+The callee will consume `Subprogress` and get the `ProgressManager` by calling `start(totalCount:)`. That `ProgressManager` is used for the function's own progress updates.
 
 ```swift
 @available(FoundationPreview 6.2, *)
 /// Subprogress is used to establish parent-child relationship between two instances of `ProgressManager`.
 ///
 /// Subprogress is returned from a call to `subprogress(assigningCount:)` by a parent ProgressManager.
-/// A child ProgressManager is then returned by calling `manager(totalCount:)` on a Subprogress.
+/// A child ProgressManager is then returned by calling `start(totalCount:)` on a Subprogress.
 public struct Subprogress: ~Copyable, Sendable {
 
     /// Instantiates a ProgressManager which is a child to the parent ProgressManager from which the Subprogress is created.
     /// 
     /// - Parameter totalCount: Total count of returned child `ProgressManager` instance.
     /// - Returns: A `ProgressManager` instance.
-    public consuming func manager(totalCount: Int?) -> ProgressManager
+    public consuming func start(totalCount: Int?) -> ProgressManager
 }
 ```
 
@@ -725,7 +728,7 @@ extension Progress {
     /// Delegates a portion of totalUnitCount to a future child `ProgressManager` instance.
     ///
     /// - Parameter count: Number of units delegated to a child instance of `ProgressManager`
-    /// which may be instantiated by `Subprogress` later when `manager(totalCount:)` is called.
+    /// which may be instantiated by `Subprogress` later when `start(totalCount:)` is called.
     /// - Returns: A `Subprogress` instance.
     public func makeChild(withPendingUnitCount count: Int) -> Subprogress 
     
@@ -770,8 +773,10 @@ As the existing `Progress` already exists, we had to come up with a name other t
 1. Alternative to `ProgressManager` 
     - `AsyncProgress`  
     - `ProgressReporter` 
+    - `ProgressHandler`
+    - `OverallProgress` 
 
-We ended up with `ProgressManager` because it correctly associates the API as being something that can do more than reporting progress, and it can give out a portion of its `totalCount` to report subtasks. We did not choose `AsyncProgress` because prefixing an API with the term `Async` connotes to adding asynchronicity to the API, as there is a precedent of APIs doing so, such as `AsyncSequence` adding asynchronicity to `Sequence`. `ProgressReporter` also does not appropriately convey the fact that the API can be used to construct a progress tree and that it seems to be something that is read-only, which can appear confusing to others.  
+We ended up with `ProgressManager` because it correctly associates the API as being something that can do more than reporting progress, and it can give out a portion of its `totalCount` to report subtasks. We did not choose `AsyncProgress` because prefixing an API with the term `Async` connotes to adding asynchronicity to the API, as there is a precedent of APIs doing so, such as `AsyncSequence` adding asynchronicity to `Sequence`. `ProgressReporter` also does not appropriately convey the fact that the API can be used to construct a progress tree and that it seems to be something that is read-only, which can appear confusing to others. While `ProgressHandler` has the advantage of making the API sound a bit more lightweight, `ProgressManager` more accurately conveys the fact that progress reporting can be executed by "completing" a certain count, or "assigned" to a subprogress. "OverallProgress" feels better suited as a property name instead of a type name. 
     
 2. Alternative to `Subprogress` 
     - `ProgressReporter.Link`
@@ -784,8 +789,11 @@ While the names `Link`, `Child`, `Token` and `Progress` may appeal to the fact t
 
 3. Alternative to `ProgressReporter` 
     - `ProgressOutput` 
+    - `ProgressMonitor`
+    - `ProgressReporter.Status` 
+    - `ProgressReporter.Observer` 
     
-We decided to use the name `ProgressReporter` for the currency type that can either be used to observe progress or added as a child to another `ProgressManager`. The phrase `reporter` is also suggestive of the fact that `ProgressReporter` is a type that contains read-only properties relevant to progress reporting such as `totalCount` and `completedCount`. 
+We decided to use the name `ProgressReporter` for the currency type that can either be used to observe progress or added as a child to another `ProgressManager`. In comparison to `output` and `monitor`, the phrase `reporter` is more suggestive of the fact that `ProgressReporter` is a type that contains read-only properties relevant to progress reporting such as `totalCount` and `completedCount`. We also did not choose `ProgressReporter.Status` and `ProgressReporter.Observer` because having this as a nested type causes the name to read too long. 
 
 ### Introduce this Progress Reporting API to Swift standard library
 In consideration for making `ProgressManager` a lightweight API for server-side developers to use without importing the entire `Foundation` framework, we considered either introducing `ProgressManager` in a standalone module, or including `ProgressManager` in existing Swift standard library modules such as `Observation` or `Concurrency`. However, given the fact that `ProgressManager` has dependencies in `Observation` and `Concurrency` modules, and that the goal is to eventually support progress reporting over distributed actors, `Foundation` framework is the most ideal place to host the `ProgressReporter` as it is the central framework for APIs that provide core functionalities when these functionalities are not provided by Swift standard library and its modules.
