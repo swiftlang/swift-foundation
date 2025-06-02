@@ -1683,6 +1683,7 @@ class DataTests : XCTestCase {
     func test_InlineDataMutableSpan() throws {
         guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
 
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
 #if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data()
         var span = source.mutableSpan
@@ -1696,21 +1697,27 @@ class DataTests : XCTestCase {
         XCTAssertEqual(span.count, count)
         let v = UInt8.random(in: 10..<100)
         span[i] = v
+        var sub = span.extracting(i ..< i+1)
+        sub.update(repeating: v)
         XCTAssertEqual(source[i], v)
+#endif
 #endif
     }
 
     func test_InlineSliceDataMutableSpan() throws {
         guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
 
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
 #if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data(0..<100)
         let count = source.count
         var span = source.mutableSpan
         XCTAssertEqual(span.count, count)
         let i = try XCTUnwrap(span.indices.randomElement())
-        span[i] = .max
+        var sub = span.extracting(i..<i+1)
+        sub.update(repeating: .max)
         XCTAssertEqual(source[i], .max)
+#endif
 #endif
     }
 
@@ -1725,6 +1732,7 @@ class DataTests : XCTestCase {
         #error("This test needs updating")
 #endif
 
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
 #if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data(repeating: 0, count: count).dropFirst()
         XCTAssertNotEqual(source.startIndex, 0)
@@ -1735,6 +1743,7 @@ class DataTests : XCTestCase {
         span[i] = .max
         XCTAssertEqual(source[i], 0)
         XCTAssertEqual(source[i+1], .max)
+#endif
 #endif
     }
 
@@ -1753,7 +1762,8 @@ class DataTests : XCTestCase {
         XCTAssertFalse(span.isEmpty)
         XCTAssertEqual(span.byteCount, count)
         let v = UInt8.random(in: 10..<100)
-        span.storeBytes(of: v, toByteOffset: i, as: UInt8.self)
+        var sub = span.extracting(i..<i+1)
+        sub.storeBytes(of: v, as: UInt8.self)
         XCTAssertEqual(source[i], v)
 #endif
     }
