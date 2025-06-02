@@ -793,6 +793,20 @@ final class FileManagerTests : XCTestCase {
         }
     }
     
+    func testRoundtripModificationDate() throws {
+        try FileManagerPlayground {
+            "foo"
+        }.test {
+            // Precision of modification dates is dependent not only on the platform, but on the file system used
+            // Ensure that roundtripping supports at least millisecond-level precision, but some file systems may support more up to nanosecond precision
+            let date = Date(timeIntervalSince1970: 10.003)
+            try $0.setAttributes([.modificationDate : date], ofItemAtPath: "foo")
+            let readValue = try XCTUnwrap($0.attributesOfItem(atPath: "foo")[.modificationDate], "No value provided for file modification date")
+            let readDate = try XCTUnwrap(readValue as? Date, "File modification date was not a date (found type \(type(of: readValue)))")
+            XCTAssertEqual(readDate.timeIntervalSince1970, date.timeIntervalSince1970, accuracy: 0.0005, "File modification date (\(readDate.timeIntervalSince1970)) does not match expected modification date (\(date.timeIntervalSince1970))")
+        }
+    }
+    
     func testImplicitlyConvertibleFileAttributes() throws {
         try FileManagerPlayground {
             File("foo", attributes: [.posixPermissions : UInt16(0o644)])
