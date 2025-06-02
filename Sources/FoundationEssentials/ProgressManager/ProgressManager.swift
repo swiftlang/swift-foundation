@@ -66,9 +66,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal let interopObservationForMonitor: LockedState<(any Sendable)?> = LockedState(initialState: nil)
     internal let monitorInterop: LockedState<Bool> = LockedState(initialState: false)
     
-    #if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK
     internal let parentBridge: LockedState<Foundation.Progress?> = LockedState(initialState: nil) // dummy, set upon calling setParentBridge
-    #endif
+#endif
     // Interop properties - Actually set and called
     internal let ghostReporter: ProgressManager? // set at init, used to call notify observers
     internal let observers: LockedState<[@Sendable (ObserverState) -> Void]> = LockedState(initialState: [])// storage for all observers, set upon calling addObservers
@@ -340,8 +340,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     /// Mutates any settable properties that convey information about progress.
-    public func withProperties<T>(_ closure: @Sendable (inout Values) throws -> T) rethrows -> T {
-        return try state.withLock { state in
+    public func withProperties<T, E: Error>(
+        _ closure: (inout sending Values) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        return try state.withLock { (state) throws(E) -> T in
             var values = Values(manager: self, state: state)
             // This is done to avoid copy on write later
             state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:], childrenOtherProperties: [:])
@@ -350,24 +352,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             return result
         }
     }
-    
-//    public func withProperties<T, E: Error>(
-//        _ closure: (inout sending Values) throws(E) -> sending T
-//    ) throws(E) -> sending T {
-//        return try state.withLock { state in
-//            var values = Values(manager: self, state: state)
-//            // This is done to avoid copy on write later
-//            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:], childrenOtherProperties: [:])
-//
-//            do {
-//                let result = try closure(&values)
-//                state = values.state
-//                return result
-//            } catch let localError {
-//                throw localError as! E
-//            }
-//        }
-//    }
     
     //MARK: ProgressManager Properties getters
     /// Returns nil if `self` was instantiated without total units;
@@ -468,7 +452,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 
                 if next.isFinished {
                     // Remove from children list
-//                    _ = children.withLock { $0.remove(self) }
+                    //                    _ = children.withLock { $0.remove(self) }
                     
                     if portion != 0 {
                         // Update our self completed units
@@ -506,7 +490,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             observation = monitorObservation
         }
     }
-
+    
     internal func setMonitorInterop(to value: Bool) {
         monitorInterop.withLock { monitorInterop in
             monitorInterop = value
@@ -556,8 +540,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         parentReporter.updateChildFraction(from: updates.0, to: updates.1, portion: portionOfParent)
     }
     
-    internal func getAdditionalProperties<T>(_ closure: @Sendable (Values) throws -> T) rethrows -> T {
-        try state.withLock { state in
+    internal func getAdditionalProperties<T, E: Error>(
+        _ closure: (sending Values) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        try state.withLock { state throws(E) -> T in
             let values = Values(manager: self, state: state)
             // No need to modify state since this is read-only
             let result = try closure(values)

@@ -113,13 +113,17 @@ package struct LockedState<State> {
             return initialState
         })
     }
-
-    package func withLock<T>(_ body: @Sendable (inout State) throws -> T) rethrows -> T {
+    
+    package func withLock<T, E: Error>(
+        _ body: (inout sending State) throws(E) -> sending T
+    ) throws(E) -> sending T {
         try withLockUnchecked(body)
     }
-    
-    package func withLockUnchecked<T>(_ body: (inout State) throws -> T) rethrows -> T {
-        try _buffer.withUnsafeMutablePointers { state, lock in
+
+    package func withLockUnchecked<T, E: Error>(
+        _ body: (inout sending State) throws(E) -> sending T
+    ) throws(E) -> sending T {
+        try _buffer.withUnsafeMutablePointers { (state, lock) throws(E) in
             _Lock.lock(lock)
             defer { _Lock.unlock(lock) }
             return try body(&state.pointee)
