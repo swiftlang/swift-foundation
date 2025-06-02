@@ -28,6 +28,11 @@ internal struct FractionState {
         selfFraction + childFraction
     }
     var interopChild: ProgressManager? // read from this if self is actually an interop ghost
+    
+    var isDirty: Bool = false // Flag to indicate fraction computation needs update
+    var isProcessing: Bool = false
+    var pendingCompletedCount: Int?
+    var dirtyChildren: Set<ProgressManager> = Set() // Track which children are dirty
 }
 
 internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
@@ -78,7 +83,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var totalCount: Int? {
         _$observationRegistrar.access(self, keyPath: \.totalCount)
         return state.withLock { state in
-            getTotalCount(fractionState: &state.fractionState)
+            return getTotalCount(state: &state)
         }
     }
     
@@ -87,8 +92,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var completedCount: Int {
         _$observationRegistrar.access(self, keyPath: \.completedCount)
         return state.withLock { state in
-            getCompletedCount(fractionState: &state.fractionState)
+            return getCompletedCount(state: &state)
         }
+        
     }
     
     /// The proportion of work completed.
@@ -97,7 +103,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var fractionCompleted: Double {
         _$observationRegistrar.access(self, keyPath: \.fractionCompleted)
         return state.withLock { state in
-            getFractionCompleted(fractionState: &state.fractionState)
+            getFractionCompleted(state: &state)
         }
     }
     
@@ -106,7 +112,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var isIndeterminate: Bool {
         _$observationRegistrar.access(self, keyPath: \.isIndeterminate)
         return state.withLock { state in
-            getIsIndeterminate(fractionState: &state.fractionState)
+            getIsIndeterminate(state: &state)
         }
     }
     
@@ -115,7 +121,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var isFinished: Bool {
         _$observationRegistrar.access(self, keyPath: \.isFinished)
         return state.withLock { state in
-            getIsFinished(fractionState: &state.fractionState)
+            getIsFinished(state: &state)
         }
     }
     
@@ -141,7 +147,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         /// The total units of work.
         public var totalCount: Int? {
             mutating get {
-                manager.getTotalCount(fractionState: &state.fractionState)
+                manager.getTotalCount(state: &state)
             }
             
             set {
@@ -172,15 +178,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         /// The completed units of work.
         public var completedCount: Int {
             mutating get {
-                manager.getCompletedCount(fractionState: &state.fractionState)
+                manager.getCompletedCount(state: &state)
             }
             
             set {
-                let prev = state.fractionState.overallFraction
-                state.fractionState.selfFraction.completed = newValue
-                manager.updateFractionCompleted(from: prev, to: state.fractionState.overallFraction)
-                manager.ghostReporter?.notifyObservers(with: .fractionUpdated)
+                //TODO: I am scared, this might introduce recursive lock again
+//                let existingCompleted = state.fractionState.selfFraction.completed
+//                manager.complete(count: newValue - existingCompleted)
                 
+                manager.ghostReporter?.notifyObservers(with: .fractionUpdated)
                 manager.monitorInterop.withLock { [manager] interop in
                     if interop == true {
                         manager.notifyObservers(with: .fractionUpdated)
@@ -306,8 +312,20 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Increases `completedCount` by `count`.
     /// - Parameter count: Units of work.
     public func complete(count: Int) {
-        let updateState = updateCompletedCount(count: count)
-        updateFractionCompleted(from: updateState.previous, to: updateState.current)
+        // First update pendingCompletedCount
+        updatePendingCompletedCount(increment: count)
+        
+        // Then mark self to be dirty
+        state.withLock { state in
+            state.fractionState.isDirty = true
+        }
+        
+        // Add self to all parent's dirtyChildren list & mark parents as dirty recursively
+        parents.withLock { parents in
+            for (parent, _) in parents {
+                parent.addDirtyChild(self)
+            }
+        }
         
         // Interop updates stuff
         ghostReporter?.notifyObservers(with: .fractionUpdated)
@@ -371,24 +389,28 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     //MARK: ProgressManager Properties getters
     /// Returns nil if `self` was instantiated without total units;
     /// returns a `Int` value otherwise.
-    private func getTotalCount(fractionState: inout FractionState) -> Int? {
-        if let interopChild = fractionState.interopChild {
+    private func getTotalCount(state: inout State) -> Int? {
+        if let interopChild = state.fractionState.interopChild {
             return interopChild.totalCount
         }
-        if fractionState.indeterminate {
+        if state.fractionState.indeterminate {
             return nil
         } else {
-            return fractionState.selfFraction.total
+            return state.fractionState.selfFraction.total
         }
     }
     
     /// Returns 0 if `self` has `nil` total units;
     /// returns a `Int` value otherwise.
-    private func getCompletedCount(fractionState: inout FractionState) -> Int {
-        if let interopChild = fractionState.interopChild {
+    private func getCompletedCount(state: inout State) -> Int {
+        if let interopChild = state.fractionState.interopChild {
             return interopChild.completedCount
         }
-        return fractionState.selfFraction.completed
+        
+        // Trigger updates all the way from leaf
+        processDirtyStates(state: &state)
+        
+        return state.fractionState.selfFraction.completed
     }
     
     /// Returns 0.0 if `self` has `nil` total units;
@@ -397,30 +419,30 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     ///
     /// The calculation of fraction completed for a ProgressManager instance that has children
     /// will take into account children's fraction completed as well.
-    private func getFractionCompleted(fractionState: inout FractionState) -> Double {
-        if let interopChild = fractionState.interopChild {
+    private func getFractionCompleted(state: inout State) -> Double {
+        if let interopChild = state.fractionState.interopChild {
             return interopChild.fractionCompleted
         }
-        if fractionState.indeterminate {
+        if state.fractionState.indeterminate {
             return 0.0
         }
-        guard fractionState.selfFraction.total > 0 else {
-            return fractionState.selfFraction.fractionCompleted
+        guard state.fractionState.selfFraction.total > 0 else {
+            return state.fractionState.selfFraction.fractionCompleted
         }
-        return (fractionState.selfFraction + fractionState.childFraction).fractionCompleted
+        return (state.fractionState.selfFraction + state.fractionState.childFraction).fractionCompleted
     }
     
     
     /// Returns `true` if completed and total units are not `nil` and completed units is greater than or equal to total units;
     /// returns `false` otherwise.
-    private func getIsFinished(fractionState: inout FractionState) -> Bool {
-        return fractionState.selfFraction.isFinished
+    private func getIsFinished(state: inout State) -> Bool {
+        return state.fractionState.selfFraction.isFinished
     }
     
     
     /// Returns `true` if `self` has `nil` total units.
-    private func getIsIndeterminate(fractionState: inout FractionState) -> Bool {
-        return fractionState.indeterminate
+    private func getIsIndeterminate(state: inout State) -> Bool {
+        return state.fractionState.indeterminate
     }
     
     //MARK: FractionCompleted Calculation methods
@@ -429,15 +451,172 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         let current: _ProgressFraction
     }
     
-    private func updateCompletedCount(count: Int) -> UpdateState {
+    // Called only by complete(count:)
+    private func updatePendingCompletedCount(increment count: Int) {
+        print("called update pending completed count")
         // Acquire and release child's lock
-        let (previous, current) = state.withLock { state in
-            let prev = state.fractionState.overallFraction
-            state.fractionState.selfFraction.completed += count
-            return (prev, state.fractionState.overallFraction)
+        state.withLock { state in
+            // If there was a pending update before
+            if let updatedCompletedCount = state.fractionState.pendingCompletedCount {
+                state.fractionState.pendingCompletedCount = updatedCompletedCount + count
+            } else {
+                // If this is the first pending update
+                state.fractionState.pendingCompletedCount = state.fractionState.selfFraction.completed + count
+            }
         }
-        return UpdateState(previous: previous, current: current)
     }
+    
+    private func addDirtyChild(_ child: ProgressManager) {
+        print("called dirty child")
+        state.withLock { state in
+            // If already dirty, don't continue adding
+            if state.fractionState.dirtyChildren.contains(child) {
+                return
+            } else {
+                state.fractionState.dirtyChildren.insert(child)
+                state.fractionState.isDirty = true
+            }
+        }
+        
+        parents.withLock { parents in
+            for (parent, _) in parents {
+                parent.addDirtyChild(child)
+            }
+        }
+    }
+    
+    private func processDirtyStates(state: inout State) {
+        if state.fractionState.isProcessing { return }
+        
+        if !state.fractionState.isDirty { return }
+        
+        state.fractionState.isProcessing = true
+        
+        
+        // Collect dirty nodes in DFS order
+        let nodesToProcess = collectAllDirtyNodes(state: &state)
+        
+        // Process in bottom-up order
+        for node in nodesToProcess.reversed() {
+            node.processLocalState()
+        }
+        
+        state.fractionState.isProcessing = false
+        
+    }
+    
+    private func collectAllDirtyNodes(state: inout State) -> [ProgressManager] {
+        var result = [ProgressManager]()
+        var visited = Set<ProgressManager>()
+        collectDirtyNodesRecursive(&result, visited: &visited, state: &state)
+        return result.reversed()
+    }
+    
+    private func collectDirtyNodesRecursive(_ result: inout [ProgressManager], visited: inout Set<ProgressManager>, state: inout State) {
+        if visited.contains(self) { return }
+        visited.insert(self)
+        
+        let dirtyChildren = state.fractionState.dirtyChildren
+        
+        // TODO: Any danger here because children can be concurrently added? 
+        
+        for dirtyChild in dirtyChildren {
+            dirtyChild.state.withLock { state in
+                dirtyChild.collectDirtyNodesRecursive(&result, visited: &visited, state: &state)
+            }
+        }
+    
+//        if state.fractionState.isDirty {
+            result.append(self)
+//        }
+    }
+    
+    private func processLocalState() {
+        // 1. Apply our own pending completed count first
+        
+
+        state.withLock { state in
+            // Update our own self fraction
+            if let updatedCompletedCount = state.fractionState.pendingCompletedCount {
+                state.fractionState.selfFraction.completed = updatedCompletedCount
+            }
+            // IMPORTANT: We don't need to update our parent here
+            // Parents will call updateFractionForChild on us later
+        }
+        
+        
+        // 2. Get dirty children before clearing the set
+        let dirtyChildren = state.withLock { state in
+            let children = Array(state.fractionState.dirtyChildren)
+            state.fractionState.dirtyChildren.removeAll()
+            return children
+        }
+        
+        // 3. Reset our child fraction since we'll recalculate it
+        state.withLock { state in
+            state.fractionState.childFraction = _ProgressFraction(completed: 0, total: 0)
+        }
+        
+        // 4. Update for each dirty child
+        for child in dirtyChildren {
+            // THIS is where we update our childFraction based on each child
+            updateFractionForChild(child)
+        }
+        
+        // 5. Recalculate overall fraction
+//        recalculateOverallFraction()
+        
+        // 6. Clear dirty flag
+        state.withLock { state in
+            state.fractionState.isDirty = false
+        }
+    }
+
+    // THIS is the key method where parent updates its childFraction based on a child
+    private func updateFractionForChild(_ child: ProgressManager) {
+        // Get child's CURRENT fraction (which includes its updated selfFraction)
+        let childFraction = child.getCurrentFraction()
+        
+        // Get the portion assigned to this child
+        let childPortion = getChildPortion(child)
+        
+        state.withLock { state in
+            // Calculate the child's contribution to our progress
+            let multiplier = _ProgressFraction(completed: childPortion, total: state.fractionState.selfFraction.total)
+            
+            // Add child's contribution to our childFraction
+            // This is how our childFraction gets updated based on the child's state
+            state.fractionState.childFraction = state.fractionState.childFraction + (childFraction * multiplier)
+        }
+    }
+
+    // Helper to get a child's current fraction WITHOUT triggering processing
+    internal func getCurrentFraction() -> _ProgressFraction {
+        return state.withLock { state in
+            // Direct access to fraction state without processing
+            return state.fractionState.overallFraction
+        }
+    }
+    
+    private func getChildPortion(_ child: ProgressManager) -> Int {
+        return child.parents.withLock { parents in
+            for (parent, portionOfParent) in parents {
+                if parent == self {
+                    return portionOfParent
+                }
+            }
+            return 0
+        }
+    }
+
+    // Recalculate overall fraction
+//    private func recalculateOverallFraction() {
+//        state.withLock { state in
+//            // Combine self fraction and child fraction
+//            // This should make the "0" is not equal to "13" test pass
+//            state.fractionState.overallFraction = state.fractionState.selfFraction + state.fractionState.childFraction
+//        }
+//    }
     
     private func updateFractionCompleted(from: _ProgressFraction, to: _ProgressFraction) {
         _$observationRegistrar.withMutation(of: self, keyPath: \.fractionCompleted) {
