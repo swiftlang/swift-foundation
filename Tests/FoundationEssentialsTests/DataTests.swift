@@ -1637,7 +1637,7 @@ class DataTests : XCTestCase {
     func test_InlineDataSpan() throws {
         guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
 
-#if $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data()
         var span = source.span
         XCTAssertTrue(span.isEmpty)
@@ -1653,7 +1653,7 @@ class DataTests : XCTestCase {
     func test_InlineSliceDataSpan() throws {
         guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
 
-#if $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         let source = Data(0 ... .max)
         let span = source.span
         XCTAssertEqual(span.count, source.count)
@@ -1672,7 +1672,7 @@ class DataTests : XCTestCase {
         #error("This test needs updating")
 #endif
 
-#if $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         let source = Data(repeating: 0, count: count).dropFirst()
         XCTAssertNotEqual(source.startIndex, 0)
         let span = source.span
@@ -1683,7 +1683,7 @@ class DataTests : XCTestCase {
     func test_InlineDataMutableSpan() throws {
         guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
 
-#if $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data()
         var span = source.mutableSpan
         XCTAssertTrue(span.isEmpty)
@@ -1703,7 +1703,7 @@ class DataTests : XCTestCase {
     func test_InlineSliceDataMutableSpan() throws {
         guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
 
-#if $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data(0..<100)
         let count = source.count
         var span = source.mutableSpan
@@ -1725,7 +1725,7 @@ class DataTests : XCTestCase {
         #error("This test needs updating")
 #endif
 
-#if $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data(repeating: 0, count: count).dropFirst()
         XCTAssertNotEqual(source.startIndex, 0)
         count = source.count
@@ -1741,7 +1741,7 @@ class DataTests : XCTestCase {
     func test_InlineDataMutableRawSpan() throws {
         guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
 
-#if $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data()
         var span = source.mutableBytes
         XCTAssertTrue(span.isEmpty)
@@ -1761,7 +1761,7 @@ class DataTests : XCTestCase {
     func test_InlineSliceDataMutableRawSpan() throws {
         guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
 
-#if $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data(0..<100)
         let count = source.count
         var span = source.mutableBytes
@@ -1783,7 +1783,7 @@ class DataTests : XCTestCase {
         #error("This test needs updating")
 #endif
 
-#if $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
         var source = Data(repeating: 0, count: count).dropFirst()
         XCTAssertNotEqual(source.startIndex, 0)
         count = source.count
