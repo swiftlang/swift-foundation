@@ -19,32 +19,32 @@ import Observation
 @Observable public final class ProgressReporter: Sendable {
     
     /// The total units of work.
-    var totalCount: Int? {
+    public var totalCount: Int? {
         manager.totalCount
     }
     
     /// The completed units of work.
     /// If `self` is indeterminate, the value will be 0.
-    var completedCount: Int {
+    public var completedCount: Int {
         manager.completedCount
     }
     
     /// The proportion of work completed.
     /// This takes into account the fraction completed in its children instances if children are present.
     /// If `self` is indeterminate, the value will be 0.
-    var fractionCompleted: Double {
+    public var fractionCompleted: Double {
         manager.fractionCompleted
     }
     
     /// The state of initialization of `totalCount`.
     /// If `totalCount` is `nil`, the value will be `true`.
-    var isIndeterminate: Bool {
+    public var isIndeterminate: Bool {
         manager.isIndeterminate
     }
     
     /// The state of completion of work.
     /// If `completedCount` >= `totalCount`, the value will be `true`.
-    var isFinished: Bool {
+    public var isFinished: Bool {
         manager.isFinished
     }
     
