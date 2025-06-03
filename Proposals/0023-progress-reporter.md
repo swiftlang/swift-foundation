@@ -575,17 +575,30 @@ public struct Subprogress: ~Copyable, Sendable {
 /// It is read-only and can be added as a child of another ProgressManager. 
 @Observable public final class ProgressReporter : Sendable {
 
+    /// The total units of work.
     public var totalCount: Int? { get }
 
+    /// The completed units of work.
+    /// If `self` is indeterminate, the value will be 0.
     public var completedCount: Int { get }
 
+    /// The proportion of work completed.
+    /// This takes into account the fraction completed in its children instances if children are present.
+    /// If `self` is indeterminate, the value will be 0.
     public var fractionCompleted: Double { get }
 
+    /// The state of initialization of `totalCount`.
+    /// If `totalCount` is `nil`, the value will be `true`.
     public var isIndeterminate: Bool { get }
 
+    /// The state of completion of work.
+    /// If `completedCount` >= `totalCount`, the value will be `true`.
     public var isFinished: Bool { get }
 
-    public func withProperties<T, E: Error>(_ closure: @Sendable (ProgressManager.Values) throws(E) -> T) throws(E) -> T
+    /// Reads properties that convey additional information about progress.
+    public func withProperties<T, E: Error>(
+        _ closure: (sending ProgressManager.Values) throws(E) -> sending T
+    ) throws(E) -> T
 }
 ```
 
