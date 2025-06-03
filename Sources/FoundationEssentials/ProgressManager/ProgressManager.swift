@@ -118,6 +118,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
+    
+    /// A `ProgressReporter` instance, used for providing read-only observation of progress updates or composing into other `ProgressManager`s.
     public var reporter: ProgressReporter {
         return .init(manager: self)
     }
@@ -127,6 +129,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         
         associatedtype Value: Sendable, Hashable, Equatable
         
+        /// The default value to return when property is not set to a specific value.
         static var defaultValue: Value { get }
     }
     
@@ -252,6 +255,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     /// Returns a `Subprogress` representing a portion of `self` which can be passed to any method that reports progress.
     ///
+    /// If the `Subprogress` is not converted into a `ProgressManager` (for example, due to an error or early return),
+    /// then the assigned count is marked as completed in the parent `ProgressManager`.
+    ///
     /// - Parameter count: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
     /// - Returns: A `Subprogress` instance.
     public func subprogress(assigningCount portionOfParent: Int) -> Subprogress {
@@ -264,8 +270,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Adds a `ProgressReporter` as a child, with its progress representing a portion of `self`'s progress.
     /// - Parameters:
     ///   - reporter: A `ProgressReporter` instance.
-    ///   - portionOfParent: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
-    public func assign(count portionOfParent: Int, to reporter: ProgressReporter) {
+    ///   - count: Units, which is a portion of `totalCount`delegated to an instance of `Subprogress`.
+    public func assign(count: Int, to reporter: ProgressReporter) {
         precondition(isCycle(reporter: reporter) == false, "Creating a cycle is not allowed.")
         
         // get the actual progress from within the reporter, then add as children
@@ -273,7 +279,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         
         // Add reporter as child + Add self as parent
         self.addToChildren(childManager: actualManager)
-        actualManager.addParent(parentReporter: self, portionOfParent: portionOfParent)
+        actualManager.addParent(parentReporter: self, portionOfParent: count)
     }
     
     /// Increases `completedCount` by `count`.
