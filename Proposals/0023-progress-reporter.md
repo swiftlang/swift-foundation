@@ -3,8 +3,10 @@
 * Proposal: SF-0023
 * Author(s): [Chloe Yeo](https://github.com/chloe-yeo)
 * Review Manager: [Charles Hu](https://github.com/iCharlesHu)
-* Status: **Pitch**
-* Review: [Pitch](https://forums.swift.org/t/pitch-progress-reporting-in-swift-concurrency/78112/10)
+* Status: **2nd Review Jun. 3, 2025 ... Jun. 10, 2025**
+* Review:
+  * [Pitch](https://forums.swift.org/t/pitch-progress-reporting-in-swift-concurrency/78112/10)
+  * [First Review](https://forums.swift.org/t/review-sf-0023-progress-reporting-in-swift-concurrency/79474)
 
 
 ## Revision history
