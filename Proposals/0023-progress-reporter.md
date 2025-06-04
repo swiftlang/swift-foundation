@@ -3,8 +3,10 @@
 * Proposal: SF-0023
 * Author(s): [Chloe Yeo](https://github.com/chloe-yeo)
 * Review Manager: [Charles Hu](https://github.com/iCharlesHu)
-* Status: **Review Apr. 23, 2025...Apr. 30, 2025**
-* Review: [Pitch](https://forums.swift.org/t/pitch-progress-reporting-in-swift-concurrency/78112/10)
+* Status: **2nd Review Jun. 3, 2025 ... Jun. 10, 2025**
+* Review:
+  * [Pitch](https://forums.swift.org/t/pitch-progress-reporting-in-swift-concurrency/78112/10)
+  * [First Review](https://forums.swift.org/t/review-sf-0023-progress-reporting-in-swift-concurrency/79474)
 
 
 ## Revision history
@@ -16,73 +18,72 @@
     - Replaced top level `totalCount` to be get-only and only settable via `withProperties` closure
     - Added the ability for `completedCount` to be settable via `withProperties` closure
     - Omitted checking of `Task.cancellation` in `complete(count:)` method
-* **v3** Major Updates: 
+* **v3** Minor Updates: 
     - Renamed `ProgressReporter.Progress` struct to `Subprogress` 
     - Renamed `assign(count:)` method to `subprogress(assigningCount:)` 
     - Restructure examples in `Proposed Solution` to showcase clearer difference of progress-reporting framework code and progress-observing developer code  
-
+* **v4** Major Updates: 
+    - Renamed `ProgressReporter` class to `ProgressManager` 
+    - Introduced `ProgressReporter` type and `assign(count:to:)` for alternative use cases, including multi-parent support
+    - Specified Behavior of `ProgressManager` for `Task` cancellation
+    - Redesigned implementation of custom properties to support both holding values of custom property of `self` and of descendants, and multi-parent support
+    - Restructured examples in Proposed Solution to show the use of `Subprogress` and `ProgressReporter` in different cases and enforce use of `subprogress` as parameter label for methods reporting progress and use of `progressReporter` as property name when returning `ProgressReporter` from a library
+    - Expanded Future Directions
+    - Expanded Alternatives Considered
+    - Moving `FormatStyle` to separate future proposal
+* **v5** Minor Updates: 
+    - Renamed `manager(totalCount:)` to `start(totalCount)`
+    - Expanded Alternatives Considered
+    
 ## Table of Contents 
 
-- [`ProgressReporter`: Progress Reporting in Swift Concurrency](#progressreporter-progress-reporting-in-swift-concurrency)
-  - [Revision history](#revision-history)
-  - [Table of Contents](#table-of-contents)
-  - [Introduction](#introduction)
-  - [Motivation](#motivation)
-  - [Proposed solution and example](#proposed-solution-and-example)
-    - [Reporting Progress (General Operations)](#reporting-progress-general-operations)
-    - [Reporting Progress (File-Related Operations)](#reporting-progress-file-related-operations)
-    - [Advantages of using `Subprogress` as Currency Type](#advantages-of-using-subprogress-as-currency-type)
-    - [Interoperability with Existing `Progress`](#interoperability-with-existing-progress)
-  - [Detailed design](#detailed-design)
-    - [`ProgressReporter`](#progressreporter)
-    - [`ProgressReporter.Properties`](#progressreporterproperties)
-    - [`Subprogress`](#subprogress)
-    - [`ProgressReporter.FormatStyle`](#progressreporterformatstyle)
-    - [`ProgressReporter.FileFormatStyle`](#progressreporterfileformatstyle)
-    - [Methods for Interoperability with Existing `Progress`](#methods-for-interoperability-with-existing-progress)
-      - [ProgressReporter (Parent) - Progress (Child)](#progressreporter-parent---progress-child)
-      - [Progress (Parent) - ProgressReporter (Child)](#progress-parent---progressreporter-child)
-  - [Impact on existing code](#impact-on-existing-code)
-  - [Future Directions](#future-directions)
-    - [Additional Overloads to APIs within UI Frameworks](#additional-overloads-to-apis-within-ui-frameworks)
-    - [Distributed `ProgressReporter`](#distributed-progressreporter)
-    - [Enhanced `FormatStyle`](#enhanced-formatstyle)
-  - [Alternatives considered](#alternatives-considered)
-    - [Alternative Names](#alternative-names)
-    - [Introduce `ProgressReporter` to Swift standard library](#introduce-progressreporter-to-swift-standard-library)
-    - [Implement `ProgressReporter` as a Generic Class](#implement-progressreporter-as-a-generic-class)
-    - [Implement `ProgressReporter` as an actor](#implement-progressreporter-as-an-actor)
-    - [Implement `ProgressReporter` as a protocol](#implement-progressreporter-as-a-protocol)
-    - [Introduce an `Observable` adapter for `ProgressReporter`](#introduce-an-observable-adapter-for-progressreporter)
-    - [Introduce Method to Generate Localized Description](#introduce-method-to-generate-localized-description)
-    - [Introduce Explicit Support for Cancellation, Pausing, and Resuming of `ProgressReporter`](#introduce-explicit-support-for-cancellation-pausing-and-resuming-of-progressreporter)
-    - [Check Task Cancellation within `complete(count:)` Method](#check-task-cancellation-within-completecount-method)
-    - [Introduce `totalCount` and `completedCount` properties as `UInt64`](#introduce-totalcount-and-completedcount-properties-as-uint64)
-    - [Store Existing `Progress` in TaskLocal Storage](#store-existing-progress-in-tasklocal-storage)
-    - [Add Convenience Method to Existing `Progress` for Easier Instantiation of Child Progress](#add-convenience-method-to-existing-progress-for-easier-instantiation-of-child-progress)
-    - [Allow for Assignment of `ProgressReporter` to Multiple Progress Reporter Trees](#allow-for-assignment-of-progressreporter-to-multiple-progress-reporter-trees)
-    - [Replace Count-based Relationships between `ProgressReporter`](#replace-count-based-relationships-between-progressreporter)
-    - [Introduce Additional Convenience for Getting `Subprogress`](#introduce-additional-convenience-for-getting-subprogress)
-  - [Acknowledgements](#acknowledgements)
+* [Introduction](#introduction)
+* [Motivation](#motivation)
+* [Proposed Solution and Example](#proposed-solution-and-example)
+* [Detailed Design](#detailed-design)
+* [Impact on Existing Code](#impact-on-existing-code)
+* [Future Directions](#future-directions)
+* [Alternatives Considered](#alternatives-considered)
+* [Acknowledgements](#acknowledgements)
 
 ## Introduction
 
 Progress reporting is a generally useful concept, and can be helpful in all kinds of applications: from high level UIs, to simple command line tools, and more.
 
-Foundation offers a progress reporting mechanism that has been very popular with application developers on Apple platforms. The existing `Progress` class provides a self-contained, tree-based mechanism for progress reporting and is adopted in various APIs which are able to report progress. The functionality of the `Progress` class is two-fold –– it reports progress at the code level, and at the same time, displays progress at the User Interface level. While the recommended usage pattern of `Progress` works well with Cocoa's completion-handler-based async APIs, it does not fit well with Swift's concurrency support via async/await.
+Foundation offers a progress reporting mechanism that has been popular with application developers on Apple platforms. The existing `Progress` class provides a self-contained, tree-based mechanism for progress reporting and is adopted in various APIs to report progress. While the recommended usage pattern of `Progress` works well with Cocoa's completion-handler-based async APIs, it does not fit well with Swift's concurrency support via async/await. 
 
-This proposal aims to introduce an efficient, easy-to-use, less error-prone Progress Reporting API —— `ProgressReporter` —— that is compatible with async/await style concurrency to Foundation. To further support the use of this Progress Reporting API with high-level UIs, this API is also `Observable`. 
+This proposal aims to introduce a new Progress Reporting API —— `ProgressManager` —— to Foundation. This API is designed with several key objectives in mind:  
+
+1. **Swift Concurrency Integration**: This API enables smooth, incremental progress reporting within async/await code patterns.
+
+2. **Self-Documenting Design**: The types introduced in this API clearly separate the composition from observation of progress and allow developers to make it obvious which methods report progress to clients. 
+
+3. **Error-Resistant Architecture**: One common mistake/footgun when it comes to progress reporting is reusing the [same progress reporting instance](#advantages-of-using-subprogress-as-currency-type). This tends to lead to mistakenly overwriting its expected unit of work after previous caller has set it, or "over completing" / "double finishing" the report after it's been completed. This API prevents this by introducing strong types with different roles. Additionally, it handles progress delegation, accumulation, and nested reporting automatically, eliminating race conditions and progress calculation errors.
+
+4. **Decoupled Progress and Task Control**: This API focuses exclusively on progress reporting, clearly separating it from task control mechanisms like cancellation, which remain the responsibility of Swift's native concurrency primitives for a more coherent programming model. While this API does not assume any control over tasks, it needs to be consistently handling non-completion of progress so it will react to cancellation by completing the progress upon `deinit`. 
+
+5. **Swift Observation Framework Support**: This API leverages the `@Observable` macro to make progress information automatically bindable to UI components, enabling reactive updates with minimal boilerplate code. The Observation framework also provides a way for developers to observe values of `@Observable` APIs via `AsyncSequence`.  
+
+6. **Type-Safe Extensibility**: This API provides a structured way to attach and propagate custom metadata alongside the standard numerical progress metrics through a type-safe property system.
+
+7. **Dual Use Case Support**: This API provides a model that supports both function-level progress reporting and class-level progress reporting. In the latter case, the progress type exposed can be part of more than one progress tree. 
 
 ## Motivation
 
-A progress reporting mechanism that is compatible with Swift's async/await style concurrency would be to pass a `Progress` instance as a parameter to functions or methods that report progress. The current recommended usage pattern of the existing `Progress`, as outlined in [Apple Developer Documentation](https://developer.apple.com/documentation/foundation/progress), does not fit well with async/await style concurrency. Typically, a function that aims to report progress to its callers will first return an instance of the existing `Progress`. The returned instance is then added as a child to a parent `Progress` instance. 
+### Reporting Progress using Existing `Progress` API 
 
-In the following example, the function `chopFruits(completionHandler:)` reports progress to its caller, `makeSalad()`.  
+The existing `Progress` API can be used two different ways. A method can return a `Progress`, or a class can conform to the `ProgressReporting` protocol and contain a `Progress` property.
+
+#### Return a `Progress` Instance from a Method 
+
+The current recommended usage pattern of the existing `Progress`, as outlined in [Apple Developer Documentation](https://developer.apple.com/documentation/foundation/progress), does not fit well with async/await style concurrency. Typically, a function that aims to report progress to its callers will first return an instance of the existing `Progress`. The returned instance is then added as a child to a parent `Progress` instance. The only way to use the existing `Progress` API in a way that is compatible with Swift's async/await style concurrency would be to pass a `Progress` instance as a parameter to functions or methods that report progress.
+
+In the following example, we have a function `chopFruits(completionHandler:)` reports progress to its caller, `makeSalad()`. 
 
 ```swift
 public func makeSalad() {
     let progress = Progress(totalUnitCount: 3) // parent Progress instance 
-    let subprogress = chopFruits { result in // child Progress instance 
+    let chopSubprogress = chopFruits { result in // child Progress instance 
         switch result {
             case .success(let progress): 
                 progress.completedUnitCount += 1
@@ -90,13 +91,13 @@ public func makeSalad() {
                 print("Fruits not chopped")
         }
     } 
-    progress.addChild(subprogress, withPendingUnitCount: 1) 
+    progress.addChild(chopSubprogress, withPendingUnitCount: 1) 
 }
 
 public func chopFruits(completionHandler: @escaping (Result<Progress, Error>) -> Void) -> Progress {}
 ```
-When we 
-update this function to use async/await, the previous pattern no longer composes as expected: 
+
+When we update this function to use async/await, the previous pattern no longer composes as expected: 
 
 ```swift
 public func makeSalad() async {
@@ -108,29 +109,29 @@ public func makeSalad() async {
 public func chopFruits() async -> Progress {}
 ```
 
-The previous pattern of "returning" the `Progress` instance no longer composes as expected because we are forced to await the `chopFruits()` call before returning the `Progress` instance. However, the `Progress` instance that gets returned already has its `completedUnitCount` equal to `totalUnitCount`. This defeats its purpose of showing incremental progress as the code runs to completion within the method.
+We are forced to await the `chopFruits()` call before returning the `Progress` instance. However, the `Progress` instance that is returned from `chopFruits` already has its `completedUnitCount` equal to `totalUnitCount`. Since the `chopSubprogress` would have been completed before being added as a child to its parent `Progress`, it fails to show incremental progress as the code runs to completion within the method.
 
-Additionally, while it may be possible to reuse the existing `Progress` to report progress in an `async` function by passing `Progress` as an argument to the function reporting progress, it is more error-prone, as shown below: 
+While it may be possible to use the existing `Progress` to report progress in an `async` function to show incremental progress, by passing `Progress` as an argument to the function reporting progress, it is more error-prone, as shown below: 
 
 ```swift
-let fruits = ["apple", "orange", "melon"]
-let vegetables = ["spinach", "carrots", "celeries"]
+let fruits = [Ingredient("apple"), Ingredient("orange"), Ingredient("melon")]
+let vegetables = [Ingredient("spinach"), Ingredient("carrots"), Ingredient("celeries")]
 
 public func makeSalad() async {
     let progress = Progress(totalUnitCount: 2)
     
-    let choppingProgress = Progress()
-    progress.addChild(subprogress, withPendingUnitCount: 1)
+    let chopSubprogress = Progress()
+    progress.addChild(chopSubprogress, withPendingUnitCount: 1)
     
-    await chopFruits(progress: subprogress)
+    await chopFruits(progress: chopSubprogress)
     
-    await chopVegetables(progress: subprogress) // Author's mistake: same subprogress was reused! 
+    await chopVegetables(progress: chopSubprogress) // Author's mistake: same subprogress was reused! 
 }
 
 public func chopFruits(progress: Progress) async {
     progress.totalUnitCount = Int64(fruits.count)
     for fruit in fruits {
-        await chopItem(fruit)
+        await fruit.chop()
         progress.completedUnitCount += 1
     }
 }
@@ -138,272 +139,245 @@ public func chopFruits(progress: Progress) async {
 public func chopVegetables(progress: Progress) async {
     progress.totalUnitCount = Int64(vegetables.count) // Author's mistake: overwriting progress made in `chopFruits` on the same `progress` instance!
     for vegetable in vegetables {
-        await chopItem(vegetable)
+        await vegetable.chop()
         progress.completedUnitCount += 1
     }
 }
-
-public func chopItem(_ item: Ingredient) async {}
 ```
 
-The existing `Progress` was not designed in a way that enforces the usage of `Progress` instance as a function parameter to report progress. Without a strong rule about who creates the `Progress` and who consumes it, it is easy to end up in a situation where the `Progress` is used more than once. This results in nondeterministic behavior when developers may accidentally overcomplete or overwrite a `Progress` instance. 
+The existing `Progress` was not designed in a way that enforces the usage of `Progress` instance as a function parameter to report progress. Without a strong rule about who creates the `Progress` and who consumes it, it is easy to end up in a situation where the `Progress` is used more than once. This results in nondeterministic behavior when developers may accidentally overcomplete or overwrite a `Progress` instance.
 
-We introduce a new progress reporting mechanism following the new `ProgressReporter` type. This type encourages safer practices of progress reporting, separating what to be passed as parameter from what to be used to report progress.
+#### Return a `Progress` Instance from a Class Conforming to `Foundation.ProgressReporting` Protocol 
 
-This proposal outlines the use of `ProgressReporter` as reporters of progress and `~Copyable` `Subprogress` as parameters passed to progress reporting methods.
+Another recommended usage pattern of `Progress`, which involves the `ProgressReporting` protocol, is outlined in [Apple Developer Documentation](https://developer.apple.com/documentation/foundation/progressreporting). While this approach does not suffer from the same problem of `Progress` completing before being added to be part of a `Progress` tree, it exposes all of the mutable state of `Progress` to its observers.
+
+### `ProgressManager` API 
+
+We propose introducing a new progress reporting type called `ProgressManager`. `ProgressManager` is used to report progress.
+
+In order to compose progress into trees, we also introduce two more types:
+
+1. `Subprogress`: A `~Copyable` type, used when a `ProgressManager` wishes to assign a portion of its total progress to an `async` function.
+2. `ProgressReporter`: A class used to report progress to interested observers. This includes one or more other `ProgressManager`s, which may incorporate those updates into their own progress.
+
+```mermaid
+block-beta
+columns 1
+
+  ProgressReporter
+  space
+  ProgressManager
+  space
+  Subprogress
+
+  ProgressManager --> ProgressReporter
+  ProgressManager --> Subprogress
+```
 
 ## Proposed solution and example
 
-### Reporting Progress (General Operations)
+### Reporting Progress using `Subprogress` 
 
-To begin, let's create a framework called `SaladMaker` that contains functionalities that can make a salad and has built-in progress reporting. 
+To begin, let's assume there is a library `FoodProcessor` and a library `Juicer`. Both libraries report progress. 
 
-```swift 
-struct Fruit {
-    func chop() async { ... }
-}
-
-struct Dressing {
-    func pour() async { ... } 
-}
-
-public class SaladMaker {
+```swift
+// FoodProcessor.framework
+public class FoodProcessor {
     
-    let fruits: [Fruit]
-    let dressings: [Dressing]
-    
-    public init() {
-        fruits = [Fruit("apple"), Fruit("banana"), Fruit("cherry")]
-        dressings = [Dressing("mayo"), Dressing("mustard"), Dressing("ketchup")]
-    }
-}
-```
-
-In order to report progress on subparts of making a salad, such as `chopFruits` and `mixDressings`, the framework methods each has a `Subprogress` parameter. The `Subprogress` parameter is also optional to provide developers the option to either opt-in to receiving progress updates when calling each of the methods. 
-
-Within the methods thay report progress, each `Subprogress` passed into the subparts then has to be consumed to initialize an instance of `ProgressReporter`. This is done by calling `reporter(totalCount:)` on `Subprogress`. This can be done as follows:
-
-```swift 
-extension SaladMaker {
-
-    private func chopFruits(progress: consuming Subprogress?) async {
-        // Initialize a progress reporter to report progress on chopping fruits
-        // with passed-in progress parameter
-        let choppingReporter = progress?.reporter(totalCount: fruits.count)
-        for fruit in fruits {
-            await fruit.chop()
-            choppingReporter?.complete(count: 1)
-        }
+    func process(ingredients: [Ingredient], subprogress: consuming Subprogress? = nil) async {
+          let manager = subprogress?.start(totalCount: ingredients.count + 1)
+          
+          // Do some work in a function
+          await chop(manager?.subprogress(assigningCount: ingredients.count))
+          
+          // Call some other function that does not yet support progress reporting, and complete the work myself
+          await blender.blend(ingredients)
+          manager?.complete(count: 1)
     }
     
-    private func mixDressings(progress: consuming Subprogress?) async {
-        // Initialize a progress reporter to report progress on mixing dressing
-        // with passed-in progress parameter
-        let dressingReporter = progress?.reporter(totalCount: dressings.count)
-        for dressing in dressings {
-            await dressing.pour()
-            dressingReporter?.complete(count: 1)
-        }
-    }
+    static func chop(_ ingredient: Ingredient) -> Ingredient { ... }
 }
-```
 
-When a developer wants to use the `SaladMaker` framework and track the progress of making a salad, they can do so as follows: 
-
-```swift 
-func makeSalad() async {
-    let saladMaker = SaladMaker()
+// Juicer.framework
+public class Juicer {
     
-    // Initialize a root-level `ProgressReporter` representing overall progress
-    let overall = ProgressReporter(totalCount: 100)
-
-    // Call `chopFruits` and opt-in to receive progress updates
-    // by passing in a `Subprogress` constituting 70 count of overall progress
-    await saladMaker.chopFruits(progress: overall.subprogress(assigningCount: 70))
-    
-    print("Chopped fruits, salad is \(overall.formatted(.fractionCompleted()))")
+    public func makeJuice(ingredients: [Ingredient], subprogress: consuming Subprogress? = nil) async {
+        let manager = subprogress?.start(totalCount: ingredients.count)
         
-    // Call `mixDressings` and opt-in to receive progress updates
-    // by passing in a `Subprogress` constituting 30 count of overall progress
-    await saladMaker.mixDressings(progress: overall.subprogress(assigningCount: 30))
-    
-    print("Mixed dressings, salad is \(overall.formatted(.fractionCompleted()))")
-}
-
-await makeSalad()
-```
-
-### Reporting Progress (File-Related Operations)
-
-With the use of @dynamicMemberLookup attribute, `ProgressReporter` is able to access properties that are not explicitly defined in the class. This means that developers are able to define additional properties on the class specific to the operations they are reporting progress on. For instance, we pre-define additional file-related properties on `ProgressReporter` by extending `ProgressReporter` for use cases of reporting progress on file operations.
-
->Note: The mechanisms of how extending `ProgressReporter` to include additional properties will be shown in the Detailed Design section of the proposal.
-
-In this section, we will show an example of how we report progress with additional file-related properties:
-
-To begin, let's create a class `ImageProcessor` that has the functionalities of downloading images and applying a filter onto images. 
-
-```swift 
-struct Image {
-    let bytes: UInt64
-    
-    func download() async { ... }
-    
-    func applyFilter() async { ... }
-}
-
-final class ImageProcessor: Sendable {
-    
-    let images: [Image]
-    
-    init(images: [Image]) {
-        self.images = images
-    }
-}
-```
-
-The method to download images would also report information such as `totalByteCount` along with the properties directly defined on a `ProgressReporter`. While `totalByteCount` is not directly defined on the `ProgressReporter` class, we can still set the property `totalByteCount` via the `withProperties` closure because this property can be discovered at runtime via the `@dynamicMemberLookup` attribute.
-
-The subpart of applying filter does not contain additional file-related information, so we report progress on this subpart as usual.
-
-Both the `downloadImagesFromDisk` and `applyFilterToImages` methods allow developers the option to receive progress updates while the tasks are carried out. 
-
-```swift 
-extension ImageProcessor {
-    
-    func downloadImagesFromDisk(progress: consuming Subprogress?) async {
-        // Initialize a progress reporter to report progress on downloading images
-        // with passed-in progress parameter
-        let reporter = progress?.reporter(totalCount: images.count)
-        
-        // Initialize file-related properties on the reporter
-        reporter?.withProperties { properties in
-            properties.totalFileCount = images.count
-            properties.totalByteCount = images.map { $0.bytes }.reduce(0, +)
-        }
-        
-        for image in images {
-            await image.download()
-            reporter?.complete(count: 1)
-            // Update each file-related property
-            reporter?.withProperties { properties in
-                properties.completedFileCount += 1
-                properties.completedByteCount += image.bytes
-            }
-        }
-    }
-    
-    func applyFilterToImages(progress: consuming Subprogress?) async {
-        // Initializes a progress reporter to report progress on applying filter
-        // with passed-in progress parameter
-        let reporter = progress?.reporter(totalCount: images.count)
-        for image in images {
-            await image.applyFilter()
-            reporter?.complete(count: 1)
+        for ingredient in ingredients {
+            await ingredient.blend()
+            manager?.complete(count: 1)
         }
     }
 }
 ```
 
-When a developer wants to use the `ImageProcessor` framework to download images and apply filters on them, they can do so as follows: 
+When we prepare dinner, we may want to use both the `FoodProcessor` and `Juicer` asynchronously. We can do so as follows: 
 
 ```swift 
-func downloadImagesAndApplyFilter() async {
-    let imageProcessor = ImageProcessor(images: [Image(bytes: 1000), Image(bytes: 2000), Image(bytes: 3000)]) 
+// Developer Code 
+let overallManager = ProgressManager(totalCount: 2)
+let foodProcessor = FoodProcessor()
+let juicer = Juicer()
+let mainCourse = [Ingredient("Spinach"), Ingredient("Cabbage"), Ingredient("Carrot")]
+let beverage = [Ingredient("Celery"), Ingredient("Kale"), Ingredient("Apple")]
 
-    // Initialize a root-level `ProgressReporter` representing overall progress
-    let overall = ProgressReporter(totalCount: 2)
+await withTaskGroup(of: Void.self) { group in
+    group.addTask {
+        // Instantiate `Subprogress` to pass as a parameter
+        await foodProcessor.process(ingredients: mainCourse, subprogress: overallManager.subprogress(assigningCount: 1))
+    }
     
-    // Call `downloadImagesFromDisk` and opt-in to receive progress updates
-    // by passing in a `Subprogress` constituting 1 count of overall progress
-    await imageProcessor.downloadImagesFromDisk(progress: overall.subprogress(assigningCount: 1))
-    
-    // Call `applyFilterToImages` and opt-in to receive progress updates
-    // by passing in a `Subprogress` constituting 1 count of overall progress
-    await imageProcessor.applyFilterToImages(progress: overall.subprogress(assigningCount: 1))
+    group.addTask {
+        await juicer.makeJuice(ingredients: beverage, subprogress: overallManager.subprogress(assigningCount: 1))
+    }
 }
-
-await downloadImagesAndApplyFilter() 
 ```
+
+<details>
+
+<summary>
 
 ### Advantages of using `Subprogress` as Currency Type
 
-The advantages of `ProgressReporter` mainly derive from the use of `Subprogress` as a currency to create descendants of `ProgresssReporter`, and the recommended ways to use `Subprogress` are as follows: 
+</summary>
 
-1. Pass `Subprogress` instead of `ProgressReporter` as a parameter to methods that report progress.
+There are two main advantages to using `Subprogress` as a currency type for assigning progress:
 
-`Subprogress` should be used as the currency to be passed into progress-reporting methods, within which a child `ProgressReporter` instance that constitutes a portion of its parent's total units is created via a call to `reporter(totalCount:)`, as follows: 
+1. It is `~Copyable` to ensure that the progress is assigned to only one task. Additionally, due to its `~Copyable` nature, the API can detect whether or not the `Subprogress` is consumed. If the `Subprogress` is not converted into a `ProgressManager` (for example, due to an error or early return), then the assigned count is marked as completed in the parent `ProgressManager`.
+2. When used as an argument to a function, it is clear that the function supports reporting progress.
+
+Here's how you use the proposed API to get the most of its benefits:
+
+1. Pass `Subprogress` as a parameter to functions that report progress.
+
+Inside the function, create a child `ProgressManager` instance to report progress in its own world via `start(totalCount:)`, as follows: 
 
 ```swift
-func correctlyReportToSubprogressAfterInstantiatingReporter() async {
-    let overall = ProgressReporter(totalCount: 2)
-    await subTask(progress: overall.subprogress(assigningCount: 1))
+func correctlyUsingSubprogress() async {
+    let overall = ProgressManager(totalCount: 2)
+    await subTask(subprogress: overall.subprogress(assigningCount: 1))
 }
 
-func subTask(progress: consuming Subprogress) async {
+func subTask(subprogress: consuming Subprogress? = nil) async {
     let count = 10
-    let progressReporter = progress.reporter(totalCount: count) // returns an instance of ProgressReporter
+    let manager = subprogress?.start(totalCount: count) // returns an instance of ProgressManager that can be used to report progress of subtask
     for _ in 1...count {
-        progressReporter?.complete(count: 1) // reports progress as usual
+        manager?.complete(count: 1) // reports progress as usual
     }
 }
 ```
 
-While developers may accidentally make the mistake of trying to report progress to a passed-in `Subprogress`, the fact that it does not have the same properties as an actual `ProgressReporter` means the compiler can inform developers when they are using either `ProgressReporter` or `Subprogress` wrongly. The only way for developers to kickstart actual progress reporting with `Subprogress` is by calling the `reporter(totalCount:)` to create a `ProgressReporter`, then subsequently call `complete(count:)` on `ProgressReporter`.
-
-Each time before progress reporting happens, there needs to be a call to `reporter(totalCount:)`, which returns a `ProgressReporter` instance, before calling `complete(count:)` on the returned `ProgressReporter`. 
-
-The following faulty example shows how reporting progress directly to `Subprogress` without initializing it will be cause a compiler error. Developers will always need to instantiate a `ProgressReporter` from `ProgresReporter.Progress` before reporting progress.  
+If developers accidentally try to report progress to a passed-in `Subprogress`, the compiler can inform developers, as the following. The fix is quite straightforward: The only one function on `Subprogress` is `start(totalCount:)` which creates a manager to report progress on, so the developer can easily diagnose it.
 
 ```swift 
-func incorrectlyReportToSubprogressWithoutInstantiatingReporter() async {
-    let overall = ProgressReporter(totalCount: 2)
-    await subTask(progress: overall.subprogress(assigningCount: 1))
-}
-
-func subTask(progress: consuming Subprogress) async {
+func subTask(subprogress: consuming Subprogress? = nil) async {
     // COMPILER ERROR: Value of type 'Subprogress' has no member 'complete'
-    progress.complete(count: 1)
+    subprogress?.complete(count: 1)
 }
 ```
 
-2. Consume each `Subprogress` only once, and if not consumed, its parent `ProgressReporter` behaves as if none of its units were ever allocated to create `Subprogress`. 
+2. Consume each `Subprogress` only once. 
 
-Developers should create only one `Subprogress` for a corresponding to-be-instantiated `ProgressReporter` instance, as follows: 
+Developers should create only one `Subprogress` for a corresponding to-be-instantiated `ProgressManager` instance, as follows: 
 
 ```swift 
-func correctlyConsumingSubprogress() {
-    let overall = ProgressReporter(totalCount: 2)
+func correctlyCreatingOneSubprogressForOneSubtask() {
+    let overall = ProgressManager(totalCount: 2)
     
-    let progressOne = overall.subprogress(assigningCount: 1) // create one Subprogress
-    let reporterOne = progressOne.reporter(totalCount: 10) // initialize ProgressReporter instance with 10 units
+    let subprogressOne = overall.subprogress(assigningCount: 1) // create one Subprogress
+    let managerOne = subprogressOne.start(totalCount: 10) // initialize ProgressManager instance with 10 units
     
-    let progressTwo = overall.subprogress(assigningCount: 1) //create one Subprogress
-    let reporterTwo = progressTwo.reporter(totalCount: 8) // initialize ProgressReporter instance with 8 units 
+    let subprogressTwo = overall.subprogress(assigningCount: 1) //create one Subprogress
+    let managerTwo = subprogressTwo.start(totalCount: 8) // initialize ProgressManager instance with 8 units 
 }
 ```
 
-It is impossible for developers to accidentally consume `Subprogress` more than once, because even if developers accidentally **type** out an expression to consume an already-consumed `Subprogress`, their code won't compile at all. 
-
-The `reporter(totalCount:)` method, which **consumes** the `Subprogress`, can only be called once on each `Subprogress` instance. If there are more than one attempts to call `reporter(totalCount:)` on the same instance of `Subprogress`, the code will not compile due to the `~Copyable` nature of `Subprogress`. 
+If developer forgets to create a new `Subprogress` and try to reuse an already consumed `Subprogress`, the code will not compile:
 
 ```swift 
-func incorrectlyConsumingSubprogress() {
-    let overall = ProgressReporter(totalCount: 2)
+func incorrectlyCreatingOneSubprogressForMultipleSubtasks() {
+    let overall = ProgressManager(totalCount: 2)
     
-    let progressOne = overall.subprogress(assigningCount: 1) // create one Subprogress
-    let reporterOne = progressOne.reporter(totalCount: 10) // initialize ProgressReporter instance with 10 units 
+    let subprogressOne = overall.subprogress(assigningCount: 1) // create one Subprogress
+    let managerOne = subprogressOne.start(totalCount: 10) // initialize ProgressManager instance with 10 units 
 
-    // COMPILER ERROR: 'progressOne' consumed more than once
-    let reporterTwo = progressOne.reporter(totalCount: 8) // initialize ProgressReporter instance with 8 units using same Progress 
+    // COMPILER ERROR: 'subprogressOne' consumed more than once
+    let managerTwo = subprogressOne.start(totalCount: 8) // initialize ProgressManager instance with 8 units using same Subprogress 
+}
+```
+
+This prevents the problem of stealing or overwriting the progress as we've seen in the [Motivation section](#motivation).
+
+</details>
+
+### Reporting Progress using `ProgressReporter` 
+
+In cases where a library wishes to report progress that may be composed into several trees, or when it reports progress that is disconnected from the result of a single function call, it can report progress with a `ProgressReporter`. An example of this is tracking days remaining till an examination: 
+
+```swift 
+// ExamCountdown Library
+public class ExamCountdown {
+     // Returns the progress reporter for how many days until exam 
+     public var progressReporter: ProgressReporter
+}
+```
+
+When we want to observe progress reported by the class `ExamCountdown`, we can observe `ProgressReporter` directly, as it is `@Observable` and contains read-only access to all properties of `ProgressManager` from which it is instantiated from, as follows:  
+
+```swift 
+// Developer Code 
+let examCountdown = ExamCountdown() 
+
+let observedProgress = examCountdown.progressReporter
+``` 
+
+Additionally, `ProgressReporter` can also be added to be part of **more than one progress tree**, as follows:  
+
+```swift 
+// Add `ProgressReporter` to a parent `ProgressManager` 
+let overall = ProgressManager(totalCount: 5)
+overall.assign(count: 3, to: examCountdown.progressReporter)
+
+// Add `ProgressReporter` to another parent `ProgressManager` with different assigned count
+let deadlineTracker = ProgressManager(totalCount: 2) 
+overall.assign(count: 1, to: examCountdown, progressReporter)
+
+``` 
+
+### Reporting Progress With Type-Safe Custom Properties 
+
+You can define additional properties specific to the operations you are reporting progress on with `@dynamicMemberLookup`. For instance, we pre-define additional file-related properties on `ProgressManager` by extending `ProgressManager` for reporting progress on file operations.
+
+We can declare a custom additional property as follows:
+
+```swift 
+struct Filename: ProgressManager.Property {
+    typealias Value = String
+    
+    static var defaultValue: String { "" }
+}
+
+extension ProgressManager.Properties {
+    var filename: Filename.Type { Filename.self }
+}
+``` 
+
+You can report custom properties using `ProgressManager` as follows:  
+
+```swift 
+let manager: ProgressManager = ...
+manager.withProperties { properties in 
+    properties.filename = "Capybara.jpg" // using self-defined custom property 
+    properties.totalByteCount = 1000000 // using pre-defined file-related property
 }
 ```
 
 ### Interoperability with Existing `Progress` 
 
-In both cases below, the propagation of progress of subparts to a root progress should work the same ways the existing `Progress` and `ProgressReporter` work.
+In both cases below, the propagation of progress of subparts to a root progress should work the same ways as the existing `Progress`. Due to the fact that the existing `Progress` assumes a tree structure instead of an acyclic graph structure of the new `ProgressManager`, interoperability between `Progress` and `ProgressManager` similarly assumes the tree structure. 
 
-Consider two progress reporting methods, one which utilizes the existing `Progress`, and another using `ProgressReporter`: 
+Consider two progress reporting methods, one of which utilizes the existing `Progress`, and the other `ProgressManager`: 
 
 ```swift 
 // Framework code: Function reporting progress with the existing `Progress`
@@ -418,69 +392,64 @@ func doSomethingWithProgress() -> Progress {
     return p
 }
 
-// Framework code: Function reporting progress with `ProgressReporter` 
-func doSomethingWithReporter(progress: consuming Subprogress) async -> Int {
-    let reporter = progress.reporter(totalCount: 2)
+// Framework code: Function reporting progress with `Subprogress` 
+func doSomethingWithManager(subprogress: consuming Subprogress) async -> Int {
+    let manager = subprogress.start(totalCount: 2)
     //do something
-    reporter.complete(count: 1)
+    manager.complete(count: 1)
     //do something
-    reporter.complete(count: 1)
+    manager.complete(count: 1)
+}
+
+// Framework code: Library reporting progress with `ProgressReporter` 
+class DownloadManager {
+    var progressReporter: ProgressReporter { get }
 }
 ```
 
-In the case in which we need to receive a `Progress` instance and add it as a child to a `ProgressReporter` parent, we can use the interop method `subprogress(assigningCount: to:)`. 
+In the case in which we need to receive a `Progress` instance and add it as a child to a `ProgressManager` parent, we can use the interop method `subprogress(assigningCount: to:)`. 
 
-The choice of naming the interop method as `subprogress(assigningCount: to:)` is to keep the syntax consistent with the method used to add a `ProgressReporter` instance to the progress tree, `subprogress(assigningCount:)`. An example of how these can be used to compose a `ProgressReporter` tree with a top-level `ProgressReporter` is as follows:
+An example of how this can be used to compose a `ProgressManager` tree with a top-level `ProgressManager` is as follows:
 
 ```swift 
 // Developer code
-func reporterParentProgressChildInterop() async {
-    let overall = ProgressReporter(totalCount: 2) // Top-level `ProgressReporter`
-    
-    // Assigning 1 unit of overall's `totalCount` to `Subprogress`
-    let progressOne = overall.subprogress(assigningCount: 1)
-    // Passing `Subprogress` to method reporting progress
-    let result = await doSomethingWithReporter(progress: progressOne)
-    
-    
-    // Getting a `Progress` from method reporting progress
-    let progressTwo = doSomethingWithProgress() 
-    // Assigning 1 unit of overall's `totalCount` to the existing `Progress` 
-    overall.subprogress(assigningCount: 1, to: progressTwo) 
-}
+let overall = ProgressManager(totalCount: 2) // Top-level `ProgressManager`
+
+let subprogressOne = overall.subprogress(assigningCount: 1)
+let result = await doSomethingWithManager(subprogress: subprogressOne)
+
+let subprogressTwo = doSomethingWithProgress() 
+overall.subprogress(assigningCount: 1, to: subprogressTwo) 
 ```
 
-The reverse case, in which a framework needs to receive a `ProgressReporter` instance as a child from a top-level `Progress`, can also be done. The interop method `makeChild(withPendingUnitCount: kind:)` added to `Progress` will support the explicit composition of a progress tree. 
+The reverse case, in which a `ProgressManager` instance needs to become a child of a top-level `Progress` via `Subprogress` or `ProgressReporter`, can also be done. We can use the methods `makeChild(withPendingUnitCount:)` for getting a `Subprogress` and `addChild(_:withPendingUnitCount:)` for adding a `ProgressReporter` as a child. 
 
-The choice of naming the interop method as `makeChild(withPendingUnitCount: kind:)` is to keep the syntax consistent with the method used to add a `Foundation.Progress` instance as a child, `addChild(_: withPendingUnitCount:)`. An example of how this can be used to compose a `Foundation.Progress` tree with a top-level `Foundation.Progress` is as follows: 
+An example of how this can be used to compose a `Foundation.Progress` tree with a top-level `Foundation.Progress` is as follows: 
 
 ```swift
 // Developer code 
-func progressParentReporterChildInterop() {
-    let overall = Progress(totalUnitCount: 2)  // Top-level `Progress`
-    
-    // Getting a `Progress` from method reporting progress
-    let progressOne = doSomethingWithProgress() 
-    // Add Foundation's `Progress` as a child which takes up 1 unit of overall's `totalUnitCount`
-    overall.addChild(progressOne, withPendingUnitCount: 1)
-    
-    // Getting a `Subprogress` which takes up 1 unit of overall's `totalUnitCount` 
-    let progressTwo = overall.makeChild(withPendingUnitCount: 1)
-    // Passing `Subprogress` instance to method reporting progress 
-    doSomethingWithReporter(progress: progressTwo)
-}
+let overall = Progress(totalUnitCount: 3)  // Top-level `Progress`
+
+let subprogressOne = doSomethingWithProgress() 
+overall.addChild(subprogressOne, withPendingUnitCount: 1)
+
+let subprogressTwo = overall.makeChild(withPendingUnitCount: 1)
+doSomethingWithManager(subprogress: subprogressTwo)
+
+let subprogressThree = DownloadManager().progressReporter
+overall.addChild(subprogressThree, withPendingUnitCount: 1)
 ```
 
 ## Detailed design
 
-### `ProgressReporter`
+### `ProgressManager`
 
-`ProgressReporter` is an Observable and Sendable class that developers use to report progress. Specifically, an instance of `ProgressReporter` can be used to either track progress of a single task, or track progress of a tree of `ProgressReporter` instances.
+`ProgressManager` is an Observable and Sendable class that developers use to report progress. Specifically, an instance of `ProgressManager` can be used to either track progress of a single task, or track progress of a graph of `ProgressManager` instances.
 
 ```swift
 /// An object that conveys ongoing progress to the user for a specified task.
 @available(FoundationPreview 6.2, *)
-@Observable public final class ProgressReporter : Sendable, Hashable, Equatable, CustomDebugStringConvertible {
+@Observable public final class ProgressManager : Sendable, Hashable, Equatable, CustomDebugStringConvertible {
     
     /// The total units of work.
     public var totalCount: Int? { get }
@@ -502,22 +471,23 @@ func progressParentReporterChildInterop() {
     /// If `completedCount` >= `totalCount`, the value will be `true`.
     public var isFinished: Bool { get }
 
+    /// A `ProgressReporter` instance, used for providing read-only observation of progress updates or composing into other `ProgressManager`s.
+    public var reporter: ProgressReporter { get }
+    
+    /// A debug description. 
+    public var debugDescription: String { get }
+
     /// A type that conveys additional task-specific information on progress.
     public protocol Property {
 
-        associatedtype T : Sendable
+        associatedtype Value : Sendable
         
         /// The default value to return when property is not set to a specific value.
-        static var defaultValue: T { get }
-
-        /// Aggregates an array of `T` into a single value `T`.
-        /// - Parameter all: Array of `T` to be aggregated.
-        /// - Returns: A new instance of `T`.
-        static func reduce(_ all: [T]) -> T
+        static var defaultValue: Value { get }
     }
 
     /// A container that holds values for properties that convey information about progress.
-    @dynamicMemberLookup public struct Values : Sendable, CustomStringDebugConvertible {
+    @dynamicMemberLookup public struct Values : Sendable {
 
         /// The total units of work.
         public var totalCount: Int? { mutating get set }
@@ -526,10 +496,7 @@ func progressParentReporterChildInterop() {
         public var completedCount: Int { mutating get set }
         
         /// Returns a property value that a key path indicates. If value is not defined, returns property's `defaultValue`. 
-        public subscript<P>(dynamicMember key: KeyPath<ProgressReporter.Properties, P.Type>) -> P.T where P : ProgressReporter.Property { get set }
-        
-        /// Returns a debug description. 
-        public static var debugDescription: String { get }
+        public subscript<Property: ProgressManager.Property>(dynamicMember key: KeyPath<ProgressManager.Properties, Property.Type>) -> Property.Value { get set }
     }
 
     /// Initializes `self` with `totalCount`.
@@ -538,48 +505,116 @@ func progressParentReporterChildInterop() {
     /// - Parameter totalCount: Total units of work.
     public convenience init(totalCount: Int?)
 
-    /// Returns a `Subprogress` representing a portion of `self`which can be passed to any method that reports progress.
+    /// Returns a `Subprogress` representing a portion of `self` which can be passed to any method that reports progress.
     ///
-    /// - Parameter count: Units, which is a portion of `totalCount` delegated to an instance of `Subprogress`.
+    /// If the `Subprogress` is not converted into a `ProgressManager` (for example, due to an error or early return), 
+    /// then the assigned count is marked as completed in the parent `ProgressManager`.
+    ///
+    /// - Parameter count: The portion of `totalCount` to be delegated to the `Subprogress`.
     /// - Returns: A `Subprogress` instance.
-    public func subprogress(assigningCount portionOfParent: Int) -> Subprogress
+    public func subprogress(assigningCount count: Int) -> Subprogress
+    
+    /// Adds a `ProgressReporter` as a child, with its progress representing a portion of `self`'s progress.
+    ///
+    /// - Parameters:
+    ///   - output: A `ProgressReporter` instance.
+    ///   - count: The portion of `totalCount` to be delegated to the `ProgressReporter`.
+    public func assign(count: Int, to reporter: ProgressReporter)
 
     /// Increases `completedCount` by `count`.
     /// - Parameter count: Units of work.
     public func complete(count: Int)
 
     /// Accesses or mutates any properties that convey additional information about progress.
-    public func withProperties<T>(_ closure: @Sendable (inout Values) throws -> T) rethrows -> T
+    public func withProperties<T, E: Error>(
+        _ closure: (inout sending Values) throws(E) -> sending T
+    ) throws(E) -> sending T
+    
+    /// Returns an array of values for specified property in subtree.
+    /// 
+    /// - Parameter property: Type of property.
+    /// - Returns: Array of values for property.
+    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value?]
 
-    /// Returns a debug description. 
-    public static var debugDescription: String { get }
-}
-
-/// Default implementation for `reduce` where T is `AdditiveArithmetic`. 
-@available(FoundationPreview 6.2, *)
-extension ProgressReporter.Property where Self.T : AdditiveArithmetic {
-    /// Aggregates an array of `T` into a single value `T`.
-    ///
-    /// All `T` `AdditiveArithmetic` values are added together. 
-    /// - Parameter all: Array of `T` to be aggregated.
-    /// - Returns: A new instance of `T`.
-    public static func reduce(_ all: [T]) -> T
+    /// Returns the aggregated result of values where type of property is `AdditiveArithmetic`.
+    /// All values are added together. 
+    /// 
+    /// - Parameters:
+    ///   - property: Type of property.
+    ///   - values: Sum of values.
+    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value : AdditiveArithmetic
 }
 ```
 
-### `ProgressReporter.Properties`
+### `Subprogress`
 
-`ProgressReporter.Properties` is a struct that contains declarations of additional properties that are not defined directly on `ProgressReporter`, but discovered at runtime via `@dynamicMemberLookup`. These additional properties should be defined separately in `ProgressReporter` because neither are they used to drive forward progress like `totalCount` and `completedCount`, nor are they applicable in all cases of progress reporting.
+You call `ProgressManager`'s `subprogress(assigningCount:)` to create a `Subprogress`. It is a `~Copyable` instance that you pass into functions that report progress.
 
-We pre-declare some of these additional properties that are commonly desired in use cases of progress reporting such as `totalFileCount` and `totalByteCount`. 
-
-For developers that would like to report additional metadata or properties as they use `ProgressReporter` to report progress, they will need to add declarations of their additional properties into `ProgressReporter.Properties`, similar to how the pre-declared additional properties are declared.
+The callee will consume `Subprogress` and get the `ProgressManager` by calling `start(totalCount:)`. That `ProgressManager` is used for the function's own progress updates.
 
 ```swift
 @available(FoundationPreview 6.2, *)
-extension ProgressReporter {
+/// Subprogress is used to establish parent-child relationship between two instances of `ProgressManager`.
+///
+/// Subprogress is returned from a call to `subprogress(assigningCount:)` by a parent ProgressManager.
+/// A child ProgressManager is then returned by calling `start(totalCount:)` on a Subprogress.
+public struct Subprogress: ~Copyable, Sendable {
 
-extension ProgressReporter {
+    /// Instantiates a ProgressManager which is a child to the parent ProgressManager from which the Subprogress is created.
+    /// 
+    /// - Parameter totalCount: Total count of returned child `ProgressManager` instance.
+    /// - Returns: A `ProgressManager` instance.
+    public consuming func start(totalCount: Int?) -> ProgressManager
+}
+```
+
+### `ProgressReporter` 
+
+```swift 
+@available(FoundationPreview 6.2, *)
+/// ProgressReporter is used to observe progress updates from a `ProgressManager`. It may also be used to incorporate those updates into another `ProgressManager`.
+/// 
+/// It is read-only and can be added as a child of another ProgressManager. 
+@Observable public final class ProgressReporter : Sendable {
+
+    /// The total units of work.
+    public var totalCount: Int? { get }
+
+    /// The completed units of work.
+    /// If `self` is indeterminate, the value will be 0.
+    public var completedCount: Int { get }
+
+    /// The proportion of work completed.
+    /// This takes into account the fraction completed in its children instances if children are present.
+    /// If `self` is indeterminate, the value will be 0.
+    public var fractionCompleted: Double { get }
+
+    /// The state of initialization of `totalCount`.
+    /// If `totalCount` is `nil`, the value will be `true`.
+    public var isIndeterminate: Bool { get }
+
+    /// The state of completion of work.
+    /// If `completedCount` >= `totalCount`, the value will be `true`.
+    public var isFinished: Bool { get }
+
+    /// Reads properties that convey additional information about progress.
+    public func withProperties<T, E: Error>(
+        _ closure: (sending ProgressManager.Values) throws(E) -> sending T
+    ) throws(E) -> T
+}
+```
+
+### `ProgressManager.Properties`
+
+`ProgressManager.Properties` is a struct that contains declarations of additional properties that are not defined directly on `ProgressManager`, but discovered at runtime via `@dynamicMemberLookup`. These additional properties should be defined separately in `ProgressManager` because neither are they used to drive forward progress like `totalCount` and `completedCount`, nor are they applicable in all cases of progress reporting.
+
+We pre-declare some of these additional properties that are commonly desired in use cases of progress reporting, including and not limited to, `totalFileCount` and `totalByteCount`. 
+
+If you would like to report additional metadata or properties that are not part of the pre-declared additional properties, you can declare additional properties into `ProgressManager.Properties`, similar to how the pre-declared additional properties are declared.
+
+```swift
+@available(FoundationPreview 6.2, *)
+extension ProgressManager {
 
     public struct Properties {
 
@@ -588,7 +623,7 @@ extension ProgressReporter {
 
         public struct TotalFileCount : Property {
 
-            public typealias T = Int
+            public typealias Value = Int
 
             public static var defaultValue: Int { get }
         }
@@ -598,7 +633,7 @@ extension ProgressReporter {
 
         public struct CompletedFileCount : Property {
 
-            public typealias T = Int
+            public typealias Value = Int
 
             public static var defaultValue: Int { get }
         }
@@ -608,7 +643,7 @@ extension ProgressReporter {
 
         public struct TotalByteCount : Property {
 
-            public typealias T = UInt64
+            public typealias Value = UInt64
 
             public static var defaultValue: UInt64 { get }
         }
@@ -618,7 +653,7 @@ extension ProgressReporter {
 
         public struct CompletedByteCount : Property {
 
-            public typealias T = UInt64
+            public typealias Value = UInt64
 
             public static var defaultValue: UInt64 { get }
         }
@@ -628,7 +663,7 @@ extension ProgressReporter {
 
         public struct Throughput : Property {
 
-            public typealias T = UInt64
+            public typealias Value = UInt64
 
             public static var defaultValue: UInt64 { get }
         }
@@ -638,7 +673,7 @@ extension ProgressReporter {
 
         public struct EstimatedTimeRemaining : Property {
 
-            public typealias T = Duration
+            public typealias Value = Duration
 
             public static var defaultValue: Duration { get }
         }
@@ -646,158 +681,79 @@ extension ProgressReporter {
 }
 ```
 
-### `Subprogress`
+### Cancellation in `ProgressManager` 
 
-An instance of `Subprogress` is returned from a call to `ProgressReporter`'s `subprogress(assigningCount:)`. `Subprogress` acts as an intermediary instance that you pass into functions that report progress. Additionally, callers should convert `Subprogress` to `ProgressReporter` before starting to report progress with it by calling `reporter(totalCount:)`. 
+While this API does not assume any control over tasks, it needs to react to a task being cancelled, or a `Subprogress` not being consumed.
 
-```swift
-@available(FoundationPreview 6.2, *)
-extension ProgressReporter {
+While there are many different ways to handle cancellation, as discussed in the Alternatives Considered section [here](#introduce-explicit-support-for-cancellation\,-pausing\,-and-resuming-of-this-progress-reporting-api) and [here](#handling-cancellation-by-checking-task-cancellation-or-allowing-incomplete-progress-after-task-cancellation) we have decided that the way `ProgressManager` handles cancellation would be to complete the `ProgressManager` by setting its `completedCount` to `totalCount`, thus ensuring that the `fractionCompleted` still progress towards 1.00. Similarly, a `Subprogress` that is created but not consumed will also be completed. 
 
-    public struct Progress : ~Copyable, Sendable {
-    
-        /// Instantiates a ProgressReporter which is a child to the parent from which `self` is returned.
-        /// - Parameter totalCount: Total count of returned child `ProgressReporter` instance.
-        /// - Returns: A `ProgressReporter` instance.
-        public consuming func reporter(totalCount: Int?) -> ProgressReporter
-    }
-}
-```
+In cases where you encounter cancellation, and would like to present more information about cancellation, you can create a custom property to report that information to clients. 
 
-### `ProgressReporter.FormatStyle` 
+### Getting `AsyncStream` via Observation 
 
-`ProgressReporter.FormatStyle` is used to configure the formatting of `ProgressReporter` into localized descriptions. You can specify which option to  format `ProgressReporter` with, and call the `format(_:)` method to get a localized string containing information that you have specified when initializing a `ProgressReporter.FormatStyle`.  
-
-```swift
-@available(FoundationPreview 6.2, *)
-extension ProgressReporter {
-
-    public struct FormatStyle : Codable, Equatable, Hashable {
-
-        public struct Option : Codable, Hashable, Equatable {
-
-            /// Option specifying `fractionCompleted`.
-            ///
-            /// For example, 20% completed.
-            /// - Parameter style: A `FloatingPointFormatStyle<Double>.Percent` instance that should be used to format `fractionCompleted`.
-            /// - Returns: A `LocalizedStringResource` for formatted `fractionCompleted`.
-            public static func fractionCompleted(format style: FloatingPointFormatStyle<Double>.Percent = FloatingPointFormatStyle<Double>.Percent()) -> Option
-
-            /// Option specifying `completedCount` / `totalCount`.
-            ///
-            /// For example, 5 of 10.
-            /// - Parameter style: An `IntegerFormatStyle<Int>` instance that should be used to format `completedCount` and `totalCount`.
-            /// - Returns: A `LocalizedStringResource` for formatted `completedCount` / `totalCount`.
-            public static func count(format style: IntegerFormatStyle<Int> = IntegerFormatStyle<Int>()) -> Option
-        }
-        
-        public var locale: Locale
-
-        public init(_ option: Option, locale: Locale = .autoupdatingCurrent)
-    }
-}
-
-@available(FoundationPreview 6.2, *)
-extension ProgressReporter.FormatStyle : FormatStyle {
-
-    public func locale(_ locale: Locale) -> ProgressReporter.FormatStyle
-
-    public func format(_ reporter: ProgressReporter) -> String
-}
-```
-
-To provide convenience methods for formatting `ProgressReporter`, we also provide the `formatted(_:)` method that developers can call on any `ProgressReporter`.
-
-```swift
-@available(FoundationPreview 6.2, *)
-extension ProgressReporter {
-
-    public func formatted<F>(_ style: F) -> F.FormatOutput where F : FormatStyle, F.FormatInput == ProgressReporter
-}
-
-@available(FoundationPreview 6.2, *)
-extension FormatStyle where Self == ProgressReporter.FormatStyle {
-
-    public static func fractionCompleted(format: FloatingPointFormatStyle<Double>.Percent) -> Self
-
-    public static func count(format: IntegerFormatStyle<Int>) -> Self    
-}
-```
-
-### `ProgressReporter.FileFormatStyle`
-
-The custom format style for additional file-related properties are also implemented as follows: 
+`ProgressManager` and `ProgressReporter` are both `Observable` final classes. As proposed in [SE-0475: Transactional Observation of Values](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0475-observed.md), there will be a way for developers to get an `AsyncSequence` to observe changes to instances that are `Observable`. We can obtain `AsyncStream` for `ProgressManager` and `ProgressReporter` as follows:
 
 ```swift 
-@available(FoundationPreview 6.2, *)
-extension ProgressReporter {
+let manager = ProgressManager(totalCount: 2)
+let managerFractionStream = Observations { manager.fractionCompleted }
 
-    public struct FileFormatStyle : Codable, Equatable, Hashable {
-
-        public struct Options : Codable, Equatable, Hashable {
-
-            /// Option specifying all file-related properties.
-            public static var file: Option { get }
-        }
-
-        public var locale: Locale
-
-        public init(_ option: Options, locale: Locale = .autoupdatingCurrent)
-    }
-}
-
-@available(FoundationPreview 6.2, *)
-extension ProgressReporter.FileFormatStyle : FormatStyle {
-
-    public func locale(_ locale: Locale) -> ProgressReporter.FileFormatStyle
-
-    public func format(_ reporter: ProgressReporter) -> String
-}
-
-@available(FoundationPreview 6.2, *)
-extension FormatStyle where Self == ProgressReporter.FileFormatStyle {
-
-    public static var file: Self { get }
-}
+let reporter = manager.reporter 
+let reporterFractionStream = Observations { reporter.fractionCompleted }
 ```
 
 ### Methods for Interoperability with Existing `Progress` 
 
-To allow frameworks which may have dependencies on the pre-existing progress-reporting protocol to adopt this new progress-reporting protocol, either as a recipient of a child `Progress` instance that needs to be added to its `ProgressReporter` tree, or as a provider of `ProgressReporter` that may later be added to another framework's `Progress` tree, there needs to be additional support for ensuring that progress trees can be composed with in two cases: 
-1. A `ProgressReporter` instance has to parent a `Progress` child
-2. A `Progress` instance has to parent a `ProgressReporter` child 
+> In line with the structure of tree-based progress reporting in the existing `Progress`, interoperability support between `NSProgress` and `ProgressManager` assumes that developers will only construct progress trees with single parents using these interoperability methods. 
 
-#### ProgressReporter (Parent) - Progress (Child)
+To allow frameworks which may have dependencies on the pre-existing progress-reporting protocol to adopt this new progress-reporting protocol, either as a recipient of a child `Progress` instance that needs to be added to its `ProgressManager` tree, or as a provider of `ProgressManager` that may later be added to another framework's `Progress` tree, there needs to be additional support for ensuring that progress trees can be composed with in three cases: 
 
-To add an instance of `Progress` as a child to an instance of `ProgressReporter`, we pass an `Int` for the portion of `ProgressReporter`'s `totalCount` `Progress` should take up and a `Progress` instance to `subprogress(assigningCount: to:)`. The `ProgressReporter` instance will track the `Progress` instance just like any of its `ProgressReporter` children.
+1. A `ProgressManager` is a parent to a `Foundation.Progress` child
+2. A `Foundation.Progress` is a parent to a `ProgressManager` child
+
+#### `ProgressManager` (Parent) - `Foundation.Progress` (Child)
+
+To add an instance of `Foundation.Progress` as a child to an instance of `ProgressManager`, we pass an `Int` for the portion of `ProgressManager`'s `totalCount` `Foundation.Progress` should take up and a `Foundation.Progress` instance to `assign(count: to:)`. The `ProgressManager` instance will track the `Foundation.Progress` instance just like any of its `ProgressManager` children.
+
+>The choice of naming the interop method as `subprogress(assigningCount: to:)` is to keep the syntax consistent with the method used to add a `ProgressManager` instance to the progress tree using this new API, `subprogress(assigningCount:)`. 
 
 ```swift 
 @available(FoundationPreview 6.2, *)
-extension ProgressReporter {
-    // Adds a `Progress` instance as a child which constitutes a certain `count` of `self`'s `totalCount`.
+extension ProgressManager {
+    /// Adds a Foundation's `Progress` instance as a child which constitutes a certain `count` of `self`'s `totalCount`.
+    /// 
     /// - Parameters:
     ///   - count: Number of units delegated from `self`'s `totalCount`.
-    ///   - progress: `Progress` which receives the delegated `count`.
-    public func subprogress(assigningCount: Int, to progress: Foundation.Progress)
+    ///   - progress: `Foundation.Progress` which receives the delegated `count`.
+    public func subprogress(assigningCount count: Int, to progress: Foundation.Progress)
 }
 ```
 
-#### Progress (Parent) - ProgressReporter (Child) 
+#### `Foundation.Progress` (Parent) - `ProgressManager` (Child) 
 
-To add an instance of `ProgressReporter` as a child to an instance of the existing `Progress`, the `Progress` instance calls `makeChild(count:kind:)` to get a `Subprogress` instance that can be passed as a parameter to a function that reports progress. The `Progress` instance will track the `ProgressReporter` instance as a child, just like any of its `Progress` children. 
+To add an instance of `ProgressManager` as a child to an instance of the existing `Foundation.Progress`, the `Foundation.Progress` instance calls `makeChild(count:)` to get a `Subprogress` instance that can be passed as a parameter to a function that reports progress. The `Foundation.Progress` instance will track the `ProgressManager` instance as a child, just like any of its `Progress` children. 
+
+>The choice of naming the interop methods as `makeChild(withPendingUnitCount:)` and `addChild(_:withPendingUnitCount` is to keep the syntax consistent with the method used to add a `Foundation.Progress` instance as a child to another `Foundation.Progress`. 
 
 ```swift 
 @available(FoundationPreview 6.2, *)
 extension Progress {
     /// Returns a Subprogress which can be passed to any method that reports progress
-    /// and can be initialized into a child `ProgressReporter` to the `self`.
+    /// and can be initialized into a child `ProgressManager` to the `self`.
     ///
-    /// Delegates a portion of totalUnitCount to a future child `ProgressReporter` instance.
+    /// Delegates a portion of totalUnitCount to a future child `ProgressManager` instance.
     ///
-    /// - Parameter count: Number of units delegated to a child instance of `ProgressReporter`
-    /// which may be instantiated by `Subprogress` later when `reporter(totalCount:)` is called.
+    /// - Parameter count: Number of units delegated to a child instance of `ProgressManager`
+    /// which may be instantiated by `Subprogress` later when `start(totalCount:)` is called.
     /// - Returns: A `Subprogress` instance.
-    public func makeChild(withPendingUnitCount count: Int) -> Subprogress
+    public func makeChild(withPendingUnitCount count: Int) -> Subprogress 
+    
+    
+    /// Adds a ProgressReporter as a child to a Foundation.Progress.
+    /// 
+    /// - Parameters:
+    ///   - output: A `ProgressReporter` instance.
+    ///   - count: Number of units delegated from `self`'s `totalCount` to Progress Reporter.
+    public func addChild(_ reporter: ProgressReporter, withPendingUnitCount count: Int)
 }
 ```
 
@@ -805,88 +761,96 @@ extension Progress {
 
 There should be no impact on existing code, as this is an additive change. 
 
-However, this new progress reporting API, `ProgressReporter`, which is compatible with Swift's async/await style concurrency, will be favored over the existing `Progress` API going forward. Depending on how widespread the adoption of `ProgressReporter` is, we may consider deprecating the existing `Progress` API. 
+However, this new progress reporting API, `ProgressManager`, which is compatible with Swift's async/await style concurrency, will be favored over the existing `Progress` API going forward. Depending on how widespread the adoption of `ProgressManager` is, we may consider deprecating the existing `Progress` API. 
 
-## Future Directions 
+## Future Directions  
+
+### Introduce `FormatStyle`
+We can introduce `FormatStyle` for both the `ProgressManager` and `ProgressReporter` to enable easier formatting of these types. 
 
 ### Additional Overloads to APIs within UI Frameworks 
-To enable wider adoption of `ProgressReporter`, we can add overloads to APIs within UI frameworks that has been using Foundation's `Progress`, such as `ProgressView` in SwiftUI. Adding support to existing progress-related APIs within UI Frameworks will enable adoption of `ProgressReporter` for app developers who wish to do extensive progress reporting and show progress on the User Interface using `ProgressReporter`. 
+To enable wider adoption of `ProgressManager`, we can add overloads to APIs within UI frameworks that have been using Foundation's `Progress`, such as `ProgressView` in SwiftUI. Adding support to existing progress-related APIs within UI Frameworks will enable adoption of `ProgressManager` for app developers who wish to do extensive progress reporting and show progress on the User Interface using `ProgressManager`. 
 
-### Distributed `ProgressReporter`
-To enable inter-process progress reporting, we would like to introduce distributed `ProgressReporter` in the future, which would functionally be similar to how Foundation's `Progress` mechanism for reporting progress across processes.
+### Distributed `ProgressManager`
+To enable inter-process progress reporting, we can introduce distributed `ProgressManager` in the future, which would functionally be similar to how `Progress` reports progress across processes.
 
-### Enhanced `FormatStyle`
-To enable more customization of `ProgressReporter`, we would like to introduce more options in `ProgressReporter`'s `FormatStyle`.
+### Automatic Count Management for Simplified Progress Tracking
+To further safeguard developers from making mistakes of over-assigning or under-assigning counts from one `ProgressManager` to another, we can consider introducing some convenience, for example, macros, to automatically manage the aggregation of units. This would be useful in scenarios in which developers have nested progress components and manual count maintenance becomes more complex.   
+
+### Support for Non-Integer Formats of Progress Updates
+To handle progress values from other sources that provide progress updates as non-integer formats such as `Double`, we can introduce a way for `ProgressManager` to either be instantiated with non-integer formats, or a peer instance of `ProgressManager` that works with `ProgressManager` to compose a progress graph.   
 
 ## Alternatives considered
 
 ### Alternative Names
 As the existing `Progress` already exists, we had to come up with a name other than `Progress` for this API, but one that still conveys the progress-reporting functionality of this API. Some of the names we have considered are as follows: 
 
-1. Alternative to `ProgressReporter` 
+1. Alternative to `ProgressManager` 
     - `AsyncProgress`  
+    - `ProgressReporter` 
+    - `ProgressHandler`
+    - `OverallProgress` 
 
-We decided to proceed with the name `ProgressReporter` because prefixing an API with the term `Async` may be confusing for developers, as there is a precedent of APIs doing so, such as `AsyncSequence` adding asynchronicity to `Sequence`, whereas this is a different case for `ProgressReporter` vs `Progress`.  
+We ended up with `ProgressManager` because it correctly associates the API as being something that can do more than reporting progress, and it can give out a portion of its `totalCount` to report subtasks. We did not choose `AsyncProgress` because prefixing an API with the term `Async` connotes to adding asynchronicity to the API, as there is a precedent of APIs doing so, such as `AsyncSequence` adding asynchronicity to `Sequence`. `ProgressReporter` also does not appropriately convey the fact that the API can be used to construct a progress tree and that it seems to be something that is read-only, which can appear confusing to others. While `ProgressHandler` has the advantage of making the API sound a bit more lightweight, `ProgressManager` more accurately conveys the fact that progress reporting can be executed by "completing" a certain count, or "assigned" to a subprogress. "OverallProgress" feels better suited as a property name instead of a type name. 
     
 2. Alternative to `Subprogress` 
     - `ProgressReporter.Link`
     - `ProgressReporter.Child` 
-    - `ProgressReporter.Token`
-    - `ProgressReporter.Progress`  
+    - `ProgressReporter.Token`  
+    - `ProgressReporter.Progress` 
+    - `ProgressInput`
     
-While the names `Link`, `Child`, and `Token` may appeal to the fact that this is a type that is separate from the `ProgressReporter` itself and should only be used as a function parameter and to be consumed immediately to kickstart progress reporting, it is ambiguous because developers may not immedidately figure out its function from just the name itself. While `Progress` may be a good name to indicate to developers that any method receiving `Progress` as a parameter reports progress, it is does not accurately convey its nature of being the bearer of a certain portion of some parent's `totalCount`. We landed at `Subprogress` as it serves as an indicator for developers that methods with a `Subprogress` parameter reports progress, and at the same time conveys the correct idea that it is meant to be a part of a progress tree.
+While the names `Link`, `Child`, `Token` and `Progress` may appeal to the fact that this type should only be used as a function parameter in methods that report progress and to be consumed immediately to kickstart progress reporting, it is ambiguous because developers may not immediately figure out its functionality from just the name itself. `Subprogress` is an intuitive name because developers will instinctively think of it as something that reports on subtasks and can be composed as part of a progress graph.  
 
-3. Alternative to `subprogress(assigningCount:)` 
-    - `assign(count:)`
-
-We initially considered naming the method that returns a `Subprogress` instance `assign(count:)` due to its nature of being a peer method to `complete(count:)`. However, `assign` does not intuitively indicate to developers that this method is supposed to return anything, so we decided on naming the method `subprogress` and its argument `assigningCount` to indicate that it is assigning a portion of its own `totalCount` to a `Subprogress` instance. 
+3. Alternative to `ProgressReporter` 
+    - `ProgressOutput` 
+    - `ProgressMonitor`
+    - `ProgressReporter.Status` 
+    - `ProgressReporter.Observer` 
     
-### Introduce `ProgressReporter` to Swift standard library
-In consideration for making `ProgressReporter` a lightweight API for server-side developers to use without importing the entire `Foundation` framework, we considered either introducing `ProgressReporter` in a standalone module, or including `ProgressReporter` in existing Swift standard library modules such as `Observation` or `Concurrency`. However, given the fact that `ProgressReporter` has dependencies in `Observation` and `Concurrency` modules, and that the goal is to eventually support progress reporting over XPC connections, `Foundation` framework is the most ideal place to host the `ProgressReporter` as it is the central framework for APIs that provide core functionalities when these functionalities are not provided by Swift standard library and its modules.
+We decided to use the name `ProgressReporter` for the currency type that can either be used to observe progress or added as a child to another `ProgressManager`. In comparison to `output` and `monitor`, the phrase `reporter` is more suggestive of the fact that `ProgressReporter` is a type that contains read-only properties relevant to progress reporting such as `totalCount` and `completedCount`. We also did not choose `ProgressReporter.Status` and `ProgressReporter.Observer` because having this as a nested type causes the name to read too long. 
 
-### Implement `ProgressReporter` as a Generic Class
-In Version 1 of this proposal, we proposed implementing `ProgressReporter` as a generic class, which has a type parameter `Properties`, which conforms to the protocol `ProgressProperties`. In this case, the API reads as `ProgressReporter<Properties>`. This was implemented as such to account for additional properties required in different use cases of progress reporting. For instance, `FileProgressProperties` is a type of `ProgressProperties` that holds references to properties related to file operations such as `totalByteCount` and `totalFileCount`. The `ProgressReporter` class itself will then have a `properties` property, which holds a reference to its `Properties` struct, in order to access additional properties via dot syntax, which would read as `reporter.properties.totalByteCount`. In this implementation, the typealiases introduced are as follows: 
+### Introduce this Progress Reporting API to Swift standard library
+In consideration for making `ProgressManager` a lightweight API for server-side developers to use without importing the entire `Foundation` framework, we considered either introducing `ProgressManager` in a standalone module, or including `ProgressManager` in existing Swift standard library modules such as `Observation` or `Concurrency`. However, given the fact that `ProgressManager` has dependencies in `Observation` and `Concurrency` modules, and that the goal is to eventually support progress reporting over distributed actors, `Foundation` framework is the most ideal place to host the `ProgressReporter` as it is the central framework for APIs that provide core functionalities when these functionalities are not provided by Swift standard library and its modules.
 
-    ```swift 
-    public typealias BasicProgressReporter = ProgressReporter<BasicProgressProperties>
-    public typealias FileProgressReporter = ProgressReporter<FileProgressProperties>
-    public typealias FileProgress = ProgressReporter<FileProgressProperties>.Progress
-    public typealias BasicProgress = ProgressReporter<BasicProgressProperties>.Progress
-    ``` 
-    
-However, while this provides flexibility for developers to create any custom types of `ProgressReporter`, some issues that arise include the additional properties of a child `ProgressReporter` being inaccessible by its parent `ProgressReporter` if they were not of the same type. For instance, if the child is a `FileProgressReporter` while the parent is a `BasicProgressReporter`, the parent does not have access to the child's `FileProgressProperties` because it only has reference to its own `BasicProgressProperties`. This means that developers would not be able to display additional file-related properties reported by its child in its localized descriptions without an extra step of adding a layer of children to parent different types of children in the progress reporter tree. 
+### Concurrency-Integrated Progress Reporting via TaskLocal Storage
+This allows a progress object to be stored in Swift `TaskLocal` storage. This allows the implicit model of building a progress tree to be used from Swift Concurrency asynchronous contexts. In this solution, `+(NSProgress *)currentProgress` and `- (void)_addImplicitChild:(NSProgress *) child` reads from TaskLocal storage when called from a Swift Concurrency context. This method was found to be not preferable as we would like to encourage the usage of the explicit model of Progress Reporting, in which we do not depend on an implicit TaskLocal storage, and for methods to be explicit about progress reporting. 
 
-We decided to replace the generic class implementation with `@dynamicMemberLookup`, making the `ProgressReporter` class non-generic, and instead relies on `@dynamicMemberLookup` to access additional properties that developers may want to use in progress reporting. This allows `ProgressReporter` to all be of the same `Type`, and at the same time retains the benefits of being able to report progress with additional properties such as `totalByteCount` and `totalFileCount`. With all progress reporters in a tree being the same type, a top-level `ProgressReporter` can access any additional properties reported by its children `ProgressReporter` without much trouble as compared to if `ProgressReporter` were to be a generic class.
+Progress being implicit is risky for evolution of source code. When a library that developers depend on introduce new functionalities later on, developers may not be aware of the progress reporting behavior change if progress is implicit, as shown below: 
 
-### Implement `ProgressReporter` as an actor
-We considered implementing `ProgressReporter` as we want to maintain this API as a reference type that is safe to use in concurrent environments. However, if `ProgressReporter` were to be implemented, `ProgressReporter` will not be able to conform to `Observable` because actor-based keypaths do not exist as of now. Ensuring that `ProgressReporter` is `Observable` is important to us, as we want to ensure that `ProgressReporter` works well with UI components in SwiftUI. 
+```swift
+// initial code 
 
-### Implement `ProgressReporter` as a protocol
-In consideration of making the surface of the API simpler without the use of generics, we considered implementing `ProgressReporter` as a protocol, and provide implementations for specialized `ProgressReporter` classes that conform to the protocol, namely `BasicProgress`(`ProgressReporter` for progress reporting with only simple `count`) and `FileProgress` (`ProgressReporter` for progress reporting with file-related additional properties such as `totalFileCount`). This had the benefit of developers having to initialize a `ProgressReporter` instance with `BasicProgress(totalCount: 10)` instead of `ProgressReporter<BasicProgressProperties>(totalCount: 10)`.  
+// Library code
+func g() async {
+    // implicitly consumes task local progress
+}
 
-However, one of the downside of this is that every time a developer wants to create a `ProgressReporter` that contains additional properties that are tailored to their use case, they would have to write an entire class that conforms to the `ProgressReporter` protocol from scratch, including the calculations of `fractionCompleted` for `ProgressReporter` trees. Additionally, the `~Copyable` struct nested within the `ProgressReporter` class that should be used as function parameter passed to functions that report progress will have to be included in the `ProgressReporter` protocol as an `associatedtype` that is `~Copyable`. However, the Swift compiler currently cannot suppress 'Copyable' requirement of an associated type and developers will need to consciously work around this. These create a lot of overload for developers wishing to report progress with additional metadata beyond what we provide in `BasicProgress` and `FileProgress` in this case. 
+// App code
+func f() async {
+    var progressManager = ProgressManager(totalUnitCount: 1)
+    await g() // progress consumed
+}
 
-### Introduce an `Observable` adapter for `ProgressReporter`
-We thought about introducing a clearer separation of responsibility between the reporting and observing of a `ProgressReporter`, because progress reporting is often done by the framework, and the caller of a certain method of a framework would merely observe the `ProgressReporter` within the framework. This will deter observers from accidentally mutating values of a framework's `ProgressReporter`. 
+// later changed code 
 
-However, this means that `ProgressReporter` needs to be passed into the `Observable` adapter to make an instance `ObservableProgressReporter`, which can then be passed into `ProgressView()` later. We decided that this is too much overhead for developers to use for the benefit of avoiding observers from mutating values of `ProgressReporter`. 
+// Library code
+func newFunction() async { 
+    // also implicitly consumes task local progress
+}
 
-### Introduce Method to Generate Localized Description
-We considered introducing a `localizedDescription(including:)` method, which returns a `LocalizedStringResource` for observers to get custom format descriptions for `ProgressReporter`. In contrast, using a `FormatStyle` aligns more closely with Swift's API, and has more flexibility for developers to add custom `FormatStyle` to display localized descriptions for additional properties they may want to declare and use. 
+func g() async {
+    await newFunction() // consumes task local progress
+    // no more progress to consume here
+}
 
-### Introduce Explicit Support for Cancellation, Pausing, and Resuming of `ProgressReporter`
-The existing `Progress` provides support for cancelling, pausing and resuming an ongoing operation tracked by an instance of `Progress`, and propagates these actions down to all of its children. We decided to not introduce support for this behavior as there is support in cancelling a `Task` via `Task.cancel()` in Swift structured concurrency. The absence of support for cancellation, pausing and resuming in `ProgressReporter` helps to clarify the scope of responsibility of this API, which is to report progress, instead of owning a task and performing actions on it.
-
-### Check Task Cancellation within `complete(count:)` Method
-We considered adding a `Task.isCancelled` check in the `complete(count:)` method so that calls to `complete(count:)` from a `Task` that is cancelled becomes a no-op. This means that once a Task is cancelled, calls to `complete(count:)` from within the task does not make any further incremental progress. 
-
-We decided to remove this check to transfer the responsibility back to the developer to not report progress further from within a cancelled task. Typically, developers complete some expensive async work and subsequently updates the `completedCount` of a `ProgressReporter` by calling `complete(count:)`. Checking `Task.isCancelled` means that we take care of the cancellation by not making any further incremental progress, but developers are still responsible for the making sure that they do not execute any of the expensive async work. Removing the `Task.isCancelled` check from `complete(count:)` helps to make clear that developers will be responsible for both canceling any expensive async work and any further update to `completedCount` of `ProgressReporter` when `Task.isCancelled` returns `true`.  
-
-### Introduce `totalCount` and `completedCount` properties as `UInt64`
-We considered using `UInt64` as the type for `totalCount` and `completedCount` to support the case where developers use `totalCount` and `completedCount` to track downloads of larger files on 32-bit platforms byte-by-byte. However, developers are not encouraged to update progress byte-by-byte, and should instead set the counts to the granularity at which they want progress to be visibly updated. For instance, instead of updating the download progress of a 10,000 bytes file in a byte-by-byte fashion, developers can instead update the count by 1 for every 1,000 bytes that has been downloaded. In this case, developers set the `totalCount` to 10 instead of 10,000. To account for cases in which developers may want to report the current number of bytes downloaded, we added `totalByteCount` and `completedByteCount` to `FileProgressProperties`, which developers can set and display within `localizedDescription`.
-
-### Store Existing `Progress` in TaskLocal Storage
-This would allow a `Progress` object to be stored in Swift `TaskLocal` storage. This allows the implicit model of building a progress tree to be used from Swift Concurrency asynchronous contexts. In this solution, getting the current `Progress` and adding a child `Progress` is done by first reading from TaskLocal storage when called from a Swift Concurrency context. This method was found to be not preferable as we would like to encourage the usage of the explicit model of Progress Reporting, in which we do not depend on an implicit TaskLocal storage and have methods that report progress to explicitly accepts a `Progress` object as a parameter. 
+// App code
+func f() async {
+    // Did not change, but the reporting behavior has changed
+    var progressManager = ProgressManager(totalCount: 1)
+    await g()
+}
+```
 
 ### Add Convenience Method to Existing `Progress` for Easier Instantiation of Child Progress
 While the explicit model has concurrency support via completion handlers, the usage pattern does not fit well with async/await, because which an instance of `Progress` returned by an asynchronous function would return after code is executed to completion. In the explicit model, to add a child to a parent progress, we pass an instantiated child progress object into the `addChild(child:withPendingUnitCount:)` method. In this alternative, we add a convenience method that bears the function signature `makeChild(pendingUnitCount:)` to the `Progress` class. This method instantiates an empty progress and adds itself as a child, allowing developers to add a child progress to a parent progress without having to instantiate a child progress themselves. The additional method reads as follows: 
@@ -902,27 +866,43 @@ extension Progress {
 ```
 This method would mean that we are altering the usage pattern of pre-existing `Progress` API, which may introduce more confusions to developers in their efforts to move from non-async functions to async functions.
 
-### Allow for Assignment of `ProgressReporter` to Multiple Progress Reporter Trees
-The ability to assign a `ProgressReporter` to be part of multiple progress trees means allowing for a `ProgressReporter` to have more than one parent, would enable developers the flexibility to model any type of progress relationships. 
+### Implement this Progress Reporting API using `AsyncStream` 
+While using `AsyncStream` would allow developers to report progress with any type of their choice to represent progress, which gives great flexibility to developers in progress reporting, it makes the progress reporting API surface difficult to use for most of the simple cases of progress reporting that merely uses integer fractions. In line with the philosophy of progressive disclosure, we introduce the use of integers as the type to report progress with, and the ability for developers to declare type-safe additional properties that are discoverable at runtime via `@dynamicMemberLookup`. This allows us to cater to both the simple needs of reporting progress with a `totalCount` and `completedCount`, and an additional mechanism for propagating additional metadata throughout the progress graph. 
 
-However, allowing the freedom to add a ProgressReporter to more than one tree compromises the safety guarantee we want to provide in this API. The main safety guarantee we provide via this API is that `ProgressReporter` will not be used more than once because it is always instantiated from calling reporter(totalCount:) on a ~Copyable `Subprogress` instance.
+### Implement this Progress Reporting API as a Generic Class
+In Version 1 of this proposal, we proposed implementing `ProgressManager` using the name `ProgressReporter` as a generic class, which has a type parameter `Properties`, which conforms to the protocol `ProgressProperties`. In this case, the API reads as `ProgressReporter<Properties>`. This was implemented as such to account for additional properties required in different use cases of progress reporting. For instance, `FileProgressProperties` is a type of `ProgressProperties` that holds references to properties related to file operations such as `totalByteCount` and `totalFileCount`. The `ProgressReporter` class itself will then have a `properties` property, which holds a reference to its `Properties` struct, in order to access additional properties via dot syntax, which would read as `reporter.properties.totalByteCount`. In this implementation, the typealiases introduced are as follows: 
 
-### Replace Count-based Relationships between `ProgressReporter` 
-The progress-reporting functionality = of each `ProgressReporter` depends on the `totalCount` and `completedCount` properties, both of which are integers. This puts the responsibility onto the developers to make sure that all `assignedCount` add up to the `totalCount` for a correct progress reporting at the top level.  
+    ```swift 
+    public typealias BasicProgressReporter = ProgressReporter<BasicProgressProperties>
+    public typealias FileProgressReporter = ProgressReporter<FileProgressProperties>
+    public typealias FileProgress = ProgressReporter<FileProgressProperties>.Progress
+    public typealias BasicProgress = ProgressReporter<BasicProgressProperties>.Progress
+    ``` 
+    
+However, while this provides flexibility for developers to create any custom types of `ProgressReporter`, some issues that arise include the additional properties of a child `ProgressReporter` being inaccessible by its parent `ProgressReporter` if they were not of the same type. For instance, if the child is a `FileProgressReporter` while the parent is a `BasicProgressReporter`, the parent does not have access to the child's `FileProgressProperties` because it only has reference to its own `BasicProgressProperties`. This means that developers would not be able to display additional file-related properties reported by its child in its localized descriptions without an extra step of adding a layer of children to parent different types of children in the progress reporter tree. 
 
-While there are considerations to move away from this due to the extra attention required from developers in refactoring code, `fractionCompleted`, which is a `Double` value, has the most precision when computed from integers. 
+We decided to replace the generic class implementation with `@dynamicMemberLookup` to rely on it to access additional properties that developers may want to use in progress reporting. This allows `ProgressManager` to all be of the same `Type`, and at the same time retains the benefits of being able to report progress with additional properties such as `totalByteCount` and `totalFileCount`. With all progress reporters in a tree being the same type, a top-level `ProgressReporter` can access any additional properties reported by its children `ProgressManager` without much trouble as compared to if `ProgressManager` were to be a generic class.
 
-### Introduce Additional Convenience for Getting `Subprogress` 
-We considered introducing a convenience for getting `Subprogress` by calling `subprogress()` without specifying `assigningCount` as an argument. In this case, the `Subprogress` returned will automatically be assigned 1 count of its parent's `totalCount` and parent's `totalCount` will automatically increase by 1. 
+### Implement this Progress Reporting API as an actor
+We considered implementing `ProgressManager` as we want to maintain this API as a reference type that is safe to use in concurrent environments. However, if `ProgressManager` were to be implemented, `ProgressManager` will not be able to conform to `Observable` because actor-based keypaths do not exist as of now. Ensuring that `ProgressManager` is `Observable` is important to us, as we want to ensure that `ProgressManager` works well with UI components in UI frameworks. 
 
-However, this convenience would introduce more confusion with developers when they try to use `subprogress()` and `subprogress(assigningCount:)` next to each other because `subprogress(assigningCount:)` does not automatically increase the parent's `totalCount`: 
+### Make `ProgressManager` not @Observable
+We considered making `ProgressManager` not @Observable, and make `ProgressReporter` the @Observable adapter instead. This would limit developers to have to do `manager.reporter` before binding it with a UI component. While this simplifies the case for integrating with UI components, it introduces more boilerplate to developers who may only have a `ProgressManager` to begin with. 
 
-```swift 
-// Developer code 
-let overall = ProgressReporter(totalCount: nil) 
-await doSomething(overall.assign()) // totalCount: nil -> 1, assignedCount: 0 -> 1 
-await doSomething(overall.assign(count: 2)) // totalCount: 1 (doesn't increase), assignedCount: 1 -> 3 
-```
+### Not exposing read-only variables in `ProgressReporter` 
+We initially considered not exposing get-only variables in `ProgressReporter`, which would work in cases where developers are composing `ProgressReporter` into multiple different `ProgressManager` parents. However, this would not work very well for cases where developers only want to observe values on the `ProgressReporter`, such as `fractionCompleted` because they would have to call `reporter.manager` just to get the properties. Thus we decided to introduce read-only properties on `ProgressReporter` as well. 
+
+### Introduce Method to Generate Localized Description
+We considered introducing a `localizedDescription(including:)` method, which returns a `LocalizedStringResource` for observers to get custom format descriptions for `ProgressManager`. In contrast, using a `FormatStyle` aligns more closely with Swift's API, and has more flexibility for developers to add custom `FormatStyle` to display localized descriptions for additional properties they may want to declare and use. 
+
+### Introduce Explicit Support for Cancellation, Pausing, and Resuming of this Progress Reporting API 
+The existing `Progress` provides support for cancelling, pausing and resuming an ongoing operation tracked by an instance of `Progress`, and propagates these actions down to all of its children. We decided to not introduce support for this behavior as there is support in cancelling a `Task` via `Task.cancel()` in Swift structured concurrency. The absence of support for cancellation, pausing and resuming in `ProgressManager` helps to clarify the scope of responsibility of this API, which is to report progress, instead of owning a task and performing actions on it.
+
+### Handling Cancellation by Checking Task Cancellation or Allowing Incomplete Progress after Task Cancellation
+We considered adding a `Task.isCancelled` check in the `complete(count:)` method so that calls to `complete(count:)` from a `Task` that is cancelled becomes a no-op. We have also considered not completing the progress to reflect the fact that no futher calls to `complete(count:)` are made after a `Task` is cancelled. However, in order to make sure that there is always a consistent state for progress independent of state of task, the `ProgressManager` will always finish before being deinitialized. THROW ERROR INSTEAD; catch error use error handling, if want to provide metadata for the cancellation - use custom property 
+
+### Introduce `totalCount` and `completedCount` properties as `UInt64`
+We considered using `UInt64` as the type for `totalCount` and `completedCount` to support the case where developers use `totalCount` and `completedCount` to track downloads of larger files on 32-bit platforms byte-by-byte. However, developers are not encouraged to update progress byte-by-byte, and should instead set the counts to the granularity at which they want progress to be visibly updated. For instance, instead of updating the download progress of a 10,000 bytes file in a byte-by-byte fashion, developers can instead update the count by 1 for every 1,000 bytes that has been downloaded. In this case, developers set the `totalCount` to 10 instead of 10,000. To account for cases in which developers may want to report the current number of bytes downloaded, we added `totalByteCount` and `completedByteCount` to `ProgressManager.Properties`, which developers can set and display using format style.
 
 ## Acknowledgements 
 Thanks to 
@@ -936,7 +916,7 @@ Thanks to
 - [Cassie Jones](https://github.com/porglezomp), 
 - [Konrad Malawski](https://github.com/ktoso), 
 - [Philippe Hausler](https://github.com/phausler), 
-- Julia Vashchenko  
+- Julia Vashchenko(https://github.pie.apple.com/julia)
 for valuable feedback on this proposal and its previous versions.
     
 Thanks to 
