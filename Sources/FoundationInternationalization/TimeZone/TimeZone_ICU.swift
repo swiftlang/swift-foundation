@@ -222,6 +222,12 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
                 return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: true, isDaylight: false)
             case .shortGeneric:
                 return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: true, isGeneric: true, isDaylight: false)
+#if FOUNDATION_FRAMEWORK
+                // We only need this when building in ObjC mode, when the enum comes from a .h
+            @unknown default:
+                // Use standard style
+                return Self.timeZoneDisplayName(for: c, timeZoneName: identifier, localeName: locID, isShort: false, isGeneric: false, isDaylight: false)
+#endif
             }
         }
     }

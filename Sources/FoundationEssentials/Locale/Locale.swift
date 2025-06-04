@@ -554,13 +554,22 @@ public struct Locale : Hashable, Equatable, Sendable {
     // MARK: -
     //
 
-    /// Returns a list of the user's preferred languages.
+    /// Returns a list of the user's preferred languages, as specified in Language & Region settings, taking into account any per-app language overrides.
     ///
     /// - note: `Bundle` is responsible for determining the language that your application will run in, based on the result of this API and combined with the languages your application supports.
     /// - seealso: `Bundle.preferredLocalizations(from:)`
     /// - seealso: `Bundle.preferredLocalizations(from:forPreferences:)`
+    /// - seealso: `Locale.preferredLocales`
     public static var preferredLanguages: [String] {
         LocaleCache.cache.preferredLanguages(forCurrentUser: false)
+    }
+
+    /// Returns a list of the user’s preferred locales, as specified in Language & Region settings, taking into account any per-app language overrides.
+    @available(FoundationPreview 6.2, *)
+    public static var preferredLocales: [Locale] {
+        return self.preferredLanguages.compactMap {
+            Locale(identifier: $0)
+        }
     }
 
     private static let languageCodeKey = "kCFLocaleLanguageCodeKey"
