@@ -1431,8 +1431,8 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 return systems
             }
 
-            // The result always has .latn and the locale's numbering system
-            var result: Set<Locale.NumberingSystem> = [.latn, _lockedNumberingSystem(&state)]
+            // The result always has .latin and the locale's numbering system
+            var result: Set<Locale.NumberingSystem> = [.latin, _lockedNumberingSystem(&state)]
 
             // https://www.unicode.org/reports/tr35/tr35-numbers.html#Numbering_Systems
             let variants: [Locale.NumberingSystem] = [ "default", "native", "traditional", "finance" ]
@@ -1631,7 +1631,7 @@ extension Locale {
             return numbering
         }
 
-        return Locale.NumberingSystem.defaultNumberingSystem(for: localeID) ?? .latn
+        return Locale.NumberingSystem.defaultNumberingSystem(for: localeID) ?? .latin
     }
 
     static func localeIdentifierWithLikelySubtags(_ localeID: String) -> String {
