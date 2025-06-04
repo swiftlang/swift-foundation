@@ -173,6 +173,7 @@ private struct AttributedStringIndexTrackingTests {
         #expect(String(text[helloRange].characters) == "He")
     }
     
+    #if FOUNDATION_EXIT_TESTS
     @Test
     func trackingLostPreconditions() async {
         await #expect(processExitsWith: .failure) {
@@ -207,6 +208,7 @@ private struct AttributedStringIndexTrackingTests {
             }
         }
     }
+    #endif
     
     @Test
     func trackingLost() throws {
@@ -261,6 +263,7 @@ private struct AttributedStringIndexTrackingTests {
         #expect(AttributedString(text[updatedRanges[1]]) == original[worldRange].settingAttributes(AttributeContainer.testInt(2)))
     }
     
+    #if FOUNDATION_EXIT_TESTS
     @Test
     func invalidInputRanges() async {
         await #expect(processExitsWith: .failure) {
@@ -288,4 +291,5 @@ private struct AttributedStringIndexTrackingTests {
             }
         }
     }
+    #endif
 }
