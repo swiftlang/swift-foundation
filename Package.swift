@@ -75,9 +75,9 @@ let wasiLibcCSettings: [CSetting] = [
     .define("_WASI_EMULATED_MMAN", .when(platforms: [.wasi])),
 ]
 
-let testOnlySwiftSettings: [SwiftSetting] {
-    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openBSD])) // The latest Windows toolchain does not yet have exit tests in swift-testing
-}
+let testOnlySwiftSettings: [SwiftSetting] = [
+    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux])) // The latest Windows toolchain does not yet have exit tests in swift-testing
+]
 
 let package = Package(
     name: "swift-foundation",
