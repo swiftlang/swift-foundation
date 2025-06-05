@@ -304,7 +304,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.fractionState.selfFraction.completed += count
             }
         } else {
-            // Instead of updating state directly and propagating the values up, we mark ourselves and all our parents as dirty
+            // If there are parents, instead of updating state directly and propagating the values up,
+            // we mark ourselves and all our parents as dirty
             markDirty(increment: count)
         }
         
@@ -372,8 +373,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             return interopChild.completedCount
         }
         
-        // If we happen to query dirty leaf
-        if state.dirtyChildren.isEmpty {
+        // If we happen to query dirty leaf, just propagate up without worrying about recursive lock issues
+//        if state.dirtyChildren.isEmpty {
             if state.dirtyCompleted != nil {
                 let prev = state.fractionState.overallFraction
                 if let dirtyCompleted = state.dirtyCompleted {
@@ -381,11 +382,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 }
                 updateSelfInParent(from: prev, to: state.fractionState.overallFraction, exclude: nil)
             }
-        }
+//        }
         
-        
-        // If we happen to query a dirty root caused by dirty descendants
-        // Check if update is needed
+        // If we happen to query a dirty root caused by dirty descendants, we still need to make the children propagate up without trying to acquire our own lock
         var dirtyNodes: [ProgressManager] = []
         
         if !state.dirtyChildren.isEmpty || state.dirtyCompleted != nil {
@@ -499,14 +498,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             return
         }
         // Update self's completed values
-        let (previous, current) = state.withLock { state in
+        let (previous, current) = self.state.withLock { state in
             let prev = state.fractionState.overallFraction
             if let dirtyCompleted = state.dirtyCompleted {
                 state.fractionState.selfFraction.completed = dirtyCompleted
             }
             return (prev, state.fractionState.overallFraction)
         }
-        
         updateSelfInParent(from: previous, to: current, exclude: exclude)
     }
     
