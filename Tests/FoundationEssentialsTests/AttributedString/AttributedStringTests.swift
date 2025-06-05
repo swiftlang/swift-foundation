@@ -2346,7 +2346,7 @@ E {
             let attrStr = AttributedString(str)
             let nsRange = NSRange(location: 8, length: 1) // Just the "e" without the accent
             
-            let strRange = try #require(Range<String.Index>(nsRange, in: str))
+            let strRange = Range<String.Index>(nsRange, in: str)
             #expect(strRange != nil)
             #expect(strRange == str.unicodeScalars.index(str.startIndex, offsetBy: 8) ..< str.unicodeScalars.index(str.startIndex, offsetBy: 9))
             #expect(str[strRange!] == "e")
