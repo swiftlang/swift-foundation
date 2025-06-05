@@ -101,10 +101,6 @@
 #include <stdlib.h>
 #endif
 
-#if __has_include(<stdnoreturn.h>)
-#include <stdnoreturn.h>
-#endif
-
 #if __has_include(<string.h>)
 #include <string.h>
 #endif
@@ -162,6 +158,11 @@
 #error "possibly define TZDIR and TZDEFAULT for this platform"
 #endif /* TARGET_OS_MAC || TARGET_OS_LINUX || TARGET_OS_BSD */
 
+#endif
+
+// Must be last to avoid conflicts with other headers on Windows.
+#if __has_include(<stdnoreturn.h>)
+#include <stdnoreturn.h>
 #endif
 
 #endif // FOUNDATION_CSTDLIB
