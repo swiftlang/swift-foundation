@@ -10,116 +10,125 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+import Testing
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
 #endif
 
-final class AttributedStringIndexValidityTests: XCTestCase {
-    public func testStartEndRange() {
+@Suite("AttributedString Index Validity")
+private struct AttributedStringIndexValidityTests {
+    @Test
+    public func startEndRange() {
         let str = AttributedString("Hello, world")
         
-        XCTAssertTrue(str.startIndex.isValid(within: str))
-        XCTAssertFalse(str.endIndex.isValid(within: str))
-        XCTAssertTrue((str.startIndex ..< str.endIndex).isValid(within: str))
-        XCTAssertTrue((str.startIndex ..< str.startIndex).isValid(within: str))
-        XCTAssertTrue((str.endIndex ..< str.endIndex).isValid(within: str))
+        #expect(str.startIndex.isValid(within: str))
+        #expect(!str.endIndex.isValid(within: str))
+        #expect((str.startIndex ..< str.endIndex).isValid(within: str))
+        #expect((str.startIndex ..< str.startIndex).isValid(within: str))
+        #expect((str.endIndex ..< str.endIndex).isValid(within: str))
         
         let subStart = str.index(afterCharacter: str.startIndex)
         let subEnd = str.index(beforeCharacter: str.endIndex)
         
         do {
             let substr = str[str.startIndex ..< str.endIndex]
-            XCTAssertTrue(substr.startIndex.isValid(within: substr))
-            XCTAssertFalse(substr.endIndex.isValid(within: substr))
-            XCTAssertTrue((substr.startIndex ..< substr.endIndex).isValid(within: substr))
+            #expect(substr.startIndex.isValid(within: substr))
+            #expect(!substr.endIndex.isValid(within: substr))
+            #expect((substr.startIndex ..< substr.endIndex).isValid(within: substr))
         }
         
         do {
             let substr = str[subStart ..< str.endIndex]
-            XCTAssertTrue(substr.startIndex.isValid(within: substr))
-            XCTAssertFalse(substr.endIndex.isValid(within: substr))
-            XCTAssertTrue((substr.startIndex ..< substr.endIndex).isValid(within: substr))
+            #expect(substr.startIndex.isValid(within: substr))
+            #expect(!substr.endIndex.isValid(within: substr))
+            #expect((substr.startIndex ..< substr.endIndex).isValid(within: substr))
         }
         
         do {
             let substr = str[str.startIndex ..< subEnd]
-            XCTAssertTrue(substr.startIndex.isValid(within: substr))
-            XCTAssertFalse(substr.endIndex.isValid(within: substr))
-            XCTAssertTrue((substr.startIndex ..< substr.endIndex).isValid(within: substr))
+            #expect(substr.startIndex.isValid(within: substr))
+            #expect(!substr.endIndex.isValid(within: substr))
+            #expect((substr.startIndex ..< substr.endIndex).isValid(within: substr))
         }
         
         do {
             let substr = str[subStart ..< subEnd]
-            XCTAssertTrue(substr.startIndex.isValid(within: substr))
-            XCTAssertFalse(substr.endIndex.isValid(within: substr))
-            XCTAssertTrue((substr.startIndex ..< substr.endIndex).isValid(within: substr))
-            XCTAssertTrue((substr.startIndex ..< substr.startIndex).isValid(within: substr))
-            XCTAssertTrue((substr.endIndex ..< substr.endIndex).isValid(within: substr))
+            #expect(substr.startIndex.isValid(within: substr))
+            #expect(!substr.endIndex.isValid(within: substr))
+            #expect((substr.startIndex ..< substr.endIndex).isValid(within: substr))
+            #expect((substr.startIndex ..< substr.startIndex).isValid(within: substr))
+            #expect((substr.endIndex ..< substr.endIndex).isValid(within: substr))
         }
         
         do {
             let substr = str[RangeSet(str.startIndex ..< str.endIndex)]
-            XCTAssertTrue(str.startIndex.isValid(within: substr))
-            XCTAssertFalse(str.endIndex.isValid(within: substr))
-            XCTAssertTrue((str.startIndex ..< str.endIndex).isValid(within: substr))
+            #expect(str.startIndex.isValid(within: substr))
+            #expect(!str.endIndex.isValid(within: substr))
+            #expect((str.startIndex ..< str.endIndex).isValid(within: substr))
         }
         
         do {
             let substr = str[RangeSet(subStart ..< str.endIndex)]
-            XCTAssertTrue(subStart.isValid(within: substr))
-            XCTAssertFalse(str.endIndex.isValid(within: substr))
-            XCTAssertTrue((subStart ..< str.endIndex).isValid(within: substr))
+            #expect(subStart.isValid(within: substr))
+            #expect(!str.endIndex.isValid(within: substr))
+            #expect((subStart ..< str.endIndex).isValid(within: substr))
         }
         
         do {
             let substr = str[RangeSet(str.startIndex ..< subEnd)]
-            XCTAssertTrue(str.startIndex.isValid(within: substr))
-            XCTAssertFalse(subEnd.isValid(within: substr))
-            XCTAssertTrue((str.startIndex ..< subEnd).isValid(within: substr))
+            #expect(str.startIndex.isValid(within: substr))
+            #expect(!subEnd.isValid(within: substr))
+            #expect((str.startIndex ..< subEnd).isValid(within: substr))
         }
         
         do {
             let substr = str[RangeSet(subStart ..< subEnd)]
-            XCTAssertTrue(subStart.isValid(within: substr))
-            XCTAssertFalse(subEnd.isValid(within: substr))
-            XCTAssertTrue((subStart ..< subEnd).isValid(within: substr))
-            XCTAssertTrue((subStart ..< subStart).isValid(within: substr))
-            XCTAssertTrue((subEnd ..< subEnd).isValid(within: substr))
+            #expect(subStart.isValid(within: substr))
+            #expect(!subEnd.isValid(within: substr))
+            #expect((subStart ..< subEnd).isValid(within: substr))
+            #expect((subStart ..< subStart).isValid(within: substr))
+            #expect((subEnd ..< subEnd).isValid(within: substr))
         }
     }
     
-    public func testExhaustiveIndices() {
+    @Test
+    public func exhaustiveIndices() {
         let str = AttributedString("Hello Cafe\u{301} 👍🏻🇺🇸 World")
         for idx in str.characters.indices {
-            XCTAssertTrue(idx.isValid(within: str))
+            #expect(idx.isValid(within: str))
         }
         for idx in str.unicodeScalars.indices {
-            XCTAssertTrue(idx.isValid(within: str))
+            #expect(idx.isValid(within: str))
         }
         for idx in str.utf8.indices {
-            XCTAssertTrue(idx.isValid(within: str))
+            #expect(idx.isValid(within: str))
         }
         for idx in str.utf16.indices {
-            XCTAssertTrue(idx.isValid(within: str))
+            #expect(idx.isValid(within: str))
         }
     }
     
-    public func testOutOfBoundsContiguous() {
+    @Test
+    public func outOfBoundsContiguous() {
         let str = AttributedString("Hello, world")
         let subStart = str.index(afterCharacter: str.startIndex)
         let subEnd = str.index(beforeCharacter: str.endIndex)
         let substr = str[subStart ..< subEnd]
         
-        XCTAssertFalse(str.startIndex.isValid(within: substr))
-        XCTAssertFalse(str.endIndex.isValid(within: substr))
-        XCTAssertFalse((str.startIndex ..< str.endIndex).isValid(within: substr))
-        XCTAssertFalse((str.startIndex ..< substr.startIndex).isValid(within: substr))
-        XCTAssertFalse((substr.startIndex ..< str.endIndex).isValid(within: substr))
-        XCTAssertFalse((str.startIndex ..< str.startIndex).isValid(within: substr))
-        XCTAssertFalse((str.endIndex ..< str.endIndex).isValid(within: substr))
+        #expect(!str.startIndex.isValid(within: substr))
+        #expect(!str.endIndex.isValid(within: substr))
+        #expect(!(str.startIndex ..< str.endIndex).isValid(within: substr))
+        #expect(!(str.startIndex ..< substr.startIndex).isValid(within: substr))
+        #expect(!(substr.startIndex ..< str.endIndex).isValid(within: substr))
+        #expect(!(str.startIndex ..< str.startIndex).isValid(within: substr))
+        #expect(!(str.endIndex ..< str.endIndex).isValid(within: substr))
     }
     
-    public func testOutOfBoundsDiscontiguous() {
+    @Test
+    public func outOfBoundsDiscontiguous() {
         let str = AttributedString("Hello, world")
         let idxA = str.index(afterCharacter: str.startIndex)
         let idxB = str.index(afterCharacter: idxA)
@@ -128,66 +137,67 @@ final class AttributedStringIndexValidityTests: XCTestCase {
         let middleIdx = str.index(afterCharacter: idxB)
         let substr = str[RangeSet([idxA ..< idxB, idxC ..< idxD])]
         
-        XCTAssertFalse(str.startIndex.isValid(within: substr))
-        XCTAssertFalse(str.endIndex.isValid(within: substr))
-        XCTAssertFalse(idxD.isValid(within: substr))
-        XCTAssertFalse(middleIdx.isValid(within: substr))
-        XCTAssertFalse((str.startIndex ..< idxA).isValid(within: substr))
-        XCTAssertFalse((idxA ..< middleIdx).isValid(within: substr))
-        XCTAssertFalse((middleIdx ..< idxD).isValid(within: substr))
-        XCTAssertFalse((str.startIndex ..< str.startIndex).isValid(within: substr))
-        XCTAssertFalse((str.endIndex ..< str.endIndex).isValid(within: substr))
+        #expect(!str.startIndex.isValid(within: substr))
+        #expect(!str.endIndex.isValid(within: substr))
+        #expect(!idxD.isValid(within: substr))
+        #expect(!middleIdx.isValid(within: substr))
+        #expect(!(str.startIndex ..< idxA).isValid(within: substr))
+        #expect(!(idxA ..< middleIdx).isValid(within: substr))
+        #expect(!(middleIdx ..< idxD).isValid(within: substr))
+        #expect(!(str.startIndex ..< str.startIndex).isValid(within: substr))
+        #expect(!(str.endIndex ..< str.endIndex).isValid(within: substr))
     }
     
-    public func testMutationInvalidation() {
-        func checkInPlace(_ mutation: (inout AttributedString) -> (), file: StaticString = #filePath, line: UInt = #line) {
+    @Test
+    public func mutationInvalidation() {
+        func checkInPlace(_ mutation: (inout AttributedString) -> (), sourceLocation: SourceLocation = #_sourceLocation) {
             var str = AttributedString("Hello World")
             let idxA = str.startIndex
             let idxB = str.index(afterCharacter: idxA)
             
-            XCTAssertTrue(idxA.isValid(within: str), "Initial index A was invalid in original", file: file, line: line)
-            XCTAssertTrue(idxB.isValid(within: str), "Initial index B was invalid in original", file: file, line: line)
-            XCTAssertTrue((idxA ..< idxB).isValid(within: str), "Initial range was invalid in original", file: file, line: line)
-            XCTAssertTrue(RangeSet(idxA ..< idxB).isValid(within: str), "Initial range set was invalid in original", file: file, line: line)
+            #expect(idxA.isValid(within: str), "Initial index A was invalid in original", sourceLocation: sourceLocation)
+            #expect(idxB.isValid(within: str), "Initial index B was invalid in original", sourceLocation: sourceLocation)
+            #expect((idxA ..< idxB).isValid(within: str), "Initial range was invalid in original", sourceLocation: sourceLocation)
+            #expect(RangeSet(idxA ..< idxB).isValid(within: str), "Initial range set was invalid in original", sourceLocation: sourceLocation)
             
             mutation(&str)
             
-            XCTAssertFalse(idxA.isValid(within: str), "Initial index A was valid in in-place mutated", file: file, line: line)
-            XCTAssertFalse(idxB.isValid(within: str), "Initial index B was valid in in-place mutated", file: file, line: line)
-            XCTAssertFalse((idxA ..< idxB).isValid(within: str), "Initial range was valid in in-place mutated", file: file, line: line)
-            XCTAssertFalse(RangeSet(idxA ..< idxB).isValid(within: str), "Initial range set was valid in in-place mutated", file: file, line: line)
+            #expect(!idxA.isValid(within: str), "Initial index A was valid in in-place mutated", sourceLocation: sourceLocation)
+            #expect(!idxB.isValid(within: str), "Initial index B was valid in in-place mutated", sourceLocation: sourceLocation)
+            #expect(!(idxA ..< idxB).isValid(within: str), "Initial range was valid in in-place mutated", sourceLocation: sourceLocation)
+            #expect(!RangeSet(idxA ..< idxB).isValid(within: str), "Initial range set was valid in in-place mutated", sourceLocation: sourceLocation)
         }
         
-        func checkCopy(_ mutation: (inout AttributedString) -> (), file: StaticString = #filePath, line: UInt = #line) {
+        func checkCopy(_ mutation: (inout AttributedString) -> (), sourceLocation: SourceLocation = #_sourceLocation) {
             let str = AttributedString("Hello World")
             let idxA = str.startIndex
             let idxB = str.index(afterCharacter: idxA)
             
             var copy = str
-            XCTAssertTrue(idxA.isValid(within: str), "Initial index A was invalid in original", file: file, line: line)
-            XCTAssertTrue(idxB.isValid(within: str), "Initial index B was invalid in original", file: file, line: line)
-            XCTAssertTrue((idxA ..< idxB).isValid(within: str), "Initial range was invalid in original", file: file, line: line)
-            XCTAssertTrue(RangeSet(idxA ..< idxB).isValid(within: str), "Initial range set was invalid in original", file: file, line: line)
-            XCTAssertTrue(idxA.isValid(within: copy), "Initial index A was invalid in copy", file: file, line: line)
-            XCTAssertTrue(idxB.isValid(within: copy), "Initial index B was invalid in copy", file: file, line: line)
-            XCTAssertTrue((idxA ..< idxB).isValid(within: copy), "Initial range was invalid in copy", file: file, line: line)
-            XCTAssertTrue(RangeSet(idxA ..< idxB).isValid(within: copy), "Initial range set was invalid in copy", file: file, line: line)
+            #expect(idxA.isValid(within: str), "Initial index A was invalid in original", sourceLocation: sourceLocation)
+            #expect(idxB.isValid(within: str), "Initial index B was invalid in original", sourceLocation: sourceLocation)
+            #expect((idxA ..< idxB).isValid(within: str), "Initial range was invalid in original", sourceLocation: sourceLocation)
+            #expect(RangeSet(idxA ..< idxB).isValid(within: str), "Initial range set was invalid in original", sourceLocation: sourceLocation)
+            #expect(idxA.isValid(within: copy), "Initial index A was invalid in copy", sourceLocation: sourceLocation)
+            #expect(idxB.isValid(within: copy), "Initial index B was invalid in copy", sourceLocation: sourceLocation)
+            #expect((idxA ..< idxB).isValid(within: copy), "Initial range was invalid in copy", sourceLocation: sourceLocation)
+            #expect(RangeSet(idxA ..< idxB).isValid(within: copy), "Initial range set was invalid in copy", sourceLocation: sourceLocation)
             
             mutation(&copy)
             
-            XCTAssertTrue(idxA.isValid(within: str), "Initial index A was invalid in original after copy", file: file, line: line)
-            XCTAssertTrue(idxB.isValid(within: str), "Initial index B was invalid in original after copy", file: file, line: line)
-            XCTAssertTrue((idxA ..< idxB).isValid(within: str), "Initial range was invalid in original after copy", file: file, line: line)
-            XCTAssertTrue(RangeSet(idxA ..< idxB).isValid(within: str), "Initial range set was invalid in original after copy", file: file, line: line)
-            XCTAssertFalse(idxA.isValid(within: copy), "Initial index A was valid in copy", file: file, line: line)
-            XCTAssertFalse(idxB.isValid(within: copy), "Initial index B was valid in copy", file: file, line: line)
-            XCTAssertFalse((idxA ..< idxB).isValid(within: copy), "Initial range was valid in copy", file: file, line: line)
-            XCTAssertFalse(RangeSet(idxA ..< idxB).isValid(within: copy), "Initial range set was valid in copy", file: file, line: line)
+            #expect(idxA.isValid(within: str), "Initial index A was invalid in original after copy", sourceLocation: sourceLocation)
+            #expect(idxB.isValid(within: str), "Initial index B was invalid in original after copy", sourceLocation: sourceLocation)
+            #expect((idxA ..< idxB).isValid(within: str), "Initial range was invalid in original after copy", sourceLocation: sourceLocation)
+            #expect(RangeSet(idxA ..< idxB).isValid(within: str), "Initial range set was invalid in original after copy", sourceLocation: sourceLocation)
+            #expect(!idxA.isValid(within: copy), "Initial index A was valid in copy", sourceLocation: sourceLocation)
+            #expect(!idxB.isValid(within: copy), "Initial index B was valid in copy", sourceLocation: sourceLocation)
+            #expect(!(idxA ..< idxB).isValid(within: copy), "Initial range was valid in copy", sourceLocation: sourceLocation)
+            #expect(!RangeSet(idxA ..< idxB).isValid(within: copy), "Initial range set was valid in copy", sourceLocation: sourceLocation)
         }
         
-        func check(_ mutation: (inout AttributedString) -> (), file: StaticString = #filePath, line: UInt = #line) {
-            checkInPlace(mutation, file: file, line: line)
-            checkCopy(mutation, file: file, line: line)
+        func check(_ mutation: (inout AttributedString) -> (), sourceLocation: SourceLocation = #_sourceLocation) {
+            checkInPlace(mutation, sourceLocation: sourceLocation)
+            checkCopy(mutation, sourceLocation: sourceLocation)
         }
         
         check {

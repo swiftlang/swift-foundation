@@ -10,61 +10,70 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+import Testing
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
 #endif
 
-final class AttributedStringDiscontiguousTests: XCTestCase {
-    func testEmptySlice() {
+@Suite("Discontiguous AttributedString")
+private struct AttributedStringDiscontiguousTests {
+    @Test
+    func emptySlice() {
         let str = AttributedString()
         let slice = str[RangeSet()]
-        XCTAssertTrue(slice.runs.isEmpty)
-        XCTAssertTrue(slice.characters.isEmpty)
-        XCTAssertTrue(slice.unicodeScalars.isEmpty)
-        XCTAssertEqual(slice, slice)
-        XCTAssertEqual(slice.runs.startIndex, slice.runs.endIndex)
-        XCTAssertEqual(slice.characters.startIndex, slice.characters.endIndex)
-        XCTAssertEqual(slice.unicodeScalars.startIndex, slice.unicodeScalars.endIndex)
-        XCTAssertEqual(AttributedString("abc")[RangeSet()], AttributedString("def")[RangeSet()])
+        #expect(slice.runs.isEmpty)
+        #expect(slice.characters.isEmpty)
+        #expect(slice.unicodeScalars.isEmpty)
+        #expect(slice == slice)
+        #expect(slice.runs.startIndex == slice.runs.endIndex)
+        #expect(slice.characters.startIndex == slice.characters.endIndex)
+        #expect(slice.unicodeScalars.startIndex == slice.unicodeScalars.endIndex)
+        #expect(AttributedString("abc")[RangeSet()] == AttributedString("def")[RangeSet()])
         
         for r in slice.runs {
-            XCTFail("Enumerating empty runs should not have produced \(r)")
+            Issue.record("Enumerating empty runs should not have produced \(r)")
         }
         for c in slice.characters {
-            XCTFail("Enumerating empty characters should not have produced \(c)")
+            Issue.record("Enumerating empty characters should not have produced \(c)")
         }
         for s in slice.unicodeScalars {
-            XCTFail("Enumerating empty unicode scalars should not have produced \(s)")
+            Issue.record("Enumerating empty unicode scalars should not have produced \(s)")
         }
     }
     
-    func testCharacters() {
+    @Test
+    func characters() {
         let str = AttributedString("abcdefgabc")
         let fullSlice = str[str.startIndex ..< str.endIndex].characters
         let fullDiscontiguousSlice = str[RangeSet(str.startIndex ..< str.endIndex)].characters
-        XCTAssertTrue(fullSlice.elementsEqual(fullDiscontiguousSlice))
+        #expect(fullSlice.elementsEqual(fullDiscontiguousSlice))
         
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 3)
         let rangeB = str.index(str.endIndex, offsetByCharacters: -3) ..< str.endIndex
         let rangeSet = RangeSet([rangeA, rangeB])
         let slice = str[rangeSet].characters
-        XCTAssertEqual(Array(slice), ["a", "b", "c", "a", "b", "c"])
+        #expect(Array(slice) == ["a", "b", "c", "a", "b", "c"])
     }
     
-    func testUnicodeScalars() {
+    @Test
+    func unicodeScalars() {
         let str = AttributedString("abcdefgabc")
         let fullSlice = str[str.startIndex ..< str.endIndex].unicodeScalars
         let fullDiscontiguousSlice = str[RangeSet(str.startIndex ..< str.endIndex)].unicodeScalars
-        XCTAssertTrue(fullSlice.elementsEqual(fullDiscontiguousSlice))
+        #expect(fullSlice.elementsEqual(fullDiscontiguousSlice))
         
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByUnicodeScalars: 3)
         let rangeB = str.index(str.endIndex, offsetByUnicodeScalars: -3) ..< str.endIndex
         let rangeSet = RangeSet([rangeA, rangeB])
         let slice = str[rangeSet].unicodeScalars
-        XCTAssertEqual(Array(slice), ["a", "b", "c", "a", "b", "c"])
+        #expect(Array(slice) == ["a", "b", "c", "a", "b", "c"])
     }
     
-    func testAttributes() {
+    @Test
+    func attributes() {
         let str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -78,7 +87,7 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             for range in ranges.ranges {
                 b[range].testInt = 2
             }
-            XCTAssertEqual(a, b)
+            #expect(a == b)
         }
         
         do {
@@ -88,7 +97,7 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             for range in ranges.ranges {
                 b[range].test.testInt = 2
             }
-            XCTAssertEqual(a, b)
+            #expect(a == b)
         }
         
         do {
@@ -98,7 +107,7 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             for range in ranges.ranges {
                 b[range][AttributeScopes.TestAttributes.TestIntAttribute.self] = 2
             }
-            XCTAssertEqual(a, b)
+            #expect(a == b)
         }
         
         do {
@@ -110,15 +119,15 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             for range in ranges.ranges {
                 b[range].testInt = nil
             }
-            XCTAssertEqual(a, b)
+            #expect(a == b)
         }
         
         do {
             var a = str
             a.testInt = 2
-            XCTAssertEqual(a[ranges].testInt, 2)
+            #expect(a[ranges].testInt == 2)
             a[rangeA].testInt = 3
-            XCTAssertEqual(a[ranges].testInt, nil)
+            #expect(a[ranges].testInt == nil)
         }
         
         do {
@@ -130,7 +139,7 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             for range in ranges.ranges {
                 b[range].mergeAttributes(AttributeContainer.testInt(2))
             }
-            XCTAssertEqual(a, b)
+            #expect(a == b)
         }
         
         do {
@@ -142,7 +151,7 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             for range in ranges.ranges {
                 b[range].setAttributes(AttributeContainer.testInt(2))
             }
-            XCTAssertEqual(a, b)
+            #expect(a == b)
         }
         
         do {
@@ -154,7 +163,7 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             for range in ranges.ranges {
                 b[range].replaceAttributes(AttributeContainer(), with: AttributeContainer.testInt(2))
             }
-            XCTAssertEqual(a, b)
+            #expect(a == b)
         }
         
         do {
@@ -166,11 +175,12 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             for range in ranges.ranges {
                 b[range].replaceAttributes(AttributeContainer.testString("foo"), with: AttributeContainer.testInt(2))
             }
-            XCTAssertEqual(a, b)
+            #expect(a == b)
         }
     }
     
-    func testReinitialization() {
+    @Test
+    func reinitialization() {
         var str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -179,10 +189,11 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
         str[ranges].testInt = 2
         
         let reinitialized = AttributedString(str[ranges])
-        XCTAssertEqual(reinitialized, AttributedString("ace", attributes: AttributeContainer.testInt(2)))
+        #expect(reinitialized == AttributedString("ace", attributes: AttributeContainer.testInt(2)))
     }
     
-    func testReslicing() {
+    @Test
+    func reslicing() {
         var str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -190,14 +201,15 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
         let ranges = RangeSet([rangeA, rangeB, rangeC])
         str[ranges].testInt = 2
         
-        XCTAssertEqual(str[ranges], str[ranges][ranges])
-        XCTAssertEqual(AttributedString(str[ranges][RangeSet([rangeA, rangeB])]), AttributedString("ac", attributes: AttributeContainer.testInt(2)))
-        XCTAssertEqual(AttributedString(str[ranges][rangeA.lowerBound ..< rangeB.upperBound]), AttributedString("ac", attributes: AttributeContainer.testInt(2)))
+        #expect(str[ranges] == str[ranges][ranges])
+        #expect(AttributedString(str[ranges][RangeSet([rangeA, rangeB])]) == AttributedString("ac", attributes: AttributeContainer.testInt(2)))
+        #expect(AttributedString(str[ranges][rangeA.lowerBound ..< rangeB.upperBound]) == AttributedString("ac", attributes: AttributeContainer.testInt(2)))
         
-        XCTAssertEqual(str[RangeSet()][RangeSet()], str[RangeSet()])
+        #expect(str[RangeSet()][RangeSet()] == str[RangeSet()])
     }
     
-    func testRuns() {
+    @Test
+    func runs() {
         var str = AttributedString("AAA", attributes: AttributeContainer.testInt(2))
         str += AttributedString("BBB", attributes: AttributeContainer.testInt(3).testString("foo"))
         str += AttributedString("CC", attributes: AttributeContainer.testInt(3).testString("bar"))
@@ -216,13 +228,14 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
         
         let runs = str[rangeSet].runs
         let expectedRanges = [rangeA, rangeB_first, rangeB_second, rangeC, rangeD, rangeE]
-        XCTAssertEqual(runs.count, expectedRanges.count)
-        XCTAssertEqual(runs.reversed().count, expectedRanges.reversed().count)
-        XCTAssertEqual(runs.map(\.range), expectedRanges)
-        XCTAssertEqual(runs.reversed().map(\.range), expectedRanges.reversed())
+        #expect(runs.count == expectedRanges.count)
+        #expect(runs.reversed().count == expectedRanges.reversed().count)
+        #expect(runs.map(\.range) == expectedRanges)
+        #expect(runs.reversed().map(\.range) == expectedRanges.reversed())
     }
     
-    func testCoalescedRuns() {
+    @Test
+    func coalescedRuns() {
         struct EquatableBox<T: Equatable, U: Equatable>: Equatable, CustomStringConvertible {
             let t: T
             let u: U
@@ -260,15 +273,16 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
         let runs = str[rangeSet].runs
         
         let testIntExpectation = [EquatableBox(2, rangeA), EquatableBox(3, rangeB), EquatableBox(3, rangeC), EquatableBox(nil, rangeD), EquatableBox(nil, rangeE)]
-        XCTAssertEqual(runs[\.testInt].map(EquatableBox.init), testIntExpectation)
-        XCTAssertEqual(runs[\.testInt].reversed().map(EquatableBox.init), testIntExpectation.reversed())
+        #expect(runs[\.testInt].map(EquatableBox.init) == testIntExpectation)
+        #expect(runs[\.testInt].reversed().map(EquatableBox.init) == testIntExpectation.reversed())
         
         let testStringExpectation = [EquatableBox(nil, rangeA), EquatableBox("foo", rangeB_first), EquatableBox("bar", rangeB_second), EquatableBox("baz", rangeC), EquatableBox(nil, rangeD), EquatableBox(nil, rangeE)]
-        XCTAssertEqual(runs[\.testString].map(EquatableBox.init), testStringExpectation)
-        XCTAssertEqual(runs[\.testString].reversed().map(EquatableBox.init), testStringExpectation.reversed())
+        #expect(runs[\.testString].map(EquatableBox.init) == testStringExpectation)
+        #expect(runs[\.testString].reversed().map(EquatableBox.init) == testStringExpectation.reversed())
     }
     
-    func testRemoveSubranges() {
+    @Test
+    func removeSubranges() {
         var str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -280,10 +294,11 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
         
         str.removeSubranges(ranges)
         let result = AttributedString("bdfg", attributes: AttributeContainer.testBool(true))
-        XCTAssertEqual(str, result)
+        #expect(str == result)
     }
     
-    func testSliceSetter() {
+    @Test
+    func sliceSetter() {
         var str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -296,13 +311,13 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
         do {
             var copy = str
             copy[ranges] = copy[ranges]
-            XCTAssertEqual(copy, str)
+            #expect(copy == str)
         }
         
         do {
             var copy = str
             copy[ranges] = str[ranges]
-            XCTAssertEqual(copy, str)
+            #expect(copy == str)
         }
         
         do {
@@ -313,11 +328,12 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
             let ranges2 = RangeSet([rangeA2, rangeB2, rangeC2])
             var copy = str
             copy[ranges] = str2[ranges2]
-            XCTAssertEqual(String(copy.characters), "ZbYdXfg")
+            #expect(String(copy.characters) == "ZbYdXfg")
         }
     }
     
-    func testGraphemesAcrossDiscontiguousRanges() {
+    @Test
+    func graphemesAcrossDiscontiguousRanges() {
         let str = "a\n\u{301}"
         let attrStr = AttributedString(str)
         let strRangeA = str.startIndex ..< str.index(after: str.startIndex) // Range of 'a'
@@ -335,6 +351,6 @@ final class AttributedStringDiscontiguousTests: XCTestCase {
         //      (2) The behavior is consistent between String and AttributedString.CharacterView
         let strSlice = str[strRanges]
         let attrStrSlice = attrStr[attrStrRanges].characters
-        XCTAssert(strSlice.elementsEqual(attrStrSlice), "Characters \(Array(strSlice)) and \(Array(attrStrSlice)) do not match")
+        #expect(strSlice.elementsEqual(attrStrSlice), "Characters \(Array(strSlice)) and \(Array(attrStrSlice)) do not match")
     }
 }
