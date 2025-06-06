@@ -2458,8 +2458,9 @@ E {
         struct EmptyScope : AttributeScope {
             
         }
-        var emptyIterator = EmptyScope.attributeKeys.makeIterator()
-        #expect(emptyIterator.next() == nil)
+        for key in EmptyScope.attributeKeys {
+            Issue.record("Empty scope should not have produced key \(key)")
+        }
     }
 #endif // FOUNDATION_FRAMEWORK
 
