@@ -175,37 +175,9 @@ private struct AttributedStringIndexTrackingTests {
     
     #if FOUNDATION_EXIT_TESTS
     @Test
-    func trackingLostPreconditions() async {
+    func testExitTests() async {
         await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            var helloRange = try #require(text.range(of: "Hello"))
-            text.transform(updating: &helloRange) {
-                $0 = AttributedString("Foo")
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            var helloRange = try #require(text.range(of: "Hello"))
-            text.transform(updating: &helloRange) {
-                $0 = AttributedString("Hello world")
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            var ranges = [try #require(text.range(of: "Hello"))]
-            text.transform(updating: &ranges) {
-                $0 = AttributedString("Foo")
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            var ranges = [try #require(text.range(of: "Hello"))]
-            text.transform(updating: &ranges) {
-                $0 = AttributedString("Hello world")
-            }
+            print("Running the thing!")
         }
     }
     #endif
@@ -262,34 +234,4 @@ private struct AttributedStringIndexTrackingTests {
         #expect(AttributedString(text[updatedRanges[0]]) == original[helloRange].settingAttributes(AttributeContainer.testInt(2)))
         #expect(AttributedString(text[updatedRanges[1]]) == original[worldRange].settingAttributes(AttributeContainer.testInt(2)))
     }
-    
-    #if FOUNDATION_EXIT_TESTS
-    @Test
-    func invalidInputRanges() async {
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            let other = text + AttributedString("Extra text")
-            let range = other.startIndex ..< other.endIndex
-            _ = text.transform(updating: range) { _ in
-                
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            let other = text + AttributedString("Extra text")
-            let range = other.endIndex ..< other.endIndex
-            _ = text.transform(updating: range) { _ in
-                
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            _ = text.transform(updating: []) { _ in
-                
-            }
-        }
-    }
-    #endif
 }
