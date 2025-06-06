@@ -1,4 +1,4 @@
-# `ProgressReporter`: Progress Reporting in Swift Concurrency  
+# `ProgressManager`: Progress Reporting in Swift Concurrency  
 
 * Proposal: SF-0023
 * Author(s): [Chloe Yeo](https://github.com/chloe-yeo)
@@ -601,6 +601,20 @@ public struct Subprogress: ~Copyable, Sendable {
     public func withProperties<T, E: Error>(
         _ closure: (sending ProgressManager.Values) throws(E) -> sending T
     ) throws(E) -> T
+    
+    /// Returns an array of values for specified property in subtree.
+    /// 
+    /// - Parameter property: Type of property.
+    /// - Returns: Array of values for property.
+    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value?]
+
+    /// Returns the aggregated result of values where type of property is `AdditiveArithmetic`.
+    /// All values are added together. 
+    /// 
+    /// - Parameters:
+    ///   - property: Type of property.
+    ///   - values: Sum of values.
+    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value : AdditiveArithmetic
 }
 ```
 
