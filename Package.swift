@@ -75,9 +75,19 @@ let wasiLibcCSettings: [CSetting] = [
     .define("_WASI_EMULATED_MMAN", .when(platforms: [.wasi])),
 ]
 
-let testOnlySwiftSettings: [SwiftSetting] = [
-    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux])) // The latest Windows toolchain does not yet have exit tests in swift-testing
+var testOnlySwiftSettings: [SwiftSetting] = [
+    // The latest Windows toolchain does not yet have exit tests in swift-testing
+    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd]))
 ]
+
+#if os(Linux)
+import FoundationEssentials
+
+if ProcessInfo.processInfo.operatingSystemVersionString.hasPrefix("Ubuntu 20.") {
+    // Exit tests currently hang indefinitely on Ubuntu 20.
+    testOnlySwiftSettings.removeFirst()
+}
+#endif
 
 let package = Package(
     name: "swift-foundation",
