@@ -76,7 +76,8 @@ let wasiLibcCSettings: [CSetting] = [
 ]
 
 let testOnlySwiftSettings: [SwiftSetting] = [
-    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux])) // The latest Windows toolchain does not yet have exit tests in swift-testing
+    // Disabled due to hangs on Linux within `AttributedStringIndexTrackingTests`
+    // .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux])) // The latest Windows toolchain does not yet have exit tests in swift-testing
 ]
 
 let package = Package(
