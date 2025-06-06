@@ -3,7 +3,8 @@
 * Proposal: [SF-0026](0026-preferredLocales.md)
 * Authors: [करन मिश्र · Karan Miśra](https://github.com/karan-misra)
 * Review Manager: TBD
-* Status: **Awaiting review**
+* Status: **Accepted**
+* Implementation: https://github.com/swiftlang/swift-foundation/pull/1315
 * Review: ([pitch](https://forums.swift.org/t/pitch-introduce-locale-preferredlocales/79900))
 
 ## Introduction

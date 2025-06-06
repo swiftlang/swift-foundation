@@ -4,6 +4,7 @@
 * Proposal: [SF-0024](0024-filename.md)
 * Authors:[Matt Seaman](https://github.com/matthewseaman), [Andreas Neusuess](https://github.com/Tantalum73)
 * Review Manager: [Tina L](https://github.com/itingliu)
+* Implementation: https://github.com/swiftlang/swift-foundation/pull/1274
 * Status: **Accepted**
 
 
