@@ -617,6 +617,12 @@ class TestProgressReporter: XCTestCase {
             properties.totalFileCount = 6
         }
         XCTAssertEqual(reporter.withProperties(\.totalFileCount), 6)
+        
+        let totalFileCount = manager.total(of: ProgressManager.Properties.TotalFileCount.self)
+        XCTAssertEqual(totalFileCount, 6)
+        
+        let totalFileCountValues = manager.values(of: ProgressManager.Properties.TotalFileCount.self)
+        XCTAssertEqual(totalFileCountValues, [6])
     }
     
     func testAddProgressReporterAsChild() {
