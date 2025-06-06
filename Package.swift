@@ -75,10 +75,6 @@ let wasiLibcCSettings: [CSetting] = [
     .define("_WASI_EMULATED_MMAN", .when(platforms: [.wasi])),
 ]
 
-let testOnlySwiftSettings: [SwiftSetting] = [
-    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux])) // The latest Windows toolchain does not yet have exit tests in swift-testing
-]
-
 let package = Package(
     name: "swift-foundation",
     platforms: [.macOS("15"), .iOS("18"), .tvOS("18"), .watchOS("11")],
@@ -175,7 +171,7 @@ let package = Package(
                 "LifetimeDependenceMutableAccessors",
                 .when(platforms: [.macOS, .iOS, .watchOS, .tvOS, .linux])
               ),
-            ] + availabilityMacros + featureSettings + testOnlySwiftSettings
+            ] + availabilityMacros + featureSettings
         ),
 
         // FoundationInternationalization
@@ -208,7 +204,7 @@ let package = Package(
                 "TestSupport",
                 "FoundationInternationalization",
             ],
-            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
+            swiftSettings: availabilityMacros + featureSettings
         ),
         
         // FoundationMacros
@@ -240,7 +236,7 @@ package.targets.append(contentsOf: [
             "FoundationMacros",
             "TestSupport"
         ],
-        swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
+        swiftSettings: availabilityMacros + featureSettings
     )
 ])
 #endif

@@ -10,286 +10,202 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Testing
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
+#if canImport(TestSupport)
+import TestSupport
 #endif
 
-@Suite("AttributedString Index Tracking")
-private struct AttributedStringIndexTrackingTests {
-    @Test
-    func basics() throws {
+final class AttributedStringIndexTrackingTests: XCTestCase {
+    func testBasic() throws {
         var text = AttributedString("ABC. Hello, world!")
         let original = text
-        let helloRange = try #require(text.range(of: "Hello"))
-        let worldRange = try #require(text.range(of: "world"))
+        let helloRange = try XCTUnwrap(text.range(of: "Hello"))
+        let worldRange = try XCTUnwrap(text.range(of: "world"))
         
-        let updatedRanges = try #require(text.transform(updating: [helloRange, worldRange]) {
+        let updatedRanges = try XCTUnwrap(text.transform(updating: [helloRange, worldRange]) {
             $0.insert(AttributedString("Goodbye. "), at: $0.startIndex)
         })
         
-        #expect(updatedRanges.count == 2)
-        #expect(text[updatedRanges[0]] == original[helloRange])
-        #expect(text[updatedRanges[1]] == original[worldRange])
+        XCTAssertEqual(updatedRanges.count, 2)
+        XCTAssertEqual(text[updatedRanges[0]], original[helloRange])
+        XCTAssertEqual(text[updatedRanges[1]], original[worldRange])
     }
     
-    @Test
-    func insertionWithinRange() throws {
+    func testInsertionWithinRange() throws {
         var text = AttributedString("Hello, world")
-        var helloRange = try #require(text.range(of: "Hello"))
+        var helloRange = try XCTUnwrap(text.range(of: "Hello"))
         
         text.transform(updating: &helloRange) {
             $0.insert(AttributedString("_Goodbye_"), at: $0.index($0.startIndex, offsetByCharacters: 3))
         }
         
-        #expect(String(text[helloRange].characters) == "Hel_Goodbye_lo")
+        XCTAssertEqual(String(text[helloRange].characters), "Hel_Goodbye_lo")
     }
     
-    @Test
-    func insertionAtStartOfRange() throws {
+    func testInsertionAtStartOfRange() throws {
         var text = AttributedString("Hello, world")
-        let helloRange = try #require(text.range(of: "llo"))
+        let helloRange = try XCTUnwrap(text.range(of: "llo"))
         
-        let updatedHelloRange = try #require(text.transform(updating: helloRange) {
+        let updatedHelloRange = try XCTUnwrap(text.transform(updating: helloRange) {
             $0.insert(AttributedString("_"), at: helloRange.lowerBound)
         })
         
-        #expect(String(text[updatedHelloRange].characters) == "llo")
+        XCTAssertEqual(String(text[updatedHelloRange].characters), "llo")
     }
     
-    @Test
-    func insertionAtEndOfRange() throws {
+    func testInsertionAtEndOfRange() throws {
         var text = AttributedString("Hello, world")
-        let helloRange = try #require(text.range(of: "llo"))
+        let helloRange = try XCTUnwrap(text.range(of: "llo"))
         
-        let updatedHelloRange = try #require(text.transform(updating: helloRange) {
+        let updatedHelloRange = try XCTUnwrap(text.transform(updating: helloRange) {
             $0.insert(AttributedString("_"), at: helloRange.upperBound)
         })
         
-        #expect(String(text[updatedHelloRange].characters) == "llo")
+        XCTAssertEqual(String(text[updatedHelloRange].characters), "llo")
     }
     
-    @Test
-    func insertionAtEmptyRange() throws {
+    func testInsertionAtEmptyRange() throws {
         var text = AttributedString("ABCDE")
         let idx = text.index(text.startIndex, offsetByCharacters: 3)
         
-        let updatedRange = try #require(text.transform(updating: idx ..< idx) {
+        let updatedRange = try XCTUnwrap(text.transform(updating: idx ..< idx) {
             $0.insert(AttributedString("_"), at: idx)
         })
         
-        #expect(updatedRange.lowerBound == updatedRange.upperBound)
-        #expect(text.characters[updatedRange.lowerBound] == "D")
+        XCTAssertEqual(updatedRange.lowerBound, updatedRange.upperBound)
+        XCTAssertEqual(text.characters[updatedRange.lowerBound], "D")
     }
     
-    @Test
-    func removalWithinRange() throws {
+    func testRemovalWithinRange() throws {
         var text = AttributedString("Hello, world")
-        var helloRange = try #require(text.range(of: "Hello"))
+        var helloRange = try XCTUnwrap(text.range(of: "Hello"))
         
         try text.transform(updating: &helloRange) {
-            $0.removeSubrange(try #require($0.range(of: "ll")))
+            $0.removeSubrange(try XCTUnwrap($0.range(of: "ll")))
         }
         
-        #expect(String(text[helloRange].characters) == "Heo")
+        XCTAssertEqual(String(text[helloRange].characters), "Heo")
     }
     
-    @Test
-    func fullCollapse() throws {
+    func testFullCollapse() throws {
         do {
             var text = AttributedString("Hello, world")
-            var helloRange = try #require(text.range(of: "Hello"))
+            var helloRange = try XCTUnwrap(text.range(of: "Hello"))
             
             text.transform(updating: &helloRange) {
                 $0.removeSubrange($0.startIndex ..< $0.endIndex)
             }
             
-            #expect(String(text[helloRange].characters) == "")
+            XCTAssertEqual(String(text[helloRange].characters), "")
         }
         
         do {
             var text = AttributedString("Hello, world")
-            let helloRange = try #require(text.range(of: "Hello"))
+            let helloRange = try XCTUnwrap(text.range(of: "Hello"))
             
-            let updatedHelloRange = try #require(text.transform(updating: helloRange) {
+            let updatedHelloRange = try XCTUnwrap(text.transform(updating: helloRange) {
                 $0.removeSubrange(helloRange)
             })
             
-            #expect(String(text[updatedHelloRange].characters) == "")
+            XCTAssertEqual(String(text[updatedHelloRange].characters), "")
         }
         
         do {
             var text = AttributedString("Hello, world")
-            var helloRange = try #require(text.range(of: ", "))
+            var helloRange = try XCTUnwrap(text.range(of: ", "))
             
             try text.transform(updating: &helloRange) {
-                $0.removeSubrange(try #require($0.range(of: "o, w")))
+                $0.removeSubrange(try XCTUnwrap($0.range(of: "o, w")))
             }
             
-            #expect(String(text[helloRange].characters) == "")
+            XCTAssertEqual(String(text[helloRange].characters), "")
             let collapsedIdx = text.index(text.startIndex, offsetByCharacters: 4)
-            #expect(helloRange == collapsedIdx ..< collapsedIdx)
+            XCTAssertEqual(helloRange, collapsedIdx ..< collapsedIdx)
         }
     }
     
-    @Test
-    func collapseLeft() throws {
+    func testCollapseLeft() throws {
         var text = AttributedString("Hello, world")
-        var helloRange = try #require(text.range(of: "Hello"))
+        var helloRange = try XCTUnwrap(text.range(of: "Hello"))
         
         try text.transform(updating: &helloRange) {
-            $0.removeSubrange(try #require($0.range(of: "llo, wo")))
+            $0.removeSubrange(try XCTUnwrap($0.range(of: "llo, wo")))
         }
         
-        #expect(String(text[helloRange].characters) == "He")
+        XCTAssertEqual(String(text[helloRange].characters), "He")
     }
     
-    @Test
-    func collapseRight() throws {
+    func testCollapseRight() throws {
         var text = AttributedString("Hello, world")
-        var worldRange = try #require(text.range(of: "world"))
+        var worldRange = try XCTUnwrap(text.range(of: "world"))
         
         try text.transform(updating: &worldRange) {
-            $0.removeSubrange(try #require($0.range(of: "llo, wo")))
+            $0.removeSubrange(try XCTUnwrap($0.range(of: "llo, wo")))
         }
         
-        #expect(String(text[worldRange].characters) == "rld")
+        XCTAssertEqual(String(text[worldRange].characters), "rld")
     }
     
-    @Test
-    func nesting() throws {
+    func testNesting() throws {
         var text = AttributedString("Hello, world")
-        var helloRange = try #require(text.range(of: "Hello"))
+        var helloRange = try XCTUnwrap(text.range(of: "Hello"))
         try text.transform(updating: &helloRange) {
-            var worldRange = try #require($0.range(of: "world"))
+            var worldRange = try XCTUnwrap($0.range(of: "world"))
             try $0.transform(updating: &worldRange) {
-                $0.removeSubrange(try #require($0.range(of: "llo, wo")))
+                $0.removeSubrange(try XCTUnwrap($0.range(of: "llo, wo")))
             }
-            #expect(String($0[worldRange].characters) == "rld")
+            XCTAssertEqual(String($0[worldRange].characters), "rld")
         }
-        #expect(String(text[helloRange].characters) == "He")
+        XCTAssertEqual(String(text[helloRange].characters), "He")
     }
     
-    #if FOUNDATION_EXIT_TESTS
-    @Test
-    func trackingLostPreconditions() async {
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            var helloRange = try #require(text.range(of: "Hello"))
-            text.transform(updating: &helloRange) {
-                $0 = AttributedString("Foo")
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            var helloRange = try #require(text.range(of: "Hello"))
-            text.transform(updating: &helloRange) {
-                $0 = AttributedString("Hello world")
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            var ranges = [try #require(text.range(of: "Hello"))]
-            text.transform(updating: &ranges) {
-                $0 = AttributedString("Foo")
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            var ranges = [try #require(text.range(of: "Hello"))]
-            text.transform(updating: &ranges) {
-                $0 = AttributedString("Hello world")
-            }
-        }
-    }
-    #endif
-    
-    @Test
-    func trackingLost() throws {
+    func testTrackingLost() throws {
         let text = AttributedString("Hello, world")
-        let helloRange = try #require(text.range(of: "Hello"))
+        let helloRange = try XCTUnwrap(text.range(of: "Hello"))
         
         do {
             var copy = text
-            #expect(copy.transform(updating: helloRange) {
+            XCTAssertNil(copy.transform(updating: helloRange) {
                 $0 = AttributedString("Foo")
-            } == nil)
+            })
         }
         
         do {
             var copy = text
-            #expect(copy.transform(updating: helloRange) {
+            XCTAssertNil(copy.transform(updating: helloRange) {
                 $0 = AttributedString("Hello world")
-            } == nil)
+            })
         }
         
         do {
             var copy = text
-            #expect(copy.transform(updating: helloRange) {
+            XCTAssertNotNil(copy.transform(updating: helloRange) {
                 $0 = $0
-            } != nil)
+            })
         }
         
         do {
             var copy = text
-            #expect(copy.transform(updating: helloRange) {
+            XCTAssertNotNil(copy.transform(updating: helloRange) {
                 var reference = $0
                 reference.testInt = 2
                 $0 = $0
-            } != nil)
-            #expect(copy.testInt == nil)
+            })
+            XCTAssertNil(copy.testInt)
         }
     }
     
-    @Test
-    func attributeMutation() throws {
+    func testAttributeMutation() throws {
         var text = AttributedString("Hello, world!")
         let original = text
-        let helloRange = try #require(text.range(of: "Hello"))
-        let worldRange = try #require(text.range(of: "world"))
+        let helloRange = try XCTUnwrap(text.range(of: "Hello"))
+        let worldRange = try XCTUnwrap(text.range(of: "world"))
         
-        let updatedRanges = try #require(text.transform(updating: [helloRange, worldRange]) {
+        let updatedRanges = try XCTUnwrap(text.transform(updating: [helloRange, worldRange]) {
             $0.testInt = 2
         })
         
-        #expect(updatedRanges.count == 2)
-        #expect(AttributedString(text[updatedRanges[0]]) == original[helloRange].settingAttributes(AttributeContainer.testInt(2)))
-        #expect(AttributedString(text[updatedRanges[1]]) == original[worldRange].settingAttributes(AttributeContainer.testInt(2)))
+        XCTAssertEqual(updatedRanges.count, 2)
+        XCTAssertEqual(AttributedString(text[updatedRanges[0]]), original[helloRange].settingAttributes(AttributeContainer.testInt(2)))
+        XCTAssertEqual(AttributedString(text[updatedRanges[1]]), original[worldRange].settingAttributes(AttributeContainer.testInt(2)))
     }
-    
-    #if FOUNDATION_EXIT_TESTS
-    @Test
-    func invalidInputRanges() async {
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            let other = text + AttributedString("Extra text")
-            let range = other.startIndex ..< other.endIndex
-            _ = text.transform(updating: range) { _ in
-                
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            let other = text + AttributedString("Extra text")
-            let range = other.endIndex ..< other.endIndex
-            _ = text.transform(updating: range) { _ in
-                
-            }
-        }
-        
-        await #expect(processExitsWith: .failure) {
-            var text = AttributedString("Hello, world")
-            _ = text.transform(updating: []) { _ in
-                
-            }
-        }
-    }
-    #endif
 }
