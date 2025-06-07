@@ -1975,16 +1975,64 @@ extension DataTests {
         XCTAssertEqual(Data().base64EncodedData(), Data())
     }
 
+    func test_base64Encode_allBytesSequentially() {
+        let input = UInt8(0) ... UInt8(255)
+
+        XCTAssertEqual(
+            Data(input).base64EncodedString(),
+            """
+            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0B\
+            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgY\
+            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw\
+            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==
+            """
+        )
+        XCTAssertEqual(
+            Data(input).base64EncodedString(options: .omitPaddingCharacter),
+            """
+            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0B\
+            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgY\
+            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw\
+            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w
+            """
+        )
+        XCTAssertEqual(
+            Data(input).base64EncodedString(options: [.base64URLAlphabet]),
+            """
+            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0B\
+            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn-AgY\
+            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq-wsbKztLW2t7i5uru8vb6_wMHCw\
+            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_w==
+            """
+        )
+        XCTAssertEqual(
+            Data(input).base64EncodedString(options: [.omitPaddingCharacter, .base64URLAlphabet]),
+            """
+            AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0B\
+            BQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn-AgY\
+            KDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq-wsbKztLW2t7i5uru8vb6_wMHCw\
+            8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_w
+            """
+        )
+    }
+
     func test_base64Encode_arrayOfNulls() {
         let input = Data(repeating: 0, count: 10)
         XCTAssertEqual(input.base64EncodedString(), "AAAAAAAAAAAAAA==")
         XCTAssertEqual(input.base64EncodedData(), Data("AAAAAAAAAAAAAA==".utf8))
+
+        XCTAssertEqual(input.base64EncodedString(options: .omitPaddingCharacter), "AAAAAAAAAAAAAA")
+        XCTAssertEqual(input.base64EncodedData(options: .omitPaddingCharacter), Data("AAAAAAAAAAAAAA".utf8))
     }
 
     func test_base64Encode_differentPaddingNeeds() {
         XCTAssertEqual(Data([1, 2, 3, 4]).base64EncodedString(), "AQIDBA==")
         XCTAssertEqual(Data([1, 2, 3, 4, 5]).base64EncodedString(), "AQIDBAU=")
         XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]).base64EncodedString(), "AQIDBAUG")
+
+        XCTAssertEqual(Data([1, 2, 3, 4]).base64EncodedString(options: .omitPaddingCharacter), "AQIDBA")
+        XCTAssertEqual(Data([1, 2, 3, 4, 5]).base64EncodedString(options: .omitPaddingCharacter), "AQIDBAU")
+        XCTAssertEqual(Data([1, 2, 3, 4, 5, 6]).base64EncodedString(options: .omitPaddingCharacter), "AQIDBAUG")
 
         XCTAssertEqual(Data([1, 2, 3, 4]).base64EncodedString(options: [.lineLength64Characters]), "AQIDBA==")
         XCTAssertEqual(Data([1, 2, 3, 4, 5]).base64EncodedString(options: [.lineLength64Characters]), "AQIDBAU=")
