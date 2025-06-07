@@ -2309,7 +2309,15 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         case .month:
             var dc = dateComponents(monthBasedComponents, from: dateInWholeSecond, in: timeZone)
-            dc.month = (dc.month ?? 0) + amount
+            if let month = dc.month {
+                let (res, overflow) = month.addingReportingOverflow(amount)
+                guard !overflow else {
+                    throw .overflow(field, date, nil)
+                }
+                dc.month = res
+            } else {
+                dc.month = amount
+            }
             capDay(in: &dc) // adding 1 month to Jan 31 should return Feb 29, not Feb 31
             resultInWholeSeconds = try self.date(from: dc, inTimeZone: timeZone, dstRepeatedTimePolicy: .latter)
         case .quarter:
