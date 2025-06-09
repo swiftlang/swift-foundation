@@ -5,6 +5,7 @@
 * Review Manager: [Tina Liu](https://github.com/itingliu)
 * Status: **Accepted**
 * Review: ([Pitch](https://forums.swift.org/t/pitch-attributedstring-discontiguous-operations/76574)) 
+* Implementation: #1145
 
 ## Introduction
 

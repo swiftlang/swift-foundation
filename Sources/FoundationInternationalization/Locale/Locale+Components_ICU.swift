@@ -22,34 +22,7 @@ internal import _FoundationICU
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Components {
-    // Returns an ICU-style identifier like "de_DE@calendar=gregorian"
-    internal var icuIdentifier: String {
-        var keywords: [ICULegacyKey: String] = [:]
-        if let id = calendar?.cldrIdentifier { keywords[Calendar.Identifier.legacyKeywordKey] = id }
-        if let id = collation?._normalizedIdentifier { keywords[Locale.Collation.legacyKeywordKey] = id }
-        if let id = currency?._normalizedIdentifier { keywords[Locale.Currency.legacyKeywordKey] = id }
-        if let id = numberingSystem?._normalizedIdentifier { keywords[Locale.NumberingSystem.legacyKeywordKey] = id }
-        if let id = firstDayOfWeek?.rawValue { keywords[Locale.Weekday.legacyKeywordKey] = id }
-        if let id = hourCycle?.rawValue { keywords[Locale.HourCycle.legacyKeywordKey] = id }
-        if let id = measurementSystem?._normalizedIdentifier { keywords[Locale.MeasurementSystem.legacyKeywordKey] = id }
-        // No need for redundant region keyword
-        if let region = region, region != languageComponents.region {
-            // rg keyword value is actually a subdivision code
-            keywords[Locale.Region.legacyKeywordKey] = Locale.Subdivision.subdivision(for: region)._normalizedIdentifier
-        }
-        if let id = subdivision?._normalizedIdentifier { keywords[Locale.Subdivision.legacyKeywordKey] = id }
-        if let id = timeZone?.identifier { keywords[TimeZone.legacyKeywordKey] = id }
-        if let id = variant?._normalizedIdentifier { keywords[Locale.Variant.legacyKeywordKey] = id }
 
-        var locID = languageComponents.identifier
-        for (key, val) in keywords {
-            // This uses legacy key-value pairs, like "collation=phonebook" instead of "-cu-phonebk", so be sure that the above values are `legacyKeywordKey`
-            // See Locale.Components.legacyKey(forKey:) for more info on performance costs
-            locID = Locale.identifierWithKeywordValue(locID, key: key, value: val)
-        }
-        return locID
-    }
-    
     /// - Parameter identifier: Unicode language identifier such as "en-u-nu-thai-ca-buddhist-kk-true"
     public init(identifier: String) {
         let languageComponents = Locale.Language.Components(identifier: identifier)

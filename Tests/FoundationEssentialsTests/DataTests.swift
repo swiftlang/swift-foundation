@@ -1634,6 +1634,177 @@ class DataTests : XCTestCase {
         // source.advanced(by: 5)
     }
 
+    func test_InlineDataSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+        var source = Data()
+        var span = source.span
+        XCTAssertTrue(span.isEmpty)
+
+        source.append(contentsOf: [1, 2, 3])
+        span = source.span
+        XCTAssertFalse(span.isEmpty)
+        XCTAssertEqual(span.count, source.count)
+        XCTAssertEqual(span[0], 1)
+#endif
+    }
+
+    func test_InlineSliceDataSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+        let source = Data(0 ... .max)
+        let span = source.span
+        XCTAssertEqual(span.count, source.count)
+        XCTAssertEqual(span[span.indices.last!], .max)
+#endif
+    }
+
+    func test_LargeSliceDataSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if _pointerBitWidth(_64)
+        let count = Int(Int32.max)
+#elseif _pointerBitWidth(_32)
+        let count = Int(Int16.max)
+#else
+        #error("This test needs updating")
+#endif
+
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+        let source = Data(repeating: 0, count: count).dropFirst()
+        XCTAssertNotEqual(source.startIndex, 0)
+        let span = source.span
+        XCTAssertFalse(span.isEmpty)
+#endif
+    }
+
+    func test_InlineDataMutableSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+        var source = Data()
+        var span = source.mutableSpan
+        XCTAssertTrue(span.isEmpty)
+
+        source.append(contentsOf: [1, 2, 3])
+        let count = source.count
+        span = source.mutableSpan
+        let i = try XCTUnwrap(span.indices.randomElement())
+        XCTAssertFalse(span.isEmpty)
+        XCTAssertEqual(span.count, count)
+        let v = UInt8.random(in: 10..<100)
+        span[i] = v
+        var sub = span.extracting(i ..< i+1)
+        sub.update(repeating: v)
+        XCTAssertEqual(source[i], v)
+#endif
+#endif
+    }
+
+    func test_InlineSliceDataMutableSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+        var source = Data(0..<100)
+        let count = source.count
+        var span = source.mutableSpan
+        XCTAssertEqual(span.count, count)
+        let i = try XCTUnwrap(span.indices.randomElement())
+        var sub = span.extracting(i..<i+1)
+        sub.update(repeating: .max)
+        XCTAssertEqual(source[i], .max)
+#endif
+#endif
+    }
+
+    func test_LargeSliceDataMutableSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if _pointerBitWidth(_64)
+        var count = Int(Int32.max)
+#elseif _pointerBitWidth(_32)
+        var count = Int(Int16.max)
+#else
+        #error("This test needs updating")
+#endif
+
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+        var source = Data(repeating: 0, count: count).dropFirst()
+        XCTAssertNotEqual(source.startIndex, 0)
+        count = source.count
+        var span = source.mutableSpan
+        XCTAssertEqual(span.count, count)
+        let i = try XCTUnwrap(span.indices.dropFirst().randomElement())
+        span[i] = .max
+        XCTAssertEqual(source[i], 0)
+        XCTAssertEqual(source[i+1], .max)
+#endif
+#endif
+    }
+
+    func test_InlineDataMutableRawSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+        var source = Data()
+        var span = source.mutableBytes
+        XCTAssertTrue(span.isEmpty)
+
+        source.append(contentsOf: [1, 2, 3])
+        let count = source.count
+        span = source.mutableBytes
+        let i = try XCTUnwrap(span.byteOffsets.randomElement())
+        XCTAssertFalse(span.isEmpty)
+        XCTAssertEqual(span.byteCount, count)
+        let v = UInt8.random(in: 10..<100)
+        var sub = span.extracting(i..<i+1)
+        sub.storeBytes(of: v, as: UInt8.self)
+        XCTAssertEqual(source[i], v)
+#endif
+    }
+
+    func test_InlineSliceDataMutableRawSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+        var source = Data(0..<100)
+        let count = source.count
+        var span = source.mutableBytes
+        XCTAssertEqual(span.byteCount, count)
+        let i = try XCTUnwrap(span.byteOffsets.randomElement())
+        span.storeBytes(of: -1, toByteOffset: i, as: Int8.self)
+        XCTAssertEqual(source[i], .max)
+#endif
+    }
+
+    func test_LargeSliceDataMutableRawSpan() throws {
+        guard #available(FoundationSpan 6.2, *) else { throw XCTSkip("Span not available") }
+
+#if _pointerBitWidth(_64)
+        var count = Int(Int32.max)
+#elseif _pointerBitWidth(_32)
+        var count = Int(Int16.max)
+#else
+        #error("This test needs updating")
+#endif
+
+#if compiler(>=6.2) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
+        var source = Data(repeating: 0, count: count).dropFirst()
+        XCTAssertNotEqual(source.startIndex, 0)
+        count = source.count
+        var span = source.mutableBytes
+        XCTAssertEqual(span.byteCount, count)
+        let i = try XCTUnwrap(span.byteOffsets.dropFirst().randomElement())
+        span.storeBytes(of: -1, toByteOffset: i, as: Int8.self)
+        XCTAssertEqual(source[i], 0)
+        XCTAssertEqual(source[i+1], .max)
+#endif
+    }
 
     #if false // FIXME: XCTest doesn't support crash tests yet rdar://20195010&22387653
     func test_bounding_failure_subdata() {
