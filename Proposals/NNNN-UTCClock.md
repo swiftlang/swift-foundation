@@ -1,6 +1,6 @@
 # UTCClock and Epochs
 
-* Proposal: 
+* Proposal: [SF-0027](0027-UTCClock.md)
 * Authors: [Philippe Hausler](https://github.com/phausler)
 * Review Manager: [Tina L](https://github.com/itingliu)
 * Status: Review: Jun 10...Jun 17, 2025
