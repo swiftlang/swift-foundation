@@ -3,7 +3,7 @@
 * Proposal: 
 * Authors: [Philippe Hausler](https://github.com/phausler)
 * Review Manager: 
-* Status: 
+* Status: Review: Jun 10...Jun 17, 2025
 * Implementation: 
 * Review: [Pitch](https://forums.swift.org/t/pitch-utcclock/78018) 
 
