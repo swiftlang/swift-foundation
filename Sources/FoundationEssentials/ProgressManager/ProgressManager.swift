@@ -27,6 +27,7 @@ internal struct FractionState {
     var overallFraction: _ProgressFraction {
         selfFraction + childFraction
     }
+    var children: Set<ProgressManager>
     var interopChild: ProgressManager? // read from this if self is actually an interop ghost
 }
 
@@ -153,6 +154,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 }
                 state.fractionState.selfFraction.total = newValue ?? 0
                 
+                // Updating my own childFraction here because previously they did not get updated because my total was 0
+                if !state.fractionState.children.isEmpty {
+                    for child in state.fractionState.children {
+                        child.updateChildFractionSpecial(of: manager, state: &state)
+                    }
+                }
+                
                 // if newValue is nil, reset indeterminate to true
                 if newValue != nil {
                     state.fractionState.indeterminate = false
@@ -227,16 +235,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     internal let parents: LockedState<[ProgressManager: Int]>
-    private let children: LockedState<Set<ProgressManager>>
     private let state: LockedState<State>
     
     internal init(total: Int?, ghostReporter: ProgressManager?, interopObservation: (any Sendable)?) {
         self.parents = .init(initialState: [:])
-        self.children = .init(initialState: Set())
         let fractionState = FractionState(
             indeterminate: total == nil ? true : false,
             selfFraction: _ProgressFraction(completed: 0, total: total ?? 0),
             childFraction: _ProgressFraction(completed: 0, total: 1),
+            children: Set<ProgressManager>(),
             interopChild: nil
         )
         let state = State(fractionState: fractionState, otherProperties: [:], childrenOtherProperties: [:])
@@ -324,7 +331,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         return try state.withLock { (state) throws(E) -> T in
             var values = Values(manager: self, state: state)
             // This is done to avoid copy on write later
-            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction()), otherProperties: [:], childrenOtherProperties: [:])
+            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction(), children: Set()), otherProperties: [:], childrenOtherProperties: [:])
             let result = try closure(&values)
             state = values.state
             return result
@@ -400,6 +407,23 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             return (prev, state.fractionState.overallFraction)
         }
         return UpdateState(previous: previous, current: current)
+    }
+    
+    // This is used when parent has its lock acquired and wants its child to update parent's childFraction to reflect child's own changes
+    private func updateChildFractionSpecial(of manager: ProgressManager, state managerState: inout State) {
+        let portion = parents.withLock { parents in
+            return parents[manager]
+        }
+        
+        if let portionOfParent = portion {
+            let myFraction = state.withLock { $0.fractionState.overallFraction }
+
+            if myFraction.isFinished {
+                // If I'm not finished, update my entry in parent's childFraction
+                managerState.fractionState.childFraction = managerState.fractionState.childFraction + _ProgressFraction(completed: portionOfParent, total: managerState.fractionState.selfFraction.total) * myFraction
+
+            }
+        }
     }
     
     private func updateFractionCompleted(from: _ProgressFraction, to: _ProgressFraction) {
@@ -491,8 +515,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     internal func addToChildren(childManager: ProgressManager) {
-        _ = children.withLock { children in
-            children.insert(childManager)
+        _ = state.withLock { state in
+            state.fractionState.children.insert(childManager)
         }
     }
     

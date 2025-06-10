@@ -645,6 +645,56 @@ class TestProgressReporter: XCTestCase {
         XCTAssertEqual(altManager2.fractionCompleted, 0.4)
     }
     
+    func testAssignToProgressReporterThenSetTotalCount() {
+        let overall = ProgressManager(totalCount: nil)
+        
+        let child1 = ProgressManager(totalCount: 10)
+        overall.assign(count: 10, to: child1.reporter)
+        child1.complete(count: 5)
+        
+        let child2 = ProgressManager(totalCount: 20)
+        overall.assign(count: 20, to: child2.reporter)
+        child2.complete(count: 20)
+        
+        overall.withProperties { properties in
+            properties.totalCount = 30
+        }
+        XCTAssertEqual(overall.completedCount, 20)
+        XCTAssertEqual(overall.fractionCompleted, 25 / 30)
+        
+        child1.complete(count: 5)
+        
+        XCTAssertEqual(overall.completedCount, 30)
+        XCTAssertEqual(overall.fractionCompleted, 1.0)
+    }
+    
+    func testMakeSubprogressThenSetTotalCount() async {
+        let overall = ProgressManager(totalCount: nil)
+        
+        let reporter1 = await dummy(index: 1, subprogress: overall.subprogress(assigningCount: 10))
+        
+        let reporter2 = await dummy(index: 2, subprogress: overall.subprogress(assigningCount: 20))
+        
+        XCTAssertEqual(reporter1.fractionCompleted, 0.5)
+        
+        XCTAssertEqual(reporter2.fractionCompleted, 0.5)
+        
+        overall.withProperties { properties in
+            properties.totalCount = 30
+        }
+        
+        XCTAssertEqual(overall.totalCount, 30)
+        XCTAssertEqual(overall.fractionCompleted, 0.5)
+    }
+    
+    func dummy(index: Int, subprogress: consuming Subprogress) async -> ProgressReporter {
+        let manager = subprogress.start(totalCount: index * 10)
+        
+        manager.complete(count: (index * 10) / 2)
+        
+        return manager.reporter
+    }
+    
     /// All of these test cases hit the precondition for cycle detection, but currently there's no way to check for hitting precondition in xctest.
 //    func testProgressReporterDirectCycleDetection() {
 //        let manager = ProgressManager(totalCount: 2)
