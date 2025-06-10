@@ -53,6 +53,7 @@ public struct UTCClock: Sendable {
   public init()
 }
 
+@available(FoundationPreview 6.2, *)
 extension UTCClock: Clock {
     public func sleep(until deadline: Date, tolerance: Duration? = nil) async throws
     public var now: Date { get }
