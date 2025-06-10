@@ -64,6 +64,7 @@ extension UTCClock: Clock {
 The extension of `Date` conforms it to `InstantProtocol` and adds one addition "near miss" of the protocol as an additional function that in practice feels like a default parameter. This `duration(to:includingLeapSeconds:)` function provides the calculation of the duration from one point in time to another and calculates if the span between the two points includes a leap second or not. This calculation can be used for historical astronomical data since the irregularity of the rotation causes variation in the observed solar time. Those points are historically fixed and are a known series of events at specific dates (in UTC)[^utclist].
 
 ```swift
+@available(FoundationPreview 6.2, *)
 extension Date: InstantProtocol {
     public func advanced(by duration: Duration) -> Date
     public func duration(to other: Date) -> Duration
