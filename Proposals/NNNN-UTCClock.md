@@ -47,6 +47,7 @@ These additions can be broken down into three categories; the `UTCClock` definit
 The structure of the `UTCClock` is trivially sendable since it houses no specific state and has the defined typealias of its `Instant` as `Date`. The minimum feasible resolution of `Date` is 1 nanosecond (however that may vary from platform to platform where Foundation is implemented).
 
 ```swift
+@available(FoundationPreview 6.2, *)
 public struct UTCClock: Sendable {
   public typealias Instant = Date
   public init()
