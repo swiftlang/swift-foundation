@@ -28,6 +28,7 @@ add_library(FoundationEssentials
     OutputBuffer.swift
     Platform.swift
     SortComparator.swift
+    UTCClock.swift
     UUID_Wrappers.swift
     UUID.swift
     WASILibc+Extensions.swift
