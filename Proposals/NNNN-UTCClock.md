@@ -70,6 +70,7 @@ extension Date: InstantProtocol {
     public func duration(to other: Date) -> Duration
 }
 
+@available(FoundationPreview 6.2, *)
 extension Date {
     public static func leapSeconds(from start: Date, to end: Date) -> Duration
 }
