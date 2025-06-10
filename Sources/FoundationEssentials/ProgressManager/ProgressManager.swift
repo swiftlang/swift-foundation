@@ -418,7 +418,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         if let portionOfParent = portion {
             let myFraction = state.withLock { $0.fractionState.overallFraction }
 
-            if myFraction.isFinished {
+            if !myFraction.isFinished {
                 // If I'm not finished, update my entry in parent's childFraction
                 managerState.fractionState.childFraction = managerState.fractionState.childFraction + _ProgressFraction(completed: portionOfParent, total: managerState.fractionState.selfFraction.total) * myFraction
 
