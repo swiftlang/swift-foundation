@@ -92,6 +92,7 @@ An extension to `UTCClock` will be made in `Foundation` for exposing an `systemE
 
 ```swift
 
+@available(FoundationPreview 6.2, *)
 extension UTCClock {
     public static var systemEpoch: Date { get }
 }
