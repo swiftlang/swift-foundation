@@ -3,8 +3,10 @@
 * Proposal: [SF-NNNN](NNNN-locale-region-category.md)
 * Authors: [Tina Liu](https://github.com/itingliu)
 * Review Manager: TBD
+* Implementation: [https://github.com/swiftlang/swift-foundation/pull/1253]()
 * Status: **Awaiting review**
-
+* Reviews: [Pitch](https://forums.swift.org/t/pitch-category-support-for-locale-region/79240)
+ 
 ## Introduction
 
 Currently, `Locale.Region` offers a few functionalities to query information about a region:
