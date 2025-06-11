@@ -1,4 +1,4 @@
-# `ProgressReporter`: Progress Reporting in Swift Concurrency  
+# `ProgressManager`: Progress Reporting in Swift Concurrency  
 
 * Proposal: SF-0023
 * Author(s): [Chloe Yeo](https://github.com/chloe-yeo)
@@ -33,6 +33,9 @@
     - Moving `FormatStyle` to separate future proposal
 * **v5** Minor Updates: 
     - Renamed `manager(totalCount:)` to `start(totalCount)`
+    - Changed the return type of `values(of:)` to be an array of non-optional values
+    - Clarify cycle-detection behavior in `assign(count:to:)` at runtime
+    - Expanded Future Directions
     - Expanded Alternatives Considered
     
 ## Table of Contents 
@@ -153,12 +156,12 @@ Another recommended usage pattern of `Progress`, which involves the `ProgressRep
 
 ### `ProgressManager` API 
 
-We propose introducing a new progress reporting type called `ProgressManager`. `ProgressManager` is used to report progress.
+We propose introducing a new progress reporting type called `ProgressManager`. `ProgressManager` is used to manage the composition of progress by either assigning it, or completing it. 
 
 In order to compose progress into trees, we also introduce two more types:
 
 1. `Subprogress`: A `~Copyable` type, used when a `ProgressManager` wishes to assign a portion of its total progress to an `async` function.
-2. `ProgressReporter`: A class used to report progress to interested observers. This includes one or more other `ProgressManager`s, which may incorporate those updates into their own progress.
+2. `ProgressReporter`: A class used to report progress of `ProgressManager` to interested observers. This includes one or more other `ProgressManager`s, which may incorporate those updates into their own progress.
 
 ```mermaid
 block-beta
@@ -516,6 +519,8 @@ overall.addChild(subprogressThree, withPendingUnitCount: 1)
     
     /// Adds a `ProgressReporter` as a child, with its progress representing a portion of `self`'s progress.
     ///
+    /// If a cycle is detected, this will cause a crash at runtime. 
+    ///
     /// - Parameters:
     ///   - output: A `ProgressReporter` instance.
     ///   - count: The portion of `totalCount` to be delegated to the `ProgressReporter`.
@@ -534,7 +539,7 @@ overall.addChild(subprogressThree, withPendingUnitCount: 1)
     /// 
     /// - Parameter property: Type of property.
     /// - Returns: Array of values for property.
-    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value?]
+    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value]
 
     /// Returns the aggregated result of values where type of property is `AdditiveArithmetic`.
     /// All values are added together. 
@@ -601,6 +606,20 @@ public struct Subprogress: ~Copyable, Sendable {
     public func withProperties<T, E: Error>(
         _ closure: (sending ProgressManager.Values) throws(E) -> sending T
     ) throws(E) -> T
+    
+    /// Returns an array of values for specified property in subtree.
+    /// 
+    /// - Parameter property: Type of property.
+    /// - Returns: Array of values for property.
+    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value]
+
+    /// Returns the aggregated result of values where type of property is `AdditiveArithmetic`.
+    /// All values are added together. 
+    /// 
+    /// - Parameters:
+    ///   - property: Type of property.
+    ///   - values: Sum of values.
+    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value : AdditiveArithmetic
 }
 ```
 
@@ -779,6 +798,9 @@ To further safeguard developers from making mistakes of over-assigning or under-
 
 ### Support for Non-Integer Formats of Progress Updates
 To handle progress values from other sources that provide progress updates as non-integer formats such as `Double`, we can introduce a way for `ProgressManager` to either be instantiated with non-integer formats, or a peer instance of `ProgressManager` that works with `ProgressManager` to compose a progress graph.   
+
+### Support for Decomposition of Progress / Display of Hierarchy of Progress Subtree 
+If there happens to be greater demand of a functionality to either decompose a `ProgressManager` or `ProgressReporter` into its constituents, or to display the hierarchy of the subtree with a `ProgressManager` or `ProgressReporter` at its root, we can introduce additive changes to this API. 
 
 ## Alternatives considered
 
