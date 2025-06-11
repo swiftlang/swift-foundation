@@ -1,10 +1,10 @@
 # `Locale.Region.Category` 
 
-* Proposal: [SF-NNNN](NNNN-locale-region-category.md)
+* Proposal: [SF-0028](0028-locale-region-category.md)
 * Authors: [Tina Liu](https://github.com/itingliu)
-* Review Manager: TBD
+* Review Manager: [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Implementation: [https://github.com/swiftlang/swift-foundation/pull/1253]()
-* Status: **Awaiting review**
+* Status: **Review: Jun 11, 2025...Jun 18, 2025**
 * Reviews: [Pitch](https://forums.swift.org/t/pitch-category-support-for-locale-region/79240)
  
 ## Introduction
