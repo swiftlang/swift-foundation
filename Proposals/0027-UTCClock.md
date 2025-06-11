@@ -4,7 +4,7 @@
 * Authors: [Philippe Hausler](https://github.com/phausler)
 * Review Manager: [Tina L](https://github.com/itingliu)
 * Status: Review: Jun 10...Jun 17, 2025
-* Implementation: Pending
+* Implementation: [Pull request](https://github.com/swiftlang/swift-foundation/pull/1344)
 * Review: [Pitch](https://forums.swift.org/t/pitch-utcclock/78018) 
 
  ## Introduction
