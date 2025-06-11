@@ -60,6 +60,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         case totalCountUpdated
     }
     
+    internal let parents: LockedState<[ProgressManager: Int]>
+    private let state: LockedState<State>
+    
     // Interop properties - Just kept alive
     internal let interopObservation: (any Sendable)? // set at init
     internal let interopObservationForMonitor: LockedState<(any Sendable)?> = LockedState(initialState: nil)
@@ -231,9 +234,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             }
         }
     }
-    
-    internal let parents: LockedState<[ProgressManager: Int]>
-    private let state: LockedState<State>
     
     internal init(total: Int?, ghostReporter: ProgressManager?, interopObservation: (any Sendable)?) {
         self.parents = .init(initialState: [:])
