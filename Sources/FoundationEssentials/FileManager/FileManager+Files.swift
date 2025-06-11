@@ -965,7 +965,7 @@ extension _FileManagerImpl {
             
             if let date = attributes[.modificationDate] as? Date {
                 let (isecs, fsecs) = modf(date.timeIntervalSince1970)
-                if let tv_sec = Int(exactly: isecs),
+                if let tv_sec = time_t(exactly: isecs),
                    let tv_nsec = Int(exactly: round(fsecs * 1000000000.0)) {
                     var timespecs = (timespec(), timespec())
                     timespecs.0.tv_sec = tv_sec
