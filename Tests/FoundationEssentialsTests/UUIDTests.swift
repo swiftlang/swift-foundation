@@ -67,7 +67,7 @@ final class UUIDTests : XCTestCase {
             UUID(uuidString: "a53baa1c-b4f5-48db-9467-9786b76b266c")!,
             UUID(uuidString: "a53baa1c-b4f5-48db-9467-9786b76b256d")!,
         ]
-        checkHashable(values, equalityOracle: { $0 == $1 })
+        XCTCheckHashable(values, equalityOracle: { $0 == $1 })
     }
 
     func test_AnyHashableContainingUUID() {

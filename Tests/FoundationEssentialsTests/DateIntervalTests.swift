@@ -77,7 +77,7 @@ final class DateIntervalTests : XCTestCase {
                 DateInterval(start: start2b, duration: duration2),
             ],
         ]
-        checkHashableGroups(intervals)
+        XCTCheckHashableGroups(intervals)
     }
 
     func test_checkIntersection() {

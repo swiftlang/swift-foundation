@@ -239,7 +239,7 @@ class TestIndexPath: XCTestCase {
             [1, 1, 2],
             [Int.max, Int.max, Int.max],
         ]
-        checkHashable(samples, equalityOracle: { $0 == $1 })
+        XCTCheckHashable(samples, equalityOracle: { $0 == $1 })
 
         // this should not cause an overflow crash
         _ = IndexPath(indexes: [Int.max >> 8, 2, Int.max >> 36]).hashValue 
