@@ -33,6 +33,8 @@
     - Moving `FormatStyle` to separate future proposal
 * **v5** Minor Updates: 
     - Renamed `manager(totalCount:)` to `start(totalCount)`
+    - Changed the return type of `values(of:)` to be an array of non-optional values
+    - Clarify cycle-detection behavior in `assign(count:to:)` at runtime
     - Expanded Alternatives Considered
     
 ## Table of Contents 
@@ -153,12 +155,12 @@ Another recommended usage pattern of `Progress`, which involves the `ProgressRep
 
 ### `ProgressManager` API 
 
-We propose introducing a new progress reporting type called `ProgressManager`. `ProgressManager` is used to report progress.
+We propose introducing a new progress reporting type called `ProgressManager`. `ProgressManager` is used to manage the composition of progress by either assigning it, or completing it. 
 
 In order to compose progress into trees, we also introduce two more types:
 
 1. `Subprogress`: A `~Copyable` type, used when a `ProgressManager` wishes to assign a portion of its total progress to an `async` function.
-2. `ProgressReporter`: A class used to report progress to interested observers. This includes one or more other `ProgressManager`s, which may incorporate those updates into their own progress.
+2. `ProgressReporter`: A class used to report progress of `ProgressManager` to interested observers. This includes one or more other `ProgressManager`s, which may incorporate those updates into their own progress.
 
 ```mermaid
 block-beta
@@ -516,6 +518,8 @@ overall.addChild(subprogressThree, withPendingUnitCount: 1)
     
     /// Adds a `ProgressReporter` as a child, with its progress representing a portion of `self`'s progress.
     ///
+    /// If a cycle is detected, this will cause a crash at runtime. 
+    ///
     /// - Parameters:
     ///   - output: A `ProgressReporter` instance.
     ///   - count: The portion of `totalCount` to be delegated to the `ProgressReporter`.
@@ -534,7 +538,7 @@ overall.addChild(subprogressThree, withPendingUnitCount: 1)
     /// 
     /// - Parameter property: Type of property.
     /// - Returns: Array of values for property.
-    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value?]
+    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value]
 
     /// Returns the aggregated result of values where type of property is `AdditiveArithmetic`.
     /// All values are added together. 
@@ -606,7 +610,7 @@ public struct Subprogress: ~Copyable, Sendable {
     /// 
     /// - Parameter property: Type of property.
     /// - Returns: Array of values for property.
-    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value?]
+    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value]
 
     /// Returns the aggregated result of values where type of property is `AdditiveArithmetic`.
     /// All values are added together. 
