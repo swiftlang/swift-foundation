@@ -210,12 +210,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
                 
                 // Generate an array of myself + children values of the property
-                let flattenedChildrenValues: [P.Value?] = {
+                let flattenedChildrenValues: [P.Value] = {
                     let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)]
-                    var childrenValues: [P.Value?] = []
+                    var childrenValues: [P.Value] = []
                     if let dictionary = childrenDictionary {
                         for (_, value) in dictionary {
-                            if let value = value as? [P.Value?] {
+                            if let value = value as? [P.Value] {
                                 childrenValues.append(contentsOf: value)
                             }
                         }
@@ -224,7 +224,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 }()
                 
                 // Send the array of myself + children values of property to parents
-                let updateValueForParent: [P.Value?] = [newValue] + flattenedChildrenValues
+                let updateValueForParent: [P.Value] = [newValue] + flattenedChildrenValues
                 manager.parents.withLock { [manager] parents in
                     for (parent, _) in parents {
                         parent.updateChildrenOtherProperties(property: P.self, child: manager, value: updateValueForParent)
@@ -307,7 +307,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Returns an array of values for specified property in subtree.
     /// - Parameter metatype: Type of property.
     /// - Returns: Array of values for property.
-    public func values<P: Property>(of property: P.Type) -> [P.Value?] {
+    public func values<P: Property>(of property: P.Type) -> [P.Value] {
         _$observationRegistrar.access(self, keyPath: \.state)
         return state.withLock { state in
             let childrenValues = getFlattenedChildrenValues(property: property, state: &state)

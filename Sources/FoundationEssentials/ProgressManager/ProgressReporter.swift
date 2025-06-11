@@ -58,7 +58,7 @@ import Observation
     /// Returns an array of values for specified property in subtree.
     /// - Parameter metatype: Type of property.
     /// - Returns: Array of values for property.
-    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value?] {
+    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value] {
         manager.values(of: property)
     }
     
