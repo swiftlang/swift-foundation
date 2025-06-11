@@ -74,9 +74,7 @@ endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Android)
     target_compile_options(FoundationEssentials PRIVATE
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -Xcc -Xfrontend -D_GNU_SOURCE>"
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend InoutLifetimeDependence>"
-        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend LifetimeDependenceMutableAccessors>")
+        "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -Xcc -Xfrontend -D_GNU_SOURCE>")
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 endif()
 
