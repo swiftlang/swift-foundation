@@ -35,6 +35,7 @@
     - Renamed `manager(totalCount:)` to `start(totalCount)`
     - Changed the return type of `values(of:)` to be an array of non-optional values
     - Clarify cycle-detection behavior in `assign(count:to:)` at runtime
+    - Expanded Future Directions
     - Expanded Alternatives Considered
     
 ## Table of Contents 
@@ -797,6 +798,9 @@ To further safeguard developers from making mistakes of over-assigning or under-
 
 ### Support for Non-Integer Formats of Progress Updates
 To handle progress values from other sources that provide progress updates as non-integer formats such as `Double`, we can introduce a way for `ProgressManager` to either be instantiated with non-integer formats, or a peer instance of `ProgressManager` that works with `ProgressManager` to compose a progress graph.   
+
+### Support for Decomposition of Progress / Display of Hierarchy of Progress Subtree 
+If there happens to be greater demand of a functionality to either decompose a `ProgressManager` or `ProgressReporter` into its constituents, or to display the hierarchy of the subtree with a `ProgressManager` or `ProgressReporter` at its root, we can introduce additive changes to this API. 
 
 ## Alternatives considered
 
