@@ -1,8 +1,9 @@
 # Expanded calendar support
 
-* Proposal: SF-017
+* Proposal: SF-0017
 * Authors: [Dragan Besevic](dragan@unicode.org)
 * Review Manager: Tina Liu
+* Implementation: https://github.com/swiftlang/swift-foundation/pull/1171
 * Status: **Accepted**
 
 

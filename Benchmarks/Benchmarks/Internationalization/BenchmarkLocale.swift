@@ -13,15 +13,20 @@
 import Benchmark
 import func Benchmark.blackHole
 
-#if FOUNDATION_FRAMEWORK // This test uses CFString
+#if os(macOS) && USE_PACKAGE
+import FoundationEssentials
+import FoundationInternationalization
+#else
 import Foundation
+#endif
 
 let benchmarks = {
     Benchmark.defaultConfiguration.maxIterations = 1_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
-    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .mallocCountTotal, .throughput]
+    Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput, .peakMemoryResident, .peakMemoryResidentDelta]
 
+#if FOUNDATION_FRAMEWORK
     let string1 = "aaA" as CFString
     let string2 = "AAà" as CFString
     let range1 = CFRange(location: 0, length: CFStringGetLength(string1))
@@ -34,5 +39,22 @@ let benchmarks = {
                 CFStringCompareWithOptionsAndLocale(string1, string2, range1, .init(rawValue: 0), nsLocale)
             }
     }
-}
 #endif
+
+    let identifiers = Locale.availableIdentifiers
+    let allComponents = identifiers.map { Locale.Components(identifier: $0) }
+    Benchmark("LocaleInitFromComponents") { benchmark in
+        for components in allComponents {
+            let locale = Locale(components: components)
+            let components2 = Locale.Components(locale: locale)
+            let locale2 = Locale(components: components2) // cache hit
+        }
+    }
+
+    Benchmark("LocaleComponentsInitIdentifer") { benchmark in
+        for identifier in identifiers {
+            let components = Locale.Components(identifier: identifier)
+        }
+    }
+}
+
