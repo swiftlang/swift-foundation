@@ -20,17 +20,6 @@ internal import OrderedCollections
 internal import _FoundationCollections
 #endif
 
-internal struct FractionState {
-    var indeterminate: Bool
-    var selfFraction: _ProgressFraction
-    var childFraction: _ProgressFraction
-    var overallFraction: _ProgressFraction {
-        selfFraction + childFraction
-    }
-    var children: Set<ProgressManager>
-    var interopChild: ProgressManager? // read from this if self is actually an interop ghost
-}
-
 internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     let metatype: Any.Type
     
@@ -50,7 +39,14 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Stores all the state of properties
     internal struct State {
-        var fractionState: FractionState
+        var indeterminate: Bool
+        var selfFraction: _ProgressFraction
+        var childFraction: _ProgressFraction
+        var overallFraction: _ProgressFraction {
+            selfFraction + childFraction
+        }
+        var children: Set<ProgressManager>
+        var interopChild: ProgressManager? // read from this if self is actually an interop ghost
         var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
         // Type: Metatype maps to dictionary of child to value
         var childrenOtherProperties: [AnyMetatypeWrapper: OrderedDictionary<ProgressManager, [(any Sendable)]>]
@@ -150,27 +146,27 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             }
             
             set {
-                let previous = state.fractionState.overallFraction
-                if state.fractionState.selfFraction.total != newValue && state.fractionState.selfFraction.total > 0 {
-                    state.fractionState.childFraction = state.fractionState.childFraction * _ProgressFraction(completed: state.fractionState.selfFraction.total, total: newValue ?? 1)
+                let previous = state.overallFraction
+                if state.selfFraction.total != newValue && state.selfFraction.total > 0 {
+                    state.childFraction = state.childFraction * _ProgressFraction(completed: state.selfFraction.total, total: newValue ?? 1)
                 }
-                state.fractionState.selfFraction.total = newValue ?? 0
+                state.selfFraction.total = newValue ?? 0
                 
                 // Updating my own childFraction here because previously they did not get updated because my total was 0
-                if !state.fractionState.children.isEmpty {
-                    for child in state.fractionState.children {
+                if !state.children.isEmpty {
+                    for child in state.children {
                         child.updateChildFractionSpecial(of: manager, state: &state)
                     }
                 }
                 
                 // if newValue is nil, reset indeterminate to true
                 if newValue != nil {
-                    state.fractionState.indeterminate = false
+                    state.indeterminate = false
                 } else {
-                    state.fractionState.indeterminate = true
+                    state.indeterminate = true
                 }
                 //TODO: rdar://149015734 Check throttling
-                manager.updateFractionCompleted(from: previous, to: state.fractionState.overallFraction)
+                manager.updateFractionCompleted(from: previous, to: state.overallFraction)
                 manager.ghostReporter?.notifyObservers(with: .totalCountUpdated)
                 manager.monitorInterop.withLock { [manager] interop in
                     if interop == true {
@@ -188,9 +184,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             }
             
             set {
-                let prev = state.fractionState.overallFraction
-                state.fractionState.selfFraction.completed = newValue
-                manager.updateFractionCompleted(from: prev, to: state.fractionState.overallFraction)
+                let prev = state.overallFraction
+                state.selfFraction.completed = newValue
+                manager.updateFractionCompleted(from: prev, to: state.overallFraction)
                 manager.ghostReporter?.notifyObservers(with: .fractionUpdated)
                 
                 manager.monitorInterop.withLock { [manager] interop in
@@ -241,14 +237,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     internal init(total: Int?, ghostReporter: ProgressManager?, interopObservation: (any Sendable)?) {
         self.parents = .init(initialState: [:])
-        let fractionState = FractionState(
+        let state = State(
             indeterminate: total == nil ? true : false,
             selfFraction: _ProgressFraction(completed: 0, total: total ?? 0),
             childFraction: _ProgressFraction(completed: 0, total: 1),
             children: Set<ProgressManager>(),
-            interopChild: nil
-        )
-        let state = State(fractionState: fractionState, otherProperties: [:], childrenOtherProperties: [:])
+            interopChild: nil,
+            otherProperties: [:],
+            childrenOtherProperties: [:],
+            )
         self.state = LockedState(initialState: state)
         self.interopObservation = interopObservation
         self.ghostReporter = ghostReporter
@@ -301,7 +298,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         let parentCount = parents.withLock { $0 }.count
         if parentCount == 0 {
             state.withLock { state in
-                state.fractionState.selfFraction.completed += count
+                state.selfFraction.completed += count
             }
         } else {
             // If there are parents, instead of updating state directly and propagating the values up,
@@ -345,7 +342,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         return try state.withLock { (state) throws(E) -> T in
             var values = Values(manager: self, state: state)
             // This is done to avoid copy on write later
-            state = State(fractionState: FractionState(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction(), children: Set()), otherProperties: [:], childrenOtherProperties: [:])
+            state = State(indeterminate: true, selfFraction: _ProgressFraction(), childFraction: _ProgressFraction(), children: Set(), otherProperties: [:], childrenOtherProperties: [:])
             let result = try closure(&values)
             state = values.state
             return result
@@ -356,31 +353,31 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Returns nil if `self` was instantiated without total units;
     /// returns a `Int` value otherwise.
     private func getTotalCount(state: inout State) -> Int? {
-        if let interopChild = state.fractionState.interopChild {
+        if let interopChild = state.interopChild {
             return interopChild.totalCount
         }
-        if state.fractionState.indeterminate {
+        if state.indeterminate {
             return nil
         } else {
-            return state.fractionState.selfFraction.total
+            return state.selfFraction.total
         }
     }
     
     /// Returns 0 if `self` has `nil` total units;
     /// returns a `Int` value otherwise.
     private func getCompletedCount(state: inout State) -> Int {
-        if let interopChild = state.fractionState.interopChild {
+        if let interopChild = state.interopChild {
             return interopChild.completedCount
         }
         
         // If we happen to query dirty leaf, just propagate up without worrying about recursive lock issues
 //        if state.dirtyChildren.isEmpty {
             if state.dirtyCompleted != nil {
-                let prev = state.fractionState.overallFraction
+                let prev = state.overallFraction
                 if let dirtyCompleted = state.dirtyCompleted {
-                    state.fractionState.selfFraction.completed = dirtyCompleted
+                    state.selfFraction.completed = dirtyCompleted
                 }
-                updateSelfInParent(from: prev, to: state.fractionState.overallFraction, exclude: nil)
+                updateSelfInParent(from: prev, to: state.overallFraction, exclude: nil)
             }
 //        }
         
@@ -398,7 +395,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         
         // Return the actual completedCount
-        return state.fractionState.selfFraction.completed
+        return state.selfFraction.completed
     }
     
     /// Returns 0.0 if `self` has `nil` total units;
@@ -408,10 +405,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// The calculation of fraction completed for a ProgressManager instance that has children
     /// will take into account children's fraction completed as well.
     private func getFractionCompleted(state: inout State) -> Double {
-        if let interopChild = state.fractionState.interopChild {
+        if let interopChild = state.interopChild {
             return interopChild.fractionCompleted
         }
-        if state.fractionState.indeterminate {
+        if state.indeterminate {
             return 0.0
         }
         
@@ -420,23 +417,23 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             //TODO: Call update method
         }
         
-        guard state.fractionState.selfFraction.total > 0 else {
-            return state.fractionState.selfFraction.fractionCompleted
+        guard state.selfFraction.total > 0 else {
+            return state.selfFraction.fractionCompleted
         }
-        return (state.fractionState.selfFraction + state.fractionState.childFraction).fractionCompleted
+        return (state.selfFraction + state.childFraction).fractionCompleted
     }
     
     
     /// Returns `true` if completed and total units are not `nil` and completed units is greater than or equal to total units;
     /// returns `false` otherwise.
     private func getIsFinished(state: inout State) -> Bool {
-        return state.fractionState.selfFraction.isFinished
+        return state.selfFraction.isFinished
     }
     
     
     /// Returns `true` if `self` has `nil` total units.
     private func getIsIndeterminate(state: inout State) -> Bool {
-        return state.fractionState.indeterminate
+        return state.indeterminate
     }
     
     //MARK: FractionCompleted Calculation methods
@@ -452,7 +449,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.dirtyCompleted = dirtyValue + increment
             } else {
                 // If this is the first update
-                state.dirtyCompleted = state.fractionState.selfFraction.completed + increment
+                state.dirtyCompleted = state.selfFraction.completed + increment
             }
         }
         
@@ -499,11 +496,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         // Update self's completed values
         let (previous, current) = self.state.withLock { state in
-            let prev = state.fractionState.overallFraction
+            let prev = state.overallFraction
             if let dirtyCompleted = state.dirtyCompleted {
-                state.fractionState.selfFraction.completed = dirtyCompleted
+                state.selfFraction.completed = dirtyCompleted
             }
-            return (prev, state.fractionState.overallFraction)
+            return (prev, state.overallFraction)
         }
         updateSelfInParent(from: previous, to: current, exclude: exclude)
     }
@@ -534,18 +531,18 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         
         let updateState = state.withLock { state in
-            let previousOverallFraction = state.fractionState.overallFraction
+            let previousOverallFraction = state.overallFraction
             
-            let multiple = _ProgressFraction(completed: portion, total: state.fractionState.selfFraction.total)
+            let multiple = _ProgressFraction(completed: portion, total: state.selfFraction.total)
             
             let oldFractionOfParent = previous * multiple
             
             if previous.total != 0 {
-                state.fractionState.childFraction = state.fractionState.childFraction - oldFractionOfParent
+                state.childFraction = state.childFraction - oldFractionOfParent
             }
             
             if next.total != 0 {
-                state.fractionState.childFraction = state.fractionState.childFraction + (next * multiple)
+                state.childFraction = state.childFraction + (next * multiple)
                 
                 if next.isFinished {
                     // Remove from children list
@@ -553,33 +550,25 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     
                     if portion != 0 {
                         // Update our self completed units
-                        state.fractionState.selfFraction.completed += portion
+                        state.selfFraction.completed += portion
                     }
                     
                     // Subtract the (child's fraction completed * multiple) from our child fraction
-                    state.fractionState.childFraction = state.fractionState.childFraction  - (multiple * next)
+                    state.childFraction = state.childFraction  - (multiple * next)
                 }
             }
-            return UpdateState(previous: previousOverallFraction, current: state.fractionState.overallFraction)
+            return UpdateState(previous: previousOverallFraction, current: state.overallFraction)
         }
         
         updateSelfInParent(from: updateState.previous, to: updateState.current, exclude: exclude)
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
     private func updateCompletedCount(count: Int) -> UpdateState {
         // Acquire and release child's lock
         let (previous, current) = state.withLock { state in
-            let prev = state.fractionState.overallFraction
-            state.fractionState.selfFraction.completed += count
-            return (prev, state.fractionState.overallFraction)
+            let prev = state.overallFraction
+            state.selfFraction.completed += count
+            return (prev, state.overallFraction)
         }
         return UpdateState(previous: previous, current: current)
     }
@@ -591,12 +580,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         
         if let portionOfParent = portion {
-            let myFraction = state.withLock { $0.fractionState.overallFraction }
+            let myFraction = state.withLock { $0.overallFraction }
 
             if !myFraction.isFinished {
                 // If I'm not finished, update my entry in parent's childFraction
-                managerState.fractionState.childFraction = managerState.fractionState.childFraction + _ProgressFraction(completed: portionOfParent, total: managerState.fractionState.selfFraction.total) * myFraction
-
+                managerState.childFraction = managerState.childFraction + _ProgressFraction(completed: portionOfParent, total: managerState.selfFraction.total) * myFraction
             }
         }
     }
@@ -616,18 +604,18 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// A child progress has been updated, which changes our own fraction completed.
     internal func updateChildFraction(from previous: _ProgressFraction, to next: _ProgressFraction, portion: Int) {
         let updateState = state.withLock { state in
-            let previousOverallFraction = state.fractionState.overallFraction
+            let previousOverallFraction = state.overallFraction
             
-            let multiple = _ProgressFraction(completed: portion, total: state.fractionState.selfFraction.total)
+            let multiple = _ProgressFraction(completed: portion, total: state.selfFraction.total)
             
             let oldFractionOfParent = previous * multiple
             
             if previous.total != 0 {
-                state.fractionState.childFraction = state.fractionState.childFraction - oldFractionOfParent
+                state.childFraction = state.childFraction - oldFractionOfParent
             }
             
             if next.total != 0 {
-                state.fractionState.childFraction = state.fractionState.childFraction + (next * multiple)
+                state.childFraction = state.childFraction + (next * multiple)
                 
                 if next.isFinished {
                     // Remove from children list
@@ -635,14 +623,14 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     
                     if portion != 0 {
                         // Update our self completed units
-                        state.fractionState.selfFraction.completed += portion
+                        state.selfFraction.completed += portion
                     }
                     
                     // Subtract the (child's fraction completed * multiple) from our child fraction
-                    state.fractionState.childFraction = state.fractionState.childFraction  - (multiple * next)
+                    state.childFraction = state.childFraction  - (multiple * next)
                 }
             }
-            return UpdateState(previous: previousOverallFraction, current: state.fractionState.overallFraction)
+            return UpdateState(previous: previousOverallFraction, current: state.overallFraction)
         }
         updateFractionCompleted(from: updateState.previous, to: updateState.current)
     }
@@ -687,13 +675,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     internal func setInteropChild(interopChild: ProgressManager) {
         state.withLock { state in
-            state.fractionState.interopChild = interopChild
+            state.interopChild = interopChild
         }
     }
     
     internal func addToChildren(childManager: ProgressManager) {
         _ = state.withLock { state in
-            state.fractionState.children.insert(childManager)
+            state.children.insert(childManager)
         }
     }
     
@@ -711,7 +699,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             }
             
             let original = _ProgressFraction(completed: 0, total: 0)
-            let updated = state.fractionState.overallFraction
+            let updated = state.overallFraction
             return (original, updated)
         }
         
