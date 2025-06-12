@@ -37,7 +37,7 @@ private struct StringSortComparatorTests {
     @Test func locale() {
         let swedishComparator = String.Comparator(options: [], locale: Locale(identifier: "sv"))
         #expect(swedishComparator.compare("ă", "ã") == .orderedAscending)
-        #expect(swedishComparator.locale, Locale(identifier: "sv"))
+        #expect(swedishComparator.locale == Locale(identifier: "sv"))
     }
     
     @Test func nilLocale() {

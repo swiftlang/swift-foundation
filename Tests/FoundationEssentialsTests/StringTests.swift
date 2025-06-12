@@ -1463,7 +1463,7 @@ final class StringTestsStdlib: XCTestCase {
             .ascii,
             .utf8,
         ]
-        checkHashable(instances, equalityOracle: { $0 == $1 })
+        XCTCheckHashable(instances, equalityOracle: { $0 == $1 })
     }
 
     func test_localizedStringWithFormat() {
