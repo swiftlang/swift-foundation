@@ -172,6 +172,7 @@ extension ICU.StringConverter {
 }
 
 
+#if !FOUNDATION_FRAMEWORK
 @_dynamicReplacement(for: _icuMakeStringFromBytes(_:encoding:))
 func _icuMakeStringFromBytes_impl(_ bytes: UnsafeBufferPointer<UInt8>, encoding: String.Encoding) -> String? {
     guard let converter = ICU.StringConverter.converter(for: encoding),
@@ -202,3 +203,4 @@ func _icuStringEncodingConvert_impl(string: String, using encoding: String.Encod
     }
     return converter.encode(string: string, allowLossyConversion: allowLossyConversion)
 }
+#endif
