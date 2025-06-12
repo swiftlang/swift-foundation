@@ -45,8 +45,8 @@ public struct Subprogress: ~Copyable, Sendable {
             ghostReporter?.setInteropChild(interopChild: childManager)
         } else {
             // Add child to parent's _children list & Store in child children's position in parent
-            parent.addToChildren(childManager: childManager)
-            childManager.addParent(parentReporter: parent, portionOfParent: portionOfParent)
+            parent.addToChildren(child: childManager, portion: portionOfParent, childFraction: childManager.getProgressFraction())
+            childManager.addParent(parent: parent, portionOfParent: portionOfParent)
         }
         
         return childManager
