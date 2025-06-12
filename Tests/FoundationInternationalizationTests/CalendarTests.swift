@@ -1232,6 +1232,14 @@ final class CalendarTests : XCTestCase {
             let added = calendar.date(byAdding: components, to: date)
             XCTAssertNil(added)
         }
+
+        do {
+            let date = Date(timeIntervalSinceReferenceDate: 1710419015.233922)
+            let calendar = Calendar(identifier: .gregorian)
+            let value = 9223372036854775806
+            let added = calendar.date(byAdding: .month, value: value, to: date)
+            XCTAssertNil(added)
+        }
     }
 
     func test_dateComponentsFromDateOverflow() {
