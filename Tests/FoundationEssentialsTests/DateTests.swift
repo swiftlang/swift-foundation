@@ -10,154 +10,158 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationEssentials)
-@testable import FoundationEssentials
+import FoundationEssentials
+#elseif FOUNDATION_FRAMEWORK
+import Foundation
 #endif
 
-final class DateTests : XCTestCase {
+@Suite("Date")
+private struct DateTests {
 
-    func testDateComparison() {
+    @Test func comparison() {
         let d1 = Date()
         let d2 = d1 + 1
 
-        XCTAssertGreaterThan(d2, d1)
-        XCTAssertLessThan(d1, d2)
+        #expect(d2 > d1)
+        #expect(d1 < d2)
 
         let d3 = Date(timeIntervalSince1970: 12345)
         let d4 = Date(timeIntervalSince1970: 12345)
 
-        XCTAssertEqual(d3, d4)
-        XCTAssertLessThanOrEqual(d3, d4)
-        XCTAssertGreaterThanOrEqual(d4, d3)
+        #expect(d3 == d4)
+        #expect(d3 <= d4)
+        #expect(d4 >= d3)
     }
 
-    func testDateMutation() {
+    @Test func mutation() {
         let d0 = Date()
         var d1 = Date()
         d1 = d1 + 1.0
         let d2 = Date(timeIntervalSinceNow: 10)
 
-        XCTAssertGreaterThan(d2, d1)
-        XCTAssertNotEqual(d1, d0)
+        #expect(d2 > d1)
+        #expect(d1 != d0)
 
         let d3 = d1
         d1 += 10
 
-        XCTAssertGreaterThan(d1, d3)
+        #expect(d1 > d3)
     }
 
-    func testDistantPast() {
+    @Test func distantPast() {
         let distantPast = Date.distantPast
         let currentDate = Date()
 
-        XCTAssertLessThan(distantPast, currentDate)
-        XCTAssertGreaterThan(currentDate, distantPast)
-        XCTAssertLessThan(distantPast.timeIntervalSince(currentDate),
+        #expect(distantPast < currentDate)
+        #expect(currentDate > distantPast)
+        #expect(distantPast.timeIntervalSince(currentDate) <
                           3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
     }
 
-    func testDistantFuture() {
+    @Test func distantFuture() {
         let distantFuture = Date.distantFuture
         let currentDate = Date()
 
-        XCTAssertLessThan(currentDate, distantFuture)
-        XCTAssertGreaterThan(distantFuture, currentDate)
-        XCTAssertGreaterThan(distantFuture.timeIntervalSince(currentDate),
+        #expect(currentDate < distantFuture)
+        #expect(distantFuture > currentDate)
+        #expect(distantFuture.timeIntervalSince(currentDate) >
                               3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
     }
 
-    func test_now() {
+    @Test func now() {
         let date1 : Date = .now
         let date2 : Date = .now
 
-        XCTAssertLessThanOrEqual(date1, date2)
+        #expect(date1 <= date2)
     }
 
-    func testDescriptionReferenceDate() {
+    @Test func descriptionReferenceDate() {
         let date = Date(timeIntervalSinceReferenceDate: TimeInterval(0))
 
-        XCTAssertEqual("2001-01-01 00:00:00 +0000", date.description)
+        #expect("2001-01-01 00:00:00 +0000" == date.description)
     }
 
-    func testDescription1970() {
+    @Test func description1970() {
         let date = Date(timeIntervalSince1970: TimeInterval(0))
 
-        XCTAssertEqual("1970-01-01 00:00:00 +0000", date.description)
+        #expect("1970-01-01 00:00:00 +0000" == date.description)
     }
 
-    func testDescriptionDistantPast() throws {
-#if os(Windows)
-        throw XCTSkip("ucrt does not support distant past")
-#else
+    #if os(Windows)
+    @Test(.disabled("ucrt does not support distant past"))
+    #else
+    @Test
+    #endif
+    func descriptionDistantPast() throws {
 #if FOUNDATION_FRAMEWORK
-        XCTAssertEqual("0001-01-01 00:00:00 +0000", Date.distantPast.description)
+        #expect("0001-01-01 00:00:00 +0000" == Date.distantPast.description)
 #else
-        XCTAssertEqual("0000-12-30 00:00:00 +0000", Date.distantPast.description)
-#endif
+        #expect("0000-12-30 00:00:00 +0000" == Date.distantPast.description)
 #endif
     }
 
-    func testDescriptionDistantFuture() throws {
-#if os(Windows)
-        throw XCTSkip("ucrt does not support distant future")
-#else
-        XCTAssertEqual("4001-01-01 00:00:00 +0000", Date.distantFuture.description)
-#endif
+    #if os(Windows)
+    @Test(.disabled("ucrt does not support distant past"))
+    #else
+    @Test
+    #endif
+    func descriptionDistantFuture() throws {
+        #expect("4001-01-01 00:00:00 +0000" == Date.distantFuture.description)
     }
 
-    func testDescriptionBeyondDistantPast() {
+    @Test func descriptionBeyondDistantPast() {
         let date = Date.distantPast.addingTimeInterval(TimeInterval(-1))
 #if FOUNDATION_FRAMEWORK
-        XCTAssertEqual("0000-12-31 23:59:59 +0000", date.description)
+        #expect("0000-12-31 23:59:59 +0000" == date.description)
 #else
-        XCTAssertEqual("<description unavailable>", date.description)
+        #expect("<description unavailable>" == date.description)
 #endif
     }
 
-    func testDescriptionBeyondDistantFuture() {
+    @Test func descriptionBeyondDistantFuture() {
         let date = Date.distantFuture.addingTimeInterval(TimeInterval(1))
 #if FOUNDATION_FRAMEWORK
-        XCTAssertEqual("4001-01-01 00:00:01 +0000", date.description)
+        #expect("4001-01-01 00:00:01 +0000" == date.description)
 #else
-        XCTAssertEqual("<description unavailable>", date.description)
+        #expect("<description unavailable>" == date.description)
 #endif
     }
     
-    func testNowIsAfterReasonableDate() {
+    @Test func nowIsAfterReasonableDate() {
         let date = Date.now
-        XCTAssert(date.timeIntervalSinceReferenceDate > 742100000.0) // "2024-07-08T02:53:20Z"
-        XCTAssert(date.timeIntervalSinceReferenceDate < 3896300000.0) // "2124-06-21T01:33:20Z"
+        #expect(date.timeIntervalSinceReferenceDate > 742100000.0) // "2024-07-08T02:53:20Z"
+        #expect(date.timeIntervalSinceReferenceDate < 3896300000.0) // "2124-06-21T01:33:20Z"
     }
 }
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
-final class DateBridgingTests : XCTestCase {
-    func testCast() {
+@Suite("Date Bridging")
+private struct DateBridgingTests {
+    @Test func cast() {
         let d0 = NSDate()
         let d1 = d0 as Date
-        XCTAssertEqual(d0.timeIntervalSinceReferenceDate, d1.timeIntervalSinceReferenceDate)
+        #expect(d0.timeIntervalSinceReferenceDate == d1.timeIntervalSinceReferenceDate)
     }
 
-    func test_AnyHashableCreatedFromNSDate() {
+    @Test func anyHashableCreatedFromNSDate() {
         let values: [NSDate] = [
             NSDate(timeIntervalSince1970: 1000000000),
             NSDate(timeIntervalSince1970: 1000000001),
             NSDate(timeIntervalSince1970: 1000000001),
         ]
         let anyHashables = values.map(AnyHashable.init)
-        expectEqual(Date.self, type(of: anyHashables[0].base))
-        expectEqual(Date.self, type(of: anyHashables[1].base))
-        expectEqual(Date.self, type(of: anyHashables[2].base))
-        XCTAssertNotEqual(anyHashables[0], anyHashables[1])
-        XCTAssertEqual(anyHashables[1], anyHashables[2])
+        #expect(Date.self == type(of: anyHashables[0].base))
+        #expect(Date.self == type(of: anyHashables[1].base))
+        #expect(Date.self == type(of: anyHashables[2].base))
+        #expect(anyHashables[0] != anyHashables[1])
+        #expect(anyHashables[1] == anyHashables[2])
     }
 
-    func test_AnyHashableCreatedFromNSDateComponents() {
+    @Test func anyHashableCreatedFromNSDateComponents() {
         func makeNSDateComponents(year: Int) -> NSDateComponents {
             let result = NSDateComponents()
             result.year = year
@@ -169,15 +173,15 @@ final class DateBridgingTests : XCTestCase {
             makeNSDateComponents(year: 1995),
         ]
         let anyHashables = values.map(AnyHashable.init)
-        expectEqual(DateComponents.self, type(of: anyHashables[0].base))
-        expectEqual(DateComponents.self, type(of: anyHashables[1].base))
-        expectEqual(DateComponents.self, type(of: anyHashables[2].base))
-        XCTAssertNotEqual(anyHashables[0], anyHashables[1])
-        XCTAssertEqual(anyHashables[1], anyHashables[2])
+        #expect(DateComponents.self == type(of: anyHashables[0].base))
+        #expect(DateComponents.self == type(of: anyHashables[1].base))
+        #expect(DateComponents.self == type(of: anyHashables[2].base))
+        #expect(anyHashables[0] != anyHashables[1])
+        #expect(anyHashables[1] == anyHashables[2])
     }
 
-    func test_dateComponents_unconditionallyBridgeFromObjectiveC() {
-        XCTAssertEqual(DateComponents(), DateComponents._unconditionallyBridgeFromObjectiveC(nil))
+    @Test func dateComponents_unconditionallyBridgeFromObjectiveC() {
+        #expect(DateComponents() == DateComponents._unconditionallyBridgeFromObjectiveC(nil))
     }
 }
 #endif // FOUNDATION_FRAMEWORK
