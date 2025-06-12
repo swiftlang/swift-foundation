@@ -10,20 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#else
+#if canImport(FoundationEssentials)
 @testable import FoundationEssentials
+#else
+@testable import Foundation
 #endif
 
 private protocol Buildable {
     func build(in path: String, using fileManager: FileManager) throws
 }
-
+    
 struct File : ExpressibleByStringLiteral, Buildable {
     private let name: String
     private let attributes: [FileAttributeKey : Any]?
@@ -65,9 +63,9 @@ struct SymbolicLink : Buildable {
 struct Directory : Buildable {
     fileprivate let name: String
     private let attributes: [FileAttributeKey : Any]?
-    private let contents: [FileManagerPlayground.Item]
+    private let contents: [FilePlayground.Item]
     
-    init(_ name: String, attributes: [FileAttributeKey : Any]? = nil, @FileManagerPlayground.DirectoryBuilder _ contentsClosure: () -> [FileManagerPlayground.Item]) {
+    init(_ name: String, attributes: [FileAttributeKey : Any]? = nil, @FilePlayground.DirectoryBuilder _ contentsClosure: () -> [FilePlayground.Item]) {
         self.name = name
         self.attributes = attributes
         self.contents = contentsClosure()
@@ -82,7 +80,29 @@ struct Directory : Buildable {
     }
 }
 
-struct FileManagerPlayground {
+@globalActor
+actor CurrentWorkingDirectoryActor: GlobalActor {
+    static let shared = CurrentWorkingDirectoryActor()
+    
+    private init() {}
+    
+    @CurrentWorkingDirectoryActor
+    static func withCurrentWorkingDirectory(
+        _ path: String,
+        fileManager: FileManager = .default,
+        sourceLocation: SourceLocation = #_sourceLocation,
+        body: @CurrentWorkingDirectoryActor () throws -> Void // Must be synchronous to prevent suspension points within body which could introduce a change in the CWD
+    ) throws {
+        let previousCWD = fileManager.currentDirectoryPath
+        try #require(fileManager.changeCurrentDirectoryPath(path), "Failed to change CWD to '\(path)'", sourceLocation: sourceLocation)
+        defer {
+            #expect(fileManager.changeCurrentDirectoryPath(previousCWD), "Failed to change CWD back to the original directory '\(previousCWD)'", sourceLocation: sourceLocation)
+        }
+        try body()
+    }
+}
+
+struct FilePlayground {
     enum Item : Buildable {
         case file(File)
         case directory(Directory)
@@ -119,25 +139,23 @@ struct FileManagerPlayground {
     private let directory: Directory
     
     init(@DirectoryBuilder _ contentsClosure: () -> [Item]) {
-        self.directory = Directory("FileManagerPlayground_\(UUID().uuidString)", contentsClosure)
+        self.directory = Directory("FilePlayground_\(UUID().uuidString)", contentsClosure)
     }
     
-    func test(captureDelegateCalls: Bool = false, file: StaticString = #filePath, line: UInt = #line, _ tester: (FileManager) throws -> Void) throws {
+    func test(captureDelegateCalls: Bool = false, sourceLocation: SourceLocation = #_sourceLocation, _ tester: sending (FileManager) throws -> Void) async throws {
         let capturingDelegate = CapturingFileManagerDelegate()
-        try withExtendedLifetime(capturingDelegate) {
-            let fileManager = FileManager()
-            let tempDir = String.temporaryDirectoryPath
-            try directory.build(in: tempDir, using: fileManager)
-            let previousCWD = fileManager.currentDirectoryPath
-            if captureDelegateCalls {
-                // Add the delegate after the call to `build` to ensure that the builder doesn't mutate the delegate
-                fileManager.delegate = capturingDelegate
-            }
-            let createdDir = tempDir.appendingPathComponent(directory.name)
-            XCTAssertTrue(fileManager.changeCurrentDirectoryPath(createdDir), "Failed to change CWD to the newly created playground directory", file: file, line: line)
-            try tester(fileManager)
-            XCTAssertTrue(fileManager.changeCurrentDirectoryPath(previousCWD), "Failed to change CWD back to the original directory", file: file, line: line)
-            try fileManager.removeItem(atPath: createdDir)
+        let fileManager = FileManager()
+        let tempDir = String.temporaryDirectoryPath
+        try directory.build(in: tempDir, using: fileManager)
+        if captureDelegateCalls {
+            // Add the delegate after the call to `build` to ensure that the builder doesn't mutate the delegate
+            fileManager.delegate = capturingDelegate
         }
+        let createdDir = tempDir.appendingPathComponent(directory.name)
+        try await CurrentWorkingDirectoryActor.withCurrentWorkingDirectory(createdDir, fileManager: fileManager, sourceLocation: sourceLocation) {
+            try tester(fileManager)
+        }
+        try fileManager.removeItem(atPath: createdDir)
+        _fixLifetime(capturingDelegate) // Ensure capturingDelegate lives beyond the tester body
     }
 }
