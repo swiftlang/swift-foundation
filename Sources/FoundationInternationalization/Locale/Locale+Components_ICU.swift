@@ -216,7 +216,11 @@ extension Locale.Region {
             return nil
         }
 
-        guard let code = String(validatingUTF8: uregion_getRegionCode(containingRegion)) else {
+        guard let region = uregion_getRegionCode(containingRegion) else {
+            return nil
+        }
+
+        guard let code = String(validatingUTF8: region) else {
             return nil
         }
 
@@ -236,7 +240,11 @@ extension Locale.Region {
             return nil
         }
 
-        guard let code = String(validatingUTF8: uregion_getRegionCode(containingContinent)) else {
+        guard let region = uregion_getRegionCode(containingContinent) else {
+            return nil
+        }
+
+        guard let code = String(validatingUTF8: region) else {
             return nil
         }
 
@@ -423,8 +431,8 @@ extension Locale.NumberingSystem {
         var status = U_ZERO_ERROR
         let numberingSystem = unumsys_open(localeIdentifier, &status)
         defer { unumsys_close(numberingSystem) }
-        if let numberingSystem, status.isSuccess {
-            self.init(String(cString: unumsys_getName(numberingSystem)))
+        if let numberingSystem, status.isSuccess, let name = unumsys_getName(numberingSystem) {
+            self.init(String(cString: name))
         } else {
             self = .latn
         }
