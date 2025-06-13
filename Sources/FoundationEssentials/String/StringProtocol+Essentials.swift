@@ -91,6 +91,11 @@ dynamic public func _cfStringEncodingConvert(string: String, using encoding: UIn
     // Dynamically replaced by swift-corelibs-foundation to implement encodings that we do not have Swift replacements for, yet
     return nil
 }
+
+dynamic package func _icuStringEncodingConvert(string: String, using encoding: String.Encoding, allowLossyConversion: Bool) -> Data? {
+    // Concrete implementation is provided by FoundationInternationalization.
+    return nil
+}
 #endif
 
 @available(FoundationPreview 0.4, *)
@@ -249,6 +254,11 @@ extension String {
                     buffer.appendElement(value)
                 }
             }
+        case .japaneseEUC:
+            // Here we catch encodings that are supported by Foundation Framework
+            // but are not supported by corelibs-foundation.
+            // We delegate conversion to ICU.
+            return _icuStringEncodingConvert(string: self, using: encoding, allowLossyConversion: allowLossyConversion)
 #endif
         default:
 #if FOUNDATION_FRAMEWORK
