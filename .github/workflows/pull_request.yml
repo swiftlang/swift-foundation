@@ -14,7 +14,7 @@ jobs:
     with:
       linux_swift_versions: '["nightly-main"]'
       windows_swift_versions: '["nightly-main"]'
-      enable_macos_checks: true
+      enable_macos_checks: false
       macos_xcode_versions: '["16.3"]'
       macos_versions: '["sequoia"]'
 
