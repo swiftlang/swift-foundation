@@ -177,7 +177,7 @@ private struct URLTests {
     }
 
     @Test(.enabled(if: foundation_swift_url_enabled()))
-    func URLPathAPIsResolveAgainstBase() throws {
+    func pathAPIsResolveAgainstBase() throws {
         // Borrowing the same test cases from RFC 3986, but checking paths
         let base = URL(string: "http://a/b/c/d;p?q")
         let tests = [
@@ -244,7 +244,7 @@ private struct URLTests {
 
     
     @Test(.enabled(if: foundation_swift_url_enabled()))
-    func URLPathComponentsPercentEncodedSlash() throws {
+    func pathComponentsPercentEncodedSlash() throws {
         var url = try #require(URL(string: "https://example.com/https%3A%2F%2Fexample.com"))
         #expect(url.pathComponents == ["/", "https://example.com"])
 
@@ -266,7 +266,7 @@ private struct URLTests {
 
     
     @Test(.enabled(if: foundation_swift_url_enabled()))
-    func URLRootlessPath() throws {
+    func rootlessPath() throws {
         let paths = ["", "path"]
         let queries = [nil, "query"]
         let fragments = [nil, "fragment"]
@@ -533,7 +533,7 @@ private struct URLTests {
         "[This is not a valid URL without encoding.]",
         "Encoding a relative path! 😎",
     ])
-    func URLEncodingInvalidCharacters(urlString: String) throws {
+    func encodingInvalidCharacters(urlString: String) throws {
         var url = URL(string: urlString, encodingInvalidCharacters: true)
         #expect(url != nil, "Expected a percent-encoded url for string \(urlString)")
         url = URL(string: urlString, encodingInvalidCharacters: false)
@@ -1045,7 +1045,7 @@ private struct URLTests {
     
     // This brute forces many combinations and takes a long time.
     @Test(.disabled("Disabled in automated testing - enable manually when needed"))
-    func URLComponentsRangeCombinations() throws {
+    func componentsRangeCombinations() throws {
         let schemes = [nil, "a", "aa"]
         let users = [nil, "b", "bb"]
         let passwords = [nil, "c", "cc"]
