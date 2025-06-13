@@ -788,7 +788,7 @@ private struct FileManagerTests {
 #if os(Windows)
             // Removing the current working directory fails on Windows because the directory is in use.
             #expect {
-                try fileManager.removeItem(atPath: $0.currentDirectoryPath)
+                try fileManager.removeItem(atPath: fileManager.currentDirectoryPath)
             } throws: {
                 ($0 as? CocoaError)?.code == .fileWriteNoPermission
             }
@@ -1007,11 +1007,8 @@ private struct FileManagerTests {
         assertSearchPaths([.itemReplacementDirectory], exists: false)
     }
 
-    #if canImport(Darwin) || os(Windows)
-    @Test(.disabled("This test is not applicable on this platform"))
-    #else
+    #if !canImport(Darwin) && !os(Windows)
     @Test(.disabled(if: ProcessInfo.processInfo.environment.keys.contains(where: { $0.starts(with: "XDG") }), "Skipping due to presence of XDG environment variables which may affect this test"))
-    #endif
     func searchPaths_XDGEnvironmentVariables() async throws {
         try await FilePlayground {
             Directory("TestPath") {}
@@ -1042,6 +1039,7 @@ private struct FileManagerTests {
             validate("HOME", directory: .userDirectory, domain: .localDomainMask)
         }
     }
+    #endif
 
     @Test func getSetAttributes() async throws {
         try await FilePlayground {
