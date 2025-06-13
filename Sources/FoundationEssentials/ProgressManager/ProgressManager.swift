@@ -468,10 +468,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    private func updateState(exclude lockedRoot: ProgressManager?, lockedState: inout State, child: ProgressManager? = nil, fraction: _ProgressFraction? = nil) {
+    private func updateState(exclude lockedRoot: ProgressManager?, lockedState: inout State) {
         // If I am the root which was queried.
         if self === lockedRoot {
-            print("Called updateState on self. This should never be called by a root. Only called by a leaf")
+            lockedState.isDirty = false
             return
         }
         
@@ -484,6 +484,23 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: state.overallFraction)
             }
         }
+    }
+    
+    private func updateStateLocked(exclude lockedRoot: ProgressManager?, lockedState: inout State, state: inout State) {
+        // If I am the root which was queried.
+        if self === lockedRoot {
+            lockedState.isDirty = false
+            return
+        }
+        
+        // Set isDirty to false
+        state.isDirty = false
+        
+        // Propagate these changes up to parent
+        for (parent, _) in state.parents {
+            parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: state.overallFraction)
+        }
+    
     }
 
     internal func updateChildState(exclude lockedRoot: ProgressManager?, lockedState: inout State, child: ProgressManager, fraction: _ProgressFraction) {
@@ -505,11 +522,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             
             if fraction.isFinished {
                 state.selfFraction.completed += state.children[child]?.portionOfSelf ?? 0
+                state.children.removeValue(forKey: child)
             }
             
-            for (parent, _) in state.parents {
-                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: state.overallFraction)
-            }
+            updateStateLocked(exclude: lockedRoot, lockedState: &lockedState, state: &state)
+//            for (parent, _) in state.parents {
+//                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: state.overallFraction)
+//            }
         }
     }
 
