@@ -774,7 +774,7 @@ private struct FileManagerTests {
                 "foo"
             }
             "bar"
-        }.test { fileManager in
+        }.test { (fileManager) throws in
             #expect(try fileManager.subpathsOfDirectory(atPath: ".").sorted() == ["bar", "dir", "dir/foo"])
             #expect(fileManager.changeCurrentDirectoryPath("dir"))
             #expect(try fileManager.subpathsOfDirectory(atPath: ".") == ["foo"])

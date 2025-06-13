@@ -156,6 +156,6 @@ struct FilePlayground {
             try tester(fileManager)
         }
         try fileManager.removeItem(atPath: createdDir)
-        _fixLifetime(capturingDelegate) // Ensure capturingDelegate lives beyond the tester body
+        extendLifetime(capturingDelegate) // Ensure capturingDelegate lives beyond the tester body
     }
 }
