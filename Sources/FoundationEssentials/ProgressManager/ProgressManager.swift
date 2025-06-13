@@ -374,17 +374,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 //        // If self is dirty, that just means I got mutated and my parents haven't received updates.
 //        // If my dirtyChildren list exists, that just means I have fractional updates from children, which might not have completed.
 //        // If at least one of my dirtyChildren actually completed, that means I would need to update my completed count actually.
-
-//        let completedDirtyChildren = state.dirtyChildren.filter(\.isFinished)
-//        if !completedDirtyChildren.isEmpty {
-//            // update my own value based on dirty children completion
-//            for completedChild in completedDirtyChildren {
-//                // Update my completed count with the portion I assigned to this child
-//                state.selfFraction.completed += state.children[completedChild]?.portionOfSelf ?? 0
-//                // Remove child from dirtyChildren list, so that the future updates won't be messed up
-//                state.dirtyChildren.remove(completedChild)
-//            }
-//        }
         
         // If there are dirty children, get updates first
         if state.dirtyChildren.count > 0 {
@@ -476,6 +465,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             for (parent, _) in lockedState.parents {
                 parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: lockedState.overallFraction)
             }
+            
             return
         }
         
@@ -492,7 +482,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 
     internal func updateChildState(exclude lockedRoot: ProgressManager?, lockedState: inout State, child: ProgressManager, fraction: _ProgressFraction) {
         if self === lockedRoot {
-            print("I am locked. Lock not acquired. Use lockedState passed in.")
             lockedState.children[child]?.childFraction = fraction
             lockedState.dirtyChildren.remove(child)
             
