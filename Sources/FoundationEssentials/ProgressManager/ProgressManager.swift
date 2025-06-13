@@ -472,6 +472,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         // If I am the root which was queried.
         if self === lockedRoot {
             lockedState.isDirty = false
+            
+            for (parent, _) in lockedState.parents {
+                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: lockedState.overallFraction)
+            }
             return
         }
         
@@ -485,23 +489,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             }
         }
     }
-    
-    private func updateStateLocked(exclude lockedRoot: ProgressManager?, lockedState: inout State, state: inout State) {
-        // If I am the root which was queried.
-        if self === lockedRoot {
-            lockedState.isDirty = false
-            return
-        }
-        
-        // Set isDirty to false
-        state.isDirty = false
-        
-        // Propagate these changes up to parent
-        for (parent, _) in state.parents {
-            parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: state.overallFraction)
-        }
-    
-    }
 
     internal func updateChildState(exclude lockedRoot: ProgressManager?, lockedState: inout State, child: ProgressManager, fraction: _ProgressFraction) {
         if self === lockedRoot {
@@ -513,6 +500,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 lockedState.selfFraction.completed += lockedState.children[child]?.portionOfSelf ?? 0
                 lockedState.children.removeValue(forKey: child)
             }
+            
+            updateState(exclude: self, lockedState: &lockedState)
+            
             return
         }
         
@@ -524,12 +514,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.selfFraction.completed += state.children[child]?.portionOfSelf ?? 0
                 state.children.removeValue(forKey: child)
             }
-            
-            updateStateLocked(exclude: lockedRoot, lockedState: &lockedState, state: &state)
-//            for (parent, _) in state.parents {
-//                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: state.overallFraction)
-//            }
         }
+        
+        updateState(exclude: lockedRoot, lockedState: &lockedState)
     }
 
     /// Returns `true` if completed and total units are not `nil` and completed units is greater than or equal to total units;
