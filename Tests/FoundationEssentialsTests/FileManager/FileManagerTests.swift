@@ -774,27 +774,27 @@ private struct FileManagerTests {
                 "foo"
             }
             "bar"
-        }.test {
-            #expect(try $0.subpathsOfDirectory(atPath: ".").sorted() == ["bar", "dir", "dir/foo"])
-            #expect($0.changeCurrentDirectoryPath("dir"))
-            #expect(try $0.subpathsOfDirectory(atPath: ".") == ["foo"])
-            #expect(!$0.changeCurrentDirectoryPath("foo"))
-            #expect($0.changeCurrentDirectoryPath(".."))
-            #expect(try $0.subpathsOfDirectory(atPath: ".").sorted() == ["bar", "dir", "dir/foo"])
-            #expect(!$0.changeCurrentDirectoryPath("does_not_exist"))
+        }.test { fileManager in
+            #expect(try fileManager.subpathsOfDirectory(atPath: ".").sorted() == ["bar", "dir", "dir/foo"])
+            #expect(fileManager.changeCurrentDirectoryPath("dir"))
+            #expect(try fileManager.subpathsOfDirectory(atPath: ".") == ["foo"])
+            #expect(!fileManager.changeCurrentDirectoryPath("foo"))
+            #expect(fileManager.changeCurrentDirectoryPath(".."))
+            #expect(try fileManager.subpathsOfDirectory(atPath: ".").sorted() == ["bar", "dir", "dir/foo"])
+            #expect(!fileManager.changeCurrentDirectoryPath("does_not_exist"))
 
             // Test get current directory path when it's parent directory was removed.
-            #expect($0.changeCurrentDirectoryPath("dir"))
+            #expect(fileManager.changeCurrentDirectoryPath("dir"))
 #if os(Windows)
             // Removing the current working directory fails on Windows because the directory is in use.
             #expect {
-                try $0.removeItem(atPath: $0.currentDirectoryPath)
+                try fileManager.removeItem(atPath: $0.currentDirectoryPath)
             } throws: {
                 ($0 as? CocoaError)?.code == .fileWriteNoPermission
             }
 #else
-            try $0.removeItem(atPath: $0.currentDirectoryPath)
-            #expect($0.currentDirectoryPath == "")
+            try fileManager.removeItem(atPath: fileManager.currentDirectoryPath)
+            #expect(fileManager.currentDirectoryPath == "")
 #endif
         }
     }
@@ -1010,7 +1010,7 @@ private struct FileManagerTests {
     #if canImport(Darwin) || os(Windows)
     @Test(.disabled("This test is not applicable on this platform"))
     #else
-    @Test(.disabled(if: ProcessInfo.processInfo.environment.keys.first(where: { $0.starts(with: "XDG") }), "Skipping due to presence of XDG environment variables which may affect this test"))
+    @Test(.disabled(if: ProcessInfo.processInfo.environment.keys.contains(where: { $0.starts(with: "XDG") }), "Skipping due to presence of XDG environment variables which may affect this test"))
     #endif
     func searchPaths_XDGEnvironmentVariables() async throws {
         try await FilePlayground {
