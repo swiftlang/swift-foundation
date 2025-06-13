@@ -247,8 +247,7 @@ package.targets.append(contentsOf: [
     .testTarget(
         name: "FoundationMacrosTests",
         dependencies: [
-            "FoundationMacros",
-            "TestSupport"
+            "FoundationMacros"
         ],
         swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
     )

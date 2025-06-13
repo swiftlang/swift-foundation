@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Testing
 
-final class PredicateMacroBasicTests: XCTestCase {
-    func testSimple() {
+@Suite("#Predicate Macro Basics")
+private struct PredicateMacroBasicTests {
+    @Test func simple() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -30,7 +31,7 @@ final class PredicateMacroBasicTests: XCTestCase {
         )
     }
     
-    func testImplicitReturn() {
+    @Test func implicitReturn() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> { input in
@@ -47,7 +48,7 @@ final class PredicateMacroBasicTests: XCTestCase {
         )
     }
     
-    func testInferredGenerics() {
+    @Test func inferredGenerics() {
         AssertPredicateExpansion(
             """
             #Predicate { input in
@@ -64,7 +65,7 @@ final class PredicateMacroBasicTests: XCTestCase {
         )
     }
     
-    func testShorthandArgumentNames() {
+    @Test func shorthandArgumentNames() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> {
@@ -81,7 +82,7 @@ final class PredicateMacroBasicTests: XCTestCase {
         )
     }
     
-    func testExplicitClosureArgumentTypes() {
+    @Test func explicitClosureArgumentTypes() {
         AssertPredicateExpansion(
             """
             #Predicate<Int, String> { (a: Int, b: String) -> Bool in
@@ -98,7 +99,7 @@ final class PredicateMacroBasicTests: XCTestCase {
         )
     }
     
-    func testDiagnoseMissingTrailingClosure() {
+    @Test func diagnoseMissingTrailingClosure() {
         AssertPredicateExpansion(
             """
             #Predicate
@@ -141,7 +142,7 @@ final class PredicateMacroBasicTests: XCTestCase {
         )
     }
     
-    func testKeyPath() {
+    @Test func keyPath() {
         AssertPredicateExpansion(
             """
             #Predicate<Object> {
@@ -192,7 +193,7 @@ final class PredicateMacroBasicTests: XCTestCase {
         )
     }
     
-    func testComments() {
+    @Test func comments() {
         AssertPredicateExpansion(
             """
             // comment
