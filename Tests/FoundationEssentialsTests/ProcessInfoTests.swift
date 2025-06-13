@@ -22,6 +22,8 @@ import FoundationEssentials
 import Darwin
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
+#elseif canImport(CRT)
+import CRT
 #endif
 
 // Since we can't really mock system settings like OS name,
