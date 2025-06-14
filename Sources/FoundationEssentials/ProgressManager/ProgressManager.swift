@@ -370,11 +370,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         if let interopChild = state.interopChild {
             return interopChild.completedCount
         }
-        
-//        // If self is dirty, that just means I got mutated and my parents haven't received updates.
-//        // If my dirtyChildren list exists, that just means I have fractional updates from children, which might not have completed.
-//        // If at least one of my dirtyChildren actually completed, that means I would need to update my completed count actually.
-        
+        // Implementation thoughts:
+        // If self is dirty, that just means I got mutated and my parents haven't received updates.
+        // If my dirtyChildren list exists, that just means I have fractional updates from children, which might not have completed.
+        // If at least one of my dirtyChildren actually completed, that means I would need to update my completed count actually.
+    
         // If there are dirty children, get updates first
         if state.dirtyChildren.count > 0 {
             
@@ -399,6 +399,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// The calculation of fraction completed for a ProgressManager instance that has children
     /// will take into account children's fraction completed as well.
     private func getFractionCompleted(state: inout State) -> Double {
+        // Implementation thoughts: 
         // If my self is dirty, that means I got mutated and I have parents that haven't received updates from me.
         // If my dirtyChildren list exists, that means I have fractional updates from these children, and I need these fractional updates.
         // But this runs into the issue of updating only the queried branch, but not the other branch that is not queried but dirty, this would cause the leaf to be cleaned up, but the other branch which share the dirty leaf hasn't received any updates.
@@ -432,80 +433,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         
         return state.overallFraction.fractionCompleted
-    }
-    
-    /// Collect bottommost dirty nodes in a subtree
-    private func collectDirtyNodes(dirtyNodes: inout [ProgressManager], state: inout State) {
-            if state.dirtyChildren.isEmpty && state.isDirty {
-                dirtyNodes += [self]
-            } else {
-                for child in state.dirtyChildren {
-                    child.collectDirtyNodes(dirtyNodes: &dirtyNodes)
-                }
-            }
-        }
-        
-    private func collectDirtyNodes(dirtyNodes: inout [ProgressManager]) {
-        state.withLock { state in
-            if state.dirtyChildren.isEmpty && state.isDirty {
-                dirtyNodes += [self]
-            } else {
-                for child in state.dirtyChildren {
-                    child.collectDirtyNodes(dirtyNodes: &dirtyNodes)
-                }
-            }
-        }
-    }
-    
-    private func updateState(exclude lockedRoot: ProgressManager?, lockedState: inout State) {
-        // If I am the root which was queried.
-        if self === lockedRoot {
-            lockedState.isDirty = false
-            
-            for (parent, _) in lockedState.parents {
-                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: lockedState.overallFraction)
-            }
-            
-            return
-        }
-        
-        state.withLock { state in
-            // Set isDirty to false
-            state.isDirty = false
-            
-            // Propagate these changes up to parent
-            for (parent, _) in state.parents {
-                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: state.overallFraction)
-            }
-        }
-    }
-
-    internal func updateChildState(exclude lockedRoot: ProgressManager?, lockedState: inout State, child: ProgressManager, fraction: _ProgressFraction) {
-        if self === lockedRoot {
-            lockedState.children[child]?.childFraction = fraction
-            lockedState.dirtyChildren.remove(child)
-            
-            if fraction.isFinished {
-                lockedState.selfFraction.completed += lockedState.children[child]?.portionOfSelf ?? 0
-                lockedState.children.removeValue(forKey: child)
-            }
-            
-            updateState(exclude: self, lockedState: &lockedState)
-            
-            return
-        }
-        
-        state.withLock { state in
-            state.children[child]?.childFraction = fraction
-            state.dirtyChildren.remove(child)
-            
-            if fraction.isFinished {
-                state.selfFraction.completed += state.children[child]?.portionOfSelf ?? 0
-                state.children.removeValue(forKey: child)
-            }
-        }
-        
-        updateState(exclude: lockedRoot, lockedState: &lockedState)
     }
 
     /// Returns `true` if completed and total units are not `nil` and completed units is greater than or equal to total units;
@@ -556,22 +483,109 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    // This is used when parent has its lock acquired and wants its child to update parent's childFraction to reflect child's own changes
-//    private func updateChildFractionSpecial(of manager: ProgressManager, state managerState: inout State) {
-//        let portion = parents.withLock { parents in
-//            return parents[manager]
-//        }
-//        
-//        if let portionOfParent = portion {
-//            let myFraction = state.withLock { $0.overallFraction }
-//
-//            if !myFraction.isFinished {
-//                // If I'm not finished, update my entry in parent's childFraction
-//                managerState.childFraction = managerState.childFraction + _ProgressFraction(completed: portionOfParent, total: managerState.selfFraction.total) * myFraction
-//            }
-//        }
-//    }
+    /// Collect bottommost dirty nodes in a subtree, when called from locked context.
+    private func collectDirtyNodes(dirtyNodes: inout [ProgressManager], state: inout State) {
+            if state.dirtyChildren.isEmpty && state.isDirty {
+                dirtyNodes += [self]
+            } else {
+                for child in state.dirtyChildren {
+                    child.collectDirtyNodes(dirtyNodes: &dirtyNodes)
+                }
+            }
+        }
+
+    /// Collect bottommost dirty nodes in a subtree, when called directly.
+    private func collectDirtyNodes(dirtyNodes: inout [ProgressManager]) {
+        state.withLock { state in
+            if state.dirtyChildren.isEmpty && state.isDirty {
+                dirtyNodes += [self]
+            } else {
+                for child in state.dirtyChildren {
+                    child.collectDirtyNodes(dirtyNodes: &dirtyNodes)
+                }
+            }
+        }
+    }
     
+    /// Updates the state of current ProgressManager by setting isDirty to false.
+    private func updateState(exclude lockedRoot: ProgressManager?, lockedState: inout State) {
+        // If I am the root which was queried.
+        if self === lockedRoot {
+            lockedState.isDirty = false
+            
+            for (parent, _) in lockedState.parents {
+                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: lockedState.overallFraction)
+            }
+            
+            return
+        }
+        
+        state.withLock { state in
+            // Set isDirty to false
+            state.isDirty = false
+            
+            // Propagate these changes up to parent
+            for (parent, _) in state.parents {
+                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: state.overallFraction)
+            }
+        }
+    }
+
+    /// Updates the stored state of a child, accounting for whether or not child has completed.
+    internal func updateChildState(exclude lockedRoot: ProgressManager?, lockedState: inout State, child: ProgressManager, fraction: _ProgressFraction) {
+        if self === lockedRoot {
+            lockedState.children[child]?.childFraction = fraction
+            lockedState.dirtyChildren.remove(child)
+            
+            if fraction.isFinished {
+                lockedState.selfFraction.completed += lockedState.children[child]?.portionOfSelf ?? 0
+                lockedState.children.removeValue(forKey: child)
+            }
+            
+            updateState(exclude: self, lockedState: &lockedState)
+            
+            return
+        }
+        
+        state.withLock { state in
+            state.children[child]?.childFraction = fraction
+            state.dirtyChildren.remove(child)
+            
+            if fraction.isFinished {
+                state.selfFraction.completed += state.children[child]?.portionOfSelf ?? 0
+                state.children.removeValue(forKey: child)
+            }
+        }
+        
+        updateState(exclude: lockedRoot, lockedState: &lockedState)
+    }
+    
+    internal func updateState() {
+        state.withLock { state in
+            // Set isDirty to false
+            state.isDirty = false
+            
+            // Propagate these changes up to parent
+            for (parent, _) in state.parents {
+                parent.updateChildState(child: self, fraction: state.overallFraction)
+            }
+        }
+    }
+    
+    internal func updateChildState(child: ProgressManager, fraction: _ProgressFraction) {
+        state.withLock { state in
+            state.children[child]?.childFraction = fraction
+            state.dirtyChildren.remove(child)
+            
+            if fraction.isFinished {
+                state.selfFraction.completed += state.children[child]?.portionOfSelf ?? 0
+                state.children.removeValue(forKey: child)
+            }
+        }
+        
+        updateState()
+    }
+
     //MARK: Interop-related internal methods
     /// Adds `observer` to list of `_observers` in `self`.
     internal func addObserver(observer: @escaping @Sendable (ObserverState) -> Void) {
@@ -731,6 +745,19 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             for (parent, _) in state.parents {
                 if !updatedVisited.contains(parent) {
                     if parent.isCycle(reporter: reporter, visited: updatedVisited) {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+    }
+    
+    func isCycleInterop(visited: Set<ProgressManager> = []) -> Bool {
+        return state.withLock { state in
+            for (parent, _) in state.parents {
+                if !visited.contains(parent) {
+                    if parent.isCycle(reporter: reporter, visited: visited) {
                         return true
                     }
                 }

@@ -89,16 +89,7 @@ extension Progress {
                 return true
             }
             let updatedVisited = visited.union([unwrappedParent])
-            return unwrappedParent.parents.withLock { parents in
-                for (parent, _) in parents {
-                    if !updatedVisited.contains(parent) {
-                        if parent.isCycle(reporter: reporter, visited: updatedVisited) {
-                            return true
-                        }
-                    }
-                }
-                return false
-            }
+            return unwrappedParent.isCycleInterop(visited: updatedVisited)
         }
         return false
     }
@@ -174,7 +165,7 @@ extension ProgressManager {
     public func subprogress(assigningCount count: Int, to progress: Foundation.Progress) {
         precondition(progress._parent() == nil, "Cannot assign a progress to more than one parent.")
         
-        let parentBridge = _NSProgressParentBridge(managerParent: self)
+        let parentBridge = _NSProgressParentBridge(managerParent: self, progressChild: progress, portion: count)
         progress._setParent(parentBridge, portion: Int64(count))
 
         // Save ghost parent in ProgressManager so it doesn't go out of scope after assign method ends
@@ -187,16 +178,30 @@ extension ProgressManager {
 internal final class _NSProgressParentBridge: Progress, @unchecked Sendable {
 
     internal let actualParent: ProgressManager
+    internal let actualChild: Progress
+    internal let ghostChild: ProgressManager
 
-    init(managerParent: ProgressManager) {
+    init(managerParent: ProgressManager, progressChild: Progress, portion: Int) {
         self.actualParent = managerParent
+        self.actualChild = progressChild
+        self.ghostChild = ProgressManager(totalCount: Int(progressChild.totalUnitCount))
         super.init(parent: nil, userInfo: nil)
+        
+        // Make ghostChild mirror progressChild, ghostChild is added as a child to managerParent
+        ghostChild.withProperties { properties in
+            properties.completedCount = Int(progressChild.completedUnitCount)
+        }
+        
+        managerParent.addToChildren(child: ghostChild, portion: portion, childFraction: _ProgressFraction(completed: Int(completedUnitCount), total: Int(totalUnitCount)))
+        
+        ghostChild.addParent(parent: managerParent, portionOfParent: portion)
     }
 
     // Overrides the _updateChild func that Foundation.Progress calls to update parent
     // so that the parent that gets updated is the ProgressManager parent
     override func _updateChild(_ child: Foundation.Progress, fraction: _NSProgressFractionTuple, portion: Int64) {
-        actualParent.updateChildFraction(from: _ProgressFraction(nsProgressFraction: fraction.previous), to: _ProgressFraction(nsProgressFraction: fraction.next), portion: Int(portion))
+//        actualParent.updateChildFraction(from: _ProgressFraction(nsProgressFraction: fraction.previous), to: _ProgressFraction(nsProgressFraction: fraction.next), portion: Int(portion))
+            actualParent.updateChildState(child: ghostChild, fraction: _ProgressFraction(nsProgressFraction: fraction.next))
     }
 }
 #endif
