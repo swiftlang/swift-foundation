@@ -24,6 +24,11 @@ dynamic public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, 
     // Provide swift-corelibs-foundation with an entry point to convert some bytes into a String
     return nil
 }
+
+dynamic package func _icuMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: String.Encoding) -> String? {
+    // Concrete implementation is provided by FoundationInternationalization.
+    return nil
+}
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -184,6 +189,17 @@ extension String {
                 }
             }
             self = bytes.withContiguousStorageIfAvailable(buildString) ?? Array(bytes).withUnsafeBufferPointer(buildString)
+        case .japaneseEUC:
+            // Here we catch encodings that are supported by Foundation Framework
+            // but are not supported by corelibs-foundation.
+            // We delegate conversion to ICU.
+            guard let string = (
+                bytes.withContiguousStorageIfAvailable({ _icuMakeStringFromBytes($0, encoding: encoding) }) ??
+                Array(bytes).withUnsafeBufferPointer({ _icuMakeStringFromBytes($0, encoding: encoding) })
+            ) else {
+                return nil
+            }
+            self = string
         #endif
         default:
 #if FOUNDATION_FRAMEWORK
