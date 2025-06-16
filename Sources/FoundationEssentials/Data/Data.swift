@@ -2205,9 +2205,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 
 #if compiler(>=6.2) && $LifetimeDependence
     @available(FoundationSpan 6.2, *)
-#if FOUNDATION_FRAMEWORK
-    @_disfavoredOverload
-#endif // FOUNDATION_FRAMEWORK
     public var bytes: RawSpan {
         @lifetime(borrow self)
         borrowing get {
