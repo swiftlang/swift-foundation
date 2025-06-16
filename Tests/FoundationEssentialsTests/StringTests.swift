@@ -1208,7 +1208,7 @@ private struct StringTests {
     }
     
 #if FOUNDATION_FRAMEWORK
-    @Test func extendedAttributeData() throws {
+    @Test func extendedAttributeEncodings() throws {
         // XAttr is supported on some platforms, but not all. For now we just test this code on Darwin.
         let encs : [String._Encoding] = [
             .ascii,
