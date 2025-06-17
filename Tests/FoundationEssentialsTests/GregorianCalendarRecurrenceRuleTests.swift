@@ -542,6 +542,7 @@ private struct GregorianCalendarRecurrenceRuleTests {
     
     @Test func yearlyRecurrenceWithWeekNumberExpansion() {
         var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
         calendar.firstWeekday = 2 // Week starts on Monday
         calendar.minimumDaysInFirstWeek = 4
         
@@ -569,6 +570,7 @@ private struct GregorianCalendarRecurrenceRuleTests {
     
     @Test func yearlyRecurrenceWithWeekNumberExpansionCountingBack() {
         var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
         calendar.firstWeekday = 2 // Week starts on Monday
         
         let start = Date(timeIntervalSince1970: 1704117600.0) // 2024-01-01T14:00:00-0000
