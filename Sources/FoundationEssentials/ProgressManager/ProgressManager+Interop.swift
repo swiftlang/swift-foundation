@@ -45,7 +45,6 @@ extension Progress {
         var actualProgress = ghostReporterChild.subprogress(assigningCount: count)
         actualProgress.observation = observation
         actualProgress.ghostReporter = ghostReporterChild
-        actualProgress.interopWithProgressParent = true
         return actualProgress
     }
     

@@ -21,7 +21,6 @@ public struct Subprogress: ~Copyable, Sendable {
     internal var isInitializedToProgressReporter: Bool
     
     // Interop variables for Progress - ProgressManager Interop
-    internal var interopWithProgressParent: Bool = false
     // To be kept alive in ProgressManager
     internal var observation: (any Sendable)?
     internal var ghostReporter: ProgressManager?
@@ -40,9 +39,10 @@ public struct Subprogress: ~Copyable, Sendable {
         
         let childManager = ProgressManager(total: totalCount, ghostReporter: ghostReporter, interopObservation: observation)
         
-        if interopWithProgressParent {
+        // If ghostReporter exists, it means there is interop of ProgressParent - ProgressManager Child
+        if let intermediary = ghostReporter {
             // Set interop child of ghost manager so ghost manager reads from here
-            ghostReporter?.setInteropChild(interopChild: childManager)
+            intermediary.setInteropChild(interopChild: childManager)
         } else {
             // Add child to parent's _children list & Store in child children's position in parent
             parent.addToChildren(child: childManager, portion: portionOfParent, childFraction: childManager.getProgressFraction())
