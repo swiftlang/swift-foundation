@@ -424,6 +424,14 @@ private struct StringTests {
         #expect("/////".lastPathComponent == "/")
         #expect("/./..//./..//".lastPathComponent == "..")
         #expect("/😎/😂/❤️/".lastPathComponent == "❤️")
+        
+        #expect("/a/b/c".lastPathComponent == "c")
+        #expect("/aaa".lastPathComponent == "aaa")
+        #expect("/a/b/c/".lastPathComponent == "c")
+        #expect("hello".lastPathComponent == "hello")
+        #expect("hello/".lastPathComponent == "hello")
+        #expect("hello///".lastPathComponent == "hello")
+        #expect("//a//".lastPathComponent == "a")
     }
 
     @Test func testRemovingDotSegments() {
@@ -892,6 +900,47 @@ private struct StringTests {
             let result = input.pathComponents
             #expect(result == expected)
         }
+    }
+    
+    @Test func deletingLastPathComponent() {
+        #expect("/a/b/c".deletingLastPathComponent() == "/a/b")
+        #expect("".deletingLastPathComponent() == "")
+        #expect("/".deletingLastPathComponent() == "/")
+        #expect("q".deletingLastPathComponent() == "")
+        #expect("/aaa".deletingLastPathComponent() == "/")
+        #expect("/aaa/".deletingLastPathComponent() == "/")
+        #expect("/a/b/c/".deletingLastPathComponent() == "/a/b")
+        #expect("hello".deletingLastPathComponent() == "")
+        #expect("hello/".deletingLastPathComponent() == "")
+        #expect("/hello/".deletingLastPathComponent() == "/")
+        #expect("hello///".deletingLastPathComponent() == "")
+        #expect("a/".deletingLastPathComponent() == "")
+        #expect("a/b".deletingLastPathComponent() == "a")
+        #expect("a/b/".deletingLastPathComponent() == "a")
+        #expect("a//b//".deletingLastPathComponent() == "a")
+    }
+    
+    @Test func appendingPathComponent() {
+        let comp = "test"
+        #expect("/a/b/c".appendingPathComponent(comp) == "/a/b/c/test")
+        #expect("".appendingPathComponent(comp) == "test")
+        #expect("/".appendingPathComponent(comp) == "/test")
+        #expect("q".appendingPathComponent(comp) == "q/test")
+        #expect("/aaa".appendingPathComponent(comp) == "/aaa/test")
+        #expect("/a/b/c/".appendingPathComponent(comp) == "/a/b/c/test")
+        #expect("hello".appendingPathComponent(comp) == "hello/test")
+        #expect("hello/".appendingPathComponent(comp) == "hello/test")
+        
+        #expect("hello/".appendingPathComponent("/test") == "hello/test")
+        #expect("hello".appendingPathComponent("/test") == "hello/test")
+        #expect("hello///".appendingPathComponent("///test") == "hello/test")
+        #expect("hello".appendingPathComponent("test/") == "hello/test")
+        #expect("hello".appendingPathComponent("test/test2") == "hello/test/test2")
+        #expect("hello".appendingPathComponent("test/test2/") == "hello/test/test2")
+        #expect("hello".appendingPathComponent("test///test2/") == "hello/test/test2")
+        #expect("hello".appendingPathComponent("/") == "hello")
+        #expect("//".appendingPathComponent("/") == "/")
+        #expect("".appendingPathComponent("") == "")
     }
 
     @Test func dataUsingEncoding() {
