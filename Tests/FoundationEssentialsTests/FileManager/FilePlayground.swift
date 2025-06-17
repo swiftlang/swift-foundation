@@ -144,18 +144,18 @@ struct FilePlayground {
     
     func test(captureDelegateCalls: Bool = false, sourceLocation: SourceLocation = #_sourceLocation, _ tester: sending (FileManager) throws -> Void) async throws {
         let capturingDelegate = CapturingFileManagerDelegate()
-        let fileManager = FileManager()
         let tempDir = String.temporaryDirectoryPath
-        try directory.build(in: tempDir, using: fileManager)
-        if captureDelegateCalls {
-            // Add the delegate after the call to `build` to ensure that the builder doesn't mutate the delegate
-            fileManager.delegate = capturingDelegate
-        }
+        try directory.build(in: tempDir, using: FileManager.default)
         let createdDir = tempDir.appendingPathComponent(directory.name)
-        try await CurrentWorkingDirectoryActor.withCurrentWorkingDirectory(createdDir, fileManager: fileManager, sourceLocation: sourceLocation) {
+        try await CurrentWorkingDirectoryActor.withCurrentWorkingDirectory(createdDir, sourceLocation: sourceLocation) {
+            let fileManager = FileManager()
+            if captureDelegateCalls {
+                // Add the delegate after the call to `build` to ensure that the builder doesn't mutate the delegate
+                fileManager.delegate = capturingDelegate
+            }
             try tester(fileManager)
         }
-        try fileManager.removeItem(atPath: createdDir)
+        try FileManager.default.removeItem(atPath: createdDir)
         extendLifetime(capturingDelegate) // Ensure capturingDelegate lives beyond the tester body
     }
 }
