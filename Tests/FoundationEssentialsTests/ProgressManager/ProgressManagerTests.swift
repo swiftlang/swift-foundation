@@ -430,6 +430,7 @@ class TestProgressManagerInterop: XCTestCase {
         manager?.complete(count: 2)
     }
     
+    // TODO: Occasionally it propagates values wrongly, end up with 1.25 at the end 
     func testInteropProgressParentProgressManagerChild() async throws {
         // Initialize a Progress Parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)

@@ -166,7 +166,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.selfFraction.total = newValue ?? 0
                 manager.markDirty(state: &state)
                 
-                state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
+                state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
+                
                 if state.monitorInterop == true {
                     manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
                 }
@@ -185,7 +186,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.selfFraction.completed = newValue
                 manager.markDirty(state: &state)
                 
-                state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
+                state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
                 if state.monitorInterop == true {
                     manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
                 }
@@ -288,7 +289,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             state.selfFraction.completed += count
             markDirty(state: &state)
             
-            state.ghostReporter?.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
+            state.ghostReporter?.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
             if state.monitorInterop == true {
                 notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
             }
@@ -587,11 +588,18 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     /// Notifies all `_observers` of `self` when `state` changes.
+    private func notifyObservers(with observedState: ObserverState) {
+        state.withLock {state in
+            for observer in state.observers {
+                observer(observedState)
+            }
+        }
+    }
+    
     private func notifyObservers(with observedState: ObserverState, state: inout State) {
         for observer in state.observers {
             observer(observedState)
         }
-        
     }
     
     internal func setInteropObservationForMonitor(observation monitorObservation: (any Sendable)) {
