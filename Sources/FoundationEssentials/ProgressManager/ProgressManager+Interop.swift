@@ -110,15 +110,12 @@ private final class _ProgressParentProgressManagerChild: Sendable {
             }
             
             switch observerState {
-            case .totalCountUpdated:
-                self.ghostParent.totalUnitCount = Int64(self.ghostChild.totalCount ?? 0)
+            case .totalCountUpdated(let totalCount):
+                self.ghostParent.totalUnitCount = Int64(totalCount)
                 
-            case .fractionUpdated:
-                let count = self.ghostChild.withProperties { p in
-                    return (p.completedCount, p.totalCount)
-                }
-                self.ghostParent.completedUnitCount = Int64(count.0)
-                self.ghostParent.totalUnitCount = Int64(count.1 ?? 0)
+            case .fractionUpdated(let totalCount, let completedCount):
+                self.ghostParent.completedUnitCount = Int64(completedCount)
+                self.ghostParent.totalUnitCount = Int64(totalCount)
             }
         }
     }
@@ -138,15 +135,12 @@ private final class _ProgressParentProgressReporterChild: Sendable {
             }
             
             switch observerState {
-            case .totalCountUpdated:
-                self.intermediary.totalUnitCount = Int64(self.reporter.manager.totalCount ?? 0)
+            case .totalCountUpdated(let totalCount):
+                self.intermediary.totalUnitCount = Int64(totalCount)
                 
-            case .fractionUpdated:
-                let count = self.reporter.manager.withProperties { p in
-                    return (p.completedCount, p.totalCount)
-                }
-                self.intermediary.completedUnitCount = Int64(count.0)
-                self.intermediary.totalUnitCount = Int64(count.1 ?? 0)
+            case .fractionUpdated(let totalCount, let completedCount):
+                self.intermediary.completedUnitCount = Int64(completedCount)
+                self.intermediary.totalUnitCount = Int64(totalCount)
             }
         }
     }
