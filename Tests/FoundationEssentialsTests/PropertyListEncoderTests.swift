@@ -1584,9 +1584,9 @@ data1 = <7465
             
 
 // MARK: - Helper Global Functions
-func AssertEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String) {
+func AssertEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String, sourceLocation: SourceLocation = #_sourceLocation) {
     if lhs.count != rhs.count {
-        Issue.record("\(prefix) [CodingKey].count mismatch: \(lhs.count) != \(rhs.count)")
+        Issue.record("\(prefix) [CodingKey].count mismatch: \(lhs.count) != \(rhs.count)", sourceLocation: sourceLocation)
         return
     }
 
@@ -1594,21 +1594,21 @@ func AssertEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String) 
         switch (key1.intValue, key2.intValue) {
         case (.none, .none): break
         case (.some(let i1), .none):
-            Issue.record("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != nil")
+            Issue.record("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != nil", sourceLocation: sourceLocation)
             return
         case (.none, .some(let i2)):
-            Issue.record("\(prefix) CodingKey.intValue mismatch: nil != \(type(of: key2))(\(i2))")
+            Issue.record("\(prefix) CodingKey.intValue mismatch: nil != \(type(of: key2))(\(i2))", sourceLocation: sourceLocation)
             return
         case (.some(let i1), .some(let i2)):
             guard i1 == i2 else {
-                Issue.record("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != \(type(of: key2))(\(i2))")
+                Issue.record("\(prefix) CodingKey.intValue mismatch: \(type(of: key1))(\(i1)) != \(type(of: key2))(\(i2))", sourceLocation: sourceLocation)
                 return
             }
 
             break
         }
 
-        #expect(key1.stringValue == key2.stringValue, "\(prefix) CodingKey.stringValue mismatch: \(type(of: key1))('\(key1.stringValue)') != \(type(of: key2))('\(key2.stringValue)')")
+        #expect(key1.stringValue == key2.stringValue, "\(prefix) CodingKey.stringValue mismatch: \(type(of: key1))('\(key1.stringValue)') != \(type(of: key2))('\(key2.stringValue)')", sourceLocation: sourceLocation)
     }
 }
 
