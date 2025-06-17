@@ -10,6 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal // NOTE: internal because BufferView is internal, `parseError` below is `package`
+func parseError(
+    _ value: BufferView<UInt8>, exampleFormattedString: String?, extendedDescription: String? = nil
+) -> CocoaError {
+    // TODO: change to UTF8Span, and prototype string append and interpolation taking UTF8Span
+    parseError(String(decoding: value, as: UTF8.self), exampleFormattedString: exampleFormattedString, extendedDescription: extendedDescription)
+}
+
 package func parseError(_ value: String, exampleFormattedString: String?, extendedDescription: String? = nil) -> CocoaError {
     let errorStr: String
     if let exampleFormattedString = exampleFormattedString {
@@ -25,13 +33,13 @@ func isASCIIDigit(_ x: UInt8) -> Bool {
 }
 
 extension BufferViewIterator<UInt8> {
-    mutating func expectCharacter(_ expected: UInt8, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws {
+    mutating func expectCharacter(_ expected: UInt8, input: BufferView<UInt8>, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws {
         guard let parsed = next(), parsed == expected else {
             throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
         }
     }
     
-    mutating func expectOneOrMoreCharacters(_ expected: UInt8, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws {
+    mutating func expectOneOrMoreCharacters(_ expected: UInt8, input: BufferView<UInt8>, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws {
         guard let parsed = next(), parsed == expected else {
             throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
         }
@@ -47,7 +55,7 @@ extension BufferViewIterator<UInt8> {
         }
     }
             
-    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
+    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: BufferView<UInt8>, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
         // Consume all leading zeros, parse until we no longer see a digit
         var result = 0
         var count = 0
