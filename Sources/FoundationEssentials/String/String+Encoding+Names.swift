@@ -14,15 +14,6 @@
 // MARK: - Private extensions for parsing encoding names
 
 private extension Unicode.Scalar {
-  var _isASCIINumeric: Bool {
-    return ("0"..."9").contains(self)
-  }
-
-  var _asciiNumericValue: Int {
-    assert(_isASCIINumeric)
-    return Int(self.value - 0x30)
-  }
-
   /// Returns the Boolean value that indicates whether or not `self` is "ASCII whitespace".
   ///
   /// Reference: https://infra.spec.whatwg.org/#ascii-whitespace
@@ -96,68 +87,6 @@ extension StringEncodingNameTokenizer where Self: ~Copyable {
             }
         }
         return try other.nextToken() == nil
-    }
-}
-
-/// ICU-independent parser that follows [Charset Alias Matching](https://www.unicode.org/reports/tr22/tr22-8.html#Charset_Alias_Matching).
-private struct UTS22Tokenizer: StringEncodingNameTokenizer, ~Copyable {
-    enum Token: Equatable {
-        case numeric(Int)
-        case alphabet(ASCIICaseInsensitiveUnicodeScalar)
-    }
-
-    enum Error: Swift.Error {
-        case tooLargeNumericValue
-    }
-
-    let scalars: String.UnicodeScalarView
-
-    private var _currentIndex: String.UnicodeScalarView.Index
-
-    init(name: String) {
-        self.scalars = name.unicodeScalars
-        self._currentIndex = scalars.startIndex
-    }
-
-    mutating func nextToken() throws -> Token? {
-        guard _currentIndex < scalars.endIndex else {
-            return nil
-        }
-
-        let scalar = scalars[_currentIndex]
-        switch scalar {
-        case "0"..."9":
-            // Parse a numeric value ignoring leading zeros.
-            //
-            // NOTE: To prevent the value from overflow, a threhold is set here.
-            //       The max number of digits to be expected is 8 as of now: i.g. `csISO42JISC62261978`.
-            //       It wouldn't matter to throw an error in practice when the value is too large.
-
-            let threshold: Int = 999_999_999
-            var value = scalar._asciiNumericValue
-            scalars.formIndex(after: &_currentIndex)
-            while _currentIndex < scalars.endIndex {
-                let currentScalar = scalars[_currentIndex]
-                guard currentScalar._isASCIINumeric else {
-                    break
-                }
-                value = value * 10 + currentScalar._asciiNumericValue
-                if value > threshold {
-                    throw Error.tooLargeNumericValue
-                }
-                scalars.formIndex(after: &_currentIndex)
-            }
-            return .numeric(value)
-        case "A"..."Z", "a"..."z":
-            scalars.formIndex(after: &_currentIndex)
-            return .alphabet(ASCIICaseInsensitiveUnicodeScalar(scalar))
-        default:
-            scalars.formIndex(after: &_currentIndex)
-            if _currentIndex < scalars.endIndex {
-                return try nextToken()
-            }
-            return nil
-        }
     }
 }
 
