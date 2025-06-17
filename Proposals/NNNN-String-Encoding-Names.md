@@ -237,10 +237,7 @@ This feature can be freely adopted and un-adopted in source code with no deploym
 
 ## Future directions
 
-`String.init(data:encoding:)` and `String.data(using:)` will be implemented more appropriately[^string-data-regression].
-
-[^string-data-regression]: https://github.com/swiftlang/swift-foundation/issues/1015
-
+This feature will make more programs easy to parse string encoding names so that (e.g.) Web apps written in Swift won't need to implement such parser on their own.
 
 Hopefully, happening some cascades like below might be expected in the longer term.
 
@@ -275,8 +272,6 @@ public struct WHATWGEncoding: StrawmanStringEncodingProtocol {
 ```
 
 </div></details>
-
-- `String.Encoding` might be deprecated as a natural course in the distant future??
 
 
 ## Alternatives considered
