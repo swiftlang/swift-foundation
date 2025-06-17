@@ -10,12 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Testing
 import FoundationMacros
 
-final class BundleMacroTests: XCTestCase {
+@Suite("#bundle Macro")
+private struct BundleMacroTests {
 
-    func testSimple() {
+    @Test func testSimple() {
         AssertMacroExpansion(
             macros: ["bundle": BundleMacro.self],
             """
@@ -35,7 +36,7 @@ final class BundleMacroTests: XCTestCase {
         )
     }
 
-    func testUsingParenthesis() {
+    @Test func testUsingParenthesis() {
         AssertMacroExpansion(
             macros: ["bundle": BundleMacro.self],
             """

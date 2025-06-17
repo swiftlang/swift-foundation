@@ -10,56 +10,46 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+
+import Testing
+
+#if canImport(FoundationEssentials)
+@testable import FoundationEssentials
+#else
+@testable import Foundation
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#else
-@testable import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
-class SortComparatorTests: XCTestCase {
-    func test_comparable_descriptors() {
+@Suite("SortComparator")
+private struct SortComparatorTests {
+    @Test func comparableDescriptors() {
         let intDesc: ComparableComparator<Int> = ComparableComparator<Int>()
-        XCTAssertEqual(intDesc.compare(0, 1), .orderedAscending)
+        #expect(intDesc.compare(0, 1) == .orderedAscending)
         let result = intDesc.compare(1000, -10)
-        XCTAssertEqual(result, .orderedDescending)
+        #expect(result == .orderedDescending)
     }
     
     
-    func test_order() {
+    @Test func order() {
         var intDesc: ComparableComparator<Int> = ComparableComparator<Int>(order: .reverse)
-        XCTAssertEqual(intDesc.compare(0, 1), .orderedDescending)
-        XCTAssertEqual(intDesc.compare(1000, -10), .orderedAscending)
-        XCTAssertEqual(intDesc.compare(100, 100), .orderedSame)
+        #expect(intDesc.compare(0, 1) == .orderedDescending)
+        #expect(intDesc.compare(1000, -10) == .orderedAscending)
+        #expect(intDesc.compare(100, 100) == .orderedSame)
         
         intDesc.order = .forward
-        XCTAssertEqual(intDesc.compare(0, 1), .orderedAscending)
-        XCTAssertEqual(intDesc.compare(1000, -10), .orderedDescending)
-        XCTAssertEqual(intDesc.compare(100, 100), .orderedSame)
+        #expect(intDesc.compare(0, 1) == .orderedAscending)
+        #expect(intDesc.compare(1000, -10) == .orderedDescending)
+        #expect(intDesc.compare(100, 100) == .orderedSame)
     }
     
-    func test_compare_options_descriptor() {
-        let compareOptions = String.Comparator(options: [.numeric])
-        XCTAssertEqual(
-            compareOptions.compare("ttestest005", "test2"),
-            "test005".compare("test2", options: [.numeric]))
-        XCTAssertEqual(
-            compareOptions.compare("test2", "test005"),
-            "test2".compare("test005", options: [.numeric]))
-    }
-    
-    func testAnySortComparatorEquality() {
+    @Test func anySortComparatorEquality() {
         let a: ComparableComparator<Int> = ComparableComparator<Int>()
         let b: ComparableComparator<Int> = ComparableComparator<Int>(order: .reverse)
         let c: ComparableComparator<Double> = ComparableComparator<Double>()
-        XCTAssertEqual(AnySortComparator(a), AnySortComparator(a))
-        XCTAssertEqual(AnySortComparator(b), AnySortComparator(b))
-        XCTAssertEqual(AnySortComparator(c), AnySortComparator(c))
-        XCTAssertNotEqual(AnySortComparator(a), AnySortComparator(b))
-        XCTAssertNotEqual(AnySortComparator(b), AnySortComparator(c))
-        XCTAssertNotEqual(AnySortComparator(a), AnySortComparator(c))
+        #expect(AnySortComparator(a) == AnySortComparator(a))
+        #expect(AnySortComparator(b) == AnySortComparator(b))
+        #expect(AnySortComparator(c) == AnySortComparator(c))
+        #expect(AnySortComparator(a) != AnySortComparator(b))
+        #expect(AnySortComparator(b) != AnySortComparator(c))
+        #expect(AnySortComparator(a) != AnySortComparator(c))
     }
 }

@@ -75,6 +75,20 @@ let wasiLibcCSettings: [CSetting] = [
     .define("_WASI_EMULATED_MMAN", .when(platforms: [.wasi])),
 ]
 
+var testOnlySwiftSettings: [SwiftSetting] = [
+    // The latest Windows toolchain does not yet have exit tests in swift-testing
+    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd]))
+]
+
+#if os(Linux)
+import FoundationEssentials
+
+if ProcessInfo.processInfo.operatingSystemVersionString.hasPrefix("Ubuntu 20.") {
+    // Exit tests currently hang indefinitely on Ubuntu 20.
+    testOnlySwiftSettings.removeFirst()
+}
+#endif
+
 let package = Package(
     name: "swift-foundation",
     platforms: [.macOS("15"), .iOS("18"), .tvOS("18"), .watchOS("11")],
@@ -171,7 +185,7 @@ let package = Package(
                 "LifetimeDependenceMutableAccessors",
                 .when(platforms: [.macOS, .iOS, .watchOS, .tvOS, .linux])
               ),
-            ] + availabilityMacros + featureSettings
+            ] + availabilityMacros + featureSettings + testOnlySwiftSettings
         ),
 
         // FoundationInternationalization
@@ -204,7 +218,7 @@ let package = Package(
                 "TestSupport",
                 "FoundationInternationalization",
             ],
-            swiftSettings: availabilityMacros + featureSettings
+            swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
         ),
         
         // FoundationMacros
@@ -233,10 +247,9 @@ package.targets.append(contentsOf: [
     .testTarget(
         name: "FoundationMacrosTests",
         dependencies: [
-            "FoundationMacros",
-            "TestSupport"
+            "FoundationMacros"
         ],
-        swiftSettings: availabilityMacros + featureSettings
+        swiftSettings: availabilityMacros + featureSettings + testOnlySwiftSettings
     )
 ])
 #endif

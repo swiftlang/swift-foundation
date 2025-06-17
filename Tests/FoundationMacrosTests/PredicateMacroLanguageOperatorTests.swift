@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Testing
 
-final class PredicateMacroLanguageOperatorTests: XCTestCase {
-    func testEqual() {
+@Suite("#Predicate Macro Language Operators")
+private struct PredicateMacroLanguageOperatorTests {
+    @Test func equal() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -31,7 +32,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testEqualExplicitReturn() {
+    @Test func equalExplicitReturn() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -49,7 +50,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testNotEqual() {
+    @Test func notEqual() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -67,7 +68,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testComparison() {
+    @Test func comparison() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -137,7 +138,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testConjunction() {
+    @Test func conjunction() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -155,7 +156,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testDisjunction() {
+    @Test func disjunction() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -173,7 +174,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testArithmetic() {
+    @Test func arithmetic() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -226,7 +227,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testDivision() {
+    @Test func division() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -244,7 +245,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testRemainder() {
+    @Test func remainder() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -262,7 +263,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testNegation() {
+    @Test func negation() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -279,7 +280,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testUnaryMinus() {
+    @Test func unaryMinus() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -296,7 +297,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testNilCoalesce() {
+    @Test func nilCoalesce() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -314,7 +315,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testRanges() {
+    @Test func ranges() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
@@ -348,7 +349,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testOptionalChaining() {
+    @Test func optionalChaining() {
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { inputA in
@@ -533,7 +534,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testForceUnwrap() {
+    @Test func forceUnwrap() {
         AssertPredicateExpansion(
             """
             #Predicate<Object?> { inputA in
@@ -668,7 +669,7 @@ final class PredicateMacroLanguageOperatorTests: XCTestCase {
         )
     }
     
-    func testDiagnoseUnknownOperator() {
+    @Test func diagnoseUnknownOperator() {
         AssertPredicateExpansion(
             """
             #Predicate<Object, Object> { inputA, inputB in
