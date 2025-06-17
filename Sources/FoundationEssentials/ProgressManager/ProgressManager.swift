@@ -37,6 +37,18 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 /// An object that conveys ongoing progress to the user for a specified task.
 @Observable public final class ProgressManager: Sendable {
     
+    // Stores the information on each child added to children
+    internal struct ChildState {
+        var portionOfSelf: Int // Portion of my totalCount that this child accounts for
+        var childFraction: _ProgressFraction // Fraction adjusted based on portion of self; If not dirty, overallFraction should be composed of this
+    }
+    
+    // Interop states to notify observers
+    internal enum ObserverState {
+        case fractionUpdated
+        case totalCountUpdated
+    }
+    
     // Stores all the state of properties
     internal struct State {
         var interopChild: ProgressManager? // read from this if self is actually an interop ghost
@@ -57,30 +69,23 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         var childrenOtherProperties: [AnyMetatypeWrapper: OrderedDictionary<ProgressManager, [(any Sendable)]>] // Type: Metatype maps to dictionary of child to value
     }
     
-    internal struct ChildState {
-        var portionOfSelf: Int // Portion of my totalCount that this child accounts for
-        var childFraction: _ProgressFraction // Fraction adjusted based on portion of self; If not dirty, overallFraction should be composed of this
+    internal struct InteropState {
+        // All interop-related stuff
+        // Interop properties - Just kept alive
+        var interopObservation: (any Sendable)? // set at init
+        var interopObservationForMonitor:(any Sendable)? = nil
+        var monitorInterop: Bool = false
+        
+    #if FOUNDATION_FRAMEWORK
+        var parentBridge: Foundation.Progress? = nil // dummy, set upon calling setParentBridge
+    #endif
+        // Interop properties - Actually set and called
+        var ghostReporter: ProgressManager? // set at init, used to call notify observers
+        var observers: [@Sendable (ObserverState) -> Void] = [] // storage for all observers, set upon calling addObservers
     }
     
     private let state: LockedState<State>
-    
-    // Interop states
-    internal enum ObserverState {
-        case fractionUpdated
-        case totalCountUpdated
-    }
-    
-    // Interop properties - Just kept alive
-    internal let interopObservation: (any Sendable)? // set at init
-    internal let interopObservationForMonitor: LockedState<(any Sendable)?> = LockedState(initialState: nil)
-    internal let monitorInterop: LockedState<Bool> = LockedState(initialState: false)
-    
-#if FOUNDATION_FRAMEWORK
-    internal let parentBridge: LockedState<Foundation.Progress?> = LockedState(initialState: nil) // dummy, set upon calling setParentBridge
-#endif
-    // Interop properties - Actually set and called
-    internal let ghostReporter: ProgressManager? // set at init, used to call notify observers
-    internal let observers: LockedState<[@Sendable (ObserverState) -> Void]> = LockedState(initialState: [])// storage for all observers, set upon calling addObservers
+    private let interopState: LockedState<InteropState>
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -166,10 +171,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.selfFraction.total = newValue ?? 0
                 manager.markDirty(state: &state)
                 
-                manager.ghostReporter?.notifyObservers(with: .totalCountUpdated)
-                manager.monitorInterop.withLock { [manager] interop in
-                    if interop == true {
-                        manager.notifyObservers(with: .totalCountUpdated)
+                manager.interopState.withLock { interopState in
+                    interopState.ghostReporter?.notifyObservers(with:.fractionUpdated, interopState: &interopState)
+                    if interopState.monitorInterop == true {
+                        manager.notifyObservers(with: .fractionUpdated, interopState: &interopState)
                     }
                 }
             }
@@ -187,11 +192,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.selfFraction.completed = newValue
                 manager.markDirty(state: &state)
                 
-                manager.ghostReporter?.notifyObservers(with: .fractionUpdated)
-                
-                manager.monitorInterop.withLock { [manager] interop in
-                    if interop == true {
-                        manager.notifyObservers(with: .fractionUpdated)
+                manager.interopState.withLock { interopState in
+                    interopState.ghostReporter?.notifyObservers(with:.fractionUpdated, interopState: &interopState)
+                    if interopState.monitorInterop == true {
+                        manager.notifyObservers(with: .fractionUpdated, interopState: &interopState)
                     }
                 }
             }
@@ -241,11 +245,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             children: [:],
             parents: [:],
             otherProperties: [:],
-            childrenOtherProperties: [:]
+            childrenOtherProperties: [:],
         )
         self.state = LockedState(initialState: state)
-        self.interopObservation = interopObservation
-        self.ghostReporter = ghostReporter
+        
+        let interopState = InteropState(
+            interopObservation: interopObservation,
+            ghostReporter: ghostReporter
+        )
+        self.interopState = LockedState(initialState: interopState)
     }
     
     /// Initializes `self` with `totalCount`.
@@ -294,11 +302,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             markDirty(state: &state)
         }
         
-        // Interop updates stuff
-        ghostReporter?.notifyObservers(with: .fractionUpdated)
-        monitorInterop.withLock { [self] interop in
-            if interop == true {
-                notifyObservers(with: .fractionUpdated)
+        interopState.withLock { interopState in
+            interopState.ghostReporter?.notifyObservers(with:.fractionUpdated, interopState: &interopState)
+            if interopState.monitorInterop == true {
+                notifyObservers(with: .fractionUpdated, interopState: &interopState)
             }
         }
     }
@@ -589,38 +596,36 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     //MARK: Interop-related internal methods
     /// Adds `observer` to list of `_observers` in `self`.
     internal func addObserver(observer: @escaping @Sendable (ObserverState) -> Void) {
-        observers.withLock { observers in
-            observers.append(observer)
+        interopState.withLock { interopState in
+            interopState.observers.append(observer)
         }
     }
     
     /// Notifies all `_observers` of `self` when `state` changes.
-    private func notifyObservers(with state: ObserverState) {
-        observers.withLock { observers in
-            for observer in observers {
-                observer(state)
-            }
+    private func notifyObservers(with observedState: ObserverState, interopState: inout InteropState) {
+        for observer in interopState.observers {
+            observer(observedState)
         }
+        
     }
     
     internal func setInteropObservationForMonitor(observation monitorObservation: (any Sendable)) {
-        interopObservationForMonitor.withLock { observation in
-            observation = monitorObservation
+        interopState.withLock { interopState in
+            interopState.interopObservationForMonitor = monitorObservation
+            interopState.monitorInterop = true
         }
     }
-    
-    internal func setMonitorInterop(to value: Bool) {
-        monitorInterop.withLock { monitorInterop in
-            monitorInterop = value
-        }
-    }
+
     
     //MARK: Internal methods to mutate locked context
 #if FOUNDATION_FRAMEWORK
     internal func setParentBridge(parentBridge: Foundation.Progress) {
-        self.parentBridge.withLock { bridge in
-            bridge = parentBridge
+        interopState.withLock { interopState in
+            interopState.parentBridge = parentBridge
         }
+//        self.parentBridge.withLock { bridge in
+//            bridge = parentBridge
+//        }
     }
 #endif
     

@@ -69,7 +69,6 @@ extension Progress {
         let observation = _ProgressParentProgressReporterChild(intermediary: ghostProgressParent, reporter: reporter)
         
         reporter.manager.setInteropObservationForMonitor(observation: observation)
-        reporter.manager.setMonitorInterop(to: true)
     }
     
     // MARK: Cycle detection
