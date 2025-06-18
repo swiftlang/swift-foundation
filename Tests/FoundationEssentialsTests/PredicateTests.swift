@@ -22,23 +22,27 @@ import Foundation
 import RegexBuilder
 #endif
 
+// These types are non-private and in the global scope to ensure a consistent string type name for the debugDescription() test
+struct PredicateTestObject {
+    var a: Int
+    var b: String
+    var c: Double
+    var d: Int
+    var e: Character
+    var f: Bool
+    var g: [Int]
+    var h: Date = .now
+    var i: Any = 3
+}
+
+struct PredicateTestObject2 {
+    var a: Bool
+}
+
 @Suite("Predicate")
 private struct PredicateTests {
-    struct Object {
-        var a: Int
-        var b: String
-        var c: Double
-        var d: Int
-        var e: Character
-        var f: Bool
-        var g: [Int]
-        var h: Date = .now
-        var i: Any = 3
-    }
-    
-    struct Object2 {
-        var a: Bool
-    }
+    typealias Object = PredicateTestObject
+    typealias Object2 = PredicateTestObject2
     
     @Test func basic() throws {
         let compareTo = 2
@@ -375,7 +379,7 @@ private struct PredicateTests {
         let predicateName = _typeName(Predicate<Object>.self)
         #expect(
             debugDescription ==
-            "\(predicateName)(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\Object.i), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\Object.h), rhs: Value<\(dateName)>(\(date.debugDescription)))))"
+            "\(predicateName)(variable: (Variable(#)), expression: NilCoalesce(lhs: OptionalFlatMap(wrapped: ConditionalCast(input: KeyPath(root: Variable(#), keyPath: \\PredicateTestObject.i), desiredType: Swift.Int), variable: Variable(#), transform: Equal(lhs: Variable(#), rhs: Value<Swift.Int>(3))), rhs: Equal(lhs: KeyPath(root: Variable(#), keyPath: \\PredicateTestObject.h), rhs: Value<\(dateName)>(\(date.debugDescription)))))"
         )
     }
 
