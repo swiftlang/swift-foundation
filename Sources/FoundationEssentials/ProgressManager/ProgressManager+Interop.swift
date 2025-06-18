@@ -39,12 +39,15 @@ extension Progress {
         let ghostReporterChild = ProgressManager(totalCount: count)
         
         // Make observation instance
-        let observation = _ProgressParentProgressManagerChild(ghostParent: ghostProgressParent, ghostChild: ghostReporterChild)
+        let managerObservation = _ProgressParentProgressManagerChild(
+            ghostParent: ghostProgressParent,
+            ghostChild: ghostReporterChild
+        )
         
         // Make actual child with ghost child being parent
         var actualProgress = ghostReporterChild.subprogress(assigningCount: count)
-        actualProgress.managerObservation = observation
-        actualProgress.ghostReporter = ghostReporterChild
+        actualProgress.managerObservation = managerObservation
+        actualProgress.progressParentProgressManagerChildMessenger = ghostReporterChild
         return actualProgress
     }
     
@@ -65,7 +68,10 @@ extension Progress {
         self.addChild(ghostProgressParent, withPendingUnitCount: Int64(count))
         
         // Make observation instance
-        let reporterObservation = _ProgressParentProgressReporterChild(intermediary: ghostProgressParent, reporter: reporter)
+        let reporterObservation = _ProgressParentProgressReporterChild(
+            intermediary: ghostProgressParent,
+            reporter: reporter
+        )
         reporter.manager.setInteropObservationForReporter(observation: reporterObservation)
     }
     
@@ -191,7 +197,6 @@ internal final class _NSProgressParentBridge: Progress, @unchecked Sendable {
     // Overrides the _updateChild func that Foundation.Progress calls to update parent
     // so that the parent that gets updated is the ProgressManager parent
     override func _updateChild(_ child: Foundation.Progress, fraction: _NSProgressFractionTuple, portion: Int64) {
-//        actualParent.updateChildFraction(from: _ProgressFraction(nsProgressFraction: fraction.previous), to: _ProgressFraction(nsProgressFraction: fraction.next), portion: Int(portion))
             actualParent.updateChildState(child: ghostChild, fraction: _ProgressFraction(nsProgressFraction: fraction.next))
     }
 }

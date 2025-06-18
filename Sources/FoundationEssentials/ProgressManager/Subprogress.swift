@@ -23,7 +23,7 @@ public struct Subprogress: ~Copyable, Sendable {
     // Interop variables for Progress - ProgressManager Interop
     // To be kept alive in ProgressManager
     internal var managerObservation: _ProgressParentProgressManagerChild?
-    internal var ghostReporter: ProgressManager?
+    internal var progressParentProgressManagerChildMessenger: ProgressManager?
             
     internal init(parent: ProgressManager, portionOfParent: Int) {
         self.parent = parent
@@ -37,16 +37,27 @@ public struct Subprogress: ~Copyable, Sendable {
     public consuming func start(totalCount: Int?) -> ProgressManager {
         isInitializedToProgressReporter = true
         
-        let childManager = ProgressManager(total: totalCount, ghostReporter: ghostReporter, managerObservation: managerObservation)
+        let childManager = ProgressManager(
+            total: totalCount,
+            progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger,
+            managerObservation: managerObservation
+        )
         
-        // If ghostReporter exists, it means there is interop of ProgressParent - ProgressManager Child
-        if let intermediary = ghostReporter {
+        // If messenger exists, it means there is interop of ProgressParent - ProgressManager Child
+        if let intermediary = progressParentProgressManagerChildMessenger {
             // Set interop child of ghost manager so ghost manager reads from here
             intermediary.setInteropChild(interopChild: childManager)
         } else {
             // Add child to parent's _children list & Store in child children's position in parent
-            parent.addToChildren(child: childManager, portion: portionOfParent, childFraction: childManager.getProgressFraction())
-            childManager.addParent(parent: parent, portionOfParent: portionOfParent)
+            parent.addToChildren(
+                child: childManager,
+                portion: portionOfParent,
+                childFraction: childManager.getProgressFraction()
+            )
+            childManager.addParent(
+                parent: parent,
+                portionOfParent: portionOfParent
+            )
         }
         
         return childManager

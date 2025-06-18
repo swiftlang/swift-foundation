@@ -80,7 +80,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         // Interop properties - only kept alive
         var interopObservation: InteropObservation
         // Interop properties - Actually set and called
-        var ghostReporter: ProgressManager? // set at init, used to call notify observers
+        var progressParentProgressManagerChildMessenger: ProgressManager? // set at init, used to call notify observers
         var observers: [@Sendable (ObserverState) -> Void] = [] // storage for all observers, set upon calling addObservers
     }
     
@@ -169,10 +169,21 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.selfFraction.total = newValue ?? 0
                 manager.markDirty(state: &state)
                 
-                state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
+                state.progressParentProgressManagerChildMessenger?.notifyObservers(
+                    with:.fractionUpdated(
+                        totalCount: state.selfFraction.total,
+                        completedCount: state.selfFraction.completed
+                    )
+                )
                 
                 if let _ = state.interopObservation.progressParentProgressReporterChild {
-                    manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
+                    manager.notifyObservers(
+                        with: .fractionUpdated(
+                            totalCount: state.selfFraction.total,
+                            completedCount: state.selfFraction.completed
+                        ),
+                        state: &state
+                    )
                 }
             }
         }
@@ -189,9 +200,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.selfFraction.completed = newValue
                 manager.markDirty(state: &state)
                 
-                state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
+                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
                 if let _ = state.interopObservation.progressParentProgressReporterChild  {
-                    manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
+                    manager.notifyObservers(
+                        with: .fractionUpdated(
+                            totalCount: state.selfFraction.total,
+                            completedCount: state.selfFraction.completed
+                        ),
+                        state: &state
+                    )
                 }
             }
         }
@@ -230,7 +247,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    internal init(total: Int?, ghostReporter: ProgressManager?, managerObservation: _ProgressParentProgressManagerChild?) {
+    internal init(total: Int?, progressParentProgressManagerChildMessenger: ProgressManager?, managerObservation: _ProgressParentProgressManagerChild?) {
         let state = State(
             interopChild: nil,
             isDirty: false,
@@ -242,7 +259,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             otherProperties: [:],
             childrenOtherProperties: [:],
             interopObservation: InteropObservation(progressParentProgressManagerChild: managerObservation),
-            ghostReporter: ghostReporter
+            progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger
         )
         self.state = LockedState(initialState: state)
     }
@@ -252,7 +269,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// If `totalCount` is set to `nil`, `self` is indeterminate.
     /// - Parameter totalCount: Total units of work.
     public convenience init(totalCount: Int?) {
-        self.init(total: totalCount, ghostReporter: nil, managerObservation: nil)
+        self.init(
+            total: totalCount,
+            progressParentProgressManagerChildMessenger: nil,
+            managerObservation: nil
+        )
     }
     
     /// Returns a `Subprogress` representing a portion of `self` which can be passed to any method that reports progress.
@@ -292,9 +313,20 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             state.selfFraction.completed += count
             markDirty(state: &state)
             
-            state.ghostReporter?.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
+            state.progressParentProgressManagerChildMessenger?.notifyObservers(
+                with: .fractionUpdated(
+                    totalCount: state.selfFraction.total,
+                    completedCount: state.selfFraction.completed
+                )
+            )
             if let _ = state.interopObservation.progressParentProgressReporterChild  {
-                notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
+                notifyObservers(
+                    with: .fractionUpdated(
+                        totalCount: state.selfFraction.total,
+                        completedCount: state.selfFraction.completed
+                    ),
+                    state: &state
+                )
             }
         }
     }
