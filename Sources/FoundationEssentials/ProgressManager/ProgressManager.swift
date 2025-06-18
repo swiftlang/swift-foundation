@@ -49,6 +49,16 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         case totalCountUpdated(totalCount: Int)
     }
     
+    // Mirroring observation to be kept alive
+    internal struct InteropObservation {
+        // Formerly interopObservation, interopObservationForMonitor, parentBridge
+        var progressParentProgressManagerChild: _ProgressParentProgressManagerChild? // Set when init
+        var progressParentProgressReporterChild: _ProgressParentProgressReporterChild? = nil // Set when setInteropObservationForReporter is called
+        #if FOUNDATION_FRAMEWORK
+        var parentBridge: Foundation.Progress? = nil // Set when setParentBridge is called
+        #endif
+    }
+    
     // Stores all the state of properties
     internal struct State {
         var interopChild: ProgressManager? // read from this if self is actually an interop ghost
@@ -67,13 +77,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         var parents: [ProgressManager: Int] // My parents and their information in relation to me, how much of their totalCount I am a part of
         var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
         var childrenOtherProperties: [AnyMetatypeWrapper: OrderedDictionary<ProgressManager, [(any Sendable)]>] // Type: Metatype maps to dictionary of child to value
-        // All interop-related stuff
-        // Interop properties - Just kept alive
-        var interopObservation: (any Sendable)? // set at init
-        var interopObservationForMonitor:(any Sendable)? = nil
-    #if FOUNDATION_FRAMEWORK
-        var parentBridge: Foundation.Progress? = nil // dummy, set upon calling setParentBridge
-    #endif
+        // Interop properties - only kept alive
+        var interopObservation: InteropObservation
         // Interop properties - Actually set and called
         var ghostReporter: ProgressManager? // set at init, used to call notify observers
         var observers: [@Sendable (ObserverState) -> Void] = [] // storage for all observers, set upon calling addObservers
@@ -166,7 +171,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 
                 state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
                 
-                if let monitorObservation = state.interopObservationForMonitor {
+                if let _ = state.interopObservation.progressParentProgressReporterChild {
                     manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
                 }
             }
@@ -185,7 +190,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 manager.markDirty(state: &state)
                 
                 state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
-                if let monitorObservation = state.interopObservationForMonitor  {
+                if let _ = state.interopObservation.progressParentProgressReporterChild  {
                     manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
                 }
             }
@@ -225,7 +230,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    internal init(total: Int?, ghostReporter: ProgressManager?, interopObservation: (any Sendable)?) {
+    internal init(total: Int?, ghostReporter: ProgressManager?, managerObservation: _ProgressParentProgressManagerChild?) {
         let state = State(
             interopChild: nil,
             isDirty: false,
@@ -236,7 +241,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             parents: [:],
             otherProperties: [:],
             childrenOtherProperties: [:],
-            interopObservation: interopObservation,
+            interopObservation: InteropObservation(progressParentProgressManagerChild: managerObservation),
             ghostReporter: ghostReporter
         )
         self.state = LockedState(initialState: state)
@@ -247,7 +252,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// If `totalCount` is set to `nil`, `self` is indeterminate.
     /// - Parameter totalCount: Total units of work.
     public convenience init(totalCount: Int?) {
-        self.init(total: totalCount, ghostReporter: nil, interopObservation: nil)
+        self.init(total: totalCount, ghostReporter: nil, managerObservation: nil)
     }
     
     /// Returns a `Subprogress` representing a portion of `self` which can be passed to any method that reports progress.
@@ -288,7 +293,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             markDirty(state: &state)
             
             state.ghostReporter?.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
-            if let monitorObservation = state.interopObservationForMonitor  {
+            if let _ = state.interopObservation.progressParentProgressReporterChild  {
                 notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
             }
         }
@@ -328,7 +333,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 children: [:],
                 parents: [:],
                 otherProperties: [:],
-                childrenOtherProperties: [:])
+                childrenOtherProperties: [:],
+                interopObservation: InteropObservation()
+            )
             let result = try closure(&values)
             state = values.state
             return result
@@ -600,9 +607,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    internal func setInteropObservationForMonitor(observation monitorObservation: (any Sendable)) {
+    internal func setInteropObservationForReporter(observation reporterObservation: _ProgressParentProgressReporterChild) {
         state.withLock { state in
-            state.interopObservationForMonitor = monitorObservation
+            state.interopObservation.progressParentProgressReporterChild = reporterObservation
         }
     }
 
@@ -611,7 +618,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 #if FOUNDATION_FRAMEWORK
     internal func setParentBridge(parentBridge: Foundation.Progress) {
         state.withLock { state in
-            state.parentBridge = parentBridge
+            state.interopObservation.parentBridge = parentBridge
         }
     }
 #endif

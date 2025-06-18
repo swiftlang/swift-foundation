@@ -43,7 +43,7 @@ extension Progress {
         
         // Make actual child with ghost child being parent
         var actualProgress = ghostReporterChild.subprogress(assigningCount: count)
-        actualProgress.observation = observation
+        actualProgress.managerObservation = observation
         actualProgress.ghostReporter = ghostReporterChild
         return actualProgress
     }
@@ -65,9 +65,8 @@ extension Progress {
         self.addChild(ghostProgressParent, withPendingUnitCount: Int64(count))
         
         // Make observation instance
-        let observation = _ProgressParentProgressReporterChild(intermediary: ghostProgressParent, reporter: reporter)
-        
-        reporter.manager.setInteropObservationForMonitor(observation: observation)
+        let reporterObservation = _ProgressParentProgressReporterChild(intermediary: ghostProgressParent, reporter: reporter)
+        reporter.manager.setInteropObservationForReporter(observation: reporterObservation)
     }
     
     // MARK: Cycle detection
@@ -93,7 +92,7 @@ extension Progress {
     }
 }
 
-private final class _ProgressParentProgressManagerChild: Sendable {
+internal final class _ProgressParentProgressManagerChild: Sendable {
     private let ghostParent: Progress
     private let ghostChild: ProgressManager
     
@@ -120,7 +119,7 @@ private final class _ProgressParentProgressManagerChild: Sendable {
     }
 }
 
-private final class _ProgressParentProgressReporterChild: Sendable {
+internal final class _ProgressParentProgressReporterChild: Sendable {
     private let intermediary: Progress
     private let reporter: ProgressReporter
     

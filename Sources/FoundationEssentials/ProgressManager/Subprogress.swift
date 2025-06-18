@@ -22,7 +22,7 @@ public struct Subprogress: ~Copyable, Sendable {
     
     // Interop variables for Progress - ProgressManager Interop
     // To be kept alive in ProgressManager
-    internal var observation: (any Sendable)?
+    internal var managerObservation: _ProgressParentProgressManagerChild?
     internal var ghostReporter: ProgressManager?
             
     internal init(parent: ProgressManager, portionOfParent: Int) {
@@ -37,7 +37,7 @@ public struct Subprogress: ~Copyable, Sendable {
     public consuming func start(totalCount: Int?) -> ProgressManager {
         isInitializedToProgressReporter = true
         
-        let childManager = ProgressManager(total: totalCount, ghostReporter: ghostReporter, interopObservation: observation)
+        let childManager = ProgressManager(total: totalCount, ghostReporter: ghostReporter, managerObservation: managerObservation)
         
         // If ghostReporter exists, it means there is interop of ProgressParent - ProgressManager Child
         if let intermediary = ghostReporter {
