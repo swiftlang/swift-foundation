@@ -166,11 +166,7 @@ private final class DataIOTests {
     }
 #endif
     
-    #if os(watchOS)
-    @Test(.disabled("This test is not supported on this platform"))
-    #else
-    @Test
-    #endif
+#if !os(watchOS)
     func largeFile() throws {
         // More than 2 GB
         let size = 0x80010000
@@ -189,6 +185,7 @@ private final class DataIOTests {
         #expect(data.count == readNS.count)
 #endif
     }
+#endif
     
     #if os(Linux) || os(Windows)
     @Test
