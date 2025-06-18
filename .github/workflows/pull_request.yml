@@ -9,7 +9,7 @@ on:
 
 jobs:
   tests:
-    name: Test
+    name: Test (SwiftPM)
     uses: swiftlang/github-workflows/.github/workflows/swift_package_test.yml@main
     with:
       linux_swift_versions: '["nightly-main"]'
@@ -17,6 +17,23 @@ jobs:
       enable_macos_checks: false
       macos_xcode_versions: '["16.3"]'
       macos_versions: '["sequoia"]'
+
+  cmake_build:
+    name: Build (CMake)
+    runs-on: ubuntu-latest
+    container: swiftlang/swift:nightly-main-noble
+    steps:
+      - name: Checkout Sources
+        uses: actions/checkout@v1
+      - name: Install Dependencies
+        shell: bash
+        run: apt update && apt install -y cmake ninja-build
+      - name: Configure Project
+        shell: bash
+        run: cmake -G 'Ninja' -B build -S . -DCMAKE_C_COMPILER=clang -DCMAKE_Swift_COMPILER=swiftc -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=YES
+      - name: Build Project
+        shell: bash
+        run: cmake --build build
 
   soundness:
     name: Soundness
