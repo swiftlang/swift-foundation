@@ -18,6 +18,20 @@ import Testing
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
+private func generateTestData(count: Int = 16_777_216) -> Data {
+    // Set a few bytes so we're sure to not be all zeros
+    let buf = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: count)
+    for i in 0..<15 {
+        for j in 0..<128 {
+            buf[j * 1024 + i] = UInt8.random(in: 1..<42)
+        }
+    }
+    
+    return Data(bytesNoCopy: buf.baseAddress!, count: count, deallocator: .custom({ ptr, _ in
+        ptr.deallocate()
+    }))
+}
+
 @Suite("Data I/O")
 private final class DataIOTests {
     
@@ -28,20 +42,6 @@ private final class DataIOTests {
     init() {
         // Generate a random file name
         url = URL.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
-    }
-    
-    func generateTestData(count: Int = 16_777_216) -> Data {
-        // Set a few bytes so we're sure to not be all zeros
-        let buf = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: count)
-        for i in 0..<15 {
-            for j in 0..<128 {
-                buf[j * 1024 + i] = UInt8.random(in: 1..<42)
-            }
-        }
-        
-        return Data(bytesNoCopy: buf.baseAddress!, count: count, deallocator: .custom({ ptr, _ in
-            ptr.deallocate()
-        }))
     }
             
     func writeAndVerifyTestData(to url: URL, writeOptions: Data.WritingOptions = [], readOptions: Data.ReadingOptions = [], sourceLocation: SourceLocation = #_sourceLocation) throws {
@@ -166,27 +166,6 @@ private final class DataIOTests {
     }
 #endif
     
-#if !os(watchOS)
-    func largeFile() throws {
-        // More than 2 GB
-        let size = 0x80010000
-
-        let data = generateTestData(count: size)
-        
-        try data.write(to: url)
-        let read = try Data(contentsOf: url, options: .mappedIfSafe)
-
-        // No need to compare the contents, but do compare the size
-        #expect(data.count == read.count)
-        
-#if FOUNDATION_FRAMEWORK
-        // Try the NSData path
-        let readNS = try NSData(contentsOf: url, options: .mappedIfSafe) as Data
-        #expect(data.count == readNS.count)
-#endif
-    }
-#endif
-    
     #if os(Linux) || os(Windows)
     @Test
     #else
@@ -214,5 +193,31 @@ private final class DataIOTests {
         let maps = try String(contentsOfFile: "/proc/self/maps", encoding: .utf8)
         #expect(!maps.isEmpty)
     }
+}
+
+extension LargeDataTests {
+    // This test is placed in the LargeDataTests suite since it allocates an extremely large amount of memory for some devices
+#if !os(watchOS)
+    @Test func readLargeFile() throws {
+        let url = URL.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: url) }
+        // More than 2 GB
+        let size = 0x80010000
+        
+        let data = generateTestData(count: size)
+        
+        try data.write(to: url)
+        let read = try Data(contentsOf: url, options: .mappedIfSafe)
+        
+        // No need to compare the contents, but do compare the size
+        #expect(data.count == read.count)
+        
+#if FOUNDATION_FRAMEWORK
+        // Try the NSData path
+        let readNS = try NSData(contentsOf: url, options: .mappedIfSafe) as Data
+        #expect(data.count == readNS.count)
+#endif
+    }
+#endif
 }
 

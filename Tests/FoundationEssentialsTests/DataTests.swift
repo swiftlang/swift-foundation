@@ -1670,23 +1670,6 @@ private final class DataTests {
     }
 
     @available(FoundationSpan 6.2, *)
-    @Test func largeSliceDataSpan() throws {
-#if _pointerBitWidth(_64)
-        let count = Int(Int32.max)
-#elseif _pointerBitWidth(_32)
-        let count = Int(Int16.max)
-#else
-        #error("This test needs updating")
-#endif
-
-        let source = Data(repeating: 0, count: count).dropFirst()
-        #expect(source.startIndex != 0)
-        let span = source.span
-        let isEmpty = span.isEmpty
-        #expect(!isEmpty)
-    }
-
-    @available(FoundationSpan 6.2, *)
     @Test func inlineDataMutableSpan() throws {
 #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         var source = Data()
@@ -1695,7 +1678,7 @@ private final class DataTests {
         #expect(isEmpty)
 
         source.append(contentsOf: [1, 2, 3])
-        var count = source.count
+        let count = source.count
         span = source.mutableSpan
         let indices = span.indices
         let i = try #require(indices.randomElement())
@@ -1721,29 +1704,6 @@ private final class DataTests {
         var sub = span.extracting(i..<i+1)
         sub.update(repeating: .max)
         #expect(source[i] == .max)
-#endif
-    }
-
-    @available(FoundationSpan 6.2, *)
-    @Test func largeSliceDataMutableSpan() throws {
-#if _pointerBitWidth(_64)
-        var count = Int(Int32.max)
-#elseif _pointerBitWidth(_32)
-        var count = Int(Int16.max)
-#else
-        #error("This test needs updating")
-#endif
-
-#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
-        var source = Data(repeating: 0, count: count).dropFirst()
-        #expect(source.startIndex != 0)
-        count = source.count
-        var span = source.mutableSpan
-        #expect(span.count == count)
-        let i = try #require(span.indices.dropFirst().randomElement())
-        span[i] = .max
-        #expect(source[i] == 0)
-        #expect(source[i+1] == .max)
 #endif
     }
 
@@ -1779,28 +1739,6 @@ private final class DataTests {
         let i = try #require(byteOffsets.randomElement())
         span.storeBytes(of: -1, toByteOffset: i, as: Int8.self)
         #expect(source[i] == .max)
-    }
-
-    @available(FoundationSpan 6.2, *)
-    @Test func largeSliceDataMutableRawSpan() throws {
-#if _pointerBitWidth(_64)
-        var count = Int(Int32.max)
-#elseif _pointerBitWidth(_32)
-        var count = Int(Int16.max)
-#else
-        #error("This test needs updating")
-#endif
-
-        var source = Data(repeating: 0, count: count).dropFirst()
-        #expect(source.startIndex != 0)
-        count = source.count
-        var span = source.mutableBytes
-        let byteCount = span.byteCount
-        #expect(byteCount == count)
-        let i = try #require(span.byteOffsets.dropFirst().randomElement())
-        span.storeBytes(of: -1, toByteOffset: i, as: Int8.self)
-        #expect(source[i] == 0)
-        #expect(source[i+1] == .max)
     }
 
     #if FOUNDATION_EXIT_TESTS
@@ -2443,3 +2381,72 @@ extension DataTests {
     }
 }
 #endif
+
+// These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
+@Suite("Large Data Tests", .serialized)
+struct LargeDataTests {
+    @Test
+    @available(FoundationSpan 6.2, *)
+    func largeSliceDataSpan() throws {
+#if _pointerBitWidth(_64)
+        let count = Int(Int32.max)
+#elseif _pointerBitWidth(_32)
+        let count = Int(Int16.max)
+#else
+#error("This test needs updating")
+#endif
+        
+        let source = Data(repeating: 0, count: count).dropFirst()
+        #expect(source.startIndex != 0)
+        let span = source.span
+        let isEmpty = span.isEmpty
+        #expect(!isEmpty)
+    }
+    
+    @Test
+    @available(FoundationSpan 6.2, *)
+    func largeSliceDataMutableSpan() throws {
+#if _pointerBitWidth(_64)
+        var count = Int(Int32.max)
+#elseif _pointerBitWidth(_32)
+        var count = Int(Int16.max)
+#else
+#error("This test needs updating")
+#endif
+        
+#if !canImport(Darwin) || FOUNDATION_FRAMEWORK
+        var source = Data(repeating: 0, count: count).dropFirst()
+        #expect(source.startIndex != 0)
+        count = source.count
+        var span = source.mutableSpan
+        #expect(span.count == count)
+        let i = try #require(span.indices.dropFirst().randomElement())
+        span[i] = .max
+        #expect(source[i] == 0)
+        #expect(source[i+1] == .max)
+#endif
+    }
+    
+    @Test
+    @available(FoundationSpan 6.2, *)
+    func largeSliceDataMutableRawSpan() throws {
+#if _pointerBitWidth(_64)
+        var count = Int(Int32.max)
+#elseif _pointerBitWidth(_32)
+        var count = Int(Int16.max)
+#else
+#error("This test needs updating")
+#endif
+        
+        var source = Data(repeating: 0, count: count).dropFirst()
+        #expect(source.startIndex != 0)
+        count = source.count
+        var span = source.mutableBytes
+        let byteCount = span.byteCount
+        #expect(byteCount == count)
+        let i = try #require(span.byteOffsets.dropFirst().randomElement())
+        span.storeBytes(of: -1, toByteOffset: i, as: Int8.self)
+        #expect(source[i] == 0)
+        #expect(source[i+1] == .max)
+    }
+}
