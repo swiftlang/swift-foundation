@@ -1656,8 +1656,7 @@ private final class DataTests {
         span = source.span
         isEmpty = span.isEmpty
         #expect(!isEmpty)
-        let count = span.count
-        #expect(count == source.count)
+        #expect(span.count == source.count)
         let firstElement = span[0]
         #expect(firstElement == 1)
     }
@@ -1702,8 +1701,7 @@ private final class DataTests {
         let i = try #require(indices.randomElement())
         isEmpty = span.isEmpty
         #expect(!isEmpty)
-        count = span.count
-        #expect(count == count)
+        #expect(span.count == count)
         let v = UInt8.random(in: 10..<100)
         span[i] = v
         var sub = span.extracting(i ..< i+1)
