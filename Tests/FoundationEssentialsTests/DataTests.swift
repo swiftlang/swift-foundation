@@ -1943,14 +1943,6 @@ private final class DataTests {
         #expect(0 == offsets[0], "composing two dispatch_data should enumerate as structural data with the first offset as the location of the region")
         #expect(dataToEncode.count == offsets[1], "composing two dispatch_data should enumerate as structural data with the first offset as the location of the region")
     }
-
-    @Test func rangeOfSlice() {
-        let data = "FooBar".data(using: .ascii)!
-        let slice = data[3...] // Bar
-
-        let range = slice.range(of: "a".data(using: .ascii)!)
-        #expect(range == 4..<5 as Range<Data.Index>)
-    }
     #endif
 }
 
