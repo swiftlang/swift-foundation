@@ -23,7 +23,7 @@ extension NSTimeZone {
     static func _timeZoneWith(name: String, data: Data?) -> _NSSwiftTimeZone? {
         if let data {
             // We don't cache data-based TimeZones
-            guard let tz = TimeZone(name: name) else {
+            guard let tz = TimeZone(identifier: name) else {
                 return nil
             }
             return _NSSwiftTimeZone(timeZone: tz, data: data)

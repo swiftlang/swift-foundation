@@ -732,7 +732,7 @@ final class CalendarTests : XCTestCase {
         let startDate = Date(timeIntervalSinceReferenceDate: 689292158.712307) // 2022-11-04 22:02:38 UTC
         let endDate = startDate + (86400 * 3) + (3600 * 2) // 3 days + 2 hours later - cross a DST boundary which adds a day with an additional hour in it
         var cal = Calendar(identifier: .gregorian)
-        let tz = TimeZone(name: "America/Los_Angeles")!
+        let tz = TimeZone(identifier: "America/Los_Angeles")!
         cal.timeZone = tz
         
         // Purpose of this test is not to test the addition itself (we have others for that), but to smoke test the wrapping API
