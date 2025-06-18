@@ -71,8 +71,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         // Interop properties - Just kept alive
         var interopObservation: (any Sendable)? // set at init
         var interopObservationForMonitor:(any Sendable)? = nil
-        var monitorInterop: Bool = false
-        
     #if FOUNDATION_FRAMEWORK
         var parentBridge: Foundation.Progress? = nil // dummy, set upon calling setParentBridge
     #endif
@@ -168,7 +166,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 
                 state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
                 
-                if state.monitorInterop == true {
+                if let monitorObservation = state.interopObservationForMonitor {
                     manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
                 }
             }
@@ -187,7 +185,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 manager.markDirty(state: &state)
                 
                 state.ghostReporter?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
-                if state.monitorInterop == true {
+                if let monitorObservation = state.interopObservationForMonitor  {
                     manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
                 }
             }
@@ -290,7 +288,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             markDirty(state: &state)
             
             state.ghostReporter?.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
-            if state.monitorInterop == true {
+            if let monitorObservation = state.interopObservationForMonitor  {
                 notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
             }
         }
@@ -605,7 +603,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal func setInteropObservationForMonitor(observation monitorObservation: (any Sendable)) {
         state.withLock { state in
             state.interopObservationForMonitor = monitorObservation
-            state.monitorInterop = true
         }
     }
 
