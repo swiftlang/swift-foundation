@@ -32,54 +32,85 @@ func isASCIIDigit(_ x: UInt8) -> Bool {
     x >= UInt8(ascii: "0") && x <= UInt8(ascii: "9")
 }
 
+/**
+
+ Fundamental operations:
+    - Peek: return the next portion of input, if it exists and matches the given criteria
+    - Match: like peek, but also consumes the portion of input
+    - Parse: like match, but produces a value by interpreting the portion of input
+
+   Notes on return types:
+    `peek(_:(UInt8) -> Bool) -> UInt8?` is more descriptive than returning a `Bool`, but slighlty less ergonomic if you only care about the `Bool`. If we don't return the `UInt8`, some callers may need to store it from the function somehow or else double-load it.
+    Match functions have different return types, depending on whether they always succeed, whether they match a variable length, etc. Since they also advance as part of matching, the return lengths are dicardable. They can also be retroactively calculated by the caller, we just return it because we can.
+    Finally, the parse functions just return the value, as there's no way to have a discardable return value alongside a non-discardable one. Again, lengths can be retroactively calculated by the caller based on the iterator's new offset.
+ */
 extension BufferViewIterator<UInt8> {
-    mutating func expectCharacter(_ expected: UInt8, input: BufferView<UInt8>, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws {
-        guard let parsed = next(), parsed == expected else {
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+    // Returns the next byte if there is one and it
+    // matches the predicate, otherwise false
+    func peek(_ f: (UInt8) -> Bool) -> UInt8? {
+        guard let b = peek(), f(b) else {
+            return nil
         }
+        return b
     }
-    
-    mutating func expectOneOrMoreCharacters(_ expected: UInt8, input: BufferView<UInt8>, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws {
-        guard let parsed = next(), parsed == expected else {
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+
+    mutating func matchByte(_ expected: UInt8) -> Bool {
+        if peek() == expected {
+            _uncheckedAdvance()
+            return true
         }
-        
-        while let parsed = peek(), parsed == expected {
-            advance()
-        }
+        return false
     }
-    
-    mutating func expectZeroOrMoreCharacters(_ expected: UInt8) {
-        while let parsed = peek(), parsed == expected {
-            advance()
+
+    mutating func matchPredicate(_ f: (UInt8) -> Bool) -> UInt8? {
+        guard let b = peek(f) else {
+            return nil
         }
+        _uncheckedAdvance()
+        return b
     }
-            
-    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: BufferView<UInt8>, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
+
+    @discardableResult
+    mutating func matchZeroOrMore(_ expected: UInt8) -> Int {
+        var count = 0
+        while matchByte(expected) {
+            count += 1
+        }
+        return count
+    }
+
+    @discardableResult
+    mutating func matchOneOrMore(_ expected: UInt8) -> Int? {
+        let c = matchZeroOrMore(expected)
+        return c == 0 ? nil : c
+    }
+
+    // TODO: I think it would be cleaner to separate out
+    // nanosecond handling here...
+    mutating func parseNumber(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false) -> Int? {
         // Consume all leading zeros, parse until we no longer see a digit
         var result = 0
         var count = 0
         // Cap at 10 digits max to avoid overflow
         let max = min(maxDigits ?? 10, 10)
-        while let next = peek(), isASCIIDigit(next) {
+        while let next = matchPredicate(isASCIIDigit) {
             let digit = Int(next - UInt8(ascii: "0"))
             result *= 10
             result += digit
-            advance()
             count += 1
             if count >= max { break }
         }
-        
+
         guard count > 0 else {
             // No digits actually found
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+            return nil
         }
-        
+
         if let minDigits, count < minDigits {
             // Too few digits found
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+            return nil
         }
-        
+
         if nanoseconds {
             // Keeps us in the land of integers
             if count == 1 { return result * 100_000_000 }
@@ -91,13 +122,11 @@ extension BufferViewIterator<UInt8> {
             if count == 7 { return result * 100 }
             if count == 8 { return result * 10 }
             if count == 9 { return result }
-            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+            return nil
         }
 
         return result
     }
-    
-
 }
 
 // Formatting helpers

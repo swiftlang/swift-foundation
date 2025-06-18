@@ -343,12 +343,17 @@ extension DateComponents {
             // https://www.rfc-editor.org/rfc/rfc9110.html#http.date
             // <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
 
+            // Produce an error message to throw
+            func error(_ extendedDescription: String? = nil) -> CocoaError {
+                parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: extendedDescription)
+            }
+
             var it = view.makeIterator()
             var dc = DateComponents()
             
             // Despite the spec, we allow the weekday name to be optional.
             guard let maybeWeekday1 = it.peek() else {
-                throw parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now))
+                throw error()
             }
             
             if isASCIIDigit(maybeWeekday1) {
@@ -356,7 +361,7 @@ extension DateComponents {
             } else {
                 // Anything else must be a day-name (Mon, Tue, ... Sun)
                 guard let weekday1 = it.next(), let weekday2 = it.next(), let weekday3 = it.next() else {
-                    throw parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now))
+                    throw error()
                 }
 
                 dc.weekday = switch (weekday1, weekday2, weekday3) {
@@ -375,20 +380,30 @@ extension DateComponents {
                 case (UInt8(ascii: "S"), UInt8(ascii: "a"), UInt8(ascii: "t")):
                     7
                 default:
-                    throw parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Malformed weekday name")
+                    throw error("Malformed weekday name")
                 }
                 
                 // Move past , and space to weekday
-                try it.expectCharacter(UInt8(ascii: ","), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing , after weekday")
-                try it.expectCharacter(UInt8(ascii: " "), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing space after weekday")
+                guard it.matchByte(UInt8(ascii: ",")) else {
+                    throw error("Missing , after weekday")
+                }
+                guard it.matchByte(UInt8(ascii: " ")) else {
+                    throw error("Missing space after weekday")
+                }
             }
 
-            dc.day = try it.digits(minDigits: 2, maxDigits: 2, input: view, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing or malformed day")
-            try it.expectCharacter(UInt8(ascii: " "), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            guard let day = it.parseNumber(minDigits: 2, maxDigits: 2) else {
+                throw error("Missing or malformed day")
+            }
+            dc.day = day
+
+            guard it.matchByte(UInt8(ascii: " ")) else {
+                throw error()
+            }
 
             // month-name (Jan, Feb, ... Dec)
             guard let month1 = it.next(), let month2 = it.next(), let month3 = it.next() else {
-                throw parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing month")
+                throw error("Missing month")
             }
             
             dc.month = switch (month1, month2, month3) {
@@ -417,32 +432,50 @@ extension DateComponents {
             case (UInt8(ascii: "D"), UInt8(ascii: "e"), UInt8(ascii: "c")):
                 12
             default:
-                throw parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Month \(String(describing: dc.month)) is out of bounds")
+                throw error("Month \(String(describing: dc.month)) is out of bounds")
             }
 
-            try it.expectCharacter(UInt8(ascii: " "), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            guard it.matchByte(UInt8(ascii: " ")) else {
+                throw error()
+            }
 
-            dc.year = try it.digits(minDigits: 4, maxDigits: 4, input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            try it.expectCharacter(UInt8(ascii: " "), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            guard let year = it.parseNumber(minDigits: 4, maxDigits: 4) else {
+                throw error()
+            }
+            dc.year = year
 
-            let hour = try it.digits(minDigits: 2, maxDigits: 2, input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            guard it.matchByte(UInt8(ascii: " ")) else {
+                throw error()
+            }
+
+            guard let hour = it.parseNumber(minDigits: 2, maxDigits: 2) else {
+                throw error()
+            }
             if hour < 0 || hour > 23 {
-                throw parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Hour \(hour) is out of bounds")
+                throw error("Hour \(hour) is out of bounds")
             }
             dc.hour = hour
             
-            try it.expectCharacter(UInt8(ascii: ":"), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            let minute = try it.digits(minDigits: 2, maxDigits: 2, input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            guard it.matchByte(UInt8(ascii: ":")) else {
+                throw error()
+            }
+            guard let minute = it.parseNumber(minDigits: 2, maxDigits: 2) else {
+                throw error()
+            }
             if minute < 0 || minute > 59 {
-                throw parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Minute \(minute) is out of bounds")
+                throw error("Minute \(minute) is out of bounds")
             }
             dc.minute = minute
             
-            try it.expectCharacter(UInt8(ascii: ":"), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            let second = try it.digits(minDigits: 2, maxDigits: 2, input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            guard it.matchByte(UInt8(ascii: ":")) else {
+                throw error()
+            }
+            guard let second = it.parseNumber(minDigits: 2, maxDigits: 2) else {
+                throw error()
+            }
             // second '60' is supported in the spec for leap seconds, but Foundation does not support leap seconds. 60 is adjusted to 59.
             if second < 0 || second > 60 {
-                throw parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Second \(second) is out of bounds")
+                throw error("Second \(second) is out of bounds")
             }
             // Foundation does not support leap seconds. We convert 60 seconds into 59 seconds.
             if second == 60 {
@@ -450,12 +483,17 @@ extension DateComponents {
             } else {
                 dc.second = second
             }
-            try it.expectCharacter(UInt8(ascii: " "), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            guard it.matchByte(UInt8(ascii: " ")) else {
+                throw error()
+            }
 
             // "GMT"
-            try it.expectCharacter(UInt8(ascii: "G"), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing GMT time zone")
-            try it.expectCharacter(UInt8(ascii: "M"), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing GMT time zone")
-            try it.expectCharacter(UInt8(ascii: "T"), input: view, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing GMT time zone")
+            guard it.matchByte(UInt8(ascii: "G")),
+                  it.matchByte(UInt8(ascii: "M")),
+                  it.matchByte(UInt8(ascii: "T"))
+            else {
+                throw error("Missing GMT time zone")
+            }
 
             // Time zone is always GMT, calendar is always Gregorian
             dc.timeZone = .gmt
