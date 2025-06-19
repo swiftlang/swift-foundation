@@ -60,32 +60,23 @@ extension Date {
         }
 
         fileprivate func parse(_ value: String, in range: Range<String.Index>) -> (String.Index, Date)? {
-            var v = value[range]
+            let v = value[range]
             guard !v.isEmpty else {
                 return nil
             }
-            
-            let result = v.withUTF8 { buffer -> (Int, Date)? in
-                let view = BufferView(unsafeBufferPointer: buffer)!
 
-                guard let comps = try? componentsStyle.components(in: view) else {
-                    return nil
-                }
-                
-                // HTTP dates are always GMT
-                guard let date = Calendar(identifier: .gregorian).date(from: comps.components) else {
-                    return nil
-                }
-                    
-                return (comps.consumed, date)
+            guard #available(FoundationSpan 6.2, *) else {
+                fatalError("Span unavailable")
             }
-            
-            guard let result else {
+
+            guard let comps = try? componentsStyle.components(in: v.utf8Span),
+                  let date = Calendar(identifier: .gregorian).date(from: comps.components)
+            else {
                 return nil
             }
-            
-            let endIndex = value.utf8.index(v.startIndex, offsetBy: result.0)
-            return (endIndex, result.1)
+
+            let endIndex = value.utf8.index(v.startIndex, offsetBy: comps.consumed)
+            return (endIndex, date)
         }
     }
 }
@@ -316,30 +307,27 @@ extension DateComponents {
         }
 
         private func parse(_ value: String, in range: Range<String.Index>) -> (String.Index, DateComponents)? {
-            var v = value[range]
+            let v = value[range]
             guard !v.isEmpty else {
                 return nil
             }
-            
-            let result = v.withUTF8 { buffer -> (Int, DateComponents)? in
-                let view = BufferView(unsafeBufferPointer: buffer)!
 
-                guard let comps = try? components(in: view) else {
-                    return nil
-                }
-                    
-                return (comps.consumed, comps.components)
+            guard #available(FoundationSpan 6.2, *) else {
+                fatalError("Span unavailable")
             }
-            
-            guard let result else {
+
+            guard let comps = try? components(in: v.utf8Span) else {
                 return nil
             }
-            
-            let endIndex = value.utf8.index(v.startIndex, offsetBy: result.0)
-            return (endIndex, result.1)
+
+            let endIndex = value.utf8.index(v.startIndex, offsetBy: comps.consumed)
+            return (endIndex, comps.components)
         }
 
-        fileprivate func components(in view: borrowing BufferView<UInt8>) throws -> ComponentsParseResult {
+        @available(FoundationSpan 6.2, *)
+        fileprivate func components(
+            in view: UTF8Span
+        ) throws -> ComponentsParseResult {
             // https://www.rfc-editor.org/rfc/rfc9110.html#http.date
             // <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
 
@@ -348,7 +336,7 @@ extension DateComponents {
                 parseError(view, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: extendedDescription)
             }
 
-            var it = view.makeIterator()
+            var it = view.makeCursor()
             var dc = DateComponents()
             
             // Despite the spec, we allow the weekday name to be optional.
@@ -500,7 +488,7 @@ extension DateComponents {
             dc.calendar = Calendar(identifier: .gregorian)
 
             // Would be nice to see this functionality on BufferView, but for now we calculate it ourselves.
-            let utf8CharactersRead = it.curPointer - view.startIndex._rawValue
+            let utf8CharactersRead = it.currentOffset
             
             return ComponentsParseResult(consumed: utf8CharactersRead, components: dc)
         }
