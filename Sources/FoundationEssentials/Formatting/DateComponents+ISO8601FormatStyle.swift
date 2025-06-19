@@ -407,7 +407,8 @@ extension DateComponents.ISO8601FormatStyle {
         var components: DateComponents
     }
     
-    private func components(fillMissingUnits: Bool, defaultTimeZone: TimeZone, in view: borrowing BufferView<UInt8>) throws -> ComponentsParseResult {
+    @available(FoundationSpan 6.2, *)
+    private func components(fillMissingUnits: Bool, defaultTimeZone: TimeZone, in view: UTF8Span) throws -> ComponentsParseResult {
         let fields = formatFields
 
         // Produce an error message to throw
@@ -415,7 +416,7 @@ extension DateComponents.ISO8601FormatStyle {
             parseError(view, exampleFormattedString: Date.ISO8601FormatStyle(self).format(Date.now), extendedDescription: extendedDescription)
         }
 
-        var it = view.makeIterator()
+        var it = view.makeCursor()
         var needsSeparator = false
         
         // Keep these fields local and set them in the DateComponents once for improved performance
@@ -618,7 +619,7 @@ extension DateComponents.ISO8601FormatStyle {
                     if let next = it.peek(), (next == UInt8(ascii: "+") || next == UInt8(ascii: "-")) {
                         if next == UInt8(ascii: "+") { positive = true }
                         else { positive = false }
-                        it.advance()
+                        it.uncheckedAdvance()
                     } else {
                         positive = true
                         tzOffset = 0
@@ -631,7 +632,7 @@ extension DateComponents.ISO8601FormatStyle {
                     if let next = it.peek(), (next == UInt8(ascii: "+") || next == UInt8(ascii: "-")) {
                         if next == UInt8(ascii: "+") { positive = true }
                         else { positive = false }
-                        it.advance()
+                        it.uncheckedAdvance()
                     } else {
                         positive = true
                         tzOffset = 0
@@ -660,8 +661,8 @@ extension DateComponents.ISO8601FormatStyle {
                     if let next = it.peek() {
                         if next == UInt8(ascii: ":") {
                             // Throw it away
-                            it.advance()
-                            
+                            it.uncheckedAdvance()
+
                             // But we should have minutes after this
                             expectMinutes = true
                         } else if isASCIIDigit(next) {
@@ -732,7 +733,7 @@ extension DateComponents.ISO8601FormatStyle {
                                 rawDayOfYear: dayOfYear)
 
         // Would be nice to see this functionality on BufferView, but for now we calculate it ourselves.
-        let utf8CharactersRead = it.curPointer - view.startIndex._rawValue
+        let utf8CharactersRead = it.currentOffset
         return ComponentsParseResult(consumed: utf8CharactersRead, components: dc)
     }
 }
@@ -772,27 +773,21 @@ extension DateComponents.ISO8601FormatStyle : ParseStrategy {
     }
     
     internal func parse(_ value: String, fillMissingUnits: Bool, in range: Range<String.Index>) -> (String.Index, DateComponents)? {
-        var v = value[range]
+        let v = value[range]
         guard !v.isEmpty else {
             return nil
         }
-        
-        let result = v.withUTF8 { buffer -> (Int, DateComponents)? in
-            let view = BufferView(unsafeBufferPointer: buffer)!
 
-            guard let comps = try? components(fillMissingUnits: fillMissingUnits, defaultTimeZone: timeZone, in: view) else {
-                return nil
-            }
-            
-            return (comps.consumed, comps.components)
+        guard #available(FoundationSpan 6.2, *) else {
+            fatalError("Span unavailable")
         }
-        
-        guard let result else {
+
+        guard let comps = try? components(fillMissingUnits: fillMissingUnits, defaultTimeZone: timeZone, in: v.utf8Span) else {
             return nil
         }
-        
-        let endIndex = value.utf8.index(v.startIndex, offsetBy: result.0)
-        return (endIndex, result.1)
+
+        let endIndex = value.utf8.index(v.startIndex, offsetBy: comps.consumed)
+        return (endIndex, comps.components)
     }
 }
 

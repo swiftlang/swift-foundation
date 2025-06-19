@@ -18,6 +18,15 @@ func parseError(
     parseError(String(decoding: value, as: UTF8.self), exampleFormattedString: exampleFormattedString, extendedDescription: extendedDescription)
 }
 
+@available(FoundationSpan 6.2, *)
+func parseError(
+    _ value: UTF8Span, exampleFormattedString: String?, extendedDescription: String? = nil
+) -> CocoaError {
+    // TODO: change to UTF8Span, and prototype string append and interpolation taking UTF8Span
+    parseError(String(copying: value), exampleFormattedString: exampleFormattedString, extendedDescription: extendedDescription)
+}
+
+
 package func parseError(_ value: String, exampleFormattedString: String?, extendedDescription: String? = nil) -> CocoaError {
     let errorStr: String
     if let exampleFormattedString = exampleFormattedString {
@@ -32,19 +41,66 @@ func isASCIIDigit(_ x: UInt8) -> Bool {
     x >= UInt8(ascii: "0") && x <= UInt8(ascii: "9")
 }
 
-/**
 
- Fundamental operations:
-    - Peek: return the next portion of input, if it exists and matches the given criteria
-    - Match: like peek, but also consumes the portion of input
-    - Parse: like match, but produces a value by interpreting the portion of input
+@available(FoundationSpan 6.2, *)
+extension UTF8Span {
+    // This is just an iterator style type, though for UTF8 we can
+    // load scalars and Characters, presumably.
+    //
+    // NOTE: I'm calling this "Cursor" temporarily as "Iterator" might
+    // end up being taken for other reasons.
+    struct Cursor: ~Escapable {
+        var span: UTF8Span
+        var currentOffset: Int
 
-   Notes on return types:
-    `peek(_:(UInt8) -> Bool) -> UInt8?` is more descriptive than returning a `Bool`, but slighlty less ergonomic if you only care about the `Bool`. If we don't return the `UInt8`, some callers may need to store it from the function somehow or else double-load it.
-    Match functions have different return types, depending on whether they always succeed, whether they match a variable length, etc. Since they also advance as part of matching, the return lengths are dicardable. They can also be retroactively calculated by the caller, we just return it because we can.
-    Finally, the parse functions just return the value, as there's no way to have a discardable return value alongside a non-discardable one. Again, lengths can be retroactively calculated by the caller based on the iterator's new offset.
- */
-extension BufferViewIterator<UInt8> {
+        @lifetime(copy span)
+        init(_ span: UTF8Span) {
+            self.span = span
+            self.currentOffset = 0
+        }
+    }
+
+    @lifetime(copy self) // copy or borrow?
+    func makeCursor() -> Cursor {
+        .init(self)
+    }
+}
+
+@available(FoundationSpan 6.2, *)
+extension UTF8Span.Cursor {
+    @lifetime(self: copy self)
+    mutating func uncheckedAdvance() {
+        assert(self.currentOffset < span.count)
+        self.currentOffset += 1
+    }
+
+    func peek() -> UInt8? {
+        guard !isEmpty else { return nil }
+        return span.span[unchecked: self.currentOffset]
+    }
+
+    @lifetime(self: copy self)
+    mutating func next() -> UInt8? {
+        guard !isEmpty else { return nil }
+        defer { uncheckedAdvance() }
+        return peek()
+    }
+
+    var isEmpty: Bool { self.currentOffset >= span.count }
+
+    @lifetime(self: copy self)
+    mutating func consume(_ byte: UInt8) -> Bool {
+        guard peek() == byte else {
+            return false
+        }
+        uncheckedAdvance()
+        return true
+    }
+
+}
+
+@available(FoundationSpan 6.2, *)
+extension UTF8Span.Cursor {
     // Returns the next byte if there is one and it
     // matches the predicate, otherwise false
     func peek(_ f: (UInt8) -> Bool) -> UInt8? {
@@ -54,22 +110,38 @@ extension BufferViewIterator<UInt8> {
         return b
     }
 
+    @lifetime(self: copy self)
     mutating func matchByte(_ expected: UInt8) -> Bool {
         if peek() == expected {
-            _uncheckedAdvance()
+            uncheckedAdvance()
             return true
         }
         return false
     }
 
+    @lifetime(self: copy self)
     mutating func matchPredicate(_ f: (UInt8) -> Bool) -> UInt8? {
         guard let b = peek(f) else {
             return nil
         }
-        _uncheckedAdvance()
+        uncheckedAdvance()
         return b
     }
 
+    /**
+     NOTE: We want a `match(anyOf:)` operation that takes an Array or Set
+     literal (or String literal, clearly delineated to mean ASCII), but is guaranteed not to actually materialize a  runtime managed object.
+
+     For example, that would handle this pattern from ISO8601:
+     ```
+        if let next = it.peek(), (next == UInt8(ascii: "+") || next == UInt8(ascii: "-")) {
+            if next == UInt8(ascii: "+") { positive = true }
+            else { positive = false }
+            it.uncheckedAdvance()
+     ```
+     */
+
+    @lifetime(self: copy self)
     @discardableResult
     mutating func matchZeroOrMore(_ expected: UInt8) -> Int {
         var count = 0
@@ -79,6 +151,7 @@ extension BufferViewIterator<UInt8> {
         return count
     }
 
+    @lifetime(self: copy self)
     @discardableResult
     mutating func matchOneOrMore(_ expected: UInt8) -> Int? {
         let c = matchZeroOrMore(expected)
@@ -87,16 +160,18 @@ extension BufferViewIterator<UInt8> {
 
     // TODO: I think it would be cleaner to separate out
     // nanosecond handling here...
+    @lifetime(self: copy self)
     mutating func parseNumber(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false) -> Int? {
         // Consume all leading zeros, parse until we no longer see a digit
         var result = 0
         var count = 0
         // Cap at 10 digits max to avoid overflow
         let max = min(maxDigits ?? 10, 10)
-        while let next = matchPredicate(isASCIIDigit) {
+        while let next = peek(), isASCIIDigit(next) {
             let digit = Int(next - UInt8(ascii: "0"))
             result *= 10
             result += digit
+            uncheckedAdvance()
             count += 1
             if count >= max { break }
         }
