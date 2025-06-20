@@ -124,7 +124,7 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
     static internal func *(lhs: _ProgressFraction, rhs: _ProgressFraction) -> _ProgressFraction {
         guard !lhs.overflowed && !rhs.overflowed else {
             // If either has overflowed already, we preserve that
-            return _ProgressFraction(double: rhs.fractionCompleted * rhs.fractionCompleted, overflow: true)
+            return _ProgressFraction(double: lhs.fractionCompleted * rhs.fractionCompleted, overflow: true)
         }
 
         let newCompleted = lhs.completed.multipliedReportingOverflow(by: rhs.completed)
