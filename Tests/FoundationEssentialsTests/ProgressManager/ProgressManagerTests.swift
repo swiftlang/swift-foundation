@@ -580,9 +580,9 @@ import Testing
         #expect(parentManager1.fractionCompleted == 0.25)
         #expect(parentManager2.fractionCompleted == 0.25)
         
-//        await #expect(processExitsWith: .failure) {
-//            progress.addChild(parentManager1.reporter, withPendingUnitCount: 1) // this should trigger cycle detection
-//        }
+        await #expect(processExitsWith: .failure) {
+            progress.addChild(parentManager1.reporter, withPendingUnitCount: 1) // this should trigger cycle detection
+        }
     }
 }
 #endif
@@ -654,7 +654,7 @@ import Testing
             properties.totalCount = 30
         }
         #expect(overall.completedCount == 20)
-        #expect(overall.fractionCompleted == 25 / 30)
+        #expect(overall.fractionCompleted == Double(25) / Double(30))
         
         child1.complete(count: 5)
         
@@ -690,30 +690,36 @@ import Testing
     }
     
     /// All of these test cases hit the precondition for cycle detection, but currently there's no way to check for hitting precondition in xctest.
-//    func testProgressReporterDirectCycleDetection() {
-//        let manager = ProgressManager(totalCount: 2)
-//        
-//        manager.assign(count: 1, to: manager.reporter)
-//    }
-//    
-//    func testProgressReporterIndirectCycleDetection() {
-//        let manager = ProgressManager(totalCount: 2)
-//                
-//        let altManager = ProgressManager(totalCount: 1)
-//        altManager.assign(count: 1, to: manager.reporter)
-//        
-//        manager.assign(count: 1, to: altManager.reporter)
-//    }
-//    
-//    func testProgressReporterNestedCycleDetection() {
-//        let manager1 = ProgressManager(totalCount: 1)
-//        
-//        let manager2 = ProgressManager(totalCount: 2)
-//        manager1.assign(count: 1, to: manager2.reporter)
-//        
-//        let manager3 = ProgressManager(totalCount: 3)
-//        manager2.assign(count: 1, to: manager3.reporter)
-//        
-//        manager3.assign(count: 1, to: manager1.reporter)
-//    }
+    func testProgressReporterDirectCycleDetection() {
+        let manager = ProgressManager(totalCount: 2)
+        await #expect(processExitsWith: .failure) {
+            manager.assign(count: 1, to: manager.reporter)
+        }
+    }
+    
+    func testProgressReporterIndirectCycleDetection() {
+        let manager = ProgressManager(totalCount: 2)
+                
+        let altManager = ProgressManager(totalCount: 1)
+        altManager.assign(count: 1, to: manager.reporter)
+        
+        await #expect(processExitsWith: .failure) {
+            manager.assign(count: 1, to: altManager.reporter)
+        }
+    }
+    
+    func testProgressReporterNestedCycleDetection() {
+        let manager1 = ProgressManager(totalCount: 1)
+        
+        let manager2 = ProgressManager(totalCount: 2)
+        manager1.assign(count: 1, to: manager2.reporter)
+        
+        let manager3 = ProgressManager(totalCount: 3)
+        manager2.assign(count: 1, to: manager3.reporter)
+        
+        await #expect(processExitsWith: .failure) {
+            manager3.assign(count: 1, to: manager1.reporter)
+
+        }
+    }
 }
