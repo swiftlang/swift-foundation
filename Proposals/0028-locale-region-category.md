@@ -4,8 +4,8 @@
 * Authors: [Tina Liu](https://github.com/itingliu)
 * Review Manager: [Jeremy Schonfeld](https://github.com/jmschonfeld)
 * Implementation: [https://github.com/swiftlang/swift-foundation/pull/1253]()
-* Status: **Review: Jun 11, 2025...Jun 18, 2025**
-* Reviews: [Pitch](https://forums.swift.org/t/pitch-category-support-for-locale-region/79240)
+* Status: **Accepted**
+* Reviews: [Pitch](https://forums.swift.org/t/pitch-category-support-for-locale-region/79240), [Review](https://forums.swift.org/t/review-sf-0028-locale-region-category/80415)
  
 ## Introduction
 
