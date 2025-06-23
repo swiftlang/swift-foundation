@@ -698,36 +698,36 @@ class TestProgressManagerInterop: XCTestCase {
     }
     
     /// All of these test cases hit the precondition for cycle detection, but currently there's no way to check for hitting precondition in xctest.
-    func testProgressReporterDirectCycleDetection() {
-        let manager = ProgressManager(totalCount: 2)
-        await #expect(processExitsWith: .failure) {
-            manager.assign(count: 1, to: manager.reporter)
-        }
-    }
-    
-    func testProgressReporterIndirectCycleDetection() {
-        let manager = ProgressManager(totalCount: 2)
-                
-        let altManager = ProgressManager(totalCount: 1)
-        altManager.assign(count: 1, to: manager.reporter)
-        
-        await #expect(processExitsWith: .failure) {
-            manager.assign(count: 1, to: altManager.reporter)
-        }
-    }
-    
-    func testProgressReporterNestedCycleDetection() {
-        let manager1 = ProgressManager(totalCount: 1)
-        
-        let manager2 = ProgressManager(totalCount: 2)
-        manager1.assign(count: 1, to: manager2.reporter)
-        
-        let manager3 = ProgressManager(totalCount: 3)
-        manager2.assign(count: 1, to: manager3.reporter)
-        
-        await #expect(processExitsWith: .failure) {
-            manager3.assign(count: 1, to: manager1.reporter)
-
-        }
-    }
+//    func testProgressReporterDirectCycleDetection() {
+//        let manager = ProgressManager(totalCount: 2)
+//        await #expect(processExitsWith: .failure) {
+//            manager.assign(count: 1, to: manager.reporter)
+//        }
+//    }
+//    
+//    func testProgressReporterIndirectCycleDetection() {
+//        let manager = ProgressManager(totalCount: 2)
+//                
+//        let altManager = ProgressManager(totalCount: 1)
+//        altManager.assign(count: 1, to: manager.reporter)
+//        
+//        await #expect(processExitsWith: .failure) {
+//            manager.assign(count: 1, to: altManager.reporter)
+//        }
+//    }
+//    
+//    func testProgressReporterNestedCycleDetection() {
+//        let manager1 = ProgressManager(totalCount: 1)
+//        
+//        let manager2 = ProgressManager(totalCount: 2)
+//        manager1.assign(count: 1, to: manager2.reporter)
+//        
+//        let manager3 = ProgressManager(totalCount: 3)
+//        manager2.assign(count: 1, to: manager3.reporter)
+//        
+//        await #expect(processExitsWith: .failure) {
+//            manager3.assign(count: 1, to: manager1.reporter)
+//
+//        }
+//    }
 }
