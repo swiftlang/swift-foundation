@@ -10,17 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
+import Testing
+
+#if canImport(FoundationEssentials)
+@testable import FoundationEssentials
+#else
+@testable import Foundation
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#else
-@testable import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
-
-final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
+@Suite("GregorianCalendar RecurrenceRule")
+private struct GregorianCalendarRecurrenceRuleTests {
     /// A Gregorian calendar in GMT with no time zone changes
     var gregorian: Calendar = {
         var gregorian = Calendar(identifier: .gregorian)
@@ -28,17 +27,21 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         return gregorian
     }()
   
-    func testRoundtripEncoding() throws {
+    @Test func roundtripEncoding() throws {
         // These are not necessarily valid recurrence rule, they are constructed
         // in a way to test all encoding paths
-        var recurrenceRule1 = Calendar.RecurrenceRule(calendar: .current, frequency: .daily)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = .init(identifier: "en_001")
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        
+        var recurrenceRule1 = Calendar.RecurrenceRule(calendar: calendar, frequency: .daily)
         recurrenceRule1.interval = 2
         recurrenceRule1.months = [1, 2, Calendar.RecurrenceRule.Month(4, isLeap: true)]
         recurrenceRule1.weeks = [2, 3]
         recurrenceRule1.weekdays = [.every(.monday), .nth(1, .wednesday)]
         recurrenceRule1.end = .afterOccurrences(5)
         
-        var recurrenceRule2 = Calendar.RecurrenceRule(calendar: .init(identifier: .gregorian), frequency: .daily)
+        var recurrenceRule2 = Calendar.RecurrenceRule(calendar: calendar, frequency: .daily)
         recurrenceRule2.months = [2, 10]
         recurrenceRule2.weeks = [1, -1]
         recurrenceRule2.setPositions = [1]
@@ -55,12 +58,12 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         let decoded1 = try JSONDecoder().decode(Calendar.RecurrenceRule.self, from: recurrenceRule1JSON)
         let decoded2 = try JSONDecoder().decode(Calendar.RecurrenceRule.self, from: recurrenceRule2JSON)
         
-        XCTAssertEqual(recurrenceRule1, decoded1)
-        XCTAssertEqual(recurrenceRule2, decoded2)
-        XCTAssertNotEqual(recurrenceRule1, recurrenceRule2)
+        #expect(recurrenceRule1 == decoded1)
+        #expect(recurrenceRule2 == decoded2)
+        #expect(recurrenceRule1 != recurrenceRule2)
     }
     
-    func testSimpleDailyRecurrence() {
+    @Test func simpleDailyRecurrence() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -102,10 +105,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1287583200.0), // 2010-10-20T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testSimpleDailyRecurrenceWithCount() {
+    @Test func simpleDailyRecurrenceWithCount() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -121,10 +124,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1285336800.0), // 2010-09-24T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testDailyRecurrenceWithDaysOfTheWeek() {
+    @Test func dailyRecurrenceWithDaysOfTheWeek() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -145,10 +148,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1287410400.0), // 2010-10-18T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testDailyRecurrenceWithDaysOfTheWeekAndMonth() {
+    @Test func dailyRecurrenceWithDaysOfTheWeekAndMonth() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -164,10 +167,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1285596000.0), // 2010-09-27T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testDailyRecurrenceWithMonth() {
+    @Test func dailyRecurrenceWithMonth() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -190,10 +193,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1285855200.0), // 2010-09-30T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testDailyRecurrenceEveryThreeDays() {
+    @Test func dailyRecurrenceEveryThreeDays() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -216,11 +219,11 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1287410400.0), // 2010-10-18T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
         
     }
     
-    func testSimpleWeeklyRecurrence() {
+    @Test func simpleWeeklyRecurrence() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -237,10 +240,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1287496800.0), // 2010-10-19T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testWeeklyRecurrenceEveryOtherWeek() {
+    @Test func weeklyRecurrenceEveryOtherWeek() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -256,10 +259,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1287496800.0), // 2010-10-19T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testWeeklyRecurrenceWithDaysOfWeek() {
+    @Test func weeklyRecurrenceWithDaysOfWeek() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -280,10 +283,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1287410400.0), // 2010-10-18T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testWeeklyRecurrenceWithDaysOfWeekAndMonth() {
+    @Test func weeklyRecurrenceWithDaysOfWeekAndMonth() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -299,9 +302,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1285596000.0), // 2010-09-27T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
-    func testWeeklyRecurrenceWithDaysOfWeekAndSetPositions() {
+    
+    @Test func weeklyRecurrenceWithDaysOfWeekAndSetPositions() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1287619200.0) // 2010-10-21T00:00:00-0000
         
@@ -319,10 +323,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1287151200.0), // 2010-10-15T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testMonthlyRecurrenceWithWeekdays() {
+    @Test func monthlyRecurrenceWithWeekdays() {
         // Find the first monday and last friday of each month for a given range
         let start = Date(timeIntervalSince1970: 1641045600.0) // 2022-01-01T14:00:00-0000
         let end   = Date(timeIntervalSince1970: 1677679200.0) // 2023-03-01T14:00:00-0000
@@ -364,10 +368,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1677247200.0), // 2023-02-24T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testYearlyRecurrenceOnLeapDay() {
+    @Test func yearlyRecurrenceOnLeapDay() {
         let start   = Date(timeIntervalSince1970: 1704067200.0) // 2024-01-01T00:00:00-0000
         let end     = Date(timeIntervalSince1970: 1956528000.0) // 2032-01-01T00:00:00-0000
         let leapDay = Date(timeIntervalSince1970: 1709200800.0) // 2024-02-29T10:00:00-0000
@@ -387,7 +391,7 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1898589600.0), // 2030-03-01T10:00:00-0000
             Date(timeIntervalSince1970: 1930125600.0), // 2031-03-01T10:00:00-0000
         ]
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
         
         rule.matchingPolicy = .nextTime
         results = Array(rule.recurrences(of: leapDay, in: start..<end))
@@ -401,7 +405,7 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1898553600.0), // 2030-03-01T00:00:00-0000
             Date(timeIntervalSince1970: 1930089600.0), // 2031-03-01T00:00:00-0000
         ]
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
         
         rule.matchingPolicy = .previousTimePreservingSmallerComponents
         results = Array(rule.recurrences(of: leapDay, in: start..<end))
@@ -415,7 +419,7 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1898503200.0), // 2030-02-28T10:00:00-0000
             Date(timeIntervalSince1970: 1930039200.0), // 2031-02-28T10:00:00-0000
         ]
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
         
         rule.matchingPolicy = .strict
         results = Array(rule.recurrences(of: leapDay, in: start..<end))
@@ -423,10 +427,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1709200800.0), // 2024-02-29T10:00:00-0000
             Date(timeIntervalSince1970: 1835431200.0), // 2028-02-29T10:00:00-0000
         ]
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
 
-    func testYearlyRecurrenceMovingToFeb29() {
+    @Test func yearlyRecurrenceMovingToFeb29() {
         /// Rule for an event that repeats on February 29th of each year, or closest date after
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly, matchingPolicy: .nextTimePreservingSmallerComponents)
         rule.months = [2]
@@ -437,19 +441,19 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         var birthdays = rule.recurrences(of: rangeStart, in: rangeStart..<rangeEnd).makeIterator()
         //                               ^ Since the rule will change the month and day, we only borrow the time of day from the initial date
 
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 951782400.0)) // 2000-02-29T00:00:00-0000
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 983404800.0)) // 2001-03-01T00:00:00-0000
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1014940800.0)) // 2002-03-01T00:00:00-0000
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1046476800.0)) // 2003-03-01T00:00:00-0000
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1078012800.0)) // 2004-02-29T00:00:00-0000
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1109635200.0)) // 2005-03-01T00:00:00-0000
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1141171200.0)) // 2006-03-01T00:00:00-0000
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1172707200.0)) // 2007-03-01T00:00:00-0000
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1204243200.0)) // 2008-02-29T00:00:00-0000
-        XCTAssertEqual(birthdays.next(), Date(timeIntervalSince1970: 1235865600.0)) // 2009-03-01T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 951782400.0)) // 2000-02-29T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 983404800.0)) // 2001-03-01T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 1014940800.0)) // 2002-03-01T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 1046476800.0)) // 2003-03-01T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 1078012800.0)) // 2004-02-29T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 1109635200.0)) // 2005-03-01T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 1141171200.0)) // 2006-03-01T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 1172707200.0)) // 2007-03-01T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 1204243200.0)) // 2008-02-29T00:00:00-0000
+        #expect(birthdays.next() == Date(timeIntervalSince1970: 1235865600.0)) // 2009-03-01T00:00:00-0000
     }
     
-    func testYearlyRecurrenceWithMonthExpansion() {
+    @Test func yearlyRecurrenceWithMonthExpansion() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1350777600.0) // 2012-10-21T00:00:00-0000
         
@@ -466,9 +470,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1337608800.0), // 2012-05-21T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
-    func testYearlyRecurrenceWithDayOfMonthExpansion() {
+    
+    @Test func yearlyRecurrenceWithDayOfMonthExpansion() {
         let start = Date(timeIntervalSince1970: 1695304800.0) // 2023-09-21T14:00:00-0000
         let end   = Date(timeIntervalSince1970: 1729519200.0) // 2024-10-21T14:00:00-0000
         
@@ -484,10 +489,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1727704800.0), // 2024-09-30T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testYearlyRecurrenceWithMonthAndDayOfMonthExpansion() {
+    @Test func yearlyRecurrenceWithMonthAndDayOfMonthExpansion() {
         let start = Date(timeIntervalSince1970: 1285027200.0) // 2010-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1350777600.0) // 2012-10-21T00:00:00-0000
         
@@ -509,9 +514,9 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1336658400.0), // 2012-05-10T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }    
-    func testYearlyRecurrenceWithMonthAndWeekdayExpansion() {
+    @Test func yearlyRecurrenceWithMonthAndWeekdayExpansion() {
         let start = Date(timeIntervalSince1970: 1704117600.0) // 2024-01-01T14:00:00-0000
         let end   = Date(timeIntervalSince1970: 1767225600.0) // 2026-01-01T00:00:00-0000
         
@@ -532,11 +537,12 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1758895200.0), // 2025-09-26T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testYearlyRecurrenceWithWeekNumberExpansion() {
+    @Test func yearlyRecurrenceWithWeekNumberExpansion() {
         var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
         calendar.firstWeekday = 2 // Week starts on Monday
         calendar.minimumDaysInFirstWeek = 4
         
@@ -559,11 +565,12 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1452866400.0), // 2016-01-15T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testYearlyRecurrenceWithWeekNumberExpansionCountingBack() {
+    @Test func yearlyRecurrenceWithWeekNumberExpansionCountingBack() {
         var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
         calendar.firstWeekday = 2 // Week starts on Monday
         
         let start = Date(timeIntervalSince1970: 1704117600.0) // 2024-01-01T14:00:00-0000
@@ -581,10 +588,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1766584800.0), // 2025-12-24T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testYearlyRecurrenceWithDayOfYearExpansion() {
+    @Test func yearlyRecurrenceWithDayOfYearExpansion() {
         let start = Date(timeIntervalSince1970: 1695254400.0) // 2023-09-21T00:00:00-0000
         let end   = Date(timeIntervalSince1970: 1729468800.0) // 2024-10-21T00:00:00-0000
         
@@ -599,10 +606,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1704117600.0), // 2024-01-01T14:00:00-0000
         ]
         
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testHourlyRecurrenceWithWeekdayFilter() {
+    @Test func hourlyRecurrenceWithWeekdayFilter() {
         // Repeat hourly, but filter to Sundays
         let start = Date(timeIntervalSince1970: 1590314400.0) // 2020-05-24T10:00:00-0000
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .hourly)
@@ -628,9 +635,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1590886800.0), // 2020-05-31T01:00:00-0000
         ]
 
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
-    func testHourlyRecurrenceWithHourAndWeekdayFilter() {
+    
+    @Test func hourlyRecurrenceWithHourAndWeekdayFilter() {
         // Repeat hourly, filter to 10am on the last Sunday of the month
         let start = Date(timeIntervalSince1970: 1590314400.0) // 2020-05-24T10:00:00-0000
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .hourly)
@@ -645,9 +653,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1598785200.0), // 2020-08-30T11:00:00-0000
         ]
 
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
-    func testDailyRecurrenceWithHourlyExpansions() {
+    
+    @Test func dailyRecurrenceWithHourlyExpansions() {
         // Repeat hourly, filter to 10am on the last Sunday of the month
         let start = Date(timeIntervalSince1970: 1590307200.0) // 2020-05-24T08:00:00-0000
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily)
@@ -668,11 +677,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
             Date(timeIntervalSince1970: 1590397200.0), // 2020-05-25T09:00:00-0000
             Date(timeIntervalSince1970: 1590397230.0), // 2020-05-25T09:00:30-0000
         ]
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
    }
    
-    
-   func testEmptySequence() {
+   @Test func emptySequence() {
         // Construct a recurrence rule which requests matches on the 32nd of May
         let start = Date(timeIntervalSince1970: 1704067200.0) // 2024-01-01T00:00:00-0000
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly)
@@ -681,12 +689,12 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         rule.matchingPolicy = .strict
 
         for _ in rule.recurrences(of: start) {
-            XCTFail("Recurrence rule is not expected to produce results")
+            Issue.record("Recurrence rule is not expected to produce results")
         }
         // If we get here, there isn't an infinite loop
    }
     
-   func testOutOfRangeComponents() {
+   @Test func outOfRangeComponents() {
         let start = Date(timeIntervalSince1970: 1695304800.0) // 2023-09-21T14:00:00-0000
         let end   = Date(timeIntervalSince1970: 1729519200.0) // 2024-10-21T14:00:00-0000
         
@@ -696,73 +704,73 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         let eventStart = Date(timeIntervalSince1970: 1285077600.0) // 2010-09-21T14:00:00-0000
         let results = Array(rule.recurrences(of: eventStart, in: start..<end))
         
-        XCTAssertEqual(results, [])
+        #expect(results == [])
     }
     
-    func testFirstMondaysStrictMatching() {
+    @Test func firstMondaysStrictMatching() {
         let startDate = Date(timeIntervalSince1970: 1706659200.0) // 2024-01-31T00:00:00-0000
         
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly, matchingPolicy: .strict)
         rule.weekdays = [.nth(1, .monday)]
         
         var dates = rule.recurrences(of: startDate).makeIterator()
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1707091200.0)) // 2024-02-05T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1709510400.0)) // 2024-03-04T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1711929600.0)) // 2024-04-01T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1714953600.0)) // 2024-05-06T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1707091200.0)) // 2024-02-05T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1709510400.0)) // 2024-03-04T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1711929600.0)) // 2024-04-01T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1714953600.0)) // 2024-05-06T00:00:00-0000
     }
     
-    func testFifthFridaysStrictMatching() {
+    @Test func fifthFridaysStrictMatching() {
         let startDate = Date(timeIntervalSince1970: 1706659200.0) // 2024-01-31T00:00:00-0000
         
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly, matchingPolicy: .strict)
         rule.weekdays = [.nth(5, .friday)]
         
         var dates = rule.recurrences(of: startDate).makeIterator()
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1711670400.0)) // 2024-03-29T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1717113600.0)) // 2024-05-31T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1724976000.0)) // 2024-08-30T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1732838400.0)) // 2024-11-29T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1711670400.0)) // 2024-03-29T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1717113600.0)) // 2024-05-31T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1724976000.0)) // 2024-08-30T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1732838400.0)) // 2024-11-29T00:00:00-0000
     }
 
-    func testYearlyRecurrenceWeekdayExpansionStrictMatching() {
+    @Test func yearlyRecurrenceWeekdayExpansionStrictMatching() {
         let startDate = Date(timeIntervalSince1970: 1709164800.0) // 2024-02-29T00:00:00-0000
         
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly, matchingPolicy: .strict)
         rule.weekdays = [.nth(5, .friday)]
         
         var dates = rule.recurrences(of: startDate).makeIterator()
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1738281600.0)) // 2025-01-31T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1769731200.0)) // 2026-01-30T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1738281600.0)) // 2025-01-31T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1769731200.0)) // 2026-01-30T00:00:00-0000
     }
 
-    func testYearlyRecurrenceDayOfYearExpansionStrictMatching() {
+    @Test func yearlyRecurrenceDayOfYearExpansionStrictMatching() {
         let startDate = Date(timeIntervalSince1970: 1709164800.0) // 2024-02-29T00:00:00-0000
         
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly, matchingPolicy: .strict)
         rule.daysOfTheYear = [61]
         
         var dates = rule.recurrences(of: startDate).makeIterator()
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1709251200.0)) // 2024-03-01T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1740873600.0)) // 2025-03-02T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1772409600.0)) // 2026-03-02T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1803945600.0)) // 2027-03-02T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1835481600.0)) // 2028-03-01T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1709251200.0)) // 2024-03-01T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1740873600.0)) // 2025-03-02T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1772409600.0)) // 2026-03-02T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1803945600.0)) // 2027-03-02T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1835481600.0)) // 2028-03-01T00:00:00-0000
     }
 
-    func testYearlyRecurrenceWeekExpansionStrictMatching() {
+    @Test func yearlyRecurrenceWeekExpansionStrictMatching() {
         let startDate = Date(timeIntervalSince1970: 1709164800.0) // 2024-02-29T00:00:00-0000
         
         var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly, matchingPolicy: .strict)
         rule.weeks = [2]
         
         var dates = rule.recurrences(of: startDate).makeIterator()
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1736553600.0)) // 2025-01-11T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1767484800.0)) // 2026-01-04T00:00:00-0000
-        XCTAssertEqual(dates.next(), Date(timeIntervalSince1970: 1799020800.0)) // 2027-01-04T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1736553600.0)) // 2025-01-11T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1767484800.0)) // 2026-01-04T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1799020800.0)) // 2027-01-04T00:00:00-0000
     }
 
-    func testWeekdayFilter() {
+    @Test func weekdayFilter() {
         var alarms = Calendar.RecurrenceRule(calendar: gregorian, frequency: .daily)
         alarms.weekdays = [.every(.monday), .every(.tuesday), .every(.wednesday), .every(.thursday), .every(.friday)]
         alarms.hours = [7, 8]
@@ -771,25 +779,25 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         let start = Date(timeIntervalSince1970: 1695304800.0) // 2023-09-21T14:00:00-0000
         var results = alarms.recurrences(of: start).makeIterator()
 
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695366000.0)) // 2023-09-22T07:00:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695366900.0)) // 2023-09-22T07:15:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695367800.0)) // 2023-09-22T07:30:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695368700.0)) // 2023-09-22T07:45:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695369600.0)) // 2023-09-22T08:00:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695370500.0)) // 2023-09-22T08:15:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695371400.0)) // 2023-09-22T08:30:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695372300.0)) // 2023-09-22T08:45:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695625200.0)) // 2023-09-25T07:00:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695626100.0)) // 2023-09-25T07:15:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695627000.0)) // 2023-09-25T07:30:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695627900.0)) // 2023-09-25T07:45:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695628800.0)) // 2023-09-25T08:00:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695629700.0)) // 2023-09-25T08:15:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695630600.0)) // 2023-09-25T08:30:00-0000
-        XCTAssertEqual(results.next(), Date(timeIntervalSince1970: 1695631500.0)) // 2023-09-25T08:45:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695366000.0)) // 2023-09-22T07:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695366900.0)) // 2023-09-22T07:15:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695367800.0)) // 2023-09-22T07:30:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695368700.0)) // 2023-09-22T07:45:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695369600.0)) // 2023-09-22T08:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695370500.0)) // 2023-09-22T08:15:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695371400.0)) // 2023-09-22T08:30:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695372300.0)) // 2023-09-22T08:45:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695625200.0)) // 2023-09-25T07:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695626100.0)) // 2023-09-25T07:15:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695627000.0)) // 2023-09-25T07:30:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695627900.0)) // 2023-09-25T07:45:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695628800.0)) // 2023-09-25T08:00:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695629700.0)) // 2023-09-25T08:15:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695630600.0)) // 2023-09-25T08:30:00-0000
+        #expect(results.next() == Date(timeIntervalSince1970: 1695631500.0)) // 2023-09-25T08:45:00-0000
     }
 
-    func testRangeExcludesUpperBounds() {
+    @Test func rangeExcludesUpperBounds() {
         let start = Date(timeIntervalSince1970: 1695304800.0) // 2023-09-21T14:00:00-0000
         let end   = Date(timeIntervalSince1970: 1697896800.0) // 2023-10-21T14:00:00-0000
 
@@ -801,10 +809,10 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
         let expectedResults: [Date] = [
             Date(timeIntervalSince1970: 1695304800.0), // 2023-09-21T14:00:00-0000
         ]
-        XCTAssertEqual(results, expectedResults)
+        #expect(results == expectedResults)
     }
     
-    func testDailyRecurrenceRuleWithNonzeroNanosecondComponent() {
+    @Test func dailyRecurrenceRuleWithNonzeroNanosecondComponent() {
         let referenceStart = Date(timeIntervalSinceReferenceDate: 1746627600) // 2025-05-07T07:20:00.000-07:00
         let referenceEnd = Date(timeIntervalSinceReferenceDate: 1746714000) // 2025-05-08T07:20:00.000-07:00
         
@@ -817,7 +825,7 @@ final class GregorianCalendarRecurrenceRuleTests: XCTestCase {
                 start,
                 referenceEnd.addingTimeInterval(nsec)
             ]
-            XCTAssertEqual(results, expectedResults, "Failed for nanoseconds \(nsec)")
+            #expect(results == expectedResults, "Failed for nanoseconds \(nsec)")
         }
     }
 }

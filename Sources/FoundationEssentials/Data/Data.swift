@@ -2203,11 +2203,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         return try _representation.withUnsafeBytes(body)
     }
 
-#if compiler(>=6.2) && $LifetimeDependence
     @available(FoundationSpan 6.2, *)
-#if FOUNDATION_FRAMEWORK
-    @_disfavoredOverload
-#endif // FOUNDATION_FRAMEWORK
     public var bytes: RawSpan {
         @lifetime(borrow self)
         borrowing get {
@@ -2242,9 +2238,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
             return _overrideLifetime(span, borrowing: self)
         }
     }
-#endif
 
-#if compiler(>=5.9) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
     @available(FoundationSpan 6.2, *)
     public var mutableBytes: MutableRawSpan {
         @lifetime(&self)
@@ -2304,7 +2298,6 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 #endif
         }
     }
-#endif // $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
 
     @_alwaysEmitIntoClient
     public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
@@ -2979,7 +2972,6 @@ extension Data : Codable {
 }
 
 // TODO: remove once _overrideLifetime is public in the standard library
-#if compiler(>=6.2) && $LifetimeDependence
 /// Unsafely discard any lifetime dependency on the `dependent` argument. Return
 /// a value identical to `dependent` with a lifetime dependency on the caller's
 /// borrow scope of the `source` argument.
@@ -3011,9 +3003,7 @@ internal func _overrideLifetime<
 ) -> T {
   dependent
 }
-#endif
 
-#if compiler(>=5.9) && $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
 /// Unsafely discard any lifetime dependency on the `dependent` argument.
 /// Return a value identical to `dependent` with a lifetime dependency
 /// on the caller's exclusive borrow scope of the `source` argument.
@@ -3030,4 +3020,3 @@ internal func _overrideLifetime<
 ) -> T {
   dependent
 }
-#endif // $InoutLifetimeDependence && $LifetimeDependenceMutableAccessors
