@@ -1283,7 +1283,9 @@ private struct JSONEncoderTests {
         #expect(try 3.14 == JSONDecoder().decode(Double.self, from: partialData))
     }
 
-    @Test func depthTraversal() {
+    @Test
+    @MainActor // Deeply recursive tests which requires running on the main thread which has a higher stack size limit
+    func depthTraversal() {
         struct SuperNestedArray : Decodable {
             init(from decoder: Decoder) throws {
                 var container = try decoder.unkeyedContainer()
