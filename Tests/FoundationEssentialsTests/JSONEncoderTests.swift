@@ -1393,20 +1393,18 @@ private struct JSONEncoderTests {
         _testRoundTrip(of: testValue)
     }
   
-    @Test(arguments: [
-        Int128.min,
-        Int128.min + 1,
-        -0x1_0000_0000_0000_0000,
-        0x0_8000_0000_0000_0000,
-        -1,
-        0,
-        0x7fff_ffff_ffff_ffff,
-        0x8000_0000_0000_0000,
-        0xffff_ffff_ffff_ffff,
-        0x1_0000_0000_0000_0000,
-        .max
-    ])
-    func roundTrippingInt128(i128: Int128) {
+    @Test func roundTrippingInt128() {
+        for i128 in [Int128.min,
+                        Int128.min + 1,
+                        -0x1_0000_0000_0000_0000,
+                        0x0_8000_0000_0000_0000,
+                        -1,
+                        0,
+                        0x7fff_ffff_ffff_ffff,
+                        0x8000_0000_0000_0000,
+                        0xffff_ffff_ffff_ffff,
+                        0x1_0000_0000_0000_0000,
+                        .max] {
         _testRoundTrip(of: i128)
     }
     
@@ -1434,19 +1432,18 @@ private struct JSONEncoderTests {
         }
     }
     
-    @Test(arguments: [
-        UInt128.zero,
-        1,
-        0x0000_0000_0000_0000_7fff_ffff_ffff_ffff,
-        0x0000_0000_0000_0000_8000_0000_0000_0000,
-        0x0000_0000_0000_0000_ffff_ffff_ffff_ffff,
-        0x0000_0000_0000_0001_0000_0000_0000_0000,
-        0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff,
-        0x8000_0000_0000_0000_0000_0000_0000_0000,
-        .max
-    ])
-    func roundTrippingUInt128(u128: UInt128) {
-        _testRoundTrip(of: u128)
+    @Test func roundTrippingUInt128() {
+        for u128 in [UInt128.zero,
+                     1,
+                     0x0000_0000_0000_0000_7fff_ffff_ffff_ffff,
+                     0x0000_0000_0000_0000_8000_0000_0000_0000,
+                     0x0000_0000_0000_0000_ffff_ffff_ffff_ffff,
+                     0x0000_0000_0000_0001_0000_0000_0000_0000,
+                     0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff,
+                     0x8000_0000_0000_0000_0000_0000_0000_0000,
+                     .max] {
+            _testRoundTrip(of: u128)
+        }
     }
     
     @Test func uint128SlowPath() throws {
