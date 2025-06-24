@@ -120,14 +120,24 @@ package struct LockedState<State> {
         try withLockUnchecked(body)
     }
 
+    private struct UnsafeSendableBox<T>: @unchecked Sendable {
+        let value: T
+    }
+
     package func withLockUnchecked<T, E: Error>(
         _ body: (inout sending State) throws(E) -> sending T
     ) throws(E) -> sending T {
-        try _buffer.withUnsafeMutablePointers { (state, lock) throws(E) in
+        let box = try _buffer.withUnsafeMutablePointers { (state, lock) throws(E) in
             _Lock.lock(lock)
-            defer { _Lock.unlock(lock) }
-            return try body(&state.pointee)
+            // Safe because we know nobody else will concurrently access state due to the lock
+            nonisolated(unsafe) var value = state.pointee
+            // Safe because we are effectively "sending" this to the caller without storing any other references to it
+            let box = UnsafeSendableBox(value: try body(&value))
+            state.pointee = value
+            _Lock.unlock(lock)
+            return box
         }
+        return box.value
     }
 
     // Ensures the managed state outlives the locked scope.
