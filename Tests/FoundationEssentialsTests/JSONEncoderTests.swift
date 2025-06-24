@@ -1404,8 +1404,9 @@ private struct JSONEncoderTests {
                         0x8000_0000_0000_0000,
                         0xffff_ffff_ffff_ffff,
                         0x1_0000_0000_0000_0000,
-                        .max] {
-        _testRoundTrip(of: i128)
+                     .max] {
+            _testRoundTrip(of: i128)
+        }
     }
     
     @Test func int128SlowPath() throws {
