@@ -35,6 +35,14 @@ import FoundationEssentials
 import Foundation
 #endif
 
+var isLinux: Bool {
+    #if os(Linux)
+    true
+    #else
+    false
+    #endif
+}
+
 // MARK: - Test Suite
 
 @Suite("JSONEncoder")
@@ -1433,18 +1441,21 @@ private struct JSONEncoderTests {
             }
         }
     }
-    
-    @Test(arguments: [
-        UInt128.zero,
-        1,
-        0x0000_0000_0000_0000_7fff_ffff_ffff_ffff,
-        0x0000_0000_0000_0000_8000_0000_0000_0000,
-        0x0000_0000_0000_0000_ffff_ffff_ffff_ffff,
-        0x0000_0000_0000_0001_0000_0000_0000_0000,
-        0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff,
-        0x8000_0000_0000_0000_0000_0000_0000_0000,
-        .max
-    ])
+
+    @Test(
+        .disabled(if: isLinux, "This test is not applicable on this platform"),
+        arguments: [
+            UInt128.zero,
+            1,
+            0x0000_0000_0000_0000_7fff_ffff_ffff_ffff,
+            0x0000_0000_0000_0000_8000_0000_0000_0000,
+            0x0000_0000_0000_0000_ffff_ffff_ffff_ffff,
+            0x0000_0000_0000_0001_0000_0000_0000_0000,
+            0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff,
+            0x8000_0000_0000_0000_0000_0000_0000_0000,
+            .max
+        ]
+    )
     func roundTrippingUInt128(u128: UInt128) {
         _testRoundTrip(of: u128)
     }
