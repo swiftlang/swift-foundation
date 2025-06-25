@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 import Observation
+internal import Synchronization
 
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
@@ -84,7 +85,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         var observers: [@Sendable (ObserverState) -> Void] = [] // storage for all observers, set upon calling addObservers
     }
     
-    private let state: LockedState<State>
+    private let state: Mutex<State>
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -261,7 +262,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             interopObservation: InteropObservation(progressParentProgressManagerChild: managerObservation),
             progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger
         )
-        self.state = LockedState(initialState: state)
+        self.state = Mutex(state)
     }
     
     /// Initializes `self` with `totalCount`.

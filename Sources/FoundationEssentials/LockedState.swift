@@ -129,12 +129,12 @@ package struct LockedState<State> {
     ) throws(E) -> sending T {
         let box = try _buffer.withUnsafeMutablePointers { (state, lock) throws(E) in
             _Lock.lock(lock)
+            defer { _Lock.unlock(lock) }
             // Safe because we know nobody else will concurrently access state due to the lock
             nonisolated(unsafe) var value = state.pointee
             // Safe because we are effectively "sending" this to the caller without storing any other references to it
             let box = UnsafeSendableBox(value: try body(&value))
             state.pointee = value
-            _Lock.unlock(lock)
             return box
         }
         return box.value
