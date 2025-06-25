@@ -336,7 +336,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// - Parameter metatype: Type of property.
     /// - Returns: Array of values for property.
     public func values<P: Property>(of property: P.Type) -> [P.Value] {
-        _$observationRegistrar.access(self, keyPath: \.state)
+//        _$observationRegistrar.access(self, keyPath: \.state)
         return state.withLock { state in
             let childrenValues = getFlattenedChildrenValues(property: property, state: &state)
             return [state.otherProperties[AnyMetatypeWrapper(metatype: property)] as? P.Value ?? P.defaultValue] + childrenValues.map { $0 ?? P.defaultValue }
