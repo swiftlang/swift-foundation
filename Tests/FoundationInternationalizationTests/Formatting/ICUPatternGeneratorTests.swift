@@ -6,33 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationInternationalization)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
-final class ICUPatternGeneratorTests: XCTestCase {
+@Suite("ICUPatternGenerator")
+private struct ICUPatternGeneratorTests {
 
     typealias DateFieldCollection = Date.FormatStyle.DateFieldCollection
-    func testConversationalDayPeriodsOverride() {
+    @Test func conversationalDayPeriodsOverride() {
 
         var locale: Locale
         var calendar: Calendar
-        func test(symbols: Date.FormatStyle.DateFieldCollection, expectedPattern: String, file: StaticString = #filePath, line: UInt = #line) {
+        func test(symbols: Date.FormatStyle.DateFieldCollection, expectedPattern: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let pattern = ICUPatternGenerator.localizedPattern(symbols: symbols, locale: locale, calendar: calendar)
-            XCTAssertEqual(pattern, expectedPattern, file: file, line: line)
+            #expect(pattern == expectedPattern, sourceLocation: sourceLocation)
 
             // We should not see any kind of day period designator ("a" or "B") when showing 24-hour hour ("H").
             if (expectedPattern.contains("H") || pattern.contains("H")) && (pattern.contains("a") || pattern.contains("B")) {
-                XCTFail("Pattern should not contain day period", file: file, line: line)
+                Issue.record("Pattern should not contain day period", sourceLocation: sourceLocation)
             }
         }
 
@@ -40,6 +37,7 @@ final class ICUPatternGeneratorTests: XCTestCase {
         do {
             locale = Locale(identifier: "zh_TW")
             calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .gmt
 
             test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
                  expectedPattern: "y/M/d BBBBh時")
@@ -83,6 +81,7 @@ final class ICUPatternGeneratorTests: XCTestCase {
         do {
             locale = Locale(identifier: "zh_TW")
             calendar = Calendar(identifier: .republicOfChina)
+            calendar.timeZone = .gmt
 
             test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
                  expectedPattern: "G y/M/d BBBBh時")
@@ -113,6 +112,7 @@ final class ICUPatternGeneratorTests: XCTestCase {
         do {
             locale = Locale(identifier: "zh_TW")
             calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .gmt
 
             test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
                  expectedPattern: "y/M/d BBBBh時")
@@ -159,6 +159,7 @@ final class ICUPatternGeneratorTests: XCTestCase {
             locale = Locale(components: localeUsing24hour)
 
             calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .gmt
 
             test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
                  expectedPattern: "y/M/d H時")
@@ -201,6 +202,7 @@ final class ICUPatternGeneratorTests: XCTestCase {
         do {
             locale = Locale(identifier: "zh_HK")
             calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .gmt
 
             test(symbols: .init(year: .defaultDigits, month: .defaultDigits, day: .defaultDigits, hour: .defaultDigitsWithWideAMPM),
                  expectedPattern: "d/M/y aaaah時")
@@ -243,6 +245,7 @@ final class ICUPatternGeneratorTests: XCTestCase {
             // So there should be no "B" in the pattern
             locale = Locale(identifier: "en_TW")
             calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .gmt
 
             test(symbols: .init(hour: .defaultDigitsWithAbbreviatedAMPM, minute: .defaultDigits),
                  expectedPattern: "h:mm a")
