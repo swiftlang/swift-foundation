@@ -10,31 +10,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationInternationalization)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
-final class DurationExtensionTests : XCTestCase {
+@Suite("Duration Extension")
+private struct DurationExtensionTests {
 
-    func testRoundingMode() {
+    @Test func roundingMode() {
 
-        func verify(_ tests: [Int64], increment: Int64, expected: [FloatingPointRoundingRule: [Int64]], file: StaticString = #filePath, line: UInt = #line) {
+        func verify(_ tests: [Int64], increment: Int64, expected: [FloatingPointRoundingRule: [Int64]], sourceLocation: SourceLocation = #_sourceLocation) {
             let modes: [FloatingPointRoundingRule] = [.down, .up, .towardZero, .awayFromZero, .toNearestOrEven, .toNearestOrAwayFromZero]
             for mode in modes {
                 var actual: [Duration] = []
                 for test in tests {
                     actual.append(Duration.seconds(test).rounded(increment: Duration.seconds(increment), rule: mode))
                 }
-                XCTAssertEqual(actual, expected[mode]?.map { Duration.seconds($0) }, "\(mode) does not match", file: file, line: line)
+                #expect(actual == expected[mode]?.map { Duration.seconds($0) }, "\(mode) does not match", sourceLocation: sourceLocation)
             }
         }
 
