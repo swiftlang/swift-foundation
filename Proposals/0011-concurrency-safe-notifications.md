@@ -3,7 +3,7 @@
 * Proposal: SF-0011
 * Author(s): [Philippe Hausler](https://github.com/phausler), [Christopher Thielen](https://github.com/cthielen)
 * Review Manager: [Charles Hu](https://github.com/iCharlesHu)
-* Status: **2nd Review** May. 15, 2025 ... May. 22, 2025
+* Status: **Accepted**
 
 ## Revision history
 
