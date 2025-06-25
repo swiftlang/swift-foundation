@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Testing
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
@@ -17,29 +19,25 @@
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
-
-final class StringConverterTests: XCTestCase {
+@Suite("String (ICU Encoding)")
+private struct StringICUEncodingTests {
     private func _test_roundTripConversion(
         string: String,
         data: Data,
-        encoding: String._Encoding,
-        file: StaticString = #filePath,
-        line: UInt = #line
+        encoding: String.Encoding,
+        sourceLocation: SourceLocation = #_sourceLocation
     ) {
-        XCTAssertEqual(
-            string.data(using: encoding), data, "Failed to convert string to data.",
-            file: file, line: line
+        #expect(
+            string.data(using: encoding) == data, "Failed to convert string to data.",
+            sourceLocation: sourceLocation
         )
-        XCTAssertEqual(
-            string, String(data: data, encoding: encoding), "Failed to convert data to string.",
-            file: file, line: line
+        #expect(
+            string == String(data: data, encoding: encoding), "Failed to convert data to string.",
+            sourceLocation: sourceLocation
         )
     }
 
-    func test_japaneseEUC() {
+    @Test func japaneseEUC() {
         // Confirm that https://github.com/swiftlang/swift-foundation/issues/1016 is fixed.
 
         // ASCII
@@ -117,22 +115,22 @@ final class StringConverterTests: XCTestCase {
         // Unsupported characters
         let onsen = "Onsen♨" // BMP emoji
         let sushi = "Sushi🍣" // non-BMP emoji
-        XCTAssertNil(onsen.data(using: String._Encoding.japaneseEUC))
-        XCTAssertNil(sushi.data(using: String._Encoding.japaneseEUC))
-        XCTAssertEqual(
-            onsen.data(using: String._Encoding.japaneseEUC, allowLossyConversion: true),
+        #expect(onsen.data(using: .japaneseEUC) == nil)
+        #expect(sushi.data(using: .japaneseEUC) == nil)
+        #expect(
+            onsen.data(using: .japaneseEUC, allowLossyConversion: true) ==
             "Onsen?".data(using: .utf8)
         )
         #if FOUNDATION_FRAMEWORK
         // NOTE: Foundation framework replaces an unsupported non-BMP character
         //       with "??"(two question marks).
-        XCTAssertEqual(
-            sushi.data(using: String._Encoding.japaneseEUC, allowLossyConversion: true),
+        #expect(
+            sushi.data(using: .japaneseEUC, allowLossyConversion: true) ==
             "Sushi??".data(using: .utf8)
         )
         #else
-        XCTAssertEqual(
-            sushi.data(using: String._Encoding.japaneseEUC, allowLossyConversion: true),
+        #expect(
+            sushi.data(using: .japaneseEUC, allowLossyConversion: true) ==
             "Sushi?".data(using: .utf8)
         )
         #endif
