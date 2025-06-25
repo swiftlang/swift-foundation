@@ -299,16 +299,18 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             return builder.string
         }
         let baseParseInfo = baseURL._swiftURL?._parseInfo
-        let baseEncodedComponents = baseParseInfo?.encodedComponents ?? []
-        if let baseUser = baseURL.user(percentEncoded: !baseEncodedComponents.contains(.user)) {
+        // If we aren't in the special case where we need the original
+        // string, always leave the base components encoded.
+        let baseComponentsToDecode = !original ? [] : baseParseInfo?.encodedComponents ?? []
+        if let baseUser = baseURL.user(percentEncoded: !baseComponentsToDecode.contains(.user)) {
             builder.user = baseUser
         }
-        if let basePassword = baseURL.password(percentEncoded: !baseEncodedComponents.contains(.password)) {
+        if let basePassword = baseURL.password(percentEncoded: !baseComponentsToDecode.contains(.password)) {
             builder.password = basePassword
         }
         if let baseHost = baseParseInfo?.host {
-            builder.host = baseEncodedComponents.contains(.host) && baseParseInfo!.didPercentEncodeHost ? Parser.percentDecode(baseHost) : String(baseHost)
-        } else if let baseHost = baseURL.host(percentEncoded: !baseEncodedComponents.contains(.host)) {
+            builder.host = baseComponentsToDecode.contains(.host) && baseParseInfo!.didPercentEncodeHost ? Parser.percentDecode(baseHost) : String(baseHost)
+        } else if let baseHost = baseURL.host(percentEncoded: !baseComponentsToDecode.contains(.host)) {
             builder.host = baseHost
         }
         if let basePort = baseParseInfo?.portString {
@@ -317,8 +319,8 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             builder.portString = String(basePort)
         }
         if builder.path.isEmpty {
-            builder.path = baseURL.path(percentEncoded: !baseEncodedComponents.contains(.path))
-            if builder.query == nil, let baseQuery = baseURL.query(percentEncoded: !baseEncodedComponents.contains(.query)) {
+            builder.path = baseURL.path(percentEncoded: !baseComponentsToDecode.contains(.path))
+            if builder.query == nil, let baseQuery = baseURL.query(percentEncoded: !baseComponentsToDecode.contains(.query)) {
                 builder.query = baseQuery
             }
         } else {
@@ -327,7 +329,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
             } else if baseURL.hasAuthority && baseURL.path().isEmpty {
                 "/" + builder.path
             } else {
-                baseURL.path(percentEncoded: !baseEncodedComponents.contains(.path)).merging(relativePath: builder.path)
+                baseURL.path(percentEncoded: !baseComponentsToDecode.contains(.path)).merging(relativePath: builder.path)
             }
             builder.path = newPath.removingDotSegments
         }
