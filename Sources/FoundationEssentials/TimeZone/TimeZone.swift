@@ -71,15 +71,6 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         }
     }
 
-    internal init?(name: String) {
-        // Try the cache first
-        if let cached = TimeZoneCache.cache.fixed(name) {
-            _tz = cached
-        } else {
-            return nil
-        }
-    }
-
     /// Returns a time zone identified by a given abbreviation.
     ///
     /// In general, you are discouraged from using abbreviations except for unique instances such as "GMT". Time Zone abbreviations are not standardized and so a given abbreviation may have multiple meanings--for example, "EST" refers to Eastern Time in both the United States and Australia
