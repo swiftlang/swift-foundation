@@ -45,10 +45,15 @@ private struct StringSortComparatorTests {
         #expect(swedishComparator.compare("ă", "ã") == .orderedDescending)
     }
     
-    @Test(.enabled(if: Locale.current.language.languageCode == .english, "Test only verified to work with English as current language"))
-    func standardLocalized() throws {
-        let localizedStandard = String.StandardComparator.localizedStandard
-        #expect(localizedStandard.compare("ă", "ã") == .orderedAscending)
+    @Test func standardLocalized() async {
+        await usingCurrentInternationalizationPreferences {
+            var prefs = LocalePreferences()
+            prefs.languages = ["en-US"]
+            prefs.locale = "en_US"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            let localizedStandard = String.StandardComparator.localizedStandard
+            #expect(localizedStandard.compare("ă", "ã") == .orderedAscending)
+        }
         
         let unlocalizedStandard = String.StandardComparator.lexical
         #expect(unlocalizedStandard.compare("ă", "ã") == .orderedDescending)
