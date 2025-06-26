@@ -246,8 +246,12 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
     private static func _fromDouble(_ d : Double) -> (Int, Int) {
         // This simplistic algorithm could someday be replaced with something better.
         // Basically - how many 1/Nths is this double?
-        // And we choose to use 131072 for N
-        let denominator : Int = 131072
+        var denominator: Int
+        switch Int.bitWidth {
+            case 32:  denominator = 1048576    // 2^20 - safe for 32-bit
+            case 64:  denominator =  1073741824 // 2^30 - high precision for 64-bit
+            default:  denominator = 131072       // 2^17 - ultra-safe fallback
+        }
         let numerator = Int(d / (1.0 / Double(denominator)))
         return (numerator, denominator)
     }
