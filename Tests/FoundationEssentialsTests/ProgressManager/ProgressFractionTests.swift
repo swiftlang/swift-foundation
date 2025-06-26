@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -20,67 +18,67 @@ import TestSupport
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-final class ProgressFractionTests: XCTestCase {
-    func test_equal() {
+@Suite("Progress Fraction") struct ProgressFractionTests {
+    @Test func equal() {
         let f1 = _ProgressFraction(completed: 5, total: 10)
         let f2 = _ProgressFraction(completed: 100, total: 200)
         
-        XCTAssertEqual(f1, f2)
+        #expect(f1 == f2)
         
         let f3 = _ProgressFraction(completed: 3, total: 10)
-        XCTAssertNotEqual(f1, f3)
+        #expect(f1 != f3)
         
         let f4 = _ProgressFraction(completed: 5, total: 10)
-        XCTAssertEqual(f1, f4)
+        #expect(f1 == f4)
     }
     
-    func test_addSame() {
+    @Test func addSame() {
         let f1 = _ProgressFraction(completed: 5, total: 10)
         let f2 = _ProgressFraction(completed: 3, total: 10)
 
         let r = f1 + f2
-        XCTAssertEqual(r.completed, 8)
-        XCTAssertEqual(r.total, 10)
+        #expect(r.completed == 8)
+        #expect(r.total == 10)
     }
     
-    func test_addDifferent() {
+    @Test func addDifferent() {
         let f1 = _ProgressFraction(completed: 5, total: 10)
         let f2 = _ProgressFraction(completed : 300, total: 1000)
 
         let r = f1 + f2
-        XCTAssertEqual(r.completed, 800)
-        XCTAssertEqual(r.total, 1000)
+        #expect(r.completed == 800)
+        #expect(r.total == 1000)
     }
     
-    func test_subtract() {
+    @Test func subtract() {
         let f1 = _ProgressFraction(completed: 5, total: 10)
         let f2 = _ProgressFraction(completed: 3, total: 10)
 
         let r = f1 - f2
-        XCTAssertEqual(r.completed, 2)
-        XCTAssertEqual(r.total, 10)
+        #expect(r.completed == 2)
+        #expect(r.total == 10)
     }
     
-    func test_multiply() {
+    @Test func multiply() {
         let f1 = _ProgressFraction(completed: 5, total: 10)
         let f2 = _ProgressFraction(completed: 1, total: 2)
 
         let r = f1 * f2
-        XCTAssertEqual(r.completed, 5)
-        XCTAssertEqual(r.total, 20)
+        #expect(r.completed == 5)
+        #expect(r.total == 20)
     }
     
-    func test_simplify() {
+    @Test func simplify() {
         let f1 = _ProgressFraction(completed: 5, total: 10)
         let f2 = _ProgressFraction(completed: 3, total: 10)
 
         let r = (f1 + f2).simplified()
         
-        XCTAssertEqual(r.completed, 4)
-        XCTAssertEqual(r.total, 5)
+        #expect(r.completed == 4)
+        #expect(r.total == 5)
     }
     
-    func test_overflow() {
+    @Test func overflow() {
         // These prime numbers are problematic for overflowing
         let denominators : [Int] = [5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 69]
         
@@ -94,11 +92,10 @@ final class ProgressFractionTests: XCTestCase {
         for d in denominators {
             expectedResult = expectedResult + 1.0 / Double(d)
         }
-        
-        XCTAssertEqual(fractionResult, expectedResult, accuracy: 0.00001)
+        #expect(abs(fractionResult - expectedResult) < 0.00001)
     }
     
-    func test_addOverflow() {
+    @Test func addOverflow() {
         // These prime numbers are problematic for overflowing
         let denominators : [Int] = [5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 69]
         var f1 = _ProgressFraction(completed: 1, total: 3)
@@ -107,48 +104,48 @@ final class ProgressFractionTests: XCTestCase {
         }
 
         // f1 should be in overflow
-        XCTAssertTrue(f1.overflowed)
+        #expect(f1.overflowed)
         
         let f2 = _ProgressFraction(completed: 1, total: 4) + f1
         
         // f2 should also be in overflow
-        XCTAssertTrue(f2.overflowed)
+        #expect(f2.overflowed)
         
         // And it should have completed value of about 1.0/4.0 + f1.fractionCompleted
         let expected = (1.0 / 4.0) + f1.fractionCompleted
         
-        XCTAssertEqual(expected, f2.fractionCompleted, accuracy: 0.00001)
+        #expect(abs(expected - f2.fractionCompleted) < 0.00001)
     }
     
 #if _pointerBitWidth(_64) // These tests assumes Int is Int64
-    func test_andAndSubtractOverflow() {
+    @Test func addAndSubtractOverflow() {
         let f1 = _ProgressFraction(completed: 48, total: 60)
         let f2 = _ProgressFraction(completed: 5880, total: 7200)
         let f3 = _ProgressFraction(completed: 7048893638467736640, total: 8811117048084670800)
         
         let result1 = (f3 - f1) + f2
-        XCTAssertTrue(result1.completed > 0)
+        #expect(result1.completed > 0)
         
         let result2 = (f3 - f2) + f1
-        XCTAssertTrue(result2.completed < 60)
+        #expect(result2.completed < 60)
     }
 #endif
     
-    func test_fractionFromDouble() {
+    @Test func fractionFromDouble() {
         let d = 4.25 // exactly representable in binary
         let f1 = _ProgressFraction(double: d)
         
         let simplified = f1.simplified()
-        XCTAssertEqual(simplified.completed, 17)
-        XCTAssertEqual(simplified.total, 4)
+        #expect(simplified.completed == 17)
+        #expect(simplified.total == 4)
     }
     
-    func test_unnecessaryOverflow() {
+    @Test func unnecessaryOverflow() {
         // just because a fraction has a large denominator doesn't mean it needs to overflow
         let f1 = _ProgressFraction(completed: (Int.max - 1) / 2, total: Int.max - 1)
         let f2 = _ProgressFraction(completed: 1, total: 16)
         
         let r = f1 + f2
-        XCTAssertFalse(r.overflowed)
+        #expect(!r.overflowed)
     }
 }
