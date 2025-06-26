@@ -403,3 +403,22 @@ extension Range where Bound == BigString.Index {
         Range<AttributedString.Index>(uncheckedBounds: (AttributedString.Index(lowerBound, version: version), AttributedString.Index(upperBound, version: version)))
     }
 }
+
+extension AttributedString {
+  /// Returns a boolean value indicating whether this string is identical to
+  /// `other`.
+  ///
+  /// Two string values are identical if there is no way to distinguish between
+  /// them.
+  ///
+  /// Comparing strings this way includes comparing (normally) hidden
+  /// implementation details such as the memory location of any underlying
+  /// string storage object. Therefore, identical strings are guaranteed to
+  /// compare equal with `==`, but not all equal strings are considered
+  /// identical.
+  ///
+  /// - Performance: O(1)
+  public func isIdentical(to other: Self) -> Bool {
+    self._guts === other._guts
+  }
+}
