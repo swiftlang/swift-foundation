@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 import Testing
-import XCTest
 
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
@@ -19,7 +18,7 @@ import XCTest
 #endif // FOUNDATION_FRAMEWORK
 
 /// Unit tests for basic functionalities of ProgressManager
-@Suite("Progress Manager Tests") struct ProgressManagerTests {
+@Suite("Progress Manager") struct ProgressManagerTests {
     /// MARK: Helper methods that report progress
     func doBasicOperationV1(reportTo subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 8)
@@ -49,7 +48,7 @@ import XCTest
     }
     
     /// MARK: Tests calculations based on change in totalCount
-    @Test func testTotalCountNil() async throws {
+    @Test func totalCountNil() async throws {
         let overall = ProgressManager(totalCount: nil)
         overall.complete(count: 10)
         #expect(overall.completedCount == 10)
@@ -58,7 +57,7 @@ import XCTest
         #expect(overall.totalCount == nil)
     }
     
-    @Test func testTotalCountReset() async throws {
+    @Test func totalCountReset() async throws {
         let overall = ProgressManager(totalCount: 10)
         overall.complete(count: 5)
         #expect(overall.completedCount == 5)
@@ -87,7 +86,7 @@ import XCTest
         #expect(overall.isFinished == false)
     }
     
-    @Test func testTotalCountNilWithChild() async throws {
+    @Test func totalCountNilWithChild() async throws {
         let overall = ProgressManager(totalCount: nil)
         #expect(overall.completedCount == 0)
         #expect(overall.totalCount == nil)
@@ -121,7 +120,7 @@ import XCTest
         #expect(overall.isFinished == false)
     }
     
-    @Test func testTotalCountFinishesWithLessCompletedCount() async throws {
+    @Test func totalCountFinishesWithLessCompletedCount() async throws {
         let overall = ProgressManager(totalCount: 10)
         overall.complete(count: 5)
         
@@ -137,7 +136,7 @@ import XCTest
     }
     
     /// MARK: Tests single-level tree
-    @Test func testDiscreteReporter() async throws {
+    @Test func discreteManager() async throws {
         let manager =  ProgressManager(totalCount: 3)
         await doBasicOperationV1(reportTo: manager.subprogress(assigningCount: 3))
         #expect(manager.fractionCompleted == 1.0)
@@ -146,7 +145,7 @@ import XCTest
     }
     
     /// MARK: Tests multiple-level trees
-    @Test func testEmptyDiscreteReporter() async throws {
+    @Test func emptyDiscreteManager() async throws {
         let manager =  ProgressManager(totalCount: nil)
         #expect(manager.isIndeterminate == true)
         
@@ -162,7 +161,7 @@ import XCTest
         #expect(manager.isFinished == true)
     }
     
-    @Test func testTwoLevelTreeWithTwoChildren() async throws {
+    @Test func twoLevelTreeWithTwoChildren() async throws {
         let overall = ProgressManager(totalCount: 2)
         
         await doBasicOperationV1(reportTo: overall.subprogress(assigningCount: 1))
@@ -178,7 +177,7 @@ import XCTest
         #expect(overall.isIndeterminate == false)
     }
     
-    @Test func testTwoLevelTreeWithTwoChildrenWithOneFileProperty() async throws {
+    @Test func twoLevelTreeWithTwoChildrenWithOneFileProperty() async throws {
         let overall = ProgressManager(totalCount: 2)
         
         let progress1 = overall.subprogress(assigningCount: 1)
@@ -196,7 +195,7 @@ import XCTest
         #expect(overall.withProperties(\.totalFileCount) == 0)
     }
     
-    @Test func testTwoLevelTreeWithMultipleChildren() async throws {
+    @Test func twoLevelTreeWithMultipleChildren() async throws {
         let overall = ProgressManager(totalCount: 3)
         
         await doBasicOperationV1(reportTo: overall.subprogress(assigningCount:1))
@@ -212,7 +211,7 @@ import XCTest
         #expect(overall.completedCount == 3)
     }
     
-    @Test func testThreeLevelTree() async throws {
+    @Test func threeLevelTree() async throws {
         let overall = ProgressManager(totalCount: 100)
         #expect(overall.fractionCompleted == 0.0)
         
@@ -237,7 +236,7 @@ import XCTest
         #expect(overall.isFinished == true)
     }
     
-    @Test func testFourLevelTree() async throws {
+    @Test func fourLevelTree() async throws {
         let overall = ProgressManager(totalCount: 100)
         #expect(overall.fractionCompleted == 0.0)
         
@@ -267,7 +266,7 @@ import XCTest
 }
 
 /// Unit tests for propagation of type-safe metadata in ProgressManager tree.
-@Suite("Progress Manager Additional Properties Tests") struct TestProgressManagerAdditionalProperties {
+@Suite("Progress Manager Additional Properties") struct ProgressManagerAdditionalPropertiesTests {
     func doFileOperation(reportTo subprogress: consuming Subprogress) async {
         let manager = subprogress.start(totalCount: 100)
         manager.withProperties { properties in
@@ -287,7 +286,7 @@ import XCTest
         #expect(manager.withProperties(\.totalFileCount) == 100)
     }
     
-    @Test func testDiscreteReporterWithFileProperties() async throws {
+    @Test func discreteReporterWithFileProperties() async throws {
         let fileProgressManager = ProgressManager(totalCount: 3)
         await doFileOperation(reportTo: fileProgressManager.subprogress(assigningCount: 3))
         #expect(fileProgressManager.fractionCompleted == 1.0)
@@ -309,7 +308,7 @@ import XCTest
         #expect(reducedCompletedFileValue == 100)
     }
     
-    @Test func testTwoLevelTreeWithOneChildWithFileProperties() async throws {
+    @Test func twoLevelTreeWithOneChildWithFileProperties() async throws {
         let overall = ProgressManager(totalCount: 2)
         
         let progress1 = overall.subprogress(assigningCount: 1)
@@ -333,7 +332,7 @@ import XCTest
         #expect(completedFileValues == [0, 0])
     }
     
-    @Test func testTwoLevelTreeWithTwoChildrenWithFileProperties() async throws {
+    @Test func twoLevelTreeWithTwoChildrenWithFileProperties() async throws {
         let overall = ProgressManager(totalCount: 2)
         
         let progress1 = overall.subprogress(assigningCount: 1)
@@ -374,7 +373,7 @@ import XCTest
         #expect(updatedCompletedFileValues == [0, 1, 1])
     }
     
-    @Test func testThreeLevelTreeWithFileProperties() async throws {
+    @Test func threeLevelTreeWithFileProperties() async throws {
         let overall = ProgressManager(totalCount: 1)
         
         let progress1 = overall.subprogress(assigningCount: 1)
@@ -413,15 +412,9 @@ import XCTest
 
 #if FOUNDATION_FRAMEWORK
 /// Unit tests for interop methods that support building Progress trees with both Progress and ProgressManager
-class TestProgressManagerInterop: XCTestCase {
-    func doSomethingWithProgress(expectation1: XCTestExpectation, expectation2: XCTestExpectation) async -> Progress {
+@Suite("Progress Manager Interop") struct ProgressManagerInteropTests {
+    func doSomethingWithProgress() async -> Progress {
         let p = Progress(totalUnitCount: 2)
-        Task.detached {
-            p.completedUnitCount = 1
-            expectation1.fulfill()
-            p.completedUnitCount = 2
-            expectation2.fulfill()
-        }
         return p
     }
     
@@ -432,46 +425,50 @@ class TestProgressManagerInterop: XCTestCase {
     }
     
     // TODO: Occasionally it propagates values wrongly, end up with 1.25 at the end
-    func testInteropProgressParentProgressManagerChild() async throws {
+    @Test func interopProgressParentProgressManagerChild() async throws {
         // Initialize a Progress Parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)
         
         // Add Progress as Child
-        let expectation1 = XCTestExpectation(description: "Set completed unit count to 1")
-        let expectation2 = XCTestExpectation(description: "Set completed unit count to 2")
-        let p1 = await doSomethingWithProgress(expectation1: expectation1, expectation2: expectation2)
+        let p1 = await doSomethingWithProgress()
         overall.addChild(p1, withPendingUnitCount: 5)
         
-        await fulfillment(of: [expectation1, expectation2], timeout: 10.0)
+        let _ = await Task.detached {
+            p1.completedUnitCount = 1
+            try? await Task.sleep(nanoseconds: 10000)
+            p1.completedUnitCount = 2
+        }.value
         
         // Check if ProgressManager values propagate to Progress parent
-        XCTAssertEqual(overall.fractionCompleted, 0.5)
-        XCTAssertEqual(overall.completedUnitCount, 5)
+        #expect(overall.fractionCompleted == 0.5)
+        #expect(overall.completedUnitCount == 5)
         
         // Add ProgressManager as Child
         let p2 = overall.makeChild(withPendingUnitCount: 5)
         await doSomethingWithReporter(subprogress: p2)
         
         // Check if Progress values propagate to Progress parent
-        XCTAssertEqual(overall.fractionCompleted, 1.0)
-        XCTAssertEqual(overall.completedUnitCount, 10)
+        #expect(overall.fractionCompleted == 1.0)
+        #expect(overall.completedUnitCount == 10)
     }
     
-    func testInteropProgressParentProgressReporterChildWithEmptyProgress() async throws {
+    @Test func interopProgressParentProgressReporterChildWithEmptyProgress() async throws {
         // Initialize a Progress parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)
         
         // Add Progress as Child
-        let expectation1 = XCTestExpectation(description: "Set completed unit count to 1")
-        let expectation2 = XCTestExpectation(description: "Set completed unit count to 2")
-        let p1 = await doSomethingWithProgress(expectation1: expectation1, expectation2: expectation2)
+        let p1 = await doSomethingWithProgress()
         overall.addChild(p1, withPendingUnitCount: 5)
         
-        await fulfillment(of: [expectation1, expectation2], timeout: 10.0)
+        let _ = await Task.detached {
+            p1.completedUnitCount = 1
+            try? await Task.sleep(nanoseconds: 10000)
+            p1.completedUnitCount = 2
+        }.value
 
         // Check if ProgressManager values propagate to Progress parent
-        XCTAssertEqual(overall.fractionCompleted, 0.5)
-        XCTAssertEqual(overall.completedUnitCount, 5)
+        #expect(overall.fractionCompleted == 0.5)
+        #expect(overall.completedUnitCount == 5)
         
         // Add ProgressReporter as Child
         let p2 = ProgressManager(totalCount: 10)
@@ -481,25 +478,27 @@ class TestProgressManagerInterop: XCTestCase {
         p2.complete(count: 10)
         
         // Check if Progress values propagate to Progress parent
-        XCTAssertEqual(overall.fractionCompleted, 1.0)
-        XCTAssertEqual(overall.completedUnitCount, 10)
+        #expect(overall.fractionCompleted == 1.0)
+        #expect(overall.completedUnitCount == 10)
     }
     
-    func testInteropProgressParentProgressReporterChildWithExistingProgress() async throws {
+    @Test func interopProgressParentProgressReporterChildWithExistingProgress() async throws {
         // Initialize a Progress parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)
         
         // Add Progress as Child
-        let expectation1 = XCTestExpectation(description: "Set completed unit count to 1")
-        let expectation2 = XCTestExpectation(description: "Set completed unit count to 2")
-        let p1 = await doSomethingWithProgress(expectation1: expectation1, expectation2: expectation2)
+        let p1 = await doSomethingWithProgress()
         overall.addChild(p1, withPendingUnitCount: 5)
         
-        await fulfillment(of: [expectation1, expectation2], timeout: 10.0)
-
+        let _ = await Task.detached {
+            p1.completedUnitCount = 1
+            try? await Task.sleep(nanoseconds: 10000)
+            p1.completedUnitCount = 2
+        }.value
+        
         // Check if ProgressManager values propagate to Progress parent
-        XCTAssertEqual(overall.fractionCompleted, 0.5)
-        XCTAssertEqual(overall.completedUnitCount, 5)
+        #expect(overall.fractionCompleted == 0.5)
+        #expect(overall.completedUnitCount == 5)
         
         // Add ProgressReporter with CompletedCount 3 as Child
         let p2 = ProgressManager(totalCount: 10)
@@ -510,11 +509,11 @@ class TestProgressManagerInterop: XCTestCase {
         p2.complete(count: 7)
         
         // Check if Progress values propagate to Progress parent
-        XCTAssertEqual(overall.fractionCompleted, 1.0)
-        XCTAssertEqual(overall.completedUnitCount, 10)
+        #expect(overall.fractionCompleted == 1.0)
+        #expect(overall.completedUnitCount == 10)
     }
     
-    func testInteropProgressManagerParentProgressChild() async throws {
+    @Test func interopProgressManagerParentProgressChild() async throws {
         // Initialize ProgressManager parent
         let overallManager = ProgressManager(totalCount: 10)
         
@@ -522,22 +521,24 @@ class TestProgressManagerInterop: XCTestCase {
         await doSomethingWithReporter(subprogress: overallManager.subprogress(assigningCount: 5))
         
         // Check if ProgressManager values propagate to ProgressManager parent
-        XCTAssertEqual(overallManager.fractionCompleted, 0.5)
-        XCTAssertEqual(overallManager.completedCount, 5)
+        #expect(overallManager.fractionCompleted == 0.5)
+        #expect(overallManager.completedCount == 5)
         
         // Interop: Add Progress as Child
-        let expectation1 = XCTestExpectation(description: "Set completed unit count to 1")
-        let expectation2 = XCTestExpectation(description: "Set completed unit count to 2")
-        let p2 = await doSomethingWithProgress(expectation1: expectation1, expectation2: expectation2)
+        let p2 = await doSomethingWithProgress()
         overallManager.subprogress(assigningCount: 5, to: p2)
         
-        await fulfillment(of: [expectation1, expectation2], timeout: 10.0)
+        let _ = await Task.detached {
+            p2.completedUnitCount = 1
+            try? await Task.sleep(nanoseconds: 10000)
+            p2.completedUnitCount = 2
+        }.value
         
         // Check if Progress values propagate to ProgressRerpoter parent
-        XCTAssertEqual(overallManager.completedCount, 10)
-        XCTAssertEqual(overallManager.totalCount, 10)
+        #expect(overallManager.completedCount == 10)
+        #expect(overallManager.totalCount == 10)
         //TODO: Somehow this sometimes gets updated to 1.25 instead of just 1.0
-        XCTAssertEqual(overallManager.fractionCompleted, 1.0)
+        #expect(overallManager.fractionCompleted == 1.0)
     }
     
     func getProgressWithTotalCountInitialized() -> Progress {
@@ -548,55 +549,59 @@ class TestProgressManagerInterop: XCTestCase {
         let _ = progress.start(totalCount: 5)
     }
     
-    func testInteropProgressManagerParentProgressChildConsistency() async throws {
+    @Test func interopProgressManagerParentProgressChildConsistency() async throws {
         let overallReporter = ProgressManager(totalCount: nil)
         let child = overallReporter.subprogress(assigningCount: 5)
         receiveProgress(progress: child)
-        XCTAssertNil(overallReporter.totalCount)
+        #expect(overallReporter.totalCount == nil)
         
         let overallReporter2 = ProgressManager(totalCount: nil)
         let interopChild = getProgressWithTotalCountInitialized()
         overallReporter2.subprogress(assigningCount: 5, to: interopChild)
-        XCTAssertNil(overallReporter2.totalCount)
+        #expect(overallReporter2.totalCount == nil)
     }
     
-    func testInteropProgressParentProgressManagerChildConsistency() async throws {
+    @Test func interopProgressParentProgressManagerChildConsistency() async throws {
         let overallProgress = Progress()
         let child = Progress(totalUnitCount: 5)
         overallProgress.addChild(child, withPendingUnitCount: 5)
-        XCTAssertEqual(overallProgress.totalUnitCount, 0)
+        #expect(overallProgress.totalUnitCount == 0)
         
         let overallProgress2 = Progress()
         let interopChild = overallProgress2.makeChild(withPendingUnitCount: 5)
         receiveProgress(progress: interopChild)
-        XCTAssertEqual(overallProgress2.totalUnitCount, 0)
+        #expect(overallProgress2.totalUnitCount == 0)
     }
     
-    func testIndirectParticipationOfProgressInAcyclicGraph() async throws {
-        let manager = ProgressManager(totalCount: 2)
-        
-        let parentManager1 = ProgressManager(totalCount: 1)
-        parentManager1.assign(count: 1, to: manager.reporter)
-        
-        let parentManager2 = ProgressManager(totalCount: 1)
-        parentManager2.assign(count: 1, to: manager.reporter)
-        
-        let progress = Progress.discreteProgress(totalUnitCount: 4)
-        manager.subprogress(assigningCount: 1, to: progress)
-                
-        progress.completedUnitCount = 2
-        XCTAssertEqual(progress.fractionCompleted, 0.5)
-        XCTAssertEqual(manager.fractionCompleted, 0.25)
-        XCTAssertEqual(parentManager1.fractionCompleted, 0.25)
-        XCTAssertEqual(parentManager2.fractionCompleted, 0.25)
-        
-//        progress.addChild(parentManager1.reporter, withPendingUnitCount: 1) // this should trigger cycle detection
+    #if FOUNDATION_EXIT_TESTS
+    @Test func indirectParticipationOfProgressInAcyclicGraph() async throws {
+        await #expect(processExitsWith: .failure) {
+            let manager = ProgressManager(totalCount: 2)
+            
+            let parentManager1 = ProgressManager(totalCount: 1)
+            parentManager1.assign(count: 1, to: manager.reporter)
+            
+            let parentManager2 = ProgressManager(totalCount: 1)
+            parentManager2.assign(count: 1, to: manager.reporter)
+            
+            let progress = Progress.discreteProgress(totalUnitCount: 4)
+            manager.subprogress(assigningCount: 1, to: progress)
+                    
+            progress.completedUnitCount = 2
+            #expect(progress.fractionCompleted == 0.5)
+            #expect(manager.fractionCompleted == 0.25)
+            #expect(parentManager1.fractionCompleted == 0.25)
+            #expect(parentManager2.fractionCompleted == 0.25)
+            
+            progress.addChild(parentManager1.reporter, withPendingUnitCount: 1) // this should trigger cycle detection
+        }
     }
+    #endif
 }
 #endif
 
-@Suite("Progress Reporter Tests") struct TestProgressReporter {
-    @Test func testObserveProgressReporter() {
+@Suite("Progress Reporter") struct ProgressReporterTests {
+    @Test func observeProgressReporter() {
         let manager = ProgressManager(totalCount: 3)
         
         let reporter = manager.reporter
@@ -698,36 +703,39 @@ class TestProgressManagerInterop: XCTestCase {
     }
     
     /// All of these test cases hit the precondition for cycle detection, but currently there's no way to check for hitting precondition in xctest.
-//    func testProgressReporterDirectCycleDetection() {
-//        let manager = ProgressManager(totalCount: 2)
-//        await #expect(processExitsWith: .failure) {
-//            manager.assign(count: 1, to: manager.reporter)
-//        }
-//    }
-//    
-//    func testProgressReporterIndirectCycleDetection() {
-//        let manager = ProgressManager(totalCount: 2)
-//                
-//        let altManager = ProgressManager(totalCount: 1)
-//        altManager.assign(count: 1, to: manager.reporter)
-//        
-//        await #expect(processExitsWith: .failure) {
-//            manager.assign(count: 1, to: altManager.reporter)
-//        }
-//    }
-//    
-//    func testProgressReporterNestedCycleDetection() {
-//        let manager1 = ProgressManager(totalCount: 1)
-//        
-//        let manager2 = ProgressManager(totalCount: 2)
-//        manager1.assign(count: 1, to: manager2.reporter)
-//        
-//        let manager3 = ProgressManager(totalCount: 3)
-//        manager2.assign(count: 1, to: manager3.reporter)
-//        
-//        await #expect(processExitsWith: .failure) {
-//            manager3.assign(count: 1, to: manager1.reporter)
-//
-//        }
-//    }
+    #if FOUNDATION_EXIT_TESTS
+    @Test func testProgressReporterDirectCycleDetection() async {
+        await #expect(processExitsWith: .failure) {
+            let manager = ProgressManager(totalCount: 2)
+            manager.assign(count: 1, to: manager.reporter)
+        }
+    }
+    
+    @Test func testProgressReporterIndirectCycleDetection() async throws {
+        await #expect(processExitsWith: .failure) {
+            let manager = ProgressManager(totalCount: 2)
+                    
+            let altManager = ProgressManager(totalCount: 1)
+            altManager.assign(count: 1, to: manager.reporter)
+            
+            manager.assign(count: 1, to: altManager.reporter)
+        }
+    }
+    
+    @Test func testProgressReporterNestedCycleDetection() async throws {
+        
+        await #expect(processExitsWith: .failure) {
+            let manager1 = ProgressManager(totalCount: 1)
+            
+            let manager2 = ProgressManager(totalCount: 2)
+            manager1.assign(count: 1, to: manager2.reporter)
+            
+            let manager3 = ProgressManager(totalCount: 3)
+            manager2.assign(count: 1, to: manager3.reporter)
+            
+            manager3.assign(count: 1, to: manager1.reporter)
+
+        }
+    }
+    #endif
 }
