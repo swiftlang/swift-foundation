@@ -23,7 +23,7 @@ import Testing
 @Suite("Gregorian Calendar (Internationalization)")
 private struct GregorianCalendarInternationalizationTests {
     @Test func copy() {
-        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: nil, locale: nil, firstWeekday: 5, minimumDaysInFirstWeek: 3, gregorianStartDate: nil)
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 5, minimumDaysInFirstWeek: 3, gregorianStartDate: nil)
         
         let newLocale = Locale(identifier: "new locale")
         let tz = TimeZone(identifier: "America/Los_Angeles")!
@@ -35,7 +35,7 @@ private struct GregorianCalendarInternationalizationTests {
         #expect(copied.firstWeekday == 5)
         #expect(copied.minimumDaysInFirstWeek == 3)
         
-        let copied2 = gregorianCalendar.copy(changingLocale: nil, changingTimeZone: nil, changingFirstWeekday: 1, changingMinimumDaysInFirstWeek: 1)
+        let copied2 = gregorianCalendar.copy(changingLocale: nil, changingTimeZone: .gmt, changingFirstWeekday: 1, changingMinimumDaysInFirstWeek: 1)
         
         // unset values stay the same
         #expect(copied2.locale == gregorianCalendar.locale)
@@ -2464,7 +2464,7 @@ private struct GregorianCalendarInternationalizationTests {
         // expect local time in dc.timeZone (UTC+8)
         #expect(gregorianCalendar.date(from: dc_customTimeZone)! == Date(timeIntervalSinceReferenceDate: 679024975.891)) // 2022-07-09T02:02:55Z
         
-        let dcCalendar_noTimeZone = Calendar(identifier: .japanese, locale: Locale(identifier: ""), timeZone: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+        let dcCalendar_noTimeZone = Calendar(identifier: .japanese, locale: Locale(identifier: ""), timeZone: .gmt, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         var dc_customCalendarNoTimeZone_customTimeZone = dc
         dc_customCalendarNoTimeZone_customTimeZone.calendar = dcCalendar_noTimeZone
         dc_customCalendarNoTimeZone_customTimeZone.timeZone = .init(secondsFromGMT: 28800)
