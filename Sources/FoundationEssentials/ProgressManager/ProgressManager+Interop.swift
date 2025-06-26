@@ -114,9 +114,6 @@ internal final class _ProgressParentProgressManagerChild: Sendable {
             }
             
             switch observerState {
-            case .totalCountUpdated(let totalCount):
-                self.ghostParent.totalUnitCount = Int64(totalCount)
-                
             case .fractionUpdated(let totalCount, let completedCount):
                 self.ghostParent.completedUnitCount = Int64(completedCount)
                 self.ghostParent.totalUnitCount = Int64(totalCount)
@@ -139,9 +136,6 @@ internal final class _ProgressParentProgressReporterChild: Sendable {
             }
             
             switch observerState {
-            case .totalCountUpdated(let totalCount):
-                self.intermediary.totalUnitCount = Int64(totalCount)
-                
             case .fractionUpdated(let totalCount, let completedCount):
                 self.intermediary.completedUnitCount = Int64(completedCount)
                 self.intermediary.totalUnitCount = Int64(totalCount)

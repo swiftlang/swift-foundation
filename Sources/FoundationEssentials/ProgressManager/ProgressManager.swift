@@ -47,7 +47,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     // Interop states to notify observers
     internal enum ObserverState {
         case fractionUpdated(totalCount: Int, completedCount: Int)
-        case totalCountUpdated(totalCount: Int)
     }
     
     // Mirroring observation to be kept alive
