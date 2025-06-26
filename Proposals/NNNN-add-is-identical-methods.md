@@ -3,8 +3,8 @@
 * Proposal: [SF-NNNN](NNNN-add-is-identical-methods.md)
 * Authors: [Rick van Voorden](https://github.com/vanvoorden), [Karoy Lorentey](https://github.com/lorentey)
 * Review Manager: TBD
-* Status: **Awaiting implementation**
-* Implementation: TODO
+* Status: **Awaiting review**
+* Implementation: ([AttributedString, AttributedSubstring](https://github.com/swiftlang/swift-foundation/pull/1385)), ([Data](https://github.com/swiftlang/swift-foundation/pull/1384))
 * Review: ([Pre-Pitch](https://forums.swift.org/t/how-to-check-two-array-instances-for-identity-equality-in-constant-time/78792)), ([Pitch #1](https://forums.swift.org/t/pitch-distinguishable-protocol-for-quick-comparisons/79145))
 
 ## Introduction
