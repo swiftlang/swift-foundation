@@ -811,7 +811,7 @@ To further safeguard developers from making mistakes of over-assigning or under-
 To handle progress values from other sources that provide progress updates as non-integer formats such as `Double`, we can introduce a way for `ProgressManager` to either be instantiated with non-integer formats, or a peer instance of `ProgressManager` that works with `ProgressManager` to compose a progress graph.   
 
 ### Support for Displaying Children of Progress Subtree
- If there are greater demand of a functionality to display the children of a root `ProgressManager` or `ProgressReporter`, we can introduce additive changes to this API.
+ If there are greater demands of a functionality to display the children of a root `ProgressManager` or `ProgressReporter`, we can introduce additive changes to this API.
 
 ## Alternatives considered
 
@@ -977,7 +977,7 @@ We considered using `UInt64` as the type for `totalCount` and `completedCount` t
 We previously considered making `totalCount` a settable property on `ProgressManager`, but this would introduce a race condition that is common among cases in which `Sendable` types have settable properties. This is because two threads can try to mutate `totalCount` at the same time, but the `Mutex` guarding `ProgressManager` will not be held across both operations, thus creating a race condition, resulting in the `totalCount` that can either reflects both the mutations, or one of the mutations indeterministically. Therefore, we changed it so that `totalCount` is a read-only property on `ProgressManager`, and is only mutable within the `withProperties` closure to prevent this race condition. 
 
 ### Representation of Indeterminate state in `ProgressManager` 
-There were discussions about representing indeterminate state in `ProgressManager` alternatively, for example, using enums. However, since `totalCount` is an optional and can be set to `nil` to represent indeterminate state, we think that this is straightforward and sufficient to represent indeterminate state for cases where developers do not know `totalCount` at the start of an operation they want to report progress for. A `ProgressManager` becomes determinate once its `totalCount` set to an `Int`. 
+There were discussions about representing indeterminate state in `ProgressManager` alternatively, for example, using enums. However, since `totalCount` is an optional and can be set to `nil` to represent indeterminate state, we think that this is straightforward and sufficient to represent indeterminate state for cases where developers do not know `totalCount` at the start of an operation they want to report progress for. A `ProgressManager` becomes determinate once its `totalCount` is set to an `Int`. 
 
 ## Acknowledgements 
 Thanks to 
