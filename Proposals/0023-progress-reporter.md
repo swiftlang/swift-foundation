@@ -6,8 +6,8 @@
 * Status: **2nd Review Jun. 3, 2025 ... Jun. 10, 2025**
 * Review:
   * [Pitch](https://forums.swift.org/t/pitch-progress-reporting-in-swift-concurrency/78112/10)
-  * [Second Pitch](https://forums.swift.org/t/pitch-2-progressmanager-progress-reporting-in-swift-concurrency/80024)
   * [First Review](https://forums.swift.org/t/review-sf-0023-progress-reporting-in-swift-concurrency/79474)
+  * [Second Pitch](https://forums.swift.org/t/pitch-2-progressmanager-progress-reporting-in-swift-concurrency/80024)
   * [Second Review](https://forums.swift.org/t/review-2nd-sf-0023-progressreporter-progress-reporting-in-swift-concurrency/80284)
 
 
