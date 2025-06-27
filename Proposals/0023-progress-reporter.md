@@ -928,14 +928,14 @@ We considered making `ProgressManager` not `Observable`, and make `ProgressRepor
 We considered introducing only two types in this API, `ProgressManager` and `Subprogress`, which would enable developers to create a tree of `ProgressManager` to report progress. However, this has two limitations: 
     - It assumes a single-parent, tree-based structure. 
     - Developers would have to expose a mutable `ProgressManager` to its observers if they decide to have `ProgressManager` as a property on a class. For example:  
-    ```swift 
-    class DownloadManager {
-        var progress: ProgressManager { get } // to be observed by developers using DownloadManager class 
-    }
-    
-    let observedProgress = DownloadManager().progress 
-    observedProgress.complete(count: 12) // ⚠️: ALLOWED, because `ProgressManager` is mutable!! 
-    ```
+```swift 
+class DownloadManager {
+    var progress: ProgressManager { get } // to be observed by developers using DownloadManager class 
+}
+
+let observedProgress = DownloadManager().progress 
+observedProgress.complete(count: 12) // ⚠️: ALLOWED, because `ProgressManager` is mutable!! 
+```
 To overcome the two limitations, we decided to introduce an additional type, `ProgressReporter`, which is a read-only representation of a `ProgressManager`, which would contain the calculations of progress within `ProgressManager`. The `ProgressReporter` can also be used to safely add the `ProgressManager` it wraps around as a child to more than one `ProgressManager` to support multi-parent use cases. This is written in code as follows: 
 
 ```swift
