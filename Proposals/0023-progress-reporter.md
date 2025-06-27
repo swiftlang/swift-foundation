@@ -3,7 +3,7 @@
 * Proposal: SF-0023
 * Author(s): [Chloe Yeo](https://github.com/chloe-yeo)
 * Review Manager: [Charles Hu](https://github.com/iCharlesHu)
-* Status: **2nd Review Jun. 3, 2025 ... Jun. 10, 2025**
+* Status: **Accepted**
 * Review:
   * [Pitch](https://forums.swift.org/t/pitch-progress-reporting-in-swift-concurrency/78112/10)
   * [First Review](https://forums.swift.org/t/review-sf-0023-progress-reporting-in-swift-concurrency/79474)
@@ -886,6 +886,8 @@ func f() async {
 }
 ```
 
+Additionally, progress reporting being directly integrated into the structured concurrency model would also introduce a non-trivial trade-off. Supporting multi-parent use cases, or the ability to construct an acyclic graph for progress is a heavily-desired feature for this API, but structured concurrency, which assumes a tree structure, would inevitably break this use case. 
+
 ### Add Convenience Method to Existing `Progress` for Easier Instantiation of Child Progress
 While the explicit model has concurrency support via completion handlers, the usage pattern does not fit well with async/await, because which an instance of `Progress` returned by an asynchronous function would return after code is executed to completion. In the explicit model, to add a child to a parent progress, we pass an instantiated child progress object into the `addChild(child:withPendingUnitCount:)` method. In this alternative, we add a convenience method that bears the function signature `makeChild(pendingUnitCount:)` to the `Progress` class. This method instantiates an empty progress and adds itself as a child, allowing developers to add a child progress to a parent progress without having to instantiate a child progress themselves. The additional method reads as follows: 
 
@@ -920,8 +922,45 @@ We decided to replace the generic class implementation with `@dynamicMemberLooku
 ### Implement this Progress Reporting API as an actor
 We considered implementing `ProgressManager` as we want to maintain this API as a reference type that is safe to use in concurrent environments. However, if `ProgressManager` were to be implemented, `ProgressManager` will not be able to conform to `Observable` because actor-based keypaths do not exist as of now. Ensuring that `ProgressManager` is `Observable` is important to us, as we want to ensure that `ProgressManager` works well with UI components in UI frameworks. 
 
-### Make `ProgressManager` not @Observable
-We considered making `ProgressManager` not @Observable, and make `ProgressReporter` the @Observable adapter instead. This would limit developers to have to do `manager.reporter` before binding it with a UI component. While this simplifies the case for integrating with UI components, it introduces more boilerplate to developers who may only have a `ProgressManager` to begin with. 
+### Make `ProgressManager` not `Observable`
+We considered making `ProgressManager` not `Observable`, and make `ProgressReporter` the `Observable` adapter instead. This would limit developers to have to do `manager.reporter` before binding it with a UI component. While this simplifies the case for integrating with UI components, it introduces more boilerplate to developers who may only have a `ProgressManager` to begin with. 
+
+### Support for Multi-parent Use Cases 
+We considered introducing only two types in this API, `ProgressManager` and `Subprogress`, which would enable developers to create a tree of `ProgressManager` to report progress. However, this has two limitations: 
+    - It assumes a single-parent, tree-based structure. 
+    - Developers would have to expose a mutable `ProgressManager` to its observers if they decide to have `ProgressManager` as a property on a class. For example:  
+    ```swift 
+    class DownloadManager {
+        var progress: ProgressManager { get } // to be observed by developers using DownloadManager class 
+    }
+    
+    let observedProgress = DownloadManager().progress 
+    observedProgress.complete(count: 12) // ⚠️: ALLOWED, because `ProgressManager` is mutable!! 
+    ```
+To overcome the two limitations, we decided to introduce an additional type, `ProgressReporter`, which is a read-only representation of a `ProgressManager`, which would contain the calculations of progress within `ProgressManager`. The `ProgressReporter` can also be used to safely add the `ProgressManager` it wraps around as a child to more than one `ProgressManager` to support multi-parent use cases. This is written in code as follows: 
+
+```swift
+class DownloadManager {
+    var progressReporter: ProgressReporter { 
+        get {
+            progressManager.reporter 
+        }
+    } // wrapper for `ProgressManager` in `DownloadManager` class 
+    
+    private let progressManager: ProgressManager // used to compose progress in DownloadManager class
+}
+```
+
+Authors of DownloadManager can expose `ProgressReporter` to developers without allowing developers to mutate `ProgressManager`. Developers can also freely use `ProgressReporter` to construct a multi-parent acyclic graph of progress, as follows: 
+```swift 
+let myProgress = ProgressManager(totalCount: 2)
+
+let downloadManager = DownloadManager() 
+myProgress.assign(count: 1, to: downloadManager.progress) // add downloadManager.progress as a child 
+
+let observedProgress = downloadManager.progress 
+observedProgress.complete(count: 12) // ✅: NOT ALLOWED, `ProgressReporter` is read-only!! 
+```
 
 ### Not exposing read-only variables in `ProgressReporter` 
 We initially considered not exposing get-only variables in `ProgressReporter`, which would work in cases where developers are composing `ProgressReporter` into multiple different `ProgressManager` parents. However, this would not work very well for cases where developers only want to observe values on the `ProgressReporter`, such as `fractionCompleted` because they would have to call `reporter.manager` just to get the properties. Thus we decided to introduce read-only properties on `ProgressReporter` as well.  
@@ -934,6 +973,12 @@ We considered adding a `Task.isCancelled` check in the `complete(count:)` method
 
 ### Introduce `totalCount` and `completedCount` properties as `UInt64`
 We considered using `UInt64` as the type for `totalCount` and `completedCount` to support the case where developers use `totalCount` and `completedCount` to track downloads of larger files on 32-bit platforms byte-by-byte. However, developers are not encouraged to update progress byte-by-byte, and should instead set the counts to the granularity at which they want progress to be visibly updated. For instance, instead of updating the download progress of a 10,000 bytes file in a byte-by-byte fashion, developers can instead update the count by 1 for every 1,000 bytes that has been downloaded. In this case, developers set the `totalCount` to 10 instead of 10,000. To account for cases in which developers may want to report the current number of bytes downloaded, we added `totalByteCount` and `completedByteCount` to `ProgressManager.Properties`, which developers can set and display using format style.
+
+### Make `totalCount` a settable property on `ProgressManager` 
+We previously considered making `totalCount` a settable property on `ProgressManager`, but this would introduce a race condition that is common among cases in which `Sendable` types have settable properties. This is because two threads can try to mutate `totalCount` at the same time, but the `Mutex` guarding `ProgressManager` will not be held across both operations, thus creating a race condition, resulting in the `totalCount` that can either reflects both the mutations, or one of the mutations indeterministically. Therefore, we changed it so that `totalCount` is a read-only property on `ProgressManager`, and is only mutable within the `withProperties` closure to prevent this race condition. 
+
+### Representation of Indeterminate state in `ProgressManager` 
+There were discussions about representing indeterminate state in `ProgressManager` alternatively, for example, using enums. However, since `totalCount` is an optional and can be set to `nil` to represent indeterminate state, we think that this is straightforward and sufficient to represent indeterminate state for cases where developers do not know `totalCount` at the start of an operation they want to report progress for. A `ProgressManager` becomes determinate once its `totalCount` set to an `Int`. 
 
 ## Acknowledgements 
 Thanks to 
