@@ -6,7 +6,9 @@
 * Status: **2nd Review Jun. 3, 2025 ... Jun. 10, 2025**
 * Review:
   * [Pitch](https://forums.swift.org/t/pitch-progress-reporting-in-swift-concurrency/78112/10)
+  * [Second Pitch](https://forums.swift.org/t/pitch-2-progressmanager-progress-reporting-in-swift-concurrency/80024)
   * [First Review](https://forums.swift.org/t/review-sf-0023-progress-reporting-in-swift-concurrency/79474)
+  * [Second Review](https://forums.swift.org/t/review-2nd-sf-0023-progressreporter-progress-reporting-in-swift-concurrency/80284)
 
 
 ## Revision history
@@ -27,14 +29,16 @@
     - Introduced `ProgressReporter` type and `assign(count:to:)` for alternative use cases, including multi-parent support
     - Specified Behavior of `ProgressManager` for `Task` cancellation
     - Redesigned implementation of custom properties to support both holding values of custom property of `self` and of descendants, and multi-parent support
+    - Introduced `values(of:)` and `total(of:)` methods to dislay and aggregate values of custom properties in a subtree
     - Restructured examples in Proposed Solution to show the use of `Subprogress` and `ProgressReporter` in different cases and enforce use of `subprogress` as parameter label for methods reporting progress and use of `progressReporter` as property name when returning `ProgressReporter` from a library
     - Expanded Future Directions
     - Expanded Alternatives Considered
     - Moving `FormatStyle` to separate future proposal
 * **v5** Minor Updates: 
-    - Renamed `manager(totalCount:)` to `start(totalCount)`
+    - Renamed `manager(totalCount:)` method to `start(totalCount)`
     - Changed the return type of `values(of:)` to be an array of non-optional values
-    - Clarify cycle-detection behavior in `assign(count:to:)` at runtime
+    - Clarified cycle-detection behavior in `assign(count:to:)` at runtime
+    - Added `CustomStringConvertible` and `CustomDebugStringConvertible` conformance to `ProgressManager` and `ProgressReporter`
     - Expanded Future Directions
     - Expanded Alternatives Considered
     
@@ -59,7 +63,7 @@ This proposal aims to introduce a new Progress Reporting API —— `ProgressMan
 
 1. **Swift Concurrency Integration**: This API enables smooth, incremental progress reporting within async/await code patterns.
 
-2. **Self-Documenting Design**: The types introduced in this API clearly separate the composition from observation of progress and allow developers to make it obvious which methods report progress to clients. 
+2. **Self-Documenting Design**: The types introduced in this API clearly separate the composition of progress from observation of progress and allow developers to make it obvious which methods report progress to clients. 
 
 3. **Error-Resistant Architecture**: One common mistake/footgun when it comes to progress reporting is reusing the [same progress reporting instance](#advantages-of-using-subprogress-as-currency-type). This tends to lead to mistakenly overwriting its expected unit of work after previous caller has set it, or "over completing" / "double finishing" the report after it's been completed. This API prevents this by introducing strong types with different roles. Additionally, it handles progress delegation, accumulation, and nested reporting automatically, eliminating race conditions and progress calculation errors.
 
@@ -345,7 +349,6 @@ overall.assign(count: 3, to: examCountdown.progressReporter)
 // Add `ProgressReporter` to another parent `ProgressManager` with different assigned count
 let deadlineTracker = ProgressManager(totalCount: 2) 
 overall.assign(count: 1, to: examCountdown, progressReporter)
-
 ``` 
 
 ### Reporting Progress With Type-Safe Custom Properties 
@@ -447,12 +450,12 @@ overall.addChild(subprogressThree, withPendingUnitCount: 1)
 
 ### `ProgressManager`
 
-`ProgressManager` is an Observable and Sendable class that developers use to report progress. Specifically, an instance of `ProgressManager` can be used to either track progress of a single task, or track progress of a graph of `ProgressManager` instances.
+`ProgressManager` is an `Observable` and `Sendable` class that developers use to report progress. Specifically, an instance of `ProgressManager` can be used to either track progress of a single task, or track progress of a graph of `ProgressManager` instances.
 
 ```swift
 /// An object that conveys ongoing progress to the user for a specified task.
 @available(FoundationPreview 6.2, *)
-@Observable public final class ProgressManager : Sendable, Hashable, Equatable, CustomDebugStringConvertible {
+@Observable public final class ProgressManager : Sendable, Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     
     /// The total units of work.
     public var totalCount: Int? { get }
@@ -476,6 +479,9 @@ overall.addChild(subprogressThree, withPendingUnitCount: 1)
 
     /// A `ProgressReporter` instance, used for providing read-only observation of progress updates or composing into other `ProgressManager`s.
     public var reporter: ProgressReporter { get }
+    
+    /// A description. 
+    public var description: String { get }
     
     /// A debug description. 
     public var debugDescription: String { get }
@@ -580,7 +586,7 @@ public struct Subprogress: ~Copyable, Sendable {
 /// ProgressReporter is used to observe progress updates from a `ProgressManager`. It may also be used to incorporate those updates into another `ProgressManager`.
 /// 
 /// It is read-only and can be added as a child of another ProgressManager. 
-@Observable public final class ProgressReporter : Sendable {
+@Observable public final class ProgressReporter : Sendable, CustomStringConvertible, CustomDebugStringConvertible {
 
     /// The total units of work.
     public var totalCount: Int? { get }
@@ -601,6 +607,12 @@ public struct Subprogress: ~Copyable, Sendable {
     /// The state of completion of work.
     /// If `completedCount` >= `totalCount`, the value will be `true`.
     public var isFinished: Bool { get }
+    
+    /// A description. 
+    public var description: String { get }
+    
+    /// A debug description. 
+    public var debugDescription: String { get }
 
     /// Reads properties that convey additional information about progress.
     public func withProperties<T, E: Error>(
@@ -799,8 +811,8 @@ To further safeguard developers from making mistakes of over-assigning or under-
 ### Support for Non-Integer Formats of Progress Updates
 To handle progress values from other sources that provide progress updates as non-integer formats such as `Double`, we can introduce a way for `ProgressManager` to either be instantiated with non-integer formats, or a peer instance of `ProgressManager` that works with `ProgressManager` to compose a progress graph.   
 
-### Support for Decomposition of Progress / Display of Hierarchy of Progress Subtree 
-If there happens to be greater demand of a functionality to either decompose a `ProgressManager` or `ProgressReporter` into its constituents, or to display the hierarchy of the subtree with a `ProgressManager` or `ProgressReporter` at its root, we can introduce additive changes to this API. 
+### Support for Displaying Children of Progress Subtree
+ If there are greater demand of a functionality to display the children of a root `ProgressManager` or `ProgressReporter`, we can introduce additive changes to this API.
 
 ## Alternatives considered
 
@@ -912,10 +924,7 @@ We considered implementing `ProgressManager` as we want to maintain this API as 
 We considered making `ProgressManager` not @Observable, and make `ProgressReporter` the @Observable adapter instead. This would limit developers to have to do `manager.reporter` before binding it with a UI component. While this simplifies the case for integrating with UI components, it introduces more boilerplate to developers who may only have a `ProgressManager` to begin with. 
 
 ### Not exposing read-only variables in `ProgressReporter` 
-We initially considered not exposing get-only variables in `ProgressReporter`, which would work in cases where developers are composing `ProgressReporter` into multiple different `ProgressManager` parents. However, this would not work very well for cases where developers only want to observe values on the `ProgressReporter`, such as `fractionCompleted` because they would have to call `reporter.manager` just to get the properties. Thus we decided to introduce read-only properties on `ProgressReporter` as well. 
-
-### Introduce Method to Generate Localized Description
-We considered introducing a `localizedDescription(including:)` method, which returns a `LocalizedStringResource` for observers to get custom format descriptions for `ProgressManager`. In contrast, using a `FormatStyle` aligns more closely with Swift's API, and has more flexibility for developers to add custom `FormatStyle` to display localized descriptions for additional properties they may want to declare and use. 
+We initially considered not exposing get-only variables in `ProgressReporter`, which would work in cases where developers are composing `ProgressReporter` into multiple different `ProgressManager` parents. However, this would not work very well for cases where developers only want to observe values on the `ProgressReporter`, such as `fractionCompleted` because they would have to call `reporter.manager` just to get the properties. Thus we decided to introduce read-only properties on `ProgressReporter` as well.  
 
 ### Introduce Explicit Support for Cancellation, Pausing, and Resuming of this Progress Reporting API 
 The existing `Progress` provides support for cancelling, pausing and resuming an ongoing operation tracked by an instance of `Progress`, and propagates these actions down to all of its children. We decided to not introduce support for this behavior as there is support in cancelling a `Task` via `Task.cancel()` in Swift structured concurrency. The absence of support for cancellation, pausing and resuming in `ProgressManager` helps to clarify the scope of responsibility of this API, which is to report progress, instead of owning a task and performing actions on it.
