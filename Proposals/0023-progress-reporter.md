@@ -625,11 +625,9 @@ public struct Subprogress: ~Copyable, Sendable {
     public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value]
 
     /// Returns the aggregated result of values where type of property is `AdditiveArithmetic`.
-    /// All values are added together. 
     /// 
     /// - Parameters:
     ///   - property: Type of property.
-    ///   - values: Sum of values.
     public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value : AdditiveArithmetic
 }
 ```
