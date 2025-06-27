@@ -618,16 +618,22 @@ public struct Subprogress: ~Copyable, Sendable {
         _ closure: (sending ProgressManager.Values) throws(E) -> sending T
     ) throws(E) -> T
     
-    /// Returns an array of values for specified property in subtree.
+    /// Returns an array of values for specified additional property in subtree.
+    /// The specified property refers to a declared type representing additional progress-related properties 
+    /// that conform to the `ProgressManager.Property` protocol. 
     /// 
     /// - Parameter property: Type of property.
     /// - Returns: Array of values for property.
     public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value]
 
-    /// Returns the aggregated result of values where type of property is `AdditiveArithmetic`.
-    /// 
-    /// - Parameters:
-    ///   - property: Type of property.
+    /// Returns the aggregated result of values for specified `AdditiveArithmetic` property in subtree.
+    /// The specified property refers to a declared type representing additional progress-related properties 
+    /// that conform to the `ProgressManager.Property` protocol. 
+    /// The specified property also has to be an `AdditiveArithmetic`. For non-`AdditiveArithmetic` types, you should 
+    /// write your own method to aggregate values. 
+    ///
+    /// - Parameters property: Type of property.
+    /// - Returns: Aggregated result of values for property. 
     public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value : AdditiveArithmetic
 }
 ```
@@ -639,6 +645,8 @@ public struct Subprogress: ~Copyable, Sendable {
 We pre-declare some of these additional properties that are commonly desired in use cases of progress reporting, including and not limited to, `totalFileCount` and `totalByteCount`. 
 
 If you would like to report additional metadata or properties that are not part of the pre-declared additional properties, you can declare additional properties into `ProgressManager.Properties`, similar to how the pre-declared additional properties are declared.
+
+Additionally, the additional metadata or properties of each `ProgressManager` can be read by calling the `values(of:)` method defined in `ProgressManager`. The `values(of:)` method returns an array of values for each specified property in a subtree. If you would like to get an aggregated value of a property that is an `AdditiveArithmetic` type, you can call the `total(of:)` method defined in `ProgressManager`.  
 
 ```swift
 @available(FoundationPreview 6.2, *)
