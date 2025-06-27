@@ -77,7 +77,7 @@ let wasiLibcCSettings: [CSetting] = [
 
 let testOnlySwiftSettings: [SwiftSetting] = [
     // The latest Windows toolchain does not yet have exit tests in swift-testing
-    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd]))
+    .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd, .windows]))
 ]
 
 let package = Package(
