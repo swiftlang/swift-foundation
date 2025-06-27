@@ -1983,6 +1983,34 @@ E {
             }
         }
     }
+    
+    @Test func runSliceSubscripting() {
+        var str = AttributedString("Foo", attributes: .init().testInt(1))
+        str += AttributedString("Bar", attributes: .init().testInt(2))
+        str += AttributedString("Baz", attributes: .init().testInt(3))
+        
+        do {
+            let runsSlice = str.runs[\.testInt]
+            for (value, range) in runsSlice {
+                for idx in str.utf8[range].indices {
+                    let subscriptResult = runsSlice[idx]
+                    #expect(subscriptResult.0 == value, "Subscript index \(idx) did not produce same value as runs slice")
+                    #expect(subscriptResult.1 == range, "Subscript index \(idx) did not produce same range as runs slice")
+                }
+            }
+        }
+        
+        do {
+            let runsSlice = str[str.index(afterCharacter: str.startIndex) ..< str.index(beforeCharacter: str.endIndex)].runs[\.testInt]
+            for (value, range) in runsSlice {
+                for idx in str.utf8[range].indices {
+                    let subscriptResult = runsSlice[idx]
+                    #expect(subscriptResult.0 == value, "Subscript index \(idx) did not produce same value as runs slice")
+                    #expect(subscriptResult.1 == range, "Subscript index \(idx) did not produce same range as runs slice")
+                }
+            }
+        }
+    }
 
     // MARK: - Other Tests
     

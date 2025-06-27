@@ -594,9 +594,6 @@ extension AttributedString.Runs {
         // _strBounds.range(containing:) below validates that i._value is within the bounds of this slice
         precondition(!attributeNames.isEmpty)
         let r = _guts.findRun(at: i._value)
-        if r.runIndex.offset == endIndex._runOffset {
-            return (i, r.runIndex)
-        }
         let currentRange = _strBounds.range(containing: i._value).range
         
         guard constraints.count != 1 || constraints.contains(nil) else {
