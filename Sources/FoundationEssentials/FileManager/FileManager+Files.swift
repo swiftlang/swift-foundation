@@ -967,6 +967,12 @@ extension _FileManagerImpl {
                 #endif
             }
             
+            #if canImport(Glibc)
+            // support for 64-bit timestamps on 32-bit platforms; unfortunately
+            // suseconds_t is not an alias of the appropriate type, but time_t is
+            typealias suseconds_t = time_t
+            #endif
+
             if let date = attributes[.modificationDate] as? Date {
                 let (isecs, fsecs) = modf(date.timeIntervalSince1970)
                 if let tv_sec = time_t(exactly: isecs),
