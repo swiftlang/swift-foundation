@@ -10,15 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationInternationalization)
+@testable import FoundationEssentials
 @testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
@@ -27,60 +24,61 @@ let day = 86400
 let hour = 3600
 let minute = 60
 
-final class DurationUnitsFormatStyleTests : XCTestCase {
+@Suite("Duration.UnitsFormatStyle")
+private struct DurationUnitsFormatStyleTests {
     let enUS = Locale(identifier: "en_US")
 
-    func testDurationUnitsFormatStyleAPI() {
+    @Test func durationUnitsFormatStyleAPI() {
         let d1 = Duration.seconds(2 * 3600 + 43 * 60 + 24) // 2hr 43min 24s
         let d2 = Duration.seconds(43 * 60 + 24) // 43min 24s
         let d3 = Duration(seconds: 24, milliseconds: 490)
         let d4 = Duration.seconds(43 * 60 + 5) // 43min 5s
         let d0 = Duration.seconds(0)
 
-        XCTAssertEqual(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)), "2 hours, 43 minutes, 24 seconds")
-        XCTAssertEqual(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)), "43 minutes, 24 seconds")
-        XCTAssertEqual(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)), "24 seconds")
-        XCTAssertEqual(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)), "0 seconds")
+        #expect(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)) == "2 hours, 43 minutes, 24 seconds")
+        #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)) == "43 minutes, 24 seconds")
+        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)) == "24 seconds")
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS)) == "0 seconds")
 
-        XCTAssertEqual(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)), "2 hours, 43 minutes, 24 seconds")
-        XCTAssertEqual(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)), "0 hours, 43 minutes, 24 seconds")
-        XCTAssertEqual(d3.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)), "0 hours, 0 minutes, 24 seconds")
-        XCTAssertEqual(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)), "0 hours, 0 minutes, 0 seconds")
+        #expect(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "2 hours, 43 minutes, 24 seconds")
+        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "0 hours, 43 minutes, 24 seconds")
+        #expect(d3.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "0 hours, 0 minutes, 24 seconds")
+        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS)) == "0 hours, 0 minutes, 0 seconds")
 
-        XCTAssertEqual(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)), "3 hr")
-        XCTAssertEqual(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)), "43 min")
-        XCTAssertEqual(d3.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)), "24 sec")
-        XCTAssertEqual(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)), "0 sec")
+        #expect(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "3 hr")
+        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "43 min")
+        #expect(d3.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "24 sec")
+        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1).locale(enUS)) == "0 sec")
 
-        XCTAssertEqual(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)), "2.72 hr")
-        XCTAssertEqual(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)), "43.40 min")
-        XCTAssertEqual(d3.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)), "24.49 sec")
-        XCTAssertEqual(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)), "0.00 sec")
+        #expect(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "2.72 hr")
+        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "43.40 min")
+        #expect(d3.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "24.49 sec")
+        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS)) == "0.00 sec")
 
-        XCTAssertEqual(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)), "00 hours, 43 minutes, 24 seconds")
-        XCTAssertEqual(d4.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)), "00 hours, 43 minutes, 05 seconds")
-        XCTAssertEqual(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)), "00 hours, 00 minutes, 00 seconds")
+        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)) == "00 hours, 43 minutes, 24 seconds")
+        #expect(d4.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)) == "00 hours, 43 minutes, 05 seconds")
+        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS)) == "00 hours, 00 minutes, 00 seconds")
 
-        XCTAssertEqual(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)), "02 hours, 43 minutes, 24 seconds")
-        XCTAssertEqual(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)), "43 minutes, 24 seconds")
-        XCTAssertEqual(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)), "24 seconds")
-        XCTAssertEqual(d4.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)), "43 minutes, 05 seconds")
-        XCTAssertEqual(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)), "00 seconds")
+        #expect(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)) == "02 hours, 43 minutes, 24 seconds")
+        #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)) == "43 minutes, 24 seconds")
+        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)) == "24 seconds")
+        #expect(d4.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)) == "43 minutes, 05 seconds")
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2).locale(enUS)) == "00 seconds")
 
-        XCTAssertEqual(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)), "02 hours, 43 minutes, 24.00 seconds")
-        XCTAssertEqual(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)), "43 minutes, 24.00 seconds")
-        XCTAssertEqual(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)), "24.49 seconds")
-        XCTAssertEqual(d4.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)), "43 minutes, 05.00 seconds")
-        XCTAssertEqual(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)), "00.00 seconds")
-        XCTAssertEqual(Duration(minutes: 43, seconds: 24, milliseconds: 490).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)), "43 minutes, 24.49 seconds")
+        #expect(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)) == "02 hours, 43 minutes, 24.00 seconds")
+        #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)) == "43 minutes, 24.00 seconds")
+        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)) == "24.49 seconds")
+        #expect(d4.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)) == "43 minutes, 05.00 seconds")
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)) == "00.00 seconds")
+        #expect(Duration(minutes: 43, seconds: 24, milliseconds: 490).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)) == "43 minutes, 24.49 seconds")
     }
 
-    func verify(seconds: Int, milliseconds: Int, allowedUnits: Set<Duration._UnitsFormatStyle.Unit>, fractionalSecondsLength: Int = 0, rounding: FloatingPointRoundingRule = .toNearestOrEven, increment: Double? = nil, expected: String, file: StaticString = #filePath, line: UInt = #line) {
+    func verify(seconds: Int, milliseconds: Int, allowedUnits: Set<Duration._UnitsFormatStyle.Unit>, fractionalSecondsLength: Int = 0, rounding: FloatingPointRoundingRule = .toNearestOrEven, increment: Double? = nil, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
         let d = Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds))
-        XCTAssertEqual(d.formatted(.units(allowed: allowedUnits, zeroValueUnits: .show(length: 1), fractionalPart: .show(length: fractionalSecondsLength, rounded: rounding, increment: increment)).locale(enUS)), expected, file: file, line: line)
+        #expect(d.formatted(.units(allowed: allowedUnits, zeroValueUnits: .show(length: 1), fractionalPart: .show(length: fractionalSecondsLength, rounded: rounding, increment: increment)).locale(enUS)) == expected, sourceLocation: sourceLocation)
     }
 
-    func testNoFractionParts() {
+    @Test func noFractionParts() {
 
         // [.minutes, .seconds]
 
@@ -165,7 +163,7 @@ final class DurationUnitsFormatStyleTests : XCTestCase {
         verify(seconds: 5399, milliseconds: 500, allowedUnits: [.hours, .minutes], expected: "1 hr, 30 min")
     }
 
-    func testShowFractionParts() {
+    @Test func showFractionParts() {
         // [.minutes, .seconds]
 
         verify(seconds: 0, milliseconds: 499,  allowedUnits: [.minutes, .seconds], fractionalSecondsLength: 2, expected: "0 min, 0.50 sec")
@@ -286,18 +284,18 @@ final class DurationUnitsFormatStyleTests : XCTestCase {
         verify(seconds: w3_d6_h23_m59_s30, milliseconds: 0, allowedUnits: [ .weeks, .days, .hours ], fractionalSecondsLength: 2, rounding: .down, increment: 0.5, expected: "3 wks, 6 days, 23.50 hr")
     }
 
-    func testDurationUnitsFormatStyleAPI_largerThanDay() {
+    @Test func durationUnitsFormatStyleAPI_largerThanDay() {
 
         var duration: Duration!
         let allowedUnits: Set<Duration._UnitsFormatStyle.Unit> = [.weeks, .days, .hours]
         func assertZeroValueUnit(_ zeroFormat: Duration._UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
-                                  file: StaticString = #filePath, line: UInt = #line) {
-            XCTAssertEqual(duration.formatted(.units(allowed: allowedUnits, width: .wide, zeroValueUnits: zeroFormat).locale(enUS)), expected, file: file, line: line)
+                                  sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(duration.formatted(.units(allowed: allowedUnits, width: .wide, zeroValueUnits: zeroFormat).locale(enUS)) == expected, sourceLocation: sourceLocation)
         }
 
         func assertMaxUnitCount(_ maxUnitCount: Int, fractionalPart: Duration._UnitsFormatStyle.FractionalPartDisplayStrategy, _ expected: String,
-                                  file: StaticString = #filePath, line: UInt = #line) {
-            XCTAssertEqual(duration.formatted(.units(allowed: allowedUnits, width: .wide, maximumUnitCount: maxUnitCount, fractionalPart: fractionalPart).locale(enUS)), expected, file: file, line: line)
+                                  sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(duration.formatted(.units(allowed: allowedUnits, width: .wide, maximumUnitCount: maxUnitCount, fractionalPart: fractionalPart).locale(enUS)) == expected, sourceLocation: sourceLocation)
         }
 
 
@@ -331,12 +329,11 @@ final class DurationUnitsFormatStyleTests : XCTestCase {
         assertMaxUnitCount(1, fractionalPart: .show(length: 2), "13.33 hours")
     }
 
-    func testZeroValueUnits() {
+    @Test func zeroValueUnits() {
         var duration: Duration
         var allowedUnits: Set<Duration._UnitsFormatStyle.Unit>
-        func test(_ zeroFormat: Duration._UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
-                                  file: StaticString = #filePath, line: UInt = #line) {
-            XCTAssertEqual(duration.formatted(.units(allowed: allowedUnits, width: .wide, zeroValueUnits: zeroFormat).locale(enUS)), expected, file: file, line: line)
+        func test(_ zeroFormat: Duration._UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(duration.formatted(.units(allowed: allowedUnits, width: .wide, zeroValueUnits: zeroFormat).locale(enUS)) == expected, sourceLocation: sourceLocation)
         }
 
         do {
@@ -435,21 +432,21 @@ final class DurationUnitsFormatStyleTests : XCTestCase {
     func assertEqual(_ duration: Duration,
                      allowedUnits: Set<Duration._UnitsFormatStyle.Unit>, maximumUnitCount: Int? = nil, roundSmallerParts: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalPartLength: Int = Int.max, roundingIncrement: Double? = nil, dropZeroUnits: Bool = false,
                      expected: (units: [Duration._UnitsFormatStyle.Unit], values: [Double]),
-                     file: StaticString = #filePath, line: UInt = #line) {
+                     sourceLocation: SourceLocation = #_sourceLocation) {
 
         let (units, values) = Duration._UnitsFormatStyle.unitsToUse(duration: duration, allowedUnits: allowedUnits, maximumUnitCount: maximumUnitCount, roundSmallerParts: roundSmallerParts, trailingFractionalPartLength: trailingFractionalPartLength, roundingIncrement: roundingIncrement, dropZeroUnits: dropZeroUnits)
         guard values.count == expected.values.count else {
-            XCTFail("\(values) is not equal to \(expected.values)", file: file, line: line)
+            Issue.record("\(values) is not equal to \(expected.values)", sourceLocation: sourceLocation)
             return
         }
 
-        XCTAssertEqual(units, expected.units, file: file, line: line)
+        #expect(units == expected.units, sourceLocation: sourceLocation)
         for (idx, value) in values.enumerated() {
-            XCTAssertEqual(value, expected.values[idx], accuracy: 0.001, file: file, line: line)
+            #expect(abs(value - expected.values[idx]) <= 0.001, sourceLocation: sourceLocation)
         }
     }
 
-    func testMaximumUnitCounts() {
+    @Test func maximumUnitCounts() {
         let duration = Duration.seconds(2 * 3600 + 43 * 60 + 24) // 2hr 43min 24s
         assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds] , maximumUnitCount: nil, expected: ([.hours, .minutes, .seconds], [2, 43, 24]))
         assertEqual(duration, allowedUnits: [.hours, .minutes], maximumUnitCount: nil, expected: ([.hours, .minutes], [2, 43.4]))
@@ -459,7 +456,7 @@ final class DurationUnitsFormatStyleTests : XCTestCase {
         assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds], maximumUnitCount: 2, expected: ([.hours, .minutes], [2, 43.4]))
     }
 
-    func testRounding() {
+    @Test func rounding() {
         let duration = Duration.seconds(2 * 3600 + 43 * 60 + 24) // 2hr 43min 24s
         assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds] , roundSmallerParts: .down, expected: ([.hours, .minutes, .seconds], [2, 43, 24]))
 
@@ -474,7 +471,7 @@ final class DurationUnitsFormatStyleTests : XCTestCase {
         assertEqual(duration, allowedUnits: [.hours] , roundSmallerParts: .down, trailingFractionalPartLength: 0, expected: ([.hours], [2]))
     }
 
-    func testZeroUnitsDisplay() {
+    @Test func zeroUnitsDisplay() {
         let duration = Duration.seconds(2 * 3600 + 24) // 2hr 0min 24s
         assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds] , dropZeroUnits: false, expected: ([.hours, .minutes, .seconds], [2, 0, 24]))
         assertEqual(duration, allowedUnits: [.hours, .minutes, .seconds] , dropZeroUnits: true, expected: ([.hours, .seconds], [2, 24]))
@@ -490,15 +487,15 @@ final class DurationUnitsFormatStyleTests : XCTestCase {
         assertEqual(duration0, allowedUnits: [.hours, .minutes] , dropZeroUnits: true, expected: ([], []))
     }
 
-    func testLengthRangeExpression() {
+    @Test func lengthRangeExpression() {
 
         var duration: Duration
         var allowedUnits: Set<Duration._UnitsFormatStyle.Unit>
 
-        func verify<R: RangeExpression, R2: RangeExpression>(intLimits: R, fracLimits: R2, _ expected: String, file: StaticString = #filePath, line: UInt = #line) where R.Bound == Int, R2.Bound == Int {
+        func verify<R: RangeExpression, R2: RangeExpression>(intLimits: R, fracLimits: R2, _ expected: String, sourceLocation: SourceLocation = #_sourceLocation) where R.Bound == Int, R2.Bound == Int {
             let style = Duration._UnitsFormatStyle(allowedUnits: allowedUnits, width: .abbreviated, valueLengthLimits: intLimits, fractionalPart: .init(lengthLimits: fracLimits)).locale(enUS)
             let formatted = style.format(duration)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
         }
         let oneThousandWithMaxPadding = "000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,001,000"
 
@@ -874,7 +871,7 @@ final class DurationUnitsFormatStyleTests : XCTestCase {
     }
 
 
-    func testNegativeValues() {
+    @Test func negativeValues() {
         verify(seconds: 0, milliseconds: -499, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 0 sec")
         verify(seconds: 0, milliseconds: -500, allowedUnits: [.hours, .minutes, .seconds], expected: "0 hr, 0 min, 0 sec")
         verify(seconds: 0, milliseconds: -501, allowedUnits: [.hours, .minutes, .seconds], expected: "-0 hr, 0 min, 1 sec")
@@ -921,12 +918,13 @@ extension Sequence where Element == DurationUnitAttributedFormatStyleTests.Segme
     }
 }
 
-final class DurationUnitAttributedFormatStyleTests : XCTestCase {
+@Suite("Duration.UnitsFormatStyle.Attributed")
+private struct DurationUnitAttributedFormatStyleTests {
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DurationFieldAttribute.Field?, AttributeScopes.FoundationAttributes.MeasurementAttribute.Component?)
     let enUS = Locale(identifier: "en_US")
     let frFR = Locale(identifier: "fr_FR")
 
-    func testAttributedStyle_enUS() {
+    @Test func attributedStyle_enUS() {
         let d1 = Duration.seconds(2 * 3600 + 43 * 60 + 24) // 2hr 43min 24s
         let d2 = Duration.seconds(43 * 60 + 24) // 43min 24s
         let d3 = Duration.seconds(24.490) // 24s 490ms
@@ -937,7 +935,7 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
 
         // Default configuration -- hide the field when its value is 0
 
-        XCTAssertEqual(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed),
+        #expect(d1.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed) ==
                        [("2", .hours, .value),
                         (" ", .hours, nil),
                         ("hours", .hours, .unit),
@@ -951,7 +949,7 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
                         ("seconds", .seconds, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed),
+        #expect(d2.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed) ==
                        [("43", .minutes, .value),
                         (" ", .minutes, nil),
                         ("minutes", .minutes, .unit),
@@ -961,19 +959,19 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
                         ("seconds", .seconds, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed),
+        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed) ==
                        [("24", .seconds, .value),
                         (" ", .seconds, nil),
                         ("seconds", .seconds, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed),
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(enUS).attributed) ==
                        [("0", .seconds, .value),
                         (" ", .seconds, nil),
                         ("seconds", .seconds, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide).locale(enUS).attributed),
+        #expect(d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide).locale(enUS).attributed) ==
                        [("3", .weeks, .value),
                         (" ", .weeks, nil),
                         ("weeks", .weeks, .unit),
@@ -983,7 +981,7 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
                         ("hours", .hours, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d5.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide).locale(enUS).attributed),
+        #expect(d5.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide).locale(enUS).attributed) ==
                        [("3", .weeks, .value),
                         (" ", .weeks, nil),
                         ("weeks", .weeks, .unit),
@@ -999,7 +997,7 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
 
         // Always show zero value units
 
-        XCTAssertEqual(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed),
+        #expect(d2.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed) ==
                        [("0", .hours, .value),
                         (" ", .hours, nil),
                         ("hours", .hours, .unit),
@@ -1013,7 +1011,7 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
                         ("seconds", .seconds, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed),
+        #expect(d3.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed) ==
                        [("0", .hours, .value),
                         (" ", .hours, nil),
                         ("hours", .hours, .unit),
@@ -1027,7 +1025,7 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
                         ("seconds", .seconds, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed),
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed) ==
                        [("0", .hours, .value),
                         (" ", .hours, nil),
                         ("hours", .hours, .unit),
@@ -1041,7 +1039,7 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
                         ("seconds", .seconds, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed),
+        #expect(d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide, zeroValueUnits: .show(length: 1)).locale(enUS).attributed) ==
                        [("3", .weeks, .value),
                         (" ", .weeks, nil),
                         ("weeks", .weeks, .unit),
@@ -1058,7 +1056,7 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
 
         // Always show zero value units padded
 
-        XCTAssertEqual(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS).attributed),
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, zeroValueUnits: .show(length: 2)).locale(enUS).attributed) ==
                        [("00", .hours, .value),
                         (" ", .hours, nil),
                         ("hours", .hours, .unit),
@@ -1074,37 +1072,37 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
 
         // Test fractional parts
 
-        XCTAssertEqual(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).attributed.locale(enUS)),
+        #expect(d1.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).attributed.locale(enUS)) ==
                        [("2.72", .hours, .value),
                         (" ", .hours, nil),
                         ("hr", .hours, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).attributed.locale(enUS)),
+        #expect(d0.formatted(.units(allowed:[.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1, fractionalPart: .show(length: 2)).attributed.locale(enUS)) ==
                        [("0.00", .seconds, .value),
                         (" ", .seconds, nil),
                         ("sec", .seconds, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS).attributed),
+        #expect(d4.formatted(.units(allowed: [.weeks, .days, .hours], width: .wide, maximumUnitCount: 1, fractionalPart: .show(length: 2)).locale(enUS).attributed) ==
                        [("3.08", .weeks, .value),
                         (" ", .weeks, nil),
                         ("weeks", .weeks, .unit),
                        ].attributedString)
     }
 
-    func testAttributedStyle_frFR() {
+    @Test func testAttributedStyle_frFR() {
         let d1 = Duration.seconds(2 * 3600 + 43 * 60 + 24) // 2hr 43min 24s
         let d0 = Duration.seconds(0)
         let nbsp = " "
 
-        XCTAssertEqual(d1.formatted(.units(allowed: [.seconds], width: .wide).locale(frFR).attributed),
+        #expect(d1.formatted(.units(allowed: [.seconds], width: .wide).locale(frFR).attributed) ==
                        [("9 804", .seconds, .value),
                         (nbsp, .seconds, nil),
                         ("secondes", .seconds, .unit),
                        ].attributedString)
 
-        XCTAssertEqual(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(frFR).attributed),
+        #expect(d0.formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide).locale(frFR).attributed) ==
                        [("0", .seconds, .value),
                         (nbsp, .seconds, nil),
                         ("seconde", .seconds, .unit),
@@ -1115,96 +1113,96 @@ final class DurationUnitAttributedFormatStyleTests : XCTestCase {
 
 // MARK: DiscreteFormatStyle conformance test
 
-final class TestDurationUnitsDiscreteConformance : XCTestCase {
-    func testBasics() throws {
-        var style: Duration._UnitsFormatStyle
+@Suite("Duration.UnitsFormatStyle Discrete Conformance")
+private struct TestDurationUnitsDiscreteConformance {
+    @Test func basics() throws {
+        var style: Duration.UnitsFormatStyle
         style = .units(fractionalPart: .hide(rounded: .down)).locale(Locale(identifier: "en_US"))
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(2))
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero.nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .zero.nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .zero)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-1).nextDown)
+        #expect(style.discreteInput(after: .seconds(1)) == .seconds(2))
+        #expect(style.discreteInput(before: .seconds(1)) == .seconds(1).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(500)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(500)) == .zero.nextDown)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(0)) == .zero.nextDown)
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .zero)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .seconds(-1).nextDown)
+        #expect(style.discreteInput(after: .seconds(-1)) == .zero)
+        #expect(style.discreteInput(before: .seconds(-1)) == .seconds(-1).nextDown)
 
 
         style.fractionalPartDisplay.roundingRule = .up
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(0))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .zero.nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero.nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .seconds(-1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-2))
+        #expect(style.discreteInput(after: .seconds(1)) == .seconds(1).nextUp)
+        #expect(style.discreteInput(before: .seconds(1)) == .seconds(0))
+        #expect(style.discreteInput(after: .milliseconds(500)) == .seconds(1).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(500)) == .zero)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .zero.nextUp)
+        #expect(style.discreteInput(before: .milliseconds(0)) == .seconds(-1))
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .zero.nextUp)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .seconds(-1))
+        #expect(style.discreteInput(after: .seconds(-1)) == .seconds(-1).nextUp)
+        #expect(style.discreteInput(before: .seconds(-1)) == .seconds(-2))
 
         style.fractionalPartDisplay.roundingRule = .towardZero
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(2))
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .seconds(1))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1))
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .seconds(-1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-2))
+        #expect(style.discreteInput(after: .seconds(1)) == .seconds(2))
+        #expect(style.discreteInput(before: .seconds(1)) == .seconds(1).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(500)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(500)) == .seconds(-1))
+        #expect(style.discreteInput(after: .milliseconds(0)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(0)) == .seconds(-1))
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .seconds(1))
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .seconds(-1))
+        #expect(style.discreteInput(after: .seconds(-1)) == .seconds(-1).nextUp)
+        #expect(style.discreteInput(before: .seconds(-1)) == .seconds(-2))
 
         style.fractionalPartDisplay.roundingRule = .awayFromZero
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .seconds(1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .seconds(0))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .seconds(1).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .zero)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .zero.nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .zero.nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .zero)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .seconds(-1).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .zero)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .seconds(-1).nextDown)
+        #expect(style.discreteInput(after: .seconds(1)) == .seconds(1).nextUp)
+        #expect(style.discreteInput(before: .seconds(1)) == .seconds(0))
+        #expect(style.discreteInput(after: .milliseconds(500)) == .seconds(1).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(500)) == .zero)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .zero.nextUp)
+        #expect(style.discreteInput(before: .milliseconds(0)) == .zero.nextDown)
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .zero)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .seconds(-1).nextDown)
+        #expect(style.discreteInput(after: .seconds(-1)) == .zero)
+        #expect(style.discreteInput(before: .seconds(-1)) == .seconds(-1).nextDown)
 
         style.fractionalPartDisplay.roundingRule = .toNearestOrAwayFromZero
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .milliseconds(1500))
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .milliseconds(500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .milliseconds(1500))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .milliseconds(500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .milliseconds(500))
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .milliseconds(-500))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .milliseconds(-500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .milliseconds(-1500))
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .milliseconds(-500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .milliseconds(-1500))
+        #expect(style.discreteInput(after: .seconds(1)) == .milliseconds(1500))
+        #expect(style.discreteInput(before: .seconds(1)) == .milliseconds(500).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(500)) == .milliseconds(1500))
+        #expect(style.discreteInput(before: .milliseconds(500)) == .milliseconds(500).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .milliseconds(500))
+        #expect(style.discreteInput(before: .milliseconds(0)) == .milliseconds(-500))
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .milliseconds(-500).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .milliseconds(-1500))
+        #expect(style.discreteInput(after: .seconds(-1)) == .milliseconds(-500).nextUp)
+        #expect(style.discreteInput(before: .seconds(-1)) == .milliseconds(-1500))
 
         style.fractionalPartDisplay.roundingRule = .toNearestOrEven
 
-        XCTAssertEqual(style.discreteInput(after: .seconds(1)), .milliseconds(1500))
-        XCTAssertEqual(style.discreteInput(before: .seconds(1)), .milliseconds(500))
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(500)), .milliseconds(500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(500)), .milliseconds(-500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(0)), .milliseconds(500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(0)), .milliseconds(-500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .milliseconds(-500)), .milliseconds(500).nextUp)
-        XCTAssertEqual(style.discreteInput(before: .milliseconds(-500)), .milliseconds(-500).nextDown)
-        XCTAssertEqual(style.discreteInput(after: .seconds(-1)), .milliseconds(-500))
-        XCTAssertEqual(style.discreteInput(before: .seconds(-1)), .milliseconds(-1500))
+        #expect(style.discreteInput(after: .seconds(1)) == .milliseconds(1500))
+        #expect(style.discreteInput(before: .seconds(1)) == .milliseconds(500))
+        #expect(style.discreteInput(after: .milliseconds(500)) == .milliseconds(500).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(500)) == .milliseconds(-500).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(0)) == .milliseconds(500).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(0)) == .milliseconds(-500).nextDown)
+        #expect(style.discreteInput(after: .milliseconds(-500)) == .milliseconds(500).nextUp)
+        #expect(style.discreteInput(before: .milliseconds(-500)) == .milliseconds(-500).nextDown)
+        #expect(style.discreteInput(after: .seconds(-1)) == .milliseconds(-500))
+        #expect(style.discreteInput(before: .seconds(-1)) == .milliseconds(-1500))
     }
 
-    func testEvaluation() {
+    @Test func evaluation() {
         func assertEvaluation(of style: Duration._UnitsFormatStyle,
                               rounding roundingRules: [FloatingPointRoundingRule] = [.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven],
                               in range: ClosedRange<Duration>,
                               includes expectedExcerpts: [String]...,
-                              file: StaticString = #filePath,
-                              line: UInt = #line) {
+                              sourceLocation: SourceLocation = #_sourceLocation) {
 
             for rule in roundingRules {
                 var style = style.locale(Locale(identifier: "en_US"))
@@ -1213,21 +1211,19 @@ final class TestDurationUnitsDiscreteConformance : XCTestCase {
                     sequence: style.evaluate(from: range.lowerBound, to: range.upperBound).map(\.output),
                     contains: expectedExcerpts,
                     "lowerbound to upperbound, rounding \(rule)",
-                    file: file,
-                    line: line)
-
+                    sourceLocation: sourceLocation)
+                
                 verify(
                     sequence: style.evaluate(from: range.upperBound, to: range.lowerBound).map(\.output),
                     contains: expectedExcerpts
                         .reversed()
                         .map { $0.reversed() },
                     "upperbound to lowerbound, rounding \(rule)",
-                    file: file,
-                    line: line)
+                    sourceLocation: sourceLocation)
             }
         }
-
-
+        
+        
         assertEvaluation(
             of: .init(allowedUnits: [.minutes, .seconds], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
             in: Duration.seconds(61).symmetricRange,
@@ -1256,7 +1252,7 @@ final class TestDurationUnitsDiscreteConformance : XCTestCase {
                 "1m 0s",
                 "1m 1s",
             ])
-
+        
         assertEvaluation(
             of: .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .hide),
             in: Duration.seconds(120).symmetricRange,
@@ -1285,7 +1281,7 @@ final class TestDurationUnitsDiscreteConformance : XCTestCase {
                 "1m",
                 "2m",
             ])
-
+        
         assertEvaluation(
             of: .init(allowedUnits: [.hours], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
             in: Duration.seconds(3 * 3600).symmetricRange,
@@ -1298,7 +1294,7 @@ final class TestDurationUnitsDiscreteConformance : XCTestCase {
                 "2h",
                 "3h",
             ])
-
+        
         assertEvaluation(
             of: .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1)),
             in: Duration.seconds(120).symmetricRange,
@@ -1376,20 +1372,20 @@ final class TestDurationUnitsDiscreteConformance : XCTestCase {
                 "2.0m",
             ])
     }
-
-    func testRegressions() throws {
+    
+    @Test func regressions() throws {
         var style: Duration._UnitsFormatStyle
-
+        
         style = .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1, rounded: .toNearestOrAwayFromZero))
-
-        XCTAssertLessThanOrEqual(try XCTUnwrap(style.discreteInput(after: Duration(secondsComponent: -75, attosecondsComponent: -535173016509531840))), Duration(secondsComponent: -73, attosecondsComponent: -122099659011723263))
-
+        
+        #expect(try #require(style.discreteInput(after: Duration(secondsComponent: -75, attosecondsComponent: -535173016509531840))) <= Duration(secondsComponent: -73, attosecondsComponent: -122099659011723263))
+        
         style = .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1))
-
-        XCTAssertLessThanOrEqual(try XCTUnwrap(style.discreteInput(after: Duration(secondsComponent: -63, attosecondsComponent: -0))), Duration(secondsComponent: -59, attosecondsComponent: -900000000000000000))
+        
+        #expect(try #require(style.discreteInput(after: Duration(secondsComponent: -63, attosecondsComponent: -0))) <= Duration(secondsComponent: -59, attosecondsComponent: -900000000000000000))
     }
-
-    func testRandomSamples() throws {
+    
+    @Test func randomSamples() throws {
         let styles: [Duration._UnitsFormatStyle] = [
             .init(allowedUnits: [.minutes, .seconds], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
             .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .hide),
@@ -1399,12 +1395,13 @@ final class TestDurationUnitsDiscreteConformance : XCTestCase {
                 .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1, rounded: roundingRule)),
             ]
         }
-
-
+        
+        
         for style in styles {
-            try verifyDiscreteFormatStyleConformance(style, samples: 100, "\(style)")
+            try verifyDiscreteFormatStyleConformance(style.locale(Locale(identifier: "en_US")), samples: 100, "\(style)")
         }
     }
+    
 }
 
 extension Duration {

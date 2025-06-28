@@ -5,73 +5,68 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
-// REQUIRES: objc_intero
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationInternationalization)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
-final class DateRelativeFormatStyleTests: XCTestCase {
+@Suite("Date.RelativeFormatStyle")
+private struct DateRelativeFormatStyleTests {
 
     let oneHour: TimeInterval = 60 * 60
     let oneDay: TimeInterval = 60 * 60 * 24
     let enUSLocale = Locale(identifier: "en_US")
-    var calendar = Calendar(identifier: .gregorian)
+    let calendar: Calendar
 
 
-    override func setUp() {
-        calendar.timeZone = TimeZone(abbreviation: "GMT")!
+    init() {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(abbreviation: "GMT")!
+        self.calendar = c
     }
 
-    func testDefaultStyle() throws {
+    @Test func defaultStyle() throws {
         let style = Date.RelativeFormatStyle(locale: enUSLocale, calendar: calendar)
-        XCTAssertEqual(style.format(Date()), "in 0 seconds")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneHour)), "in 1 hour")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneHour * 2)), "in 2 hours")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneDay)), "in 1 day")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneDay * 2)), "in 2 days")
+        #expect(style.format(Date()) == "in 0 seconds")
+        #expect(style.format(Date(timeIntervalSinceNow: oneHour)) == "in 1 hour")
+        #expect(style.format(Date(timeIntervalSinceNow: oneHour * 2)) == "in 2 hours")
+        #expect(style.format(Date(timeIntervalSinceNow: oneDay)) == "in 1 day")
+        #expect(style.format(Date(timeIntervalSinceNow: oneDay * 2)) == "in 2 days")
 
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: -oneHour)), "1 hour ago")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: -oneHour * 2)), "2 hours ago")
+        #expect(style.format(Date(timeIntervalSinceNow: -oneHour)) == "1 hour ago")
+        #expect(style.format(Date(timeIntervalSinceNow: -oneHour * 2)) == "2 hours ago")
 
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: -oneHour * 1.5)), "2 hours ago")
-        XCTAssertEqual(style.format(Date(timeIntervalSinceNow: oneHour * 1.5)), "in 2 hours")
+        #expect(style.format(Date(timeIntervalSinceNow: -oneHour * 1.5)) == "2 hours ago")
+        #expect(style.format(Date(timeIntervalSinceNow: oneHour * 1.5)) == "in 2 hours")
     }
 
-    func testDateRelativeFormatConvenience() throws {
+    @Test func dateRelativeFormatConvenience() throws {
         let now = Date()
         let tomorrow = Date(timeInterval: oneDay + oneHour * 2, since: now)
         let future = Date(timeInterval: oneDay * 14 + oneHour * 3, since: now)
         let past = Date(timeInterval: -(oneDay * 14 + oneHour * 2), since: now)
 
-        XCTAssertEqual(past.formatted(.relative(presentation: .named)), Date.RelativeFormatStyle(presentation: .named, unitsStyle: .wide).format(past))
-        XCTAssertEqual(tomorrow.formatted(.relative(presentation: .numeric)), Date.RelativeFormatStyle(presentation: .numeric, unitsStyle: .wide).format(tomorrow))
-        XCTAssertEqual(tomorrow.formatted(Date.RelativeFormatStyle(presentation: .named)), Date.RelativeFormatStyle(presentation: .named).format(tomorrow))
+        #expect(past.formatted(.relative(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named, unitsStyle: .wide).locale(enUSLocale).format(past))
+        #expect(tomorrow.formatted(.relative(presentation: .numeric).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .numeric, unitsStyle: .wide).locale(enUSLocale).format(tomorrow))
+        #expect(tomorrow.formatted(Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale)) == Date.RelativeFormatStyle(presentation: .named).locale(enUSLocale).format(tomorrow))
 
-        XCTAssertEqual(past.formatted(Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence)), Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).format(past))
-        XCTAssertEqual(future.formatted(.relative(presentation: .numeric, unitsStyle: .abbreviated)), Date.RelativeFormatStyle(unitsStyle: .abbreviated).format(future))
+        #expect(past.formatted(Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .spellOut, capitalizationContext: .beginningOfSentence).locale(enUSLocale).format(past))
+        #expect(future.formatted(.relative(presentation: .numeric, unitsStyle: .abbreviated).locale(enUSLocale)) == Date.RelativeFormatStyle(unitsStyle: .abbreviated).locale(enUSLocale).format(future))
     }
 
-    func testNamedStyleRounding() throws {
+    @Test func namedStyleRounding() throws {
         let named = Date.RelativeFormatStyle(presentation: .named, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, file: StaticString = #filePath, line: UInt = #line) {
+        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let date = Date(timeIntervalSinceReferenceDate: dateValue)
             let refDate = Date(timeIntervalSinceReferenceDate: relativeTo)
             let formatted = named._format(date, refDate: refDate)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
         }
 
         // Within a day
@@ -186,14 +181,14 @@ final class DateRelativeFormatStyleTests: XCTestCase {
         _verifyStyle(725759999.0, relativeTo: 645019200.0, expected: "in 2 years")
     }
 
-    func testNumericStyleRounding() throws {
+    @Test func numericStyleRounding() throws {
         let numeric = Date.RelativeFormatStyle(presentation: .numeric, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, file: StaticString = #filePath, line: UInt = #line) {
+        func _verifyStyle(_ dateValue: TimeInterval, relativeTo: TimeInterval, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let date = Date(timeIntervalSinceReferenceDate: dateValue)
             let refDate = Date(timeIntervalSinceReferenceDate: relativeTo)
             let formatted = numeric._format(date, refDate: refDate)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
         }
 
         // Within a day
@@ -304,38 +299,40 @@ final class DateRelativeFormatStyleTests: XCTestCase {
 
     }
     
-    func testAutoupdatingCurrentChangesFormatResults() {
-        let locale = Locale.autoupdatingCurrent
-        let date = Date.now + 3600
-
-        // Get a formatted result from es-ES
-        var prefs = LocalePreferences()
-        prefs.languages = ["es-ES"]
-        prefs.locale = "es_ES"
-        LocaleCache.cache.resetCurrent(to: prefs)
-        let formattedSpanish = date.formatted(.relative(presentation: .named).locale(locale))
-
-        // Get a formatted result from en-US
-        prefs.languages = ["en-US"]
-        prefs.locale = "en_US"
-        LocaleCache.cache.resetCurrent(to: prefs)
-        let formattedEnglish = date.formatted(.relative(presentation: .named).locale(locale))
-
-        // Reset to current preferences before any possibility of failing this test
-        LocaleCache.cache.reset()
-
-        // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
-        XCTAssertNotEqual(formattedSpanish, formattedEnglish)
+    @Test func autoupdatingCurrentChangesFormatResults() async {
+        await usingCurrentInternationalizationPreferences {
+            let locale = Locale.autoupdatingCurrent
+            let date = Date.now + 3600
+            
+            // Get a formatted result from es-ES
+            var prefs = LocalePreferences()
+            prefs.languages = ["es-ES"]
+            prefs.locale = "es_ES"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            let formattedSpanish = date.formatted(.relative(presentation: .named).locale(locale))
+            
+            // Get a formatted result from en-US
+            prefs.languages = ["en-US"]
+            prefs.locale = "en_US"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            let formattedEnglish = date.formatted(.relative(presentation: .named).locale(locale))
+            
+            // Reset to current preferences before any possibility of failing this test
+            LocaleCache.cache.reset()
+            
+            // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
+            #expect(formattedSpanish != formattedEnglish)
+        }
     }
 
-    func testAllowedFieldsNamed() throws {
+    @Test func allowedFieldsNamed() throws {
         var named = Date.RelativeFormatStyle(presentation: .named, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, file: StaticString = #filePath, line: UInt = #line) {
+        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let date = try! Date.ISO8601FormatStyle().parse(dateStr)
             let refDate = try! Date.ISO8601FormatStyle().parse(relativeTo)
             let formatted = named._format(date, refDate: refDate)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
         }
 
         named.allowedFields = [.year]
@@ -361,14 +358,14 @@ final class DateRelativeFormatStyleTests: XCTestCase {
         _verifyStyle("2021-06-11T07:00:00Z", relativeTo: "2021-06-10T12:00:00Z", expected: "tomorrow")
     }
 
-    func testAllowedFieldsNumeric() throws {
+    @Test func allowedFieldsNumeric() throws {
         var named = Date.RelativeFormatStyle(presentation: .numeric, locale: enUSLocale, calendar: calendar)
 
-        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, file: StaticString = #filePath, line: UInt = #line) {
+        func _verifyStyle(_ dateStr: String, relativeTo: String, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let date = try! Date.ISO8601FormatStyle().parse(dateStr)
             let refDate = try! Date.ISO8601FormatStyle().parse(relativeTo)
             let formatted = named._format(date, refDate: refDate)
-            XCTAssertEqual(formatted, expected, file: file, line: line)
+            #expect(formatted == expected, sourceLocation: sourceLocation)
         }
 
         named.allowedFields = [.year]
@@ -393,11 +390,12 @@ final class DateRelativeFormatStyleTests: XCTestCase {
 
 // MARK: DiscreteFormatStyle conformance test
 
-final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
+@Suite("Date.AnchoredRelativeFormatStyle Discrete Conformance")
+private struct TestDateAnchoredRelativeDiscreteConformance {
     let enUSLocale = Locale(identifier: "en_US")
     var calendar = Calendar(identifier: .gregorian)
 
-    override func setUp() {
+    init() {
         calendar.timeZone = TimeZone(abbreviation: "GMT")!
     }
 
@@ -405,65 +403,64 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
         try! Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZoneSeparator: .omitted, timeZone: .gmt).locale(enUSLocale).parse(string)
     }
 
-    func testExamples() throws {
+    @Test func examples() throws {
         var now = Date.now
         var style = Date.AnchoredRelativeFormatStyle(anchor: now)
             .locale(enUSLocale)
 
-        XCTAssertEqual(style.discreteInput(after: now.addingTimeInterval(1)), now.addingTimeInterval(1.5))
-        XCTAssertEqual(style.discreteInput(before: now.addingTimeInterval(1)), now.addingTimeInterval(0.5).nextDown)
-        XCTAssertEqual(style.discreteInput(after: now.addingTimeInterval(0.5)), now.addingTimeInterval(1.5))
-        XCTAssertEqual(style.discreteInput(before: now.addingTimeInterval(0.5)), now.addingTimeInterval(0.5).nextDown)
-        XCTAssertEqual(style.discreteInput(after: now.addingTimeInterval(0)), now.addingTimeInterval(0.5))
-        XCTAssertEqual(style.discreteInput(before: now.addingTimeInterval(0)), now.addingTimeInterval(-0.5))
-        XCTAssertEqual(style.discreteInput(after: now.addingTimeInterval(-0.5)), now.addingTimeInterval(-0.5).nextUp)
-        XCTAssertEqual(style.discreteInput(before: now.addingTimeInterval(-0.5)), now.addingTimeInterval(-1.5))
-        XCTAssertEqual(style.discreteInput(after: now.addingTimeInterval(-1)), now.addingTimeInterval(-0.5).nextUp)
-        XCTAssertEqual(style.discreteInput(before: now.addingTimeInterval(-1)), now.addingTimeInterval(-1.5))
+        #expect(style.discreteInput(after: now.addingTimeInterval(1)) == now.addingTimeInterval(1.5))
+        #expect(style.discreteInput(before: now.addingTimeInterval(1)) == now.addingTimeInterval(0.5).nextDown)
+        #expect(style.discreteInput(after: now.addingTimeInterval(0.5)) == now.addingTimeInterval(1.5))
+        #expect(style.discreteInput(before: now.addingTimeInterval(0.5)) == now.addingTimeInterval(0.5).nextDown)
+        #expect(style.discreteInput(after: now.addingTimeInterval(0)) == now.addingTimeInterval(0.5))
+        #expect(style.discreteInput(before: now.addingTimeInterval(0)) == now.addingTimeInterval(-0.5))
+        #expect(style.discreteInput(after: now.addingTimeInterval(-0.5)) == now.addingTimeInterval(-0.5).nextUp)
+        #expect(style.discreteInput(before: now.addingTimeInterval(-0.5)) == now.addingTimeInterval(-1.5))
+        #expect(style.discreteInput(after: now.addingTimeInterval(-1)) == now.addingTimeInterval(-0.5).nextUp)
+        #expect(style.discreteInput(before: now.addingTimeInterval(-1)) == now.addingTimeInterval(-1.5))
 
         now = date("2021-06-10 12:00:00Z")
         style.anchor = now
 
 
-        XCTAssertEqual(style.discreteInput(before: date("2021-06-10 11:58:30Z").addingTimeInterval(0.5).nextUp), date("2021-06-10 11:58:30Z").addingTimeInterval(0.5))
-        XCTAssertEqual(style.discreteInput(after: date("2021-06-10 11:58:30Z").addingTimeInterval(0.5)), date("2021-06-10 11:58:30Z").addingTimeInterval(0.5).nextUp)
-        XCTAssertEqual(style.format(date("2021-06-10 11:58:30Z").addingTimeInterval(0.5).nextUp), "in 1 minute")
-        XCTAssertEqual(style.format(date("2021-06-10 11:58:30Z").addingTimeInterval(0.5)), "in 2 minutes")
+        #expect(style.discreteInput(before: date("2021-06-10 11:58:30Z").addingTimeInterval(0.5).nextUp) == date("2021-06-10 11:58:30Z").addingTimeInterval(0.5))
+        #expect(style.discreteInput(after: date("2021-06-10 11:58:30Z").addingTimeInterval(0.5)) == date("2021-06-10 11:58:30Z").addingTimeInterval(0.5).nextUp)
+        #expect(style.format(date("2021-06-10 11:58:30Z").addingTimeInterval(0.5).nextUp) == "in 1 minute")
+        #expect(style.format(date("2021-06-10 11:58:30Z").addingTimeInterval(0.5)) == "in 2 minutes")
 
-        XCTAssertEqual(style.discreteInput(before: date("2021-06-10 11:57:30Z").addingTimeInterval(0.5).nextUp), date("2021-06-10 11:57:30Z").addingTimeInterval(0.5))
-        XCTAssertEqual(style.discreteInput(after: date("2021-06-10 11:57:30Z").addingTimeInterval(0.5)), date("2021-06-10 11:57:30Z").addingTimeInterval(0.5).nextUp)
-        XCTAssertEqual(style.format(date("2021-06-10 11:57:30Z").addingTimeInterval(0.5).nextUp), "in 2 minutes")
-        XCTAssertEqual(style.format(date("2021-06-10 11:57:30Z").addingTimeInterval(0.5)), "in 3 minutes")
+        #expect(style.discreteInput(before: date("2021-06-10 11:57:30Z").addingTimeInterval(0.5).nextUp) == date("2021-06-10 11:57:30Z").addingTimeInterval(0.5))
+        #expect(style.discreteInput(after: date("2021-06-10 11:57:30Z").addingTimeInterval(0.5)) == date("2021-06-10 11:57:30Z").addingTimeInterval(0.5).nextUp)
+        #expect(style.format(date("2021-06-10 11:57:30Z").addingTimeInterval(0.5).nextUp) == "in 2 minutes")
+        #expect(style.format(date("2021-06-10 11:57:30Z").addingTimeInterval(0.5)) == "in 3 minutes")
 
-        XCTAssertEqual(style.discreteInput(before: date("2021-06-10 11:56:30Z").addingTimeInterval(0.5).nextUp), date("2021-06-10 11:56:30Z").addingTimeInterval(0.5))
-        XCTAssertEqual(style.discreteInput(after: date("2021-06-10 11:56:30Z").addingTimeInterval(0.5)), date("2021-06-10 11:56:30Z").addingTimeInterval(0.5).nextUp)
-        XCTAssertEqual(style.format(date("2021-06-10 11:56:30Z").addingTimeInterval(0.5).nextUp), "in 3 minutes")
-        XCTAssertEqual(style.format(date("2021-06-10 11:56:30Z").addingTimeInterval(0.5)), "in 4 minutes")
+        #expect(style.discreteInput(before: date("2021-06-10 11:56:30Z").addingTimeInterval(0.5).nextUp) == date("2021-06-10 11:56:30Z").addingTimeInterval(0.5))
+        #expect(style.discreteInput(after: date("2021-06-10 11:56:30Z").addingTimeInterval(0.5)) == date("2021-06-10 11:56:30Z").addingTimeInterval(0.5).nextUp)
+        #expect(style.format(date("2021-06-10 11:56:30Z").addingTimeInterval(0.5).nextUp) == "in 3 minutes")
+        #expect(style.format(date("2021-06-10 11:56:30Z").addingTimeInterval(0.5)) == "in 4 minutes")
 
 
 
-        XCTAssertEqual(style.discreteInput(before: date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5)), date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown), date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5))
-        XCTAssertEqual(style.format(date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown), "1 minute ago")
-        XCTAssertEqual(style.format(date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5)), "2 minutes ago")
+        #expect(style.discreteInput(before: date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5)) == date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown)
+        #expect(style.discreteInput(after: date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown) == date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5))
+        #expect(style.format(date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5).nextDown) == "1 minute ago")
+        #expect(style.format(date("2021-06-10 12:01:30Z").addingTimeInterval(-0.5)) == "2 minutes ago")
 
-        XCTAssertEqual(style.discreteInput(before: date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5)), date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5).nextDown), date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5))
-        XCTAssertEqual(style.format(date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5).nextDown), "2 minutes ago")
-        XCTAssertEqual(style.format(date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5)), "3 minutes ago")
+        #expect(style.discreteInput(before: date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5)) == date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5).nextDown)
+        #expect(style.discreteInput(after: date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5).nextDown) == date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5))
+        #expect(style.format(date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5).nextDown) == "2 minutes ago")
+        #expect(style.format(date("2021-06-10 12:02:30Z").addingTimeInterval(-0.5)) == "3 minutes ago")
 
-        XCTAssertEqual(style.discreteInput(before: date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5)), date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5).nextDown)
-        XCTAssertEqual(style.discreteInput(after: date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5).nextDown), date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5))
-        XCTAssertEqual(style.format(date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5).nextDown), "3 minutes ago")
-        XCTAssertEqual(style.format(date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5)), "4 minutes ago")
+        #expect(style.discreteInput(before: date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5)) == date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5).nextDown)
+        #expect(style.discreteInput(after: date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5).nextDown) == date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5))
+        #expect(style.format(date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5).nextDown) == "3 minutes ago")
+        #expect(style.format(date("2021-06-10 12:03:30Z").addingTimeInterval(-0.5)) == "4 minutes ago")
     }
 
-    func testCounting() {
+    @Test func counting() {
         func assertEvaluation(of style: Date.AnchoredRelativeFormatStyle,
                               in range: ClosedRange<Date>,
                               includes expectedExcerpts: [String]...,
-                              file: StaticString = #filePath,
-                              line: UInt = #line) {
+                              sourceLocation: SourceLocation = #_sourceLocation) {
             var style = style
                 .locale(enUSLocale)
             style.calendar = calendar
@@ -472,8 +469,7 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
                 sequence: style.evaluate(from: range.lowerBound, to: range.upperBound).lazy.map(\.output),
                 contains: expectedExcerpts,
                 "(lowerbound to upperbound)",
-                file: file,
-                line: line)
+                sourceLocation: sourceLocation)
 
             verify(
                 sequence: style.evaluate(from: range.upperBound, to: range.lowerBound).lazy.map(\.output),
@@ -481,11 +477,10 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
                     .reversed()
                     .map { $0.reversed() },
                 "(upperbound to lowerbound)",
-                file: file,
-                line: line)
+                sourceLocation: sourceLocation)
         }
 
-        var now = date("2021-06-10 12:00:00Z")
+        var now = try date("2021-06-10 12:00:00Z")
 
         assertEvaluation(
             of: .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated),
@@ -565,7 +560,7 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
                 "8 mo. ago",
             ])
 
-        now = date("2023-05-15 08:47:20Z")
+        now = try date("2023-05-15 08:47:20Z")
 
         assertEvaluation(
             of: .init(anchor: now, allowedFields: [.month, .week], presentation: .numeric, unitsStyle: .abbreviated),
@@ -685,7 +680,7 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
                 "8 mo. ago",
             ])
 
-        now = date("2019-06-03 09:41:00Z")
+        now = try date("2019-06-03 09:41:00Z")
 
         assertEvaluation(
             of: .init(anchor: now, allowedFields: [.year, .month, .day, .hour, .minute], presentation: .named, unitsStyle: .wide),
@@ -863,31 +858,31 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
             ])
     }
 
-    func testRegressions() throws {
+    @Test func regressions() throws {
         var style: Date.AnchoredRelativeFormatStyle
         var now: Date
 
         now = Date(timeIntervalSinceReferenceDate: 724685580.417914)
         style = .init(anchor: now, allowedFields: [.minute], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
-        XCTAssertGreaterThan(try XCTUnwrap(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 12176601839.415668))), Date(timeIntervalSinceReferenceDate: 12176601839.415668))
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 12176601839.415668))) > Date(timeIntervalSinceReferenceDate: 12176601839.415668))
 
 
         now = Date(timeIntervalSinceReferenceDate: 724686086.706003)
         style = .init(anchor: now, allowedFields: [.minute], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
-        XCTAssertLessThan(try XCTUnwrap(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -24141834543.08099))), Date(timeIntervalSinceReferenceDate: -24141834543.08099))
+        #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -24141834543.08099))) < Date(timeIntervalSinceReferenceDate: -24141834543.08099))
 
         now = Date(timeIntervalSinceReferenceDate: 724688507.315708)
         style = .init(anchor: now, allowedFields: [.minute, .second], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
-        XCTAssertGreaterThan(try XCTUnwrap(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 6013270816.926929))), Date(timeIntervalSinceReferenceDate: 6013270816.926929))
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 6013270816.926929))) > Date(timeIntervalSinceReferenceDate: 6013270816.926929))
 
         now = Date(timeIntervalSinceReferenceDate: 724689590.234374)
         style = .init(anchor: now, allowedFields: [.month, .week], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
         print(style.format(Date(timeIntervalSinceReferenceDate: 722325435.4645464)))
-        XCTAssertGreaterThan(try XCTUnwrap(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 722325435.4645464))), Date(timeIntervalSinceReferenceDate: 722325435.4645464))
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 722325435.4645464))) > Date(timeIntervalSinceReferenceDate: 722325435.4645464))
 
         now = Date(timeIntervalSinceReferenceDate: 724701229.591328)
         style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
@@ -895,7 +890,7 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
         /// style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -7256167.2374657225)) returned Date(timeIntervalSinceReferenceDate: -31622400.5), but
         /// Date(timeIntervalSinceReferenceDate: -31622400.49), which is a valid input, because style.input(after: Date(timeIntervalSinceReferenceDate: -31622400.5)) = Date(timeIntervalSinceReferenceDate: -31622400.49),
         /// already produces a different formatted output 'in 24 yr' compared to style.format(Date(timeIntervalSinceReferenceDate: -7256167.2374657225)), which is 'in 23 yr'
-        XCTAssertGreaterThanOrEqual(try XCTUnwrap(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -7256167.2374657225))), Date(timeIntervalSinceReferenceDate: -31622400.49))
+        #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: -7256167.2374657225))) >= Date(timeIntervalSinceReferenceDate: -31622400.49))
 
 
         now = Date(timeIntervalSinceReferenceDate: 724707086.436074)
@@ -904,13 +899,13 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
         /// style.discreteInput(after: Date(timeIntervalSinceReferenceDate: -728.7911686889214)) returned Date(timeIntervalSinceReferenceDate: 0.9360740142747098), but
         /// Date(timeIntervalSinceReferenceDate: 0.9260740142747098), which is a valid input, because style.input(before: Date(timeIntervalSinceReferenceDate: 0.9360740142747098)) = Date(timeIntervalSinceReferenceDate: 0.9260740142747098),
         /// already produces a different formatted output 'in 22 yr' compared to style.format(Date(timeIntervalSinceReferenceDate: -728.7911686889214)), which is 'in 23 yr'
-       XCTAssertLessThanOrEqual(try XCTUnwrap(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: -728.7911686889214))), Date(timeIntervalSinceReferenceDate: 0.9260740142747098))
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: -728.7911686889214))) <= Date(timeIntervalSinceReferenceDate: 0.9260740142747098))
 
 
         now = Date(timeIntervalSinceReferenceDate: 724707983.332096)
         style = .init(anchor: now, allowedFields: [.year, .month, .day, .hour, .minute], presentation: .named, unitsStyle: .wide)
         style.calendar = self.calendar
-        XCTAssertGreaterThan(try XCTUnwrap(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 722086631.228182))), Date(timeIntervalSinceReferenceDate: 722086631.228182))
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 722086631.228182))) > Date(timeIntervalSinceReferenceDate: 722086631.228182))
 
         now = Date(timeIntervalSinceReferenceDate: 725887340.112405)
         style = .init(anchor: now, allowedFields: [.month, .week, .day, .hour], presentation: .numeric, unitsStyle: .abbreviated)
@@ -918,7 +913,7 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
         /// style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 728224511.9413433)) returned Date(timeIntervalSinceReferenceDate: 727487999.6124048), but
         /// Date(timeIntervalSinceReferenceDate: 727487999.6224048), which is a valid input, because style.input(after: Date(timeIntervalSinceReferenceDate: 727487999.6124048)) = Date(timeIntervalSinceReferenceDate: 727487999.6224048),
         /// already produces a different formatted output '3 wk ago' compared to style.format(Date(timeIntervalSinceReferenceDate: 728224511.9413433)), which is '1 mo ago'
-        XCTAssertGreaterThanOrEqual(try XCTUnwrap(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 728224511.9413433))), Date(timeIntervalSinceReferenceDate: 727487999.6224048))
+        #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 728224511.9413433))) >= Date(timeIntervalSinceReferenceDate: 727487999.6224048))
 
         now = Date(timeIntervalSinceReferenceDate: 725895690.016681)
         style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
@@ -926,7 +921,7 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
         /// style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 726561180.513301)) returned Date(timeIntervalSinceReferenceDate: 726364799.5166808), but
         /// Date(timeIntervalSinceReferenceDate: 726364799.5266808), which is a valid input, because style.input(after: Date(timeIntervalSinceReferenceDate: 726364799.5166808)) = Date(timeIntervalSinceReferenceDate: 726364799.5266808),
         /// already produces a different formatted output '6 days ago' compared to style.format(Date(timeIntervalSinceReferenceDate: 726561180.513301)), which is '1 wk ago'
-        XCTAssertGreaterThanOrEqual(try XCTUnwrap(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 726561180.513301))), Date(timeIntervalSinceReferenceDate: 726364799.5266808))
+        #expect(try #require(style.discreteInput(before: Date(timeIntervalSinceReferenceDate: 726561180.513301))) >= Date(timeIntervalSinceReferenceDate: 726364799.5266808))
 
         now = Date(timeIntervalSinceReferenceDate: 725903036.660503)
         style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
@@ -934,11 +929,11 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
         /// style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 725318223.6599436)) returned Date(timeIntervalSinceReferenceDate: 725414400.1605031), but
         /// Date(timeIntervalSinceReferenceDate: 725398549.919868), which is a valid input, because style.input(before: Date(timeIntervalSinceReferenceDate: 725414400.1605031)) = Date(timeIntervalSinceReferenceDate: 725414400.1505032),
         /// already produces a different formatted output 'in 6 days' compared to style.format(Date(timeIntervalSinceReferenceDate: 725318223.6599436)), which is 'in 1 wk'
-        XCTAssertLessThanOrEqual(try XCTUnwrap(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 725318223.6599436))), Date(timeIntervalSinceReferenceDate: 725398549.919868))
+        #expect(try #require(style.discreteInput(after: Date(timeIntervalSinceReferenceDate: 725318223.6599436))) <= Date(timeIntervalSinceReferenceDate: 725398549.919868))
     }
 
 #if FIXME_RANDOMIZED_SAMPLES_123465054
-    func testRandomSamples() throws {
+    @Test func randomSamples() throws {
         var style: Date.AnchoredRelativeFormatStyle
         let now = Date.now
 
@@ -946,30 +941,37 @@ final class TestDateAnchoredRelativeDiscreteConformance : XCTestCase {
 
         style = .init(anchor: now, presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
 
         style = .init(anchor: now, allowedFields: [.minute], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
 
         style = .init(anchor: now, allowedFields: [.minute, .second], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
 
         style = .init(anchor: now, allowedFields: [.month], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
 
         style = .init(anchor: now, allowedFields: [.month, .week], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
 
         style = .init(anchor: now, allowedFields: [.month, .week, .day, .hour], presentation: .numeric, unitsStyle: .abbreviated)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
 
         style = .init(anchor: now, allowedFields: [.year, .month, .day, .hour, .minute], presentation: .named, unitsStyle: .wide)
         style.calendar = self.calendar
+        style.locale = enUSLocale
         try verifyDiscreteFormatStyleConformance(style, samples: 100, message)
     }
 #endif
