@@ -741,7 +741,11 @@ extension _FileManagerImpl {
             let blockSize = UInt64(result.f_bsize)
             #else
             let fsNumber = result.f_fsid
+            #if canImport(Glibc)
+            let blockSize = fsblkcnt_t(result.f_frsize) // support 64-bit block sizes on 32-bit platforms
+            #else
             let blockSize = UInt(result.f_frsize)
+            #endif
             #endif
             var totalSizeBytes = result.f_blocks * blockSize
             var availSizeBytes = result.f_bavail * blockSize
