@@ -16,6 +16,7 @@ import Dispatch
 
 #if os(macOS) && USE_PACKAGE
 import FoundationEssentials
+import FoundationInternationalization
 #else
 import Foundation
 #endif

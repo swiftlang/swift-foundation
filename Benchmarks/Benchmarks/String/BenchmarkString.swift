@@ -19,7 +19,7 @@ import FoundationEssentials
 import Foundation
 #endif
 
-#if !os(macOS)
+#if !FOUNDATION_FRAMEWORK
 private func autoreleasepool<T>(_ block: () -> T) -> T { block() }
 #endif
 
