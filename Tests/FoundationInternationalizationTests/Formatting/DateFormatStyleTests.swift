@@ -297,6 +297,7 @@ private struct DateFormatStyleTests {
             prefs.languages = ["en-US"]
             prefs.locale = "en_US"
             LocaleCache.cache.resetCurrent(to: prefs)
+            CalendarCache.cache.reset() // The current calendar caches the current locale
             
             let fixedTimeZone = TimeZone(identifier: TimeZone.current.identifier)!
             let fixedCalendar = Calendar(identifier: Calendar.current.identifier)
