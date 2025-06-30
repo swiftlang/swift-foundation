@@ -864,7 +864,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         /// `URL("/").deletingLastPathComponent == URL("/../")`
         /// `URL("/../").standardized == URL("")`
         #if FOUNDATION_FRAMEWORK
-        if URL.compatibility4 && path == "/" {
+        if URL.compatibility1 && path == "/" {
             components.percentEncodedPath = "/../"
         } else {
             components.percentEncodedPath = newPath
@@ -915,7 +915,7 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         /// `URL("/../").standardized == URL("")`
         #if FOUNDATION_FRAMEWORK
         guard isDecomposable else { return nil }
-        let newPath = if URL.compatibility4 && _parseInfo.path == "/../" {
+        let newPath = if URL.compatibility1 && _parseInfo.path == "/../" {
             ""
         } else {
             String(_parseInfo.path).removingDotSegments
