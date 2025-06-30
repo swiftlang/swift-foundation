@@ -825,6 +825,26 @@ extension ProgressManager: Hashable, Equatable {
 extension ProgressManager: CustomDebugStringConvertible {
     /// The description for `completedCount` and `totalCount`.
     public var debugDescription: String {
-        return "\(completedCount) / \(totalCount ?? 0)"
+        return self.description
+    }
+}
+
+@available(FoundationPreview 6.2, *)
+extension ProgressManager: CustomStringConvertible {
+    public var description: String {
+        return """
+        ObjectIdentifier: \(ObjectIdentifier(self))
+        totalCount: \(String(describing: totalCount))
+        completedCount: \(completedCount)
+        fractionCompleted: \(fractionCompleted)
+        isIndeterminate: \(isIndeterminate)
+        isFinished: \(isFinished)
+        totalFileCount: \(values(of: ProgressManager.Properties.TotalFileCount.self))
+        completedFileCount: \(values(of: ProgressManager.Properties.CompletedFileCount.self))
+        totalByteCount: \(values(of: ProgressManager.Properties.TotalByteCount.self))
+        completedByteCount: \(values(of: ProgressManager.Properties.CompletedByteCount.self))
+        throughput: \(values(of: ProgressManager.Properties.Throughput.self))
+        estimatedTimeRemaining: \(values(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
+        """
     }
 }

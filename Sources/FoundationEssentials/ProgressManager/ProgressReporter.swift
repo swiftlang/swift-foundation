@@ -16,7 +16,7 @@ import Observation
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
 /// It is read-only and can be added as a child of another ProgressManager.
-@Observable public final class ProgressReporter: Sendable {
+@Observable public final class ProgressReporter: Sendable, CustomStringConvertible, CustomDebugStringConvertible {
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -46,6 +46,27 @@ import Observation
     /// If `completedCount` >= `totalCount`, the value will be `true`.
     public var isFinished: Bool {
         manager.isFinished
+    }
+    
+    public var description: String {
+        return """
+        progressManager: \(manager)
+        totalCount: \(String(describing: totalCount))
+        completedCount: \(completedCount)
+        fractionCompleted: \(fractionCompleted)
+        isIndeterminate: \(isIndeterminate)
+        isFinished: \(isFinished)
+        totalFileCount: \(values(of: ProgressManager.Properties.TotalFileCount.self))
+        completedFileCount: \(values(of: ProgressManager.Properties.CompletedFileCount.self))
+        totalByteCount: \(values(of: ProgressManager.Properties.TotalByteCount.self))
+        completedByteCount: \(values(of: ProgressManager.Properties.CompletedByteCount.self))
+        throughput: \(values(of: ProgressManager.Properties.Throughput.self))
+        estimatedTimeRemaining: \(values(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
+        """
+    }
+    
+    public var debugDescription: String {
+        return self.description
     }
     
     /// Reads properties that convey additional information about progress.
