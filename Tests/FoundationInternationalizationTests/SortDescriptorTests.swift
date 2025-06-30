@@ -20,7 +20,7 @@ import Testing
 #endif // FOUNDATION_FRAMEWORK
 
 @Suite("SortDescriptor")
-private struct SortDescriptorTests {
+struct SortDescriptorTests {
     struct NonNSObjectRoot {
         enum Gadget: Int, Comparable {
             case foo = 0

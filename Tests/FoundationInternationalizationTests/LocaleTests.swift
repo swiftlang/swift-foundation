@@ -706,7 +706,7 @@ private struct LocaleBridgingTests {
     @available(iOS, deprecated: 16)
     @available(tvOS, deprecated: 16)
     @available(watchOS, deprecated: 9)
-    @Test func getACustomLocale() {
+    @Test func customLocaleSubclass() {
         let loc = getACustomLocale("en_US")
         let objCLoc = loc as! CustomNSLocaleSubclass
 
