@@ -22,6 +22,8 @@ public struct BundleMacro: SwiftSyntaxMacros.ExpressionMacro, Sendable {
                 return Bundle.module
             #elseif SWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE
                 #error("No resource bundle is available for this module. If resources are included elsewhere, specify the bundle manually.")
+            #elseif SWIFT_BUNDLE_LOOKUP_HELPER_AVAILABLE
+                return Bundle(for: __BundleLookupHelper.self)
             #else
                 return Bundle(_dsoHandle: #dsohandle) ?? .main
             #endif
