@@ -274,7 +274,11 @@ public struct URLResourceValues {
 
 #if os(macOS)
     /// The array of Tag names.
-    public var tagNames: [String]? { return _get(.tagNamesKey) }
+    public var tagNames: [String]? {
+        get { return _get(.tagNamesKey) }
+        @available(macOS 26.0, *)
+        set { _set(.tagNamesKey, newValue: newValue) }
+    }
 #endif
 
     /// The URL's path as a file system path.
