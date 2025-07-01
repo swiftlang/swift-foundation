@@ -1580,7 +1580,7 @@ extension Calendar {
         return result
     }
     
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     internal func dateAfterMatchingDayOfYear(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let dayOfYear = components.dayOfYear else {
             // Nothing to do

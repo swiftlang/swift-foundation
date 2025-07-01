@@ -366,7 +366,7 @@ extension AttributedString.Runs: BidirectionalCollection {
     #endif
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(_ index: Index, offsetBy distance: Int) -> Index {
         guard _isDiscontiguous else {

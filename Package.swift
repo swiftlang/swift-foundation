@@ -7,17 +7,16 @@ import CompilerPluginSupport
 // Availability Macros
 
 let availabilityTags: [_Availability] = [
-    _Availability("FoundationPreview"), // Default FoundationPreview availability,
-    _Availability("FoundationPredicate"), // Predicate relies on pack parameter runtime support
-    _Availability("FoundationPredicateRegex"), // Predicate regexes rely on new stdlib APIs
-    _Availability("FoundationSpan", availability: .future), // Availability of Span types
+    _Availability("FoundationPreview"), // Default FoundationPreview availability
+    _Availability("FoundationSpan", availability: .macOS26), // Availability of Span types
 ]
-let versionNumbers = ["0.1", "0.2", "0.3", "0.4", "6.0.2", "6.1", "6.2"]
+let versionNumbers = ["6.0.2", "6.1", "6.2"]
 
 // Availability Macro Utilities
 
 enum _OSAvailability: String {
     case alwaysAvailable = "macOS 15, iOS 18, tvOS 18, watchOS 11" // This should match the package's deployment target
+    case macOS26 = "macOS 26, iOS 26, tvOS 26, watchOS 26"
     // Use 10000 for future availability to avoid compiler magic around the 9999 version number but ensure it is greater than 9999
     case future = "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000"
 }

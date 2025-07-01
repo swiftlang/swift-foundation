@@ -423,7 +423,7 @@ extension Duration.TimeFormatStyle {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.TimeFormatStyle {
     /// Returns a modified style that applies the given `grouping` rule to the highest field in the
     /// pattern.
@@ -440,7 +440,7 @@ extension Duration.TimeFormatStyle {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.TimeFormatStyle.Attributed {
     /// Returns a modified style that applies the given `grouping` rule to the highest field in the
     /// pattern.
@@ -453,7 +453,7 @@ extension Duration.TimeFormatStyle.Attributed {
 
 // MARK: Dynamic Member Lookup
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.TimeFormatStyle.Attributed {
     private var innerStyle: Duration.TimeFormatStyle {
         get {
@@ -480,7 +480,7 @@ extension Duration.TimeFormatStyle.Attributed {
 
 // MARK: DiscreteFormatStyle Conformance
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.TimeFormatStyle.Attributed : DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         Duration.TimeFormatStyle(pattern: pattern, locale: locale).discreteInput(before: input)
@@ -491,7 +491,7 @@ extension Duration.TimeFormatStyle.Attributed : DiscreteFormatStyle {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.TimeFormatStyle : DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         let (bound, isIncluded) = Duration.bound(for: input, in: interval(for: input), countingDown: true, roundingRule: self.pattern.roundingRule)

@@ -30,7 +30,7 @@ public enum ComparisonResult : Int, Sendable {
 
 #endif // !FOUNDATION_FRAMEWORK
 
-@available(FoundationPreview 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension ComparisonResult : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()

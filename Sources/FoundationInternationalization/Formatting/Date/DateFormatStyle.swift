@@ -346,7 +346,7 @@ extension Date.AttributedStyle : FormatStyle {}
 
 // MARK: Typed Attributed Style
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle {
     /// The type preserving attributed variant of this style.
     ///
@@ -557,7 +557,7 @@ extension Date.FormatStyle {
 
 // MARK: Symbol Modifiers Attributed Style
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Attributed {
     /// Change the representation of the era in the format.
     ///
@@ -817,7 +817,7 @@ public extension ParseStrategy where Self == Date.FormatStyle {
 
 // MARK: DiscreteFormatStyle Conformance
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle : DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         guard let (bound, isIncluded) = bound(for: input, isLower: true) else {
@@ -854,7 +854,7 @@ extension Date.FormatStyle : DiscreteFormatStyle {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Attributed : DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         base.discreteInput(before: input)

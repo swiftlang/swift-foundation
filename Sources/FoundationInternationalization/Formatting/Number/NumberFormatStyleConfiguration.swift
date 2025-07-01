@@ -318,7 +318,7 @@ public enum CurrencyFormatStyleConfiguration {
     public typealias DecimalSeparatorDisplayStrategy = NumberFormatStyleConfiguration.DecimalSeparatorDisplayStrategy
     public typealias RoundingRule = NumberFormatStyleConfiguration.RoundingRule
     /// The type used to configure notation for currency format styles.
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public typealias Notation = NumberFormatStyleConfiguration.Notation
 
     internal typealias RoundingIncrement = NumberFormatStyleConfiguration.RoundingIncrement

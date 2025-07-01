@@ -239,7 +239,7 @@ extension Decimal.FormatStyle {
         ///
         /// - Parameter notation: The notation to apply to the format style.
         /// - Returns: A decimal currency format style modified to use the specified notation.
-        @available(FoundationPreview 0.4, *)
+        @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         public func notation(_ notation: Configuration.Notation) -> Self {
             var new = self
             new.collection.notation = notation

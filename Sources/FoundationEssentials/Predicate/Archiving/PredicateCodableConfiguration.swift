@@ -15,13 +15,13 @@
 #if canImport(ReflectionInternal)
 internal import ReflectionInternal
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public protocol PredicateCodableKeyPathProviding {
     @preconcurrency
     static var predicateCodableKeyPaths : [String : PartialKeyPath<Self> & Sendable] { get }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConvertible {
     enum AllowListType : Equatable, Sendable {
         case concrete(Type)
@@ -268,7 +268,7 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateCodableConfiguration {
     func _identifier(for keyPath: AnyKeyPath & Sendable) -> String? {
         let concreteIdentifier = allowedKeyPaths.first {
@@ -342,7 +342,7 @@ extension PredicateCodableConfiguration {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateCodableConfiguration {
     public static let standardConfiguration: Self = {
         var configuration = Self()

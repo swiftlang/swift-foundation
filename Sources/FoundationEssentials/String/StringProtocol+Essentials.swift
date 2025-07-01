@@ -98,7 +98,7 @@ dynamic package func _icuStringEncodingConvert(string: String, using encoding: S
 }
 #endif
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension String {
     public func data(using encoding: String.Encoding, allowLossyConversion: Bool = false) -> Data? {
         // allowLossyConversion is a no-op for UTF8 and UTF16. For UTF32, we fall back to NSString when lossy conversion is requested on Darwin platforms.
