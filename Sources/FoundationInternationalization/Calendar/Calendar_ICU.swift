@@ -287,7 +287,15 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             return 1..<5
         case .calendar, .timeZone:
             return nil
-        case .era, .year, .month, .day, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .isLeapMonth, .dayOfYear:
+        case .isLeapMonth:
+            // Fast path but also workaround an ICU bug where they return 1 as the max value even for calendars without leap month
+            let hasLeapMonths = identifier == .chinese || identifier == .dangi || identifier == .gujarati || identifier == .kannada || identifier == .marathi || identifier == .telugu || identifier == .vietnamese || identifier == .vikram
+            if !hasLeapMonths {
+                return 0..<1
+            } else {
+                return nil
+            }
+        case .era, .year, .month, .day, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear:
             return nil
         }
     }

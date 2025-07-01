@@ -634,6 +634,7 @@ private func _fromNSCalendarUnit(_ unit: NSCalendar.Unit) -> Calendar.Component?
     case .calendar: return .calendar
     case .timeZone: return .timeZone
     case .deprecatedWeekUnit: return .weekOfYear
+    case .isLeapMonth: return .isLeapMonth
     default:
         return nil
     }

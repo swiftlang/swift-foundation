@@ -43,6 +43,99 @@ private struct GregorianCalendarTests {
         _ = d.julianDay
     }
 
+    // MARK: Leap month
+    @Test func calendarUnitLeapMonth_gregorianCalendar() {
+        // Test leap month with a calendar that does not observe leap month
+
+        // Gregorian: 2023-03-22.
+        let date1 = Date(timeIntervalSinceReferenceDate: 701161200)
+        // Gregorian: 2023-03-02.
+        let date2 = Date(timeIntervalSinceReferenceDate: 699433200)
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+
+        let minRange = calendar.minimumRange(of: .isLeapMonth)
+        #expect(minRange?.lowerBound == 0)
+        #expect(minRange?.count == 1)
+
+        let maxRange = calendar.maximumRange(of: .isLeapMonth)
+        #expect(maxRange?.lowerBound == 0)
+        #expect(maxRange?.count == 1)
+
+        let leapMonthRange = calendar.range(of: .isLeapMonth, in: .year, for: date1)
+        #expect(leapMonthRange == nil)
+
+        let dateIntervial = calendar.dateInterval(of: .isLeapMonth, for: date1)
+        #expect(dateIntervial == nil)
+
+        // Invalid ordinality flag
+        let ordinal = calendar.ordinality(of: .isLeapMonth, in: .year, for: date1)
+        #expect(ordinal == nil)
+
+        // Invalid ordinality flag
+        let ordinal2 = calendar.ordinality(of: .day, in: .isLeapMonth, for: date1)
+        #expect(ordinal2 == nil)
+
+        let extractedComponents = calendar.dateComponents([.year, .month], from: date1)
+        #expect(extractedComponents.isLeapMonth == false)
+        #expect(extractedComponents.month == 3)
+
+        let isLeap = calendar.component(.isLeapMonth, from: date1)
+        #expect(isLeap == 0)
+
+        let extractedLeapMonthComponents_onlyLeapMonth = calendar.dateComponents([.isLeapMonth], from: date1)
+        #expect(extractedLeapMonthComponents_onlyLeapMonth.isLeapMonth == false)
+
+        let extractedLeapMonthComponents = calendar.dateComponents([.isLeapMonth, .month], from: date1)
+        #expect(extractedLeapMonthComponents.isLeapMonth == false)
+        #expect(extractedLeapMonthComponents.month == 3)
+
+        let isEqualMonth = calendar.isDate(date1, equalTo: date2, toGranularity: .month)
+        #expect(isEqualMonth) // Both are in month 3
+
+        let isEqualLeapMonth = calendar.isDate(date1, equalTo: date2, toGranularity: .isLeapMonth)
+        #expect(isEqualLeapMonth) // Both are not in leap month
+
+        // Invalid granularity flag. Return what we return for other invalid `Calendar.Component` inputs
+        let result = calendar.compare(date1, to: date2, toGranularity: .month)
+        #expect(result == .orderedSame)
+
+        // Invalid granularity flag. Return what we return for other invalid `Calendar.Component` inputs
+        let onlyLeapMonthComparisonResult = calendar.compare(date1, to: date2, toGranularity: .isLeapMonth)
+        #expect(onlyLeapMonthComparisonResult == .orderedSame)
+
+        let nextLeapMonthDate = calendar.nextDate(after: date1, matching: DateComponents(isLeapMonth: true), matchingPolicy: .strict)
+        #expect(nextLeapMonthDate == nil) // There is not a date in Gregorian that is a leap month
+
+#if FIXED_SINGLE_LEAPMONTH
+        let nextNonLeapMonthDate = calendar.nextDate(after: date1, matching: DateComponents(isLeapMonth: false), matchingPolicy: .strict)
+        #expect(nextNonLeapMonthDate == date1) // date1 matches the condition already
+#endif
+
+        var settingLeapMonthComponents = calendar.dateComponents([.year, .month, .day], from: date1)
+        settingLeapMonthComponents.isLeapMonth = true
+        let settingLeapMonthDate = calendar.date(from: settingLeapMonthComponents)
+        #expect(settingLeapMonthDate == nil) // There is not a date in Gregorian that is a leap month
+
+        var settingNonLeapMonthComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date1)
+        settingNonLeapMonthComponents.isLeapMonth = false
+        let settingNonLeapMonthDate = calendar.date(from: settingNonLeapMonthComponents)
+        #expect(settingNonLeapMonthDate == date1) // date1 matches the condition already
+
+        let diffComponents = calendar.dateComponents([.month, .day, .isLeapMonth], from: date1, to: date2)
+        #expect(diffComponents.month == 0)
+        #expect(diffComponents.isLeapMonth == nil)
+        #expect(diffComponents.day == -20)
+
+        let addedDate = calendar.date(byAdding: .isLeapMonth, value: 1, to: date1)
+        #expect(addedDate == nil)
+
+        // Invalid argument; cannot add a boolean component with an integer value
+        let addedDate_notLeap = calendar.date(byAdding: .isLeapMonth, value: 0, to: date1)
+        #expect(addedDate_notLeap == nil)
+    }
+
     // MARK: Date from components
 
     @Test func testDateFromComponents() {
