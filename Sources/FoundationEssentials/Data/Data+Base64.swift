@@ -490,15 +490,21 @@ extension Base64 {
         let other = pointer?.bindMemory(to: UInt8.self, capacity: outputLength)
         let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
         var length = outputLength
-        if options.contains(.ignoreUnknownCharacters) {
-            try Self._decodeIgnoringErrors(from: inBuffer, into: target, length: &length, options: options)
-        } else {
-            // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
-            // branch prediction?
-            try self._decode(from: inBuffer, into: target, length: &length, options: options)
+        do {
+            if options.contains(.ignoreUnknownCharacters) {
+                try Self._decodeIgnoringErrors(from: inBuffer, into: target, length: &length, options: options)
+            } else {
+                // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
+                // branch prediction?
+                try self._decode(from: inBuffer, into: target, length: &length, options: options)
+            }
+            
+            return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
+        } catch {
+            // Do not leak the malloc on error
+            free(pointer)
+            throw error
         }
-
-        return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
     }
 
     static func _decode(
