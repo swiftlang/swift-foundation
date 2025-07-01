@@ -18,7 +18,7 @@ internal import _FoundationICU
 
 // MARK: Date.AnchoredRelativeFormatStyle
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date {
     /// A relative format style that is detached from the system time, and instead
     /// formats an anchor date relative to the format input.
@@ -114,7 +114,7 @@ extension Date {
 
 // MARK: DiscreteFormatStyle Conformance
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.AnchoredRelativeFormatStyle : DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         guard let (bound, isIncluded) = bound(for: input, relativeTo: anchor, movingDown: true, countingTowardZero: input > anchor) else {

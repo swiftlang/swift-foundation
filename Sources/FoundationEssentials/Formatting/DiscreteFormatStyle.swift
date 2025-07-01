@@ -102,7 +102,7 @@
 /// - the formatted output for `xA` and higher is **most likely** different from `format(y)`
 /// - the  formatted output between `xB` and `zB`, as well as `zA` and `xA` (excluding bounds) cannot
 ///   be predicted
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 public protocol DiscreteFormatStyle<FormatInput, FormatOutput> : FormatStyle {
     /// The next discretization boundary before the given input.
     ///
@@ -191,7 +191,7 @@ public protocol DiscreteFormatStyle<FormatInput, FormatOutput> : FormatStyle {
     func input(after input: FormatInput) -> FormatInput?
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension DiscreteFormatStyle where FormatInput : FloatingPoint {
     public func input(before input: FormatInput) -> FormatInput? {
         guard input > -FormatInput.infinity else {
@@ -210,7 +210,7 @@ extension DiscreteFormatStyle where FormatInput : FloatingPoint {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension DiscreteFormatStyle where FormatInput : FixedWidthInteger {
     public func input(before input: FormatInput) -> FormatInput? {
         guard input > FormatInput.min else {
@@ -229,7 +229,7 @@ extension DiscreteFormatStyle where FormatInput : FixedWidthInteger {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension DiscreteFormatStyle where FormatInput == Date {
     public func input(before input: FormatInput) -> FormatInput? {
         guard input > Date.distantPast else {
@@ -258,7 +258,7 @@ extension Date {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension DiscreteFormatStyle where FormatInput == Duration {
     public func input(before input: FormatInput) -> FormatInput? {
         guard input > .seconds(Int64.min) else {

@@ -123,7 +123,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultCount
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal var _count: Int {
         _characters.count
@@ -153,7 +153,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
@@ -176,7 +176,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,
@@ -207,7 +207,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultDistance(from: start, to: end)
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")

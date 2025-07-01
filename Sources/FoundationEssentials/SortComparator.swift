@@ -143,7 +143,7 @@ public struct ComparableComparator<Compared: Comparable>: SortComparator, Sendab
     public var order: SortOrder
     
 #if FOUNDATION_FRAMEWORK
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(order: SortOrder = .forward) {
         self.order = order
     }

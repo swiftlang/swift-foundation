@@ -271,7 +271,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     /// A day of the year.
     /// For example, in the Gregorian calendar, can go from 1 to 365 or 1 to 366 in leap years.
     /// - note: This value is interpreted in the context of the calendar in which it is used.
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public var dayOfYear: Int? {
         get { _dayOfYear }
         set { _dayOfYear = converted(newValue) }

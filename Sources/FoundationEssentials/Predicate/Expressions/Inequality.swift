@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct NotEqual<
         LHS : PredicateExpression,
@@ -40,17 +40,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.NotEqual : CustomStringConvertible {
     public var description: String {
         "NotEqual(lhs: \(lhs), rhs: \(rhs))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.NotEqual : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.NotEqual : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -65,5 +65,5 @@ extension PredicateExpressions.NotEqual : Codable where LHS : Codable, RHS : Cod
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.NotEqual : Sendable where LHS : Sendable, RHS : Sendable {}

@@ -22,7 +22,7 @@ extension Date {
 
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
     public struct RelativeFormatStyle : Codable, Hashable, Sendable {
-        @available(FoundationPreview 0.4, *)
+        @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         public typealias Field = Date.ComponentsFormatStyle.Field
 
         public struct UnitsStyle : Codable, Hashable, Sendable {
@@ -95,7 +95,7 @@ extension Date {
         public var calendar: Calendar
 
         /// The fields that can be used in the formatted output.
-        @available(FoundationPreview 0.4, *)
+        @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         public var allowedFields: Set<Field> {
             get {
                 _allowedFields
@@ -125,7 +125,7 @@ extension Date {
             self._allowedFields = Set(Date.ComponentsFormatStyle.Field.Option.allCases.map { .init(option: $0) })
         }
 
-        @available(FoundationPreview 0.4, *)
+        @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         public init(allowedFields: Set<Field>, presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
             self.presentation = presentation
             self.unitsStyle = unitsStyle

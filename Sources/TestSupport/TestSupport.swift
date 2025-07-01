@@ -52,7 +52,7 @@ public typealias CurrencyFormatStyleConfiguration = Foundation.CurrencyFormatSty
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias IntegerParseStrategy = Foundation.IntegerParseStrategy
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 public typealias DiscreteFormatStyle = Foundation.DiscreteFormatStyle
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
@@ -110,7 +110,7 @@ public typealias StandardPredicateExpression = Foundation.StandardPredicateExpre
 public typealias PredicateError = Foundation.PredicateError
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateCodableConfiguration = Foundation.PredicateCodableConfiguration
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 public typealias Expression = Foundation.Expression
 #else
 
@@ -152,7 +152,7 @@ public typealias CurrencyFormatStyleConfiguration = FoundationInternationalizati
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias IntegerParseStrategy = FoundationInternationalization.IntegerParseStrategy
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 public typealias DiscreteFormatStyle = FoundationEssentials.DiscreteFormatStyle
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
@@ -213,7 +213,7 @@ public typealias PredicateExpressions = FoundationEssentials.PredicateExpression
 public typealias StandardPredicateExpression = FoundationEssentials.StandardPredicateExpression
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public typealias PredicateError = FoundationEssentials.PredicateError
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 public typealias Expression = FoundationEssentials.Expression
 
 public typealias SortDescriptor = FoundationInternationalization.SortDescriptor

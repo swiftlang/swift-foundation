@@ -562,7 +562,7 @@ extension OverwritingInitializable {
 extension NSPredicate : OverwritingInitializable {}
 extension NSExpression : OverwritingInitializable {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension NSPredicate {
     public convenience init?<Input>(_ predicate: Predicate<Input>) where Input : NSObject {
         let variable = predicate.variable
@@ -574,7 +574,7 @@ extension NSPredicate {
     }
 }
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension NSExpression {
     public convenience init?<Input, Output>(_ expression: Expression<Input, Output>) where Input : NSObject {
         let variable = expression.variable

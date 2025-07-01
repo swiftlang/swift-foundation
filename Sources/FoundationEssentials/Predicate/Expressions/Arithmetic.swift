@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public enum ArithmeticOperator: Codable, Sendable {
         case add, subtract, multiply
@@ -53,17 +53,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Arithmetic : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Arithmetic : CustomStringConvertible {
     public var description: String {
         "Arithmetic(lhs: \(lhs), operator: \(op), rhs: \(rhs))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Arithmetic : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -80,5 +80,5 @@ extension PredicateExpressions.Arithmetic : Codable where LHS : Codable, RHS : C
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Arithmetic : Sendable where LHS : Sendable, RHS : Sendable {}

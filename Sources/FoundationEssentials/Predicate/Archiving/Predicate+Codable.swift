@@ -26,7 +26,7 @@ extension PredicateCodableConfiguration {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Predicate : Codable {
     public func encode(to encoder: Encoder) throws {
         try self.encode(to: encoder, configuration: .default)
@@ -37,7 +37,7 @@ extension Predicate : Codable {
     }
 }
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Expression : Codable {
     public func encode(to encoder: Encoder) throws {
         try self.encode(to: encoder, configuration: .default)
@@ -48,7 +48,7 @@ extension Expression : Codable {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension Predicate : CodableWithConfiguration {
     public typealias EncodingConfiguration = PredicateCodableConfiguration
     public typealias DecodingConfiguration = PredicateCodableConfiguration
@@ -69,7 +69,7 @@ extension Predicate : CodableWithConfiguration {
     }
 }
 
-@available(FoundationPredicate 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Expression : CodableWithConfiguration {
     public typealias EncodingConfiguration = PredicateCodableConfiguration
     public typealias DecodingConfiguration = PredicateCodableConfiguration
