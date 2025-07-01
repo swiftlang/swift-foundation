@@ -2203,6 +2203,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         return try _representation.withUnsafeBytes(body)
     }
 
+    @abi(var _aeic_bytes: RawSpan)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public var bytes: RawSpan {
@@ -2231,6 +2232,12 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
+    @abi(var bytes: RawSpan)
+    @available(*, unavailable)
+    @usableFromInline
+    internal var _abi_compatibility_bytes: RawSpan { bytes }
+
+    @abi(var _aeic_span: Span<UInt8>)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public var span: Span<UInt8> {
@@ -2241,6 +2248,12 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
+    @abi(var span: Span<UInt8>)
+    @available(*, unavailable)
+    @usableFromInline
+    internal var _abi_compatibility_span: Span<UInt8> { span }
+
+    @abi(var _aeic_mutableBytes: MutableRawSpan)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public var mutableBytes: MutableRawSpan {
@@ -2269,6 +2282,12 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
+    @abi(var mutableBytes: MutableRawSpan)
+    @available(*, unavailable)
+    @usableFromInline
+    internal var _abi_compatibility_mutableBytes: MutableRawSpan { mutating get { mutableBytes } }
+
+    @abi(var _aeic_mutableSpan: MutableSpan<UInt8>)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public var mutableSpan: MutableSpan<UInt8> {
@@ -2302,6 +2321,11 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 #endif
         }
     }
+
+    @abi(var mutableSpan: MutableSpan<UInt8>)
+    @available(*, unavailable)
+    @usableFromInline
+    internal var _abi_compatibility_mutableSpan: MutableSpan<UInt8> { mutating get { mutableSpan } }
 
     @_alwaysEmitIntoClient
     public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
