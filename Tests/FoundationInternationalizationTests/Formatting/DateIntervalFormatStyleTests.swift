@@ -210,16 +210,19 @@ private struct DateIntervalFormatStyleTests {
             prefs.languages = ["es-ES"]
             prefs.locale = "es_ES"
             LocaleCache.cache.resetCurrent(to: prefs)
+            CalendarCache.cache.reset()
             let formattedSpanish = range.formatted(.interval.locale(locale))
             
             // Get a formatted result from en-US
             prefs.languages = ["en-US"]
             prefs.locale = "en_US"
             LocaleCache.cache.resetCurrent(to: prefs)
+            CalendarCache.cache.reset()
             let formattedEnglish = range.formatted(.interval.locale(locale))
             
             // Reset to current preferences before any possibility of failing this test
             LocaleCache.cache.reset()
+            CalendarCache.cache.reset()
             
             // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
             #expect(formattedSpanish != formattedEnglish)

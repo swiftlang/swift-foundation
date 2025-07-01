@@ -10,16 +10,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
+@testable import FoundationInternationalization
+#else
+@testable import Foundation
 #endif
 
-#if canImport(FoundationInternationalization)
-@testable import FoundationInternationalization
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(WASI)
+import WASILibc
+#elseif os(Windows)
+import CRT
 #endif
 
 extension DiscreteFormatStyle where FormatInput : Comparable {
@@ -91,8 +100,7 @@ func verify<T: Equatable>(
     sequence: some Sequence<T>,
     contains expectedExcerpts: some Sequence<some Sequence<T>>,
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: SourceLocation = #_sourceLocation
 ) {
     var iterator = sequence.makeIterator()
 
@@ -110,7 +118,7 @@ func verify<T: Equatable>(
             next = iterator.next()
 
             guard let next = next else {
-                XCTFail("Expected '\(first)' but found \(potentialMatches.map { "\($0)" }.joined(separator: ", ")) instead \(message())", file: file, line: line)
+                Issue.record("Expected '\(first)' but found \(potentialMatches.map { "\($0)" }.joined(separator: ", ")) instead \(message())", sourceLocation: sourceLocation)
                 break
             }
 
@@ -119,7 +127,7 @@ func verify<T: Equatable>(
 
         while let expected = expectedIterator.next() {
             let next = iterator.next()
-            XCTAssertEqual(next, expected, message(), file: file, line: line)
+            #expect(next == expected, Comment(rawValue: message()), sourceLocation: sourceLocation)
             if next != expected {
                 return
             }
@@ -141,8 +149,7 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     strict: Bool = false,
     samples: Int = 10000,
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: SourceLocation = #_sourceLocation
 ) throws where Style.FormatOutput : Equatable, Style.FormatInput == Duration {
     try verifyDiscreteFormatStyleConformance(
         style,
@@ -159,8 +166,7 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
         max: .seconds(Int64.max),
         codeFormatter: { "Duration(secondsComponent: \($0.components.seconds), attosecondsComponent: \($0.components.attoseconds))" },
         message(),
-        file: file,
-        line: line
+        sourceLocation: sourceLocation
     )
 }
 
@@ -181,8 +187,7 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     min: Date = Date(timeIntervalSinceReferenceDate: -2000 * 365 * 24 * 3600),
     max: Date = Date(timeIntervalSinceReferenceDate: 2000 * 365 * 24 * 3600),
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: SourceLocation = #_sourceLocation
 ) throws where Style.FormatOutput : Equatable, Style.FormatInput == Date {
     try verifyDiscreteFormatStyleConformance(
         style,
@@ -199,8 +204,7 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
         max: max,
         codeFormatter: { "Date(timeIntervalSinceReferenceDate: \($0.timeIntervalSinceReferenceDate))" },
         message(),
-        file: file,
-        line: line
+        sourceLocation: sourceLocation
     )
 }
 
@@ -223,8 +227,7 @@ func verifyDiscreteFormatStyleConformance(
     min: Date = Date(timeIntervalSinceReferenceDate: -2000 * 365 * 24 * 3600),
     max: Date = Date(timeIntervalSinceReferenceDate: 2000 * 365 * 24 * 3600),
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: SourceLocation = #_sourceLocation
 ) throws {
     var style = style
 
@@ -245,8 +248,7 @@ func verifyDiscreteFormatStyleConformance(
         max: now..<max,
         codeFormatter: { "Date(timeIntervalSinceReferenceDate: \($0.lowerBound.timeIntervalSinceReferenceDate))..<Date(timeIntervalSinceReferenceDate: \($0.upperBound.timeIntervalSinceReferenceDate))" },
         message() + "\nstyle.isPositive = true",
-        file: file,
-        line: line
+        sourceLocation: sourceLocation
     )
 
     style.isPositive = false
@@ -268,8 +270,7 @@ func verifyDiscreteFormatStyleConformance(
         max: now..<now,
         codeFormatter: { "Date(timeIntervalSinceReferenceDate: \($0.lowerBound.timeIntervalSinceReferenceDate))..<Date(timeIntervalSinceReferenceDate: \($0.upperBound.timeIntervalSinceReferenceDate))" },
         message() + "\nstyle.isPositive = false",
-        file: file,
-        line: line
+        sourceLocation: sourceLocation
     )
 }
 #endif // FOUNDATION_FRAMEWORK
@@ -293,8 +294,7 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
     max: Style.FormatInput,
     codeFormatter: (Style.FormatInput) -> String,
     _ message: @autoclosure () -> String = "",
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: SourceLocation = #_sourceLocation
 ) throws where Style.FormatOutput : Equatable, Style.FormatInput : Equatable {
     func _message(assertion: Assertion, before: Bool, inputValue: Style.FormatInput, expectedValue: Style.FormatInput?, note: String) -> String {
         let message = message()
@@ -325,18 +325,18 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
         }
 
         return prefix + """
-        XCTAssert\(assertion.rawValue)(try XCTUnwrap(style.discreteInput(\(before ? "before" : "after"): \(codeFormatter(inputValue)))), \(expectedValue == nil ? "nil" : codeFormatter(expectedValue!)))
+        #expect\(assertion.rawValue)(try #require(style.discreteInput(\(before ? "before" : "after"): \(codeFormatter(inputValue)))), \(expectedValue == nil ? "nil" : codeFormatter(expectedValue!)))
 
         \(reason)
         """
     }
 
     func nextUp(_ input: Style.FormatInput) throws -> Style.FormatInput {
-        try XCTUnwrap(style.input(after: input), "\(message().isEmpty ? "" : message() + "\n")XCTAssertNotNil(style.input(after: \(codeFormatter(input))))", file: file, line: line)
+        try #require(style.input(after: input), "\(message().isEmpty ? "" : message() + "\n")#expect(style.input(after: \(codeFormatter(input))) != nil)", sourceLocation: sourceLocation)
     }
 
     func nextDown(_ input: Style.FormatInput) throws -> Style.FormatInput {
-        try XCTUnwrap(style.input(before: input), "\(message().isEmpty ? "" : message() + "\n")XCTAssertNotNil(style.input(before: \(codeFormatter(input))))", file: file, line: line)
+        try #require(style.input(before: input), "\(message().isEmpty ? "" : message() + "\n")#expect(style.input(before: \(codeFormatter(input))) != nil)", sourceLocation: sourceLocation)
     }
 
     for _ in 0..<samples {
@@ -345,25 +345,25 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
 
         guard let inputAfter = style.discreteInput(after: input) else {
             // if `inputAfter` is `nil`, we should get the same formatted output everywhere between `input` and `max`
-            XCTAssertEqual(style.format(max), output, _message(assertion: .unequal, before: false, inputValue: input, expectedValue: nil, note: "invalid upper bound"), file: file, line: line)
+            #expect(style.format(max) == output, Comment(rawValue: _message(assertion: .unequal, before: false, inputValue: input, expectedValue: nil, note: "invalid upper bound")), sourceLocation: sourceLocation)
             return
         }
 
         // check for invalid ordering
         guard isLower(input, inputAfter) else {
-            XCTFail(_message(assertion: .greater, before: false, inputValue: input, expectedValue: input, note: "invalid ordering"), file: file, line: line)
+            Issue.record(Comment(rawValue: _message(assertion: .greater, before: false, inputValue: input, expectedValue: input, note: "invalid ordering")), sourceLocation: sourceLocation)
             return
         }
 
         guard let inputBefore = style.discreteInput(before: input) else {
             // if `inputBefore` is `nil`, we should get the same formatted output everywhere between `input` and `min`
-            XCTAssertEqual(style.format(min), output, _message(assertion: .unequal, before: true, inputValue: input, expectedValue: nil, note: "invalid lower bound"), file: file, line: line)
+            #expect(style.format(min) == output, Comment(rawValue: _message(assertion: .unequal, before: true, inputValue: input, expectedValue: nil, note: "invalid lower bound")), sourceLocation: sourceLocation)
             return
         }
 
         // check for invalid ordering
         guard isLower(inputBefore, input) else {
-            XCTFail(_message(assertion: .lower, before: true, inputValue: input, expectedValue: input, note: "invalid ordering"), file: file, line: line)
+            Issue.record(Comment(rawValue: _message(assertion: .lower, before: true, inputValue: input, expectedValue: input, note: "invalid ordering")), sourceLocation: sourceLocation)
             return
         }
 
@@ -374,12 +374,12 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
             for check in [lowerSampleBound] + (0..<10).map({ _ in randomInput((lowerSampleBound, upperSampleBound)) }) + [upperSampleBound] {
                 if isLower(check, input) {
                     guard style.format(check) == output else {
-                        XCTFail(_message(assertion: .greaterEqual, before: true, inputValue: input, expectedValue: check, note: "invalid lower bound"), file: file, line: line)
+                        Issue.record(Comment(rawValue: _message(assertion: .greaterEqual, before: true, inputValue: input, expectedValue: check, note: "invalid lower bound")), sourceLocation: sourceLocation)
                         return
                     }
                 } else {
                     guard style.format(check) == output else {
-                        XCTFail(_message(assertion: .lowerEqual, before: false, inputValue: input, expectedValue: check, note: "invalid upper bound"), file: file, line: line)
+                        Issue.record(Comment(rawValue: _message(assertion: .lowerEqual, before: false, inputValue: input, expectedValue: check, note: "invalid upper bound")), sourceLocation: sourceLocation)
                         return
                     }
                 }
@@ -389,12 +389,12 @@ func verifyDiscreteFormatStyleConformance<Style: DiscreteFormatStyle>(
         // if strict checking is enabled, we also check that the formatted output for `inputAfter` and `inputBefore` is indeed different from `format(input)`
         if strict {
             guard style.format(inputAfter) != output else {
-                XCTFail(_message(assertion: .greater, before: false, inputValue: input, expectedValue: inputAfter, note: "short upper bound (strict)"), file: file, line: line)
+                Issue.record(Comment(rawValue: _message(assertion: .greater, before: false, inputValue: input, expectedValue: inputAfter, note: "short upper bound (strict)")), sourceLocation: sourceLocation)
                 return
             }
 
             guard style.format(inputBefore) != output else {
-                XCTFail(_message(assertion: .lower, before: true, inputValue: input, expectedValue: inputBefore, note: "short lower bound (strict)"), file: file, line: line)
+                Issue.record(Comment(rawValue: _message(assertion: .lower, before: true, inputValue: input, expectedValue: inputBefore, note: "short lower bound (strict)")), sourceLocation: sourceLocation)
                 return
             }
         }
