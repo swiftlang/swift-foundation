@@ -100,7 +100,9 @@ private struct DateFormatStyleTests {
     }
 
     @Test func codable() throws {
-        let style = Date.FormatStyle(date: .long, time: .complete, locale: Locale(identifier: "en_US"), calendar: Calendar(identifier: .gregorian), timeZone: .gmt, capitalizationContext: .unknown)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let style = Date.FormatStyle(date: .long, time: .complete, locale: Locale(identifier: "en_US"), calendar: calendar, timeZone: .gmt, capitalizationContext: .unknown)
             .era()
             .year()
             .quarter()

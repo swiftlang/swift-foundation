@@ -202,21 +202,21 @@ private struct CalendarTests {
         #expect(anyHashables[1] == anyHashables[2])
     }
 
-    func decodeHelper(_ l: Calendar) -> Calendar {
+    func decodeHelper(_ l: Calendar) throws -> Calendar {
         let je = JSONEncoder()
-        let data = try! je.encode(l)
+        let data = try je.encode(l)
         let jd = JSONDecoder()
-        return try! jd.decode(Calendar.self, from: data)
+        return try jd.decode(Calendar.self, from: data)
     }
 
-    @Test func serializationOfCurrent() async {
-        await usingCurrentInternationalizationPreferences {
+    @Test func serializationOfCurrent() async throws {
+        try await usingCurrentInternationalizationPreferences {
             let current = Calendar.current
-            let decodedCurrent = decodeHelper(current)
+            let decodedCurrent = try decodeHelper(current)
             #expect(decodedCurrent == current)
             
             let autoupdatingCurrent = Calendar.autoupdatingCurrent
-            let decodedAutoupdatingCurrent = decodeHelper(autoupdatingCurrent)
+            let decodedAutoupdatingCurrent = try decodeHelper(autoupdatingCurrent)
             #expect(decodedAutoupdatingCurrent == autoupdatingCurrent)
             
             #expect(decodedCurrent != decodedAutoupdatingCurrent)
@@ -227,7 +227,7 @@ private struct CalendarTests {
             // Calendar, unlike TimeZone and Locale, has some mutable properties
             var modified = Calendar.autoupdatingCurrent
             modified.firstWeekday = 6
-            let decodedModified = decodeHelper(modified)
+            let decodedModified = try decodeHelper(modified)
             #expect(decodedModified != autoupdatingCurrent)
             #expect(modified == decodedModified)
         }
