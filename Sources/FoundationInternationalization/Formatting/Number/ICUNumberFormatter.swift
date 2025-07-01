@@ -77,6 +77,7 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     func attributedStringFromPositions(_ positions: [ICUNumberFormatter.AttributePosition], string: String) -> AttributedString {
         typealias NumberPartAttribute = AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.NumberPart
         typealias NumberSymbolAttribute = AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.Symbol
@@ -246,6 +247,7 @@ final class ICUNumberFormatter : ICUNumberFormatterBase, @unchecked Sendable {
         _create(with: .init(skeleton: style.collection.skeleton, localeIdentifier: style.locale.identifierCapturingPreferences))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     func attributedFormat(_ v: Value) -> AttributedString {
         guard let (str, attributes) = attributedFormatPositions(v) else {
             return AttributedString(v.fallbackDescription)
@@ -294,6 +296,7 @@ final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase, @unchecked Send
         _create(with: .init(skeleton: style.collection.skeleton, currencyCode: style.currencyCode, localeIdentifier: style.locale.identifierCapturingPreferences))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     func attributedFormat(_ v: Value) -> AttributedString {
         guard let (str, attributes) = attributedFormatPositions(v) else {
             return AttributedString(v.fallbackDescription)
@@ -339,6 +342,7 @@ final class ICUPercentNumberFormatter : ICUNumberFormatterBase, @unchecked Senda
         _create(with: .init(skeleton: style.collection.skeleton, localeIdentifier: style.locale.identifierCapturingPreferences))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     func attributedFormat(_ v: Value) -> AttributedString {
         guard let (str, attributes) = attributedFormatPositions(v) else {
             return AttributedString(v.fallbackDescription)
@@ -364,6 +368,7 @@ final class ICUByteCountNumberFormatter : ICUNumberFormatterBase, @unchecked Sen
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     func attributedFormat(_ v: Value, unit: ByteCountFormatStyle.Unit) -> AttributedString {
         guard let (str, attributes) = attributedFormatPositions(v) else {
             return AttributedString(v.fallbackDescription)
@@ -371,6 +376,7 @@ final class ICUByteCountNumberFormatter : ICUNumberFormatterBase, @unchecked Sen
         return attributedStringFromPositions(attributes, string: str, unit: unit)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     private func attributedStringFromPositions(_ positions: [ICUNumberFormatter.AttributePosition], string: String, unit: ByteCountFormatStyle.Unit) -> AttributedString {
         typealias NumberPartAttribute = AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.NumberPart
         typealias NumberSymbolAttribute = AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.Symbol
@@ -422,6 +428,7 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked S
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     func attributedFormat(_ v: Value) -> AttributedString {
         guard let (str, attributes) = attributedFormatPositions(v) else {
             return AttributedString(v.fallbackDescription)
@@ -430,6 +437,7 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked S
     }
 
     /// Overrides superclass implementation to add the `MeasurementAttribute` property.
+    @available(FoundationAttributedString 5.5, *)
     override func attributedStringFromPositions(_ positions: [ICUNumberFormatter.AttributePosition], string: String) -> AttributedString {
         typealias NumberPartAttribute = AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.NumberPart
         typealias NumberSymbolAttribute = AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.Symbol

@@ -18,6 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     /// A mutable rope of `_InternalRun` values, sliced on an arbitrary UTF-8 offset range.
     /// Boundary runs may be sliced into two parts; this collection transparently constructs
@@ -49,6 +50,7 @@ extension AttributedString {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRunsSlice: BidirectionalCollection {
     // Note: This is a true bidirectional collection, only supporting step-by-step access.
     // (It would be possible to implement `index(_:offsetBy:)` in logarithmic time, but we have
@@ -102,6 +104,7 @@ extension AttributedString._InternalRunsSlice: BidirectionalCollection {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRunsSlice {
     func update(
         at index: inout _InternalRuns.Index,

@@ -35,10 +35,17 @@ extension Date {
         }
 
         /// Returns a type erased attributed variant of this style.
+        #if FOUNDATION_FRAMEWORK
         @available(macOS, deprecated: 15, introduced: 12, message: "Use attributedStyle instead")
         @available(iOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
         @available(tvOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
         @available(watchOS, deprecated: 11, introduced: 8, message: "Use attributedStyle instead")
+        #else
+        @available(macOS, deprecated: 26, introduced: 26, message: "Use attributedStyle instead")
+        @available(iOS, deprecated: 26, introduced: 26, message: "Use attributedStyle instead")
+        @available(tvOS, deprecated: 26, introduced: 26, message: "Use attributedStyle instead")
+        @available(watchOS, deprecated: 26, introduced: 26, message: "Use attributedStyle instead")
+        #endif
         public var attributed: AttributedStyle {
             .init(style: .verbatimFormatStyle(self))
         }
@@ -78,7 +85,7 @@ extension Date.VerbatimFormatStyle: ParseableFormatStyle {
 
 // MARK: Typed Attributed Style
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Date.VerbatimFormatStyle {
     /// The type preserving attributed variant of this style.
     ///
@@ -176,7 +183,7 @@ extension Date.VerbatimFormatStyle : DiscreteFormatStyle {
     }
 }
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Date.VerbatimFormatStyle.Attributed : DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         base.discreteInput(before: input)

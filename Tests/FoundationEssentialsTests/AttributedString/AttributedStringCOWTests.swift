@@ -18,6 +18,7 @@ import Testing
 @testable import Foundation
 #endif
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedStringProtocol {
     fileprivate mutating func genericSetAttribute() {
         self.testInt = 3
@@ -29,7 +30,7 @@ extension AttributedStringProtocol {
 private struct AttributedStringCOWTests {
     
     // MARK: - Utility Functions
-    
+    @available(FoundationAttributedString 5.5, *)
     func createAttributedString() -> AttributedString {
         var str = AttributedString("Hello", attributes: container)
         str += AttributedString(" ")
@@ -37,6 +38,7 @@ private struct AttributedStringCOWTests {
         return str
     }
     
+    @available(FoundationAttributedString 5.5, *)
     func assertCOWCopy(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         let str = createAttributedString()
         var copy = str
@@ -44,6 +46,7 @@ private struct AttributedStringCOWTests {
         #expect(str != copy, "Mutation operation did not copy when multiple references exist", sourceLocation: sourceLocation)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     func assertCOWCopyManual(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         var str = createAttributedString()
         let gutsPtr = Unmanaged.passUnretained(str._guts)
@@ -52,6 +55,7 @@ private struct AttributedStringCOWTests {
         #expect(gutsPtr.toOpaque() != newGutsPtr.toOpaque(), "Mutation operation with manual copy did not perform copy", sourceLocation: sourceLocation)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     func assertCOWNoCopy(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         var str = createAttributedString()
         let gutsPtr = Unmanaged.passUnretained(str._guts)
@@ -60,37 +64,42 @@ private struct AttributedStringCOWTests {
         #expect(gutsPtr.toOpaque() == newGutsPtr.toOpaque(), "Mutation operation copied when only one reference exists", sourceLocation: sourceLocation)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     func assertCOWBehavior(sourceLocation: SourceLocation = #_sourceLocation, _ operation: (inout AttributedString) -> Void) {
         assertCOWCopy(sourceLocation: sourceLocation, operation)
         assertCOWNoCopy(sourceLocation: sourceLocation, operation)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     func makeSubrange(_ str: AttributedString) -> Range<AttributedString.Index> {
         return str.characters.index(str.startIndex, offsetBy: 2)..<str.characters.index(str.endIndex, offsetBy: -2)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     func makeSubranges(_ str: AttributedString) -> RangeSet<AttributedString.Index> {
         let rangeA = str.characters.index(str.startIndex, offsetBy: 2)..<str.characters.index(str.startIndex, offsetBy: 4)
         let rangeB = str.characters.index(str.endIndex, offsetBy: -4)..<str.characters.index(str.endIndex, offsetBy: -2)
         return RangeSet([rangeA, rangeB])
     }
     
-    let container: AttributeContainer = {
+    @available(FoundationAttributedString 5.5, *)
+    var container: AttributeContainer {
         var container = AttributeContainer()
         container.testInt = 2
         return container
-    }()
+    }
     
-    let containerB: AttributeContainer = {
+    @available(FoundationAttributedString 5.5, *)
+    var containerB: AttributeContainer {
         var container = AttributeContainer()
         container.testBool = true
         return container
-    }()
+    }
     
     // MARK: - Tests
     
-    @Test
-    func topLevelType() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func topLevelType() {
         assertCOWBehavior { (str) in
             str.setAttributes(container)
         }
@@ -126,8 +135,8 @@ private struct AttributedStringCOWTests {
         }
     }
     
-    @Test
-    func substring() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func substring() {
         assertCOWBehavior { (str) in
             str[makeSubrange(str)].setAttributes(container)
         }
@@ -148,8 +157,8 @@ private struct AttributedStringCOWTests {
         }
     }
     
-    @Test
-    func discontiguousSubstring() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func discontiguousSubstring() {
         assertCOWBehavior { (str) in
             str[makeSubranges(str)].setAttributes(container)
         }
@@ -174,8 +183,8 @@ private struct AttributedStringCOWTests {
         }
     }
     
-    @Test
-    func characters() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func characters() {
         let char: Character = "a"
         
         assertCOWBehavior { (str) in
@@ -198,8 +207,8 @@ private struct AttributedStringCOWTests {
         }
     }
     
-    @Test
-    func unicodeScalars() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func unicodeScalars() {
         let scalar: UnicodeScalar = "a"
         
         assertCOWBehavior { (str) in
@@ -207,8 +216,8 @@ private struct AttributedStringCOWTests {
         }
     }
     
-    @Test
-    func genericProtocol() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func genericProtocol() {
         assertCOWBehavior {
             $0.genericSetAttribute()
         }
@@ -217,8 +226,8 @@ private struct AttributedStringCOWTests {
         }
     }
     
-    @Test
-    func indexTracking() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func indexTracking() {
         assertCOWBehavior {
             _ = $0.transform(updating: $0.startIndex ..< $0.endIndex) {
                 $0.testInt = 2

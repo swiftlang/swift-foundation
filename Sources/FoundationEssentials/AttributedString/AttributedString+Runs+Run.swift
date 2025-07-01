@@ -18,7 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     @dynamicMemberLookup
     public struct Run: Sendable {
@@ -42,7 +42,7 @@ extension AttributedString.Runs {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs.Run: Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs._range._utf8OffsetRange.count == rhs._range._utf8OffsetRange.count
@@ -50,14 +50,14 @@ extension AttributedString.Runs.Run: Equatable {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs.Run: CustomStringConvertible {
     public var description: String {
         AttributedSubstring(_guts, in: _range).description
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs.Run {
     public var range: Range<AttributedString.Index> {
         let lower = AttributedString.Index(_range.lowerBound, version: _guts.version)
@@ -78,7 +78,7 @@ extension AttributedString.Runs.Run {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs.Run {
     @preconcurrency
     @inlinable // Trivial implementation, allows callers to optimize away the keypath allocation

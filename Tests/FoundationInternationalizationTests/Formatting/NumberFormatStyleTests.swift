@@ -261,7 +261,12 @@ final class NumberFormatStyleTests: XCTestCase {
         XCTAssertEqual(Float64.nan.formatted(.currency(code: "USD").locale(Locale(identifier: "uz_Cyrl"))), "ҳақиқий сон эмас US$")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     func testFormattedAttributedLeadingDotSyntax() throws {
+        if #unavailable(FoundationAttributedString 5.5) {
+            throw XCTSkip("This test is not available on this OS version")
+        }
+        
         let int = 42
         XCTAssertEqual(int.formatted(.number.attributed), IntegerFormatStyle().attributed.format(int))
         XCTAssertEqual(int.formatted(.percent.attributed), IntegerFormatStyle.Percent().attributed.format(int))
@@ -1634,8 +1639,10 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
 
 // MARK: - Attributed string
 
+@available(FoundationAttributedString 5.5, *)
 fileprivate typealias Segment = (String, AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.NumberPart?, AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.Symbol?)
 
+@available(FoundationAttributedString 5.5, *)
 extension Sequence where Element == Segment {
     var attributedString: AttributedString {
         self.map { tuple in
@@ -1652,15 +1659,23 @@ extension Sequence where Element == Segment {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     fileprivate var string: String {
         String(self._guts.string)
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 class TestNumberAttributeFormatStyle: XCTestCase {
     let enUS = Locale(identifier: "en_US")
     let frFR = Locale(identifier: "fr_FR")
+    
+    override func setUpWithError() throws {
+        if #unavailable(FoundationAttributedString 5.5) {
+            throw XCTSkip("This test is not available on this OS version")
+        }
+    }
 
     func testIntegerStyle() throws {
         let style: IntegerFormatStyle<Int> = .init(locale: enUS)
@@ -2203,7 +2218,11 @@ extension NumberFormatStyleTests {
 
 extension NumberFormatStyleTests {
 
+    @available(FoundationAttributedString 5.5, *)
     func testIntegerFormatStyleBigNumberNoCrash() throws {
+        if #unavailable(FoundationAttributedString 5.5) {
+            throw XCTSkip("This test is not available on this OS version")
+        }
         let uint64Style: IntegerFormatStyle<UInt64> = .init(locale: enUSLocale)
         XCTAssertEqual(uint64Style.format(UInt64.max), "18,446,744,073,709,551,615")
         XCTAssertEqual(UInt64.max.formatted(.number.locale(enUSLocale)), "18,446,744,073,709,551,615")

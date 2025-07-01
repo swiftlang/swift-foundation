@@ -18,7 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedString {
     /// A view of an attributed string’s contents as a collection of UTF-8 code units.
     public struct UTF8View: Sendable {
@@ -42,7 +42,7 @@ extension AttributedString {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedSubstring {
     /// A view of the attributed substring's contents as a collection of UTF-8 code units.
     public var utf8: AttributedString.UTF8View {
@@ -50,14 +50,14 @@ extension AttributedSubstring {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedString.UTF8View {
     var _utf8: BigSubstring.UTF8View {
         BigSubstring.UTF8View(_unchecked: _guts.string, in: _range)
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedString.UTF8View: BidirectionalCollection {
     public typealias Element = UTF8.CodeUnit
     public typealias Index = AttributedString.Index

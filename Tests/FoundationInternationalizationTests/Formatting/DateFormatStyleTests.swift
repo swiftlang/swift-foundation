@@ -597,6 +597,7 @@ private struct DateFormatStyleTests {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension Sequence where Element == (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?) {
     var attributedString: AttributedString {
         self.map { pair in
@@ -609,8 +610,11 @@ extension Sequence where Element == (String, AttributeScopes.FoundationAttribute
 private struct DateAttributedFormatStyleTests {
     var enUSLocale = Locale(identifier: "en_US")
     var gmtTimeZone = TimeZone(secondsFromGMT: 0)!
-
+    
+    @available(FoundationAttributedString 5.5, *)
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?)
+    
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributedFormatStyle() throws {
         let baseStyle = Date.FormatStyle(locale: enUSLocale, timeZone: gmtTimeZone)
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
@@ -634,6 +638,7 @@ private struct DateAttributedFormatStyleTests {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func individualFields() throws {
         let baseStyle = Date.FormatStyle(locale: enUSLocale, timeZone: gmtTimeZone)
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
@@ -660,6 +665,7 @@ private struct DateAttributedFormatStyleTests {
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func codable() throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -673,6 +679,7 @@ private struct DateAttributedFormatStyleTests {
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func settingLocale() throws {
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
@@ -693,6 +700,7 @@ private struct DateAttributedFormatStyleTests {
     }
 
 #if FOUNDATION_FRAMEWORK
+    @available(FoundationAttributedString 5.5, *)
     @Test func formattingWithPrefsOverride() {
         let date = Date(timeIntervalSince1970: 0)
         let enUS = "en_US"
@@ -855,6 +863,7 @@ private struct DateAttributedFormatStyleTests {
 private struct DateVerbatimFormatStyleTests {
     var utcTimeZone = TimeZone(identifier: "UTC")!
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func formats() throws {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
@@ -877,6 +886,7 @@ private struct DateVerbatimFormatStyleTests {
         verify("\(hour: .defaultDigits(clock: .twelveHour, hourCycle: .zeroBased)) heures et \(minute: .twoDigits) minutes", expected: "2 heures et 51 minutes")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func parseable() throws {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
@@ -898,6 +908,7 @@ private struct DateVerbatimFormatStyleTests {
     }
 
     // Test parsing strings containing `abbreviated` names
+    @available(FoundationAttributedString 5.5, *)
     @Test func nonLenientParsingAbbreviatedNames() throws {
 
         // dateFormatter.date(from: "1970-01-01 00:00:00")!
@@ -941,6 +952,7 @@ private struct DateVerbatimFormatStyleTests {
 #endif // FIXED_ICU_74_DAYPERIOD
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func issue95845290() throws {
         let formatString: Date.FormatString = "\(weekday: .abbreviated) \(month: .abbreviated) \(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) \(timeZone: .iso8601(.short)) \(year: .defaultDigits)"
         let enGB = Locale(identifier: "en_GB")
@@ -958,9 +970,11 @@ private struct DateVerbatimFormatStyleTests {
             #expect(date == Date(timeIntervalSinceReferenceDate: 677261400.0))
         }
     }
-
+    
+    @available(FoundationAttributedString 5.5, *)
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DateFieldAttribute.Field?)
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributedString() throws {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)
@@ -984,11 +998,13 @@ private struct DateVerbatimFormatStyleTests {
                  ("20", .second)])
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func storedVar() {
         _ = Date.FormatStyle.dateTime
         _ = Date.ISO8601FormatStyle.iso8601
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func allIndividualFields() {
         // dateFormatter.date(from: "2021-01-23 14:51:20")!
         let date = Date(timeIntervalSinceReferenceDate: 633106280.0)

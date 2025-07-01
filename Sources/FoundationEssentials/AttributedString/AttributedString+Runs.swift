@@ -18,7 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     public struct Runs: Sendable {
         internal typealias _InternalRun = AttributedString._InternalRun
@@ -95,7 +95,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs: Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         // Note: Unlike AttributedString itself, this is comparing run lengths without normalizing
@@ -119,14 +119,14 @@ extension AttributedString.Runs: Equatable {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs: CustomStringConvertible {
     public var description: String {
         _guts.description(in: _strBounds)
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     public struct Index: Sendable {
         /// The offset of this run from the start of the attributed string.
@@ -185,7 +185,7 @@ extension AttributedString.Runs {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs.Index: Comparable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs._runOffset == rhs._runOffset && lhs._stringIndex == rhs._stringIndex
@@ -210,11 +210,11 @@ extension AttributedString.Runs.Index: Comparable {
 }
 
 #if !FOUNDATION_FRAMEWORK
-@available(macOS, deprecated: 10000, introduced: 12, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
-@available(iOS, deprecated: 10000, introduced: 15, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
-@available(tvOS, deprecated: 10000, introduced: 15, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
-@available(watchOS, deprecated: 10000, introduced: 8, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
-@available(visionOS, deprecated: 10000, introduced: 1, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(macOS, deprecated: 10000, introduced: 26, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(iOS, deprecated: 10000, introduced: 26, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(tvOS, deprecated: 10000, introduced: 26, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(watchOS, deprecated: 10000, introduced: 26, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(visionOS, deprecated: 10000, introduced: 26, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
 @available(*, deprecated, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
 extension AttributedString.Runs.Index: Strideable {
     public func distance(to other: Self) -> Int {
@@ -230,14 +230,14 @@ extension AttributedString.Runs.Index: Strideable {
 }
 #endif
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension Range<AttributedString.Runs.Index> {
     var _runOffsetRange: Range<Int> {
         Range<Int>(uncheckedBounds: (lowerBound._runOffset, upperBound._runOffset))
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs: BidirectionalCollection {
     public typealias Element = Run
 
@@ -339,7 +339,7 @@ extension AttributedString.Runs: BidirectionalCollection {
     }
     #endif
     
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationAttributedString 6.2, *)
     @usableFromInline
     internal func _distance(from start: Index, to end: Index) -> Int {
         guard _isDiscontiguous else {
@@ -366,7 +366,7 @@ extension AttributedString.Runs: BidirectionalCollection {
     #endif
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationAttributedString 5.9, *)
     @usableFromInline
     internal func _index(_ index: Index, offsetBy distance: Int) -> Index {
         guard _isDiscontiguous else {
@@ -433,7 +433,7 @@ extension AttributedString.Runs: BidirectionalCollection {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     // FIXME: Make public, with a better name. (Probably no need to state "run" -- `index(containing:)`?)
     internal func indexOfRun(at position: AttributedString.Index) -> Index {
@@ -488,7 +488,7 @@ extension AttributedString.Runs {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     internal func _slicedRunBoundary(
         after i: AttributedString.Index,
@@ -620,7 +620,7 @@ extension AttributedString.Runs {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension BigString {
     internal func _firstConstraintBreak(
         in range: Range<Index>,

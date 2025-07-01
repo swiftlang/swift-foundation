@@ -20,8 +20,8 @@ import Foundation
 
 @Suite("AttributedString Index Tracking")
 private struct AttributedStringIndexTrackingTests {
-    @Test
-    func basics() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func basics() throws {
         var text = AttributedString("ABC. Hello, world!")
         let original = text
         let helloRange = try #require(text.range(of: "Hello"))
@@ -36,8 +36,8 @@ private struct AttributedStringIndexTrackingTests {
         #expect(text[updatedRanges[1]] == original[worldRange])
     }
     
-    @Test
-    func insertionWithinRange() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func insertionWithinRange() throws {
         var text = AttributedString("Hello, world")
         var helloRange = try #require(text.range(of: "Hello"))
         
@@ -48,8 +48,8 @@ private struct AttributedStringIndexTrackingTests {
         #expect(String(text[helloRange].characters) == "Hel_Goodbye_lo")
     }
     
-    @Test
-    func insertionAtStartOfRange() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func insertionAtStartOfRange() throws {
         var text = AttributedString("Hello, world")
         let helloRange = try #require(text.range(of: "llo"))
         
@@ -60,8 +60,8 @@ private struct AttributedStringIndexTrackingTests {
         #expect(String(text[updatedHelloRange].characters) == "llo")
     }
     
-    @Test
-    func insertionAtEndOfRange() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func insertionAtEndOfRange() throws {
         var text = AttributedString("Hello, world")
         let helloRange = try #require(text.range(of: "llo"))
         
@@ -72,8 +72,8 @@ private struct AttributedStringIndexTrackingTests {
         #expect(String(text[updatedHelloRange].characters) == "llo")
     }
     
-    @Test
-    func insertionAtEmptyRange() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func insertionAtEmptyRange() throws {
         var text = AttributedString("ABCDE")
         let idx = text.index(text.startIndex, offsetByCharacters: 3)
         
@@ -85,8 +85,8 @@ private struct AttributedStringIndexTrackingTests {
         #expect(text.characters[updatedRange.lowerBound] == "D")
     }
     
-    @Test
-    func removalWithinRange() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func removalWithinRange() throws {
         var text = AttributedString("Hello, world")
         var helloRange = try #require(text.range(of: "Hello"))
         
@@ -97,8 +97,8 @@ private struct AttributedStringIndexTrackingTests {
         #expect(String(text[helloRange].characters) == "Heo")
     }
     
-    @Test
-    func fullCollapse() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func fullCollapse() throws {
         do {
             var text = AttributedString("Hello, world")
             var helloRange = try #require(text.range(of: "Hello"))
@@ -135,8 +135,8 @@ private struct AttributedStringIndexTrackingTests {
         }
     }
     
-    @Test
-    func collapseLeft() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func collapseLeft() throws {
         var text = AttributedString("Hello, world")
         var helloRange = try #require(text.range(of: "Hello"))
         
@@ -147,8 +147,8 @@ private struct AttributedStringIndexTrackingTests {
         #expect(String(text[helloRange].characters) == "He")
     }
     
-    @Test
-    func collapseRight() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func collapseRight() throws {
         var text = AttributedString("Hello, world")
         var worldRange = try #require(text.range(of: "world"))
         
@@ -159,8 +159,8 @@ private struct AttributedStringIndexTrackingTests {
         #expect(String(text[worldRange].characters) == "rld")
     }
     
-    @Test
-    func nesting() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func nesting() throws {
         var text = AttributedString("Hello, world")
         var helloRange = try #require(text.range(of: "Hello"))
         try text.transform(updating: &helloRange) {
@@ -174,8 +174,8 @@ private struct AttributedStringIndexTrackingTests {
     }
     
     #if FOUNDATION_EXIT_TESTS
-    @Test
-    func trackingLostPreconditions() async {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func trackingLostPreconditions() async {
         await #expect(processExitsWith: .failure) {
             var text = AttributedString("Hello, world")
             var helloRange = try #require(text.range(of: "Hello"))
@@ -210,8 +210,8 @@ private struct AttributedStringIndexTrackingTests {
     }
     #endif
     
-    @Test
-    func trackingLost() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func trackingLost() throws {
         let text = AttributedString("Hello, world")
         let helloRange = try #require(text.range(of: "Hello"))
         
@@ -247,8 +247,8 @@ private struct AttributedStringIndexTrackingTests {
         }
     }
     
-    @Test
-    func attributeMutation() throws {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func attributeMutation() throws {
         var text = AttributedString("Hello, world!")
         let original = text
         let helloRange = try #require(text.range(of: "Hello"))
@@ -264,8 +264,8 @@ private struct AttributedStringIndexTrackingTests {
     }
     
     #if FOUNDATION_EXIT_TESTS
-    @Test
-    func invalidInputRanges() async {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func invalidInputRanges() async {
         await #expect(processExitsWith: .failure) {
             var text = AttributedString("Hello, world")
             let other = text + AttributedString("Extra text")

@@ -20,8 +20,8 @@ import Foundation
 
 @Suite("Discontiguous AttributedString")
 private struct AttributedStringDiscontiguousTests {
-    @Test
-    func emptySlice() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func emptySlice() {
         let str = AttributedString()
         let slice = str[RangeSet()]
         #expect(slice.runs.isEmpty)
@@ -44,8 +44,8 @@ private struct AttributedStringDiscontiguousTests {
         }
     }
     
-    @Test
-    func characters() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func characters() {
         let str = AttributedString("abcdefgabc")
         let fullSlice = str[str.startIndex ..< str.endIndex].characters
         let fullDiscontiguousSlice = str[RangeSet(str.startIndex ..< str.endIndex)].characters
@@ -58,8 +58,8 @@ private struct AttributedStringDiscontiguousTests {
         #expect(Array(slice) == ["a", "b", "c", "a", "b", "c"])
     }
     
-    @Test
-    func unicodeScalars() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func unicodeScalars() {
         let str = AttributedString("abcdefgabc")
         let fullSlice = str[str.startIndex ..< str.endIndex].unicodeScalars
         let fullDiscontiguousSlice = str[RangeSet(str.startIndex ..< str.endIndex)].unicodeScalars
@@ -72,8 +72,8 @@ private struct AttributedStringDiscontiguousTests {
         #expect(Array(slice) == ["a", "b", "c", "a", "b", "c"])
     }
     
-    @Test
-    func attributes() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func attributes() {
         let str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -179,8 +179,8 @@ private struct AttributedStringDiscontiguousTests {
         }
     }
     
-    @Test
-    func reinitialization() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func reinitialization() {
         var str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -192,8 +192,8 @@ private struct AttributedStringDiscontiguousTests {
         #expect(reinitialized == AttributedString("ace", attributes: AttributeContainer.testInt(2)))
     }
     
-    @Test
-    func reslicing() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func reslicing() {
         var str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -208,8 +208,8 @@ private struct AttributedStringDiscontiguousTests {
         #expect(str[RangeSet()][RangeSet()] == str[RangeSet()])
     }
     
-    @Test
-    func runs() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func runs() {
         var str = AttributedString("AAA", attributes: AttributeContainer.testInt(2))
         str += AttributedString("BBB", attributes: AttributeContainer.testInt(3).testString("foo"))
         str += AttributedString("CC", attributes: AttributeContainer.testInt(3).testString("bar"))
@@ -234,8 +234,8 @@ private struct AttributedStringDiscontiguousTests {
         #expect(runs.reversed().map(\.range) == expectedRanges.reversed())
     }
     
-    @Test
-    func coalescedRuns() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func coalescedRuns() {
         struct EquatableBox<T: Equatable, U: Equatable>: Equatable, CustomStringConvertible {
             let t: T
             let u: U
@@ -281,8 +281,8 @@ private struct AttributedStringDiscontiguousTests {
         #expect(runs[\.testString].reversed().map(EquatableBox.init) == testStringExpectation.reversed())
     }
     
-    @Test
-    func removeSubranges() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func removeSubranges() {
         var str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -297,8 +297,8 @@ private struct AttributedStringDiscontiguousTests {
         #expect(str == result)
     }
     
-    @Test
-    func sliceSetter() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func sliceSetter() {
         var str = AttributedString("abcdefg")
         let rangeA = str.startIndex ..< str.index(str.startIndex, offsetByCharacters: 1)
         let rangeB = str.index(str.startIndex, offsetByCharacters: 2) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -332,8 +332,8 @@ private struct AttributedStringDiscontiguousTests {
         }
     }
     
-    @Test
-    func graphemesAcrossDiscontiguousRanges() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func graphemesAcrossDiscontiguousRanges() {
         let str = "a\n\u{301}"
         let attrStr = AttributedString(str)
         let strRangeA = str.startIndex ..< str.index(after: str.startIndex) // Range of 'a'

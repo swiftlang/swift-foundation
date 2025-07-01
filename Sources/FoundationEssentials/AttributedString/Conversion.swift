@@ -22,13 +22,13 @@ internal import _FoundationCollections
 #endif
 
 extension String {
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    @available(FoundationAttributedString 5.5, *)
     public init(_ characters: Slice<AttributedString.CharacterView>) {
         self.init(characters._characters)
     }
 
     #if false // FIXME: Make this public.
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    @available(FoundationAttributedString 5.5, *)
     @backDeployed(before: macOS 14, iOS 17, tvOS 17, watchOS 10)
     public init(_ characters: AttributedString.CharacterView) {
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
@@ -41,7 +41,7 @@ extension String {
     }
     #endif
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationAttributedString 5.9, *)
     @usableFromInline
     internal init(_characters: AttributedString.CharacterView) {
         self.init(_characters._characters)
@@ -50,7 +50,7 @@ extension String {
 
 #if FOUNDATION_FRAMEWORK
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public protocol ObjectiveCConvertibleAttributedStringKey : AttributedStringKey {
     associatedtype ObjectiveCValue : NSObject
 
@@ -58,7 +58,7 @@ public protocol ObjectiveCConvertibleAttributedStringKey : AttributedStringKey {
     static func value(for object: ObjectiveCValue) throws -> Value
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == Int, ObjectiveCValue == NSNumber {
     public static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
         return NSNumber(value: value.rawValue)
@@ -71,7 +71,7 @@ extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentabl
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension ObjectiveCConvertibleAttributedStringKey where Value : RawRepresentable, Value.RawValue == String, ObjectiveCValue == NSString {
     public static func objectiveCValue(for value: Value) throws -> ObjectiveCValue {
         return value.rawValue as NSString
@@ -91,7 +91,7 @@ internal struct _AttributeConversionOptions : OptionSet {
     static let dropThrowingAttributes = Self(rawValue: 1 << 0)
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributeContainer {
     public init(_ dictionary: [NSAttributedString.Key : Any]) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
@@ -126,7 +126,7 @@ extension AttributeContainer {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension Dictionary where Key == NSAttributedString.Key, Value == Any {
     public init(_ container: AttributeContainer) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
@@ -161,7 +161,7 @@ extension Dictionary where Key == NSAttributedString.Key, Value == Any {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension NSAttributedString {
     public convenience init(_ attrStr: AttributedString) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
@@ -203,7 +203,7 @@ extension NSAttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     public init(_ nsStr: NSAttributedString) {
         // Passing .dropThrowingAttributes causes attributes that throw during conversion to be dropped, so it is safe to do try! here
@@ -286,7 +286,7 @@ extension AttributedString {
 
 #endif // FOUNDATION_FRAMEWORK
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension String.Index {
     // FIXME: Converting indices between different collection types does not make sense.
     // FIXME: (Indices are meaningless without the collection value to which they belong,
@@ -300,7 +300,7 @@ extension String.Index {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Index {
     // FIXME: Converting indices between different collection types does not make sense.
     // FIXME: (Indices are meaningless without the collection value to which they belong,
@@ -322,7 +322,7 @@ extension AttributedString.Index {
 
 #if FOUNDATION_FRAMEWORK
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension NSRange {
     public init<R: RangeExpression, S: AttributedStringProtocol>(
         _ region: R,
@@ -341,7 +341,7 @@ extension NSRange {
         self.init(location: utf16Start - utf16Base, length: utf16Length)
     }
     
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @available(FoundationAttributedString 5.7, *)
     public init?<S: StringProtocol>(_ markdownSourcePosition: AttributedString.MarkdownSourcePosition, in target: S) {
         let startOffsets: AttributedString.MarkdownSourcePosition.Offsets
         let endOffsets: AttributedString.MarkdownSourcePosition.Offsets
@@ -369,6 +369,7 @@ extension NSRange {
 
 #endif // FOUNDATION_FRAMEWORK
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     /// A dummy collection type whose only purpose is to facilitate a `RangeExpression.relative(to:)`
     /// call that takes a range expression with string indices but needs to work on an
@@ -430,7 +431,7 @@ extension BigString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension Range where Bound == AttributedString.Index {
 #if FOUNDATION_FRAMEWORK
     public init?<S: AttributedStringProtocol>(_ range: NSRange, in string: S) {
@@ -491,6 +492,7 @@ extension Range where Bound == AttributedString.Index {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     /// A dummy collection type whose only purpose is to facilitate a `RangeExpression.relative(to:)`
     /// call that takes a range expression with attributed string indices but needs to work on a
@@ -518,7 +520,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension Range where Bound == String.Index {
     // FIXME: Converting indices between different collection types does not make sense.
     // FIXME: (Indices are meaningless without the collection value to which they belong,
@@ -560,7 +562,7 @@ extension Range where Bound == String.Index {
 
 #if FOUNDATION_FRAMEWORK
     // TODO: Support AttributedString markdown in FoundationPreview
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @available(FoundationAttributedString 5.7, *)
     public init?<S: StringProtocol>(_ markdownSourcePosition: AttributedString.MarkdownSourcePosition, in target: S) {
         if let start = markdownSourcePosition.startOffsets, let end = markdownSourcePosition.endOffsets {
             self = target.utf8.index(target.startIndex, offsetBy: start.utf8) ..< target.utf8.index(target.startIndex, offsetBy: end.utf8 + 1)

@@ -23,6 +23,7 @@ public struct FloatingPointFormatStyle<Value: BinaryFloatingPoint>: Codable, Has
         self.locale = locale
     }
 
+    @available(FoundationAttributedString 5.5, *)
     public var attributed: FloatingPointFormatStyle.Attributed {
         return FloatingPointFormatStyle.Attributed(style: self)
     }
@@ -85,6 +86,7 @@ extension FloatingPointFormatStyle {
             self.locale = locale
         }
 
+        @available(FoundationAttributedString 5.5, *)
         public var attributed: FloatingPointFormatStyle.Attributed {
             return FloatingPointFormatStyle.Attributed(style: self)
         }
@@ -153,6 +155,7 @@ extension FloatingPointFormatStyle {
             self.collection = Configuration.Collection(presentation: .standard)
         }
 
+        @available(FoundationAttributedString 5.5, *)
         public var attributed: FloatingPointFormatStyle.Attributed {
             return FloatingPointFormatStyle.Attributed(style: self)
         }
@@ -337,7 +340,7 @@ public extension FormatStyle where Self == FloatingPointFormatStyle<Float16>.Per
 
 // MARK: - Attributed string
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 extension FloatingPointFormatStyle {
     public struct Attributed : Codable, Hashable, FormatStyle, Sendable {
         enum Style : Codable, Hashable, Sendable {

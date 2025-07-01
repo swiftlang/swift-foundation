@@ -18,6 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     /// An internal convenience wrapper around `Rope<_InternalRun>`, giving it functionality
     /// that's specific to attributed strings.
@@ -41,6 +42,7 @@ extension AttributedString {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRuns {
     /// A metric that assigns each run a size of 1; i.e., the metric corresponding to run offsets.
     ///
@@ -89,6 +91,7 @@ extension AttributedString._InternalRuns {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRuns {
     struct Index {
         /// The underlying index in the rope.
@@ -108,17 +111,20 @@ extension AttributedString._InternalRuns {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRuns.Index: Equatable {
     static func ==(left: Self, right: Self) -> Bool {
         left.utf8Offset == right.utf8Offset
     }
 }
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRuns.Index: Comparable {
     static func <(left: Self, right: Self) -> Bool {
         left.utf8Offset < right.utf8Offset
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRuns: BidirectionalCollection {
     typealias Element = _InternalRun
     typealias SubSequence = Slice<Self>
@@ -187,12 +193,14 @@ extension AttributedString._InternalRuns: BidirectionalCollection {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension Slice<AttributedString._InternalRuns> {
     var utf8Count: Int {
         self.base.distance(from: self.startIndex, to: self.endIndex)
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRuns {
     func index(atRunOffset runOffset: Int) -> Index {
         let r = _rope.find(at: runOffset, in: RunMetric(), preferEnd: false)
@@ -221,6 +229,7 @@ extension AttributedString._InternalRuns {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRuns {
     var utf8Count: Int {
         _rope.count(in: UTF8Metric())
@@ -249,6 +258,7 @@ extension AttributedString._InternalRuns {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRuns {
     /// Update the run at `index` with the provided `run` and coalesce it with its
     /// neighbors if necessary. `index` is updated to a valid index addressing the

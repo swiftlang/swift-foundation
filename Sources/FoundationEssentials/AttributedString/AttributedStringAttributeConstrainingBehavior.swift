@@ -18,7 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._AttributeStorage {
     var hasConstrainedAttributes: Bool {
         self.contents.values.contains { value in
@@ -56,7 +56,7 @@ extension AttributedString._AttributeStorage {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._AttributeValue {
     var hasConstrainedAttributes: Bool {
         runBoundaries != nil
@@ -68,7 +68,7 @@ extension AttributedString._AttributeValue {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedStringKey {
     static var constraintsInvolved: [AttributedString.AttributeRunBoundaries] {
         guard let constraint = Self.runBoundaries else { return [] }
@@ -76,21 +76,21 @@ extension AttributedStringKey {
     }
 }
 
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+@available(FoundationAttributedString 5.7, *)
 extension Collection where Element == AttributedString.AttributeRunBoundaries {
     var _containsScalarConstraint: Bool {
         self.contains { $0._isScalarConstrained }
     }
 }
 
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+@available(FoundationAttributedString 5.7, *)
 extension Collection where Element == AttributedString.AttributeRunBoundaries? {
     var _containsScalarConstraint: Bool {
         self.contains { $0?._isScalarConstrained ?? false }
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Guts {
     
     // MARK: Index/Range Utilities

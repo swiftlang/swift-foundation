@@ -20,7 +20,7 @@ internal import _FoundationCollections
 
 /// A discontiguous portion of an attributed string.
 @dynamicMemberLookup
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 public struct DiscontiguousAttributedSubstring: Sendable {
     /// The guts of the base attributed string.
     internal var _guts: AttributedString.Guts
@@ -41,7 +41,7 @@ public struct DiscontiguousAttributedSubstring: Sendable {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension DiscontiguousAttributedSubstring {
     /// The underlying attributed string that the discontiguous attributed substring derives from.
     public var base: AttributedString {
@@ -49,21 +49,21 @@ extension DiscontiguousAttributedSubstring {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension DiscontiguousAttributedSubstring : CustomStringConvertible {
     public var description: String {
         _guts.description(in: _indices)
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension DiscontiguousAttributedSubstring : Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         AttributedString.Guts._characterwiseIsEqual(lhs.runs, to: rhs.runs)
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension DiscontiguousAttributedSubstring : Hashable {
     public func hash(into hasher: inout Hasher) {
         for range in _indices.ranges {
@@ -72,7 +72,7 @@ extension DiscontiguousAttributedSubstring : Hashable {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
     internal mutating func ensureUniqueReference() {
         // Note: slices should never discard the data outside their bounds, so we must make a
@@ -155,7 +155,7 @@ extension DiscontiguousAttributedSubstring : AttributedStringAttributeMutation {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension DiscontiguousAttributedSubstring {
     /// The characters of the discontiguous attributed string, as a view into the underlying string.
     public var characters: DiscontiguousSlice<AttributedString.CharacterView> {
@@ -173,7 +173,7 @@ extension DiscontiguousAttributedSubstring {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension DiscontiguousAttributedSubstring {
     /// Returns an attribute value that corresponds to an attributed string key.
     ///
@@ -263,7 +263,7 @@ extension DiscontiguousAttributedSubstring {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedString {
     /// Creates an attributed string from a discontiguous attributed substring.
     /// - Parameter substring: A discontiguous attributed substring to create the new attributed string from.
@@ -279,7 +279,7 @@ extension AttributedString {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedStringProtocol {
     /// Returns a discontiguous substring of this attributed string using a set of ranges to indicate the discontiguous substring bounds.
     /// - Parameter indices:  A set of ranges that indicate the bounds of the discontiguous substring to return.
@@ -290,7 +290,7 @@ extension AttributedStringProtocol {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedString {
     /// Returns a discontiguous substring of this discontiguous attributed string using a set of ranges to indicate the discontiguous substring bounds.
     /// - Parameter indices: A set of ranges that indicate the bounds of the discontiguous substring to return.

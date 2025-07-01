@@ -19,7 +19,7 @@ internal import _FoundationCollections
 #endif
 
 @dynamicMemberLookup
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public struct AttributedSubstring: Sendable {
     /// The guts of the base attributed string.
     internal var _guts: AttributedString.Guts
@@ -49,7 +49,7 @@ public struct AttributedSubstring: Sendable {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedSubstring {
     public var base: AttributedString {
         return AttributedString(_guts)
@@ -64,7 +64,7 @@ extension AttributedSubstring {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedSubstring { // CustomStringConvertible
     public var description: String {
         // FIXME: Why have a custom definition for this if AttributedString falls back
@@ -73,7 +73,7 @@ extension AttributedSubstring { // CustomStringConvertible
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedSubstring { // Equatable
     public static func == (lhs: Self, rhs: Self) -> Bool {
         if lhs._guts === rhs._guts && lhs._range == rhs._range {
@@ -85,7 +85,7 @@ extension AttributedSubstring { // Equatable
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedSubstring : AttributedStringProtocol {
     public var startIndex: AttributedString.Index {
         .init(_range.lowerBound, version: _guts.version)
@@ -159,7 +159,7 @@ extension AttributedSubstring : AttributedStringProtocol {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedSubstring {
     @preconcurrency
     public subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable {

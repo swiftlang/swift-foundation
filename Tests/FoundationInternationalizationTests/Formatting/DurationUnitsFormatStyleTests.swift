@@ -902,6 +902,7 @@ private struct DurationUnitsFormatStyleTests {
 
 // MARK: - Attributed string test
 
+@available(FoundationAttributedString 5.5, *)
 extension Sequence where Element == DurationUnitAttributedFormatStyleTests.Segment {
     var attributedString: AttributedString {
         self.map { tuple in
@@ -920,10 +921,13 @@ extension Sequence where Element == DurationUnitAttributedFormatStyleTests.Segme
 
 @Suite("Duration.UnitsFormatStyle.Attributed")
 private struct DurationUnitAttributedFormatStyleTests {
+    @available(FoundationAttributedString 5.5, *)
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DurationFieldAttribute.Field?, AttributeScopes.FoundationAttributes.MeasurementAttribute.Component?)
+    
     let enUS = Locale(identifier: "en_US")
     let frFR = Locale(identifier: "fr_FR")
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributedStyle_enUS() {
         let d1 = Duration.seconds(2 * 3600 + 43 * 60 + 24) // 2hr 43min 24s
         let d2 = Duration.seconds(43 * 60 + 24) // 43min 24s
@@ -1091,6 +1095,7 @@ private struct DurationUnitAttributedFormatStyleTests {
                        ].attributedString)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func testAttributedStyle_frFR() {
         let d1 = Duration.seconds(2 * 3600 + 43 * 60 + 24) // 2hr 43min 24s
         let d0 = Duration.seconds(0)

@@ -19,7 +19,7 @@ internal import _FoundationCollections
 #endif
 
 @dynamicMemberLookup
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public struct AttributedString : Sendable {
     internal var _guts: Guts
 
@@ -28,7 +28,7 @@ public struct AttributedString : Sendable {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     internal static let currentIdentity = LockedState(initialState: 0)
     internal static var _nextModifyIdentity : Int {
@@ -40,7 +40,7 @@ extension AttributedString {
 }
 
 // MARK: Initialization
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     public init() {
         self._guts = Guts()
@@ -126,7 +126,7 @@ extension AttributedString {
 #endif // FOUNDATION_FRAMEWORK
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     internal static func _bstring<S: Sequence<Character>>(from elements: S) -> BigString {
         if let elements = _specializingCast(elements, to: String.self) {
@@ -147,7 +147,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString { // Equatable
     public static func == (lhs: Self, rhs: Self) -> Bool {
         AttributedString.Guts.characterwiseIsEqual(lhs._guts, to: rhs._guts)
@@ -156,14 +156,14 @@ extension AttributedString { // Equatable
 
 // Note: The Hashable implementation is inherited from AttributedStringProtocol.
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString: ExpressibleByStringLiteral {
     public init(stringLiteral value: String) {
         self.init(value)
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString { // AttributedStringAttributeMutation
     public mutating func setAttributes(_ attributes: AttributeContainer) {
         ensureUniqueReference()
@@ -199,7 +199,7 @@ extension AttributedString { // AttributedStringAttributeMutation
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString: AttributedStringProtocol {
     public struct Index : Comparable, Sendable {
         internal var _value: BigString.Index
@@ -273,7 +273,7 @@ extension AttributedString: AttributedStringProtocol {
 }
 
 // MARK: Mutating operations
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     internal mutating func ensureUniqueReference() {
         if !isKnownUniquelyReferenced(&_guts) {
@@ -304,7 +304,7 @@ extension AttributedString {
 }
 
 // MARK: Concatenation operators
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     public static func +(lhs: AttributedString, rhs: some AttributedStringProtocol) -> AttributedString {
         var result = lhs
@@ -328,7 +328,7 @@ extension AttributedString {
 }
 
 // MARK: Substring access
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     public subscript(bounds: some RangeExpression<Index>) -> AttributedSubstring {
         get {
@@ -365,7 +365,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension Range where Bound == AttributedString.Index {
     internal var _bstringRange: Range<BigString.Index> {
         Range<BigString.Index>(uncheckedBounds: (lowerBound._value, upperBound._value))
@@ -376,12 +376,14 @@ extension Range where Bound == AttributedString.Index {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension RangeSet where Bound == AttributedString.Index {
     internal var _bstringIndices: RangeSet<BigString.Index> {
         RangeSet<BigString.Index>(self.ranges.map(\._bstringRange))
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension RangeSet where Bound == BigString.Index {
     internal func _attributedStringIndices(version: AttributedString.Guts.Version) -> RangeSet<AttributedString.Index> {
         RangeSet<AttributedString.Index>(self.ranges.lazy.map {
@@ -390,7 +392,7 @@ extension RangeSet where Bound == BigString.Index {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension Range where Bound == BigString.Index {
     internal var _utf8OffsetRange: Range<Int> {
         Range<Int>(uncheckedBounds: (lowerBound.utf8Offset, upperBound.utf8Offset))

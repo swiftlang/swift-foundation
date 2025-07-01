@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 // MARK: - Internal Index Updating
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Guts {
     func _prepareTrackedIndicesUpdate(mutationRange: Range<BigString.Index>) {
         // Move any range endpoints inside of the mutation range to outside of the mutation range since a range should never end up splitting a mutation
@@ -75,7 +76,7 @@ extension AttributedString.Guts {
 
 // MARK: - Public API
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedString {
     // MARK: inout API
     

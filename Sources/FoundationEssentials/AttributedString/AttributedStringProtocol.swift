@@ -18,7 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     public enum AttributeMergePolicy : Sendable {
         case keepNew
@@ -33,7 +33,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public protocol AttributedStringAttributeMutation {
     mutating func setAttributes(_ attributes: AttributeContainer)
     mutating func mergeAttributes(_ attributes: AttributeContainer, mergePolicy: AttributedString.AttributeMergePolicy)
@@ -41,7 +41,7 @@ public protocol AttributedStringAttributeMutation {
 }
 
 @dynamicMemberLookup
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public protocol AttributedStringProtocol
     : AttributedStringAttributeMutation, Hashable, CustomStringConvertible, Sendable
 {
@@ -52,10 +52,10 @@ public protocol AttributedStringProtocol
     var characters : AttributedString.CharacterView { get }
     var unicodeScalars : AttributedString.UnicodeScalarView { get }
     
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationAttributedString 6.2, *)
     var utf8 : AttributedString.UTF8View { get }
     
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationAttributedString 6.2, *)
     var utf16 : AttributedString.UTF16View { get }
 
     @preconcurrency subscript<K: AttributedStringKey>(_: K.Type) -> K.Value? where K.Value : Sendable { get set }
@@ -66,7 +66,7 @@ public protocol AttributedStringProtocol
 }
 
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedStringProtocol {
     var utf8 : AttributedString.UTF8View {
         AttributedString.UTF8View(__guts, in: Range(uncheckedBounds: (startIndex._value, endIndex._value)))
@@ -77,7 +77,7 @@ extension AttributedStringProtocol {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedStringProtocol {
     public func settingAttributes(_ attributes: AttributeContainer) -> AttributedString {
         var new = AttributedString(self)
@@ -103,7 +103,7 @@ extension AttributedStringProtocol {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedStringProtocol {
     internal var __guts: AttributedString.Guts {
         if let s = _specializingCast(self, to: AttributedString.self) {
@@ -132,6 +132,7 @@ extension AttributedStringProtocol {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     internal var _baseString: BigString {
         _guts.string
@@ -146,6 +147,7 @@ extension AttributedString {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedSubstring {
     internal var _baseString: BigString {
         _guts.string
@@ -162,14 +164,14 @@ extension AttributedSubstring {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedStringProtocol { // CustomStringConvertible
     public var description: String {
         __guts.description(in: _stringBounds)
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedStringProtocol { // Equatable, Hashable
     @_specialize(where Self == AttributedString, RHS == AttributedString)
     @_specialize(where Self == AttributedString, RHS == AttributedSubstring)
@@ -186,7 +188,7 @@ extension AttributedStringProtocol { // Equatable, Hashable
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedStringProtocol {
     public func index(afterCharacter i: AttributedString.Index) -> AttributedString.Index {
         self.characters.index(after: i)
@@ -262,7 +264,7 @@ extension AttributedStringProtocol {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedStringProtocol {
     internal func _range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = []) -> Range<AttributedString.Index>? {
 

@@ -8,9 +8,10 @@ import CompilerPluginSupport
 
 let availabilityTags: [_Availability] = [
     _Availability("FoundationPreview"), // Default FoundationPreview availability
+    _Availability("FoundationAttributedString"),
     _Availability("FoundationSpan", availability: .macOS26), // Availability of Span types
 ]
-let versionNumbers = ["6.0.2", "6.1", "6.2"]
+let versionNumbers = ["5.5", "5.7", "5.8", "5.9", "6.0", "6.0.2", "6.1", "6.2"]
 
 // Availability Macro Utilities
 

@@ -491,6 +491,7 @@ extension Duration {
         /// 26.25 { durationField: .seconds, component: .value }
         /// seconds { durationField: .seconds, component: .unit }
         /// ```
+        @available(FoundationAttributedString 5.7, *)
         public var attributed: Attributed {
             Attributed(innerStyle: self)
         }
@@ -532,7 +533,7 @@ extension FormatStyle where Self == Duration.UnitsFormatStyle {
 
 // MARK: - Attributed style
 
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+@available(FoundationAttributedString 5.7, *)
 extension Duration.UnitsFormatStyle {
 
     /// A format style to format a duration as an attributed string. Units in the string are annotated with the `durationField` and `measurement` attribute keys and the `DurationFieldAttribute` and `MeasurementAttribute` attribute values.
@@ -550,7 +551,7 @@ extension Duration.UnitsFormatStyle {
     /// 26.25 { durationField: .seconds, component: .value }
     /// seconds { durationField: .seconds, component: .unit }
     /// ```
-    @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+    @available(FoundationAttributedString 5.7, *)
     @dynamicMemberLookup
     public struct Attributed : FormatStyle, Sendable {
 
@@ -632,7 +633,7 @@ extension Duration.UnitsFormatStyle {
 
 // MARK: Dynamic Member Lookup
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Duration.UnitsFormatStyle.Attributed {
     public subscript<T>(dynamicMember key: KeyPath<Duration.UnitsFormatStyle, T>) -> T {
         innerStyle[keyPath: key]
@@ -650,7 +651,7 @@ extension Duration.UnitsFormatStyle.Attributed {
 
 // MARK: DiscreteFormatStyle Conformance
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Duration.UnitsFormatStyle.Attributed : DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         self.innerStyle.discreteInput(before: input)

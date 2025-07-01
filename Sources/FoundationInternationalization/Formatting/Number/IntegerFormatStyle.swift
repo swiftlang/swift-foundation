@@ -25,6 +25,7 @@ public struct IntegerFormatStyle<Value: BinaryInteger>: Codable, Hashable, Senda
         self.locale = locale
     }
 
+    @available(FoundationAttributedString 5.5, *)
     public var attributed: IntegerFormatStyle.Attributed {
         return IntegerFormatStyle.Attributed(style: self)
     }
@@ -89,6 +90,7 @@ extension IntegerFormatStyle {
             self.locale = locale
         }
 
+        @available(FoundationAttributedString 5.5, *)
         public var attributed: IntegerFormatStyle.Attributed {
             return IntegerFormatStyle.Attributed(style: self)
         }
@@ -153,6 +155,7 @@ extension IntegerFormatStyle {
             self.collection = Configuration.Collection(presentation: .standard)
         }
 
+        @available(FoundationAttributedString 5.5, *)
         public var attributed: IntegerFormatStyle.Attributed {
             return IntegerFormatStyle.Attributed(style: self)
         }
@@ -485,7 +488,7 @@ public extension FormatStyle {
 
 // MARK: - Attributed string
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 extension IntegerFormatStyle {
     public struct Attributed : Codable, Hashable, FormatStyle, Sendable {
         enum Style : Codable, Hashable {

@@ -298,6 +298,7 @@ private struct DurationToMeasurementAdditionTests {
 private struct TestDurationTimeFormatStyle {
     let enUS = Locale(identifier: "en_US")
 
+    @available(FoundationAttributedString 5.5, *)
     func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, grouping: NumberFormatStyleConfiguration.Grouping? = nil, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
         var style = Duration.TimeFormatStyle(pattern: pattern).locale(enUS)
         if let grouping {
@@ -306,6 +307,7 @@ private struct TestDurationTimeFormatStyle {
         #expect(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(style) == expected, sourceLocation: sourceLocation)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func durationPatternStyle() {
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinute, expected: "1:02")
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinute(padHourToLength: 1, roundSeconds: .down), expected: "1:01")
@@ -318,6 +320,7 @@ private struct TestDurationTimeFormatStyle {
         assertFormattedWithPattern(seconds: 3695, milliseconds: 350, pattern: .minuteSecond(padMinuteToLength: 2, fractionalSecondsLength: 2), expected: "61:35.35")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func durationPatternPadding() {
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinute(padHourToLength: 2), expected: "01:02")
         assertFormattedWithPattern(seconds: 3695, pattern: .hourMinuteSecond(padHourToLength: 2), expected: "01:01:35")
@@ -325,12 +328,14 @@ private struct TestDurationTimeFormatStyle {
         assertFormattedWithPattern(seconds: 3695, milliseconds: 500, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2), expected: "01:01:35.50")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func durationPatternGrouping() {
         assertFormattedWithPattern(seconds: 36950000, pattern: .hourMinute(padHourToLength: 2), grouping: nil, expected: "10,263:53")
         assertFormattedWithPattern(seconds: 36950000, pattern: .hourMinute(padHourToLength: 2), grouping: .automatic, expected: "10,263:53")
         assertFormattedWithPattern(seconds: 36950000, pattern: .hourMinute(padHourToLength: 2), grouping: .never, expected: "10263:53")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func noFractionParts() {
 
         // minutes, seconds
@@ -401,6 +406,7 @@ private struct TestDurationTimeFormatStyle {
         assertFormattedWithPattern(seconds: 5399, milliseconds: 500, pattern: .hourMinute, expected: "1:30")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func showFractionalSeconds() {
 
         // minutes, seconds
@@ -445,6 +451,7 @@ private struct TestDurationTimeFormatStyle {
         assertFormattedWithPattern(seconds: 7199, milliseconds: 995, pattern: .hourMinuteSecond(padHourToLength: 2, fractionalSecondsLength: 2), expected: "02:00:00.00")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func negativeValues() {
         assertFormattedWithPattern(seconds: 0, milliseconds: -499, pattern: .hourMinuteSecond, expected: "0:00:00")
         assertFormattedWithPattern(seconds: 0, milliseconds: -500, pattern: .hourMinuteSecond, expected: "0:00:00")
@@ -471,6 +478,7 @@ private struct TestDurationTimeFormatStyle {
 
 // MARK: - Attributed string test
 
+@available(FoundationAttributedString 5.5, *)
 extension Sequence where Element == DurationTimeAttributedStyleTests.Segment {
     var attributedString: AttributedString {
         self.map { tuple in
@@ -487,13 +495,17 @@ extension Sequence where Element == DurationTimeAttributedStyleTests.Segment {
 @Suite("Duration.TimeFormatStyle.Attributed")
 private struct DurationTimeAttributedStyleTests {
 
+    @available(FoundationAttributedString 5.5, *)
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DurationFieldAttribute.Field?)
+    
     let enUS = Locale(identifier: "en_US")
 
+    @available(FoundationAttributedString 5.5, *)
     func assertWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, expected: [Segment], locale: Locale = Locale(identifier: "en_US"), sourceLocation: SourceLocation = #_sourceLocation) {
         #expect(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(.time(pattern: pattern).locale(locale).attributed) == expected.attributedString, sourceLocation: sourceLocation)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributedStyle_enUS() {
         assertWithPattern(seconds: 3695, pattern: .hourMinute, expected: [
             ("1", .hours),
@@ -558,6 +570,7 @@ private struct DurationTimeAttributedStyleTests {
 
 @Suite("Duration.TimeFormatStyle Discrete Conformance")
 private struct TestDurationTimeDiscreteConformance {
+    @available(FoundationAttributedString 5.5, *)
     @Test func basics() throws {
         var style: Duration.TimeFormatStyle
         style = .init(pattern: .minuteSecond(padMinuteToLength: 0, roundFractionalSeconds: .down)).locale(Locale(identifier: "en_US"))
@@ -642,6 +655,7 @@ private struct TestDurationTimeDiscreteConformance {
         #expect(style.discreteInput(before: .seconds(-1)) == .milliseconds(-1500))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func regressions() throws {
         var style: Duration._TimeFormatStyle
 
@@ -650,6 +664,7 @@ private struct TestDurationTimeDiscreteConformance {
         #expect(try #require(style.discreteInput(after: Duration(secondsComponent: -8, attosecondsComponent: -531546586433266880))) <= Duration(secondsComponent: 30, attosecondsComponent: 0))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test(arguments:
         [FloatingPointRoundingRule.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven].flatMap { roundingRule in
             [

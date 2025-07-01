@@ -99,6 +99,11 @@ set(_SwiftFoundation_FutureAvailability "macOS 10000, iOS 10000, tvOS 10000, wat
 
 # All versions to define for each availability name
 list(APPEND _SwiftFoundation_versions
+    "5.5"
+    "5.7"
+    "5.8"
+    "5.9"
+    "6.0"
     "6.0.2"
     "6.1"
     "6.2"
@@ -107,10 +112,12 @@ list(APPEND _SwiftFoundation_versions
 # Each availability name to define
 list(APPEND _SwiftFoundation_availability_names
     "FoundationPreview"
+    "FoundationAttributedString"
     "FoundationSpan")
 
 # The aligned availability for each name (in the same order)
 list(APPEND _SwiftFoundation_availability_releases
+    ${_SwiftFoundation_BaseAvailability}
     ${_SwiftFoundation_BaseAvailability}
     ${_SwiftFoundation_macOS26Availability})
 

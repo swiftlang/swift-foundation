@@ -18,7 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     @preconcurrency
     public struct SingleAttributeTransformer<T: AttributedStringKey> : Sendable where T.Value : Sendable {
@@ -45,7 +45,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     internal func applyRemovals<K>(
         withOriginal orig: AttributedString.SingleAttributeTransformer<K>,
@@ -78,7 +78,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     @preconcurrency
     public func transformingAttributes<K>(
@@ -251,7 +251,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     @preconcurrency
     public func transformingAttributes<K>(

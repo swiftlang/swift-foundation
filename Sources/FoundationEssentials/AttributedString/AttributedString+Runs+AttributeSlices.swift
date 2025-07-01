@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice1<T : AttributedStringKey> : BidirectionalCollection, Sendable
@@ -142,7 +142,7 @@ extension AttributedString.Runs {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice2<
@@ -298,7 +298,7 @@ extension AttributedString.Runs {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice3<
@@ -466,7 +466,7 @@ extension AttributedString.Runs {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice4<
@@ -648,7 +648,7 @@ extension AttributedString.Runs {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     @preconcurrency
     public struct AttributesSlice5<
@@ -846,7 +846,7 @@ extension AttributedString.Runs {
 
 #if FOUNDATION_FRAMEWORK
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Runs {
     @_spi(AttributedString)
     public struct NSAttributesSlice : BidirectionalCollection, Sendable {
