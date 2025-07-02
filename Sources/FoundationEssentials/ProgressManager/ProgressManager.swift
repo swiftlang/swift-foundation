@@ -81,8 +81,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             return overallFraction
         }
         var children: [ChildState]
-//        var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
-//        var childrenOtherProperties: [AnyMetatypeWrapper: OrderedDictionary<ProgressManager, [(any Sendable)]>] // Type: Metatype maps to dictionary of child to value
+        var parents: [ParentState]
+//        var properties: [AnyMetatypeWrapper: (any Sendable)]
         // Interop properties - only kept alive
         var interopObservation: InteropObservation
         // Interop properties - Actually set and called
@@ -91,7 +91,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     private let state: Mutex<State>
-    private let parents: Mutex<[ParentState]>
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -177,7 +176,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 if let _ = state.interopObservation.progressParentProgressReporterChild {
                     manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
                 }
-                manager.markDirtyInParents()
+                manager.markDirtyInParents(state: state)
             }
         }
         
@@ -206,7 +205,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                         state: &state
                     )
                 }
-                manager.markDirtyInParents()
+                manager.markDirtyInParents(state: state)
             }
         }
         
@@ -250,13 +249,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             indeterminate:  total == nil ? true : false,
             selfFraction: _ProgressFraction(completed: 0, total: total ?? 0),
             children: [],
-//            otherProperties: [:],
-//            childrenOtherProperties: [:],
+            parents: [],
+//            properties: [:],
             interopObservation: InteropObservation(progressParentProgressManagerChild: managerObservation),
             progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger
         )
         self.state = Mutex(state)
-        self.parents = Mutex([])
     }
     
     /// Initializes `self` with `totalCount`.
@@ -304,9 +302,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// - Parameter count: Units of work.
     public func complete(count: Int) {
         // Update self fraction + mark dirty
-        state.withLock { state in
+        let state: State? = state.withLock { state in
             guard state.selfFraction.completed != (state.selfFraction.completed + count) else {
-                return
+                return nil
             }
             
             state.selfFraction.completed += count
@@ -326,8 +324,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     state: &state
                 )
             }
+            return state
         }
-        markDirtyInParents()
+        if let state = state {
+            markDirtyInParents(state: state)
+        }
     }
     
 //    /// Returns an array of values for specified property in subtree.
@@ -361,8 +362,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 indeterminate: true,
                 selfFraction: _ProgressFraction(),
                 children: [],
-//                otherProperties: [:],
-//                childrenOtherProperties: [:],
+                parents: [],
+//                properties: [:],
                 interopObservation: InteropObservation()
             )
             let result = try closure(&values)
@@ -489,20 +490,19 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     //MARK: FractionCompleted Calculation methods
     /// If parents exist, mark self as dirty and send dirtyState to parent.
-    private func markDirtyInParents() {
-        parents.withLock { parents in
-            for parentState in parents {
-                parentState.parent?.markChildDirty(at: parentState.positionInParent)
-            }
+    private func markDirtyInParents(state: State) {
+        for parentState in state.parents {
+            parentState.parent?.markChildDirty(at: parentState.positionInParent)
         }
     }
     
     /// Mark child at given index as dirty.
     private func markChildDirty(at position: Int) {
-        state.withLock { state in
+        let state = state.withLock { state in
             state.children[position].isDirty = true
+            return state
         }
-        markDirtyInParents()
+        markDirtyInParents(state: state)
     }
     
     private func getDirtyProgressFraction() -> _ProgressFraction {
@@ -581,9 +581,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     internal func addParent(parent: ProgressManager, positionInParent: Int) {
-        parents.withLock { parents in
+        state.withLock { state in
             let parentState = ParentState(parent: parent, positionInParent: positionInParent)
-            parents.append(parentState)
+            state.parents.append(parentState)
         }
             // Update metatype entry in parent
 //            for (metatype, value) in state.otherProperties {
@@ -681,8 +681,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         
         let updatedVisited = visited.union([self])
         
-        return parents.withLock { parents in
-            for parentState in parents {
+        return state.withLock { state in
+            for parentState in state.parents {
                 if !updatedVisited.contains(parentState.parent!) {
                     if ((parentState.parent?.isCycle(reporter: reporter, visited: updatedVisited)) != nil) {
                         return true
@@ -694,8 +694,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     func isCycleInterop(visited: Set<ProgressManager> = []) -> Bool {
-        return parents.withLock { parents in
-            for parentState in parents {
+        return state.withLock { state in
+            for parentState in state.parents {
                 if !visited.contains(parentState.parent!) {
                     if ((parentState.parent?.isCycle(reporter: reporter, visited: visited)) != nil) {
                         return true
@@ -734,10 +734,7 @@ extension ProgressManager: Hashable, Equatable {
 extension ProgressManager: CustomDebugStringConvertible {
     /// The description for `completedCount` and `totalCount`.
     public var debugDescription: String {
-        return self.description + """
-        \n
-        parents: \(parents.withLock { $0 })
-        """
+        return self.description
     }
 }
 
