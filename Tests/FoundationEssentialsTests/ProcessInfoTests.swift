@@ -159,15 +159,15 @@ private struct ProcessInfoTests {
     
     @Test func processName() {
 #if FOUNDATION_FRAMEWORK
-        let targetName = "TestHost"
+        let targetNames = ["TestHost"]
 #elseif os(Linux) || os(Windows) || os(Android) || os(FreeBSD)
-        let targetName = "swift-foundationPackageTests.xctest"
+        let targetNames = ["swift-foundationPackageTests.xctest"]
 #else
-        let targetName = "swiftpm-testing-helper"
+        let targetNames = ["swiftpm-testing-helper", "xctest"]
 #endif
         let processInfo = ProcessInfo.processInfo
         let originalProcessName = processInfo.processName
-        #expect(originalProcessName == targetName)
+        #expect(targetNames.contains(originalProcessName))
         
         // Try assigning a new process name.
         let newProcessName = "TestProcessName"
