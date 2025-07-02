@@ -37,7 +37,7 @@ extension Duration {
 
     /// Formats `self` using the hour-minute-second time pattern
     /// - Returns: A formatted string to describe the duration, such as "1:30:56" for a duration of 1 hour, 30 minutes, and 56 seconds
-    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @available(FoundationAttributedString 5.7, *)
     public func formatted() -> String {
         return Self.TimeFormatStyle(pattern: .hourMinuteSecond).format(self)
     }

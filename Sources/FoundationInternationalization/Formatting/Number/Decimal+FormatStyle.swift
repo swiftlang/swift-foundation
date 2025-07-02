@@ -22,6 +22,7 @@ extension Decimal {
             self.locale = locale
         }
 
+        @available(FoundationAttributedString 5.5, *)
         public var attributed: Attributed {
             return Attributed(style: self)
         }
@@ -107,6 +108,7 @@ extension Decimal.FormatStyle {
             self.locale = locale
         }
 
+        @available(FoundationAttributedString 5.5, *)
         public var attributed: Attributed {
             return Attributed(style: self)
         }
@@ -186,6 +188,7 @@ extension Decimal.FormatStyle {
             self.collection = Configuration.Collection(presentation: .standard)
         }
 
+        @available(FoundationAttributedString 5.5, *)
         public var attributed: Attributed {
             return Attributed(style: self)
         }
@@ -262,6 +265,7 @@ extension Decimal.FormatStyle {
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     public struct Attributed : Sendable {
         enum Style : Hashable, Codable, Sendable {
             case decimal(Decimal.FormatStyle)
@@ -330,7 +334,7 @@ extension Decimal.FormatStyle.Percent : FormatStyle {}
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal.FormatStyle.Currency : FormatStyle {}
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 extension Decimal.FormatStyle.Attributed : FormatStyle {}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)

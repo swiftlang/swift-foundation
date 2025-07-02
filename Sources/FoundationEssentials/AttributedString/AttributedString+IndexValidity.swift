@@ -14,6 +14,7 @@
 internal import Synchronization
 #endif
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Guts {
     typealias Version = UInt
     
@@ -43,7 +44,7 @@ extension AttributedString.Guts {
 
 // MARK: - Public API
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributedString.Index {
     /// Indicates whether the index is valid for use with the provided attributed string.
     /// - Parameter text: An attributed string used to validate the index.
@@ -63,7 +64,7 @@ extension AttributedString.Index {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension Range<AttributedString.Index> {
     /// Indicates whether the range is valid for use with the provided attributed string.
     /// - Parameter text: An attributed string used to validate the range.
@@ -88,7 +89,7 @@ extension Range<AttributedString.Index> {
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension RangeSet<AttributedString.Index> {
     /// Indicates whether the range set is valid for use with the provided attributed string.
     /// - Parameter text: An attributed string used to validate the range set.

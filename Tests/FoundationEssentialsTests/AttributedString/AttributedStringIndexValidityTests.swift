@@ -20,8 +20,8 @@ import Foundation
 
 @Suite("AttributedString Index Validity")
 private struct AttributedStringIndexValidityTests {
-    @Test
-    public func startEndRange() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func startEndRange() {
         let str = AttributedString("Hello, world")
         
         #expect(str.startIndex.isValid(within: str))
@@ -94,8 +94,8 @@ private struct AttributedStringIndexValidityTests {
         }
     }
     
-    @Test
-    public func exhaustiveIndices() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func exhaustiveIndices() {
         let str = AttributedString("Hello Cafe\u{301} 👍🏻🇺🇸 World")
         for idx in str.characters.indices {
             #expect(idx.isValid(within: str))
@@ -111,8 +111,8 @@ private struct AttributedStringIndexValidityTests {
         }
     }
     
-    @Test
-    public func outOfBoundsContiguous() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func outOfBoundsContiguous() {
         let str = AttributedString("Hello, world")
         let subStart = str.index(afterCharacter: str.startIndex)
         let subEnd = str.index(beforeCharacter: str.endIndex)
@@ -127,8 +127,8 @@ private struct AttributedStringIndexValidityTests {
         #expect(!(str.endIndex ..< str.endIndex).isValid(within: substr))
     }
     
-    @Test
-    public func outOfBoundsDiscontiguous() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func outOfBoundsDiscontiguous() {
         let str = AttributedString("Hello, world")
         let idxA = str.index(afterCharacter: str.startIndex)
         let idxB = str.index(afterCharacter: idxA)
@@ -148,8 +148,8 @@ private struct AttributedStringIndexValidityTests {
         #expect(!(str.endIndex ..< str.endIndex).isValid(within: substr))
     }
     
-    @Test
-    public func mutationInvalidation() {
+    @available(FoundationAttributedString 5.5, *)
+    @Test func mutationInvalidation() {
         func checkInPlace(_ mutation: (inout AttributedString) -> (), sourceLocation: SourceLocation = #_sourceLocation) {
             var str = AttributedString("Hello World")
             let idxA = str.startIndex

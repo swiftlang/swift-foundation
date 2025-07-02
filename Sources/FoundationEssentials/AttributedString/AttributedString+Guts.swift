@@ -18,6 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     internal final class Guts : @unchecked Sendable {
         typealias Index = AttributedString.Index
@@ -54,6 +55,7 @@ extension AttributedString {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Guts {
     __consuming func copy() -> AttributedString.Guts {
         AttributedString.Guts(string: self.string, runs: self.runs)
@@ -73,6 +75,7 @@ extension AttributedString.Guts {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Guts {
     internal static func characterwiseIsEqual(
         _ left: AttributedString.Guts,
@@ -182,6 +185,7 @@ extension AttributedString.Guts {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Guts {
     internal func description(in range: Range<BigString.Index>) -> String {
         self.description(in: RangeSet(range))
@@ -199,6 +203,7 @@ extension AttributedString.Guts {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.Guts {
     var stringBounds: Range<BigString.Index> {
         Range(uncheckedBounds: (string.startIndex, string.endIndex))

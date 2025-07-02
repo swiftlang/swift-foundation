@@ -38,6 +38,7 @@ import AppKit
 private struct  AttributedStringTests {
     // MARK: - Enumeration Tests
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func emptyEnumeration() {
         for _ in AttributedString().runs {
             Issue.record("Empty AttributedString should not enumerate any attributes")
@@ -59,6 +60,7 @@ private struct  AttributedStringTests {
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     func verifyAttributes<T>(_ runs: AttributedString.Runs.AttributesSlice1<T>, string: AttributedString, expectation: [(String, T.Value?)], sourceLocation: SourceLocation = #_sourceLocation) where T.Value : Sendable {
         // Test that the attribute is correct when iterating through attribute runs
         var expectIterator = expectation.makeIterator()
@@ -85,6 +87,7 @@ private struct  AttributedStringTests {
         #expect(expectIterator.next() == nil, "Additional runs expected but not found", sourceLocation: sourceLocation)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     func verifyAttributes<T, U>(_ runs: AttributedString.Runs.AttributesSlice2<T, U>, string: AttributedString, expectation: [(String, T.Value?, U.Value?)], sourceLocation: SourceLocation = #_sourceLocation) where T.Value : Sendable, U.Value : Sendable {
         // Test that the attributes are correct when iterating through attribute runs
         var expectIterator = expectation.makeIterator()
@@ -141,6 +144,7 @@ private struct  AttributedStringTests {
     }
 #endif // FOUNDATION_FRAMEWORK
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func simpleEnumeration() throws {
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testInt(1))
         attrStr += " "
@@ -180,6 +184,7 @@ private struct  AttributedStringTests {
         verifyAttributes(attrView[\.testInt, \.testDouble], string: attrStr, expectation: [("Hello", 1, nil), (" ", nil, nil), ("World", nil, 2.0)])
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func sliceEnumeration() throws {
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testInt(1))
         attrStr += AttributedString(" ")
@@ -222,6 +227,7 @@ private struct  AttributedStringTests {
     }
     
 #if FOUNDATION_FRAMEWORK
+    @available(FoundationAttributedString 5.5, *)
     @Test func nsSliceEnumeration() {
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testInt(1))
         attrStr += AttributedString(" ")
@@ -250,6 +256,7 @@ private struct  AttributedStringTests {
 
     // MARK: - Attribute Tests
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func simpleAttribute() {
         let attrStr = AttributedString("Foo", attributes: AttributeContainer().testInt(42))
         let (value, range) = attrStr.runs[\.testInt][attrStr.startIndex]
@@ -257,6 +264,7 @@ private struct  AttributedStringTests {
         #expect(range == attrStr.startIndex ..< attrStr.endIndex)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func constructorAttribute() {
         // TODO: Re-evaluate whether we want these.
         let attrStr = AttributedString("Hello", attributes: AttributeContainer().testString("Helvetica").testInt(2))
@@ -266,6 +274,7 @@ private struct  AttributedStringTests {
         #expect(attrStr == expected)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func addAndRemoveAttribute() {
         let attr : Int = 42
         let attr2 : Double = 1.0
@@ -282,6 +291,7 @@ private struct  AttributedStringTests {
         #expect(attrStr == expected2)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func addingAndRemovingAttribute() {
         let container = AttributeContainer().testInt(1).testDouble(2.2)
         let attrStr = AttributedString("Test").mergingAttributes(container)
@@ -292,6 +302,7 @@ private struct  AttributedStringTests {
         #expect(doubleRemoved == AttributedString("Test", attributes: AttributeContainer().testInt(1)))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func scopedAttributes() {
         var str = AttributedString("Hello, world", attributes: AttributeContainer().testInt(2).testDouble(3.4))
         #expect(str.test.testInt == 2)
@@ -308,6 +319,7 @@ private struct  AttributedStringTests {
         #expect(str[range].test.testBool == true)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func runAttributes() {
         var str = AttributedString("String", attributes: .init().testString("test1"))
         str += "None"
@@ -322,6 +334,7 @@ private struct  AttributedStringTests {
 
     // MARK: - Comparison Tests
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributedStringEquality() {
         #expect(AttributedString() == AttributedString())
         #expect(AttributedString("abc") == AttributedString("abc"))
@@ -360,6 +373,7 @@ private struct  AttributedStringTests {
         #expect(a2.characters.elementsEqual(a3.characters))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributedSubstringEquality() {
         let emptyStr = AttributedString("01234567890123456789")
 
@@ -390,6 +404,7 @@ private struct  AttributedStringTests {
         #expect(emptyStr[index0 ..< index5] == AttributedString("01234"))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func runEquality() {
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testInt(1))
         attrStr += AttributedString(" ")
@@ -427,6 +442,7 @@ private struct  AttributedStringTests {
         #expect(attrStr.runs != attrStr3.runs)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func substringRunEquality() {
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testInt(1))
         attrStr += AttributedString(" ")
@@ -458,6 +474,7 @@ private struct  AttributedStringTests {
 
     // MARK: - Mutation Tests
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func directMutationCopyOnWrite() {
         var attrStr = AttributedString("ABC")
         let copy = attrStr
@@ -467,6 +484,7 @@ private struct  AttributedStringTests {
         #expect(attrStr != copy)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributeMutationCopyOnWrite() {
         var attrStr = AttributedString("ABC")
         let copy = attrStr
@@ -475,6 +493,7 @@ private struct  AttributedStringTests {
         #expect(attrStr != copy)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func sliceAttributeMutation() {
         let attr : Int = 42
         let attr2 : Double = 1.0
@@ -494,6 +513,7 @@ private struct  AttributedStringTests {
         #expect(copy != attrStr)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func enumerationAttributeMutation() {
         var attrStr = AttributedString("A", attributes: AttributeContainer().testInt(1))
         attrStr += AttributedString("B", attributes: AttributeContainer().testDouble(2.0))
@@ -511,6 +531,7 @@ private struct  AttributedStringTests {
         #expect(expected == attrStr)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func mutateMultipleAttributes() {
         var attrStr = AttributedString("A", attributes: AttributeContainer().testInt(1).testBool(true))
         attrStr += AttributedString("B", attributes: AttributeContainer().testInt(1).testDouble(2))
@@ -578,6 +599,7 @@ private struct  AttributedStringTests {
         #expect(changeRange1expected == changeRange1)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func mutateAttributes() {
         var attrStr = AttributedString("A", attributes: AttributeContainer().testInt(1).testBool(true))
         attrStr += AttributedString("B", attributes: AttributeContainer().testInt(1).testDouble(2))
@@ -639,6 +661,7 @@ private struct  AttributedStringTests {
         #expect(changeRange2expected == changeRange2)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func replaceAttributes() {
         var attrStr = AttributedString("A", attributes: AttributeContainer().testInt(1).testBool(true))
         attrStr += AttributedString("B", attributes: AttributeContainer().testInt(1).testDouble(2))
@@ -679,6 +702,7 @@ private struct  AttributedStringTests {
     }
  
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func sliceMutation() {
         var attrStr = AttributedString("Hello World", attributes: AttributeContainer().testInt(1))
         let start = attrStr.characters.index(attrStr.startIndex, offsetBy: 6)
@@ -690,6 +714,7 @@ private struct  AttributedStringTests {
         #expect(attrStr != AttributedString("Hello Goodbye", attributes: AttributeContainer().testInt(1)))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func overlappingSliceMutation() throws {
         var attrStr = AttributedString("Hello, world!")
         attrStr[try #require(attrStr.range(of: "Hello"))].testInt = 1
@@ -705,6 +730,7 @@ private struct  AttributedStringTests {
         #expect(attrStr == expected)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func characters_replaceSubrange() throws {
         var attrStr = AttributedString("Hello World", attributes: AttributeContainer().testInt(1))
         attrStr.characters.replaceSubrange(try #require(attrStr.range(of: " ")), with: " Good ")
@@ -713,6 +739,7 @@ private struct  AttributedStringTests {
         #expect(expected == attrStr)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func charactersMutation_append() {
         var attrStr = AttributedString("Hello World", attributes: AttributeContainer().testInt(1))
         attrStr.characters.append(contentsOf: " Goodbye")
@@ -721,6 +748,7 @@ private struct  AttributedStringTests {
         #expect(expected == attrStr)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func unicodeScalars_replaceSubrange() {
         var attrStr = AttributedString("La Cafe\u{301}", attributes: AttributeContainer().testInt(1))
         let unicode = attrStr.unicodeScalars
@@ -730,6 +758,7 @@ private struct  AttributedStringTests {
         #expect(expected == attrStr)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func unicodeScalarsMutation_append() {
         var attrStr = AttributedString("Cafe", attributes: AttributeContainer().testInt(1))
         attrStr.unicodeScalars.append("\u{301}")
@@ -738,6 +767,7 @@ private struct  AttributedStringTests {
         #expect(expected == attrStr)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func subCharacterAttributeSetting() {
         var attrStr = AttributedString("Cafe\u{301}", attributes: AttributeContainer().testInt(1))
         let cafRange = attrStr.characters.startIndex ..< attrStr.characters.index(attrStr.characters.startIndex, offsetBy: 3)
@@ -753,6 +783,7 @@ private struct  AttributedStringTests {
         #expect(expected == attrStr)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func replaceSubrange_rangeExpression() {
         var attrStr = AttributedString("Hello World", attributes: AttributeContainer().testInt(1))
         
@@ -765,6 +796,7 @@ private struct  AttributedStringTests {
         #expect(attrStr == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func settingAttributes() {
         var attrStr = AttributedString("Hello World", attributes: .init().testInt(1))
         attrStr += AttributedString(". My name is Foundation!", attributes: .init().testBool(true))
@@ -775,6 +807,7 @@ private struct  AttributedStringTests {
         #expect(result == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func addAttributedString() {
         let attrStr = AttributedString("Hello ", attributes: .init().testInt(1))
         let attrStr2 = AttributedString("World", attributes: .init().testInt(2))
@@ -799,6 +832,7 @@ private struct  AttributedStringTests {
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func replaceSubrangeWithSubstrings() {
         let baseString = AttributedString("A", attributes: .init().testInt(1))
         + AttributedString("B", attributes: .init().testInt(2))
@@ -829,6 +863,7 @@ private struct  AttributedStringTests {
         #expect(targetString == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     func assertStringIsCoalesced(_ str: AttributedString) {
         var prev: AttributedString.Runs.Run?
         for run in str.runs {
@@ -839,6 +874,7 @@ private struct  AttributedStringTests {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func coalescing() {
         let str = AttributedString("Hello", attributes: .init().testInt(1))
         let appendSame = str + AttributedString("World", attributes: .init().testInt(1))
@@ -899,6 +935,7 @@ private struct  AttributedStringTests {
         #expect(str10.runs.count == 1)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func replaceWithEmptyElements() {
         var str = AttributedString("Hello, world")
         let range = str.startIndex ..< str.characters.index(str.startIndex, offsetBy: 5)
@@ -907,6 +944,7 @@ private struct  AttributedStringTests {
         #expect(str == AttributedString(", world"))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func description() {
         let string = AttributedString("A", attributes: .init().testInt(1))
         + AttributedString("B", attributes: .init().testInt(2))
@@ -938,6 +976,7 @@ E {
         #expect(runsDesc == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func containerDescription() {
         let cont = AttributeContainer().testBool(false).testInt(1).testDouble(2.0).testString("3")
         
@@ -952,6 +991,7 @@ E {
         #expect(desc.contains("\tTestBool = false\n"))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func runAndSubstringDescription() {
         let string = AttributedString("A", attributes: .init().testInt(1))
         + AttributedString("B", attributes: .init().testInt(2))
@@ -987,6 +1027,7 @@ E {
         #expect(subDescs == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func replacingAttributes() {
         var str = AttributedString("Hello", attributes: .init().testInt(2))
         str += AttributedString("World", attributes: .init().testString("Test"))
@@ -1000,6 +1041,7 @@ E {
         #expect(result == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func scopedAttributeContainer() {
         var str = AttributedString("Hello, world")
         
@@ -1036,6 +1078,7 @@ E {
         #expect(str[otherRange].testBool == true)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func mergeAttributes() {
         let originalAttributes = AttributeContainer.testInt(2).testBool(true)
         let newAttributes = AttributeContainer.testString("foo")
@@ -1048,6 +1091,7 @@ E {
         #expect(str.mergingAttributes(overlappingAttributes, mergePolicy: .keepCurrent) == AttributedString("Hello, world", attributes: originalAttributes.testDouble(4.3)))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func mergeAttributeContainers() {
         let originalAttributes = AttributeContainer.testInt(2).testBool(true)
         let newAttributes = AttributeContainer.testString("foo")
@@ -1059,6 +1103,7 @@ E {
         #expect(originalAttributes.merging(overlappingAttributes, mergePolicy: .keepCurrent) == originalAttributes.testDouble(4.3))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func changingSingleCharacterUTF8Length() throws {
         var attrstr = AttributedString("\u{1F3BA}\u{1F3BA}") // UTF-8 Length of 8
         attrstr.characters[attrstr.startIndex] = "A" // Changes UTF-8 Length to 5
@@ -1070,6 +1115,7 @@ E {
     
     // MARK: - Substring Tests
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func substringBase() {
         let str = AttributedString("Hello World", attributes: .init().testInt(1))
         var substr = str[str.startIndex ..< str.characters.index(str.startIndex, offsetBy: 5)]
@@ -1084,6 +1130,7 @@ E {
         #expect(str2[range].base == str2)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func substringGetAttribute() {
         let str = AttributedString("Hello World", attributes: .init().testInt(1))
         let range = str.startIndex ..< str.characters.index(str.startIndex, offsetBy: 5)
@@ -1097,6 +1144,7 @@ E {
         #expect(str2[range2].testBool == nil)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func substringDescription() {
         var str = AttributedString("Hello", attributes: .init().testInt(2))
         str += " "
@@ -1108,6 +1156,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func substringReplaceAttributes() {
         var str = AttributedString("Hello", attributes: .init().testInt(2).testString("Foundation"))
         str += " "
@@ -1123,6 +1172,7 @@ E {
         #expect(str == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func substringEquality() {
         let str = AttributedString("")
         let range = str.startIndex ..< str.endIndex
@@ -1136,6 +1186,7 @@ E {
         #expect(substringB == substringB)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func initializationFromSubstring() throws {
         var attrStr = AttributedString("yolo^+1 result<:s>^", attributes: AttributeContainer.testInt(2).testString("Hello"))
         attrStr.replaceSubrange(try #require(attrStr.range(of: "<:s>")), with: AttributedString(""))
@@ -1166,6 +1217,7 @@ E {
         var attributedString = AttributedString()
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func jsonEncoding() throws {
         let encoder = JSONEncoder()
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testBool(true).testString("blue").testInt(1))
@@ -1179,6 +1231,7 @@ E {
         #expect(decoded.attributedString == attrStr)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func decodingThenConvertingToNSAttributedString() throws {
         let encoder = JSONEncoder()
         var attrStr = AttributedString("Hello", attributes: AttributeContainer().testBool(true))
@@ -1193,6 +1246,7 @@ E {
         #expect(ns == decodedns)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func customAttributeCoding() throws {
         struct MyAttributes : AttributeScope {
             var customCodable : AttributeScopes.TestAttributes.CustomCodableAttribute
@@ -1215,6 +1269,7 @@ E {
         #expect(decoded.attributedString == attrStr)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func customCodableTypeWithCodableAttributedString() throws {
         struct MyType : Codable, Equatable {
             var other: NonCodableType
@@ -1254,6 +1309,7 @@ E {
         #expect(type == decoded)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func codingErrorsPropagateUpToCallSite() {
         enum CustomAttribute : CodableAttributedStringKey {
             typealias Value = String
@@ -1284,6 +1340,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func encodeWithPartiallyCodableScope() throws {
         enum NonCodableAttribute : AttributedStringKey {
             typealias Value = Int
@@ -1311,6 +1368,7 @@ E {
         #expect(decoded.str == expected)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func automaticCoding() throws {
         struct Obj : Codable, Equatable {
             @CodableConfiguration(from: AttributeScopes.TestAttributes.self) var attrStr = AttributedString()
@@ -1359,6 +1417,7 @@ E {
     }
 
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func manualCoding() throws {
         struct Obj : Codable, Equatable {
             var attrStr : AttributedString
@@ -1452,6 +1511,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func codableRawRepresentableAttribute() throws {
         struct Attribute : CodableAttributedStringKey {
             static let name = "MyAttribute"
@@ -1480,6 +1540,7 @@ E {
         #expect(decoded.str[Attribute.self] == .two)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func containerEncoding() throws {
         struct ContainerContainer : Codable {
             @CodableConfiguration(from: AttributeScopes.TestAttributes.self) var container = AttributeContainer()
@@ -1493,6 +1554,7 @@ E {
         #expect(obj.container == decoded.container)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func defaultAttributesCoding() throws {
         struct DefaultContainer : Codable, Equatable {
             var str : AttributedString
@@ -1506,6 +1568,7 @@ E {
         #expect(cont == decoded)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func decodingMultibyteCharacters() throws {
         let json = "{\"str\": [\"🎺ABC\", {\"TestInt\": 2}]}"
         struct Object : Codable {
@@ -1521,6 +1584,7 @@ E {
     
     // MARK: - Conversion Tests
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionToObjC() throws {
         var ourString = AttributedString("Hello", attributes: AttributeContainer().testInt(2))
         ourString += AttributedString(" ")
@@ -1532,6 +1596,7 @@ E {
         #expect(theirString == ourObjCString)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionFromObjC() throws {
         let nsString = NSMutableAttributedString(string: "Hello!")
         let rangeA = NSMakeRange(0, 3)
@@ -1545,6 +1610,7 @@ E {
         #expect(string == convertedString)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func roundTripConversion_boxed() throws {
         struct MyCustomType : Hashable {
             var num: Int
@@ -1569,6 +1635,7 @@ E {
         #expect(converted[MyCustomAttribute.self] == customVal)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func roundTripConversion_customConversion() throws {
         struct MyCustomType : Hashable { }
 
@@ -1595,6 +1662,7 @@ E {
         #expect(converted[MyCustomAttribute.self] == customVal)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func incompleteConversionFromObjC() throws {
         struct TestStringAttributeOnly : AttributeScope {
             var testString: AttributeScopes.TestAttributes.TestStringAttribute // Missing TestBoolAttribute
@@ -1612,6 +1680,7 @@ E {
         #expect(converted == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func incompleteConversionToObjC() throws {
         struct TestStringAttributeOnly : AttributeScope {
             var testString: AttributeScopes.TestAttributes.TestStringAttribute // Missing TestBoolAttribute
@@ -1625,6 +1694,7 @@ E {
         #expect(!attrs.keys.contains(.testBool))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionNestedScope() throws {
         struct SuperScope : AttributeScope {
             var subscope : SubScope
@@ -1647,6 +1717,7 @@ E {
         #expect(converted == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionAttributeContainers() throws {
         let container = AttributeContainer.testInt(2).testDouble(3.1).testString("Hello")
         
@@ -1665,6 +1736,7 @@ E {
         #expect(container == container2)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionFromInvalidObjectiveCValueTypes() throws {
         let nsStr = NSAttributedString(string: "Hello", attributes: [.testInt : "I am not an Int"])
         #expect(throws: (any Error).self) {
@@ -1696,6 +1768,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionToUTF16() throws {
         // Ensure that we're correctly using UTF16 offsets with NSAS and UTF8 offsets with AS without mixing the two
         let multiByteCharacters = ["\u{2029}", "\u{1D11E}", "\u{1D122}", "\u{1F91A}\u{1F3FB}"]
@@ -1713,6 +1786,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionWithoutScope() throws {
         // Ensure simple conversion works (no errors when loading AppKit/UIKit/SwiftUI)
         let attrStr = AttributedString()
@@ -1757,6 +1831,7 @@ E {
     }
     
     #if canImport(Accessibility)
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionWithoutScope_Accessibility() throws {
         let attributedString = AttributedString("Hello", attributes: .init().accessibilityTextCustom(["ABC"]))
         let nsAttributedString = NSAttributedString(attributedString)
@@ -1772,6 +1847,7 @@ E {
     #endif
     
     #if canImport(AppKit)
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionWithoutScope_AppKit() throws {
         var container = AttributeContainer()
         container.appKit.kern = 2.3
@@ -1784,6 +1860,7 @@ E {
     #endif
     
     #if canImport(UIKit)
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionWithoutScope_UIKit() throws {
         var container = AttributeContainer()
         container.uiKit.kern = 2.3
@@ -1796,6 +1873,7 @@ E {
     #endif
     
     #if canImport(SwiftUI)
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionWithoutScope_SwiftUI() throws {
         var container = AttributeContainer()
         container.swiftUI.kern = 2.3
@@ -1807,6 +1885,7 @@ E {
     }
     #endif
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func conversionCoalescing() throws {
         let nsStr = NSMutableAttributedString("Hello, world")
         nsStr.setAttributes([.link : NSURL(string: "http://apple.com")!, .testInt : NSNumber(integerLiteral: 2)], range: NSRange(location: 0, length: 6))
@@ -1818,6 +1897,7 @@ E {
         #expect(attrStr.link == nil)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func unalignedConversion() throws {
         let tests: [(NSRange, Int)] = [
             (NSRange(location: 0, length: 12), 1),
@@ -1842,6 +1922,7 @@ E {
 
     // MARK: - View Tests
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func charViewIndexing_backwardsFromEndIndex() {
         let testString = AttributedString("abcdefghi")
         let testChars = testString.characters
@@ -1849,6 +1930,7 @@ E {
         #expect(testChars[testIndex] == "i")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func attrViewIndexing() {
         var attrStr = AttributedString("A")
         attrStr += "B"
@@ -1867,6 +1949,7 @@ E {
         #expect(attrStrRuns.count == 1)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func unicodeScalarsViewIndexing() {
         let attrStr = AttributedString("Cafe\u{301}", attributes: AttributeContainer().testInt(1))
         let unicode = attrStr.unicodeScalars
@@ -1874,6 +1957,7 @@ E {
         #expect(unicode[unicode.index(unicode.endIndex, offsetBy: -2)] == "e")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func characterSlicing() {
         let a: AttributedString = "\u{1f1fa}\u{1f1f8}" // Regional indicators U & S
         let i = a.unicodeScalars.index(after: a.startIndex)
@@ -1884,6 +1968,7 @@ E {
         #expect(b.count == 0)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func characterSlicing_RangeExpressions() {
         // Make sure `AttributedString` and `String` produce consistent results when slicing,
         // for every range expression, whether or not the bounds fall on `Character` boundaries.
@@ -1941,6 +2026,7 @@ E {
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func unicodeScalarsSlicing() {
         let attrStr = AttributedString("Cafe\u{301}", attributes: AttributeContainer().testInt(1))
         let range = attrStr.startIndex ..< attrStr.endIndex
@@ -1962,6 +2048,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func protocolRunIndexing() {
         var str = AttributedString("Foo", attributes: .init().testInt(1))
         str += AttributedString("Bar", attributes: .init().testInt(2))
@@ -1984,6 +2071,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func runSliceSubscripting() {
         var str = AttributedString("Foo", attributes: .init().testInt(1))
         str += AttributedString("Bar", attributes: .init().testInt(2))
@@ -2014,6 +2102,7 @@ E {
 
     // MARK: - Other Tests
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func initWithSequence() {
         let expected = AttributedString("Hello World", attributes: AttributeContainer().testInt(2))
         let sequence: [Character] = ["H", "e", "l", "l", "o", " ", "W", "o", "r", "l", "d"]
@@ -2029,6 +2118,7 @@ E {
         #expect(attrStr3 == expected)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func longestEffectiveRangeOfAttribute() {
         var str = AttributedString("Abc")
         str += AttributedString("def", attributes: AttributeContainer.testInt(2).testString("World"))
@@ -2044,6 +2134,7 @@ E {
         #expect(range == expectedRange)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributeContainer() {
         var container = AttributeContainer().testBool(true).testInt(1)
         #expect(container.testBool == true)
@@ -2060,6 +2151,7 @@ E {
         #expect(container.testBool == nil)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributeContainerEquality() {
         let containerA = AttributeContainer().testInt(2).testString("test")
         let containerB = AttributeContainer().testInt(2).testString("test")
@@ -2074,6 +2166,7 @@ E {
         #expect(containerD == containerE)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributeContainerSetOnSubstring() {
         let container = AttributeContainer().testBool(true).testInt(1)
 
@@ -2088,6 +2181,7 @@ E {
         #expect(run.testString == "yellow")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func slice() {
         let attrStr = AttributedString("Hello World")
         let chars = attrStr.characters
@@ -2096,6 +2190,7 @@ E {
         #expect(AttributedString(slice) == AttributedString("World"))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func createStringsFromCharactersWithUnicodeScalarIndexes() {
         var attrStr = AttributedString("Caf", attributes: AttributeContainer().testString("a"))
         attrStr += AttributedString("e", attributes: AttributeContainer().testString("b"))
@@ -2112,6 +2207,7 @@ E {
         #expect(strs2 == ["Caf", "", "e\u{301}"])
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func settingAttributeOnSlice() throws {
         var attrString = AttributedString("This is a string.")
         var range = attrString.startIndex ..< attrString.characters.index(attrString.startIndex, offsetBy: 1)
@@ -2145,6 +2241,7 @@ E {
         #expect(attrString.characters[startIndex] == "D")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func expressibleByStringLiteral() {
         let variable : AttributedString = "Test"
         #expect(variable == AttributedString("Test"))
@@ -2155,6 +2252,7 @@ E {
         takesAttrStr("Test")
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func hashing() {
         let attrStr = AttributedString("Hello, world.", attributes: .init().testInt(2).testBool(false))
         let attrStr2 = AttributedString("Hello, world.", attributes: .init().testInt(2).testBool(false))
@@ -2170,6 +2268,7 @@ E {
         #expect(dictionary[attrStr2] == 456)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func hashingSubstring() {
         let a: AttributedString = "aXa"
         let b: AttributedString = "bXb"
@@ -2192,6 +2291,7 @@ E {
         #expect(hasherA.finalize() == hasherB.finalize())
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func hashingContainer() {
         let containerA = AttributeContainer.testInt(2).testBool(false)
         let containerB = AttributeContainer.testInt(2).testBool(false)
@@ -2207,6 +2307,7 @@ E {
         #expect(dictionary[containerB] == 456)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func utf16String() {
         let multiByteCharacters = ["\u{2029}", "\u{1D11E}", "\u{1D122}", "\u{1F91A}\u{1F3FB}"]
         
@@ -2219,6 +2320,7 @@ E {
         }
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func plusOperators() {
         let ab = AttributedString("a") + AttributedString("b")
         #expect(ab == AttributedString("ab"))
@@ -2242,6 +2344,7 @@ E {
         #expect(abc_lit == abc)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func search() throws {
         let testString = AttributedString("abcdefghi")
         #expect(testString.range(of: "baba") == nil)
@@ -2287,6 +2390,7 @@ E {
         #expect(testString.range(of: "abc", options: [.anchored, .backwards]) == nil)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func substringSearch() throws {
         let fullString = AttributedString("___abcdefghi___")
         let testString = fullString[try #require(fullString.range(of: "abcdefghi"))]
@@ -2333,6 +2437,7 @@ E {
         #expect(testString.range(of: "abc", options: [.anchored, .backwards]) == nil)
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func indexConversion() throws {
         let attrStr = AttributedString("ABCDE")
         let str = "ABCDE"
@@ -2349,6 +2454,7 @@ E {
     
 #if FOUNDATION_FRAMEWORK
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func rangeConversion() throws {
         let attrStr = AttributedString("ABCDE")
         let nsAS = NSAttributedString("ABCDE")
@@ -2367,6 +2473,7 @@ E {
         #expect(String(attrStr[attrStrR_reconverted2].characters) == "BCD")
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func unalignedRangeConversion() {
         do {
             // U+0301 Combining Acute Accent (one unicode scalar, one UTF-16)
@@ -2418,6 +2525,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func nsRangeConversionOnSlice() throws {
         let str = AttributedString("012345")
         let slice = str[str.index(str.startIndex, offsetByCharacters: 3) ..< str.endIndex]
@@ -2428,6 +2536,7 @@ E {
     
 #endif // FOUNDATION_FRAMEWORK
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func oobRangeConversion() {
         let attrStr = AttributedString("")
         let str = "Hello"
@@ -2437,6 +2546,7 @@ E {
     
 #if FOUNDATION_FRAMEWORK
     // TODO: Support scope-specific AttributedString initialization in FoundationPreview
+    @available(FoundationAttributedString 5.5, *)
     @Test func scopedCopy() {
         var str = AttributedString("A")
         str += AttributedString("B", attributes: .init().testInt(2))
@@ -2474,6 +2584,7 @@ E {
         #expect(AttributedString(str[range], including: None.self) == AttributedString("BC"))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func scopeIterationAPI() {
         struct TestScope : AttributeScope {
             let testInt: AttributeScopes.TestAttributes.TestIntAttribute
@@ -2492,6 +2603,7 @@ E {
     }
 #endif // FOUNDATION_FRAMEWORK
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func assignDifferentSubstring() {
         var attrStr1 = AttributedString("ABCDE")
         let attrStr2 = AttributedString("XYZ")
@@ -2501,6 +2613,7 @@ E {
         #expect(attrStr1 == "AXE")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func cowDuringSubstringMutation() {
         func frobnicate(_ sub: inout AttributedSubstring) {
             var new = sub
@@ -2516,6 +2629,7 @@ E {
     }
 
     #if FOUNDATION_EXIT_TESTS
+    @available(FoundationAttributedString 5.5, *)
     @Test func reassignmentDuringMutation() async {
         await #expect(processExitsWith: .failure) {
             func frobnicate(_ sub: inout AttributedSubstring) {
@@ -2528,6 +2642,7 @@ E {
     }
     #endif
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func assignDifferentCharacterView() {
         var attrStr1 = AttributedString("ABC", attributes: .init().testInt(1)) + AttributedString("DE", attributes: .init().testInt(3))
         let attrStr2 = AttributedString("XYZ", attributes: .init().testInt(2))
@@ -2536,6 +2651,7 @@ E {
         #expect(attrStr1 == AttributedString("XYZ", attributes: .init().testInt(1)))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func cowDuringCharactersMutation() {
         func frobnicate(_ chars: inout AttributedString.CharacterView) {
             var new = chars
@@ -2548,6 +2664,7 @@ E {
         #expect(attrStr == AttributedString("XYZ", attributes: .init().testInt(1)))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func assignDifferentUnicodeScalarView() {
         var attrStr1 = AttributedString("ABC", attributes: .init().testInt(1)) + AttributedString("DE", attributes: .init().testInt(3))
         let attrStr2 = AttributedString("XYZ", attributes: .init().testInt(2))
@@ -2556,6 +2673,7 @@ E {
         #expect(attrStr1 == AttributedString("XYZ", attributes: .init().testInt(1)))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func cowDuringUnicodeScalarsMutation() {
         func frobnicate(_ chars: inout AttributedString.CharacterView) {
             var new = chars
@@ -2568,6 +2686,7 @@ E {
         #expect(attrStr == AttributedString("XYZ", attributes: .init().testInt(1)))
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func utf88View() {
         let testStrings = [
             "Hello, world",
@@ -2597,6 +2716,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func utf16View() {
         let testStrings = [
             "Hello, world",
@@ -2626,6 +2746,7 @@ E {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributeContainerFiltering() {
         #expect(AttributeContainer().filter(runBoundaries: nil) == AttributeContainer())
         #expect(AttributeContainer().filter(runBoundaries: .paragraph) == AttributeContainer())
@@ -2647,6 +2768,7 @@ E {
         #expect(testConstrainedContainer.filter(inheritedByAddedText: false) == AttributeContainer.testNonExtended(5))
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func writingDirectionBehavior() throws {
         // Indicate that this sentence is primarily right to left, because the English term "Swift" is embedded into an Arabic sentence.
         var string = AttributedString("Swift مذهل!", attributes: .init().writingDirection(.rightToLeft))

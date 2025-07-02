@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     internal struct _AttributeValue : Hashable, CustomStringConvertible, Sendable {
         private typealias RawValue = any Sendable & Hashable
@@ -108,7 +108,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 internal extension Dictionary where Key == String, Value == AttributedString._AttributeValue {
     var _attrStrDescription : String {
         let keyvals = self.reduce(into: "") { (res, entry) in
@@ -118,7 +118,7 @@ internal extension Dictionary where Key == String, Value == AttributedString._At
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     internal struct _AttributeStorage: Hashable, Sendable {
         internal typealias AttributeMergePolicy = AttributedString.AttributeMergePolicy
@@ -139,14 +139,14 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._AttributeStorage: CustomStringConvertible {
     var description: String {
         contents._attrStrDescription
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._AttributeStorage {
     var isEmpty: Bool {
         contents.isEmpty
@@ -166,7 +166,7 @@ extension AttributedString._AttributeStorage {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._AttributeStorage {
     internal func isEqual(to other: Self, comparing attributes: [String]) -> Bool {
         assert(!attributes.isEmpty)
@@ -179,7 +179,7 @@ extension AttributedString._AttributeStorage {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._AttributeStorage {
     func attributesForAddedText() -> Self {
         var storage = Self()

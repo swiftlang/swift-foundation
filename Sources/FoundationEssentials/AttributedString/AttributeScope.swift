@@ -16,14 +16,14 @@
 //     var foregroundColor : ForegroundColor
 // }
 // An AttributeScope can contain other scopes as well.
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding {
     static var decodingConfiguration: AttributeScopeCodableConfiguration { get }
     static var encodingConfiguration: AttributeScopeCodableConfiguration { get }
 }
 
 @frozen
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public enum AttributeScopes { }
 
 @available(macOS, unavailable, introduced: 12.0)
@@ -171,7 +171,7 @@ internal func _loadDefaultAttributes() -> [String : any AttributedStringKey.Type
 }
 
 // TODO: Support AttributeScope key finding in FoundationPreview
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScope {
     private static var scopeDescription: ScopeDescription {
         if let cached = _loadedScopeCache.withLock({ $0[Self.self] }) {
@@ -207,7 +207,7 @@ extension AttributeScope {
     }
     
     /// A list of all attribute keys contained within this scope and any sub-scopes.
-    @available(FoundationPreview 6.2, *)
+    @available(FoundationAttributedString 6.2, *)
     public static var attributeKeys: some Sequence<any AttributedStringKey.Type> {
         Self.scopeDescription.attributes.values
     }

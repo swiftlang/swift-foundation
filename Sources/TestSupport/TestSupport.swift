@@ -137,7 +137,7 @@ public typealias PropertyListDecoder = FoundationEssentials.PropertyListDecoder
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias FormatStyle = FoundationEssentials.FormatStyle
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias ByteCountFormatStyle = FoundationInternationalization.ByteCountFormatStyle
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias ListFormatStyle = FoundationInternationalization.ListFormatStyle
@@ -158,31 +158,31 @@ public typealias DiscreteFormatStyle = FoundationEssentials.DiscreteFormatStyle
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public typealias StringStyle = FoundationInternationalization.StringStyle
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias AttributedString = FoundationEssentials.AttributedString
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias AttributeScope = FoundationEssentials.AttributeScope
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias AttributeContainer = FoundationEssentials.AttributeContainer
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias AttributeDynamicLookup = FoundationEssentials.AttributeDynamicLookup
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias AttributeScopes = FoundationEssentials.AttributeScopes
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias AttributedStringAttributeMutation = FoundationEssentials.AttributedStringAttributeMutation
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias AttributedStringKey = FoundationEssentials.AttributedStringKey
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias AttributedStringProtocol = FoundationEssentials.AttributedStringProtocol
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias AttributedSubstring = FoundationEssentials.AttributedSubstring
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias ScopedAttributeContainer = FoundationEssentials.ScopedAttributeContainer
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias CodableAttributedStringKey = FoundationEssentials.CodableAttributedStringKey
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias EncodableAttributedStringKey = FoundationEssentials.EncodableAttributedStringKey
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias DecodableAttributedStringKey = FoundationEssentials.DecodableAttributedStringKey
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)

@@ -21,6 +21,7 @@ import Foundation
 @Suite("AttributedString Constraining Behavior")
 private struct AttributedStringConstrainingBehaviorTests {
     
+    @available(FoundationAttributedString 5.5, *)
     func verify<K: AttributedStringKey>(
         string: AttributedString,
         matches expected: [(String, K.Value?)],
@@ -43,6 +44,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     func verify<K: AttributedStringKey, K2: AttributedStringKey>(string: AttributedString, matches expected: [(String, K.Value?, K2.Value?)], for key: KeyPath<AttributeDynamicLookup, K>, _ key2: KeyPath<AttributeDynamicLookup, K2>, sourceLocation: SourceLocation = #_sourceLocation)
     where K.Value : Sendable, K2.Value : Sendable
     {
@@ -60,6 +62,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         }
     }
     
+    @available(FoundationAttributedString 5.5, *)
     func verify<K: AttributedStringKey, K2: AttributedStringKey, K3: AttributedStringKey>(string: AttributedString, matches expected: [(String, K.Value?, K2.Value?, K3.Value?)], for key: KeyPath<AttributeDynamicLookup, K>, _ key2: KeyPath<AttributeDynamicLookup, K2>, _ key3: KeyPath<AttributeDynamicLookup, K3>, sourceLocation: SourceLocation = #_sourceLocation)
     where K.Value : Sendable, K2.Value : Sendable, K3.Value : Sendable
     {
@@ -81,6 +84,7 @@ private struct AttributedStringConstrainingBehaviorTests {
     
     // MARK: Extending Run Tests
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func extendingRunAddCharacters() {
         let str = AttributedString("Hello, world", attributes: .init().testInt(2).testNonExtended(1))
         
@@ -108,6 +112,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: result, matches: [("He", 2, 1), ("Hi!", 2, nil), ("rld", 2, 1)], for: \.testInt, \.testNonExtended)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func extendingRunAddUnicodeScalars() {
         let str = AttributedString("Hello, world", attributes: .init().testInt(2).testNonExtended(1))
         let scalarsStr = "A\u{0301}B"
@@ -132,6 +137,7 @@ private struct AttributedStringConstrainingBehaviorTests {
     
     // MARK: - Paragraph Constrained Tests
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func paragraphAttributeExpanding() {
         var str = AttributedString("Hello, world\nNext Paragraph")
         var range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -153,6 +159,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: str, matches: [("Hello, world\n", 4), ("Next Paragraph", 4)], for: \.testParagraphConstrained)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func paragraphAttributeRemoval() {
         var str = AttributedString("Hello, world\nNext Paragraph", attributes: .init().testParagraphConstrained(2))
         var range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -172,6 +179,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: str, matches: [("Hello, world\n", nil), ("Next Paragraph", nil)], for: \.testParagraphConstrained)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func paragraphAttributeContainerApplying() {
         var container = AttributeContainer.testParagraphConstrained(2).testString("Hello")
         var str = AttributedString("Hello, world\nNext Paragraph")
@@ -200,6 +208,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: str, matches: [("H", 4, nil, 1), ("el", 4, "Hello", 1), ("lo, w", 4, nil, 1), ("orld\n", 4, nil, 2), ("N", 4, nil, 2), ("ext Paragrap", 4, nil, 1), ("h", 4, "Hello", 2)], for: \.testParagraphConstrained, \.testString, \.testInt)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func paragraphAttributeContainerReplacing() {
         var str = AttributedString("Hello, world\nNext Paragraph")
         let range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 3)
@@ -221,6 +230,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: result, matches: [("H", 3, 2, nil), ("el", 3, nil, true), ("lo, world\n", 3, 2, nil), ("Next Paragraph", nil, 2, nil)], for: \.testParagraphConstrained, \.testInt, \.testBool)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func paragraphTextMutation() {
         let str = AttributedString("Hello, world\n", attributes: .init().testParagraphConstrained(1)) + AttributedString("Next Paragraph", attributes: .init().testParagraphConstrained(2))
         
@@ -265,6 +275,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: result, matches: [("Hello, wTest\n", 1), ("Replacementxt Paragraph", 1)], for: \.testParagraphConstrained)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func paragraphAttributedTextMutation() {
         let str = AttributedString("Hello, world\n", attributes: .init().testParagraphConstrained(1)) + AttributedString("Next Paragraph", attributes: .init().testParagraphConstrained(2))
         let singleReplacement = AttributedString("Test", attributes: .init().testParagraphConstrained(5).testSecondParagraphConstrained(6).testBool(true))
@@ -316,6 +327,7 @@ private struct AttributedStringConstrainingBehaviorTests {
     }
     
 #if FOUNDATION_FRAMEWORK
+    @available(FoundationAttributedString 5.5, *)
     @Test func paragraphFromUntrustedRuns() throws {
         let str = NSMutableAttributedString(string: "Hello ", attributes: [.testParagraphConstrained : NSNumber(2)])
         str.append(NSAttributedString(string: "World", attributes: [.testParagraphConstrained : NSNumber(3), .testSecondParagraphConstrained : NSNumber(4)]))
@@ -325,6 +337,7 @@ private struct AttributedStringConstrainingBehaviorTests {
     }
 #endif // FOUNDATION_FRAMEWORK
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func paragraphFromReplacedSubrange() {
         let str = AttributedString("Before\nHello, world\nNext Paragraph\nAfter", attributes: .init().testParagraphConstrained(1))
         
@@ -349,6 +362,7 @@ private struct AttributedStringConstrainingBehaviorTests {
     
     // MARK: - Character Constrained Tests
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func characterAttributeApply() {
         let str = AttributedString("*__*__**__*")
         
@@ -367,6 +381,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: result, matches: [("*", nil, 1), ("__", nil, 1), ("*", nil, 1), ("__", nil, 1), ("*", nil, 1), ("*", nil, 1), ("__", nil, 1), ("*", 3, 1)], for: \.testCharacterConstrained, \.testInt)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func characterAttributeSubCharacterApply() {
         let str = AttributedString("ABC \u{FFFD} DEF")
 
@@ -399,6 +414,7 @@ private struct AttributedStringConstrainingBehaviorTests {
 
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func characterAttributeContainerReplacing() {
         var str = AttributedString("*__*__**__*")
         let range = str.index(afterCharacter: str.startIndex) ..< str.index(str.startIndex, offsetByCharacters: 4)
@@ -420,6 +436,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: result, matches: [("*", nil, 2, nil), ("__", nil, nil, true), ("*", 3, nil, true), ("__", nil, 2, nil), ("*", nil, 2, nil), ("*", nil, 2, nil), ("__", nil, 2, nil), ("*", nil, 2, nil)], for: \.testCharacterConstrained, \.testInt, \.testBool)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func characterTextMutation() {
         let str = AttributedString("*__*__**__*", attributes: .init().testCharacterConstrained(2))
         
@@ -449,6 +466,7 @@ private struct AttributedStringConstrainingBehaviorTests {
     }
     
 #if FOUNDATION_FRAMEWORK
+    @available(FoundationAttributedString 5.5, *)
     @Test func characterFromUntrustedRuns() throws {
         let str = NSMutableAttributedString(string: "*__*__**__*", attributes: [.testCharacterConstrained : NSNumber(2)])
         str.append(NSAttributedString(string: "_*"))
@@ -460,6 +478,7 @@ private struct AttributedStringConstrainingBehaviorTests {
     
     // MARK: Invalidation Tests
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func invalidationAttributeChange() {
         let str = AttributedString("Hello, world", attributes: .init().testInt(1).testAttributeDependent(2))
         
@@ -494,6 +513,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: result, matches: [("Hello, world", 2, nil)], for: \.testInt, \.testAttributeDependent)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func invalidationCharacterChange() {
         let str = AttributedString("Hello, world", attributes: .init().testInt(1).testCharacterDependent(2))
         
@@ -580,6 +600,7 @@ private struct AttributedStringConstrainingBehaviorTests {
         verify(string: result, matches: [("H", nil, nil, "Hello"), ("ello, world", 1, nil, nil)], for: \.testInt, \.testCharacterDependent, \.testString)
     }
     
+    @available(FoundationAttributedString 5.5, *)
     @Test func invalidationCharacterInsertionBetweenRuns() {
         var str = AttributedString("Hello", attributes: .init().testInt(1).testCharacterDependent(2))
         str += AttributedString("World", attributes: .init().testInt(1).testCharacterDependent(3))

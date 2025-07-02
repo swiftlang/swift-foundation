@@ -18,7 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     internal struct _InternalRun: Sendable {
         // UTF-8 Code Unit Length
@@ -32,12 +32,14 @@ extension AttributedString {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRun: Equatable {
     internal static func == (left: Self, right: Self) -> Bool {
         left.length == right.length && left.attributes == right.attributes
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRun: Hashable {
     internal func hash(into hasher: inout Hasher) {
         hasher.combine(length)
@@ -45,6 +47,7 @@ extension AttributedString._InternalRun: Hashable {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRun: RopeElement {
     typealias Index = Int
 
@@ -72,12 +75,14 @@ extension AttributedString._InternalRun: RopeElement {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRun {
     internal func get<T: AttributedStringKey>(_ k: T.Type) -> T.Value? where T.Value : Sendable {
         attributes[k]
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRun {
     struct Summary: Sendable {
         var count: Int
@@ -95,6 +100,7 @@ extension AttributedString._InternalRun {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString._InternalRun.Summary: RopeSummary {
     @inline(__always)
     static var maxNodeSize: Int { 15 }

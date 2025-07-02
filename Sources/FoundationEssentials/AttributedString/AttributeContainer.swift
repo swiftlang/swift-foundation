@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 @dynamicMemberLookup
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public struct AttributeContainer : Sendable {
     internal var storage : AttributedString._AttributeStorage
     
@@ -24,7 +24,7 @@ public struct AttributeContainer : Sendable {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributeContainer {
     @preconcurrency
     public subscript<T: AttributedStringKey>(_: T.Type) -> T.Value? where T.Value : Sendable {
@@ -87,26 +87,27 @@ extension AttributeContainer {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributeContainer: Equatable {}
 
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+@available(FoundationAttributedString 5.7, *)
 extension AttributeContainer: Hashable {}
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributeContainer: CustomStringConvertible {
     public var description: String {
         storage.description
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeContainer {
     internal var _hasConstrainedAttributes: Bool {
         storage.hasConstrainedAttributes
     }
 }
 
-@available(FoundationPreview 6.2, *)
+@available(FoundationAttributedString 6.2, *)
 extension AttributeContainer {
     /// Returns a copy of the attribute container with only attributes that specify the provided inheritance behavior.
     /// - Parameter inheritedByAddedText: An `inheritedByAddedText` value to filter. Attributes matching this value are included in the returned container.

@@ -16,6 +16,7 @@ import FoundationEssentials
 
 internal import _FoundationICU
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.Symbol {
     init?(unumberFormatField: UNumberFormatFields) {
         switch unumberFormatField {
@@ -35,6 +36,7 @@ extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttr
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.NumberPart {
     init?(unumberFormatField: UNumberFormatFields) {
         switch unumberFormatField {
@@ -48,6 +50,7 @@ extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPart
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScopes.FoundationAttributes.MeasurementAttribute.Component {
     init?(unumberFormatField: UNumberFormatFields) {
         switch unumberFormatField {

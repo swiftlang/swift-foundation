@@ -18,7 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     public struct CharacterView : Sendable {
         /// The guts of the base attributed string.
@@ -80,13 +80,14 @@ extension AttributedString {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.CharacterView {
     internal var _characters: BigSubstring {
         BigSubstring(_unchecked: _guts.string, in: _range)
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension Slice<AttributedString.CharacterView> {
     internal var _rebased: AttributedString.CharacterView {
         let bounds = Range(uncheckedBounds: (self.startIndex._value, self.endIndex._value))
@@ -100,7 +101,7 @@ extension Slice<AttributedString.CharacterView> {
 
 // FIXME: AttributedString.CharacterView needs to publicly conform to Equatable & Hashable.
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.CharacterView: BidirectionalCollection {
     public typealias Element = Character
     public typealias Index = AttributedString.Index
@@ -123,7 +124,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultCount
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationAttributedString 5.9, *)
     @usableFromInline
     internal var _count: Int {
         _characters.count
@@ -153,7 +154,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance)
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationAttributedString 5.9, *)
     @usableFromInline
     internal func _index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
         precondition(i >= startIndex && i <= endIndex, "AttributedString index out of bounds")
@@ -176,7 +177,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationAttributedString 5.9, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,
@@ -207,7 +208,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return _defaultDistance(from: start, to: end)
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationAttributedString 5.9, *)
     @usableFromInline
     internal func _distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
@@ -245,7 +246,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.CharacterView: RangeReplaceableCollection {
     internal mutating func _ensureUniqueReference() {
         if !isKnownUniquelyReferenced(&_guts) {

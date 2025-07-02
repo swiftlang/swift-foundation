@@ -18,7 +18,7 @@ internal import _RopeModule
 internal import _FoundationCollections
 #endif
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString {
     public struct UnicodeScalarView: Sendable {
         internal var _guts: Guts
@@ -73,12 +73,14 @@ extension AttributedString {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.UnicodeScalarView {
     var _unicodeScalars: BigSubstring.UnicodeScalarView {
         BigSubstring.UnicodeScalarView(_unchecked: _guts.string, in: _range)
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension Slice<AttributedString.UnicodeScalarView> {
     internal var _rebased: AttributedString.UnicodeScalarView {
         let bounds = Range(uncheckedBounds: (self.startIndex._value, self.endIndex._value))
@@ -90,6 +92,7 @@ extension Slice<AttributedString.UnicodeScalarView> {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.UnicodeScalarView {
     // FIXME: AttributedString.UnicodeScalarView needs to publicly conform to Hashable.
     internal func _isEqual(to other: Self) -> Bool {
@@ -101,7 +104,7 @@ extension AttributedString.UnicodeScalarView {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.UnicodeScalarView: BidirectionalCollection {
     public typealias Element = UnicodeScalar
     public typealias Index = AttributedString.Index
@@ -124,7 +127,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return _defaultCount
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationAttributedString 5.9, *)
     @usableFromInline
     internal var _count: Int {
         _unicodeScalars.count
@@ -165,7 +168,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return _defaultIndex(i, offsetBy: distance, limitedBy: limit)
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationAttributedString 5.9, *)
     @usableFromInline
     internal func _index(
         _ i: AttributedString.Index,
@@ -189,15 +192,19 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         from start: AttributedString.Index,
         to end: AttributedString.Index
     ) -> Int {
+        #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _distance(from: start, to: end)
         }
         precondition(start >= startIndex && start <= endIndex, "AttributedString index out of bounds")
         precondition(end >= startIndex && end <= endIndex, "AttributedString index out of bounds")
         return _defaultDistance(from: start, to: end)
+        #else
+        return _distance(from: start, to: end)
+        #endif
     }
 
-    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
+    @available(FoundationAttributedString 5.9, *)
     @usableFromInline
     internal func _distance(
         from start: AttributedString.Index,
@@ -226,7 +233,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
     internal mutating func _ensureUniqueReference() {
         if !isKnownUniquelyReferenced(&_guts) {

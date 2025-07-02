@@ -12,7 +12,7 @@
 
 // MARK: AttributedStringKey API
 
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+@available(FoundationAttributedString 5.7, *)
 extension AttributedString {
     public enum AttributeRunBoundaries : Hashable, Sendable {
         case paragraph
@@ -34,7 +34,7 @@ extension AttributedString {
     }
 }
 
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+@available(FoundationAttributedString 5.7, *)
 extension AttributedString.AttributeRunBoundaries {
     var _isScalarConstrained: Bool {
         if case .character = self { return true }
@@ -49,7 +49,7 @@ extension AttributedString.AttributeRunBoundaries {
     }
 }
 
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+@available(FoundationAttributedString 5.7, *)
 extension AttributedString {
     public struct AttributeInvalidationCondition : Hashable, Sendable {
         private enum _Storage : Hashable {
@@ -94,39 +94,39 @@ extension AttributedString {
 }
 
 // Developers define new attributes by implementing AttributeKey.
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public protocol AttributedStringKey {
     associatedtype Value : Hashable
     static var name : String { get }
     
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @available(FoundationAttributedString 5.7, *)
     static var runBoundaries : AttributedString.AttributeRunBoundaries? { get }
     
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @available(FoundationAttributedString 5.7, *)
     static var inheritedByAddedText : Bool { get }
     
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @available(FoundationAttributedString 5.7, *)
     static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { get }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedStringKey {
     public var description: String { Self.name }
 
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @available(FoundationAttributedString 5.7, *)
     public static var runBoundaries : AttributedString.AttributeRunBoundaries? { nil }
 
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @available(FoundationAttributedString 5.7, *)
     public static var inheritedByAddedText : Bool { true }
 
-    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @available(FoundationAttributedString 5.7, *)
     public static var invalidationConditions : Set<AttributedString.AttributeInvalidationCondition>? { nil }
 }
 
 // MARK: Attribute Scopes
 
 @dynamicMemberLookup @frozen
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public enum AttributeDynamicLookup {
     public subscript<T: AttributedStringKey>(_: T.Type) -> T {
         get { fatalError("Called outside of a dynamicMemberLookup subscript overload") }
@@ -141,7 +141,7 @@ public enum AttributeDynamicLookup {
 extension AttributeDynamicLookup : Sendable {}
 
 @dynamicMemberLookup
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public struct ScopedAttributeContainer<S: AttributeScope> : Sendable {
     internal var storage : AttributedString._AttributeStorage
     

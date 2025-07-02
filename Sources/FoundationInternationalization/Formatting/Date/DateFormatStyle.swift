@@ -241,10 +241,17 @@ extension Date {
         public var capitalizationContext: FormatStyleCapitalizationContext
 
         /// Returns a type erased attributed variant of this style.
+        #if FOUNDATION_FRAMEWORK
         @available(macOS, deprecated: 15, introduced: 12, message: "Use attributedStyle instead")
         @available(iOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
         @available(tvOS, deprecated: 18, introduced: 15, message: "Use attributedStyle instead")
         @available(watchOS, deprecated: 11, introduced: 8, message: "Use attributedStyle instead")
+        #else
+        @available(macOS, deprecated: 26, introduced: 26, message: "Use attributedStyle instead")
+        @available(iOS, deprecated: 26, introduced: 26, message: "Use attributedStyle instead")
+        @available(tvOS, deprecated: 26, introduced: 26, message: "Use attributedStyle instead")
+        @available(watchOS, deprecated: 26, introduced: 26, message: "Use attributedStyle instead")
+        #endif
         public var attributed: AttributedStyle {
             .init(style: .formatStyle(self))
         }
@@ -288,10 +295,17 @@ extension Date {
 
     // MARK: Type-Erased AttributedStyle
 
+    #if FOUNDATION_FRAMEWORK
     @available(macOS, deprecated: 15, introduced: 12, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
     @available(iOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
     @available(tvOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
     @available(watchOS, deprecated: 11, introduced: 8, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+    #else
+    @available(macOS, deprecated: 26, introduced: 26, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+    @available(iOS, deprecated: 26, introduced: 26, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+    @available(tvOS, deprecated: 26, introduced: 26, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+    @available(watchOS, deprecated: 26, introduced: 26, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+    #endif
     public struct AttributedStyle : Sendable {
 
         enum InnerStyle: Codable, Hashable {
@@ -338,15 +352,22 @@ extension Date {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
 @available(macOS, deprecated: 15, introduced: 12, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
 @available(iOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
 @available(tvOS, deprecated: 18, introduced: 15, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
 @available(watchOS, deprecated: 11, introduced: 8, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+#else
+@available(macOS, deprecated: 26, introduced: 26, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+@available(iOS, deprecated: 26, introduced: 26, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+@available(tvOS, deprecated: 26, introduced: 26, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+@available(watchOS, deprecated: 26, introduced: 26, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
+#endif
 extension Date.AttributedStyle : FormatStyle {}
 
 // MARK: Typed Attributed Style
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Date.FormatStyle {
     /// The type preserving attributed variant of this style.
     ///
@@ -557,7 +578,7 @@ extension Date.FormatStyle {
 
 // MARK: Symbol Modifiers Attributed Style
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Date.FormatStyle.Attributed {
     /// Change the representation of the era in the format.
     ///
@@ -854,7 +875,7 @@ extension Date.FormatStyle : DiscreteFormatStyle {
     }
 }
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Date.FormatStyle.Attributed : DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         base.discreteInput(before: input)
@@ -1000,6 +1021,7 @@ extension Calendar {
 
 // MARK: Utils
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
     init?(udateFormatField: UDateFormatField) {
         switch udateFormatField {
@@ -1096,6 +1118,7 @@ extension Date.FormatStyle : CustomConsumingRegexComponent {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension String {
     func _attributedStringFromPositions(_ positions: [ICUDateFormatter.AttributePosition]) -> AttributedString {
         typealias DateFieldAttribute = AttributeScopes.FoundationAttributes.DateFieldAttribute.Field

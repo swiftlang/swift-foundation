@@ -21,13 +21,13 @@ let minuteSymbol: Character = "m"
 let secondSymbol: Character = "s"
 let quoteSymbol: Character = "'"
 
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+@available(FoundationAttributedString 5.7, *)
 extension Duration {
 
     /// Format style to format a `Duration` in a localized positional format.
     /// For example, one hour and ten minutes is displayed as “1:10:00” in
     /// the U.S. English locale, or “1.10.00” in the Finnish locale.
-    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @available(FoundationAttributedString 5.7, *)
     public struct TimeFormatStyle : FormatStyle, Sendable {
 
         /// The units to display a Duration with and configurations for the units.
@@ -152,7 +152,7 @@ extension Duration {
     internal typealias _TimeFormatStyle = TimeFormatStyle
 }
 
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+@available(FoundationAttributedString 5.7, *)
 extension FormatStyle where Self == Duration.TimeFormatStyle {
     /// A factory variable to create a time format style to format a duration.
     /// - Parameter pattern: A `Pattern` to specify the units to include in the displayed string and the behavior of the units.
@@ -165,7 +165,7 @@ extension FormatStyle where Self == Duration.TimeFormatStyle {
 // MARK: - Attributed style
 
 
-@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+@available(FoundationAttributedString 5.7, *)
 extension Duration.TimeFormatStyle {
 
     /// Formats a duration as an attributed string with the `durationField` attribute key and `FoundationAttributes.DurationFieldAttribute` attribute.
@@ -178,7 +178,7 @@ extension Duration.TimeFormatStyle {
     /// : { nil }
     /// 26.25 { durationField: .seconds }
     /// ```
-    @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+    @available(FoundationAttributedString 5.7, *)
     @dynamicMemberLookup
     public struct Attributed : FormatStyle, Sendable {
 
@@ -423,7 +423,7 @@ extension Duration.TimeFormatStyle {
     }
 }
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Duration.TimeFormatStyle {
     /// Returns a modified style that applies the given `grouping` rule to the highest field in the
     /// pattern.
@@ -440,7 +440,7 @@ extension Duration.TimeFormatStyle {
     }
 }
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Duration.TimeFormatStyle.Attributed {
     /// Returns a modified style that applies the given `grouping` rule to the highest field in the
     /// pattern.
@@ -453,7 +453,7 @@ extension Duration.TimeFormatStyle.Attributed {
 
 // MARK: Dynamic Member Lookup
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Duration.TimeFormatStyle.Attributed {
     private var innerStyle: Duration.TimeFormatStyle {
         get {
@@ -480,7 +480,7 @@ extension Duration.TimeFormatStyle.Attributed {
 
 // MARK: DiscreteFormatStyle Conformance
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Duration.TimeFormatStyle.Attributed : DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         Duration.TimeFormatStyle(pattern: pattern, locale: locale).discreteInput(before: input)
@@ -491,7 +491,7 @@ extension Duration.TimeFormatStyle.Attributed : DiscreteFormatStyle {
     }
 }
 
-@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+@available(FoundationAttributedString 6.0, *)
 extension Duration.TimeFormatStyle : DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         let (bound, isIncluded) = Duration.bound(for: input, in: interval(for: input), countingDown: true, roundingRule: self.pattern.roundingRule)

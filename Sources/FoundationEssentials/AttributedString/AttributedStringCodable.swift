@@ -30,27 +30,27 @@ extension Decoder {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public protocol EncodableAttributedStringKey : AttributedStringKey {
     static func encode(_ value: Value, to encoder: Encoder) throws
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public protocol DecodableAttributedStringKey : AttributedStringKey {
     static func decode(from decoder: Decoder) throws -> Value
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public typealias CodableAttributedStringKey = EncodableAttributedStringKey & DecodableAttributedStringKey
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension EncodableAttributedStringKey where Value : Encodable {
     public static func encode(_ value: Value, to encoder: Encoder) throws {
         try value.encode(to: encoder)
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension DecodableAttributedStringKey where Value : Decodable {
     public static func decode(from decoder: Decoder) throws -> Value {
         return try Value.init(from: decoder)
@@ -58,18 +58,18 @@ extension DecodableAttributedStringKey where Value : Decodable {
 }
 
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public protocol MarkdownDecodableAttributedStringKey : AttributedStringKey {
     static func decodeMarkdown(from decoder: Decoder) throws -> Value
     static var markdownName: String { get }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension MarkdownDecodableAttributedStringKey {
     public static var markdownName: String { name }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension MarkdownDecodableAttributedStringKey where Self : DecodableAttributedStringKey {
     public static func decodeMarkdown(from decoder: Decoder) throws -> Value {
         try Self.decode(from: decoder)
@@ -77,7 +77,7 @@ extension MarkdownDecodableAttributedStringKey where Self : DecodableAttributedS
 }
 
 #if FOUNDATION_FRAMEWORK
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
     public static func encode(_ value: Value, to encoder: Encoder) throws {
         let data = try NSKeyedArchiver.archivedData(withRootObject: value, requiringSecureCoding: true)
@@ -86,7 +86,7 @@ extension EncodableAttributedStringKey where Value : NSSecureCoding & NSObject {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension DecodableAttributedStringKey where Value : NSSecureCoding & NSObject {
     public static func decode(from decoder: Decoder) throws -> Value {
         let container = try decoder.singleValueContainer()
@@ -103,7 +103,7 @@ extension DecodableAttributedStringKey where Value : NSSecureCoding & NSObject {
 
 // MARK: AttributedString CodableWithConfiguration Conformance
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 public struct AttributeScopeCodableConfiguration : Sendable {
     internal let attributesTable : [String : any AttributedStringKey.Type]
     
@@ -124,7 +124,7 @@ public struct AttributeScopeCodableConfiguration : Sendable {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScope {
     public static var encodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
     public static var decodingConfiguration: AttributeScopeCodableConfiguration { AttributeScopeCodableConfiguration(Self.self) }
@@ -132,7 +132,7 @@ extension AttributeScope {
 
 #if FOUNDATION_FRAMEWORK
 // TODO: Support AttributedString codable conformance in FoundationPreview
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString : Codable {
     public func encode(to encoder: Encoder) throws {
         let conf = AttributeScopeCodableConfiguration(_loadDefaultAttributes())
@@ -145,7 +145,7 @@ extension AttributedString : Codable {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributedString : CodableWithConfiguration {
 
     private enum CodingKeys : String, CodingKey {
@@ -348,7 +348,7 @@ extension AttributedString : CodableWithConfiguration {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension AttributeContainer : CodableWithConfiguration {
     public func encode(to encoder: Encoder, configuration: AttributeScopeCodableConfiguration) throws {
         try AttributedString.encodeAttributeContainer(self.storage, to: encoder, configuration: configuration)
@@ -361,7 +361,7 @@ extension AttributeContainer : CodableWithConfiguration {
 
 #endif // FOUNDATION_FRAMEWORK
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(FoundationAttributedString 5.5, *)
 extension CodableConfiguration where ConfigurationProvider : AttributeScope {
     public init(wrappedValue: T, from keyPath: KeyPath<AttributeScopes, ConfigurationProvider.Type>) {
         self.wrappedValue = wrappedValue

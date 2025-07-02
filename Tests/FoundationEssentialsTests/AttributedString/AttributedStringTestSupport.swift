@@ -26,6 +26,7 @@ extension NSAttributedString.Key {
 }
 #endif
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScopes.TestAttributes {
 
     enum TestIntAttribute: CodableAttributedStringKey {
@@ -123,6 +124,7 @@ struct NonCodableType : Hashable {
     var inner : Int
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScopes {
     var test: TestAttributes.Type { TestAttributes.self }
     
@@ -141,6 +143,7 @@ extension AttributeScopes {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeDynamicLookup {
     subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.TestAttributes, T>) -> T {
         get { self[T.self] }

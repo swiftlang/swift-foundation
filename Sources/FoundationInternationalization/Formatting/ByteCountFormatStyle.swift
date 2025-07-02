@@ -16,7 +16,7 @@ import FoundationEssentials
 
 internal import _FoundationICU
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public struct ByteCountFormatStyle: FormatStyle, Sendable {
     public var style: Style { get { attributed.style } set { attributed.style = newValue} }
     public var allowedUnits: Units { get { attributed.allowedUnits } set { attributed.allowedUnits = newValue} }
@@ -247,7 +247,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
     }
 }
 
-@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+@available(FoundationAttributedString 5.5, *)
 public extension FormatStyle where Self == ByteCountFormatStyle {
     static func byteCount(style: ByteCountFormatStyle.Style, allowedUnits: ByteCountFormatStyle.Units = .all, spellsOutZero: Bool = true, includesActualByteCount: Bool = false) -> Self {
         return ByteCountFormatStyle(style: style, allowedUnits: allowedUnits, spellsOutZero: spellsOutZero, includesActualByteCount: includesActualByteCount)
@@ -284,6 +284,7 @@ private func localizedParens(locale: Locale) -> (String, String) {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScopes.FoundationAttributes.ByteCountAttribute.Component {
     internal init?(unumberFormatField: UNumberFormatFields, unit: ByteCountFormatStyle.Unit) {
         switch unumberFormatField {
@@ -309,6 +310,7 @@ extension AttributeScopes.FoundationAttributes.ByteCountAttribute.Component {
     }
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension AttributeScopes.FoundationAttributes.ByteCountAttribute.Unit {
     internal init(_ unit: ByteCountFormatStyle.Unit) {
         switch unit {

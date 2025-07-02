@@ -20,6 +20,7 @@ private struct ByteCountFormatStyleTests {
     static let locales = [Locale(identifier: "en_US"), .init(identifier: "fr_FR"), .init(identifier: "zh_TW"), .init(identifier: "zh_CN"), .init(identifier: "ar")]
 
     @Test(arguments: locales)
+    @available(FoundationAttributedString 5.5, *)
     func zeroSpelledOutKb(locale: Locale) {
         let localizedZerosSpelledOutKb: [Locale: String] = [
             Locale(identifier: "en_US"): "Zero kB",
@@ -33,6 +34,7 @@ private struct ByteCountFormatStyleTests {
     }
 
     @Test(arguments: locales)
+    @available(FoundationAttributedString 5.5, *)
     func zeroSpelledOutBytes(locale: Locale) {
         let localizedZerosSpelledOutBytes: [Locale: String] = [
             Locale(identifier: "en_US"): "Zero bytes",
@@ -90,6 +92,7 @@ private struct ByteCountFormatStyleTests {
 
 #if FIXED_86386674
     @Test(arguments: locales)
+    @available(FoundationAttributedString 5.5, *)
     func singularUnitsBinary(locale: Locale) {
         for i in 0...5 {
             let value: Int64 = (1 << (i*10))
@@ -100,6 +103,7 @@ private struct ByteCountFormatStyleTests {
 
 #if FIXED_86386684
     @Test(arguments: locales)
+    @available(FoundationAttributedString 5.5, *)
     func singularUnitsDecimal(locale: Locale) {
         for i in 0...5 {
             #expect(Int64(pow(10.0, Double(i*3))).formatted(.byteCount(style: .file).locale(locale)) == localizedSingular[locale]![i])
@@ -107,19 +111,23 @@ private struct ByteCountFormatStyleTests {
     }
 #endif
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func localizedParens() {
         #expect(1024.formatted(.byteCount(style: ByteCountFormatStyle.Style.binary, includesActualByteCount: true).locale(.init(identifier: "zh_TW"))) == "1 kB（1,024 byte）")
         #expect(1024.formatted(.byteCount(style: ByteCountFormatStyle.Style.binary, includesActualByteCount: true).locale(.init(identifier: "en_US"))) == "1 kB (1,024 bytes)")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func actualByteCount() {
         #expect(1024.formatted(.byteCount(style: ByteCountFormatStyle.Style.file, includesActualByteCount: true).locale(.init(identifier: "en_US"))) == "1 kB (1,024 bytes)")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func rtl() {
         #expect(1024.formatted(.byteCount(style: ByteCountFormatStyle.Style.binary, includesActualByteCount: true).locale(.init(identifier: "ar_SA"))) == "١ كيلوبايت (١٬٠٢٤ بايت)")
     }
 
+    @available(FoundationAttributedString 5.5, *)
     @Test func attributed() {
         var expected: [Segment]
 
@@ -187,6 +195,7 @@ private struct ByteCountFormatStyleTests {
     }
 
 #if !_pointerBitWidth(_32)
+    @available(FoundationAttributedString 5.5, *)
     @Test func testEveryAllowedUnit() {
         // 84270854: The largest unit supported currently is pb
         let expectations: [ByteCountFormatStyle.Units: String] = [
@@ -208,6 +217,7 @@ private struct ByteCountFormatStyleTests {
 #endif
 }
 
+@available(FoundationAttributedString 5.5, *)
 fileprivate struct Segment {
     let string: String
     let number: AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.NumberPart?
@@ -228,6 +238,7 @@ fileprivate struct Segment {
 
 }
 
+@available(FoundationAttributedString 5.5, *)
 extension Sequence where Element == Segment {
     var attributedString: AttributedString {
         self.map { segment in
