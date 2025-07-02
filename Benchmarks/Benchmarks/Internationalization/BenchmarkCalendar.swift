@@ -20,7 +20,8 @@ import FoundationInternationalization
 import Foundation
 #endif
 
-let benchmarks = {
+func calendarBenchmarks() {
+
     Benchmark.defaultConfiguration.maxIterations = 1_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
@@ -229,3 +230,4 @@ let benchmarks = {
         }
     }
 }
+
