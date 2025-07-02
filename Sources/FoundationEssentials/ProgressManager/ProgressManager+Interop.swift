@@ -183,15 +183,15 @@ internal final class _NSProgressParentBridge: Progress, @unchecked Sendable {
             properties.completedCount = Int(progressChild.completedUnitCount)
         }
         
-        managerParent.addToChildren(child: ghostChild, portion: portion, childFraction: _ProgressFraction(completed: Int(completedUnitCount), total: Int(totalUnitCount)))
+        let position = managerParent.addToChildren(child: ghostChild, portion: portion, childFraction: _ProgressFraction(completed: Int(completedUnitCount), total: Int(totalUnitCount)))
         
-        ghostChild.addParent(parent: managerParent, portionOfParent: portion)
+        ghostChild.addParent(parent: managerParent, positionInParent: position)
     }
 
     // Overrides the _updateChild func that Foundation.Progress calls to update parent
     // so that the parent that gets updated is the ProgressManager parent
-    override func _updateChild(_ child: Foundation.Progress, fraction: _NSProgressFractionTuple, portion: Int64) {
-            actualParent.updateChildState(child: ghostChild, fraction: _ProgressFraction(nsProgressFraction: fraction.next))
-    }
+//    override func _updateChild(_ child: Foundation.Progress, fraction: _NSProgressFractionTuple, portion: Int64) {
+//            actualParent.updateChildState(child: ghostChild, fraction: _ProgressFraction(nsProgressFraction: fraction.next))
+//    }
 }
 #endif

@@ -40,14 +40,14 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Stores the information on each child added to children
     internal struct ChildState {
-        weak var child: ProgressManager?
+        var child: ProgressManager
         var portionOfTotal: Int
         var childFraction: _ProgressFraction // Fraction adjusted based on portion of self; If not dirty, overallFraction should be composed of this
         var isDirty: Bool
     }
     
     internal struct ParentState {
-        var parent: ProgressManager
+        weak var parent: ProgressManager?
         var positionInParent: Int // My position in this parent's children array
     }
     
@@ -74,7 +74,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         var overallFraction: _ProgressFraction {
             var overallFraction = selfFraction
             for child in children {
-                overallFraction = overallFraction + (_ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total) * child.childFraction)
+                if !child.childFraction.isFinished {
+                    overallFraction = overallFraction + (_ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total) * child.childFraction)
+                }
             }
             return overallFraction
         }
@@ -95,7 +97,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var totalCount: Int? {
         _$observationRegistrar.access(self, keyPath: \.totalCount)
         return state.withLock { state in
-            getTotalCount(state: &state)
+            getTotalCountLocked(state: state)
         }
     }
     
@@ -104,7 +106,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public var completedCount: Int {
         _$observationRegistrar.access(self, keyPath: \.completedCount)
         return state.withLock { state in
-            getCompletedCount(state: &state)
+            getCompletedCountLocked(state: &state)
         }
     }
     
@@ -120,18 +122,14 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// If `totalCount` is `nil`, the value will be `true`.
     public var isIndeterminate: Bool {
         _$observationRegistrar.access(self, keyPath: \.isIndeterminate)
-        return state.withLock { state in
-            getIsIndeterminate(state: &state)
-        }
+        return getIsIndeterminate()
     }
     
     /// The state of completion of work.
     /// If `completedCount` >= `totalCount`, the value will be `true`.
     public var isFinished: Bool {
         _$observationRegistrar.access(self, keyPath: \.isFinished)
-        return state.withLock { state in
-            getIsFinished(state: &state)
-        }
+        return getIsFinished()
     }
     
     /// A `ProgressReporter` instance, used for providing read-only observation of progress updates or composing into other `ProgressManager`s.
@@ -157,8 +155,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         
         /// The total units of work.
         public var totalCount: Int? {
-            mutating get {
-                manager.getTotalCount(state: &state)
+            get {
+                manager.getTotalCountLocked(state: state)
             }
             
             set {
@@ -168,6 +166,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 } else {
                     state.indeterminate = true
                 }
+                guard newValue != state.selfFraction.total else {
+                    return 
+                }
+                
                 state.selfFraction.total = newValue ?? 0
                 
                 state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
@@ -183,11 +185,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         /// The completed units of work.
         public var completedCount: Int {
             mutating get {
-                manager.getCompletedCount(state: &state)
+                manager.getCompletedCountLocked(state: &state)
             }
             
             set {
                 //TODO: Update self completedCount and notify parents that I am dirty
+                guard newValue != state.selfFraction.completed else {
+                    return
+                }
+                
                 state.selfFraction.completed = newValue
                 
                 state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
@@ -299,6 +305,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public func complete(count: Int) {
         // Update self fraction + mark dirty
         state.withLock { state in
+            guard state.selfFraction.completed != (state.selfFraction.completed + count) else {
+                return
+            }
+            
             state.selfFraction.completed += count
             
             state.progressParentProgressManagerChildMessenger?.notifyObservers(
@@ -307,7 +317,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     completedCount: state.selfFraction.completed
                 )
             )
-            if let _ = state.interopObservation.progressParentProgressReporterChild  {
+            if let _ = state.interopObservation.progressParentProgressReporterChild {
                 notifyObservers(
                     with: .fractionUpdated(
                         totalCount: state.selfFraction.total,
@@ -317,7 +327,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 )
             }
         }
-        
         markDirtyInParents()
     }
     
@@ -371,7 +380,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     /// Returns nil if `self` was instantiated without total units;
     /// returns a `Int` value otherwise.
-    private func getTotalCount(state: inout State) -> Int? {
+    private func getTotalCountLocked(state: State) -> Int? {
         if let interopChild = state.interopChild {
             return interopChild.totalCount
         }
@@ -384,7 +393,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     /// Returns 0 if `self` has `nil` total units;
     /// returns a `Int` value otherwise.
-    private func getCompletedCount(state: inout State) -> Int {
+    private func getCompletedCountLocked(state: inout State) -> Int {
         if let interopChild = state.interopChild {
             return interopChild.completedCount
         }
@@ -395,10 +404,19 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
         // If there are dirty children, get updates first
         if state.children.count > 0 {
-            for childState in state.children {
-                if childState.isDirty {
+            for i in 0..<state.children.count {
+                if state.children[i].isDirty {
                     // if this path is dirty, update child state's selfFraction and mark not dirty
+                    let updatedProgressFraction = state.children[i].child.getDirtyProgressFraction()
+                    state.children[i] = ChildState(child: state.children[i].child,
+                                                   portionOfTotal: state.children[i].portionOfTotal,
+                                                   childFraction: updatedProgressFraction,
+                                                   isDirty: false)
+                    if updatedProgressFraction.isFinished {
+                        state.selfFraction.completed += state.children[i].portionOfTotal
+                    }
                 }
+                
             }
         }
         
@@ -435,14 +453,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             
             // If there are children, ask children to give updated values & store them
             if state.children.count > 0 {
-                for i in 0...state.children.endIndex {
+                for i in 0..<state.children.count {
                     if state.children[i].isDirty {
-                        if let child = state.children[i].child {
-                            let updatedProgressFraction = child.getDirtyProgressFraction()
-                            state.children[i] = ChildState(child: child,
-                                                           portionOfTotal: state.children[i].portionOfTotal,
-                                                           childFraction: updatedProgressFraction,
-                                                           isDirty: false)
+                        let updatedProgressFraction = state.children[i].child.getDirtyProgressFraction()
+                        state.children[i] = ChildState(child: state.children[i].child,
+                                                       portionOfTotal: state.children[i].portionOfTotal,
+                                                       childFraction: updatedProgressFraction,
+                                                       isDirty: false)
+                        if updatedProgressFraction.isFinished {
+                            state.selfFraction.completed += state.children[i].portionOfTotal
                         }
                     }
                 }
@@ -454,23 +473,26 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 
     /// Returns `true` if completed and total units are not `nil` and completed units is greater than or equal to total units;
     /// returns `false` otherwise.
-    private func getIsFinished(state: inout State) -> Bool {
-        return state.selfFraction.isFinished
+    private func getIsFinished() -> Bool {
+        return state.withLock { state in
+            state.selfFraction.isFinished
+        }
     }
     
     
     /// Returns `true` if `self` has `nil` total units.
-    private func getIsIndeterminate(state: inout State) -> Bool {
-        return state.indeterminate
+    private func getIsIndeterminate() -> Bool {
+        return state.withLock { state in
+            state.indeterminate
+        }
     }
     
     //MARK: FractionCompleted Calculation methods
     /// If parents exist, mark self as dirty and send dirtyState to parent.
     private func markDirtyInParents() {
-        // Recursively add self as dirty child to parents list
         parents.withLock { parents in
             for parentState in parents {
-                parentState.parent.markChildDirty(at: parentState.positionInParent)
+                parentState.parent?.markChildDirty(at: parentState.positionInParent)
             }
         }
     }
@@ -486,19 +508,20 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     private func getDirtyProgressFraction() -> _ProgressFraction {
         return state.withLock { state in
             if state.children.count > 0 {
-                for i in 0...state.children.endIndex {
+                for i in 0..<state.children.count {
                     if state.children[i].isDirty {
-                        if let child = state.children[i].child {
-                            let updatedProgressFraction = child.getDirtyProgressFraction()
-                            state.children[i] = ChildState(child: child,
-                                                           portionOfTotal: state.children[i].portionOfTotal,
-                                                           childFraction: updatedProgressFraction,
-                                                           isDirty: false)
+                        let updatedProgressFraction = state.children[i].child.getDirtyProgressFraction()
+                        state.children[i] = ChildState(child: state.children[i].child,
+                                                       portionOfTotal: state.children[i].portionOfTotal,
+                                                       childFraction: updatedProgressFraction,
+                                                       isDirty: false)
+                        if updatedProgressFraction.isFinished {
+                            state.selfFraction.completed += state.children[i].portionOfTotal
                         }
                     }
                 }
             }
-            return state.selfFraction
+            return state.overallFraction
         }
     }
 
@@ -512,7 +535,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     /// Notifies all `_observers` of `self` when `state` changes.
     private func notifyObservers(with observedState: ObserverState) {
-        state.withLock {state in
+        state.withLock { state in
             for observer in state.observers {
                 observer(observedState)
             }
@@ -660,8 +683,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         
         return parents.withLock { parents in
             for parentState in parents {
-                if !updatedVisited.contains(parentState.parent) {
-                    if parentState.parent.isCycle(reporter: reporter, visited: updatedVisited) {
+                if !updatedVisited.contains(parentState.parent!) {
+                    if ((parentState.parent?.isCycle(reporter: reporter, visited: updatedVisited)) != nil) {
                         return true
                     }
                 }
@@ -673,8 +696,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     func isCycleInterop(visited: Set<ProgressManager> = []) -> Bool {
         return parents.withLock { parents in
             for parentState in parents {
-                if !visited.contains(parentState.parent) {
-                    if parentState.parent.isCycle(reporter: reporter, visited: visited) {
+                if !visited.contains(parentState.parent!) {
+                    if ((parentState.parent?.isCycle(reporter: reporter, visited: visited)) != nil) {
                         return true
                     }
                 }
@@ -711,7 +734,10 @@ extension ProgressManager: Hashable, Equatable {
 extension ProgressManager: CustomDebugStringConvertible {
     /// The description for `completedCount` and `totalCount`.
     public var debugDescription: String {
-        return self.description
+        return self.description + """
+        \n
+        parents: \(parents.withLock { $0 })
+        """
     }
 }
 

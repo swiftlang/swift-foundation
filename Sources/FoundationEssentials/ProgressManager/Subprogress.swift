@@ -49,14 +49,14 @@ public struct Subprogress: ~Copyable, Sendable {
             intermediary.setInteropChild(interopChild: childManager)
         } else {
             // Add child to parent's _children list & Store in child children's position in parent
-            parent.addToChildren(
+            let position = parent.addToChildren(
                 child: childManager,
                 portion: portionOfParent,
                 childFraction: childManager.getProgressFraction()
             )
             childManager.addParent(
                 parent: parent,
-                portionOfParent: portionOfParent
+                positionInParent: position
             )
         }
         
