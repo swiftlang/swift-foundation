@@ -94,7 +94,6 @@ list(APPEND CMAKE_MODULE_PATH ${SwiftFoundation_SOURCE_DIR}/cmake/modules)
 
 # Availability Macros (only applies to FoundationEssentials and FoundationInternationalization)
 set(_SwiftFoundation_BaseAvailability "macOS 15, iOS 18, tvOS 18, watchOS 11")
-set(_SwiftFoundation_macOS26Availability "macOS 26, iOS 26, tvOS 26, watchOS 26")
 set(_SwiftFoundation_FutureAvailability "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000")
 
 # All versions to define for each availability name
@@ -106,13 +105,11 @@ list(APPEND _SwiftFoundation_versions
 
 # Each availability name to define
 list(APPEND _SwiftFoundation_availability_names
-    "FoundationPreview"
-    "FoundationSpan")
+    "FoundationPreview")
 
 # The aligned availability for each name (in the same order)
 list(APPEND _SwiftFoundation_availability_releases
-    ${_SwiftFoundation_BaseAvailability}
-    ${_SwiftFoundation_macOS26Availability})
+    ${_SwiftFoundation_BaseAvailability})
 
 foreach(version ${_SwiftFoundation_versions})
     foreach(name release IN ZIP_LISTS _SwiftFoundation_availability_names _SwiftFoundation_availability_releases)
