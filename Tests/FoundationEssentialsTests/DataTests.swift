@@ -1646,7 +1646,6 @@ private final class DataTests {
     }
 
     @Test
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func inlineDataSpan() throws {
         var source = Data()
         var span = source.span
@@ -1663,7 +1662,6 @@ private final class DataTests {
     }
 
     @Test
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func inlineSliceDataSpan() throws {
         let source = Data(0 ... .max)
         let span = source.span
@@ -1672,7 +1670,6 @@ private final class DataTests {
     }
 
     @Test
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func inlineDataMutableSpan() throws {
 #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         var source = Data()
@@ -1697,7 +1694,6 @@ private final class DataTests {
     }
 
     @Test
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func inlineSliceDataMutableSpan() throws {
 #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         var source = Data(0..<100)
@@ -1712,7 +1708,6 @@ private final class DataTests {
     }
 
     @Test
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func inlineDataMutableRawSpan() throws {
         var source = Data()
         var span = source.mutableBytes
@@ -1734,7 +1729,6 @@ private final class DataTests {
     }
 
     @Test
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func inlineSliceDataMutableRawSpan() throws {
         var source = Data(0..<100)
         let count = source.count
@@ -2392,7 +2386,6 @@ extension DataTests {
 @Suite("Large Data Tests", .serialized)
 struct LargeDataTests {
     @Test
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func largeSliceDataSpan() throws {
 #if _pointerBitWidth(_64)
         let count = Int(Int32.max)
@@ -2410,7 +2403,6 @@ struct LargeDataTests {
     }
     
     @Test
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func largeSliceDataMutableSpan() throws {
 #if _pointerBitWidth(_64)
         var count = Int(Int32.max)
@@ -2434,7 +2426,6 @@ struct LargeDataTests {
     }
     
     @Test
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func largeSliceDataMutableRawSpan() throws {
 #if _pointerBitWidth(_64)
         var count = Int(Int32.max)
