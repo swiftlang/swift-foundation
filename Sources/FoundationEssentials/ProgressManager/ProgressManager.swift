@@ -40,8 +40,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // Stores the information on each child added to children
     internal struct ChildState {
-        var portionOfSelf: Int // Portion of my totalCount that this child accounts for
+        weak var child: ProgressManager?
+        var portionOfTotal: Int
         var childFraction: _ProgressFraction // Fraction adjusted based on portion of self; If not dirty, overallFraction should be composed of this
+        var isDirty: Bool
+    }
+    
+    internal struct ParentState {
+        var parent: ProgressManager
+        var positionInParent: Int // My position in this parent's children array
     }
     
     // Interop states to notify observers
@@ -62,21 +69,18 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     // Stores all the state of properties
     internal struct State {
         var interopChild: ProgressManager? // read from this if self is actually an interop ghost
-        var isDirty: Bool
-        var dirtyChildren: Set<ProgressManager> = Set()
         var indeterminate: Bool
         var selfFraction: _ProgressFraction
         var overallFraction: _ProgressFraction {
             var overallFraction = selfFraction
             for child in children {
-                overallFraction = overallFraction + (_ProgressFraction(completed: child.value.portionOfSelf, total: selfFraction.total) * child.value.childFraction)
+                overallFraction = overallFraction + (_ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total) * child.childFraction)
             }
             return overallFraction
         }
-        var children: [ProgressManager: ChildState] // My children and their information in relation to me
-        var parents: [ProgressManager: Int] // My parents and their information in relation to me, how much of their totalCount I am a part of
-        var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
-        var childrenOtherProperties: [AnyMetatypeWrapper: OrderedDictionary<ProgressManager, [(any Sendable)]>] // Type: Metatype maps to dictionary of child to value
+        var children: [ChildState]
+//        var otherProperties: [AnyMetatypeWrapper: (any Sendable)]
+//        var childrenOtherProperties: [AnyMetatypeWrapper: OrderedDictionary<ProgressManager, [(any Sendable)]>] // Type: Metatype maps to dictionary of child to value
         // Interop properties - only kept alive
         var interopObservation: InteropObservation
         // Interop properties - Actually set and called
@@ -85,6 +89,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     private let state: Mutex<State>
+    private let parents: Mutex<[ParentState]>
     
     /// The total units of work.
     public var totalCount: Int? {
@@ -108,10 +113,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// If `self` is indeterminate, the value will be 0.
     public var fractionCompleted: Double {
         _$observationRegistrar.access(self, keyPath: \.fractionCompleted)
-        return state.withLock { state in
-            getFractionCompleted(state: &state)
-        }
-        
+        return getFractionCompleted()
     }
     
     /// The state of initialization of `totalCount`.
@@ -147,7 +149,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     /// A container that holds values for properties that specify information on progress.
-    @dynamicMemberLookup
+//    @dynamicMemberLookup
     public struct Values : Sendable {
         //TODO: rdar://149225947 Non-escapable conformance
         let manager: ProgressManager
@@ -167,24 +169,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     state.indeterminate = true
                 }
                 state.selfFraction.total = newValue ?? 0
-                manager.markDirty(state: &state)
                 
-                state.progressParentProgressManagerChildMessenger?.notifyObservers(
-                    with:.fractionUpdated(
-                        totalCount: state.selfFraction.total,
-                        completedCount: state.selfFraction.completed
-                    )
-                )
+                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
                 
                 if let _ = state.interopObservation.progressParentProgressReporterChild {
-                    manager.notifyObservers(
-                        with: .fractionUpdated(
-                            totalCount: state.selfFraction.total,
-                            completedCount: state.selfFraction.completed
-                        ),
-                        state: &state
-                    )
+                    manager.notifyObservers(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
                 }
+                manager.markDirtyInParents()
             }
         }
         
@@ -198,7 +189,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             set {
                 //TODO: Update self completedCount and notify parents that I am dirty
                 state.selfFraction.completed = newValue
-                manager.markDirty(state: &state)
                 
                 state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
                 if let _ = state.interopObservation.progressParentProgressReporterChild  {
@@ -210,58 +200,57 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                         state: &state
                     )
                 }
+                manager.markDirtyInParents()
             }
         }
         
         /// Returns a property value that a key path indicates. If value is not defined, returns property's `defaultValue`.
-        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value {
-            get {
-                return state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value ?? P.self.defaultValue
-            }
-            
-            set {
-                // Update my own other properties entry
-                state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
-                
-                // Generate an array of myself + children values of the property
-                let flattenedChildrenValues: [P.Value] = {
-                    let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)]
-                    var childrenValues: [P.Value] = []
-                    if let dictionary = childrenDictionary {
-                        for (_, value) in dictionary {
-                            if let value = value as? [P.Value] {
-                                childrenValues.append(contentsOf: value)
-                            }
-                        }
-                    }
-                    return childrenValues
-                }()
-                
-                // Send the array of myself + children values of property to parents
-                let updateValueForParent: [P.Value] = [newValue] + flattenedChildrenValues
-                for (parent, _) in state.parents {
-                    parent.updateChildrenOtherProperties(property: P.self, child: manager, value: updateValueForParent)
-                }
-                
-            }
-        }
+//        public subscript<P: Property>(dynamicMember key: KeyPath<ProgressManager.Properties, P.Type>) -> P.Value {
+//            get {
+//                return state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] as? P.Value ?? P.self.defaultValue
+//            }
+//            
+//            set {
+//                // Update my own other properties entry
+//                state.otherProperties[AnyMetatypeWrapper(metatype: P.self)] = newValue
+//                
+//                // Generate an array of myself + children values of the property
+//                let flattenedChildrenValues: [P.Value] = {
+//                    let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: P.self)]
+//                    var childrenValues: [P.Value] = []
+//                    if let dictionary = childrenDictionary {
+//                        for (_, value) in dictionary {
+//                            if let value = value as? [P.Value] {
+//                                childrenValues.append(contentsOf: value)
+//                            }
+//                        }
+//                    }
+//                    return childrenValues
+//                }()
+//                
+//                // Send the array of myself + children values of property to parents
+//                let updateValueForParent: [P.Value] = [newValue] + flattenedChildrenValues
+//                for parentState in state.parents {
+//                    parentState.parent.updateChildrenOtherProperties(property: P.self, child: manager, value: updateValueForParent)
+//                }
+//                
+//            }
+//        }
     }
     
     internal init(total: Int?, progressParentProgressManagerChildMessenger: ProgressManager?, managerObservation: _ProgressParentProgressManagerChild?) {
         let state = State(
             interopChild: nil,
-            isDirty: false,
-            dirtyChildren: Set<ProgressManager>(),
             indeterminate:  total == nil ? true : false,
             selfFraction: _ProgressFraction(completed: 0, total: total ?? 0),
-            children: [:],
-            parents: [:],
-            otherProperties: [:],
-            childrenOtherProperties: [:],
+            children: [],
+//            otherProperties: [:],
+//            childrenOtherProperties: [:],
             interopObservation: InteropObservation(progressParentProgressManagerChild: managerObservation),
             progressParentProgressManagerChildMessenger: progressParentProgressManagerChildMessenger
         )
         self.state = Mutex(state)
+        self.parents = Mutex([])
     }
     
     /// Initializes `self` with `totalCount`.
@@ -301,8 +290,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         let actualManager = reporter.manager
         
         // Add reporter as child + Add self as parent
-        self.addToChildren(child: actualManager, portion: count, childFraction: actualManager.getProgressFraction())
-        actualManager.addParent(parent: self, portionOfParent: count)
+        let position = self.addToChildren(child: actualManager, portion: count, childFraction: actualManager.getProgressFraction())
+        actualManager.addParent(parent: self, positionInParent: position)
     }
     
     /// Increases `completedCount` by `count`.
@@ -311,7 +300,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         // Update self fraction + mark dirty
         state.withLock { state in
             state.selfFraction.completed += count
-            markDirty(state: &state)
             
             state.progressParentProgressManagerChildMessenger?.notifyObservers(
                 with: .fractionUpdated(
@@ -329,28 +317,30 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 )
             }
         }
+        
+        markDirtyInParents()
     }
     
-    /// Returns an array of values for specified property in subtree.
-    /// - Parameter metatype: Type of property.
-    /// - Returns: Array of values for property.
-    public func values<P: Property>(of property: P.Type) -> [P.Value] {
-//        _$observationRegistrar.access(self, keyPath: \.state)
-        return state.withLock { state in
-            let childrenValues = getFlattenedChildrenValues(property: property, state: &state)
-            return [state.otherProperties[AnyMetatypeWrapper(metatype: property)] as? P.Value ?? P.defaultValue] + childrenValues.map { $0 ?? P.defaultValue }
-        }
-    }
-    
-    
-    /// Returns the aggregated result of values.
-    /// - Parameters:
-    ///   - property: Type of property.
-    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value: AdditiveArithmetic {
-        let droppedNil = values(of: property).compactMap { $0 }
-        return droppedNil.reduce(P.Value.zero, +)
-    }
-    
+//    /// Returns an array of values for specified property in subtree.
+//    /// - Parameter metatype: Type of property.
+//    /// - Returns: Array of values for property.
+//    public func values<P: Property>(of property: P.Type) -> [P.Value] {
+////        _$observationRegistrar.access(self, keyPath: \.state)
+//        return state.withLock { state in
+//            let childrenValues = getFlattenedChildrenValues(property: property, state: &state)
+//            return [state.otherProperties[AnyMetatypeWrapper(metatype: property)] as? P.Value ?? P.defaultValue] + childrenValues.map { $0 ?? P.defaultValue }
+//        }
+//    }
+//    
+//    
+//    /// Returns the aggregated result of values.
+//    /// - Parameters:
+//    ///   - property: Type of property.
+//    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value: AdditiveArithmetic {
+//        let droppedNil = values(of: property).compactMap { $0 }
+//        return droppedNil.reduce(P.Value.zero, +)
+//    }
+//    
     /// Mutates any settable properties that convey information about progress.
     public func withProperties<T, E: Error>(
         _ closure: (inout sending Values) throws(E) -> sending T
@@ -359,13 +349,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             var values = Values(manager: self, state: state)
             // This is done to avoid copy on write later
             state = State(
-                isDirty: false,
                 indeterminate: true,
                 selfFraction: _ProgressFraction(),
-                children: [:],
-                parents: [:],
-                otherProperties: [:],
-                childrenOtherProperties: [:],
+                children: [],
+//                otherProperties: [:],
+//                childrenOtherProperties: [:],
                 interopObservation: InteropObservation()
             )
             let result = try closure(&values)
@@ -406,15 +394,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         // If at least one of my dirtyChildren actually completed, that means I would need to update my completed count actually.
     
         // If there are dirty children, get updates first
-        if state.dirtyChildren.count > 0 {
-            
-            // Get dirty leaves
-            var dirtyLeaves: [ProgressManager] = []
-            collectDirtyNodes(dirtyNodes: &dirtyLeaves, state: &state)
-            
-            // Then ask each dirty leaf to propagate values up
-            for leaf in dirtyLeaves {
-                leaf.updateState(exclude: self, lockedState: &state)
+        if state.children.count > 0 {
+            for childState in state.children {
+                if childState.isDirty {
+                    // if this path is dirty, update child state's selfFraction and mark not dirty
+                }
             }
         }
         
@@ -428,7 +412,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     ///
     /// The calculation of fraction completed for a ProgressManager instance that has children
     /// will take into account children's fraction completed as well.
-    private func getFractionCompleted(state: inout State) -> Double {
+    private func getFractionCompleted() -> Double {
         // Implementation thoughts: 
         // If my self is dirty, that means I got mutated and I have parents that haven't received updates from me.
         // If my dirtyChildren list exists, that means I have fractional updates from these children, and I need these fractional updates.
@@ -438,31 +422,34 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         // If I am dirty leaf and no dirtyChildren, directly return fractionCompleted - no need to do recalculation when unnecessary
         // If I am dirty leaf and also has dirtyChildren - get updates
         // If I am clean leaf and has dirtyChildren - get updates
-        
-        // Interop child
-        if let interopChild = state.interopChild {
-            return interopChild.fractionCompleted
-        }
-        
-        // Indeterminate
-        if state.indeterminate {
-            return 0.0
-        }
-        
-        // If there are dirty children, get updates first
-        if state.dirtyChildren.count > 0 {
-            
-            // Get dirty leaves
-            var dirtyLeaves: [ProgressManager] = []
-            collectDirtyNodes(dirtyNodes: &dirtyLeaves, state: &state)
-            
-            // Then ask each dirty leaf to propagate values up
-            for leaf in dirtyLeaves {
-                leaf.updateState(exclude: self, lockedState: &state)
+        return state.withLock { state in
+            // Interop child
+            if let interopChild = state.interopChild {
+                return interopChild.fractionCompleted
             }
+            
+            // Indeterminate
+            if state.indeterminate {
+                return 0.0
+            }
+            
+            // If there are children, ask children to give updated values & store them
+            if state.children.count > 0 {
+                for i in 0...state.children.endIndex {
+                    if state.children[i].isDirty {
+                        if let child = state.children[i].child {
+                            let updatedProgressFraction = child.getDirtyProgressFraction()
+                            state.children[i] = ChildState(child: child,
+                                                           portionOfTotal: state.children[i].portionOfTotal,
+                                                           childFraction: updatedProgressFraction,
+                                                           isDirty: false)
+                        }
+                    }
+                }
+            }
+            
+            return state.overallFraction.fractionCompleted
         }
-        
-        return state.overallFraction.fractionCompleted
     }
 
     /// Returns `true` if completed and total units are not `nil` and completed units is greater than or equal to total units;
@@ -478,142 +465,41 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     //MARK: FractionCompleted Calculation methods
-    private struct UpdateState {
-        let previous: _ProgressFraction
-        let current: _ProgressFraction
-    }
-    
-    /// If parents exist, mark self as dirty and add self to parents' dirty children list.
-    private func markDirty(state: inout State) {
-        if state.parents.count > 0 {
-            state.isDirty = true
-        }
-        
+    /// If parents exist, mark self as dirty and send dirtyState to parent.
+    private func markDirtyInParents() {
         // Recursively add self as dirty child to parents list
-        for (parent, _) in state.parents {
-            parent.addDirtyChild(self)
+        parents.withLock { parents in
+            for parentState in parents {
+                parentState.parent.markChildDirty(at: parentState.positionInParent)
+            }
         }
-    
     }
     
-    /// Add a given child to self's dirty children list.
-    private func addDirtyChild(_ child: ProgressManager) {
+    /// Mark child at given index as dirty.
+    private func markChildDirty(at position: Int) {
         state.withLock { state in
-            // Child already exists in dirty children
-            if state.dirtyChildren.contains(child) {
-                return
-            }
-            
-            state.dirtyChildren.insert(child)
-            
-            // Propagate dirty state up to parents
-            for (parent, _) in state.parents {
-                parent.addDirtyChild(self)
-            }
+            state.children[position].isDirty = true
         }
+        markDirtyInParents()
     }
     
-    /// Collect bottommost dirty nodes in a subtree, when called from locked context.
-    private func collectDirtyNodes(dirtyNodes: inout [ProgressManager], state: inout State) {
-            if state.dirtyChildren.isEmpty && state.isDirty {
-                dirtyNodes += [self]
-            } else {
-                for child in state.dirtyChildren {
-                    child.collectDirtyNodes(dirtyNodes: &dirtyNodes)
+    private func getDirtyProgressFraction() -> _ProgressFraction {
+        return state.withLock { state in
+            if state.children.count > 0 {
+                for i in 0...state.children.endIndex {
+                    if state.children[i].isDirty {
+                        if let child = state.children[i].child {
+                            let updatedProgressFraction = child.getDirtyProgressFraction()
+                            state.children[i] = ChildState(child: child,
+                                                           portionOfTotal: state.children[i].portionOfTotal,
+                                                           childFraction: updatedProgressFraction,
+                                                           isDirty: false)
+                        }
+                    }
                 }
             }
+            return state.selfFraction
         }
-
-    /// Collect bottommost dirty nodes in a subtree, when called directly.
-    private func collectDirtyNodes(dirtyNodes: inout [ProgressManager]) {
-        state.withLock { state in
-            if state.dirtyChildren.isEmpty && state.isDirty {
-                dirtyNodes += [self]
-            } else {
-                for child in state.dirtyChildren {
-                    child.collectDirtyNodes(dirtyNodes: &dirtyNodes)
-                }
-            }
-        }
-    }
-    
-    /// Updates the state of current ProgressManager by setting isDirty to false.
-    private func updateState(exclude lockedRoot: ProgressManager?, lockedState: inout State) {
-        // If I am the root which was queried.
-        if self === lockedRoot {
-            lockedState.isDirty = false
-            
-            for (parent, _) in lockedState.parents {
-                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: lockedState.overallFraction)
-            }
-            
-            return
-        }
-        
-        state.withLock { state in
-            // Set isDirty to false
-            state.isDirty = false
-            
-            // Propagate these changes up to parent
-            for (parent, _) in state.parents {
-                parent.updateChildState(exclude: lockedRoot, lockedState: &lockedState, child: self, fraction: state.overallFraction)
-            }
-        }
-    }
-
-    /// Updates the stored state of a child, accounting for whether or not child has completed.
-    internal func updateChildState(exclude lockedRoot: ProgressManager?, lockedState: inout State, child: ProgressManager, fraction: _ProgressFraction) {
-        if self === lockedRoot {
-            lockedState.children[child]?.childFraction = fraction
-            lockedState.dirtyChildren.remove(child)
-            
-            if fraction.isFinished {
-                lockedState.selfFraction.completed += lockedState.children[child]?.portionOfSelf ?? 0
-                lockedState.children.removeValue(forKey: child)
-            }
-            
-            updateState(exclude: self, lockedState: &lockedState)
-            
-            return
-        }
-        
-        state.withLock { state in
-            state.children[child]?.childFraction = fraction
-            state.dirtyChildren.remove(child)
-            
-            if fraction.isFinished {
-                state.selfFraction.completed += state.children[child]?.portionOfSelf ?? 0
-                state.children.removeValue(forKey: child)
-            }
-        }
-        
-        updateState(exclude: lockedRoot, lockedState: &lockedState)
-    }
-    
-    internal func updateState() {
-        state.withLock { state in
-            // Set isDirty to false
-            state.isDirty = false
-            
-            // Propagate these changes up to parent
-            for (parent, _) in state.parents {
-                parent.updateChildState(child: self, fraction: state.overallFraction)
-            }
-        }
-    }
-    
-    internal func updateChildState(child: ProgressManager, fraction: _ProgressFraction) {
-        state.withLock { state in
-            state.children[child]?.childFraction = fraction
-            state.dirtyChildren.remove(child)
-            
-            if fraction.isFinished {
-                state.selfFraction.completed += state.children[child]?.portionOfSelf ?? 0
-                state.children.removeValue(forKey: child)
-            }
-        }
-        
-        updateState()
     }
 
     //MARK: Interop-related internal methods
@@ -662,27 +548,27 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     // Adds a child to the children list, with all of the info fields populated
-    internal func addToChildren(child: ProgressManager, portion: Int, childFraction: _ProgressFraction) {
-        state.withLock { state in
-            let childState = ChildState(portionOfSelf: portion, childFraction: childFraction)
-            state.children[child] = childState
-            
-            // Add child to dirtyChildren list
-            state.dirtyChildren.insert(child)
+    internal func addToChildren(child: ProgressManager, portion: Int, childFraction: _ProgressFraction) -> Int {
+        let index = state.withLock { state in
+            let childState = ChildState(child: child, portionOfTotal: portion, childFraction: childFraction, isDirty: true)
+            state.children.append(childState)
+            return state.children.count - 1
         }
+        return index
     }
     
-    internal func addParent(parent: ProgressManager, portionOfParent: Int) {
-        state.withLock { state in
-            state.parents[parent] = portionOfParent
-            
-            // Update metatype entry in parent
-            for (metatype, value) in state.otherProperties {
-                let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
-                let updatedParentEntry: [(any Sendable)?] = [value] + childrenValues
-                parent.updateChildrenOtherPropertiesAnyValue(property: metatype, child: self, value: updatedParentEntry)
-            }
+    internal func addParent(parent: ProgressManager, positionInParent: Int) {
+        parents.withLock { parents in
+            let parentState = ParentState(parent: parent, positionInParent: positionInParent)
+            parents.append(parentState)
         }
+            // Update metatype entry in parent
+//            for (metatype, value) in state.otherProperties {
+//                let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
+//                let updatedParentEntry: [(any Sendable)?] = [value] + childrenValues
+//                parent.updateChildrenOtherPropertiesAnyValue(property: metatype, child: self, value: updatedParentEntry)
+//            }
+
     }
     
     internal func getAdditionalProperties<T, E: Error>(
@@ -698,71 +584,71 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     // MARK: Propagation of Additional Properties Methods (Dual Mode of Operations)
-    private func getFlattenedChildrenValues<P: Property>(property metatype: P.Type, state: inout State) -> [P.Value?] {
-        let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
-        var childrenValues: [P.Value?] = []
-        if let dictionary = childrenDictionary {
-            for (_, value) in dictionary {
-                if let value = value as? [P.Value?] {
-                    childrenValues.append(contentsOf: value)
-                }
-            }
-        }
-        return childrenValues
-    }
-    
-    private func getFlattenedChildrenValues(property metatype: AnyMetatypeWrapper, state: inout State) -> [(any Sendable)?] {
-        let childrenDictionary = state.childrenOtherProperties[metatype]
-        var childrenValues: [(any Sendable)?] = []
-        if let dictionary = childrenDictionary {
-            for (_, value) in dictionary {
-                childrenValues.append(contentsOf: value)
-            }
-        }
-        return childrenValues
-    }
-    
-    private func updateChildrenOtherPropertiesAnyValue(property metatype: AnyMetatypeWrapper, child: ProgressManager, value: [(any Sendable)?]) {
-        state.withLock { state in
-            let myEntries = state.childrenOtherProperties[metatype]
-            if myEntries != nil {
-                // If entries is not nil, then update my entry of children values
-                state.childrenOtherProperties[metatype]![child] = value
-            } else {
-                // If entries is nil, initialize then update my entry of children values
-                state.childrenOtherProperties[metatype] = [:]
-                state.childrenOtherProperties[metatype]![child] = value
-            }
-            // Ask parent to update their entry with my value + new children value
-            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
-            let updatedParentEntry: [(any Sendable)?] = [state.otherProperties[metatype]] + childrenValues
-            for (parent, _) in state.parents {
-                parent.updateChildrenOtherPropertiesAnyValue(property: metatype, child: child, value: updatedParentEntry)
-            }
-        }
-    }
-    
-    private func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, child: ProgressManager, value: [P.Value?]) {
-        state.withLock { state in
-            let myEntries = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
-            if myEntries != nil {
-                // If entries is not nil, then update my entry of children values
-                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![child] = value
-            } else {
-                // If entries is nil, initialize then update my entry of children values
-                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = [:]
-                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![child] = value
-            }
-            // Ask parent to update their entry with my value + new children value
-            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
-            let updatedParentEntry: [P.Value?] = [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.Value] + childrenValues
-            
-            for (parent, _) in state.parents {
-                parent.updateChildrenOtherProperties(property: metatype, child: self, value: updatedParentEntry)
-            }
-            
-        }
-    }
+//    private func getFlattenedChildrenValues<P: Property>(property metatype: P.Type, state: inout State) -> [P.Value?] {
+//        let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
+//        var childrenValues: [P.Value?] = []
+//        if let dictionary = childrenDictionary {
+//            for (_, value) in dictionary {
+//                if let value = value as? [P.Value?] {
+//                    childrenValues.append(contentsOf: value)
+//                }
+//            }
+//        }
+//        return childrenValues
+//    }
+//    
+//    private func getFlattenedChildrenValues(property metatype: AnyMetatypeWrapper, state: inout State) -> [(any Sendable)?] {
+//        let childrenDictionary = state.childrenOtherProperties[metatype]
+//        var childrenValues: [(any Sendable)?] = []
+//        if let dictionary = childrenDictionary {
+//            for (_, value) in dictionary {
+//                childrenValues.append(contentsOf: value)
+//            }
+//        }
+//        return childrenValues
+//    }
+//    
+//    private func updateChildrenOtherPropertiesAnyValue(property metatype: AnyMetatypeWrapper, child: ProgressManager, value: [(any Sendable)?]) {
+//        state.withLock { state in
+//            let myEntries = state.childrenOtherProperties[metatype]
+//            if myEntries != nil {
+//                // If entries is not nil, then update my entry of children values
+//                state.childrenOtherProperties[metatype]![child] = value
+//            } else {
+//                // If entries is nil, initialize then update my entry of children values
+//                state.childrenOtherProperties[metatype] = [:]
+//                state.childrenOtherProperties[metatype]![child] = value
+//            }
+//            // Ask parent to update their entry with my value + new children value
+//            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
+//            let updatedParentEntry: [(any Sendable)?] = [state.otherProperties[metatype]] + childrenValues
+//            for (parent, _) in state.parents {
+//                parent.updateChildrenOtherPropertiesAnyValue(property: metatype, child: child, value: updatedParentEntry)
+//            }
+//        }
+//    }
+//    
+//    private func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, child: ProgressManager, value: [P.Value?]) {
+//        state.withLock { state in
+//            let myEntries = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
+//            if myEntries != nil {
+//                // If entries is not nil, then update my entry of children values
+//                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![child] = value
+//            } else {
+//                // If entries is nil, initialize then update my entry of children values
+//                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = [:]
+//                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![child] = value
+//            }
+//            // Ask parent to update their entry with my value + new children value
+//            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
+//            let updatedParentEntry: [P.Value?] = [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.Value] + childrenValues
+//            
+//            for (parent, _) in state.parents {
+//                parent.updateChildrenOtherProperties(property: metatype, child: self, value: updatedParentEntry)
+//            }
+//            
+//        }
+//    }
     
     // MARK: Cycle detection
     func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
@@ -772,10 +658,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         
         let updatedVisited = visited.union([self])
         
-        return state.withLock { state in
-            for (parent, _) in state.parents {
-                if !updatedVisited.contains(parent) {
-                    if parent.isCycle(reporter: reporter, visited: updatedVisited) {
+        return parents.withLock { parents in
+            for parentState in parents {
+                if !updatedVisited.contains(parentState.parent) {
+                    if parentState.parent.isCycle(reporter: reporter, visited: updatedVisited) {
                         return true
                     }
                 }
@@ -785,10 +671,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     func isCycleInterop(visited: Set<ProgressManager> = []) -> Bool {
-        return state.withLock { state in
-            for (parent, _) in state.parents {
-                if !visited.contains(parent) {
-                    if parent.isCycle(reporter: reporter, visited: visited) {
+        return parents.withLock { parents in
+            for parentState in parents {
+                if !visited.contains(parentState.parent) {
+                    if parentState.parent.isCycle(reporter: reporter, visited: visited) {
                         return true
                     }
                 }
@@ -839,12 +725,13 @@ extension ProgressManager: CustomStringConvertible {
         fractionCompleted: \(fractionCompleted)
         isIndeterminate: \(isIndeterminate)
         isFinished: \(isFinished)
-        totalFileCount: \(values(of: ProgressManager.Properties.TotalFileCount.self))
-        completedFileCount: \(values(of: ProgressManager.Properties.CompletedFileCount.self))
-        totalByteCount: \(values(of: ProgressManager.Properties.TotalByteCount.self))
-        completedByteCount: \(values(of: ProgressManager.Properties.CompletedByteCount.self))
-        throughput: \(values(of: ProgressManager.Properties.Throughput.self))
-        estimatedTimeRemaining: \(values(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
         """
+        
+//        totalFileCount: \(values(of: ProgressManager.Properties.TotalFileCount.self))
+//        completedFileCount: \(values(of: ProgressManager.Properties.CompletedFileCount.self))
+//        totalByteCount: \(values(of: ProgressManager.Properties.TotalByteCount.self))
+//        completedByteCount: \(values(of: ProgressManager.Properties.CompletedByteCount.self))
+//        throughput: \(values(of: ProgressManager.Properties.Throughput.self))
+//        estimatedTimeRemaining: \(values(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
     }
 }
