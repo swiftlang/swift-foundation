@@ -2203,7 +2203,9 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         return try _representation.withUnsafeBytes(body)
     }
 
-    @available(FoundationSpan 6.2, *)
+    @abi(var _aeic_bytes: RawSpan)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
     public var bytes: RawSpan {
         @lifetime(borrow self)
         borrowing get {
@@ -2230,7 +2232,14 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
-    @available(FoundationSpan 6.2, *)
+    @abi(var bytes: RawSpan)
+    @available(*, unavailable)
+    @usableFromInline
+    internal var _abi_compatibility_bytes: RawSpan { bytes }
+
+    @abi(var _aeic_span: Span<UInt8>)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
     public var span: Span<UInt8> {
         @lifetime(borrow self)
         borrowing get {
@@ -2239,7 +2248,14 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
-    @available(FoundationSpan 6.2, *)
+    @abi(var span: Span<UInt8>)
+    @available(*, unavailable)
+    @usableFromInline
+    internal var _abi_compatibility_span: Span<UInt8> { span }
+
+    @abi(var _aeic_mutableBytes: MutableRawSpan)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
     public var mutableBytes: MutableRawSpan {
         @lifetime(&self)
         mutating get {
@@ -2266,7 +2282,14 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         }
     }
 
-    @available(FoundationSpan 6.2, *)
+    @abi(var mutableBytes: MutableRawSpan)
+    @available(*, unavailable)
+    @usableFromInline
+    internal var _abi_compatibility_mutableBytes: MutableRawSpan { mutating get { mutableBytes } }
+
+    @abi(var _aeic_mutableSpan: MutableSpan<UInt8>)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @_alwaysEmitIntoClient
     public var mutableSpan: MutableSpan<UInt8> {
         @lifetime(&self)
         mutating get {
@@ -2298,6 +2321,11 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
 #endif
         }
     }
+
+    @abi(var mutableSpan: MutableSpan<UInt8>)
+    @available(*, unavailable)
+    @usableFromInline
+    internal var _abi_compatibility_mutableSpan: MutableSpan<UInt8> { mutating get { mutableSpan } }
 
     @_alwaysEmitIntoClient
     public func withContiguousStorageIfAvailable<ResultType>(_ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws -> ResultType) rethrows -> ResultType? {
@@ -2969,54 +2997,4 @@ extension Data : Codable {
             try container.encode(contentsOf: buffer)
         }
     }
-}
-
-// TODO: remove once _overrideLifetime is public in the standard library
-/// Unsafely discard any lifetime dependency on the `dependent` argument. Return
-/// a value identical to `dependent` with a lifetime dependency on the caller's
-/// borrow scope of the `source` argument.
-@unsafe
-@_unsafeNonescapableResult
-@_alwaysEmitIntoClient
-@_transparent
-@lifetime(borrow source)
-internal func _overrideLifetime<
-  T: ~Copyable & ~Escapable, U: ~Copyable & ~Escapable
->(
-  _ dependent: consuming T, borrowing source: borrowing U
-) -> T {
-  dependent
-}
-
-/// Unsafely discard any lifetime dependency on the `dependent` argument. Return
-/// a value identical to `dependent` that inherits all lifetime dependencies from
-/// the `source` argument.
-@unsafe
-@_unsafeNonescapableResult
-@_alwaysEmitIntoClient
-@_transparent
-@lifetime(copy source)
-internal func _overrideLifetime<
-  T: ~Copyable & ~Escapable, U: ~Copyable & ~Escapable
->(
-  _ dependent: consuming T, copying source: borrowing U
-) -> T {
-  dependent
-}
-
-/// Unsafely discard any lifetime dependency on the `dependent` argument.
-/// Return a value identical to `dependent` with a lifetime dependency
-/// on the caller's exclusive borrow scope of the `source` argument.
-@unsafe
-@_unsafeNonescapableResult
-@_alwaysEmitIntoClient
-@_transparent
-@lifetime(&source)
-internal func _overrideLifetime<
-  T: ~Copyable & ~Escapable, U: ~Copyable & ~Escapable
->(
-  _ dependent: consuming T,
-  mutating source: inout U
-) -> T {
-  dependent
 }
