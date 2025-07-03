@@ -12,10 +12,6 @@
 
 import Testing
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
-
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
 #else
@@ -24,6 +20,21 @@ import TestSupport
 
 #if canImport(Android)
 @preconcurrency import Android
+#endif
+
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Bionic)
+import Bionic
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import CRT
+import WinSDK
+#elseif os(WASI)
+import WASILibc
 #endif
 
 extension FileManager {
@@ -1058,7 +1069,7 @@ private struct FileManagerTests {
 
             do {
                 let attrs = try $0.attributesOfItem(atPath: "fileWithContents")
-                XCTAssertGreaterThan(try #require(attrs[.size] as? UInt), 0)
+                #expect(try #require(attrs[.size] as? UInt) > 0)
                 #expect(attrs[.type] as? FileAttributeType == FileAttributeType.typeRegular)
             }
 

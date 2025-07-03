@@ -413,7 +413,7 @@ open class JSONDecoder {
 
             // Check for explicit BOM first, then check the first two bytes. Note that if there is a BOM, we have to create our string without it.
             // This isn't strictly part of the JSON spec but it's useful to do anyway.
-            let sourceEncoding : String._Encoding
+            let sourceEncoding : String.Encoding
             let bomLength : Int
             switch (byte0, byte1, byte2, byte3) {
             case (0, 0, 0xFE, 0xFF):
