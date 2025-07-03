@@ -37,7 +37,7 @@ let usePackage: UsePackage
 
 if let useLocalPackageEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLocalPackageEnv.isEmpty {
     if useLocalPackageEnv == "1" {
-        usePackage = .useLocalPackage("..")
+        usePackage = .useLocalPackage("../..")
     } else {
         usePackage = .useLocalPackage(useLocalPackageEnv)
     }
