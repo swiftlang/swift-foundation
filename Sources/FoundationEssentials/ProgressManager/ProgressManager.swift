@@ -540,7 +540,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     // MARK: Cycle Detection Methods
-    func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
+    internal func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
         if reporter.manager === self {
             return true
         }
@@ -559,7 +559,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    func isCycleInterop(visited: Set<ProgressManager> = []) -> Bool {
+    internal func isCycleInterop(visited: Set<ProgressManager> = []) -> Bool {
         return state.withLock { state in
             for parentState in state.parents {
                 if !visited.contains(parentState.parent!) {
