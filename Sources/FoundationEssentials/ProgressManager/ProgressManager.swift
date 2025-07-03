@@ -320,9 +320,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// - Returns: Array of values for property.
     public func values<P: Property>(of property: P.Type) -> [P.Value] {
 //        _$observationRegistrar.access(self, keyPath: \.state)
-        return getDirtyValues(property: property, includeSelf: true)
+        return getPropertyValues(property: property, includeSelf: true)
     }
-    
     
     /// Returns the aggregated result of values.
     /// - Parameters:
@@ -427,8 +426,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     //MARK: FractionCompleted Calculation methods
     /// If parents exist, mark self as dirty in parent's children list.
     private func markSelfDirty(parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent?.markChildDirty(at: parentState.positionInParent)
+        if parents.count > 0 {
+            for parentState in parents {
+                parentState.parent?.markChildDirty(at: parentState.positionInParent)
+            }
         }
     }
     
@@ -539,8 +540,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     // MARK: Propagation of Additional Properties Methods (Dual Mode of Operations)
     private func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) {
-        for parentState in parents {
-            parentState.parent?.markChildDirty(property: property, at: parentState.positionInParent)
+        if parents.count > 0 {
+            for parentState in parents {
+                parentState.parent?.markChildDirty(property: property, at: parentState.positionInParent)
+            }
         }
     }
     
@@ -552,7 +555,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         markSelfDirty(property: property, parents: parents)
     }
     
-    private func getDirtyValues<P: Property>(property: P.Type, includeSelf: Bool) -> [P.Value] {
+    private func getPropertyValues<P: Property>(property: P.Type, includeSelf: Bool) -> [P.Value] {
         let values: [P.Value] = state.withLock { state in
             var values: [P.Value] = []
             if includeSelf {
@@ -563,7 +566,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     let propertyState = state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]
                     if let childPropertyState = propertyState {
                         if childPropertyState.isDirty {
-                            let updatedValues = state.children[i].child.getDirtyValues(property: property, includeSelf: true)
+                            let updatedValues = state.children[i].child.getPropertyValues(property: property, includeSelf: true)
                             let updatedPropertyState = PropertyState(value: updatedValues, isDirty: false)
                             state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]! = updatedPropertyState
                             values += updatedValues
@@ -571,9 +574,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                             values += childPropertyState.value as? [P.Value] ?? [P.defaultValue]
                         }
                     } else {
-                        let childValues = state.children[i].child.getDirtyValues(property: property, includeSelf: true)
-                        let newPropertyState = PropertyState(value: childValues, isDirty: false)
-                        state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] = newPropertyState
+                        let childValues = state.children[i].child.getPropertyValues(property: property, includeSelf: true)
+                        let childPropertyState = PropertyState(value: childValues, isDirty: false)
+                        state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] = childPropertyState
                         values += childValues
                     }
                 }
