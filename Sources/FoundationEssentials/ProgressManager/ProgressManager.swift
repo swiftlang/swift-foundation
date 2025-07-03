@@ -34,7 +34,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 }
 
 @available(FoundationPreview 6.2, *)
-// ProgressManager
 /// An object that conveys ongoing progress to the user for a specified task.
 @Observable public final class ProgressManager: Sendable {
     
@@ -267,10 +266,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public func assign(count: Int, to reporter: ProgressReporter) {
         precondition(isCycle(reporter: reporter) == false, "Creating a cycle is not allowed.")
         
-        // get the actual progress from within the reporter, then add as children
         let actualManager = reporter.manager
         
-        // Add reporter as child + Add self as parent
         let position = self.addChild(child: actualManager, portion: count, childFraction: actualManager.getProgressFraction())
         actualManager.addParent(parent: self, positionInParent: position)
     }
@@ -278,7 +275,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Increases `completedCount` by `count`.
     /// - Parameter count: Units of work.
     public func complete(count: Int) {
-        // Update self fraction + mark dirty
         let parents: [ParentState]? = state.withLock { state in
             guard state.selfFraction.completed != (state.selfFraction.completed + count) else {
                 return nil
