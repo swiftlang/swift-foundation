@@ -43,28 +43,24 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         var isDirty: Bool
     }
     
-    // Stores the information on each child added to children
     internal struct ChildState {
         var child: ProgressManager
         var portionOfTotal: Int
-        var childFraction: _ProgressFraction // Fraction adjusted based on portion of self; If not dirty, overallFraction should be composed of this
+        var childFraction: _ProgressFraction
         var isDirty: Bool
         var childProperties: [AnyMetatypeWrapper: PropertyState]
     }
     
     internal struct ParentState {
         weak var parent: ProgressManager?
-        var positionInParent: Int // My position in this parent's children array
+        var positionInParent: Int
     }
     
-    // Interop states to notify observers
     internal enum ObserverState {
         case fractionUpdated(totalCount: Int, completedCount: Int)
     }
     
-    // Mirroring observation to be kept alive
     internal struct InteropObservation {
-        // Formerly interopObservation, interopObservationForMonitor, parentBridge
         var progressParentProgressManagerChild: _ProgressParentProgressManagerChild? // Set when init
         var progressParentProgressReporterChild: _ProgressParentProgressReporterChild? = nil // Set when setInteropObservationForReporter is called
         #if FOUNDATION_FRAMEWORK
@@ -194,7 +190,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             }
             
             set {
-                //TODO: Update self completedCount and notify parents that I am dirty
                 guard newValue != state.selfFraction.completed else {
                     return
                 }
@@ -202,6 +197,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.selfFraction.completed = newValue
                 
                 state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
+                
                 if let _ = state.interopObservation.progressParentProgressReporterChild  {
                     manager.notifyObservers(
                         with: .fractionUpdated(
@@ -211,6 +207,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                         state: &state
                     )
                 }
+                
                 manager.markDirtyInParents(parents: state.parents)
             }
         }
@@ -437,7 +434,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     }
                 }
             }
-            
             return state.overallFraction.fractionCompleted
         }
     }
@@ -556,16 +552,9 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             let parentState = ParentState(parent: parent, positionInParent: positionInParent)
             state.parents.append(parentState)
         }
-            // Update metatype entry in parent
-//            for (metatype, value) in state.otherProperties {
-//                let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
-//                let updatedParentEntry: [(any Sendable)?] = [value] + childrenValues
-//                parent.updateChildrenOtherPropertiesAnyValue(property: metatype, child: self, value: updatedParentEntry)
-//            }
-
     }
     
-    internal func getAdditionalProperties<T, E: Error>(
+    internal func getProperties<T, E: Error>(
         _ closure: (sending Values) throws(E) -> sending T
     ) throws(E) -> sending T {
         try state.withLock { state throws(E) -> T in
@@ -620,72 +609,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         return values
     }
-    
-//    private func getFlattenedChildrenValues<P: Property>(property metatype: P.Type, state: inout State) -> [P.Value?] {
-//        let childrenDictionary = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
-//        var childrenValues: [P.Value?] = []
-//        if let dictionary = childrenDictionary {
-//            for (_, value) in dictionary {
-//                if let value = value as? [P.Value?] {
-//                    childrenValues.append(contentsOf: value)
-//                }
-//            }
-//        }
-//        return childrenValues
-//    }
-//    
-//    private func getFlattenedChildrenValues(property metatype: AnyMetatypeWrapper, state: inout State) -> [(any Sendable)?] {
-//        let childrenDictionary = state.childrenOtherProperties[metatype]
-//        var childrenValues: [(any Sendable)?] = []
-//        if let dictionary = childrenDictionary {
-//            for (_, value) in dictionary {
-//                childrenValues.append(contentsOf: value)
-//            }
-//        }
-//        return childrenValues
-//    }
-//    
-//    private func updateChildrenOtherPropertiesAnyValue(property metatype: AnyMetatypeWrapper, child: ProgressManager, value: [(any Sendable)?]) {
-//        state.withLock { state in
-//            let myEntries = state.childrenOtherProperties[metatype]
-//            if myEntries != nil {
-//                // If entries is not nil, then update my entry of children values
-//                state.childrenOtherProperties[metatype]![child] = value
-//            } else {
-//                // If entries is nil, initialize then update my entry of children values
-//                state.childrenOtherProperties[metatype] = [:]
-//                state.childrenOtherProperties[metatype]![child] = value
-//            }
-//            // Ask parent to update their entry with my value + new children value
-//            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
-//            let updatedParentEntry: [(any Sendable)?] = [state.otherProperties[metatype]] + childrenValues
-//            for (parent, _) in state.parents {
-//                parent.updateChildrenOtherPropertiesAnyValue(property: metatype, child: child, value: updatedParentEntry)
-//            }
-//        }
-//    }
-//    
-//    private func updateChildrenOtherProperties<P: Property>(property metatype: P.Type, child: ProgressManager, value: [P.Value?]) {
-//        state.withLock { state in
-//            let myEntries = state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]
-//            if myEntries != nil {
-//                // If entries is not nil, then update my entry of children values
-//                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![child] = value
-//            } else {
-//                // If entries is nil, initialize then update my entry of children values
-//                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)] = [:]
-//                state.childrenOtherProperties[AnyMetatypeWrapper(metatype: metatype)]![child] = value
-//            }
-//            // Ask parent to update their entry with my value + new children value
-//            let childrenValues = getFlattenedChildrenValues(property: metatype, state: &state)
-//            let updatedParentEntry: [P.Value?] = [state.otherProperties[AnyMetatypeWrapper(metatype: metatype)] as? P.Value] + childrenValues
-//            
-//            for (parent, _) in state.parents {
-//                parent.updateChildrenOtherProperties(property: metatype, child: self, value: updatedParentEntry)
-//            }
-//            
-//        }
-//    }
     
     // MARK: Cycle detection
     func isCycle(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
@@ -762,13 +685,12 @@ extension ProgressManager: CustomStringConvertible {
         fractionCompleted: \(fractionCompleted)
         isIndeterminate: \(isIndeterminate)
         isFinished: \(isFinished)
+        totalFileCount: \(values(of: ProgressManager.Properties.TotalFileCount.self))
+        completedFileCount: \(values(of: ProgressManager.Properties.CompletedFileCount.self))
+        totalByteCount: \(values(of: ProgressManager.Properties.TotalByteCount.self))
+        completedByteCount: \(values(of: ProgressManager.Properties.CompletedByteCount.self))
+        throughput: \(values(of: ProgressManager.Properties.Throughput.self))
+        estimatedTimeRemaining: \(values(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
         """
-        
-//        totalFileCount: \(values(of: ProgressManager.Properties.TotalFileCount.self))
-//        completedFileCount: \(values(of: ProgressManager.Properties.CompletedFileCount.self))
-//        totalByteCount: \(values(of: ProgressManager.Properties.TotalByteCount.self))
-//        completedByteCount: \(values(of: ProgressManager.Properties.CompletedByteCount.self))
-//        throughput: \(values(of: ProgressManager.Properties.Throughput.self))
-//        estimatedTimeRemaining: \(values(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
     }
 }

@@ -74,7 +74,7 @@ import Observation
     public func withProperties<T, E: Error>(
         _ closure: (sending ProgressManager.Values) throws(E) -> sending T
     ) throws(E) -> T {
-        return try manager.getAdditionalProperties(closure)
+        return try manager.getProperties(closure)
     }
     
 //    /// Returns an array of values for specified property in subtree.
