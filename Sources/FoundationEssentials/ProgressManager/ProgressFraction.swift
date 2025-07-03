@@ -15,12 +15,12 @@ internal import _ForSwiftFoundation
 
 internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConvertible {
     var completed : Int
-    var total : Int
+    var total : Int?
     private(set) var overflowed : Bool
     
     init() {
         completed = 0
-        total = 0
+        total = nil
         overflowed = false
     }
     
@@ -37,13 +37,8 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
     }
     
     init(completed: Int, total: Int?) {
-        if let total {
-            self.total = total
-            self.completed = completed
-        } else {
-            self.total = 0
-            self.completed = completed
-        }
+        self.total = total
+        self.completed = completed
         self.overflowed = false
     }
     
@@ -58,25 +53,33 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
 
     
     internal mutating func simplify() {
-        if self.total == 0 {
+        if let total = self.total {
+            if self.total == 0 {
+                return
+            }
+            
+            (self.completed, self.total) = _ProgressFraction._simplify(completed, total)
+        } else {
             return
         }
-        
-        (self.completed, self.total) = _ProgressFraction._simplify(completed, total)
     }
     
-    internal func simplified() -> _ProgressFraction {
-        let simplified = _ProgressFraction._simplify(completed, total)
-        return _ProgressFraction(completed: simplified.0, total: simplified.1)
+    internal func simplified() -> _ProgressFraction? {
+        if let total = self.total {
+            let simplified = _ProgressFraction._simplify(completed, total)
+            return _ProgressFraction(completed: simplified.0, total: simplified.1)
+        } else {
+            return nil
+        }
     }
     
     static private func _math(lhs: _ProgressFraction, rhs: _ProgressFraction, whichOperator: (_ lhs : Double, _ rhs : Double) -> Double, whichOverflow : (_ lhs: Int, _ rhs: Int) -> (Int, overflow: Bool)) -> _ProgressFraction {
         // Mathematically, it is nonsense to add or subtract something with a denominator of 0. However, for the purposes of implementing Progress' fractions, we just assume that a zero-denominator fraction is "weightless" and return the other value. We still need to check for the case where they are both nonsense though.
         precondition(!(lhs.total == 0 && rhs.total == 0), "Attempt to add or subtract invalid fraction")
-        guard lhs.total != 0 else {
+        guard (lhs.total != 0 && lhs.total != nil) else {
             return rhs
         }
-        guard rhs.total != 0 else {
+        guard (rhs.total != 0 && rhs.total != nil) else {
             return lhs
         }
         
@@ -86,8 +89,8 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
         }
 
         //TODO: rdar://148758226 Overflow check 
-        if let lcm = _leastCommonMultiple(lhs.total, rhs.total) {
-            let result = whichOverflow(lhs.completed * (lcm / lhs.total), rhs.completed * (lcm / rhs.total))
+        if let lcm = _leastCommonMultiple(lhs.total!, rhs.total!) {
+            let result = whichOverflow(lhs.completed * (lcm / lhs.total!), rhs.completed * (lcm / rhs.total!))
             if result.overflow {
                 return _ProgressFraction(double: whichOperator(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
             } else {
@@ -98,8 +101,8 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
             let lhsSimplified = lhs.simplified()
             let rhsSimplified = rhs.simplified()
             
-            if let lcm = _leastCommonMultiple(lhsSimplified.total, rhsSimplified.total) {
-                let result = whichOverflow(lhsSimplified.completed * (lcm / lhsSimplified.total), rhsSimplified.completed * (lcm / rhsSimplified.total))
+            if let lcm = _leastCommonMultiple((lhsSimplified?.total)!, (rhsSimplified?.total)!) {
+                let result = whichOverflow(lhsSimplified!.completed * (lcm / (lhsSimplified?.total!)!), rhsSimplified!.completed * (lcm / (rhsSimplified?.total!)!))
                 if result.overflow {
                     // Use original lhs/rhs here
                     return _ProgressFraction(double: whichOperator(lhs.fractionCompleted, rhs.fractionCompleted), overflow: true)
@@ -121,22 +124,30 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
         return _math(lhs: lhs, rhs: rhs, whichOperator: -, whichOverflow: { $0.subtractingReportingOverflow($1) })
     }
     
-    static internal func *(lhs: _ProgressFraction, rhs: _ProgressFraction) -> _ProgressFraction {
+    static internal func *(lhs: _ProgressFraction, rhs: _ProgressFraction) -> _ProgressFraction? {
         guard !lhs.overflowed && !rhs.overflowed else {
             // If either has overflowed already, we preserve that
             return _ProgressFraction(double: lhs.fractionCompleted * rhs.fractionCompleted, overflow: true)
         }
 
+        guard (lhs.total != nil && rhs.total != nil) else {
+            return nil
+        }
+        
         let newCompleted = lhs.completed.multipliedReportingOverflow(by: rhs.completed)
-        let newTotal = lhs.total.multipliedReportingOverflow(by: rhs.total)
+        let newTotal = lhs.total!.multipliedReportingOverflow(by: rhs.total!)
         
         if newCompleted.overflow || newTotal.overflow {
             // Try simplifying, then do it again
             let lhsSimplified = lhs.simplified()
             let rhsSimplified = rhs.simplified()
             
+            guard let lhsSimplified, let rhsSimplified else {
+                return nil
+            }
+            
             let newCompletedSimplified = lhsSimplified.completed.multipliedReportingOverflow(by: rhsSimplified.completed)
-            let newTotalSimplified = lhsSimplified.total.multipliedReportingOverflow(by: rhsSimplified.total)
+            let newTotalSimplified = lhsSimplified.total!.multipliedReportingOverflow(by: rhsSimplified.total!)
             
             if newCompletedSimplified.overflow || newTotalSimplified.overflow {
                 // Still overflow
@@ -149,18 +160,26 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
         }
     }
     
-    static internal func /(lhs: _ProgressFraction, rhs: Int) -> _ProgressFraction {
+    static internal func /(lhs: _ProgressFraction, rhs: Int) -> _ProgressFraction? {
         guard !lhs.overflowed else {
             // If lhs has overflowed, we preserve that
             return _ProgressFraction(double: lhs.fractionCompleted / Double(rhs), overflow: true)
         }
         
-        let newTotal = lhs.total.multipliedReportingOverflow(by: rhs)
+        guard let lhsTotal = lhs.total else {
+            return nil
+        }
+        
+        let newTotal = lhsTotal.multipliedReportingOverflow(by: rhs)
         
         if newTotal.overflow {
             let simplified = lhs.simplified()
             
-            let newTotalSimplified = simplified.total.multipliedReportingOverflow(by: rhs)
+            guard let simplified else {
+                return nil
+            }
+            
+            let newTotalSimplified = simplified.total!.multipliedReportingOverflow(by: rhs)
             
             if newTotalSimplified.overflow {
                 // Still overflow
@@ -182,6 +201,10 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
         } else if lhs.total == rhs.total {
             // Direct comparison of numerator
             return lhs.completed == rhs.completed
+        } else if lhs.total == nil && rhs.total != nil {
+            return false
+        } else if lhs.total != nil && rhs.total == nil {
+            return false
         } else if lhs.completed == 0 && rhs.completed == 0 {
             return true
         } else if lhs.completed == lhs.total && rhs.completed == rhs.total {
@@ -192,8 +215,8 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
             return false
         } else {
             // Cross-multiply
-            let left = lhs.completed.multipliedReportingOverflow(by: rhs.total)
-            let right = lhs.total.multipliedReportingOverflow(by: rhs.completed)
+            let left = lhs.completed.multipliedReportingOverflow(by: rhs.total!)
+            let right = lhs.total!.multipliedReportingOverflow(by: rhs.completed)
             
             if !left.overflow && !right.overflow {
                 if left.0 == right.0 {
@@ -204,8 +227,8 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
                 let lhsSimplified = lhs.simplified()
                 let rhsSimplified = rhs.simplified()
                 
-                let leftSimplified = lhsSimplified.completed.multipliedReportingOverflow(by: rhsSimplified.total)
-                let rightSimplified = lhsSimplified.total.multipliedReportingOverflow(by: rhsSimplified.completed)
+                let leftSimplified = lhsSimplified!.completed.multipliedReportingOverflow(by: rhsSimplified!.total!)
+                let rightSimplified = lhsSimplified!.total!.multipliedReportingOverflow(by: rhsSimplified!.completed)
 
                 if !leftSimplified.overflow && !rightSimplified.overflow {
                     if leftSimplified.0 == rightSimplified.0 {
@@ -224,11 +247,21 @@ internal struct _ProgressFraction : Sendable, Equatable, CustomDebugStringConver
     // ----
     
     internal var isFinished: Bool {
+        guard let total else {
+            return false
+        }
         return completed >= total && completed > 0 && total > 0
+    }
+    
+    internal var isIndeterminate: Bool {
+        return total == nil
     }
     
     
     internal var fractionCompleted : Double {
+        guard let total else {
+            return 0.0
+        }
         return Double(completed) / Double(total)
     }
 

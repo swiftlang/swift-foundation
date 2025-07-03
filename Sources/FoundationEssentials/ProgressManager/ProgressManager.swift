@@ -70,13 +70,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     internal struct State {
         var interopChild: ProgressManager? // read from this if self is actually an interop ghost
-        var indeterminate: Bool
         var selfFraction: _ProgressFraction
         var overallFraction: _ProgressFraction {
             var overallFraction = selfFraction
             for child in children {
                 if !child.childFraction.isFinished {
-                    overallFraction = overallFraction + (_ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total) * child.childFraction)
+                    overallFraction = overallFraction + ((_ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total) * child.childFraction)!)
                 }
             }
             return overallFraction
@@ -158,21 +157,16 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             }
             
             set {
-                if newValue != nil {
-                    state.indeterminate = false
-                } else {
-                    state.indeterminate = true
-                }
                 guard newValue != state.selfFraction.total else {
                     return 
                 }
                 
-                state.selfFraction.total = newValue ?? 0
+                state.selfFraction.total = newValue
                 
-                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
+                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed))
                 
                 if let _ = state.interopObservation.progressParentProgressReporterChild {
-                    manager.notifyObserversLocked(with: .fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed), state: &state)
+                    manager.notifyObserversLocked(with: .fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed), state: &state)
                 }
                 manager.markSelfDirty(parents: state.parents)
             }
@@ -192,12 +186,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 
                 state.selfFraction.completed = newValue
                 
-                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total, completedCount: state.selfFraction.completed))
+                state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed))
                 
                 if let _ = state.interopObservation.progressParentProgressReporterChild {
                     manager.notifyObserversLocked(
                         with: .fractionUpdated(
-                            totalCount: state.selfFraction.total,
+                            totalCount: state.selfFraction.total!,
                             completedCount: state.selfFraction.completed
                         ),
                         state: &state
@@ -229,8 +223,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal init(total: Int?, progressParentProgressManagerChildMessenger: ProgressManager?, managerObservation: _ProgressParentProgressManagerChild?) {
         let state = State(
             interopChild: nil,
-            indeterminate:  total == nil ? true : false,
-            selfFraction: _ProgressFraction(completed: 0, total: total ?? 0),
+            selfFraction: _ProgressFraction(completed: 0, total: total),
             children: [],
             parents: [],
             properties: [:],
@@ -295,14 +288,14 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             
             state.progressParentProgressManagerChildMessenger?.notifyObservers(
                 with: .fractionUpdated(
-                    totalCount: state.selfFraction.total,
+                    totalCount: state.selfFraction.total!,
                     completedCount: state.selfFraction.completed
                 )
             )
             if let _ = state.interopObservation.progressParentProgressReporterChild {
                 notifyObserversLocked(
                     with: .fractionUpdated(
-                        totalCount: state.selfFraction.total,
+                        totalCount: state.selfFraction.total!,
                         completedCount: state.selfFraction.completed
                     ),
                     state: &state
@@ -338,7 +331,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             var values = Values(manager: self, state: state)
             // This is done to avoid copy on write later
             state = State(
-                indeterminate: true,
                 selfFraction: _ProgressFraction(),
                 children: [],
                 parents: [],
@@ -366,11 +358,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         if let interopChild = state.interopChild {
             return interopChild.totalCount
         }
-        if state.indeterminate {
-            return nil
-        } else {
-            return state.selfFraction.total
-        }
+        return state.selfFraction.total
     }
     
     /// Returns 0 if `self` has `nil` total units;
@@ -397,10 +385,6 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 return interopChild.fractionCompleted
             }
             
-            if state.indeterminate {
-                return 0.0
-            }
-            
             updateChildrenProgressFractionLocked(state: &state)
 
             return state.overallFraction.fractionCompleted
@@ -418,7 +402,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Returns `true` if `self` has `nil` total units.
     private func getIsIndeterminate() -> Bool {
         return state.withLock { state in
-            state.indeterminate
+            state.selfFraction.isIndeterminate
         }
     }
     

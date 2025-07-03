@@ -64,8 +64,8 @@ import Testing
         let f2 = _ProgressFraction(completed: 1, total: 2)
 
         let r = f1 * f2
-        #expect(r.completed == 5)
-        #expect(r.total == 20)
+        #expect(r?.completed == 5)
+        #expect(r?.total == 20)
     }
     
     @Test func simplify() {
@@ -74,8 +74,8 @@ import Testing
 
         let r = (f1 + f2).simplified()
         
-        #expect(r.completed == 4)
-        #expect(r.total == 5)
+        #expect(r?.completed == 4)
+        #expect(r?.total == 5)
     }
     
     @Test func overflow() {
@@ -136,8 +136,8 @@ import Testing
         let f1 = _ProgressFraction(double: d)
         
         let simplified = f1.simplified()
-        #expect(simplified.completed == 17)
-        #expect(simplified.total == 4)
+        #expect(simplified?.completed == 17)
+        #expect(simplified?.total == 4)
     }
     
     @Test func unnecessaryOverflow() {
