@@ -608,6 +608,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                         } else {
                             values += childPropertyState.value as? [P.Value] ?? [P.defaultValue]
                         }
+                    } else {
+                        let childValues = state.children[i].child.getDirtyValues(property: property, includeSelf: true)
+                        let newPropertyState = PropertyState(value: childValues, isDirty: false)
+                        state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] = newPropertyState
+                        values += childValues
                     }
                 }
             }
