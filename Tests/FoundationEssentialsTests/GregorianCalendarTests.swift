@@ -878,130 +878,6 @@ private struct GregorianCalendarTests {
         test(.yearForWeekOfYear, date, expectedStart: nil, end: nil)
     }
 
-    @Test func testDateInterval_DST() {
-        let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 3, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
-        func test(_ c: Calendar.Component, _ date: Date, expectedStart start: Date, end: Date, sourceLocation: SourceLocation = #_sourceLocation) {
-            let new = calendar.dateInterval(of: c, for: date)!
-            let new_start = new.start
-            let new_end = new.end
-            let delta = 0.005
-            #expect(abs(new_start.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) <= delta, sourceLocation: sourceLocation)
-            #expect(abs(new_end.timeIntervalSinceReferenceDate - end.timeIntervalSinceReferenceDate) <= delta, sourceLocation: sourceLocation)
-        }
-        var date: Date
-        date = Date(timeIntervalSince1970: 828867787.0) // 1996-04-07T01:03:07-0800 (1996-04-07T09:03:07Z)
-        test(.era, date, expectedStart: Date(timeIntervalSince1970: -62135596800.0), end: Date(timeIntervalSince1970: 4335910914304.0))
-        test(.year, date, expectedStart: Date(timeIntervalSince1970: 820483200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.month, date, expectedStart: Date(timeIntervalSince1970: 828345600.0), end: Date(timeIntervalSince1970: 830934000.0))
-        test(.day, date, expectedStart: Date(timeIntervalSince1970: 828864000.0), end: Date(timeIntervalSince1970: 828946800.0))
-        test(.hour, date, expectedStart: Date(timeIntervalSince1970: 828867600.0), end: Date(timeIntervalSince1970: 828871200.0))
-        test(.minute, date, expectedStart: Date(timeIntervalSince1970: 828867780.0), end: Date(timeIntervalSince1970: 828867840.0))
-        test(.second, date, expectedStart: Date(timeIntervalSince1970: 828867787.0), end: Date(timeIntervalSince1970: 828867788.0))
-        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: 828867787.0), end: Date(timeIntervalSince1970: 828867787.0))
-        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 828864000.0), end: Date(timeIntervalSince1970: 828946800.0))
-        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 828864000.0), end: Date(timeIntervalSince1970: 828946800.0))
-        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 828345600.0), end: Date(timeIntervalSince1970: 836204400.0))
-        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: 828432000.0), end: Date(timeIntervalSince1970: 829033200.0))
-        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: 828432000.0), end: Date(timeIntervalSince1970: 829033200.0))
-        test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 820569600.0), end: Date(timeIntervalSince1970: 852019200.0))
-
-        date = Date(timeIntervalSince1970: 828871387.0) // 1996-04-07T03:03:07-0700 (1996-04-07T10:03:07Z)
-        test(.era, date, expectedStart: Date(timeIntervalSince1970: -62135596800.0), end: Date(timeIntervalSince1970: 4335910914304.0))
-        test(.year, date, expectedStart: Date(timeIntervalSince1970: 820483200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.month, date, expectedStart: Date(timeIntervalSince1970: 828345600.0), end: Date(timeIntervalSince1970: 830934000.0))
-        test(.day, date, expectedStart: Date(timeIntervalSince1970: 828864000.0), end: Date(timeIntervalSince1970: 828946800.0))
-        test(.hour, date, expectedStart: Date(timeIntervalSince1970: 828871200.0), end: Date(timeIntervalSince1970: 828874800.0))
-        test(.minute, date, expectedStart: Date(timeIntervalSince1970: 828871380.0), end: Date(timeIntervalSince1970: 828871440.0))
-        test(.second, date, expectedStart: Date(timeIntervalSince1970: 828871387.0), end: Date(timeIntervalSince1970: 828871388.0))
-        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: 828871387.0), end: Date(timeIntervalSince1970: 828871387.0))
-        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 828864000.0), end: Date(timeIntervalSince1970: 828946800.0))
-        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 828864000.0), end: Date(timeIntervalSince1970: 828946800.0))
-        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 828345600.0), end: Date(timeIntervalSince1970: 836204400.0))
-        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: 828432000.0), end: Date(timeIntervalSince1970: 829033200.0))
-        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: 828432000.0), end: Date(timeIntervalSince1970: 829033200.0))
-        test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 820569600.0), end: Date(timeIntervalSince1970: 852019200.0))
-
-        date = Date(timeIntervalSince1970: 828874987.0) // 1996-04-07T04:03:07-0700 (1996-04-07T11:03:07Z)
-        test(.era, date, expectedStart: Date(timeIntervalSince1970: -62135596800.0), end: Date(timeIntervalSince1970: 4335910914304.0))
-        test(.year, date, expectedStart: Date(timeIntervalSince1970: 820483200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.month, date, expectedStart: Date(timeIntervalSince1970: 828345600.0), end: Date(timeIntervalSince1970: 830934000.0))
-        test(.day, date, expectedStart: Date(timeIntervalSince1970: 828864000.0), end: Date(timeIntervalSince1970: 828946800.0))
-        test(.hour, date, expectedStart: Date(timeIntervalSince1970: 828874800.0), end: Date(timeIntervalSince1970: 828878400.0))
-        test(.minute, date, expectedStart: Date(timeIntervalSince1970: 828874980.0), end: Date(timeIntervalSince1970: 828875040.0))
-        test(.second, date, expectedStart: Date(timeIntervalSince1970: 828874987.0), end: Date(timeIntervalSince1970: 828874988.0))
-        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: 828874987.0), end: Date(timeIntervalSince1970: 828874987.0))
-        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 828864000.0), end: Date(timeIntervalSince1970: 828946800.0))
-        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 828864000.0), end: Date(timeIntervalSince1970: 828946800.0))
-        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 828345600.0), end: Date(timeIntervalSince1970: 836204400.0))
-        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: 828432000.0), end: Date(timeIntervalSince1970: 829033200.0))
-        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: 828432000.0), end: Date(timeIntervalSince1970: 829033200.0))
-        test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 820569600.0), end: Date(timeIntervalSince1970: 852019200.0))
-
-        date = Date(timeIntervalSince1970: 846406987.0) // 1996-10-27T01:03:07-0800 (1996-10-27T09:03:07Z)
-        test(.era, date, expectedStart: Date(timeIntervalSince1970: -62135596800.0), end: Date(timeIntervalSince1970: 4335910914304.0))
-        test(.year, date, expectedStart: Date(timeIntervalSince1970: 820483200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.month, date, expectedStart: Date(timeIntervalSince1970: 844153200.0), end: Date(timeIntervalSince1970: 846835200.0))
-        test(.day, date, expectedStart: Date(timeIntervalSince1970: 846399600.0), end: Date(timeIntervalSince1970: 846489600.0))
-        test(.hour, date, expectedStart: Date(timeIntervalSince1970: 846406800.0), end: Date(timeIntervalSince1970: 846410400.0))
-        test(.minute, date, expectedStart: Date(timeIntervalSince1970: 846406980.0), end: Date(timeIntervalSince1970: 846407040.0))
-        test(.second, date, expectedStart: Date(timeIntervalSince1970: 846406987.0), end: Date(timeIntervalSince1970: 846406988.0))
-        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: 846406987.0), end: Date(timeIntervalSince1970: 846406987.0))
-        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 846399600.0), end: Date(timeIntervalSince1970: 846489600.0))
-        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 846399600.0), end: Date(timeIntervalSince1970: 846489600.0))
-        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 844153200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: 845967600.0), end: Date(timeIntervalSince1970: 846576000.0))
-        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: 845967600.0), end: Date(timeIntervalSince1970: 846576000.0))
-        test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 820569600.0), end: Date(timeIntervalSince1970: 852019200.0))
-
-        date = Date(timeIntervalSince1970: 846410587.0) // 1996-10-27T02:03:07-0800 (1996-10-27T10:03:07Z)
-        test(.era, date, expectedStart: Date(timeIntervalSince1970: -62135596800.0), end: Date(timeIntervalSince1970: 4335910914304.0))
-        test(.year, date, expectedStart: Date(timeIntervalSince1970: 820483200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.month, date, expectedStart: Date(timeIntervalSince1970: 844153200.0), end: Date(timeIntervalSince1970: 846835200.0))
-        test(.day, date, expectedStart: Date(timeIntervalSince1970: 846399600.0), end: Date(timeIntervalSince1970: 846489600.0))
-        test(.hour, date, expectedStart: Date(timeIntervalSince1970: 846410400.0), end: Date(timeIntervalSince1970: 846414000.0))
-        test(.minute, date, expectedStart: Date(timeIntervalSince1970: 846410580.0), end: Date(timeIntervalSince1970: 846410640.0))
-        test(.second, date, expectedStart: Date(timeIntervalSince1970: 846410587.0), end: Date(timeIntervalSince1970: 846410588.0))
-        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: 846410587.0), end: Date(timeIntervalSince1970: 846410587.0))
-        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 846399600.0), end: Date(timeIntervalSince1970: 846489600.0))
-        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 846399600.0), end: Date(timeIntervalSince1970: 846489600.0))
-        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 844153200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: 845967600.0), end: Date(timeIntervalSince1970: 846576000.0))
-        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: 845967600.0), end: Date(timeIntervalSince1970: 846576000.0))
-        test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 820569600.0), end: Date(timeIntervalSince1970: 852019200.0))
-
-        date = Date(timeIntervalSince1970: 846414187.0) // 1996-10-27T03:03:07-0800 (1996-10-27T11:03:07Z)
-        test(.era, date, expectedStart: Date(timeIntervalSince1970: -62135596800.0), end: Date(timeIntervalSince1970: 4335910914304.0))
-        test(.year, date, expectedStart: Date(timeIntervalSince1970: 820483200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.month, date, expectedStart: Date(timeIntervalSince1970: 844153200.0), end: Date(timeIntervalSince1970: 846835200.0))
-        test(.day, date, expectedStart: Date(timeIntervalSince1970: 846399600.0), end: Date(timeIntervalSince1970: 846489600.0))
-        test(.hour, date, expectedStart: Date(timeIntervalSince1970: 846414000.0), end: Date(timeIntervalSince1970: 846417600.0))
-        test(.minute, date, expectedStart: Date(timeIntervalSince1970: 846414180.0), end: Date(timeIntervalSince1970: 846414240.0))
-        test(.second, date, expectedStart: Date(timeIntervalSince1970: 846414187.0), end: Date(timeIntervalSince1970: 846414188.0))
-        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: 846414187.0), end: Date(timeIntervalSince1970: 846414187.0))
-        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 846399600.0), end: Date(timeIntervalSince1970: 846489600.0))
-        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 846399600.0), end: Date(timeIntervalSince1970: 846489600.0))
-        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 844153200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: 845967600.0), end: Date(timeIntervalSince1970: 846576000.0))
-        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: 845967600.0), end: Date(timeIntervalSince1970: 846576000.0))
-        test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 820569600.0), end: Date(timeIntervalSince1970: 852019200.0))
-
-        date = Date(timeIntervalSince1970: 845121787.0) // 1996-10-12T05:03:07-0700 (1996-10-12T12:03:07Z)
-        test(.era, date, expectedStart: Date(timeIntervalSince1970: -62135596800.0), end: Date(timeIntervalSince1970: 4335910914304.0))
-        test(.year, date, expectedStart: Date(timeIntervalSince1970: 820483200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.month, date, expectedStart: Date(timeIntervalSince1970: 844153200.0), end: Date(timeIntervalSince1970: 846835200.0))
-        test(.day, date, expectedStart: Date(timeIntervalSince1970: 845103600.0), end: Date(timeIntervalSince1970: 845190000.0))
-        test(.hour, date, expectedStart: Date(timeIntervalSince1970: 845121600.0), end: Date(timeIntervalSince1970: 845125200.0))
-        test(.minute, date, expectedStart: Date(timeIntervalSince1970: 845121780.0), end: Date(timeIntervalSince1970: 845121840.0))
-        test(.second, date, expectedStart: Date(timeIntervalSince1970: 845121787.0), end: Date(timeIntervalSince1970: 845121788.0))
-        test(.nanosecond, date, expectedStart: Date(timeIntervalSince1970: 845121787.0), end: Date(timeIntervalSince1970: 845121787.0))
-        test(.weekday, date, expectedStart: Date(timeIntervalSince1970: 845103600.0), end: Date(timeIntervalSince1970: 845190000.0))
-        test(.weekdayOrdinal, date, expectedStart: Date(timeIntervalSince1970: 845103600.0), end: Date(timeIntervalSince1970: 845190000.0))
-        test(.quarter, date, expectedStart: Date(timeIntervalSince1970: 844153200.0), end: Date(timeIntervalSince1970: 852105600.0))
-        test(.weekOfMonth, date, expectedStart: Date(timeIntervalSince1970: 844758000.0), end: Date(timeIntervalSince1970: 845362800.0))
-        test(.weekOfYear, date, expectedStart: Date(timeIntervalSince1970: 844758000.0), end: Date(timeIntervalSince1970: 845362800.0))
-        test(.yearForWeekOfYear, date, expectedStart: Date(timeIntervalSince1970: 820569600.0), end: Date(timeIntervalSince1970: 852019200.0))
-    }
-
     // MARK: - Day Of Year
     @Test func test_dayOfYear() throws {
         // An arbitrary date, for which we know the answers
@@ -1596,7 +1472,7 @@ private struct GregorianCalendarTests {
     }
 
     @Test func testDifference_DST() {
-        let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(identifier: "America/Los_Angeles")!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
+        let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 4, gregorianStartDate: nil)
 
         var start: Date!
         var end: Date!

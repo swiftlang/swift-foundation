@@ -298,7 +298,7 @@ private struct DurationToMeasurementAdditionTests {
 private struct TestDurationTimeFormatStyle {
     let enUS = Locale(identifier: "en_US")
 
-    func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, grouping: NumberFormatStyleConfiguration.Grouping? = nil, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+    func assertFormattedWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration.TimeFormatStyle.Pattern, grouping: NumberFormatStyleConfiguration.Grouping? = nil, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
         var style = Duration.TimeFormatStyle(pattern: pattern).locale(enUS)
         if let grouping {
             style.grouping = grouping
@@ -490,7 +490,7 @@ private struct DurationTimeAttributedStyleTests {
     typealias Segment = (String, AttributeScopes.FoundationAttributes.DurationFieldAttribute.Field?)
     let enUS = Locale(identifier: "en_US")
 
-    func assertWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration._TimeFormatStyle.Pattern, expected: [Segment], locale: Locale = Locale(identifier: "en_US"), sourceLocation: SourceLocation = #_sourceLocation) {
+    func assertWithPattern(seconds: Int, milliseconds: Int = 0, pattern: Duration.TimeFormatStyle.Pattern, expected: [Segment], locale: Locale = Locale(identifier: "en_US"), sourceLocation: SourceLocation = #_sourceLocation) {
         #expect(Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds)).formatted(.time(pattern: pattern).locale(locale).attributed) == expected.attributedString, sourceLocation: sourceLocation)
     }
 
@@ -643,7 +643,7 @@ private struct TestDurationTimeDiscreteConformance {
     }
 
     @Test func regressions() throws {
-        var style: Duration._TimeFormatStyle
+        var style: Duration.TimeFormatStyle
 
         style = .init(pattern: .hourMinute(padHourToLength: 0, roundSeconds: .toNearestOrAwayFromZero))
 

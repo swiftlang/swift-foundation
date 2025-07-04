@@ -11,10 +11,6 @@
 //===----------------------------------------------------------------------===//
 //
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
-
 #if canImport(Glibc)
 @preconcurrency import Glibc
 #endif
@@ -24,6 +20,8 @@ import TestSupport
 #else
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
+
+import class Foundation.Bundle
 
 #if FOUNDATION_FRAMEWORK
 // Always compiled into the Tests project

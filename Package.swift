@@ -99,10 +99,7 @@ let package = Package(
         // TestSupport (Internal)
         .target(
             name: "TestSupport",
-            dependencies: [
-                "FoundationEssentials",
-                "FoundationInternationalization",
-            ],
+            path: "Tests/TestSupport",
             cSettings: wasiLibcCSettings,
             swiftSettings: availabilityMacros + featureSettings
         ),

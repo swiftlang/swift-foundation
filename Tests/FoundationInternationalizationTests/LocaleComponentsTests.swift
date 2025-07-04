@@ -334,7 +334,7 @@ private struct LocaleCodableTests {
     // Test types that used to encode both `identifier` and `normalizdIdentifier` now only encodes `identifier`
     func _testRoundtripCoding<T: Codable>(_ obj: T, identifier: String, normalizedIdentifier: String, sourceLocation: SourceLocation = #_sourceLocation) throws -> T? {
         let previousEncoded = "{\"_identifier\":\"\(identifier)\",\"_normalizedIdentifier\":\"\(normalizedIdentifier)\"}"
-        let previousEncodedData = previousEncoded.data(using: String._Encoding.utf8)!
+        let previousEncodedData = previousEncoded.data(using: .utf8)!
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(T.self, from: previousEncodedData)
 
@@ -484,7 +484,7 @@ private struct LocaleCodableTests {
 
     @Test func decode_compatible_localeComponents() throws {
         func expectDecode(_ encoded: String, _ expected: Locale.Components, sourceLocation: SourceLocation = #_sourceLocation) throws {
-            let data = try #require(encoded.data(using: String._Encoding.utf8))
+            let data = try #require(encoded.data(using: .utf8))
             let decoded = try JSONDecoder().decode(Locale.Components.self, from: data)
             #expect(decoded == expected, sourceLocation: sourceLocation)
         }
@@ -516,7 +516,7 @@ private struct LocaleCodableTests {
     @Test func decode_compatible_language() throws {
 
         func expectDecode(_ encoded: String, _ expected: Locale.Language, sourceLocation: SourceLocation = #_sourceLocation) throws {
-            let data = try #require(encoded.data(using: String._Encoding.utf8))
+            let data = try #require(encoded.data(using: .utf8))
             let decoded = try JSONDecoder().decode(Locale.Language.self, from: data)
             #expect(decoded == expected, sourceLocation: sourceLocation)
         }
@@ -532,7 +532,7 @@ private struct LocaleCodableTests {
 
     @Test func decode_compatible_languageComponents() throws {
         func expectDecode(_ encoded: String, _ expected: Locale.Language.Components, sourceLocation: SourceLocation = #_sourceLocation) throws {
-            let data = try #require(encoded.data(using: String._Encoding.utf8))
+            let data = try #require(encoded.data(using: .utf8))
             let decoded = try JSONDecoder().decode(Locale.Language.Components.self, from: data)
             #expect(decoded == expected, sourceLocation: sourceLocation)
         }
@@ -572,7 +572,7 @@ private struct LocaleCodableTests {
 
             #expect(encoded == expectedEncoded, sourceLocation: sourceLocation)
 
-            let data = try #require(encoded.data(using: String._Encoding.utf8))
+            let data = try #require(encoded.data(using: .utf8))
             let decoded = try JSONDecoder().decode(Locale.Language.self, from: data)
 
             #expect(lang == decoded, sourceLocation: sourceLocation)
@@ -611,7 +611,7 @@ private struct LocaleCodableTests {
 
             #expect(encoded == expectedEncoded, sourceLocation: sourceLocation)
 
-            let data = try #require(encoded.data(using: String._Encoding.utf8))
+            let data = try #require(encoded.data(using: .utf8))
             let decoded = try JSONDecoder().decode(Locale.Language.Components.self, from: data)
 
             #expect(lang == decoded, sourceLocation: sourceLocation)
@@ -645,7 +645,7 @@ private struct LocaleCodableTests {
 
             #expect(encoded == expectedEncoded, sourceLocation: sourceLocation)
 
-            let data = try #require(encoded.data(using: String._Encoding.utf8))
+            let data = try #require(encoded.data(using: .utf8))
             let decoded = try JSONDecoder().decode(Locale.Components.self, from: data)
 
             #expect(lang == decoded, sourceLocation: sourceLocation)

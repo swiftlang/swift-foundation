@@ -495,9 +495,6 @@ extension Duration {
             Attributed(innerStyle: self)
         }
     }
-
-    // For testing purpose. See notes about String._Encoding
-    internal typealias _UnitsFormatStyle = UnitsFormatStyle
 }
 
 // `FormatStyle` static membership lookup

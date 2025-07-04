@@ -614,7 +614,7 @@ private struct NumberFormatStyleTests {
                 "identifier": "en_US"
             }
         }
-        """.data(using: String.Encoding.utf8))
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(Decimal.FormatStyle.Currency.self, from: previouslyEncoded)
         #expect(decoded == gbpInUS)

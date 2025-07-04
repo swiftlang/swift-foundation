@@ -201,8 +201,8 @@ extension ProcessInfoTests {
             $0.thermalState = .critical
             $0.powerState = .restricted
         }
-        XCTAssertEqual(ProcessInfo.processInfo.thermalState, .critical)
-        XCTAssertEqual(ProcessInfo.processInfo.isLowPowerModeEnabled, true)
+        #expect(ProcessInfo.processInfo.thermalState == .critical)
+        #expect(ProcessInfo.processInfo.isLowPowerModeEnabled == true)
     }
 }
 #endif // FOUDATION_FRAMEWORK
