@@ -124,4 +124,64 @@ private struct UUIDTests {
         #expect(uuid2 <= uuid1)
         #expect(uuid2 == uuid1)
     }
+    
+    func testRandomVersionAndVariant() {
+        var generator = SystemRandomNumberGenerator()
+        for _ in 0..<10000 {
+            let uuid = UUID.random(using: &generator)
+            XCTAssertEqual(uuid.versionNumber, 0b0100)
+            XCTAssertEqual(uuid.varint, 0b10)
+        }
+    }
+    
+    func testDeterministicRandomGeneration() {
+        var generator = PCGRandomNumberGenerator(seed: 123456789)
+        
+        let firstUUID = UUID.random(using: &generator)
+        XCTAssertEqual(firstUUID, UUID(uuidString: "9492BAC4-F353-49E7-ACBB-A40941CA65DE"))
+        
+        let secondUUID = UUID.random(using: &generator)
+        XCTAssertEqual(secondUUID, UUID(uuidString: "392C44E5-EB3E-4455-85A7-AF9556722B9A"))
+        
+        let thirdUUID = UUID.random(using: &generator)
+        XCTAssertEqual(thirdUUID, UUID(uuidString: "9ABFCCE9-AA85-485C-9CBF-C62F0C8D1D1A"))
+        
+        let fourthUUID = UUID.random(using: &generator)
+        XCTAssertEqual(fourthUUID, UUID(uuidString: "2B29542E-F719-4D58-87B9-C6291ADD4541"))
+    }
 }
+
+extension UUID {
+    fileprivate var versionNumber: Int {
+        Int(self.uuid.6 >> 4)
+    }
+    
+    fileprivate var varint: Int {
+        Int(self.uuid.8 >> 6 & 0b11)
+    }
+}
+
+fileprivate struct PCGRandomNumberGenerator: RandomNumberGenerator {
+    private static let multiplier: UInt128 = 47_026_247_687_942_121_848_144_207_491_837_523_525
+    private static let increment: UInt128 = 117_397_592_171_526_113_268_558_934_119_004_209_487
+
+    private var state: UInt128
+
+    fileprivate init(seed: UInt64) {
+        self.state = UInt128(seed)
+    }
+
+    fileprivate mutating func next() -> UInt64 {
+        self.state = self.state &* Self.multiplier &+ Self.increment
+
+        return rotr64(
+            value: UInt64(truncatingIfNeeded: self.state &>> 64) ^ UInt64(truncatingIfNeeded: self.state),
+            rotation: UInt64(truncatingIfNeeded: self.state &>> 122)
+        )
+    }
+
+    private func rotr64(value: UInt64, rotation: UInt64) -> UInt64 {
+        (value &>> rotation) | value &<< ((~rotation &+ 1) & 63)
+    }
+}
+
