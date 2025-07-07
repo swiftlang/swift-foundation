@@ -248,7 +248,6 @@ import Testing
         
         #expect(overall.fractionCompleted == 0.0)
         
-        
         let greatGrandchild1 = grandchildManager1.subprogress(assigningCount: 100)
         let greatGrandchildManager1 = greatGrandchild1.start(totalCount: 100)
         
@@ -262,6 +261,39 @@ import Testing
         #expect(grandchildManager1.isFinished == true)
         #expect(manager1.isFinished == true)
         #expect(overall.isFinished == true)
+    }
+    
+    func doSomething(amount: Int, subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: amount)
+        for _ in 1...amount {
+            manager.complete(count: 1)
+        }
+    }
+    
+    @Test func fiveThreadsMutatingAndReading() async throws {
+        let manager = ProgressManager(totalCount: 10)
+
+        await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await doSomething(amount: 5, subprogress: manager.subprogress(assigningCount: 1))
+            }
+            
+            group.addTask {
+                await doSomething(amount: 8, subprogress: manager.subprogress(assigningCount: 1))
+            }
+            
+            group.addTask {
+                await doSomething(amount: 7, subprogress: manager.subprogress(assigningCount: 1))
+            }
+            
+            group.addTask {
+                await doSomething(amount: 6, subprogress: manager.subprogress(assigningCount: 1))
+            }
+            
+            group.addTask {
+                print(manager.fractionCompleted)
+            }
+        }
     }
 }
 
@@ -424,7 +456,6 @@ import Testing
         manager?.complete(count: 2)
     }
     
-    // TODO: Occasionally it propagates values wrongly, end up with 1.25 at the end
     @Test func interopProgressParentProgressManagerChild() async throws {
         // Initialize a Progress Parent
         let overall = Progress.discreteProgress(totalUnitCount: 10)
@@ -537,7 +568,6 @@ import Testing
         // Check if Progress values propagate to ProgressRerpoter parent
         #expect(overallManager.completedCount == 10)
         #expect(overallManager.totalCount == 10)
-        //TODO: Somehow this sometimes gets updated to 1.25 instead of just 1.0
         #expect(overallManager.fractionCompleted == 1.0)
     }
     
