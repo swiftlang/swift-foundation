@@ -73,7 +73,7 @@ private struct DurationUnitsFormatStyleTests {
         #expect(Duration(minutes: 43, seconds: 24, milliseconds: 490).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide, valueLength: 2, fractionalPart: .show(length: 2)).locale(enUS)) == "43 minutes, 24.49 seconds")
     }
 
-    func verify(seconds: Int, milliseconds: Int, allowedUnits: Set<Duration._UnitsFormatStyle.Unit>, fractionalSecondsLength: Int = 0, rounding: FloatingPointRoundingRule = .toNearestOrEven, increment: Double? = nil, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+    func verify(seconds: Int, milliseconds: Int, allowedUnits: Set<Duration.UnitsFormatStyle.Unit>, fractionalSecondsLength: Int = 0, rounding: FloatingPointRoundingRule = .toNearestOrEven, increment: Double? = nil, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
         let d = Duration(seconds: Int64(seconds), milliseconds: Int64(milliseconds))
         #expect(d.formatted(.units(allowed: allowedUnits, zeroValueUnits: .show(length: 1), fractionalPart: .show(length: fractionalSecondsLength, rounded: rounding, increment: increment)).locale(enUS)) == expected, sourceLocation: sourceLocation)
     }
@@ -287,13 +287,13 @@ private struct DurationUnitsFormatStyleTests {
     @Test func durationUnitsFormatStyleAPI_largerThanDay() {
 
         var duration: Duration!
-        let allowedUnits: Set<Duration._UnitsFormatStyle.Unit> = [.weeks, .days, .hours]
-        func assertZeroValueUnit(_ zeroFormat: Duration._UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
+        let allowedUnits: Set<Duration.UnitsFormatStyle.Unit> = [.weeks, .days, .hours]
+        func assertZeroValueUnit(_ zeroFormat: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String,
                                   sourceLocation: SourceLocation = #_sourceLocation) {
             #expect(duration.formatted(.units(allowed: allowedUnits, width: .wide, zeroValueUnits: zeroFormat).locale(enUS)) == expected, sourceLocation: sourceLocation)
         }
 
-        func assertMaxUnitCount(_ maxUnitCount: Int, fractionalPart: Duration._UnitsFormatStyle.FractionalPartDisplayStrategy, _ expected: String,
+        func assertMaxUnitCount(_ maxUnitCount: Int, fractionalPart: Duration.UnitsFormatStyle.FractionalPartDisplayStrategy, _ expected: String,
                                   sourceLocation: SourceLocation = #_sourceLocation) {
             #expect(duration.formatted(.units(allowed: allowedUnits, width: .wide, maximumUnitCount: maxUnitCount, fractionalPart: fractionalPart).locale(enUS)) == expected, sourceLocation: sourceLocation)
         }
@@ -331,8 +331,8 @@ private struct DurationUnitsFormatStyleTests {
 
     @Test func zeroValueUnits() {
         var duration: Duration
-        var allowedUnits: Set<Duration._UnitsFormatStyle.Unit>
-        func test(_ zeroFormat: Duration._UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+        var allowedUnits: Set<Duration.UnitsFormatStyle.Unit>
+        func test(_ zeroFormat: Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy, _ expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
             #expect(duration.formatted(.units(allowed: allowedUnits, width: .wide, zeroValueUnits: zeroFormat).locale(enUS)) == expected, sourceLocation: sourceLocation)
         }
 
@@ -430,11 +430,11 @@ private struct DurationUnitsFormatStyleTests {
     }
 
     func assertEqual(_ duration: Duration,
-                     allowedUnits: Set<Duration._UnitsFormatStyle.Unit>, maximumUnitCount: Int? = nil, roundSmallerParts: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalPartLength: Int = Int.max, roundingIncrement: Double? = nil, dropZeroUnits: Bool = false,
-                     expected: (units: [Duration._UnitsFormatStyle.Unit], values: [Double]),
+                     allowedUnits: Set<Duration.UnitsFormatStyle.Unit>, maximumUnitCount: Int? = nil, roundSmallerParts: FloatingPointRoundingRule = .toNearestOrEven, trailingFractionalPartLength: Int = Int.max, roundingIncrement: Double? = nil, dropZeroUnits: Bool = false,
+                     expected: (units: [Duration.UnitsFormatStyle.Unit], values: [Double]),
                      sourceLocation: SourceLocation = #_sourceLocation) {
 
-        let (units, values) = Duration._UnitsFormatStyle.unitsToUse(duration: duration, allowedUnits: allowedUnits, maximumUnitCount: maximumUnitCount, roundSmallerParts: roundSmallerParts, trailingFractionalPartLength: trailingFractionalPartLength, roundingIncrement: roundingIncrement, dropZeroUnits: dropZeroUnits)
+        let (units, values) = Duration.UnitsFormatStyle.unitsToUse(duration: duration, allowedUnits: allowedUnits, maximumUnitCount: maximumUnitCount, roundSmallerParts: roundSmallerParts, trailingFractionalPartLength: trailingFractionalPartLength, roundingIncrement: roundingIncrement, dropZeroUnits: dropZeroUnits)
         guard values.count == expected.values.count else {
             Issue.record("\(values) is not equal to \(expected.values)", sourceLocation: sourceLocation)
             return
@@ -490,10 +490,10 @@ private struct DurationUnitsFormatStyleTests {
     @Test func lengthRangeExpression() {
 
         var duration: Duration
-        var allowedUnits: Set<Duration._UnitsFormatStyle.Unit>
+        var allowedUnits: Set<Duration.UnitsFormatStyle.Unit>
 
         func verify<R: RangeExpression, R2: RangeExpression>(intLimits: R, fracLimits: R2, _ expected: String, sourceLocation: SourceLocation = #_sourceLocation) where R.Bound == Int, R2.Bound == Int {
-            let style = Duration._UnitsFormatStyle(allowedUnits: allowedUnits, width: .abbreviated, valueLengthLimits: intLimits, fractionalPart: .init(lengthLimits: fracLimits)).locale(enUS)
+            let style = Duration.UnitsFormatStyle(allowedUnits: allowedUnits, width: .abbreviated, valueLengthLimits: intLimits, fractionalPart: .init(lengthLimits: fracLimits)).locale(enUS)
             let formatted = style.format(duration)
             #expect(formatted == expected, sourceLocation: sourceLocation)
         }
@@ -1198,7 +1198,7 @@ private struct TestDurationUnitsDiscreteConformance {
     }
 
     @Test func evaluation() {
-        func assertEvaluation(of style: Duration._UnitsFormatStyle,
+        func assertEvaluation(of style: Duration.UnitsFormatStyle,
                               rounding roundingRules: [FloatingPointRoundingRule] = [.up, .down, .towardZero, .awayFromZero, .toNearestOrAwayFromZero, .toNearestOrEven],
                               in range: ClosedRange<Duration>,
                               includes expectedExcerpts: [String]...,
@@ -1374,7 +1374,7 @@ private struct TestDurationUnitsDiscreteConformance {
     }
     
     @Test func regressions() throws {
-        var style: Duration._UnitsFormatStyle
+        var style: Duration.UnitsFormatStyle
         
         style = .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .show(length: 1, rounded: .toNearestOrAwayFromZero))
         
@@ -1386,7 +1386,7 @@ private struct TestDurationUnitsDiscreteConformance {
     }
     
     @Test func randomSamples() throws {
-        let styles: [Duration._UnitsFormatStyle] = [
+        let styles: [Duration.UnitsFormatStyle] = [
             .init(allowedUnits: [.minutes, .seconds], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),
             .init(allowedUnits: [.minutes, .seconds], width: .narrow, maximumUnitCount: 1, zeroValueUnits: .hide, fractionalPart: .hide),
             .init(allowedUnits: [.hours], width: .narrow, zeroValueUnits: .show(length: 1), fractionalPart: .hide),

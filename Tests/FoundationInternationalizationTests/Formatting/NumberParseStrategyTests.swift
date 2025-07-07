@@ -220,7 +220,7 @@ private struct NumberParseStrategyTests {
             {"formatStyle":{"locale":{"current":0,"identifier":"en_US"},"collection":{"presentation":{"option":1}},"currencyCode":"USD"},"numberFormatType":{"currency":{"_0":{"presentation":{"option":1}}}},"lenient":true,"locale":{"identifier":"en_US","current":0}}
         """
 
-        let existingData = try #require(existingSerializedParseStrategy.data(using: String.Encoding.utf8))
+        let existingData = try #require(existingSerializedParseStrategy.data(using: .utf8))
 
         let decoded: IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency> = try JSONDecoder().decode(IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency>.self, from: existingData)
         #expect(decoded == p)
@@ -236,7 +236,7 @@ private struct NumberParseStrategyTests {
             {"formatStyle":{"collection":{"presentation":{"option":1}},"locale":{"current":0,"identifier":"en_US"},"currencyCode":"GBP"},"lenient":true,"locale":{"current":0,"identifier":"en_US"},"numberFormatType":{"currency":{"_0":{"presentation":{"option":1}}}}}
         """
 
-        let existingData = try #require(existingSerializedParseStrategy.data(using: String.Encoding.utf8))
+        let existingData = try #require(existingSerializedParseStrategy.data(using: .utf8))
         let decoded: IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency> = try JSONDecoder().decode(IntegerParseStrategy<IntegerFormatStyle<Int32>.Currency>.self, from: existingData)
         #expect(decoded == p)
         #expect(decoded.formatStyle == fs)
