@@ -403,6 +403,13 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     //MARK: Fractional Calculation methods
+    internal func markSelfDirty() {
+        let parents = state.withLock { state in
+            return state.parents
+        }
+        markSelfDirty(parents: parents)
+    }
+    
     private func markSelfDirty(parents: [ParentState]) {
         if parents.count > 0 {
             for parentState in parents {
