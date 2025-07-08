@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !TARGET_OS_BRIDGE
 @available(FoundationPreview 6.2, *)
 /// Subprogress is a nested ~Copyable struct used to establish parent-child relationship between two instances of ProgressManager.
 ///
@@ -69,4 +70,4 @@ public struct Subprogress: ~Copyable, Sendable {
         }
     }
 }
-
+#endif

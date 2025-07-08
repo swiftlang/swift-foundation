@@ -12,6 +12,7 @@
 
 import Observation
 
+#if !TARGET_OS_BRIDGE
 @available(FoundationPreview 6.2, *)
 /// ProgressReporter is a wrapper for ProgressManager that carries information about ProgressManager.
 ///
@@ -96,3 +97,4 @@ import Observation
         self.manager = manager
     }
 }
+#endif

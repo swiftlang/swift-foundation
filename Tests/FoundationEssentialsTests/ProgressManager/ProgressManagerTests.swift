@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 import Testing
 
+#if !TARGET_OS_BRIDGE
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
@@ -627,6 +628,7 @@ import Testing
         }
     }
     #endif
+
 }
 #endif
 
@@ -768,4 +770,6 @@ import Testing
         }
     }
     #endif
+
 }
+#endif
