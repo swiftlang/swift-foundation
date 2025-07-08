@@ -224,14 +224,19 @@ extension String {
     }
 
     internal var pathExtension: String {
-        let lastComponent = lastPathComponent.utf8
-        guard lastComponent.last != ._dot,
-              !lastComponent.starts(with: [._dot, ._dot]),
-              let lastDot = lastComponent.lastIndex(of: ._dot),
-              lastDot != lastComponent.startIndex else {
+        let utf8Component = lastPathComponent.utf8
+        guard utf8Component.last != ._dot,
+              let lastDot = utf8Component.lastIndex(of: ._dot),
+              // Don't treat a hidden file name as an extension
+              lastDot != utf8Component.startIndex else {
             return ""
         }
-        let result = String(lastPathComponent[lastComponent.index(after: lastDot)...])
+        let utf8FileName = utf8Component[..<lastDot]
+        // Guard against "." and ".." file names
+        if (utf8FileName.count == 1 || utf8FileName.count == 2) && utf8FileName.allSatisfy({ $0 == ._dot }) {
+            return ""
+        }
+        let result = String(lastPathComponent[utf8Component.index(after: lastDot)...])
         guard validatePathExtension(result) else {
             return ""
         }

@@ -854,15 +854,28 @@ private struct StringTests {
         #expect("/foo/bar/.zip".deletingPathExtension() == "/foo/bar/.zip")
         #expect("..".deletingPathExtension() == "..")
         #expect("..zip".deletingPathExtension() == "..zip")
+        #expect("/..".deletingPathExtension() == "/..")
+        #expect("/..zip".deletingPathExtension() == "/..zip")
         #expect("/foo/bar/..zip".deletingPathExtension() == "/foo/bar/..zip")
         #expect("/foo/bar/baz..zip".deletingPathExtension() == "/foo/bar/baz.")
         #expect("...".deletingPathExtension() == "...")
         #expect("...zip".deletingPathExtension() == "...zip")
+        #expect("/...".deletingPathExtension() == "/...")
+        #expect("/...zip".deletingPathExtension() == "/...zip")
         #expect("/foo/bar/...zip".deletingPathExtension() == "/foo/bar/...zip")
         #expect("/foo/bar/baz...zip".deletingPathExtension() == "/foo/bar/baz..")
         #expect("/foo.bar/bar.baz/baz.zip".deletingPathExtension() == "/foo.bar/bar.baz/baz")
         #expect("/.././.././a.zip".deletingPathExtension() == "/.././.././a")
         #expect("/.././.././.".deletingPathExtension() == "/.././.././.")
+
+        // File names starting with "." or ".." are OK
+        // as long as they aren't exactly "." or ".."
+        #expect("..name.txt".deletingPathExtension() == "..name")
+        #expect("/..name.txt".deletingPathExtension() == "/..name")
+        #expect("....txt".deletingPathExtension() == "...")
+        #expect("/....txt".deletingPathExtension() == "/...")
+        #expect(".name.txt".deletingPathExtension() == ".name")
+        #expect("/.name.txt".deletingPathExtension() == "/.name")
 
         #expect("path.foo".deletingPathExtension() == "path")
         #expect("path.foo.zip".deletingPathExtension() == "path.foo")
