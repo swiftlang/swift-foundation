@@ -27,7 +27,7 @@ Foundation will add constants to support the new calendar types.
 
 Some calendars added by this proposal have a unique feature of "leap days", where two consecutive days can have the same numeric value. This new feature will have impact on APIs that search/match dates.
 
-This property will be called isAdhikaDay, to indicate it is used in Hindu calendars which are the only calendars that has this feature. More details about the naming is provided in the section `Alternatives considered` at the end of the document.
+This property will be called `isRepeatedDay`. More details about the naming is provided in the section `Alternatives considered` at the end of the document.
 
 ## Detailed design
 
@@ -86,7 +86,7 @@ Foundation will add new string constants for new calendar identifiers for NSCale
   }
 ```
 
-Following are the code changes required to support new calendar property isAdhikaDay
+Following are the code changes required to support new calendar property isRepeatedDay
 
 
 **Calendar.swift**
@@ -96,8 +96,17 @@ Following are the code changes required to support new calendar property isAdhik
 public enum Component : Sendable {
   // ...
   @available(FoundationPreview 6.2, *)
-  case isAdhikaDay
+  case isRepeatedDay
   // ....
+}
+```
+
+**DateComponents.swift**
+
+```swift
+extension DateComponents {
+    @available(FoundationPreview 6.2, *)
+    public var isRepeatedDay: Bool? { get set }
 }
 ```
 
@@ -113,7 +122,7 @@ Calendars used in India are introducing the new field for the leap day. Clients 
 var components = DateComponents()
 ```
 
-**Second**, the comparison for calendar dates will account for this field. Two dates differs if they don't have the same value for isAdhikaDay
+**Second**, the comparison for calendar dates will account for this field. Two dates differs if they don't have the same value for isRepeatedDay
 
 For example, the clients may currently use following check
 
@@ -121,11 +130,9 @@ For example, the clients may currently use following check
 cal.compare(d1, d2)
 ```
 
-For Hindu calendars, this would only compare equal if they're both Adhika day or if they are both not. For non-Hindu calendars, isAdhikaDay property will be ignored.
+For Hindu calendars, this would only compare equal if their year, month, day, and repeated day values are all the same. For non-Hindu calendars, isRepeatedDay property will be ignored.
 
-**Third**, the calendar date arithmetic will be updated to correctly calculate the dates regarding `adhikaDay`. When working with Hindu calendars, as the leap days can occur at any position, looking for next day would have to involve recalculation.
-
-As a general rule, behavior of `isAdhikaDay` will replicate `isLeapMonth` in APIs doing matching and searching.
+As a general rule, behavior of `isRepeatedDay` will replicate `isLeapMonth` in APIs doing matching and searching.
 
 For example, let's explain what is the expected behavior in this API that enumerate the next date
 
@@ -144,17 +151,17 @@ Clients using this function to enumerate the next date after `date`, matching th
 
 * If start is on a leap day
 
-* `strict`: If components.isAdhikaDay is true, this gives you the next date that is also a leap day that shares the same day, month, year number (i.e. all those specified with the comps argument) as start. If only a subset of `DateComponents` is specified, for example only the month, this gives you the next date which is a leap day with same month. If no arguments are given for `DateComponents`, this gives the next date that is also a leap day. If components.isAdhikaDay is false, this function gives you the next date that matches the day/month/year number but one that is not a leap day.
+* `strict`: If components.isRepeatedDay is true, this gives you the next date that is also a leap day that shares the same day, month, year number (i.e. all those specified with the comps argument) as start. If only a subset of `DateComponents` is specified, for example only the month, this gives you the next date which is a leap day with same month. If no arguments are given for `DateComponents`, this gives the next date that is also a leap day. If components.isRepeatedDay is false, this function gives you the next date that matches the day/month/year number but one that is not a leap day.
 
 * If start is not on a leap day
 
-* `strict`: If components.isAdhikaDay is true, this gives you the next date that is a leap day that shares the same day, month, year number (i.e. all those specified with the comps argument) as start but a leap day. If components.isAdhikaDay is false, this function gives you the next date that matches the day/month/year number that is not a leap day.
+* `strict`: If components.isRepeatedDay is true, this gives you the next date that is a leap day that shares the same day, month, year number (i.e. all those specified with the comps argument) as start but a leap day. If components.isRepeatedDay is false, this function gives you the next date that matches the day/month/year number that is not a leap day.
 
 For the `direction` and `repeatedTimePolicy`:
 
 * `backward`: This flag does not affect how leap day search is handled, but merely changes the search direction so that it finds the match before start rather than after start.
 
-* `first`: If there are two or more matching dates, and all their components are the same, including isAdhikaDay, the function returns the first date.
+* `first`: If there are two or more matching dates, and all their components are the same, including isRepeatedDay, the function returns the first date.
 
 * `last`: Similar to `first`, but the function returns the last match.
 
@@ -178,6 +185,6 @@ public func dates(byAdding components: DateComponents,
 
 As mentioned before, the leap day is a unique feature of some of new calendars. It appears when a certain astronomical position of Sun and Moon happens which means it can appear on any date. That differs from Gregorian leap day of February 29th, which happens every four years (approximately) and it is always on the same day.
 
-This property will be called isAdhikaDay to clearly indicate it is related to Hindu lunisolar calendars. The alternative was to call it isLeapDay, but that may lead to confusion with Gregorian calendar
+This property will be called isRepeatedDay to clearly indicate it is a day that repeats. The alternatives were to call it isLeapDay which might lead to confusion with Gregorian calendar, or isAdhikaDay which would be unclear for developers unfamiliar with Hindu calendar terminology.
 
 Another point of discussion was whether to use Bengali vs Bangla and Oriya vs Odia. There has been an effort to stop using the older colloquial names Bengali and Oriya and to switch to the now-accepted names Bangla and Odia. While most of the attention has gone to the language names, the same naming should also be used for the calendar names, despite them receiving less attention.
