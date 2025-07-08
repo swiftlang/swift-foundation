@@ -130,7 +130,6 @@ import Testing
         let result2 = (f3 - f2) + f1
         #expect(result2.completed < 60)
     }
-#endif
     
     @Test func subtractOverflow() {
         let f1 = ProgressFraction(completed: 9855, total: 225066)
@@ -147,6 +146,7 @@ import Testing
         let result = f1 * f2
         #expect(abs(Double(result!.completed) / Double(result!.total!) - 1.0) < 0.01)
     }
+#endif
     
     @Test func fractionFromDouble() {
         let d = 4.25 // exactly representable in binary
