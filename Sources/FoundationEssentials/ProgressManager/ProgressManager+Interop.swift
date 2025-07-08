@@ -183,7 +183,7 @@ internal final class _NSProgressParentBridge: Progress, @unchecked Sendable {
             properties.completedCount = Int(progressChild.completedUnitCount)
         }
         
-        let position = managerParent.addChild(child: ghostChild, portion: portion, childFraction: _ProgressFraction(completed: Int(completedUnitCount), total: Int(totalUnitCount)))
+        let position = managerParent.addChild(child: ghostChild, portion: portion, childFraction: ProgressFraction(completed: Int(completedUnitCount), total: Int(totalUnitCount)))
         
         ghostChild.addParent(parent: managerParent, positionInParent: position)
     }

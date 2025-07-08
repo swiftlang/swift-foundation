@@ -45,7 +45,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal struct ChildState {
         var child: ProgressManager
         var portionOfTotal: Int
-        var childFraction: _ProgressFraction
+        var childFraction: ProgressFraction
         var isDirty: Bool
         var childProperties: [AnyMetatypeWrapper: PropertyState]
     }
@@ -69,12 +69,12 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     internal struct State {
         var interopChild: ProgressManager? // read from this if self is actually an interop ghost
-        var selfFraction: _ProgressFraction
-        var overallFraction: _ProgressFraction {
+        var selfFraction: ProgressFraction
+        var overallFraction: ProgressFraction {
             var overallFraction = selfFraction
             for child in children {
                 if !child.childFraction.isFinished {
-                    overallFraction = overallFraction + ((_ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total) * child.childFraction)!)
+                    overallFraction = overallFraction + ((ProgressFraction(completed: child.portionOfTotal, total: selfFraction.total) * child.childFraction)!)
                 }
             }
             return overallFraction
@@ -222,7 +222,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal init(total: Int?, progressParentProgressManagerChildMessenger: ProgressManager?, managerObservation: _ProgressParentProgressManagerChild?) {
         let state = State(
             interopChild: nil,
-            selfFraction: _ProgressFraction(completed: 0, total: total),
+            selfFraction: ProgressFraction(completed: 0, total: total),
             children: [],
             parents: [],
             properties: [:],
@@ -327,7 +327,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
             var values = Values(manager: self, state: state)
             // This is done to avoid copy on write later
             state = State(
-                selfFraction: _ProgressFraction(),
+                selfFraction: ProgressFraction(),
                 children: [],
                 parents: [],
                 properties: [:],
@@ -342,7 +342,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     //MARK: Fractional Properties Methods
-    internal func getProgressFraction() -> _ProgressFraction {
+    internal func getProgressFraction() -> ProgressFraction {
         return state.withLock { state in
             return state.selfFraction
         }
@@ -426,7 +426,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         markSelfDirty(parents: parents)
     }
     
-    private func getUpdatedProgressFraction() -> _ProgressFraction {
+    private func getUpdatedProgressFraction() -> ProgressFraction {
         return state.withLock { state in
             updateChildrenProgressFractionLocked(state: &state)
             return state.overallFraction
@@ -510,7 +510,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     //MARK: Parent - Child Relationship Methods
-    internal func addChild(child: ProgressManager, portion: Int, childFraction: _ProgressFraction) -> Int {
+    internal func addChild(child: ProgressManager, portion: Int, childFraction: ProgressFraction) -> Int {
         let index = state.withLock { state in
             let childState = ChildState(child: child, portionOfTotal: portion, childFraction: childFraction, isDirty: true, childProperties: [:])
             state.children.append(childState)
