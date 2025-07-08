@@ -611,6 +611,7 @@ private func _fromNSCalendarUnits(_ units : NSCalendar.Unit) -> Set<Calendar.Com
     if units.contains(.calendar) { result.insert(.calendar) }
     if units.contains(.timeZone) { result.insert(.timeZone) }
     if units.contains(.deprecatedWeekUnit) { result.insert(.weekOfYear) }
+    if units.contains(.isRepeatedDay) { result.insert(.isRepeatedDay)}
     return result
 }
 
@@ -635,6 +636,7 @@ private func _fromNSCalendarUnit(_ unit: NSCalendar.Unit) -> Calendar.Component?
     case .timeZone: return .timeZone
     case .deprecatedWeekUnit: return .weekOfYear
     case .isLeapMonth: return .isLeapMonth
+    case .isRepeatedDay: return .isRepeatedDay
     default:
         return nil
     }

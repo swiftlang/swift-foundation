@@ -38,6 +38,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     internal var _weekOfYear: Int?
     internal var _yearForWeekOfYear: Int?
     internal var _isLeapMonth: Bool?
+    internal var _isRepeatedDay: Bool?
 
     /// Initialize a `DateComponents`, optionally specifying values for its fields.
     public init(calendar: Calendar? = nil,
@@ -95,7 +96,8 @@ public struct DateComponents : Hashable, Equatable, Sendable {
          rawWeekOfYear: Int? = nil,
          rawYearForWeekOfYear: Int? = nil,
          rawDayOfYear: Int? = nil,
-         isLeapMonth: Bool? = nil) {
+         isLeapMonth: Bool? = nil,
+         isRepeatedDay: Bool? = nil) {
 
         // Be sure to set the time zone of the calendar if appropriate
         if var calendar, let timeZone {
@@ -124,11 +126,12 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         _yearForWeekOfYear = rawYearForWeekOfYear
         _dayOfYear = rawDayOfYear
         _isLeapMonth = isLeapMonth
+        _isRepeatedDay = isRepeatedDay
     }
 
     package init?(component: Calendar.Component, value: Int) {
         switch component {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         default:
             setValue(value, for: component)
@@ -299,7 +302,14 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         get { _isLeapMonth }
         set { _isLeapMonth = newValue }
     }
-    
+
+    /// Set to true if these components represent a repeated day.
+    @available(FoundationPreview 6.2, *)
+    public var isRepeatedDay: Bool? {
+        get { _isRepeatedDay }
+        set { _isRepeatedDay = newValue }
+    }
+
     /// Returns a `Date` calculated from the current components using the `calendar` property.
     public var date: Date? {
         guard let calendar = _calendar else { return nil }
@@ -317,7 +327,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 
     /// Set the value of one of the properties, using an enumeration value instead of a property name.
     ///
-    /// The calendar and timeZone and isLeapMonth properties cannot be set by this method.
+    /// The calendar, timeZone, isLeapMonth, and isRepeatedDay properties cannot be set by this method.
     @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public mutating func setValue(_ value: Int?, for component: Calendar.Component) {
         switch component {
@@ -336,7 +346,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         case .yearForWeekOfYear: self.yearForWeekOfYear = value
         case .nanosecond: self.nanosecond = value
         case .dayOfYear: self.dayOfYear = value
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             // Do nothing
             break
         }
@@ -344,7 +354,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
 
     /// Returns the value of one of the properties, using an enumeration value instead of a property name.
     ///
-    /// The calendar and timeZone and isLeapMonth property values cannot be retrieved by this method.
+    /// The calendar, timeZone, isLeapMonth, and isRepeatedDay property values cannot be retrieved by this method.
     @available(macOS 10.9, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func value(for component: Calendar.Component) -> Int? {
         switch component {
@@ -363,7 +373,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         case .yearForWeekOfYear: return self.yearForWeekOfYear
         case .nanosecond: return self.nanosecond
         case .dayOfYear: return self.dayOfYear
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         }
     }
@@ -477,6 +487,7 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         hasher.combine(_weekOfYear)
         hasher.combine(_yearForWeekOfYear)
         hasher.combine(_isLeapMonth)
+        hasher.combine(_isRepeatedDay)
         hasher.combine(_dayOfYear)
     }
 
@@ -507,6 +518,10 @@ public struct DateComponents : Hashable, Equatable, Sendable {
         if !((lhs.isLeapMonth == false && rhs.isLeapMonth == nil) ||
              (lhs.isLeapMonth == nil && rhs.isLeapMonth == false) ||
              (lhs.isLeapMonth == rhs.isLeapMonth)) {
+            return false
+        }
+
+        if lhs.isRepeatedDay != rhs.isRepeatedDay {
             return false
         }
 
@@ -550,6 +565,7 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
         if let r = dayOfYear { c.append((label: "dayOfYear", value: r)) }
         if let r = yearForWeekOfYear { c.append((label: "yearForWeekOfYear", value: r)) }
         if let r = isLeapMonth { c.append((label: "isLeapMonth", value: r)) }
+        if let r = isRepeatedDay { c.append((label: "isRepeatedDay", value: r)) }
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
@@ -574,6 +590,7 @@ extension DateComponents : Codable {
         case weekOfYear
         case yearForWeekOfYear
         case isLeapMonth
+        case isRepeatedDay
         case dayOfYear
     }
 
@@ -598,6 +615,7 @@ extension DateComponents : Codable {
         let yearForWeekOfYear = try container.decodeIfPresent(Int.self, forKey: .yearForWeekOfYear)
 
         let isLeapMonth = try container.decodeIfPresent(Bool.self, forKey: .isLeapMonth)
+        let isRepeatedDay = try container.decodeIfPresent(Bool.self, forKey: .isRepeatedDay)
 
         let dayOfYear = try container.decodeIfPresent(Int.self, forKey: .dayOfYear)
         
@@ -620,6 +638,10 @@ extension DateComponents : Codable {
 
         if let isLeapMonth {
             self.isLeapMonth = isLeapMonth
+        }
+
+        if let isRepeatedDay {
+            self.isRepeatedDay = isRepeatedDay
         }
         
         if let dayOfYear {
@@ -646,6 +668,7 @@ extension DateComponents : Codable {
         try container.encodeIfPresent(self.weekOfYear, forKey: .weekOfYear)
         try container.encodeIfPresent(self.yearForWeekOfYear, forKey: .yearForWeekOfYear)
         try container.encodeIfPresent(self.isLeapMonth, forKey: .isLeapMonth)
+        try container.encodeIfPresent(self.isRepeatedDay, forKey: .isRepeatedDay)
         try container.encodeIfPresent(self.dayOfYear, forKey: .dayOfYear)
     }
 }
@@ -685,6 +708,7 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
         if let _yearForWeekOfYear { ns.yearForWeekOfYear = _yearForWeekOfYear }
         if let _dayOfYear { ns.dayOfYear = _dayOfYear }
         if let _isLeapMonth { ns.isLeapMonth = _isLeapMonth }
+        if let _isRepeatedDay { ns.isRepeatedDay = _isRepeatedDay}
         if let _week { __NSDateComponentsSetWeek(ns, _week) }
         return ns
     }
@@ -716,6 +740,9 @@ extension DateComponents : ReferenceConvertible, _ObjectiveCBridgeable {
         if ns.dayOfYear != NSInteger.max { dc.dayOfYear = ns.dayOfYear }
         if (__NSDateComponentsIsLeapMonthSet(ns)) {
             dc.isLeapMonth = ns.isLeapMonth
+        }
+        if (__NSDateComponentsIsRepeatedDaySet(ns)) {
+            dc.isRepeatedDay = ns.isRepeatedDay
         }
         if (__NSDateComponentsWeek(ns) != NSInteger.max) {
             dc._week = __NSDateComponentsWeek(ns)

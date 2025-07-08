@@ -57,6 +57,18 @@ private struct DateComponentsTests {
         #expect(components.isLeapMonth == true)
     }
 
+    @Test func test_repeatedDay() {
+        var components = DateComponents()
+        components.day = 1
+
+        #expect(components.isRepeatedDay == nil)
+
+        components.isRepeatedDay = true
+
+        #expect(components.day == 1)
+        #expect(components.isRepeatedDay == true)
+    }
+
     @Test func valueForComponent() {
         let comps = DateComponents(calendar: nil, timeZone: nil, era: 1, year: 2013, month: 4, day: 2, hour: 20, minute: 33, second: 49, nanosecond: 192837465, weekday: 3, weekdayOrdinal: 1, quarter: nil, weekOfMonth: 1, weekOfYear: 14, yearForWeekOfYear: 2013)
 
