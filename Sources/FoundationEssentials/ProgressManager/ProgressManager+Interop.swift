@@ -58,7 +58,6 @@ extension Progress {
     ///   - count: Number of units delegated from `self`'s `totalCount`.
     public func addChild(_ reporter: ProgressReporter, withPendingUnitCount count: Int) {
         
-        // Need to detect cycle here
         precondition(self.isCycle(reporter: reporter) == false, "Creating a cycle is not allowed.")
         
         // Make intermediary & add it to NSProgress parent's children list
