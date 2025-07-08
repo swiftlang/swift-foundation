@@ -132,6 +132,22 @@ import Testing
     }
 #endif
     
+    @Test func subtractOverflow() {
+        let f1 = ProgressFraction(completed: 9855, total: 225066)
+        let f2 = ProgressFraction(completed: 14985363210613129, total: 56427817205760000)
+        
+        let result = f2 - f1
+        #expect(abs(Double(result.completed) / Double(result.total!) - 0.2217) < 0.01)
+    }
+    
+    @Test func multiplyOverflow() {
+        let f1 = ProgressFraction(completed: 4294967279, total: 4294967291)
+        let f2 = ProgressFraction(completed: 4294967279, total: 4294967291)
+        
+        let result = f1 * f2
+        #expect(abs(Double(result!.completed) / Double(result!.total!) - 1.0) < 0.01)
+    }
+    
     @Test func fractionFromDouble() {
         let d = 4.25 // exactly representable in binary
         let f1 = ProgressFraction(double: d)
