@@ -42,24 +42,33 @@ let featureSettings: [SwiftSetting] = [
     .enableUpcomingFeature("MemberImportVisibility")
 ]
 
-var dependencies: [Package.Dependency] {
-    if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] != nil {
+var dependencies: [Package.Dependency] = []
+
+if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLocalDepsEnv.isEmpty {
+    let root: String
+    if useLocalDepsEnv == "1" {
+        root = ".."
+    } else {
+        root = useLocalDepsEnv
+    }
+    dependencies += 
         [
             .package(
                 name: "swift-collections",
-                path: "../swift-collections"),
+                path: "\(root)/swift-collections"),
             .package(
                 name: "swift-foundation-icu",
-                path: "../swift-foundation-icu"),
+                path: "\(root)/swift-foundation-icu"),
             .package(
                 name: "swift-syntax",
-                path: "../swift-syntax")
+                path: "\(root)/swift-syntax")
         ]
-    } else {
+} else {
+    dependencies += 
         [
             .package(
                 url: "https://github.com/apple/swift-collections",
-                from: "1.1.0"),
+                branch: "main"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
                 branch: "main"),
@@ -67,7 +76,6 @@ var dependencies: [Package.Dependency] {
                 url: "https://github.com/swiftlang/swift-syntax",
                 branch: "main")
         ]
-    }
 }
 
 let wasiLibcCSettings: [CSetting] = [
