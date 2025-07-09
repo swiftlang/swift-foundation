@@ -411,9 +411,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     private func markSelfDirty(parents: [ParentState]) {
-        if parents.count > 0 {
-            for parentState in parents {
-                parentState.parent.markChildDirty(at: parentState.positionInParent)
+        _$observationRegistrar.withMutation(of: self, keyPath: \.fractionCompleted) {
+            if parents.count > 0 {
+                for parentState in parents {
+                    parentState.parent.markChildDirty(at: parentState.positionInParent)
+                }
             }
         }
     }
