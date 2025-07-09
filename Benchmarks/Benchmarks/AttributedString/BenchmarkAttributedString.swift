@@ -423,12 +423,20 @@ let benchmarks = {
     let manyAttributesSubstring = manyAttributesString[manyAttributesStringRange]
     let manyAttributes2Substring = manyAttributesString2[manyAttributesStringRange]
 
+    Benchmark("equalityShared") { benchmark in
+        blackHole(manyAttributesString == manyAttributesString)
+    }
+
     Benchmark("equality") { benchmark in
         blackHole(manyAttributesString == manyAttributesString2)
     }
-    
+
     Benchmark("equalityDifferingCharacters") { benchmark in
         blackHole(manyAttributesString == manyAttributesString3)
+    }
+
+    Benchmark("substringEqualityShared") { benchmark in
+        blackHole(manyAttributesSubstring == manyAttributesSubstring)
     }
     
     Benchmark("substringEquality") { benchmark in
