@@ -44,7 +44,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     internal struct ChildState {
-        var child: ProgressManager
+        weak var child: ProgressManager?
         var portionOfTotal: Int
         var childFraction: ProgressFraction
         var isDirty: Bool
@@ -52,7 +52,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     }
     
     internal struct ParentState {
-        weak var parent: ProgressManager?
+        var parent: ProgressManager
         var positionInParent: Int
     }
     
@@ -414,7 +414,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     private func markSelfDirty(parents: [ParentState]) {
         if parents.count > 0 {
             for parentState in parents {
-                parentState.parent?.markChildDirty(at: parentState.positionInParent)
+                parentState.parent.markChildDirty(at: parentState.positionInParent)
             }
         }
     }
@@ -438,13 +438,22 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         if state.children.count > 0 {
             for i in 0..<state.children.count {
                 if state.children[i].isDirty {
-                    let updatedProgressFraction = state.children[i].child.getUpdatedProgressFraction()
-                    state.children[i] = ChildState(child: state.children[i].child,
-                                                   portionOfTotal: state.children[i].portionOfTotal,
-                                                   childFraction: updatedProgressFraction,
-                                                   isDirty: false,
-                                                   childProperties: state.children[i].childProperties)
-                    if updatedProgressFraction.isFinished {
+                    if let child = state.children[i].child {
+                        let updatedProgressFraction = child.getUpdatedProgressFraction()
+                        state.children[i] = ChildState(child: child,
+                                                       portionOfTotal: state.children[i].portionOfTotal,
+                                                       childFraction: updatedProgressFraction,
+                                                       isDirty: false,
+                                                       childProperties: state.children[i].childProperties)
+                        if updatedProgressFraction.isFinished {
+                            state.selfFraction.completed += state.children[i].portionOfTotal
+                        }
+                    } else {
+                        state.children[i] = ChildState(child: nil,
+                                                       portionOfTotal: state.children[i].portionOfTotal,
+                                                       childFraction: state.children[i].childFraction,
+                                                       isDirty: false,
+                                                       childProperties: state.children[i].childProperties)
                         state.selfFraction.completed += state.children[i].portionOfTotal
                     }
                 }
@@ -456,7 +465,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     private func markSelfDirty<P: Property>(property: P.Type, parents: [ParentState]) {
         if parents.count > 0 {
             for parentState in parents {
-                parentState.parent?.markChildDirty(property: property, at: parentState.positionInParent)
+                parentState.parent.markChildDirty(property: property, at: parentState.positionInParent)
             }
         }
     }
@@ -480,24 +489,36 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                     let propertyState = state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]
                     if let childPropertyState = propertyState {
                         if childPropertyState.isDirty {
-                            let updatedValues = state.children[i].child.getUpdatedValues(property: property, includeSelf: true)
-                            let updatedPropertyState = PropertyState(value: updatedValues, isDirty: false)
-                            state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]! = updatedPropertyState
-                            values += updatedValues
+                            if let child = state.children[i].child {
+                                let updatedValues = child.getUpdatedValues(property: property, includeSelf: true)
+                                let updatedPropertyState = PropertyState(value: updatedValues, isDirty: false)
+                                state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]! = updatedPropertyState
+                                values += updatedValues
+                            } else {
+                                values += childPropertyState.value as? [P.Value] ?? [P.defaultValue]
+                            }
                         } else {
                             values += childPropertyState.value as? [P.Value] ?? [P.defaultValue]
                         }
                     } else {
-                        let childValues = state.children[i].child.getUpdatedValues(property: property, includeSelf: true)
-                        let childPropertyState = PropertyState(value: childValues, isDirty: false)
-                        state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] = childPropertyState
-                        values += childValues
+                        if let child = state.children[i].child {
+                            let childValues = child.getUpdatedValues(property: property, includeSelf: true)
+                            let childPropertyState = PropertyState(value: childValues, isDirty: false)
+                            state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] = childPropertyState
+                            values += childValues
+                        }
                     }
                 }
             }
             return values
         }
         return values
+    }
+    
+    private func setPropertyState<P: Property>(property: P.Type, value: [P.Value], at position: Int) {
+        state.withLock { state in
+            state.children[position].childProperties[AnyMetatypeWrapper(metatype: property)] = PropertyState(value: value, isDirty: false)
+        }
     }
     
     internal func getProperties<T, E: Error>(
@@ -537,8 +558,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         
         return state.withLock { state in
             for parentState in state.parents {
-                if !updatedVisited.contains(parentState.parent!) {
-                    if ((parentState.parent?.isCycle(reporter: reporter, visited: updatedVisited)) != nil) {
+                if !updatedVisited.contains(parentState.parent) {
+                    if (parentState.parent.isCycle(reporter: reporter, visited: updatedVisited)) {
                         return true
                     }
                 }
@@ -550,8 +571,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     internal func isCycleInterop(visited: Set<ProgressManager> = []) -> Bool {
         return state.withLock { state in
             for parentState in state.parents {
-                if !visited.contains(parentState.parent!) {
-                    if ((parentState.parent?.isCycle(reporter: reporter, visited: visited)) != nil) {
+                if !visited.contains(parentState.parent) {
+                    if (parentState.parent.isCycle(reporter: reporter, visited: visited)) {
                         return true
                     }
                 }
@@ -611,6 +632,24 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 }
             }
         }
+        
+        let parents = state.withLock { state in
+            return state.parents
+        }
+        
+        for parentState in parents {
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.TotalFileCount.self, value: self.values(of: ProgressManager.Properties.TotalFileCount.self), at: parentState.positionInParent)
+            
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.CompletedFileCount.self, value: self.values(of: ProgressManager.Properties.CompletedFileCount.self), at: parentState.positionInParent)
+            
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.TotalByteCount.self, value: self.values(of: ProgressManager.Properties.TotalByteCount.self), at: parentState.positionInParent)
+
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.CompletedByteCount.self, value: self.values(of: ProgressManager.Properties.CompletedByteCount.self), at: parentState.positionInParent)
+            
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.Throughput.self, value: self.values(of: ProgressManager.Properties.Throughput.self), at: parentState.positionInParent)
+            
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.EstimatedTimeRemaining.self, value: self.values(of: ProgressManager.Properties.EstimatedTimeRemaining.self), at: parentState.positionInParent)
+        }
     }
 }
     
@@ -650,3 +689,4 @@ extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible
     }
 }
 #endif
+// - this has a problem because it breaks additional properties when this happens, specifically when developers declare their own additional property type 
