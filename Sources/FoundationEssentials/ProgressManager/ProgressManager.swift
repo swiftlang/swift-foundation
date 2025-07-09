@@ -62,14 +62,14 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     
     internal struct InteropObservation {
         let progressParentProgressManagerChild: _ProgressParentProgressManagerChild?
-        var progressParentProgressReporterChild: _ProgressParentProgressReporterChild? // Set when setInteropObservationForReporter is called
+        var progressParentProgressReporterChild: _ProgressParentProgressReporterChild?
         #if FOUNDATION_FRAMEWORK
-        var parentBridge: Foundation.Progress? // Set when setParentBridge is called
+        var parentBridge: Foundation.Progress?
         #endif
     }
     
     internal struct State {
-        var interopChild: ProgressManager? // read from this if self is actually an interop ghost
+        var interopChild: ProgressManager?
         var selfFraction: ProgressFraction
         var overallFraction: ProgressFraction {
             var overallFraction = selfFraction
@@ -583,7 +583,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    internal func setInteropObservationForReporter(observation reporterObservation: _ProgressParentProgressReporterChild) {
+    internal func setInteropObservationReporter(observation reporterObservation: _ProgressParentProgressReporterChild) {
         state.withLock { state in
             state.interopObservation.progressParentProgressReporterChild = reporterObservation
         }

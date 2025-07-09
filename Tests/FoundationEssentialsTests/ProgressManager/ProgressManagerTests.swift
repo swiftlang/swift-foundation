@@ -147,7 +147,7 @@ import Testing
     
     /// MARK: Tests multiple-level trees
     @Test func emptyDiscreteManager() async throws {
-        let manager =  ProgressManager(totalCount: nil)
+        let manager = ProgressManager(totalCount: nil)
         #expect(manager.isIndeterminate == true)
         
         manager.withProperties { p in

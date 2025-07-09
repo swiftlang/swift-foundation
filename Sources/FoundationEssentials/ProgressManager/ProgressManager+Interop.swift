@@ -70,7 +70,7 @@ extension Progress {
             intermediary: ghostProgressParent,
             reporter: reporter
         )
-        reporter.manager.setInteropObservationForReporter(observation: reporterObservation)
+        reporter.manager.setInteropObservationReporter(observation: reporterObservation)
     }
     
     // MARK: Cycle detection
