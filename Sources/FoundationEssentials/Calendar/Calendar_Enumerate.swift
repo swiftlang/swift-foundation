@@ -149,7 +149,7 @@ extension DateComponents {
             guard calendar.value(v, isValidFor: .nanosecond) else { return false }
         }
 
-        if !hasAtLeastOneFieldSet && (isLeapMonth ?? false) {
+        if !hasAtLeastOneFieldSet && !(isLeapMonth ?? false) && !(isRepeatedDay ?? false) {
             return false
         }
 
@@ -217,6 +217,7 @@ extension DateComponents {
         if self.yearForWeekOfYear != nil { units.insert(.yearForWeekOfYear) }
         if self.dayOfYear != nil { units.insert(.dayOfYear) }
         if self.nanosecond != nil { units.insert(.nanosecond) }
+        if self.isRepeatedDay != nil { units.insert(.isRepeatedDay) }
         return units
     }
 
@@ -1205,7 +1206,6 @@ extension Calendar {
 
         // We need to check for leap* situations
         let isGregorianCalendar = identifier == .gregorian
-        let isChineseCalendar = identifier == .chinese
 
         if nextHighestUnit == .year || leapMonthMismatch {
             let desiredMonth = compsToMatch.month
@@ -1216,7 +1216,7 @@ extension Calendar {
                 return matchDate
             }
 
-            if isChineseCalendar {
+            if hasRepeatingMonths {
                 if leapMonthMismatch {
                     return try _adjustedDateForMismatchedChineseLeapMonth(start: start, searchingDate: searchingDate, matchDate: matchDate, matchingComponents: matchingComponents, compsToMatch: compsToMatch, direction: direction, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, isExactMatch: &isExactMatch, isLeapDay: &isLeapDay)
                 } else {
@@ -1624,8 +1624,7 @@ extension Calendar {
             return nil
         }
 
-        let isChineseCalendar = self.identifier == .chinese
-        let isLeapMonthDesired = isChineseCalendar && (components.isLeapMonth ?? false)
+        let isLeapMonthDesired = hasRepeatingMonths && (components.isLeapMonth ?? false)
 
         // After this point, result is at least startDate
         var result = startDate
@@ -1661,7 +1660,7 @@ extension Calendar {
             } while month != dateMonth
         }
 
-        // As far as we know, this is only relevant for the Chinese calendar.  In that calendar, the leap month has the same month number as the preceding month.
+        // This is relevant for the Chinese, Vietnamese, Korean, and Hindu lunisolar calendars.  In those calendars, the leap month has the same month number as the preceding month.
         // If we're searching forwards in time looking for a leap month, we need to skip the first occurrence we found of that month number because the first occurrence would not be the leap month; however, we only do this is if we are matching strictly. If we don't care about strict matching, we can skip this and let the caller handle it so it can deal with the approximations if necessary.
         if isLeapMonthDesired && strictMatching {
             // Check to see if we are already at a leap month
@@ -1956,14 +1955,27 @@ extension Calendar {
         return result
     }
 
+    internal func dayMatches(day: Int?, dateDay: Int,
+                             repeatedDay: Bool?, dateRepeatedDay: Bool) -> Bool {
+        // the intent here is to match day if the target component's day is not nil
+        // and to match isRepeatedDay if the target component's isRepeated day is not nil
+        let dayMatch = day == nil || day == dateDay
+        let repeatedMatch = repeatedDay == nil || repeatedDay == dateRepeatedDay
+        return dayMatch && repeatedMatch
+    }
+
     internal func dateAfterMatchingDay(startingAt startDate: Date, originalStartDate: Date, components comps: DateComponents, direction: SearchDirection) throws -> Date? {
-        guard let day = comps.day else {
+        let day = comps.day
+        let repeatedDay = comps.isRepeatedDay
+
+        guard day != nil || repeatedDay == true else {
             // Nothing to do
             return nil
         }
 
         var result = startDate
         var dateDay = component(.day, from: result)
+        var dateIsRepeatedDay = _dateComponents(.isRepeatedDay, from: result).isRepeatedDay ?? false
         let month = comps.month
 
         if month != nil && direction == .backward {
@@ -1978,12 +1990,13 @@ extension Calendar {
                     if let anotherFoundRange = dateInterval(of: .day, for: tempSearchDate) {
                         result = anotherFoundRange.start
                         dateDay = component(.day, from: result)
+                        dateIsRepeatedDay = _dateComponents(.isRepeatedDay, from: result).isRepeatedDay ?? false
                     }
                 }
             }
         }
 
-        if day != dateDay {
+        if !dayMatches(day: day, dateDay: dateDay, repeatedDay: repeatedDay, dateRepeatedDay: dateIsRepeatedDay)  {
             // The condition below keeps us from blowing past a month day by day to find a day which does not exist.
             // e.g. trying to find the 30th of February starting in January would go to March 30th if we don't stop here
             let originalMonth = component(.month, from: result)
@@ -2028,6 +2041,7 @@ extension Calendar {
                  }
 
                 dateDay = component(.day, from: tempSearchDate)
+                dateIsRepeatedDay = _dateComponents(.isRepeatedDay, from: tempSearchDate).isRepeatedDay ?? false
                 let dateMonth = component(.month, from: tempSearchDate)
 
                 try verifyAdvancingResult(tempSearchDate, previous: result, direction: direction)
@@ -2039,7 +2053,7 @@ extension Calendar {
                     break
                 }
                 
-            } while day != dateDay
+            } while !dayMatches(day: day, dateDay: dateDay, repeatedDay: repeatedDay, dateRepeatedDay: dateIsRepeatedDay)
 
             // If we blew past a month in its entirety, roll back by a day to the very end of the month.
             if (advancedPastWholeMonth) {
@@ -2456,7 +2470,7 @@ extension Calendar.Component {
             return .yearForWeekOfYear
         case .quarter, .isLeapMonth, .month, .dayOfYear:
             return .year
-        case .day, .weekOfMonth, .weekdayOrdinal:
+        case .day, .weekOfMonth, .weekdayOrdinal, .isRepeatedDay:
             return .month
         case .weekday:
             return .weekOfMonth

@@ -350,8 +350,9 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         case .weekOfYear: 1..<53
         case .yearForWeekOfYear: 140742..<140743
         case .nanosecond: 0..<1000000000
-        // There is no leap month in Gregorian calendar
+        // There is no leap month or repeated day in Gregorian calendar
         case .isLeapMonth: 0..<1
+        case .isRepeatedDay: 0..<1
         case .dayOfYear: 1..<366
         case .calendar, .timeZone:
             nil
@@ -382,6 +383,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         case .yearForWeekOfYear: return 140742..<144684
         case .nanosecond: return 0..<1000000000
         case .isLeapMonth: return 0..<1
+        case .isRepeatedDay: return 0..<1
         case .dayOfYear: return 1..<367
         case .calendar, .timeZone:
             return nil
@@ -721,6 +723,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             return nil
         case .isLeapMonth:
             return nil
+        case .isRepeatedDay:
+            return nil
         }
     }
 
@@ -868,7 +872,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         var effectiveUnit = unit
         switch effectiveUnit {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
             if time < -63113904000.0 {
@@ -1447,7 +1451,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         let time = date.timeIntervalSinceReferenceDate
         var effectiveUnit = component
         switch effectiveUnit {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
             if time < -63113904000.0 {
@@ -2329,7 +2333,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             // TODO: This isn't supported in Calendar_ICU either. We should do it here though.
             return date
             // nothing to do for the below fields
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return date
         case .day, .dayOfYear, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .nanosecond:
             // Handle below
@@ -2376,7 +2380,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             nanoseconds = Double(amount) / 1_000_000_000.0
             keepWallTime = false
 
-        case .era, .year, .month, .quarter, .yearForWeekOfYear, .calendar, .timeZone, .isLeapMonth:
+        case .era, .year, .month, .quarter, .yearForWeekOfYear, .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             preconditionFailure("Should not reach")
         }
 
@@ -2731,7 +2735,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
 
         case .nanosecond:
             return date + (Double(amount) * 1.0e-9)
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return date
         }
 
@@ -2896,7 +2900,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         }
 
         switch component {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             preconditionFailure("Invalid arguments")
 
         case .era:
@@ -3078,7 +3082,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
                     dc.setValue(end > start ? Int(Int32.max) : Int(Int32.min), for: component)
                 }
 
-            case .timeZone, .isLeapMonth, .calendar:
+            case .timeZone, .isLeapMonth, .isRepeatedDay, .calendar:
                 // No leap month support needed here, since these are quantities, not values
                 break
             case .quarter:
