@@ -597,10 +597,7 @@ extension _ProcessInfo {
     }
 
     private static func _getProcessName() -> String {
-        guard let processPath = CommandLine.arguments.first else {
-            return ""
-        }
-        return processPath.lastPathComponent
+        return Platform.getFullExecutablePath()?.lastPathComponent ?? ""
     }
 
 #if os(macOS)
