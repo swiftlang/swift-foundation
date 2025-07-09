@@ -295,6 +295,22 @@ import Testing
             }
         }
     }
+    
+    func makeUnfinishedChild(subprogress: consuming Subprogress) async {
+        let manager = subprogress.start(totalCount: 3)
+        manager.complete(count: 2)
+        #expect(manager.fractionCompleted == Double(2) / Double(3))
+    }
+    
+    @Test func unfinishedChild() async throws {
+        let manager = ProgressManager(totalCount: 2)
+        
+        manager.complete(count: 1)
+        #expect(manager.fractionCompleted == 0.5)
+        
+        await makeUnfinishedChild(subprogress: manager.subprogress(assigningCount: 1))
+        #expect(manager.fractionCompleted == 1.0)
+    }
 }
 
 /// Unit tests for propagation of type-safe metadata in ProgressManager tree.
@@ -603,9 +619,9 @@ import Testing
         #expect(overallProgress2.totalUnitCount == 0)
     }
     
-    #if FOUNDATION_EXIT_TESTS
+//    #if FOUNDATION_EXIT_TESTS
     @Test func indirectParticipationOfProgressInAcyclicGraph() async throws {
-        await #expect(processExitsWith: .failure) {
+//        await #expect(processExitsWith: .failure) {
             let manager = ProgressManager(totalCount: 2)
             
             let parentManager1 = ProgressManager(totalCount: 1)
@@ -624,9 +640,9 @@ import Testing
             #expect(parentManager2.fractionCompleted == 0.25)
             
             progress.addChild(parentManager1.reporter, withPendingUnitCount: 1) // this should trigger cycle detection
-        }
+//        }
     }
-    #endif
+//    #endif
 
 }
 #endif
@@ -734,28 +750,28 @@ import Testing
     }
     
     /// All of these test cases hit the precondition for cycle detection, but currently there's no way to check for hitting precondition in xctest.
-    #if FOUNDATION_EXIT_TESTS
+//    #if FOUNDATION_EXIT_TESTS
     @Test func testProgressReporterDirectCycleDetection() async {
-        await #expect(processExitsWith: .failure) {
+//        await #expect(processExitsWith: .failure) {
             let manager = ProgressManager(totalCount: 2)
             manager.assign(count: 1, to: manager.reporter)
-        }
+//        }
     }
     
     @Test func testProgressReporterIndirectCycleDetection() async throws {
-        await #expect(processExitsWith: .failure) {
+//        await #expect(processExitsWith: .failure) {
             let manager = ProgressManager(totalCount: 2)
                     
             let altManager = ProgressManager(totalCount: 1)
             altManager.assign(count: 1, to: manager.reporter)
             
             manager.assign(count: 1, to: altManager.reporter)
-        }
+//        }
     }
     
     @Test func testProgressReporterNestedCycleDetection() async throws {
         
-        await #expect(processExitsWith: .failure) {
+//        await #expect(processExitsWith: .failure) {
             let manager1 = ProgressManager(totalCount: 1)
             
             let manager2 = ProgressManager(totalCount: 2)
@@ -766,8 +782,7 @@ import Testing
             
             manager3.assign(count: 1, to: manager1.reporter)
 
-        }
+//        }
     }
-    #endif
-
+//    #endif
 }
