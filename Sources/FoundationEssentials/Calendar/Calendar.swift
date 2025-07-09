@@ -323,10 +323,10 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case nanosecond
         case calendar
         case timeZone
-        @available(FoundationPreview 0.1, *)
+        @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         case isLeapMonth
         
-        @available(FoundationPreview 0.4, *)
+        @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         case dayOfYear
         
         fileprivate var componentSetValue: ComponentSet.RawValue {
@@ -620,7 +620,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter value: The value of the specified component to add or subtract. The default value is `1`. The value can be negative, which causes subtraction.
     /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
     /// - returns: A `Sequence` of `Date` values, or an empty sequence if no addition could be performed.
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public func dates(byAdding component: Calendar.Component,
                       value: Int = 1,
                       startingAt start: Date,
@@ -641,7 +641,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter components: The components to add or subtract.
     /// - parameter wrappingComponents: If `true`, the component should be incremented and wrap around to zero/one on overflow, and should not cause higher components to be incremented. The default value is `false`.
     /// - returns: A `Sequence` of `Date` values, or an empty sequence if no addition could be performed.
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public func dates(byAdding components: DateComponents,
                       startingAt start: Date,
                       in range: Range<Date>? = nil,
@@ -1222,7 +1222,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - parameter matchingPolicy: Determines the behavior of the search algorithm when the input produces an ambiguous result.
     /// - parameter repeatedTimePolicy: Determines the behavior of the search algorithm when the input produces a time that occurs twice on a particular day.
     /// - parameter direction: Which direction in time to search. The default value is `.forward`, which means later in time.
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public func dates(byMatching components: DateComponents,
                       startingAt start: Date,
                       in range: Range<Date>? = nil,
@@ -1617,7 +1617,7 @@ package struct WeekendRange: Equatable, Hashable {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.MatchingPolicy: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -1650,7 +1650,7 @@ extension Calendar.MatchingPolicy: Codable {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RepeatedTimePolicy: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()

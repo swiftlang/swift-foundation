@@ -999,97 +999,97 @@ public extension Date.FormatStyle.Symbol.TimeZone {
 
 // MARK: Omitted Symbol Options
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Era {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Year {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.YearForWeekOfYear {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.CyclicYear {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Quarter {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Month {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Week {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Day {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.DayOfYear {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Weekday {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.DayPeriod {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Hour {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Minute {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.Second {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.SecondFraction {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.FormatStyle.Symbol.TimeZone {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)

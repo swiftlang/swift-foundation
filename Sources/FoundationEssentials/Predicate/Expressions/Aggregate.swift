@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct SequenceMaximum<
         Elements : PredicateExpression
@@ -36,23 +36,23 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMaximum : StandardPredicateExpression where Elements : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.SequenceMaximum : CustomStringConvertible {
     public var description: String {
         "SequenceMaximum(elements: \(elements))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMaximum : Codable where Elements : Codable {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMaximum : Sendable where Elements : Sendable {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct SequenceMinimum<
         Elements : PredicateExpression
@@ -78,18 +78,18 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMinimum : StandardPredicateExpression where Elements : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.SequenceMinimum : CustomStringConvertible {
     public var description: String {
         "SequenceMinimum(elements: \(elements))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMinimum : Codable where Elements : Codable {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.SequenceMinimum : Sendable where Elements : Sendable {}

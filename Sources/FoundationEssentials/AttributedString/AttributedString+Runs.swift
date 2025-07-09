@@ -366,7 +366,7 @@ extension AttributedString.Runs: BidirectionalCollection {
     #endif
     }
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal func _index(_ index: Index, offsetBy distance: Int) -> Index {
         guard _isDiscontiguous else {
@@ -594,9 +594,6 @@ extension AttributedString.Runs {
         // _strBounds.range(containing:) below validates that i._value is within the bounds of this slice
         precondition(!attributeNames.isEmpty)
         let r = _guts.findRun(at: i._value)
-        if r.runIndex.offset == endIndex._runOffset {
-            return (i, r.runIndex)
-        }
         let currentRange = _strBounds.range(containing: i._value).range
         
         guard constraints.count != 1 || constraints.contains(nil) else {

@@ -352,14 +352,14 @@ open class JSONEncoder {
         }, value: value)
     }
     
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func encode<T : EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration) throws -> Data {
         try _encode({
             try $0.wrapGeneric(value, configuration: configuration)
         }, value: value)
     }
     
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func encode<T, C>(_ value: T, configuration: C.Type) throws -> Data where T : EncodableWithConfiguration, C : EncodingConfigurationProviding, T.EncodingConfiguration == C.EncodingConfiguration {
         try encode(value, configuration: C.encodingConfiguration)
     }

@@ -41,7 +41,7 @@ extension String {
     }
     #endif
 
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     @usableFromInline
     internal init(_characters: AttributedString.CharacterView) {
         self.init(_characters._characters)

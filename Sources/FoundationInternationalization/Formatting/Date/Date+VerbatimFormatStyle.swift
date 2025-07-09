@@ -78,7 +78,7 @@ extension Date.VerbatimFormatStyle: ParseableFormatStyle {
 
 // MARK: Typed Attributed Style
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.VerbatimFormatStyle {
     /// The type preserving attributed variant of this style.
     ///
@@ -139,7 +139,7 @@ extension Date.VerbatimFormatStyle : CustomConsumingRegexComponent {
 
 // MARK: DiscreteFormatStyle Conformance
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.VerbatimFormatStyle : DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         guard let (bound, isIncluded) = bound(for: input, isLower: true) else {
@@ -176,7 +176,7 @@ extension Date.VerbatimFormatStyle : DiscreteFormatStyle {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.VerbatimFormatStyle.Attributed : DiscreteFormatStyle {
     public func discreteInput(before input: Date) -> Date? {
         base.discreteInput(before: input)

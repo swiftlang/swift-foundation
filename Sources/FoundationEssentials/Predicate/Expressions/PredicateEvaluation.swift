@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
-    @available(FoundationPredicate 0.3, *)
+    @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
     public struct PredicateEvaluate<
         Condition : PredicateExpression,
         each Input : PredicateExpression
@@ -37,23 +37,23 @@ extension PredicateExpressions {
         }
     }
     
-    @available(FoundationPredicate 0.3, *)
+    @available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
     public static func build_evaluate<Condition, each Input>(_ predicate: Condition, _ input: repeat each Input) -> PredicateEvaluate<Condition, repeat each Input> {
         PredicateEvaluate<Condition, repeat each Input>(predicate: predicate, input: repeat each input)
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.PredicateEvaluate : CustomStringConvertible {
     public var description: String {
         "PredicateEvaluate(predicate: \(predicate), input: \(input))"
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.PredicateEvaluate : StandardPredicateExpression where Condition : StandardPredicateExpression, repeat each Input : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.PredicateEvaluate : Codable where Condition : Codable, repeat each Input : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -68,6 +68,6 @@ extension PredicateExpressions.PredicateEvaluate : Codable where Condition : Cod
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.PredicateEvaluate : Sendable where Condition : Sendable, repeat each Input : Sendable {}
 #endif

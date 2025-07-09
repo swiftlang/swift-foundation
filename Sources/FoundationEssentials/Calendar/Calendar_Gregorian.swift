@@ -350,7 +350,8 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         case .weekOfYear: 1..<53
         case .yearForWeekOfYear: 140742..<140743
         case .nanosecond: 0..<1000000000
-        case .isLeapMonth: 0..<2
+        // There is no leap month in Gregorian calendar
+        case .isLeapMonth: 0..<1
         case .dayOfYear: 1..<366
         case .calendar, .timeZone:
             nil
@@ -380,7 +381,7 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         case .weekOfYear: return 1..<54
         case .yearForWeekOfYear: return 140742..<144684
         case .nanosecond: return 0..<1000000000
-        case .isLeapMonth: return 0..<2
+        case .isLeapMonth: return 0..<1
         case .dayOfYear: return 1..<367
         case .calendar, .timeZone:
             return nil
@@ -1654,6 +1655,10 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
         if let value = components.hour { guard validHour.contains(value) else { return false } }
         if let value = components.minute { guard validMinute.contains(value) else { return false } }
         if let value = components.second { guard validSecond.contains(value) else { return false } }
+        if let value = components.isLeapMonth {
+            // The only valid `isLeapMonth` setting is false
+            return value == false
+        }
         return true
     }
 

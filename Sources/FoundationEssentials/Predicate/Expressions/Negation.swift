@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct Negation<Wrapped: PredicateExpression> : PredicateExpression where Wrapped.Output == Bool {
         public typealias Output = Bool
@@ -31,17 +31,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Negation : CustomStringConvertible {
     public var description: String {
         "Negation(wrapped: \(wrapped))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Negation : StandardPredicateExpression where Wrapped : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Negation : Codable where Wrapped : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -54,5 +54,5 @@ extension PredicateExpressions.Negation : Codable where Wrapped : Codable {
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Negation : Sendable where Wrapped : Sendable {}

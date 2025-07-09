@@ -103,23 +103,23 @@ open class PropertyListDecoder {
         }, from: data, format: &format)
     }
     
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func decode<T : DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
         var format: PropertyListDecoder.PropertyListFormat = .binary
         return try decode(type, from: data, format: &format, configuration: configuration)
     }
     
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C : DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, configuration: C.decodingConfiguration)
     }
     
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func decode<T, C>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C: DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, format: &format, configuration: C.decodingConfiguration)
     }
     
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func decode<T : DecodableWithConfiguration>(_ type: T.Type, from data: Data, format: inout PropertyListDecoder.PropertyListFormat, configuration: T.DecodingConfiguration) throws -> T {
         try _decode({
             try $0.decode(type, configuration: configuration)

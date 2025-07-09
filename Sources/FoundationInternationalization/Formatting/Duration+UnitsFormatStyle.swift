@@ -632,7 +632,7 @@ extension Duration.UnitsFormatStyle {
 
 // MARK: Dynamic Member Lookup
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.UnitsFormatStyle.Attributed {
     public subscript<T>(dynamicMember key: KeyPath<Duration.UnitsFormatStyle, T>) -> T {
         innerStyle[keyPath: key]
@@ -650,7 +650,7 @@ extension Duration.UnitsFormatStyle.Attributed {
 
 // MARK: DiscreteFormatStyle Conformance
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.UnitsFormatStyle.Attributed : DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         self.innerStyle.discreteInput(before: input)
@@ -661,7 +661,7 @@ extension Duration.UnitsFormatStyle.Attributed : DiscreteFormatStyle {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Duration.UnitsFormatStyle : DiscreteFormatStyle {
     public func discreteInput(before input: Duration) -> Duration? {
         let (bound, isIncluded) = self.bound(for: input, countingDown: true)

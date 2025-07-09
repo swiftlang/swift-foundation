@@ -312,7 +312,6 @@ private struct PredicateTests {
     }
 
     @Test
-    @available(FoundationPredicateRegex 0.4, *)
     func regex() throws {
         let literalRegex = #/[AB0-9]\/?[^\n]+/#
         var predicate = #Predicate<Object> {
@@ -329,7 +328,6 @@ private struct PredicateTests {
     
     #if canImport(RegexBuilder)
     @Test
-    @available(FoundationPredicateRegex 0.4, *)
     func regex_RegexBuilder() throws {
         let builtRegex = Regex {
             ChoiceOf {
@@ -349,7 +347,6 @@ private struct PredicateTests {
     #endif
     
     @Test
-    @available(FoundationPredicate 0.3, *)
     func debugDescription() throws {
         let date = Date.now
         let predicate = #Predicate<Object> {
@@ -385,7 +382,6 @@ private struct PredicateTests {
 
     #if FOUNDATION_FRAMEWORK
     @Test
-    @available(FoundationPredicate 0.3, *)
     func nested() throws {
         let predicateA = #Predicate<Object> {
             $0.a == 3
@@ -404,7 +400,6 @@ private struct PredicateTests {
     #endif
     
     @Test
-    @available(FoundationPredicate 0.4, *)
     func expression() throws {
         let expression = #Expression<Int, Int> {
             $0 + 1

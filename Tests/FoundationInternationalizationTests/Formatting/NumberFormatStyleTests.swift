@@ -5,127 +5,107 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-//
-// RUN: %target-run-simple-swift
-// REQUIRES: executable_test
-// REQUIRES: objc_interop
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
+import Testing
 
 #if canImport(FoundationInternationalization)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
-#endif
-
-#if FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
 @testable import Foundation
 #endif
 
-final class NumberFormatStyleTests: XCTestCase {
-
+@Suite("Number FormatStyle")
+private struct NumberFormatStyleTests {
     let enUSLocale = Locale(identifier: "en_US")
     let frFRLocale = Locale(identifier: "fr_FR")
-
-    override func setUp() {
-        resetAllNumberFormatterCaches()
-    }
 
     let testNegativePositiveIntegerData: [Int] = [ -98, -9, 0, 9, 98 ]
     let testNegativePositiveDoubleData: [Double] = [ 87650, 8765, 876.5, 87.65, 8.765, 0.8765, 0.08765, 0.008765, 0, -0.008765, -876.5, -87650 ]
     let testNegativePositiveDecimalData: [Decimal] = [  Decimal(string:"87650")!, Decimal(string:"8765")!, Decimal(string:"876.5")!, Decimal(string:"87.65")!, Decimal(string:"8.765")!, Decimal(string:"0.8765")!, Decimal(string:"0.08765")!, Decimal(string:"0.008765")!, Decimal(string:"0")!, Decimal(string:"-0.008765")!, Decimal(string:"-876.5")!, Decimal(string:"-87650")! ]
 
-    func _testNegativePositiveInt<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) where F.FormatInput == Int, F.FormatOutput == String {
+    func _testNegativePositiveInt<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: Comment? = nil, sourceLocation: SourceLocation = #_sourceLocation) where F.FormatInput == Int, F.FormatOutput == String {
         for i in 0..<testNegativePositiveIntegerData.count {
-            XCTAssertEqual(style.format(testNegativePositiveIntegerData[i]), expected[i], testName, file: file, line: line)
+            #expect(style.format(testNegativePositiveIntegerData[i]) == expected[i], testName, sourceLocation: sourceLocation)
         }
     }
-    func _testNegativePositiveDouble<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) where F.FormatInput == Double, F.FormatOutput == String {
+    func _testNegativePositiveDouble<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: Comment? = nil, sourceLocation: SourceLocation = #_sourceLocation) where F.FormatInput == Double, F.FormatOutput == String {
         for i in 0..<testNegativePositiveDoubleData.count {
-            XCTAssertEqual(style.format(testNegativePositiveDoubleData[i]), expected[i], testName, file: file, line: line)
+            #expect(style.format(testNegativePositiveDoubleData[i]) == expected[i], testName, sourceLocation: sourceLocation)
         }
     }
 
-    func _testNegativePositiveDecimal<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: String = "", file: StaticString = #filePath, line: UInt = #line) where F.FormatInput == Decimal, F.FormatOutput == String {
+    func _testNegativePositiveDecimal<F: FormatStyle>(_ style: F, _ expected: [String], _ testName: Comment? = nil, sourceLocation: SourceLocation = #_sourceLocation) where F.FormatInput == Decimal, F.FormatOutput == String {
         for i in 0..<testNegativePositiveDecimalData.count {
-            XCTAssertEqual((testNegativePositiveDecimalData[i]).formatted(style), expected[i], testName, file: file, line: line)
+            #expect((testNegativePositiveDecimalData[i]).formatted(style) == expected[i], testName, sourceLocation: sourceLocation)
         }
     }
 
-    func testNSICUNumberFormatter() throws {
+    @Test func nsICUNumberFormatter() throws {
         let locale = Locale(identifier: "en_US")
-        let style: IntegerFormatStyle<Int64> = IntegerFormatStyle<Int64>().locale(locale)
-        let formatter = ICUNumberFormatter.create(for: style)
-        XCTAssertNotNil(formatter)
+        let style = IntegerFormatStyle<Int64>().locale(locale)
+        let formatter = try #require(ICUNumberFormatter.create(for: style))
 
-        XCTAssertEqual(formatter!.format(42 as Int64), "42")
-        XCTAssertEqual(formatter!.format(42 as Double), "42")
+        #expect(formatter.format(42 as Int64) == "42")
+        #expect(formatter.format(42 as Double) == "42")
 
         // Test strings longer than the stack buffer
-        let longStyle: IntegerFormatStyle<Int64> = IntegerFormatStyle<Int64>().locale(locale).precision(.integerAndFractionLength(integerLimits: 40..., fractionLimits: 0..<1))
-        let formatter_long = ICUNumberFormatter.create(for: longStyle)
-        XCTAssertNotNil(formatter_long)
-        XCTAssertEqual(formatter_long!.format(42 as Int64), "0,000,000,000,000,000,000,000,000,000,000,000,000,042")
-        XCTAssertEqual(formatter_long!.format(42 as Double), "0,000,000,000,000,000,000,000,000,000,000,000,000,042")
+        let longStyle = IntegerFormatStyle<Int64>().locale(locale).precision(.integerAndFractionLength(integerLimits: 40..., fractionLimits: 0..<1))
+        let formatter_long = try #require(ICUNumberFormatter.create(for: longStyle))
+        #expect(formatter_long.format(42 as Int64) == "0,000,000,000,000,000,000,000,000,000,000,000,000,042")
+        #expect(formatter_long.format(42 as Double) == "0,000,000,000,000,000,000,000,000,000,000,000,000,042")
     }
 
 #if !os(watchOS) // 99504292
-    func testNSICUNumberFormatterCache() throws {
+    @Test func nsICUNumberFormatterCache() throws {
 
-        let intStyle: IntegerFormatStyle<Int64> = .init(locale: Locale(identifier: "en_US"))
-        let intFormatter = ICUNumberFormatter.create(for: intStyle)
-        XCTAssertNotNil(intFormatter)
+        let intStyle = IntegerFormatStyle<Int64>(locale: Locale(identifier: "en_US"))
+        let intFormatter = try #require(ICUNumberFormatter.create(for: intStyle))
 
-        let int64Style: IntegerFormatStyle<Int64> = .init(locale: Locale(identifier: "en_US"))
-        let int64Formatter = ICUNumberFormatter.create(for: int64Style)
-        XCTAssertNotNil(int64Formatter)
+        let int64Style = IntegerFormatStyle<Int64>(locale: Locale(identifier: "en_US"))
+        let int64Formatter = try #require(ICUNumberFormatter.create(for: int64Style))
 
-        XCTAssertEqual(intFormatter!.uformatter, int64Formatter!.uformatter)
+        #expect(intFormatter.uformatter == int64Formatter.uformatter)
 
         // --
 
-        let int64StyleFr: IntegerFormatStyle<Int64> = .init(locale: Locale(identifier: "fr_FR"))
-        let int64FrFormatter = ICUNumberFormatter.create(for: int64StyleFr)
-        XCTAssertNotNil(int64FrFormatter)
+        let int64StyleFr = IntegerFormatStyle<Int64>(locale: Locale(identifier: "fr_FR"))
+        let int64FrFormatter = try #require(ICUNumberFormatter.create(for: int64StyleFr))
 
         // Different formatter for different locale
-        XCTAssertNotEqual(intFormatter!.uformatter, int64FrFormatter!.uformatter)
+        #expect(intFormatter.uformatter != int64FrFormatter.uformatter)
 
-        let int64StylePrecision: IntegerFormatStyle<Int64> = .init(locale: Locale(identifier: "en_US")).precision(.integerLength(10...))
-        let int64PrecisionFormatter = ICUNumberFormatter.create(for: int64StylePrecision)
+        let int64StylePrecision = IntegerFormatStyle<Int64>(locale: Locale(identifier: "en_US")).precision(.integerLength(10...))
+        let int64PrecisionFormatter = try #require(ICUNumberFormatter.create(for: int64StylePrecision))
 
         // Different formatter for different precision
-        XCTAssertNotEqual(intFormatter!.uformatter, int64PrecisionFormatter!.uformatter)
+        #expect(intFormatter.uformatter != int64PrecisionFormatter.uformatter)
 
         // --
 
-        let floatStyle: FloatingPointFormatStyle<Float> = .init(locale: Locale(identifier: "en_US"))
-        let floatFormatter = ICUNumberFormatter.create(for: floatStyle)
-        XCTAssertNotNil(floatFormatter)
-        XCTAssertEqual(floatFormatter!.uformatter, int64Formatter!.uformatter)
+        let floatStyle = FloatingPointFormatStyle<Float>(locale: Locale(identifier: "en_US"))
+        let floatFormatter = try #require(ICUNumberFormatter.create(for: floatStyle))
+        #expect(floatFormatter.uformatter == int64Formatter.uformatter)
 
-        let doubleStyle: FloatingPointFormatStyle<Double> = .init(locale: Locale(identifier: "en_US"))
-        let doubleFormatter = ICUNumberFormatter.create(for: doubleStyle)
-        XCTAssertNotNil(doubleFormatter)
-        XCTAssertEqual(doubleFormatter!.uformatter, floatFormatter!.uformatter)
+        let doubleStyle = FloatingPointFormatStyle<Double>(locale: Locale(identifier: "en_US"))
+        let doubleFormatter = try #require(ICUNumberFormatter.create(for: doubleStyle))
+        #expect(doubleFormatter.uformatter == floatFormatter.uformatter)
 
-        let doubleCurrencyStyle: FloatingPointFormatStyle<Double>.Currency = .init(code: "USD", locale: Locale(identifier: "en_US"))
-        let doubleCurrencyFormatter = ICUCurrencyNumberFormatter.create(for: doubleCurrencyStyle)
-        XCTAssertNotNil(doubleCurrencyFormatter)
-        XCTAssertNotEqual(doubleCurrencyFormatter!.uformatter, doubleFormatter!.uformatter, "Should use a different uformatter for an unseen style")
+        let doubleCurrencyStyle = FloatingPointFormatStyle<Double>.Currency(code: "USD", locale: Locale(identifier: "en_US"))
+        let doubleCurrencyFormatter = try #require(ICUCurrencyNumberFormatter.create(for: doubleCurrencyStyle))
+        #expect(doubleCurrencyFormatter.uformatter != doubleFormatter.uformatter, "Should use a different uformatter for an unseen style")
     }
 #endif
 
-    func testIntegerFormatStyle() throws {
+    @Test func integerFormatStyle() throws {
 
         let testData: [Int] = [
             87650000, 8765000, 876500, 87650, 8765, 876, 87, 8, 0
         ]
 
-        func testIntValues(_ style: IntegerFormatStyle<Int>, expected: [String]) {
+        func testIntValues(_ style: IntegerFormatStyle<Int>, expected: [String], sourceLocation: SourceLocation = #_sourceLocation) {
             for i in 0..<testData.count {
-                XCTAssertEqual(style.format(testData[i]), expected[i])
+                #expect(style.format(testData[i]) == expected[i], sourceLocation: sourceLocation)
             }
         }
 
@@ -138,31 +118,31 @@ final class NumberFormatStyleTests: XCTestCase {
         testIntValues(IntegerFormatStyle<Int>(locale: locale).sign(strategy: .always()), expected: [ "+87,650,000", "+8,765,000", "+876,500", "+87,650", "+8,765", "+876", "+87", "+8", "+0" ])
     }
 
-    func testIntegerFormatStyleFixedWidthLimits() throws {
-        func test<I: FixedWidthInteger>(type: I.Type = I.self, min: String, max: String) {
+    @Test func integerFormatStyleFixedWidthLimits() throws {
+        func test<I: FixedWidthInteger>(type: I.Type = I.self, min: String, max: String, sourceLocation: SourceLocation = #_sourceLocation) {
             do {
-                let style: IntegerFormatStyle<I> = .init(locale: Locale(identifier: "en_US_POSIX"))
-                XCTAssertEqual(style.format(I.min), I.min.description)
-                XCTAssertEqual(style.format(I.max), I.max.description)
+                let style = IntegerFormatStyle<I>(locale: Locale(identifier: "en_US_POSIX"))
+                #expect(style.format(I.min) == I.min.description, sourceLocation: sourceLocation)
+                #expect(style.format(I.max) == I.max.description, sourceLocation: sourceLocation)
             }
 
             do {
-                let style: IntegerFormatStyle<I> = .init(locale: Locale(identifier: "en_US"))
-                XCTAssertEqual(style.format(I.min), min)
-                XCTAssertEqual(style.format(I.max), max)
+                let style = IntegerFormatStyle<I>(locale: Locale(identifier: "en_US"))
+                #expect(style.format(I.min) == min, sourceLocation: sourceLocation)
+                #expect(style.format(I.max) == max, sourceLocation: sourceLocation)
             }
 
             do {
-                let style: IntegerFormatStyle<I>.Percent = .init(locale: Locale(identifier: "en_US"))
-                XCTAssertEqual(style.format(I.min), min + "%")
-                XCTAssertEqual(style.format(I.max), max + "%")
+                let style = IntegerFormatStyle<I>.Percent(locale: Locale(identifier: "en_US"))
+                #expect(style.format(I.min) == min + "%", sourceLocation: sourceLocation)
+                #expect(style.format(I.max) == max + "%", sourceLocation: sourceLocation)
             }
 
             do {
-                let style: IntegerFormatStyle<I>.Currency = .init(code: "USD", locale: Locale(identifier: "en_US")).presentation(.narrow)
+                let style = IntegerFormatStyle<I>.Currency(code: "USD", locale: Locale(identifier: "en_US")).presentation(.narrow)
                 let negativeSign = (min.first == "-" ? "-" : "")
-                XCTAssertEqual(style.format(I.min), "\(negativeSign)$\(min.drop(while: { $0 == "-" })).00")
-                XCTAssertEqual(style.format(I.max), "$\(max).00")
+                #expect(style.format(I.min) == "\(negativeSign)$\(min.drop(while: { $0 == "-" })).00", sourceLocation: sourceLocation)
+                #expect(style.format(I.max) == "$\(max).00", sourceLocation: sourceLocation)
             }
         }
 
@@ -177,33 +157,33 @@ final class NumberFormatStyleTests: XCTestCase {
         test(type: UInt64.self, min: "0", max: "18,446,744,073,709,551,615")
     }
 
-    func testInteger_Precision() throws {
-        let style: IntegerFormatStyle<Int> = .init(locale: Locale(identifier: "en_US"))
+    @Test func integer_Precision() throws {
+        let style = IntegerFormatStyle<Int>(locale: Locale(identifier: "en_US"))
         _testNegativePositiveInt(style.precision(.significantDigits(3...3)), [ "-98.0", "-9.00", "0.00", "9.00", "98.0" ], "exact significant digits")
         _testNegativePositiveInt(style.precision(.significantDigits(2...)), [ "-98", "-9.0", "0.0", "9.0", "98" ], "min significant digits")
 
         _testNegativePositiveInt(style.precision(.integerAndFractionLength(integerLimits: 4..., fractionLimits: 0...0)), [ "-0,098", "-0,009", "0,000", "0,009", "0,098" ])
     }
 
-    func testIntegerFormatStyle_Percent() throws {
-        let style: IntegerFormatStyle<Int>.Percent = .init(locale: Locale(identifier: "en_US"))
+    @Test func integerFormatStyle_Percent() throws {
+        let style = IntegerFormatStyle<Int>.Percent(locale: Locale(identifier: "en_US"))
         _testNegativePositiveInt(style, [ "-98%", "-9%", "0%", "9%", "98%" ], "percent default")
         _testNegativePositiveInt(style.precision(.significantDigits(3...3)), [ "-98.0%", "-9.00%", "0.00%", "9.00%", "98.0%" ], "percent + significant digit")
     }
 
-    func testIntegerFormatStyle_Currency() throws {
-        let style: IntegerFormatStyle<Int>.Currency = .init(code: "GBP", locale: Locale(identifier: "en_US"))
+    @Test func integerFormatStyle_Currency() throws {
+        let style = IntegerFormatStyle<Int>.Currency(code: "GBP", locale: Locale(identifier: "en_US"))
         _testNegativePositiveInt(style.presentation(.narrow), [ "-£98.00", "-£9.00", "£0.00", "£9.00", "£98.00" ], "currency narrow")
         _testNegativePositiveInt(style.presentation(.isoCode), [ "-GBP 98.00", "-GBP 9.00", "GBP 0.00", "GBP 9.00", "GBP 98.00" ], "currency isoCode")
         _testNegativePositiveInt(style.presentation(.standard), [ "-£98.00", "-£9.00", "£0.00", "£9.00", "£98.00" ], "currency standard")
         _testNegativePositiveInt(style.presentation(.fullName), [ "-98.00 British pounds", "-9.00 British pounds", "0.00 British pounds", "9.00 British pounds", "98.00 British pounds" ], "currency fullname")
 
-        let styleUSD: IntegerFormatStyle<Int>.Currency = .init(code: "USD", locale: Locale(identifier: "en_CA"))
+        let styleUSD = IntegerFormatStyle<Int>.Currency(code: "USD", locale: Locale(identifier: "en_CA"))
         _testNegativePositiveInt(styleUSD.presentation(.standard), [ "-US$98.00", "-US$9.00", "US$0.00", "US$9.00", "US$98.00" ], "currency standard")
     }
 
-    func testFloatingPointFormatStyle() throws {
-        let style: FloatingPointFormatStyle<Double> = .init(locale: Locale(identifier: "en_US"))
+    @Test func floatingPointFormatStyle() throws {
+        let style = FloatingPointFormatStyle<Double>(locale: Locale(identifier: "en_US"))
         _testNegativePositiveDouble(style.precision(.significantDigits(...2)), [ "88,000", "8,800", "880", "88", "8.8", "0.88", "0.088", "0.0088", "0", "-0.0088", "-880", "-88,000" ], "max 2 significant digits")
         _testNegativePositiveDouble(style.precision(.fractionLength(1...3)), [ "87,650.0", "8,765.0", "876.5", "87.65", "8.765", "0.876", "0.088", "0.009", "0.0", "-0.009", "-876.5", "-87,650.0" ], "fraction limit")
         _testNegativePositiveDouble(style.precision(.integerLength(3...)), [ "87,650", "8,765", "876.5", "087.65", "008.765", "000.8765", "000.08765", "000.008765", "000", "-000.008765", "-876.5", "-87,650" ], "min 3 integer digits")
@@ -219,13 +199,13 @@ final class NumberFormatStyleTests: XCTestCase {
         _testNegativePositiveDouble(style.precision(.integerAndFractionLength(integerLimits: 0...0, fractionLimits: 2...2)), [ "87,650.00", "8,765.00", "876.50", "87.65", "8.76", ".88", ".09", ".01", ".00", "-.01", "-876.50", "-87,650.00"], "exact 2 integer digits")
     }
 
-    func testFloatingPointFormatStyle_Percent() throws {
-        let style: FloatingPointFormatStyle<Double>.Percent = .init(locale: Locale(identifier: "en_US"))
+    @Test func floatingPointFormatStyle_Percent() throws {
+        let style = FloatingPointFormatStyle<Double>.Percent(locale: Locale(identifier: "en_US"))
         _testNegativePositiveDouble(style, [ "8,765,000%", "876,500%", "87,650%", "8,765%", "876.5%", "87.65%", "8.765%", "0.8765%", "0%", "-0.8765%", "-87,650%", "-8,765,000%" ] , "percent default")
         _testNegativePositiveDouble(style.precision(.significantDigits(2)), [ "8,800,000%", "880,000%", "88,000%", "8,800%", "880%", "88%", "8.8%", "0.88%", "0.0%", "-0.88%", "-88,000%", "-8,800,000%" ], "percent 2 significant digits")
     }
 
-    func testFloatingPointFormatStyle_BigNumber() throws {
+    @Test func floatingPointFormatStyle_BigNumber() throws {
         let bigData: [(Double, String)] = [
             (9007199254740992, "9,007,199,254,740,992.00"), // Maximum integer that can be precisely represented by a double
             (-9007199254740992, "-9,007,199,254,740,992.00"), // Minimum integer that can be precisely represented by a double
@@ -234,51 +214,51 @@ final class NumberFormatStyleTests: XCTestCase {
             (9007199254740991.5, "9,007,199,254,740,992.00"), // Would round to the closest
         ]
 
-        let style: FloatingPointFormatStyle<Double> = .init(locale: Locale(identifier: "en_US")).precision(.fractionLength(2...))
+        let style = FloatingPointFormatStyle<Double>(locale: Locale(identifier: "en_US")).precision(.fractionLength(2...))
         for (v, expected) in bigData {
-            XCTAssertEqual(style.format(v), expected)
+            #expect(style.format(v) == expected)
         }
 
-        XCTAssertEqual(Float64.greatestFiniteMagnitude.formatted(.number.locale(enUSLocale)), "179,769,313,486,231,570,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000")
-        XCTAssertEqual(Float64.infinity.formatted(.number.locale(enUSLocale)), "∞")
-        XCTAssertEqual(Float64.leastNonzeroMagnitude.formatted(.number.locale(enUSLocale)), "0")
-        XCTAssertEqual(Float64.nan.formatted(.number.locale(enUSLocale)), "NaN")
-        XCTAssertEqual(Float64.nan.formatted(.number.locale(enUSLocale).precision(.fractionLength(2))), "NaN")
-        XCTAssertEqual(Float64.nan.formatted(.number.locale(Locale(identifier: "uz_Cyrl"))), "ҳақиқий сон эмас")
+        #expect(Float64.greatestFiniteMagnitude.formatted(.number.locale(enUSLocale)) == "179,769,313,486,231,570,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000")
+        #expect(Float64.infinity.formatted(.number.locale(enUSLocale)) == "∞")
+        #expect(Float64.leastNonzeroMagnitude.formatted(.number.locale(enUSLocale)) == "0")
+        #expect(Float64.nan.formatted(.number.locale(enUSLocale)) == "NaN")
+        #expect(Float64.nan.formatted(.number.locale(enUSLocale).precision(.fractionLength(2))) == "NaN")
+        #expect(Float64.nan.formatted(.number.locale(Locale(identifier: "uz_Cyrl"))) == "ҳақиқий сон эмас")
 
-        XCTAssertEqual(Float64.greatestFiniteMagnitude.formatted(.percent.locale(enUSLocale)), "17,976,931,348,623,157,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000%")
-        XCTAssertEqual(Float64.infinity.formatted(.percent.locale(enUSLocale)), "∞%")
-        XCTAssertEqual(Float64.leastNonzeroMagnitude.formatted(.percent.locale(enUSLocale)), "0%")
-        XCTAssertEqual(Float64.nan.formatted(.percent.locale(enUSLocale)), "NaN%")
-        XCTAssertEqual(Float64.nan.formatted(.percent.locale(enUSLocale).precision(.fractionLength(2))), "NaN%")
-        XCTAssertEqual(Float64.nan.formatted(.percent.locale(Locale(identifier: "uz_Cyrl"))), "ҳақиқий сон эмас%")
+        #expect(Float64.greatestFiniteMagnitude.formatted(.percent.locale(enUSLocale)) == "17,976,931,348,623,157,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000%")
+        #expect(Float64.infinity.formatted(.percent.locale(enUSLocale)) == "∞%")
+        #expect(Float64.leastNonzeroMagnitude.formatted(.percent.locale(enUSLocale)) == "0%")
+        #expect(Float64.nan.formatted(.percent.locale(enUSLocale)) == "NaN%")
+        #expect(Float64.nan.formatted(.percent.locale(enUSLocale).precision(.fractionLength(2))) == "NaN%")
+        #expect(Float64.nan.formatted(.percent.locale(Locale(identifier: "uz_Cyrl"))) == "ҳақиқий сон эмас%")
 
-        XCTAssertEqual(Float64.greatestFiniteMagnitude.formatted(.currency(code: "USD").locale(enUSLocale)), "$179,769,313,486,231,570,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000.00")
-        XCTAssertEqual(Float64.infinity.formatted(.currency(code: "USD").locale(enUSLocale)), "$∞")
-        XCTAssertEqual(Float64.leastNonzeroMagnitude.formatted(.currency(code: "USD").locale(enUSLocale)), "$0.00")
-        XCTAssertEqual(Float64.nan.formatted(.currency(code: "USD").locale(enUSLocale)), "$NaN")
-        XCTAssertEqual(Float64.nan.formatted(.currency(code: "USD").locale(enUSLocale).precision(.fractionLength(2))), "$NaN")
-        XCTAssertEqual(Float64.nan.formatted(.currency(code: "USD").locale(Locale(identifier: "uz_Cyrl"))), "ҳақиқий сон эмас US$")
+        #expect(Float64.greatestFiniteMagnitude.formatted(.currency(code: "USD").locale(enUSLocale)) == "$179,769,313,486,231,570,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000.00")
+        #expect(Float64.infinity.formatted(.currency(code: "USD").locale(enUSLocale)) == "$∞")
+        #expect(Float64.leastNonzeroMagnitude.formatted(.currency(code: "USD").locale(enUSLocale)) == "$0.00")
+        #expect(Float64.nan.formatted(.currency(code: "USD").locale(enUSLocale)) == "$NaN")
+        #expect(Float64.nan.formatted(.currency(code: "USD").locale(enUSLocale).precision(.fractionLength(2))) == "$NaN")
+        #expect(Float64.nan.formatted(.currency(code: "USD").locale(Locale(identifier: "uz_Cyrl"))) == "ҳақиқий сон эмас US$")
     }
 
-    func testFormattedAttributedLeadingDotSyntax() throws {
+    @Test func formattedAttributedLeadingDotSyntax() throws {
         let int = 42
-        XCTAssertEqual(int.formatted(.number.attributed), IntegerFormatStyle().attributed.format(int))
-        XCTAssertEqual(int.formatted(.percent.attributed), IntegerFormatStyle.Percent().attributed.format(int))
-        XCTAssertEqual(int.formatted(.currency(code: "GBP").attributed), IntegerFormatStyle.Currency(code: "GBP").attributed.format(int))
+        #expect(int.formatted(.number.attributed) == IntegerFormatStyle().attributed.format(int))
+        #expect(int.formatted(.percent.attributed) == IntegerFormatStyle.Percent().attributed.format(int))
+        #expect(int.formatted(.currency(code: "GBP").attributed) == IntegerFormatStyle.Currency(code: "GBP").attributed.format(int))
 
         let float = 3.14159
-        XCTAssertEqual(float.formatted(.number.attributed), FloatingPointFormatStyle<Double>().attributed.format(float))
-        XCTAssertEqual(float.formatted(.percent.attributed), FloatingPointFormatStyle.Percent().attributed.format(float))
-        XCTAssertEqual(float.formatted(.currency(code: "GBP").attributed), FloatingPointFormatStyle.Currency(code: "GBP").attributed.format(float))
+        #expect(float.formatted(.number.attributed) == FloatingPointFormatStyle<Double>().attributed.format(float))
+        #expect(float.formatted(.percent.attributed) == FloatingPointFormatStyle.Percent().attributed.format(float))
+        #expect(float.formatted(.currency(code: "GBP").attributed) == FloatingPointFormatStyle.Currency(code: "GBP").attributed.format(float))
 
         let decimal = Decimal(2.999)
-        XCTAssertEqual(decimal.formatted(.number.attributed), Decimal.FormatStyle().attributed.format(decimal))
-        XCTAssertEqual(decimal.formatted(.percent.attributed), Decimal.FormatStyle.Percent().attributed.format(decimal))
-        XCTAssertEqual(decimal.formatted(.currency(code: "GBP").attributed), Decimal.FormatStyle.Currency(code: "GBP").attributed.format(decimal))
+        #expect(decimal.formatted(.number.attributed) == Decimal.FormatStyle().attributed.format(decimal))
+        #expect(decimal.formatted(.percent.attributed) == Decimal.FormatStyle.Percent().attributed.format(decimal))
+        #expect(decimal.formatted(.currency(code: "GBP").attributed) == Decimal.FormatStyle.Currency(code: "GBP").attributed.format(decimal))
     }
 
-    func testDecimalFormatStyle() throws {
+    @Test func decimalFormatStyle() throws {
         let style = Decimal.FormatStyle(locale: enUSLocale)
         _testNegativePositiveDecimal(style.precision(.significantDigits(...2)), [ "88,000", "8,800", "880", "88", "8.8", "0.88", "0.088", "0.0088", "0", "-0.0088", "-880", "-88,000" ], "max 2 significant digits")
         _testNegativePositiveDecimal(style.precision(.fractionLength(1...3)), [ "87,650.0", "8,765.0", "876.5", "87.65", "8.765", "0.876", "0.088", "0.009", "0.0", "-0.009", "-876.5", "-87,650.0" ], "fraction limit")
@@ -294,7 +274,7 @@ final class NumberFormatStyleTests: XCTestCase {
         _testNegativePositiveDecimal(style.precision(.integerAndFractionLength(integerLimits: 2...2, fractionLimits: 0...0)), [ "50", "65", "76", "88", "09", "01", "00", "00", "00", "-00", "-76", "-50"], "exact 2 integer digits; 0 fractional digits")
     }
 
-    func testDecimalFormatStyle_Percent() throws {
+    @Test func decimalFormatStyle_Percent() throws {
         let style = Decimal.FormatStyle.Percent(locale: enUSLocale)
         _testNegativePositiveDecimal(style.precision(.significantDigits(...2)), [ "8,800,000%", "880,000%", "88,000%", "8,800%", "880%", "88%", "8.8%", "0.88%", "0%", "-0.88%", "-88,000%", "-8,800,000%" ], "max 2 significant digits")
         _testNegativePositiveDecimal(style.precision(.fractionLength(1...3)), [ "8,765,000.0%",
@@ -347,259 +327,278 @@ final class NumberFormatStyleTests: XCTestCase {
                                                                                "-00%" ], "exact 2 integer digits")
     }
 
-    func testDecimalFormatStyle_Currency() throws {
+    @Test func decimalFormatStyle_Currency() throws {
         let style = Decimal.FormatStyle.Currency(code: "USD", locale: enUSLocale)
         _testNegativePositiveDecimal(style, [ "$87,650.00", "$8,765.00", "$876.50", "$87.65", "$8.76", "$0.88", "$0.09", "$0.01", "$0.00", "-$0.01", "-$876.50", "-$87,650.00" ], "currency style")
 
     }
 
-    func testDecimal_withCustomShorthand() throws {
-        guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
-            throw XCTSkip("This test can only be run with the system set to the en_US language")
+    @Test func decimal_withCustomShorthand() async {
+        await usingCurrentInternationalizationPreferences {
+            // This test can only be run with the system set to the en_US language
+            var prefs = LocalePreferences()
+            prefs.languages = ["en-US"]
+            prefs.locale = "en_US"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            
+            #expect((12345 as Decimal).formatted(.number.grouping(.never)) == "12345")
+            #expect((12345.678 as Decimal).formatted(.percent.sign(strategy: .always())) == "+1,234,567.8%")
+            #expect((-3000.14159 as Decimal).formatted(.currency(code:"USD").sign(strategy: .accounting)) == "($3,000.14)")
         }
-        XCTAssertEqual((12345 as Decimal).formatted(.number.grouping(.never)), "12345")
-        XCTAssertEqual((12345.678 as Decimal).formatted(.percent.sign(strategy: .always())), "+1,234,567.8%")
-        XCTAssertEqual((-3000.14159 as Decimal).formatted(.currency(code:"USD").sign(strategy: .accounting)), "($3,000.14)")
     }
 
-    func testDecimal_withShorthand_enUS() throws {
-        guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
-            throw XCTSkip("This test can only be run with the system set to the en_US language")
+    @Test func decimal_withShorthand_enUS() async {
+        await usingCurrentInternationalizationPreferences {
+            // This test can only be run with the system set to the en_US language
+            var prefs = LocalePreferences()
+            prefs.languages = ["en-US"]
+            prefs.locale = "en_US"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            
+            
+            #expect((12345 as Decimal).formatted(.number) == "12,345")
+            #expect((12345.678 as Decimal).formatted(.number) == "12,345.678")
+            #expect((0 as Decimal).formatted(.number) == "0")
+            #expect((3.14159 as Decimal).formatted(.number) == "3.14159")
+            #expect((-3.14159 as Decimal).formatted(.number) == "-3.14159")
+            #expect((-3000.14159 as Decimal).formatted(.number) == "-3,000.14159")
+            
+            #expect((0.12345 as Decimal).formatted(.percent) == "12.345%")
+            #expect((0.0012345 as Decimal).formatted(.percent) == "0.12345%")
+            #expect((12345 as Decimal).formatted(.percent) == "1,234,500%")
+            #expect((12345.678 as Decimal).formatted(.percent) == "1,234,567.8%")
+            #expect((0 as Decimal).formatted(.percent) == "0%")
+            #expect((3.14159 as Decimal).formatted(.percent) == "314.159%")
+            #expect((-3.14159 as Decimal).formatted(.percent) == "-314.159%")
+            #expect((-3000.14159 as Decimal).formatted(.percent) == "-300,014.159%")
+            
+            #expect((12345 as Decimal).formatted(.currency(code:"USD")) == "$12,345.00")
+            #expect((12345.678 as Decimal).formatted(.currency(code:"USD")) == "$12,345.68")
+            #expect((0 as Decimal).formatted(.currency(code:"USD")) == "$0.00")
+            #expect((3.14159 as Decimal).formatted(.currency(code:"USD")) == "$3.14")
+            #expect((-3.14159 as Decimal).formatted(.currency(code:"USD")) == "-$3.14")
+            #expect((-3000.14159 as Decimal).formatted(.currency(code:"USD")) == "-$3,000.14")
         }
-
-        XCTAssertEqual((12345 as Decimal).formatted(.number), "12,345")
-        XCTAssertEqual((12345.678 as Decimal).formatted(.number), "12,345.678")
-        XCTAssertEqual((0 as Decimal).formatted(.number), "0")
-        XCTAssertEqual((3.14159 as Decimal).formatted(.number), "3.14159")
-        XCTAssertEqual((-3.14159 as Decimal).formatted(.number), "-3.14159")
-        XCTAssertEqual((-3000.14159 as Decimal).formatted(.number), "-3,000.14159")
-
-        XCTAssertEqual((0.12345 as Decimal).formatted(.percent), "12.345%")
-        XCTAssertEqual((0.0012345 as Decimal).formatted(.percent), "0.12345%")
-        XCTAssertEqual((12345 as Decimal).formatted(.percent), "1,234,500%")
-        XCTAssertEqual((12345.678 as Decimal).formatted(.percent), "1,234,567.8%")
-        XCTAssertEqual((0 as Decimal).formatted(.percent), "0%")
-        XCTAssertEqual((3.14159 as Decimal).formatted(.percent), "314.159%")
-        XCTAssertEqual((-3.14159 as Decimal).formatted(.percent), "-314.159%")
-        XCTAssertEqual((-3000.14159 as Decimal).formatted(.percent), "-300,014.159%")
-
-        XCTAssertEqual((12345 as Decimal).formatted(.currency(code:"USD")), "$12,345.00")
-        XCTAssertEqual((12345.678 as Decimal).formatted(.currency(code:"USD")), "$12,345.68")
-        XCTAssertEqual((0 as Decimal).formatted(.currency(code:"USD")), "$0.00")
-        XCTAssertEqual((3.14159 as Decimal).formatted(.currency(code:"USD")), "$3.14")
-        XCTAssertEqual((-3.14159 as Decimal).formatted(.currency(code:"USD")), "-$3.14")
-        XCTAssertEqual((-3000.14159 as Decimal).formatted(.currency(code:"USD")), "-$3,000.14")
     }
 
-    func testDecimal_default() throws {
-        let style = Decimal.FormatStyle()
-        XCTAssertEqual((12345 as Decimal).formatted(), style.format(12345))
-        XCTAssertEqual((12345.678 as Decimal).formatted(), style.format(12345.678))
-        XCTAssertEqual((0 as Decimal).formatted(), style.format(0))
-        XCTAssertEqual((3.14159 as Decimal).formatted(), style.format(3.14159))
-        XCTAssertEqual((-3.14159 as Decimal).formatted(), style.format(-3.14159))
-        XCTAssertEqual((-3000.14159 as Decimal).formatted(), style.format(-3000.14159))
-    }
-
-    func testDecimal_default_enUS() throws {
-        guard Locale.autoupdatingCurrent.language.isEquivalent(to: Locale.Language(identifier: "en_US")) else {
-            throw XCTSkip("This test can only be run with the system set to the en_US language")
+    @Test func decimal_default() async {
+        await usingCurrentInternationalizationPreferences {
+            let style = Decimal.FormatStyle()
+            #expect((12345 as Decimal).formatted() == style.format(12345))
+            #expect((12345.678 as Decimal).formatted() == style.format(12345.678))
+            #expect((0 as Decimal).formatted() == style.format(0))
+            #expect((3.14159 as Decimal).formatted() == style.format(3.14159))
+            #expect((-3.14159 as Decimal).formatted() == style.format(-3.14159))
+            #expect((-3000.14159 as Decimal).formatted() == style.format(-3000.14159))
         }
-        XCTAssertEqual((12345 as Decimal).formatted(), "12,345")
-        XCTAssertEqual((12345.678 as Decimal).formatted(), "12,345.678")
-        XCTAssertEqual((0 as Decimal).formatted(), "0")
-        XCTAssertEqual((3.14159 as Decimal).formatted(), "3.14159")
-        XCTAssertEqual((-3.14159 as Decimal).formatted(), "-3.14159")
-        XCTAssertEqual((-3000.14159 as Decimal).formatted(), "-3,000.14159")
     }
 
-    func testDecimal_withShorthand() throws {
-        let style = Decimal.FormatStyle()
-        XCTAssertEqual((12345 as Decimal).formatted(.number), style.format(12345))
-        XCTAssertEqual((12345.678 as Decimal).formatted(.number), style.format(12345.678))
-        XCTAssertEqual((0 as Decimal).formatted(.number), style.format(0))
-        XCTAssertEqual((3.14159 as Decimal).formatted(.number), style.format(3.14159))
-        XCTAssertEqual((-3.14159 as Decimal).formatted(.number), style.format(-3.14159))
-        XCTAssertEqual((-3000.14159 as Decimal).formatted(.number), style.format(-3000.14159))
+    @Test func decimal_default_enUS() async {
+        await usingCurrentInternationalizationPreferences {
+            // This test can only be run with the system set to the en_US language
+            var prefs = LocalePreferences()
+            prefs.languages = ["en-US"]
+            prefs.locale = "en_US"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            
+            #expect((12345 as Decimal).formatted() == "12,345")
+            #expect((12345.678 as Decimal).formatted() == "12,345.678")
+            #expect((0 as Decimal).formatted() == "0")
+            #expect((3.14159 as Decimal).formatted() == "3.14159")
+            #expect((-3.14159 as Decimal).formatted() == "-3.14159")
+            #expect((-3000.14159 as Decimal).formatted() == "-3,000.14159")
+        }
+    }
 
-        let percentStyle = Decimal.FormatStyle.Percent()
-        XCTAssertEqual((12345 as Decimal).formatted(.percent), percentStyle.format(12345))
-        XCTAssertEqual((12345.678 as Decimal).formatted(.percent), percentStyle.format(12345.678))
-        XCTAssertEqual((0 as Decimal).formatted(.percent), percentStyle.format(0))
-        XCTAssertEqual((3.14159 as Decimal).formatted(.percent), percentStyle.format(3.14159))
-        XCTAssertEqual((-3.14159 as Decimal).formatted(.percent), percentStyle.format(-3.14159))
-        XCTAssertEqual((-3000.14159 as Decimal).formatted(.percent), percentStyle.format(-3000.14159))
+    @Test func decimal_withShorthand() throws {
+        let style = Decimal.FormatStyle(locale: enUSLocale)
+        #expect((12345 as Decimal).formatted(.number.locale(enUSLocale)) == style.format(12345))
+        #expect((12345.678 as Decimal).formatted(.number.locale(enUSLocale)) == style.format(12345.678))
+        #expect((0 as Decimal).formatted(.number.locale(enUSLocale)) == style.format(0))
+        #expect((3.14159 as Decimal).formatted(.number.locale(enUSLocale)) == style.format(3.14159))
+        #expect((-3.14159 as Decimal).formatted(.number.locale(enUSLocale)) == style.format(-3.14159))
+        #expect((-3000.14159 as Decimal).formatted(.number.locale(enUSLocale)) == style.format(-3000.14159))
 
-        let currencyStyle = Decimal.FormatStyle.Currency(code: "USD")
-        XCTAssertEqual((12345 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(12345))
-        XCTAssertEqual((12345.678 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(12345.678))
-        XCTAssertEqual((0 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(0))
-        XCTAssertEqual((3.14159 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(3.14159))
-        XCTAssertEqual((-3.14159 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(-3.14159))
-        XCTAssertEqual((-3000.14159 as Decimal).formatted(.currency(code:"USD")), currencyStyle.format(-3000.14159))
+        let percentStyle = Decimal.FormatStyle.Percent(locale: enUSLocale)
+        #expect((12345 as Decimal).formatted(.percent.locale(enUSLocale)) == percentStyle.format(12345))
+        #expect((12345.678 as Decimal).formatted(.percent.locale(enUSLocale)) == percentStyle.format(12345.678))
+        #expect((0 as Decimal).formatted(.percent.locale(enUSLocale)) == percentStyle.format(0))
+        #expect((3.14159 as Decimal).formatted(.percent.locale(enUSLocale)) == percentStyle.format(3.14159))
+        #expect((-3.14159 as Decimal).formatted(.percent.locale(enUSLocale)) == percentStyle.format(-3.14159))
+        #expect((-3000.14159 as Decimal).formatted(.percent.locale(enUSLocale)) == percentStyle.format(-3000.14159))
+
+        let currencyStyle = Decimal.FormatStyle.Currency(code: "USD", locale: enUSLocale)
+        #expect((12345 as Decimal).formatted(.currency(code:"USD").locale(enUSLocale)) == currencyStyle.format(12345))
+        #expect((12345.678 as Decimal).formatted(.currency(code:"USD").locale(enUSLocale)) == currencyStyle.format(12345.678))
+        #expect((0 as Decimal).formatted(.currency(code:"USD").locale(enUSLocale)) == currencyStyle.format(0))
+        #expect((3.14159 as Decimal).formatted(.currency(code:"USD").locale(enUSLocale)) == currencyStyle.format(3.14159))
+        #expect((-3.14159 as Decimal).formatted(.currency(code:"USD").locale(enUSLocale)) == currencyStyle.format(-3.14159))
+        #expect((-3000.14159 as Decimal).formatted(.currency(code:"USD").locale(enUSLocale)) == currencyStyle.format(-3000.14159))
     }
 
 #if FOUNDATION_FRAMEWORK
-    func test_autoupdatingCurrentChangesFormatResults() {
-        let locale = Locale.autoupdatingCurrent
-        let number = 50_000
+    @Test func autoupdatingCurrentChangesFormatResults() async {
+        await usingCurrentInternationalizationPreferences {
+            let locale = Locale.autoupdatingCurrent
+            let number = 50_000
 #if FOUNDATION_FRAMEWORK
-        // Measurement is not yet available in the package
-        let measurement = Measurement(value: 0.8, unit: UnitLength.meters)
+            // Measurement is not yet available in the package
+            let measurement = Measurement(value: 0.8, unit: UnitLength.meters)
 #endif
-        let currency = Decimal(123.45)
-        let percent = 54.32
-        let bytes = 1_234_567_890
-
-        // Get a formatted result from es-ES
-        var prefs = LocalePreferences()
-        prefs.languages = ["es-ES"]
-        prefs.locale = "es_ES"
-        LocaleCache.cache.resetCurrent(to: prefs)
-        let formattedSpanishNumber = number.formatted(.number.locale(locale))
+            let currency = Decimal(123.45)
+            let percent = 54.32
+            let bytes = 1_234_567_890
+            
+            // Get a formatted result from es-ES
+            var prefs = LocalePreferences()
+            prefs.languages = ["es-ES"]
+            prefs.locale = "es_ES"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            let formattedSpanishNumber = number.formatted(.number.locale(locale))
 #if FOUNDATION_FRAMEWORK
-        let formattedSpanishMeasurement = measurement.formatted(.measurement(width: .narrow).locale(locale))
+            let formattedSpanishMeasurement = measurement.formatted(.measurement(width: .narrow).locale(locale))
 #endif
-        let formattedSpanishCurrency = currency.formatted(.currency(code: "USD").locale(locale))
-        let formattedSpanishPercent = percent.formatted(.percent.locale(locale))
-        let formattedSpanishBytes = bytes.formatted(.byteCount(style: .decimal).locale(locale))
-
-        // Get a formatted result from en-US
-        prefs.languages = ["en-US"]
-        prefs.locale = "en_US"
-        LocaleCache.cache.resetCurrent(to: prefs)
-        let formattedEnglishNumber = number.formatted(.number.locale(locale))
+            let formattedSpanishCurrency = currency.formatted(.currency(code: "USD").locale(locale))
+            let formattedSpanishPercent = percent.formatted(.percent.locale(locale))
+            let formattedSpanishBytes = bytes.formatted(.byteCount(style: .decimal).locale(locale))
+            
+            // Get a formatted result from en-US
+            prefs.languages = ["en-US"]
+            prefs.locale = "en_US"
+            LocaleCache.cache.resetCurrent(to: prefs)
+            let formattedEnglishNumber = number.formatted(.number.locale(locale))
 #if FOUNDATION_FRAMEWORK
-        let formattedEnglishMeasurement = measurement.formatted(.measurement(width: .narrow).locale(locale))
+            let formattedEnglishMeasurement = measurement.formatted(.measurement(width: .narrow).locale(locale))
 #endif
-        let formattedEnglishCurrency = currency.formatted(.currency(code: "USD").locale(locale))
-        let formattedEnglishPercent = percent.formatted(.percent.locale(locale))
-        let formattedEnglishBytes = bytes.formatted(.byteCount(style: .decimal).locale(locale))
-
-        // Reset to current preferences before any possibility of failing this test
-        LocaleCache.cache.reset()
-
-        // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
-        XCTAssertNotEqual(formattedSpanishNumber, formattedEnglishNumber)
+            let formattedEnglishCurrency = currency.formatted(.currency(code: "USD").locale(locale))
+            let formattedEnglishPercent = percent.formatted(.percent.locale(locale))
+            let formattedEnglishBytes = bytes.formatted(.byteCount(style: .decimal).locale(locale))
+            
+            // Reset to current preferences before any possibility of failing this test
+            LocaleCache.cache.reset()
+            
+            // No matter what 'current' was before this test was run, formattedSpanish and formattedEnglish should be different.
+            #expect(formattedSpanishNumber != formattedEnglishNumber)
 #if FOUNDATION_FRAMEWORK
-        XCTAssertNotEqual(formattedSpanishMeasurement, formattedEnglishMeasurement)
+            #expect(formattedSpanishMeasurement != formattedEnglishMeasurement)
 #endif
-        XCTAssertNotEqual(formattedSpanishCurrency, formattedEnglishCurrency)
-        XCTAssertNotEqual(formattedSpanishPercent, formattedEnglishPercent)
-        XCTAssertNotEqual(formattedSpanishBytes, formattedEnglishBytes)
+            #expect(formattedSpanishCurrency != formattedEnglishCurrency)
+            #expect(formattedSpanishPercent != formattedEnglishPercent)
+            #expect(formattedSpanishBytes != formattedEnglishBytes)
+        }
     }
 #endif // FOUNDATION_PREVIEW
 
 #if !os(watchOS) // These tests require Int to be Int64, which is not always true on watch OSs yet
-    func testCurrency_compactName() throws {
+    @Test func currency_compactName() throws {
         let baseStyle = Decimal.FormatStyle.Currency(code: "USD", locale: Locale(identifier: "en_US")).notation(.compactName)
 
         // significant digits
         // `compactName` naturally rounds the number to the closest "name".
-        XCTAssertEqual( (922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$920T")
-        XCTAssertEqual(  (92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$92T")
-        XCTAssertEqual(   (9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2T")
-        XCTAssertEqual(    (922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$920B")
-        XCTAssertEqual(     (92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$92B")
-        XCTAssertEqual(      (9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2B")
-        XCTAssertEqual(       (922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$920M")
-        XCTAssertEqual(        (92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$92M")
-        XCTAssertEqual(         (9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2M")
-        XCTAssertEqual(          (922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$920K")
-        XCTAssertEqual(           (92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$92K")
-        XCTAssertEqual(            (9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2K")
-        XCTAssertEqual(             (922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$920")
-        XCTAssertEqual(              (92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$92")
-        XCTAssertEqual(               (9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.0")
-        XCTAssertEqual(               (0 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$0.0")
-        XCTAssertEqual(              (-9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.0")
-        XCTAssertEqual(             (-92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$92")
-        XCTAssertEqual(            (-922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$920")
-        XCTAssertEqual(           (-9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2K")
-        XCTAssertEqual(          (-92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$92K")
-        XCTAssertEqual(         (-922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$920K")
-        XCTAssertEqual(        (-9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2M")
-        XCTAssertEqual(       (-92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$92M")
-        XCTAssertEqual(      (-922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$920M")
-        XCTAssertEqual(     (-9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2B")
-        XCTAssertEqual(    (-92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$92B")
-        XCTAssertEqual(   (-922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$920B")
-        XCTAssertEqual(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2T")
-        XCTAssertEqual( (-92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$92T")
-        XCTAssertEqual((-922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$920T")
+        #expect( (922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920T")
+        #expect(  (92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92T")
+        #expect(   (9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2T")
+        #expect(    (922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920B")
+        #expect(     (92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92B")
+        #expect(      (9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2B")
+        #expect(       (922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920M")
+        #expect(        (92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92M")
+        #expect(         (9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2M")
+        #expect(          (922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920K")
+        #expect(           (92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92K")
+        #expect(            (9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2K")
+        #expect(             (922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920")
+        #expect(              (92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92")
+        #expect(               (9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.0")
+        #expect(               (0 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$0.0")
+        #expect(              (-9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.0")
+        #expect(             (-92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92")
+        #expect(            (-922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920")
+        #expect(           (-9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2K")
+        #expect(          (-92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92K")
+        #expect(         (-922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920K")
+        #expect(        (-9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2M")
+        #expect(       (-92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92M")
+        #expect(      (-922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920M")
+        #expect(     (-9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2B")
+        #expect(    (-92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92B")
+        #expect(   (-922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920B")
+        #expect(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2T")
+        #expect( (-92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92T")
+        #expect((-922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920T")
 
         // fraction length
-        XCTAssertEqual( (922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$922.34T")
-        XCTAssertEqual(  (92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$92.23T")
-        XCTAssertEqual(   (9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22T")
-        XCTAssertEqual(    (922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$922.34B")
-        XCTAssertEqual(     (92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$92.23B")
-        XCTAssertEqual(      (9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22B")
-        XCTAssertEqual(       (922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$922.34M")
-        XCTAssertEqual(        (92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$92.23M")
-        XCTAssertEqual(         (9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22M")
-        XCTAssertEqual(          (922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$922.34K")
-        XCTAssertEqual(           (92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$92.23K")
-        XCTAssertEqual(            (9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22K")
-        XCTAssertEqual(             (922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$922.00")
-        XCTAssertEqual(              (92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$92.00")
-        XCTAssertEqual(               (9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.00")
-        XCTAssertEqual(               (0 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$0.00")
-        XCTAssertEqual(              (-9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.00")
-        XCTAssertEqual(             (-92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$92.00")
-        XCTAssertEqual(            (-922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$922.00")
-        XCTAssertEqual(           (-9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22K")
-        XCTAssertEqual(          (-92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$92.23K")
-        XCTAssertEqual(         (-922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$922.34K")
-        XCTAssertEqual(        (-9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22M")
-        XCTAssertEqual(       (-92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$92.23M")
-        XCTAssertEqual(      (-922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$922.34M")
-        XCTAssertEqual(     (-9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22B")
-        XCTAssertEqual(    (-92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$92.23B")
-        XCTAssertEqual(   (-922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$922.34B")
-        XCTAssertEqual(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22T")
-        XCTAssertEqual( (-92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$92.23T")
-        XCTAssertEqual((-922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$922.34T")
+        #expect( (922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.34T")
+        #expect(  (92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.23T")
+        #expect(   (9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22T")
+        #expect(    (922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.34B")
+        #expect(     (92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.23B")
+        #expect(      (9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22B")
+        #expect(       (922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.34M")
+        #expect(        (92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.23M")
+        #expect(         (9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22M")
+        #expect(          (922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.34K")
+        #expect(           (92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.23K")
+        #expect(            (9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22K")
+        #expect(             (922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.00")
+        #expect(              (92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.00")
+        #expect(               (9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.00")
+        #expect(               (0 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$0.00")
+        #expect(              (-9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.00")
+        #expect(             (-92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.00")
+        #expect(            (-922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.00")
+        #expect(           (-9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22K")
+        #expect(          (-92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.23K")
+        #expect(         (-922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.34K")
+        #expect(        (-9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22M")
+        #expect(       (-92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.23M")
+        #expect(      (-922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.34M")
+        #expect(     (-9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22B")
+        #expect(    (-92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.23B")
+        #expect(   (-922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.34B")
+        #expect(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22T")
+        #expect( (-92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.23T")
+        #expect((-922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.34T")
 
         // rounded
-        XCTAssertEqual( (922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$1000T")
-        XCTAssertEqual(  (92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100T")
-        XCTAssertEqual(   (9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100T")
-        XCTAssertEqual(    (922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100T")
-        XCTAssertEqual(     (92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100B")
-        XCTAssertEqual(      (9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100B")
-        XCTAssertEqual(       (922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100B")
-        XCTAssertEqual(        (92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100M")
-        XCTAssertEqual(         (9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100M")
-        XCTAssertEqual(          (922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100M")
-        XCTAssertEqual(           (92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100K")
-        XCTAssertEqual(            (9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100K")
-        XCTAssertEqual(             (922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100K")
-        XCTAssertEqual(              (92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100")
-        XCTAssertEqual(               (9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100")
-        XCTAssertEqual(               (0 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$0")
-        XCTAssertEqual(              (-9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100")
-        XCTAssertEqual(             (-92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100")
-        XCTAssertEqual(            (-922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100K")
-        XCTAssertEqual(           (-9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100K")
-        XCTAssertEqual(          (-92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100K")
-        XCTAssertEqual(         (-922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100M")
-        XCTAssertEqual(        (-9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100M")
-        XCTAssertEqual(       (-92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100M")
-        XCTAssertEqual(      (-922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100B")
-        XCTAssertEqual(     (-9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100B")
-        XCTAssertEqual(    (-92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100B")
-        XCTAssertEqual(   (-922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100T")
-        XCTAssertEqual(  (-9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100T")
-        XCTAssertEqual( (-92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100T")
-        XCTAssertEqual((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$1000T")
+        #expect( (922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$1000T")
+        #expect(  (92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100T")
+        #expect(   (9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100T")
+        #expect(    (922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100T")
+        #expect(     (92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100B")
+        #expect(      (9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100B")
+        #expect(       (922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100B")
+        #expect(        (92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100M")
+        #expect(         (9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100M")
+        #expect(          (922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100M")
+        #expect(           (92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100K")
+        #expect(            (9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100K")
+        #expect(             (922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100K")
+        #expect(              (92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100")
+        #expect(               (9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100")
+        #expect(               (0 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$0")
+        #expect(              (-9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100")
+        #expect(             (-92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100")
+        #expect(            (-922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100K")
+        #expect(           (-9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100K")
+        #expect(          (-92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100K")
+        #expect(         (-922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100M")
+        #expect(        (-9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100M")
+        #expect(       (-92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100M")
+        #expect(      (-922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100B")
+        #expect(     (-9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100B")
+        #expect(    (-92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100B")
+        #expect(   (-922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100T")
+        #expect(  (-9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100T")
+        #expect( (-92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100T")
+        #expect((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$1000T")
     }
 
-    func testCurrency_Codable() throws {
+    @Test func currency_Codable() throws {
         let gbpInUS = Decimal.FormatStyle.Currency(code: "GBP", locale: enUSLocale)
         let _ = try JSONEncoder().encode(gbpInUS)
         // Valid JSON presentation of the format style
-        let previouslyEncoded = """
+        let previouslyEncoded = try #require("""
         {
             "collection":
             {
@@ -615,119 +614,114 @@ final class NumberFormatStyleTests: XCTestCase {
                 "identifier": "en_US"
             }
         }
-        """.data(using: String._Encoding.utf8)
-
-        guard let previouslyEncoded else {
-            XCTFail()
-            return
-        }
+        """.data(using: String.Encoding.utf8))
 
         let decoded = try JSONDecoder().decode(Decimal.FormatStyle.Currency.self, from: previouslyEncoded)
-        XCTAssertEqual(decoded, gbpInUS)
+        #expect(decoded == gbpInUS)
     }
 
-    func testCurrency_scientific() throws {
+    @Test func currency_scientific() throws {
         let baseStyle = Decimal.FormatStyle.Currency(code: "USD", locale: Locale(identifier: "en_US")).notation(.scientific)
 
         // significant digits
         // `compactName` naturally rounds the number to the closest "name".
-        XCTAssertEqual( (922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E14")
-        XCTAssertEqual(  (92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E13")
-        XCTAssertEqual(   (9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E12")
-        XCTAssertEqual(    (922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E11")
-        XCTAssertEqual(     (92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E10")
-        XCTAssertEqual(      (9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E9")
-        XCTAssertEqual(       (922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E8")
-        XCTAssertEqual(        (92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E7")
-        XCTAssertEqual(         (9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E6")
-        XCTAssertEqual(          (922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E5")
-        XCTAssertEqual(           (92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E4")
-        XCTAssertEqual(            (9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E3")
-        XCTAssertEqual(             (922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E2")
-        XCTAssertEqual(              (92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.2E1")
-        XCTAssertEqual(               (9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$9.0E0")
-        XCTAssertEqual(               (0 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "$0.0E0")
-        XCTAssertEqual(              (-9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.0E0")
-        XCTAssertEqual(             (-92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E1")
-        XCTAssertEqual(            (-922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E2")
-        XCTAssertEqual(           (-9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E3")
-        XCTAssertEqual(          (-92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E4")
-        XCTAssertEqual(         (-922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E5")
-        XCTAssertEqual(        (-9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E6")
-        XCTAssertEqual(       (-92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E7")
-        XCTAssertEqual(      (-922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E8")
-        XCTAssertEqual(     (-9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E9")
-        XCTAssertEqual(    (-92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E10")
-        XCTAssertEqual(   (-922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E11")
-        XCTAssertEqual(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E12")
-        XCTAssertEqual( (-92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E13")
-        XCTAssertEqual((-922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))), "-$9.2E14")
+        #expect( (922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E14")
+        #expect(  (92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E13")
+        #expect(   (9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E12")
+        #expect(    (922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E11")
+        #expect(     (92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E10")
+        #expect(      (9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E9")
+        #expect(       (922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E8")
+        #expect(        (92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E7")
+        #expect(         (9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E6")
+        #expect(          (922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E5")
+        #expect(           (92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E4")
+        #expect(            (9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E3")
+        #expect(             (922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E2")
+        #expect(              (92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2E1")
+        #expect(               (9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.0E0")
+        #expect(               (0 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$0.0E0")
+        #expect(              (-9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.0E0")
+        #expect(             (-92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E1")
+        #expect(            (-922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E2")
+        #expect(           (-9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E3")
+        #expect(          (-92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E4")
+        #expect(         (-922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E5")
+        #expect(        (-9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E6")
+        #expect(       (-92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E7")
+        #expect(      (-922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E8")
+        #expect(     (-9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E9")
+        #expect(    (-92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E10")
+        #expect(   (-922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E11")
+        #expect(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E12")
+        #expect( (-92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E13")
+        #expect((-922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2E14")
 
         // fraction length
-        XCTAssertEqual( (922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E14")
-        XCTAssertEqual(  (92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E13")
-        XCTAssertEqual(   (9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E12")
-        XCTAssertEqual(    (922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E11")
-        XCTAssertEqual(     (92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E10")
-        XCTAssertEqual(      (9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E9")
-        XCTAssertEqual(       (922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E8")
-        XCTAssertEqual(        (92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E7")
-        XCTAssertEqual(         (9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E6")
-        XCTAssertEqual(          (922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E5")
-        XCTAssertEqual(           (92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E4")
-        XCTAssertEqual(            (9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E3")
-        XCTAssertEqual(             (922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.22E2")
-        XCTAssertEqual(              (92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.20E1")
-        XCTAssertEqual(               (9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$9.00E0")
-        XCTAssertEqual(               (0 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "$0.00E0")
-        XCTAssertEqual(              (-9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.00E0")
-        XCTAssertEqual(             (-92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.20E1")
-        XCTAssertEqual(            (-922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E2")
-        XCTAssertEqual(           (-9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E3")
-        XCTAssertEqual(          (-92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E4")
-        XCTAssertEqual(         (-922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E5")
-        XCTAssertEqual(        (-9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E6")
-        XCTAssertEqual(       (-92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E7")
-        XCTAssertEqual(      (-922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E8")
-        XCTAssertEqual(     (-9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E9")
-        XCTAssertEqual(    (-92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E10")
-        XCTAssertEqual(   (-922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E11")
-        XCTAssertEqual(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E12")
-        XCTAssertEqual( (-92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E13")
-        XCTAssertEqual((-922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))), "-$9.22E14")
+        #expect( (922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E14")
+        #expect(  (92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E13")
+        #expect(   (9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E12")
+        #expect(    (922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E11")
+        #expect(     (92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E10")
+        #expect(      (9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E9")
+        #expect(       (922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E8")
+        #expect(        (92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E7")
+        #expect(         (9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E6")
+        #expect(          (922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E5")
+        #expect(           (92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E4")
+        #expect(            (9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E3")
+        #expect(             (922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22E2")
+        #expect(              (92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.20E1")
+        #expect(               (9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.00E0")
+        #expect(               (0 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$0.00E0")
+        #expect(              (-9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.00E0")
+        #expect(             (-92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.20E1")
+        #expect(            (-922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E2")
+        #expect(           (-9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E3")
+        #expect(          (-92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E4")
+        #expect(         (-922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E5")
+        #expect(        (-9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E6")
+        #expect(       (-92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E7")
+        #expect(      (-922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E8")
+        #expect(     (-9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E9")
+        #expect(    (-92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E10")
+        #expect(   (-922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E11")
+        #expect(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E12")
+        #expect( (-92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E13")
+        #expect((-922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22E14")
 
         // rounded
-        XCTAssertEqual( (922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E15")
-        XCTAssertEqual(  (92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E14")
-        XCTAssertEqual(   (9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E13")
-        XCTAssertEqual(    (922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E12")
-        XCTAssertEqual(     (92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E11")
-        XCTAssertEqual(      (9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E10")
-        XCTAssertEqual(       (922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E9")
-        XCTAssertEqual(        (92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E8")
-        XCTAssertEqual(         (9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E7")
-        XCTAssertEqual(          (922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E6")
-        XCTAssertEqual(           (92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E5")
-        XCTAssertEqual(            (9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E4")
-        XCTAssertEqual(             (922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E3")
-        XCTAssertEqual(              (92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E2")
-        XCTAssertEqual(               (9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$100E1")
-        XCTAssertEqual(               (0 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "$0E0")
-        XCTAssertEqual(              (-9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E1")
-        XCTAssertEqual(             (-92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E2")
-        XCTAssertEqual(            (-922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E3")
-        XCTAssertEqual(           (-9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E4")
-        XCTAssertEqual(          (-92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E5")
-        XCTAssertEqual(         (-922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E6")
-        XCTAssertEqual(        (-9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E7")
-        XCTAssertEqual(       (-92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E8")
-        XCTAssertEqual(      (-922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E9")
-        XCTAssertEqual(     (-9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E10")
-        XCTAssertEqual(    (-92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E11")
-        XCTAssertEqual(   (-922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E12")
-        XCTAssertEqual(  (-9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E13")
-        XCTAssertEqual( (-92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E14")
-        XCTAssertEqual((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)), "-$100E15")
+        #expect( (922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E15")
+        #expect(  (92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E14")
+        #expect(   (9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E13")
+        #expect(    (922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E12")
+        #expect(     (92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E11")
+        #expect(      (9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E10")
+        #expect(       (922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E9")
+        #expect(        (92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E8")
+        #expect(         (9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E7")
+        #expect(          (922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E6")
+        #expect(           (92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E5")
+        #expect(            (9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E4")
+        #expect(             (922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E3")
+        #expect(              (92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E2")
+        #expect(               (9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100E1")
+        #expect(               (0 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$0E0")
+        #expect(              (-9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E1")
+        #expect(             (-92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E2")
+        #expect(            (-922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E3")
+        #expect(           (-9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E4")
+        #expect(          (-92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E5")
+        #expect(         (-922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E6")
+        #expect(        (-9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E7")
+        #expect(       (-92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E8")
+        #expect(      (-922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E9")
+        #expect(     (-9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E10")
+        #expect(    (-92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E11")
+        #expect(   (-922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E12")
+        #expect(  (-9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E13")
+        #expect( (-92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E14")
+        #expect((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E15")
     }
 #endif // !os(watchOS)
 }
@@ -760,11 +754,12 @@ extension IntegerFormatStyle {
 }
 
 #if !os(watchOS) // These tests require Int to be 64 bits, which is not always true on watch OSs yet
-final class IntegerFormatStyleExhaustiveTests: XCTestCase {
+@Suite("IntegerFormatStyle (Exhaustive)")
+private struct IntegerFormatStyleExhaustiveTests {
     let exhaustiveIntNumbers : [Int64] = [9223372036854775807, 922337203685477580, 92233720368547758, 9223372036854775, 922337203685477, 92233720368547, 9223372036854, 922337203685, 92233720368, 9223372036, 922337203, 92233720, 9223372, 922337, 92233, 9223, 922, 92, 9, 0, -9, -92, -922, -9223, -92233, -922337, -9223372, -92233720, -922337203, -9223372036, -92233720368, -922337203685, -9223372036854, -92233720368547, -922337203685477, -9223372036854775, -92233720368547758, -922337203685477580, -9223372036854775808 ]
-    let baseStyle: IntegerFormatStyle<Int> = .init(locale: Locale(identifier: "en_US"))
+    let baseStyle = IntegerFormatStyle<Int>(locale: Locale(identifier: "en_US"))
 
-    func testIntegerLongStyles() throws {
+    @Test(.timeLimit(.minutes(1))) func integerLongStyles() throws {
         let testSuperLongStyles: [IntegerFormatStyle<Int>] = [
             baseStyle.precision(.significantDigits(Int.max...)),
             baseStyle.precision(.significantDigits(Int.min...Int.max)),
@@ -775,24 +770,24 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
             baseStyle.precision(.fractionLength(Int.max...)),
             baseStyle.precision(.fractionLength(Int.max...Int.max)),
             baseStyle.precision(.fractionLength(...Int.max)),
-
+            
             // Styles that do not make sense
             baseStyle.precision(.significantDigits(...Int.min)),
             baseStyle.precision(.integerAndFractionLength(integerLimits: ...Int.min, fractionLimits: ...Int.min)),
-
+            
             baseStyle.scale(Double(Int.max)),
             baseStyle.scale(Double(Int.min)),
         ]
-
+        
         // The results are too long so let's just verify that they're not empty and they won't spin
         for style in testSuperLongStyles {
             for value in exhaustiveIntNumbers {
-                XCTAssertTrue(style.format(Int(value)).count > 0)
+                #expect(style.format(Int(value)).count > 0)
             }
         }
     }
 
-    func testEquivalentStyles() throws {
+    @Test func equivalentStyles() throws {
         let equivalentStyles: [[IntegerFormatStyle<Int>]] = [
             [
                 baseStyle.precision(.significantDigits(2..<2)),
@@ -832,7 +827,7 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
                     results[value] = style.format(Int(value))
                 }
                 if let previousResults = previousResults, let previousStyle = previousStyle {
-                    XCTAssertEqual(results, previousResults, "style: \(style.debugDescription) and style: \(previousStyle.debugDescription) should produce the same strings")
+                    #expect(results == previousResults, "style: \(style.debugDescription) and style: \(previousStyle.debugDescription) should produce the same strings")
                 }
                 previousResults = results
                 previousStyle = style
@@ -840,7 +835,7 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
         }
     }
 
-    func test_plainStyle_scale() throws {
+    @Test func plainStyle_scale() throws {
         let expectations: [IntegerFormatStyle<Int> : [String]] = [
             baseStyle: [ "9,223,372,036,854,775,807",
                          "922,337,203,685,477,580",
@@ -1087,12 +1082,12 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
 
         for (style, expectedStrings) in expectations {
             for i in 0..<exhaustiveIntNumbers.count {
-                XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
+                #expect(style.format(Int(exhaustiveIntNumbers[i])) == expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
             }
         }
     }
 
-    func test_plainStyle_signStrategy() throws {
+    @Test func test_plainStyle_signStrategy() throws {
         let expectations: [IntegerFormatStyle<Int> : [String]] = [
             baseStyle.sign(strategy: .never): [ "9,223,372,036,854,775,807",
                                                 "922,337,203,685,477,580",
@@ -1217,11 +1212,11 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
         ]
         for (style, expectedStrings) in expectations {
             for i in 0..<exhaustiveIntNumbers.count {
-                XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
+                #expect(style.format(Int(exhaustiveIntNumbers[i])) == expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
             }
         }
     }
-    func test_plainStyle_rounded() throws {
+    @Test func plainStyle_rounded() throws {
         let expectations: [IntegerFormatStyle<Int> : [String]] = [
             baseStyle.rounded(rule: .toNearestOrEven, increment: 5): [ "9,223,372,036,854,775,805",
                                                                        "922,337,203,685,477,580",
@@ -1307,13 +1302,13 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
 
         for (idx, (style, expectedStrings)) in expectations.enumerated() {
             for i in 0..<exhaustiveIntNumbers.count {
-                XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectedStrings[i], "Style: \(style.collection.debugDescription) is failing for #\(idx), #\(i)")
+                #expect(style.format(Int(exhaustiveIntNumbers[i])) == expectedStrings[i], "Style: \(style.collection.debugDescription) is failing for #\(idx), #\(i)")
             }
         }
     }
 
 #if FOUNDATION_FRAMEWORK // Re-enable this test when ICU is updated to 72
-    func test_plainStyle_rounded_largeIncrement() {
+    @Test func plainStyle_rounded_largeIncrement() {
         let style = baseStyle.rounded(rule: .up, increment: Int.max)
 
         let expectations = [
@@ -1358,12 +1353,12 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
             "-9,223,372,036,854,775,807",
         ]
         for i in 0..<exhaustiveIntNumbers.count {
-            XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectations[i], "Style: \(style.collection.debugDescription) is failing for number #\(Int(exhaustiveIntNumbers[i]))")
+            #expect(style.format(Int(exhaustiveIntNumbers[i])) == expectations[i], "Style: \(style.collection.debugDescription) is failing for number #\(Int(exhaustiveIntNumbers[i]))")
         }
     }
 #endif
 
-    func test_plainStyle_scientific() throws {
+    @Test func plainStyle_scientific() throws {
         let expectations: [IntegerFormatStyle<Int> : [String]] = [
             baseStyle.notation(.scientific): [ "9.223372E18",
                                               "9.223372E17",
@@ -1490,12 +1485,12 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
         ]
         for (style, expectedStrings) in expectations {
             for i in 0..<exhaustiveIntNumbers.count {
-                XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
+                #expect(style.format(Int(exhaustiveIntNumbers[i])) == expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
             }
         }
     }
 
-    func test_plainStyle_compactName() throws {
+    @Test func plainStyle_compactName() throws {
         let expectations: [IntegerFormatStyle<Int> : [String]] = [
             // `compactName` naturally rounds the number to the closest "name".
             baseStyle.precision(.significantDigits(2...2)).notation(.compactName): [
@@ -1624,7 +1619,7 @@ final class IntegerFormatStyleExhaustiveTests: XCTestCase {
         ]
         for (style, expectedStrings) in expectations {
             for i in 0..<exhaustiveIntNumbers.count {
-                XCTAssertEqual(style.format(Int(exhaustiveIntNumbers[i])), expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
+                #expect(style.format(Int(exhaustiveIntNumbers[i])) == expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
             }
         }
     }
@@ -1654,16 +1649,17 @@ extension Sequence where Element == Segment {
 
 extension AttributedString {
     fileprivate var string: String {
-        String(self._guts.string)
+        String(self.characters)
     }
 }
 
-class TestNumberAttributeFormatStyle: XCTestCase {
+@Suite("Number Attributed FormatStyle")
+private struct NumberAttributedFormatStyleTests {
     let enUS = Locale(identifier: "en_US")
     let frFR = Locale(identifier: "fr_FR")
 
-    func testIntegerStyle() throws {
-        let style: IntegerFormatStyle<Int> = .init(locale: enUS)
+    @Test func integerStyle() throws {
+        let style = IntegerFormatStyle<Int>(locale: enUS)
         let value = -12345
         let expectations: [IntegerFormatStyle<Int> : [Segment]] = [
             style: [("-", nil, .sign), ("12", .integer, nil), (",", .integer, .groupingSeparator), ("345", .integer, nil)],
@@ -1674,12 +1670,12 @@ class TestNumberAttributeFormatStyle: XCTestCase {
 
         for (style, expectation) in expectations {
             let formatted = style.attributed.format(value)
-            XCTAssertEqual(formatted, expectation.attributedString)
+            #expect(formatted == expectation.attributedString)
         }
     }
 
-    func testIntegerStyle_Currency() throws {
-        let style: IntegerFormatStyle<Int>.Currency = .init(code: "EUR", locale: enUS)
+    @Test func integerStyle_Currency() throws {
+        let style = IntegerFormatStyle<Int>.Currency(code: "EUR", locale: enUS)
         let value = -12345
         let expectations: [IntegerFormatStyle<Int>.Currency : [Segment]] = [
             style: [("-", nil, .sign), ("€", nil, .currency), ("12", .integer, nil), (",", .integer, .groupingSeparator), ("345", .integer, nil), (".", nil, .decimalSeparator), ("00", .fraction, nil)],
@@ -1689,12 +1685,12 @@ class TestNumberAttributeFormatStyle: XCTestCase {
 
         for (style, expectation) in expectations {
             let formatted = style.attributed.format(value)
-            XCTAssertEqual(formatted, expectation.attributedString)
+            #expect(formatted == expectation.attributedString)
         }
     }
 
-    func testIntegerStyle_Percent() throws {
-        let style: IntegerFormatStyle<Int>.Percent = .init(locale: enUS)
+    @Test func integerStyle_Percent() throws {
+        let style = IntegerFormatStyle<Int>.Percent(locale: enUS)
         let value = -12345
         let expectations: [IntegerFormatStyle<Int>.Percent : [Segment]] = [
             style: [("-", nil, .sign), ("12", .integer, nil), (",", .integer, .groupingSeparator), ("345", .integer, nil), ("%", nil, .percent)],
@@ -1703,126 +1699,127 @@ class TestNumberAttributeFormatStyle: XCTestCase {
 
         for (style, expectation) in expectations {
             let formatted = style.attributed.format(value)
-            XCTAssertEqual(formatted, expectation.attributedString)
+            #expect(formatted == expectation.attributedString)
         }
     }
 
-    func testFloatingPoint() throws {
+    @Test func floatingPoint() throws {
         let style: FloatingPointFormatStyle<Double> = .init(locale: enUS)
         let value = -3000.14
-        XCTAssertEqual(style.attributed.format(value),
+        #expect(style.attributed.format(value) ==
                        [("-", nil, .sign), ("3", .integer, nil), (",", .integer, .groupingSeparator), ("000", .integer, nil), (".", nil, .decimalSeparator), ("14", .fraction, nil)].attributedString)
-        XCTAssertEqual(style.precision(.fractionLength(3...3)).attributed.format(value),
+        #expect(style.precision(.fractionLength(3...3)).attributed.format(value) ==
                        [("-", nil, .sign), ("3", .integer, nil), (",", .integer, .groupingSeparator), ("000", .integer, nil), (".", nil, .decimalSeparator), ("140", .fraction, nil)].attributedString)
-        XCTAssertEqual(style.grouping(.never).attributed.format(value),
+        #expect(style.grouping(.never).attributed.format(value) ==
                        [("-", nil, .sign), ("3000", .integer, nil), (".", nil, .decimalSeparator), ("14", .fraction, nil)].attributedString)
 
         let percent: FloatingPointFormatStyle<Double>.Percent = .init(locale: enUS)
-        XCTAssertEqual(percent.attributed.format(value),
+        #expect(percent.attributed.format(value) ==
                        [("-", nil, .sign), ("300", .integer, nil), (",", .integer, .groupingSeparator), ("014", .integer, nil), ("%", nil, .percent)].attributedString)
 
         let currency: FloatingPointFormatStyle<Double>.Currency = .init(code: "EUR", locale: Locale(identifier: "zh_TW"))
-        XCTAssertEqual(currency.grouping(.never).attributed.format(value),
+        #expect(currency.grouping(.never).attributed.format(value) ==
                        [("-", nil, .sign), ("€", nil, .currency), ("3000", .integer, nil), (".", nil, .decimalSeparator), ("14", .fraction, nil)].attributedString)
-        XCTAssertEqual(currency.presentation(.fullName).attributed.format(value),
+        #expect(currency.presentation(.fullName).attributed.format(value) ==
                        [("-", nil, .sign), ("3", .integer, nil), (",", .integer, .groupingSeparator), ("000", .integer, nil), (".", nil, .decimalSeparator), ("14", .fraction, nil), ("歐元", nil, .currency)].attributedString)
 
     }
 
-    func testDecimalStyle() throws {
+    @Test func decimalStyle() throws {
         let style = Decimal.FormatStyle(locale: enUS)
         let value = Decimal(-3000.14)
-        XCTAssertEqual(style.attributed.format(value),
+        #expect(style.attributed.format(value) ==
                        [("-", nil, .sign), ("3", .integer, nil), (",", .integer, .groupingSeparator), ("000", .integer, nil), (".", nil, .decimalSeparator), ("14", .fraction, nil)].attributedString)
-        XCTAssertEqual(style.precision(.fractionLength(3...3)).attributed.format(value),
+        #expect(style.precision(.fractionLength(3...3)).attributed.format(value) ==
                        [("-", nil, .sign), ("3", .integer, nil), (",", .integer, .groupingSeparator), ("000", .integer, nil), (".", nil, .decimalSeparator), ("140", .fraction, nil)].attributedString)
-        XCTAssertEqual(style.grouping(.never).attributed.format(value),
+        #expect(style.grouping(.never).attributed.format(value) ==
                        [("-", nil, .sign), ("3000", .integer, nil), (".", nil, .decimalSeparator), ("14", .fraction, nil)].attributedString)
 
         let percent = Decimal.FormatStyle.Percent(locale: enUS)
-        XCTAssertEqual(percent.attributed.format(value),
+        #expect(percent.attributed.format(value) ==
                        [("-", nil, .sign), ("300", .integer, nil), (",", .integer, .groupingSeparator), ("014", .integer, nil), ("%", nil, .percent)].attributedString)
 
         let currency = Decimal.FormatStyle.Currency(code: "EUR", locale: Locale(identifier: "zh_TW"))
-        XCTAssertEqual(currency.grouping(.never).attributed.format(value),
+        #expect(currency.grouping(.never).attributed.format(value) ==
                        [("-", nil, .sign), ("€", nil, .currency), ("3000", .integer, nil), (".", nil, .decimalSeparator), ("14", .fraction, nil)].attributedString)
-        XCTAssertEqual(currency.presentation(.fullName).attributed.format(value),
+        #expect(currency.presentation(.fullName).attributed.format(value) ==
                        [("-", nil, .sign), ("3", .integer, nil), (",", .integer, .groupingSeparator), ("000", .integer, nil), (".", nil, .decimalSeparator), ("14", .fraction, nil), ("歐元", nil, .currency)].attributedString)
     }
 
-    func testSettingLocale() throws {
+    @Test func settingLocale() throws {
         let int = 42000
         let double = 42000.123
         let decimal = Decimal(42000.123)
 
-        XCTAssertEqual(int.formatted(.number.attributed.locale(enUS)).string, "42,000")
-        XCTAssertEqual(int.formatted(.number.attributed.locale(frFR)).string, "42 000")
+        #expect(int.formatted(.number.attributed.locale(enUS)).string == "42,000")
+        #expect(int.formatted(.number.attributed.locale(frFR)).string == "42 000")
 
-        XCTAssertEqual(int.formatted(.number.locale(enUS).attributed).string, "42,000")
-        XCTAssertEqual(int.formatted(.number.locale(frFR).attributed).string, "42 000")
+        #expect(int.formatted(.number.locale(enUS).attributed).string == "42,000")
+        #expect(int.formatted(.number.locale(frFR).attributed).string == "42 000")
 
-        XCTAssertEqual(int.formatted(.percent.attributed.locale(enUS)).string, "42,000%")
-        XCTAssertEqual(int.formatted(.percent.attributed.locale(frFR)).string, "42 000 %")
+        #expect(int.formatted(.percent.attributed.locale(enUS)).string == "42,000%")
+        #expect(int.formatted(.percent.attributed.locale(frFR)).string == "42 000 %")
 
-        XCTAssertEqual(int.formatted(.percent.locale(enUS).attributed).string, "42,000%")
-        XCTAssertEqual(int.formatted(.percent.locale(frFR).attributed).string, "42 000 %")
+        #expect(int.formatted(.percent.locale(enUS).attributed).string == "42,000%")
+        #expect(int.formatted(.percent.locale(frFR).attributed).string == "42 000 %")
 
-        XCTAssertEqual(int.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(enUS)).string, "42,000.00 US dollars")
-        XCTAssertEqual(int.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(frFR)).string, "42 000,00 dollars des États-Unis")
+        #expect(int.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(enUS)).string == "42,000.00 US dollars")
+        #expect(int.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(frFR)).string == "42 000,00 dollars des États-Unis")
 
-        XCTAssertEqual(int.formatted(.currency(code: "USD").presentation(.fullName).locale(enUS).attributed).string, "42,000.00 US dollars")
-        XCTAssertEqual(int.formatted(.currency(code: "USD").presentation(.fullName).locale(frFR).attributed).string, "42 000,00 dollars des États-Unis")
+        #expect(int.formatted(.currency(code: "USD").presentation(.fullName).locale(enUS).attributed).string == "42,000.00 US dollars")
+        #expect(int.formatted(.currency(code: "USD").presentation(.fullName).locale(frFR).attributed).string == "42 000,00 dollars des États-Unis")
 
         // Double
 
-        XCTAssertEqual(double.formatted(FloatingPointFormatStyle.number.attributed.locale(enUS)).string, "42,000.123")
-        XCTAssertEqual(double.formatted(FloatingPointFormatStyle.number.attributed.locale(frFR)).string, "42 000,123")
+        #expect(double.formatted(FloatingPointFormatStyle.number.attributed.locale(enUS)).string == "42,000.123")
+        #expect(double.formatted(FloatingPointFormatStyle.number.attributed.locale(frFR)).string == "42 000,123")
 
-        XCTAssertEqual(double.formatted(FloatingPointFormatStyle.number.locale(enUS).attributed).string, "42,000.123")
-        XCTAssertEqual(double.formatted(FloatingPointFormatStyle.number.locale(frFR).attributed).string, "42 000,123")
+        #expect(double.formatted(FloatingPointFormatStyle.number.locale(enUS).attributed).string == "42,000.123")
+        #expect(double.formatted(FloatingPointFormatStyle.number.locale(frFR).attributed).string == "42 000,123")
 
-        XCTAssertEqual(double.formatted(FloatingPointFormatStyle.Percent.percent.attributed.locale(enUS)).string, "4,200,012.3%")
-        XCTAssertEqual(double.formatted(FloatingPointFormatStyle.Percent.percent.attributed.locale(frFR)).string, "4 200 012,3 %")
+        #expect(double.formatted(FloatingPointFormatStyle.Percent.percent.attributed.locale(enUS)).string == "4,200,012.3%")
+        #expect(double.formatted(FloatingPointFormatStyle.Percent.percent.attributed.locale(frFR)).string == "4 200 012,3 %")
 
-        XCTAssertEqual(double.formatted(FloatingPointFormatStyle.Percent.percent.locale(enUS).attributed).string, "4,200,012.3%")
-        XCTAssertEqual(double.formatted(FloatingPointFormatStyle.Percent.percent.locale(frFR).attributed).string, "4 200 012,3 %")
+        #expect(double.formatted(FloatingPointFormatStyle.Percent.percent.locale(enUS).attributed).string == "4,200,012.3%")
+        #expect(double.formatted(FloatingPointFormatStyle.Percent.percent.locale(frFR).attributed).string == "4 200 012,3 %")
 
-        XCTAssertEqual(double.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(enUS)).string, "42,000.12 US dollars")
-        XCTAssertEqual(double.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(frFR)).string, "42 000,12 dollars des États-Unis")
+        #expect(double.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(enUS)).string == "42,000.12 US dollars")
+        #expect(double.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(frFR)).string == "42 000,12 dollars des États-Unis")
 
-        XCTAssertEqual(double.formatted(.currency(code: "USD").presentation(.fullName).locale(enUS).attributed).string, "42,000.12 US dollars")
-        XCTAssertEqual(double.formatted(.currency(code: "USD").presentation(.fullName).locale(frFR).attributed).string, "42 000,12 dollars des États-Unis")
+        #expect(double.formatted(.currency(code: "USD").presentation(.fullName).locale(enUS).attributed).string == "42,000.12 US dollars")
+        #expect(double.formatted(.currency(code: "USD").presentation(.fullName).locale(frFR).attributed).string == "42 000,12 dollars des États-Unis")
 
         // Decimal
 
-        XCTAssertEqual(decimal.formatted(.number.attributed.locale(enUS)).string, "42,000.123")
-        XCTAssertEqual(decimal.formatted(.number.attributed.locale(frFR)).string, "42 000,123")
+        #expect(decimal.formatted(.number.attributed.locale(enUS)).string == "42,000.123")
+        #expect(decimal.formatted(.number.attributed.locale(frFR)).string == "42 000,123")
 
-        XCTAssertEqual(decimal.formatted(.number.locale(enUS).attributed).string, "42,000.123")
-        XCTAssertEqual(decimal.formatted(.number.locale(frFR).attributed).string, "42 000,123")
+        #expect(decimal.formatted(.number.locale(enUS).attributed).string == "42,000.123")
+        #expect(decimal.formatted(.number.locale(frFR).attributed).string == "42 000,123")
 
-        XCTAssertEqual(decimal.formatted(.percent.attributed.locale(enUS)).string, "4,200,012.3%")
-        XCTAssertEqual(decimal.formatted(.percent.attributed.locale(frFR)).string, "4 200 012,3 %")
+        #expect(decimal.formatted(.percent.attributed.locale(enUS)).string == "4,200,012.3%")
+        #expect(decimal.formatted(.percent.attributed.locale(frFR)).string == "4 200 012,3 %")
 
-        XCTAssertEqual(decimal.formatted(.percent.locale(enUS).attributed).string, "4,200,012.3%")
-        XCTAssertEqual(decimal.formatted(.percent.locale(frFR).attributed).string, "4 200 012,3 %")
+        #expect(decimal.formatted(.percent.locale(enUS).attributed).string == "4,200,012.3%")
+        #expect(decimal.formatted(.percent.locale(frFR).attributed).string == "4 200 012,3 %")
 
-        XCTAssertEqual(decimal.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(enUS)).string, "42,000.12 US dollars")
-        XCTAssertEqual(decimal.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(frFR)).string, "42 000,12 dollars des États-Unis")
+        #expect(decimal.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(enUS)).string == "42,000.12 US dollars")
+        #expect(decimal.formatted(.currency(code: "USD").presentation(.fullName).attributed.locale(frFR)).string == "42 000,12 dollars des États-Unis")
 
-        XCTAssertEqual(decimal.formatted(.currency(code: "USD").presentation(.fullName).locale(enUS).attributed).string, "42,000.12 US dollars")
-        XCTAssertEqual(decimal.formatted(.currency(code: "USD").presentation(.fullName).locale(frFR).attributed).string, "42 000,12 dollars des États-Unis")
+        #expect(decimal.formatted(.currency(code: "USD").presentation(.fullName).locale(enUS).attributed).string == "42,000.12 US dollars")
+        #expect(decimal.formatted(.currency(code: "USD").presentation(.fullName).locale(frFR).attributed).string == "42 000,12 dollars des États-Unis")
     }
 }
 
 // MARK: Pattern Matching
-final class FormatStylePatternMatchingTests : XCTestCase {
+@Suite("FormatStyle Pattern Matching")
+private struct FormatStylePatternMatchingTests {
     let frFR = Locale(identifier: "fr_FR")
     let enUS = Locale(identifier: "en_US")
 
     typealias TestCase = (string: String, style: IntegerFormatStyle<Int>, value: Int?)
 
-    func testIntegerFormatStyle_Consumer() {
+    @Test func integerFormatStyle_Consumer() {
         let style: IntegerFormatStyle<Int> = .init()
         let string = "42,000,000"
 
@@ -1862,8 +1859,8 @@ final class FormatStylePatternMatchingTests : XCTestCase {
         }
     }
 
-    func testPercentFormatStyle_Consumer() {
-        let style: IntegerFormatStyle<Int>.Percent = .init()
+    @Test func percentFormatStyle_Consumer() {
+        let style = IntegerFormatStyle<Int>.Percent()
         let string = "42%"
 
         _verifyMatching(string, formatStyle: style, expectedUpperBound: string.endIndex, expectedValue: 42)
@@ -1903,9 +1900,9 @@ final class FormatStylePatternMatchingTests : XCTestCase {
         }
     }
 
-    func testCurrencyFormatStyle_Consumer() {
-        let style: IntegerFormatStyle<Int>.Currency = .init(code: "USD", locale: enUS)
-        let floatStyle: FloatingPointFormatStyle<Double>.Currency = .init(code: "USD", locale: enUS)
+    @Test func currencyFormatStyle_Consumer() {
+        let style = IntegerFormatStyle<Int>.Currency(code: "USD", locale: enUS)
+        let floatStyle = FloatingPointFormatStyle<Double>.Currency(code: "USD", locale: enUS)
         let decimalStyle = Decimal.FormatStyle.Currency(code: "USD", locale: enUS)
 
         let string = "$52,249"
@@ -1937,7 +1934,7 @@ final class FormatStylePatternMatchingTests : XCTestCase {
 
         let frenchStyle: IntegerFormatStyle<Int>.Currency = .init(code: "EUR", locale: frFR)
         let frenchPrice = frenchStyle.format(57379)
-        XCTAssertEqual(frenchPrice, "57 379,00 €")
+        #expect(frenchPrice == "57 379,00 €")
         _verifyMatching("57 379,00 €", formatStyle: frenchStyle, expectedUpperBound: "57 379,00 €".endIndex, expectedValue: 57379)
         _verifyMatching("57 379 €", formatStyle: frenchStyle, expectedUpperBound: "57 379 €".endIndex, expectedValue: 57379)
         _verifyMatching("57 379,00 € semble beaucoup", formatStyle: frenchStyle, expectedUpperBound: "57 379,00 €".endIndex, expectedValue: 57379)
@@ -1999,10 +1996,10 @@ final class FormatStylePatternMatchingTests : XCTestCase {
         }
     }
 
-    func testMatchPartialRange_Number() {
+    @Test func matchPartialRange_Number() {
         let decimalStyle = Decimal.FormatStyle(locale: enUS)
-        let intStyle: IntegerFormatStyle<Int> = .init(locale: enUS)
-        let floatStyle: FloatingPointFormatStyle<Double> = .init(locale: enUS)
+        let intStyle = IntegerFormatStyle<Int>(locale: enUS)
+        let floatStyle = FloatingPointFormatStyle<Double>(locale: enUS)
         let string = "12,345,678,900"
 
         _match(string, decimalStyle, range: 0..<6,
@@ -2113,7 +2110,7 @@ final class FormatStylePatternMatchingTests : XCTestCase {
     }
 
     /* FIXME: These return nil currently. Should these return greedily-matched numbers?
-    func testGreedyMatchPartialRange() {
+    @Test func greedyMatchPartialRange() {
         let style = Decimal.FormatStyle(locale: enUS)
         _match(string, style, range: 0..<8,
             expectedUpperBound: 6, expectedValue: 12345) // "12,345,6"
@@ -2132,11 +2129,11 @@ extension FormatStylePatternMatchingTests {
         range: Range<Int>,
         expectedUpperBound: Int?,
         expectedValue: Value?,
-        file: StaticString = #filePath, line: UInt = #line) where Consumer.RegexOutput == Value {
+        sourceLocation: SourceLocation = #_sourceLocation) where Consumer.RegexOutput == Value {
             let upperInString = expectedUpperBound != nil ? str.index(str.startIndex, offsetBy: expectedUpperBound!) : nil
             let rangeInString = str.index(str.startIndex, offsetBy: range.lowerBound)..<str.index(str.startIndex, offsetBy: range.upperBound)
             let startingAtInStr = startingAt != nil ? str.index(str.startIndex, offsetBy: startingAt!) : nil
-            _verifyMatching(str, formatStyle: formatStyle, startingAt: startingAtInStr, range: rangeInString, expectedUpperBound: upperInString, expectedValue: expectedValue, file: file, line: line)
+            _verifyMatching(str, formatStyle: formatStyle, startingAt: startingAtInStr, range: rangeInString, expectedUpperBound: upperInString, expectedValue: expectedValue, sourceLocation: sourceLocation)
 
     }
 
@@ -2147,7 +2144,7 @@ extension FormatStylePatternMatchingTests {
         range: Range<String.Index>? = nil,
         expectedUpperBound: String.Index?,
         expectedValue: Value?,
-        file: StaticString = #filePath, line: UInt = #line) where Consumer.RegexOutput == Value {
+        sourceLocation: SourceLocation = #_sourceLocation) where Consumer.RegexOutput == Value {
         let resolvedRange = range ?? str.startIndex ..< str.endIndex
         let m = try? formatStyle.consuming(str, startingAt: startingAt ?? resolvedRange.lowerBound, in: resolvedRange)
         let upperBound = m?.upperBound
@@ -2155,46 +2152,47 @@ extension FormatStylePatternMatchingTests {
 
         let upperBoundDescription = upperBound?.utf16Offset(in: str)
         let expectedUpperBoundDescription = expectedUpperBound?.utf16Offset(in: str)
-        XCTAssertEqual(
-            upperBound, expectedUpperBound,
+            #expect(upperBound == expectedUpperBound,
             "found upperBound: \(String(describing: upperBoundDescription)); expected: \(String(describing: expectedUpperBoundDescription))",
-            file: file, line: line)
-        XCTAssertEqual(match, expectedValue, file: file, line: line)
+            sourceLocation: sourceLocation)
+        #expect(match == expectedValue, sourceLocation: sourceLocation)
     }
 }
 
 // MARK: - FoundationPreview Disabled Tests
 #if FOUNDATION_FRAMEWORK
 extension NumberFormatStyleTests {
-    func testFormattedLeadingDotSyntax() {
-        let integer = 12345
-        XCTAssertEqual(integer.formatted(.number), integer.formatted(IntegerFormatStyle.number))
-        XCTAssertEqual(integer.formatted(.percent), integer.formatted(IntegerFormatStyle.Percent.percent))
-        XCTAssertEqual(integer.formatted(.currency(code: "usd")), integer.formatted(IntegerFormatStyle.Currency.currency(code: "usd")))
-
-        let double = 1.2345
-        XCTAssertEqual(double.formatted(.number), double.formatted(FloatingPointFormatStyle.number))
-        XCTAssertEqual(double.formatted(.percent), double.formatted(FloatingPointFormatStyle.Percent.percent))
-        XCTAssertEqual(double.formatted(.currency(code: "usd")), double.formatted(FloatingPointFormatStyle.Currency.currency(code: "usd")))
-
-
-        func parseableFunc<Style: ParseableFormatStyle>(_ value: Style.FormatInput, style: Style) -> Style { style }
-
-        XCTAssertEqual(parseableFunc(UInt8(), style: .number), parseableFunc(UInt8(), style: IntegerFormatStyle.number))
-        XCTAssertEqual(parseableFunc(Int16(), style: .percent), parseableFunc(Int16(), style: IntegerFormatStyle.Percent.percent))
-        XCTAssertEqual(parseableFunc(Int(), style: .currency(code: "usd")), parseableFunc(Int(), style: IntegerFormatStyle.Currency.currency(code: "usd")))
-
-        XCTAssertEqual(parseableFunc(Float(), style: .number), parseableFunc(Float(), style: FloatingPointFormatStyle.number))
-        XCTAssertEqual(parseableFunc(Double(), style: .percent), parseableFunc(Double(), style: FloatingPointFormatStyle.Percent.percent))
-        XCTAssertEqual(parseableFunc(CGFloat(), style: .currency(code: "usd")), parseableFunc(CGFloat(), style: FloatingPointFormatStyle.Currency.currency(code: "usd")))
-
-        XCTAssertEqual(parseableFunc(Decimal(), style: .number), parseableFunc(Decimal(), style: Decimal.FormatStyle.number))
-        XCTAssertEqual(parseableFunc(Decimal(), style: .percent), parseableFunc(Decimal(), style: Decimal.FormatStyle.Percent.percent))
-        XCTAssertEqual(parseableFunc(Decimal(), style: .currency(code: "usd")), parseableFunc(Decimal(), style: Decimal.FormatStyle.Currency.currency(code: "usd")))
-
-        struct GenericWrapper<V> {}
-        func parseableWrapperFunc<Style: ParseableFormatStyle>(_ value: GenericWrapper<Style.FormatInput>, style: Style) -> Style { style }
-        XCTAssertEqual(parseableWrapperFunc(GenericWrapper<Double>(), style: .number), parseableWrapperFunc(GenericWrapper<Double>(), style: FloatingPointFormatStyle.number))
+    @Test func formattedLeadingDotSyntax() async {
+        await usingCurrentInternationalizationPreferences {
+            let integer = 12345
+            #expect(integer.formatted(.number) == integer.formatted(IntegerFormatStyle.number))
+            #expect(integer.formatted(.percent) == integer.formatted(IntegerFormatStyle.Percent.percent))
+            #expect(integer.formatted(.currency(code: "usd")) == integer.formatted(IntegerFormatStyle.Currency.currency(code: "usd")))
+            
+            let double = 1.2345
+            #expect(double.formatted(.number) == double.formatted(FloatingPointFormatStyle.number))
+            #expect(double.formatted(.percent) == double.formatted(FloatingPointFormatStyle.Percent.percent))
+            #expect(double.formatted(.currency(code: "usd")) == double.formatted(FloatingPointFormatStyle.Currency.currency(code: "usd")))
+            
+            
+            func parseableFunc<Style: ParseableFormatStyle>(_ value: Style.FormatInput, style: Style) -> Style { style }
+            
+            #expect(parseableFunc(UInt8(), style: .number) == parseableFunc(UInt8(), style: IntegerFormatStyle.number))
+            #expect(parseableFunc(Int16(), style: .percent) == parseableFunc(Int16(), style: IntegerFormatStyle.Percent.percent))
+            #expect(parseableFunc(Int(), style: .currency(code: "usd")) == parseableFunc(Int(), style: IntegerFormatStyle.Currency.currency(code: "usd")))
+            
+            #expect(parseableFunc(Float(), style: .number) == parseableFunc(Float(), style: FloatingPointFormatStyle.number))
+            #expect(parseableFunc(Double(), style: .percent) == parseableFunc(Double(), style: FloatingPointFormatStyle.Percent.percent))
+            #expect(parseableFunc(CGFloat(), style: .currency(code: "usd")) == parseableFunc(CGFloat(), style: FloatingPointFormatStyle.Currency.currency(code: "usd")))
+            
+            #expect(parseableFunc(Decimal(), style: .number) == parseableFunc(Decimal(), style: Decimal.FormatStyle.number))
+            #expect(parseableFunc(Decimal(), style: .percent) == parseableFunc(Decimal(), style: Decimal.FormatStyle.Percent.percent))
+            #expect(parseableFunc(Decimal(), style: .currency(code: "usd")) == parseableFunc(Decimal(), style: Decimal.FormatStyle.Currency.currency(code: "usd")))
+            
+            struct GenericWrapper<V> {}
+            func parseableWrapperFunc<Style: ParseableFormatStyle>(_ value: GenericWrapper<Style.FormatInput>, style: Style) -> Style { style }
+            #expect(parseableWrapperFunc(GenericWrapper<Double>(), style: .number) == parseableWrapperFunc(GenericWrapper<Double>(), style: FloatingPointFormatStyle.number))
+        }
     }
 }
 #endif
@@ -2203,47 +2201,47 @@ extension NumberFormatStyleTests {
 
 extension NumberFormatStyleTests {
 
-    func testIntegerFormatStyleBigNumberNoCrash() throws {
-        let uint64Style: IntegerFormatStyle<UInt64> = .init(locale: enUSLocale)
-        XCTAssertEqual(uint64Style.format(UInt64.max), "18,446,744,073,709,551,615")
-        XCTAssertEqual(UInt64.max.formatted(.number.locale(enUSLocale)), "18,446,744,073,709,551,615")
+    @Test func integerFormatStyleBigNumberNoCrash() throws {
+        let uint64Style = IntegerFormatStyle<UInt64>(locale: enUSLocale)
+        #expect(uint64Style.format(UInt64.max) == "18,446,744,073,709,551,615")
+        #expect(UInt64.max.formatted(.number.locale(enUSLocale)) == "18,446,744,073,709,551,615")
 
-        let uint64Percent: IntegerFormatStyle<UInt64>.Percent = .init(locale: enUSLocale)
-        XCTAssertEqual(uint64Percent.format(UInt64.max), "18,446,744,073,709,551,615%")
-        XCTAssertEqual(UInt64.max.formatted(.percent.locale(enUSLocale)), "18,446,744,073,709,551,615%")
+        let uint64Percent = IntegerFormatStyle<UInt64>.Percent(locale: enUSLocale)
+        #expect(uint64Percent.format(UInt64.max) == "18,446,744,073,709,551,615%")
+        #expect(UInt64.max.formatted(.percent.locale(enUSLocale)) == "18,446,744,073,709,551,615%")
 
-        let uint64Currency: IntegerFormatStyle<UInt64>.Currency = .init(code: "USD", locale: enUSLocale)
-        XCTAssertEqual(uint64Currency.format(UInt64.max), "$18,446,744,073,709,551,615.00")
-        XCTAssertEqual(UInt64.max.formatted(.currency(code: "USD").locale(enUSLocale)), "$18,446,744,073,709,551,615.00")
+        let uint64Currency = IntegerFormatStyle<UInt64>.Currency(code: "USD", locale: enUSLocale)
+        #expect(uint64Currency.format(UInt64.max) == "$18,446,744,073,709,551,615.00")
+        #expect(UInt64.max.formatted(.currency(code: "USD").locale(enUSLocale)) == "$18,446,744,073,709,551,615.00")
 
         let uint64StyleAttributed: IntegerFormatStyle<UInt64>.Attributed = IntegerFormatStyle<UInt64>(locale: enUSLocale).attributed
-        XCTAssertEqual(String(uint64StyleAttributed.format(UInt64.max).characters), "18,446,744,073,709,551,615")
-        XCTAssertEqual(String(UInt64.max.formatted(.number.locale(enUSLocale).attributed).characters), "18,446,744,073,709,551,615")
+        #expect(String(uint64StyleAttributed.format(UInt64.max).characters) == "18,446,744,073,709,551,615")
+        #expect(String(UInt64.max.formatted(.number.locale(enUSLocale).attributed).characters) == "18,446,744,073,709,551,615")
 
         let uint64PercentAttributed: IntegerFormatStyle<UInt64>.Attributed = IntegerFormatStyle<UInt64>.Percent(locale: enUSLocale).attributed
-        XCTAssertEqual(String(uint64PercentAttributed.format(UInt64.max).characters), "18,446,744,073,709,551,615%")
-        XCTAssertEqual(String(UInt64.max.formatted(.percent.locale(enUSLocale).attributed).characters), "18,446,744,073,709,551,615%")
+        #expect(String(uint64PercentAttributed.format(UInt64.max).characters) == "18,446,744,073,709,551,615%")
+        #expect(String(UInt64.max.formatted(.percent.locale(enUSLocale).attributed).characters) == "18,446,744,073,709,551,615%")
 
         let uint64CurrencyAttributed: IntegerFormatStyle<UInt64>.Attributed = IntegerFormatStyle<UInt64>.Currency(code: "USD", locale: enUSLocale).attributed
-        XCTAssertEqual(String(uint64CurrencyAttributed.format(UInt64.max).characters), "$18,446,744,073,709,551,615.00")
-        XCTAssertEqual(String(UInt64.max.formatted(.currency(code: "USD").locale(enUSLocale).attributed).characters), "$18,446,744,073,709,551,615.00")
+        #expect(String(uint64CurrencyAttributed.format(UInt64.max).characters) == "$18,446,744,073,709,551,615.00")
+        #expect(String(UInt64.max.formatted(.currency(code: "USD").locale(enUSLocale).attributed).characters) == "$18,446,744,073,709,551,615.00")
 
-        let int64Style: IntegerFormatStyle<Int64> = .init(locale: enUSLocale)
-        XCTAssertEqual(int64Style.format(Int64.max), "9,223,372,036,854,775,807")
-        XCTAssertEqual(int64Style.format(Int64.min), "-9,223,372,036,854,775,808")
-        XCTAssertEqual(Int64.max.formatted(.number.locale(enUSLocale)), "9,223,372,036,854,775,807")
-        XCTAssertEqual(Int64.min.formatted(.number.locale(enUSLocale)), "-9,223,372,036,854,775,808")
+        let int64Style = IntegerFormatStyle<Int64>(locale: enUSLocale)
+        #expect(int64Style.format(Int64.max) == "9,223,372,036,854,775,807")
+        #expect(int64Style.format(Int64.min) == "-9,223,372,036,854,775,808")
+        #expect(Int64.max.formatted(.number.locale(enUSLocale)) == "9,223,372,036,854,775,807")
+        #expect(Int64.min.formatted(.number.locale(enUSLocale)) == "-9,223,372,036,854,775,808")
 
-        let int64Percent: IntegerFormatStyle<Int64>.Percent = .init(locale: enUSLocale)
-        XCTAssertEqual(int64Percent.format(Int64.max), "9,223,372,036,854,775,807%")
-        XCTAssertEqual(int64Percent.format(Int64.min), "-9,223,372,036,854,775,808%")
-        XCTAssertEqual(Int64.max.formatted(.percent.locale(enUSLocale)), "9,223,372,036,854,775,807%")
-        XCTAssertEqual(Int64.min.formatted(.percent.locale(enUSLocale)), "-9,223,372,036,854,775,808%")
+        let int64Percent = IntegerFormatStyle<Int64>.Percent(locale: enUSLocale)
+        #expect(int64Percent.format(Int64.max) == "9,223,372,036,854,775,807%")
+        #expect(int64Percent.format(Int64.min) == "-9,223,372,036,854,775,808%")
+        #expect(Int64.max.formatted(.percent.locale(enUSLocale)) == "9,223,372,036,854,775,807%")
+        #expect(Int64.min.formatted(.percent.locale(enUSLocale)) == "-9,223,372,036,854,775,808%")
 
-        let int64Currency: IntegerFormatStyle<Int64>.Currency = .init(code: "USD", locale: enUSLocale)
-        XCTAssertEqual(int64Currency.format(Int64.max), "$9,223,372,036,854,775,807.00")
-        XCTAssertEqual(int64Currency.format(Int64.min), "-$9,223,372,036,854,775,808.00")
-        XCTAssertEqual(Int64.max.formatted(.currency(code: "USD").locale(enUSLocale)), "$9,223,372,036,854,775,807.00")
-        XCTAssertEqual(Int64.min.formatted(.currency(code: "USD").locale(enUSLocale)), "-$9,223,372,036,854,775,808.00")
+        let int64Currency = IntegerFormatStyle<Int64>.Currency(code: "USD", locale: enUSLocale)
+        #expect(int64Currency.format(Int64.max) == "$9,223,372,036,854,775,807.00")
+        #expect(int64Currency.format(Int64.min) == "-$9,223,372,036,854,775,808.00")
+        #expect(Int64.max.formatted(.currency(code: "USD").locale(enUSLocale)) == "$9,223,372,036,854,775,807.00")
+        #expect(Int64.min.formatted(.currency(code: "USD").locale(enUSLocale)) == "-$9,223,372,036,854,775,808.00")
     }
 }

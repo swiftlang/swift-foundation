@@ -12,7 +12,7 @@
 
 extension Calendar {
     /// A rule which specifies how often an event should repeat in the future
-    @available(FoundationPreview 0.4, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public struct RecurrenceRule: Sendable, Equatable {
         /// The calendar in which the recurrence occurs
         public var calendar: Calendar
@@ -304,7 +304,7 @@ extension Calendar {
     }
 }
 
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule.End: Codable {
     enum CodingKeys: String, CodingKey {
         case count
@@ -332,7 +332,7 @@ extension Calendar.RecurrenceRule.End: Codable {
         }
     }
 }
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule.Weekday: Codable {
     enum CodingKeys: String, CodingKey {
         case weekday
@@ -359,7 +359,7 @@ extension Calendar.RecurrenceRule.Weekday: Codable {
         }
     }
 }
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule.Month: Codable {
     enum CodingKeys: String, CodingKey {
         case month
@@ -388,7 +388,7 @@ extension Calendar.RecurrenceRule.Month: Codable {
         }
     }
 }
-@available(FoundationPreview 0.4, *)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule: Codable {
     enum CodingKeys: String, CodingKey {
         case calendar

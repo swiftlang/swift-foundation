@@ -54,7 +54,7 @@ print("swift-foundation benchmarks: \(usePackage.description)")
 var packageDependency : [Package.Dependency] = [.package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.11.1")]
 var targetDependency : [Target.Dependency] = [.product(name: "Benchmark", package: "package-benchmark")]
 var i18nTargetDependencies : [Target.Dependency] = []
-var swiftSettings : [SwiftSetting] = []
+var swiftSettings : [SwiftSetting] = [.unsafeFlags(["-Rmodule-loading"]), .enableUpcomingFeature("MemberImportVisibility")]
 
 switch usePackage {
     case .useLocalPackage(let root):

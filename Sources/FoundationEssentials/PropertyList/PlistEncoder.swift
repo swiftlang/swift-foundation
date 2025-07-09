@@ -168,7 +168,7 @@ open class PropertyListEncoder {
         return try writer.serializePlist(topLevel)
     }
     
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func encode<T : EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration) throws -> Data {
         let format = self.outputFormat
         do {
@@ -202,7 +202,7 @@ open class PropertyListEncoder {
         return try writer.serializePlist(topLevel)
     }
     
-    @available(FoundationPreview 0.1, *)
+    @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func encode<T, C>(_ value: T, configuration: C.Type) throws -> Data where T : EncodableWithConfiguration, C : EncodingConfigurationProviding, T.EncodingConfiguration == C.EncodingConfiguration {
         try encode(value, configuration: C.encodingConfiguration)
     }

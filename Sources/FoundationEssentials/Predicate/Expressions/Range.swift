@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct Range<
         LHS : PredicateExpression,
@@ -45,17 +45,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.Range : CustomStringConvertible {
     public var description: String {
         "Range(lower: \(lower), upper: \(upper))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Range : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Range : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -70,10 +70,10 @@ extension PredicateExpressions.Range : Codable where LHS : Codable, RHS : Codabl
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Range : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct ClosedRange<
         LHS : PredicateExpression,
@@ -105,17 +105,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.ClosedRange : CustomStringConvertible {
     public var description: String {
         "ClosedRange(lower: \(lower), upper: \(upper))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ClosedRange : StandardPredicateExpression where LHS : StandardPredicateExpression, RHS : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ClosedRange : Codable where LHS : Codable, RHS : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -130,10 +130,10 @@ extension PredicateExpressions.ClosedRange : Codable where LHS : Codable, RHS : 
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.ClosedRange : Sendable where LHS : Sendable, RHS : Sendable {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct RangeExpressionContains<
         RangeExpression : PredicateExpression,
@@ -162,17 +162,17 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPredicate 0.3, *)
+@available(macOS 14.4, iOS 17.4, tvOS 17.4, watchOS 10.4, *)
 extension PredicateExpressions.RangeExpressionContains : CustomStringConvertible {
     public var description: String {
         "RangeExpressionContains(range: \(range), element: \(element))"
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.RangeExpressionContains : StandardPredicateExpression where RangeExpression : StandardPredicateExpression, Element : StandardPredicateExpression {}
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.RangeExpressionContains : Codable where RangeExpression : Codable, Element : Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
@@ -187,5 +187,5 @@ extension PredicateExpressions.RangeExpressionContains : Codable where RangeExpr
     }
 }
 
-@available(FoundationPredicate 0.1, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.RangeExpressionContains : Sendable where RangeExpression : Sendable, Element : Sendable {}
