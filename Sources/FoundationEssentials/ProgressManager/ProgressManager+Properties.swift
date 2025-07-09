@@ -9,7 +9,7 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-#if !TARGET_OS_BRIDGE
+
 @available(FoundationPreview 6.2, *)
 extension ProgressManager {
     // Namespace for properties specific to operations reported on
@@ -64,4 +64,3 @@ extension ProgressManager {
         }
     }
 }
-#endif

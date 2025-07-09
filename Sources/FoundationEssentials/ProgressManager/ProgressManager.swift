@@ -21,7 +21,6 @@ internal import OrderedCollections
 internal import _FoundationCollections
 #endif
 
-#if !TARGET_OS_BRIDGE
 internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     let metatype: Any.Type
     

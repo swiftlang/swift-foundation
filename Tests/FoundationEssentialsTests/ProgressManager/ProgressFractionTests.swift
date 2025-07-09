@@ -18,7 +18,6 @@ import Testing
 @testable import FoundationEssentials
 #endif // FOUNDATION_FRAMEWORK
 
-#if !TARGET_OS_BRIDGE
 @Suite("Progress Fraction") struct ProgressFractionTests {
     @Test func equal() {
         let f1 = ProgressFraction(completed: 5, total: 10)
@@ -166,4 +165,3 @@ import Testing
         #expect(!r.overflowed)
     }
 }
-#endif

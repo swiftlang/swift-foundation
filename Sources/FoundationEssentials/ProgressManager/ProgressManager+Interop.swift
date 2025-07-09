@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK && !TARGET_OS_BRIDGE
+#if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 @available(FoundationPreview 6.2, *)
 //MARK: Progress Parent - ProgressManager Child Interop

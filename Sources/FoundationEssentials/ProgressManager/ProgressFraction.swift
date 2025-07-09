@@ -13,7 +13,6 @@
 internal import _ForSwiftFoundation
 #endif
 
-#if !TARGET_OS_BRIDGE
 internal struct ProgressFraction : Sendable, Equatable, CustomDebugStringConvertible {
     var completed : Int
     var total : Int?
@@ -318,4 +317,3 @@ internal struct ProgressFraction : Sendable, Equatable, CustomDebugStringConvert
         return (n / gcd, d / gcd)
     }
 }
-#endif
