@@ -1543,8 +1543,7 @@ extension Locale {
         var working = Set<String>()
         let localeCount = uloc_countAvailable()
         for locale in 0..<localeCount {
-            guard let name = uloc_getAvailable(locale) else { continue }
-            let localeID = String(cString: name)
+            let localeID = String(cString: uloc_getAvailable(locale))
             working.insert(localeID)
         }
         return Array(working)

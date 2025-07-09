@@ -117,7 +117,6 @@ import Darwin
 #elseif canImport(Android)
 @preconcurrency import Android
 import posix_filesystem.dirent
-internal import _FoundationCShims
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
 internal import _FoundationCShims

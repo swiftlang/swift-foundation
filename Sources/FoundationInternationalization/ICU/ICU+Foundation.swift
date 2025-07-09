@@ -29,10 +29,7 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
     }
 
     var debugDescription: String {
-        guard let error = u_errorName(code) else {
-            return "Unknown ICU error \(code.rawValue)"
-        }
-        return String(cString: error)
+        String(validatingUTF8: u_errorName(code)) ?? "Unknown ICU error \(code.rawValue)"
     }
 
 #if canImport(os)
