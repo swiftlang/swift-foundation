@@ -569,7 +569,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    internal func isCycleInterop(visited: Set<ProgressManager> = []) -> Bool {
+    internal func isCycleInterop(reporter: ProgressReporter, visited: Set<ProgressManager> = []) -> Bool {
         return state.withLock { state in
             for parentState in state.parents {
                 if !visited.contains(parentState.parent) {

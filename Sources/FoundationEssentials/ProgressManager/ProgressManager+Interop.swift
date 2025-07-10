@@ -83,14 +83,13 @@ extension Progress {
             return self._parent().isCycle(reporter: reporter)
         }
         
-        // then check against ProgressManager
         let unwrappedParent = (self._parent() as? _NSProgressParentBridge)?.actualParent
         if let unwrappedParent = unwrappedParent {
             if unwrappedParent === reporter.manager {
                 return true
             }
             let updatedVisited = visited.union([unwrappedParent])
-            return unwrappedParent.isCycleInterop(visited: updatedVisited)
+            return unwrappedParent.isCycleInterop(reporter: reporter, visited: updatedVisited)
         }
         return false
     }
