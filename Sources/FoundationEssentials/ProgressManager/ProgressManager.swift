@@ -146,13 +146,20 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     @dynamicMemberLookup
     public struct Values : Sendable {
         //TODO: rdar://149225947 Non-escapable conformance
-        let manager: ProgressManager
         var state: State
+        
+        let willGetCompletedCount: (@Sendable (inout State) -> (Int))
+        let willMarkSelfDirty: (@Sendable ([ParentState]) -> ())
+        let willMarkPropertyDirty: (@Sendable (any Property.Type, [ParentState]) -> ())
+        let willNotifyObservers: (@Sendable (ObserverState, inout State) -> ())
         
         /// The total units of work.
         public var totalCount: Int? {
             get {
-                manager.getTotalCountLocked(state: state)
+                if let interopChild = state.interopChild {
+                    return interopChild.totalCount
+                }
+                return state.selfFraction.total
             }
             
             set {
@@ -165,9 +172,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed))
                 
                 if let _ = state.interopObservation.progressParentProgressReporterChild {
-                    manager.notifyObserversLocked(with: .fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed), state: &state)
+                    willNotifyObservers(.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed), &state)
                 }
-                manager.markSelfDirty(parents: state.parents)
+                
+                willMarkSelfDirty(state.parents)
             }
         }
         
@@ -175,7 +183,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         /// The completed units of work.
         public var completedCount: Int {
             mutating get {
-                manager.getCompletedCountLocked(state: &state)
+                willGetCompletedCount(&state)
             }
             
             set {
@@ -188,16 +196,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 state.progressParentProgressManagerChildMessenger?.notifyObservers(with:.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed))
                 
                 if let _ = state.interopObservation.progressParentProgressReporterChild {
-                    manager.notifyObserversLocked(
-                        with: .fractionUpdated(
-                            totalCount: state.selfFraction.total!,
-                            completedCount: state.selfFraction.completed
-                        ),
-                        state: &state
-                    )
+                    willNotifyObservers(.fractionUpdated(totalCount: state.selfFraction.total!, completedCount: state.selfFraction.completed), &state)
                 }
                 
-                manager.markSelfDirty(parents: state.parents)
+                willMarkSelfDirty(state.parents)
             }
         }
         
@@ -214,7 +216,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                 
                 state.properties[AnyMetatypeWrapper(metatype: P.self)] = newValue
                 
-                manager.markSelfDirty(property: P.self, parents: state.parents)
+                willMarkPropertyDirty(P.self, state.parents)
             }
         }
     }
@@ -324,7 +326,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         _ closure: (inout sending Values) throws(E) -> sending T
     ) throws(E) -> sending T {
         return try state.withLock { (state) throws(E) -> T in
-            var values = Values(manager: self, state: state)
+            var values = Values(state: state, willGetCompletedCount: { updatedState in
+                self.getCompletedCountLocked(state: &updatedState)
+            }, willMarkSelfDirty: { parents in
+                self.markSelfDirty(parents: parents)
+            }, willMarkPropertyDirty: { property, parents in
+                self.markSelfDirty(property: property, parents: parents)
+            }, willNotifyObservers: { observerState, state in
+                self.notifyObserversLocked(with: observerState, state: &state)
+            })
             // This is done to avoid copy on write later
             state = State(
                 selfFraction: ProgressFraction(),
@@ -526,7 +536,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         _ closure: (sending Values) throws(E) -> sending T
     ) throws(E) -> sending T {
         try state.withLock { state throws(E) -> T in
-            let values = Values(manager: self, state: state)
+            let values = Values(state: state, willGetCompletedCount: { updatedState in
+                self.getCompletedCountLocked(state: &updatedState)
+            }, willMarkSelfDirty: { parents in
+                self.markSelfDirty(parents: parents)
+            }, willMarkPropertyDirty: { property, parents in
+                self.markSelfDirty(property: property, parents: parents)
+            }, willNotifyObservers: { observerState, state in
+                self.notifyObserversLocked(with: observerState, state: &state)
+            })
             let result = try closure(values)
             return result
         }
