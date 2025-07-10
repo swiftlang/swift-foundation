@@ -2163,36 +2163,35 @@ extension FormatStylePatternMatchingTests {
 #if FOUNDATION_FRAMEWORK
 extension NumberFormatStyleTests {
     @Test func formattedLeadingDotSyntax() async {
-        await usingCurrentInternationalizationPreferences {
-            let integer = 12345
-            #expect(integer.formatted(.number) == integer.formatted(IntegerFormatStyle.number))
-            #expect(integer.formatted(.percent) == integer.formatted(IntegerFormatStyle.Percent.percent))
-            #expect(integer.formatted(.currency(code: "usd")) == integer.formatted(IntegerFormatStyle.Currency.currency(code: "usd")))
-            
-            let double = 1.2345
-            #expect(double.formatted(.number) == double.formatted(FloatingPointFormatStyle.number))
-            #expect(double.formatted(.percent) == double.formatted(FloatingPointFormatStyle.Percent.percent))
-            #expect(double.formatted(.currency(code: "usd")) == double.formatted(FloatingPointFormatStyle.Currency.currency(code: "usd")))
-            
-            
-            func parseableFunc<Style: ParseableFormatStyle>(_ value: Style.FormatInput, style: Style) -> Style { style }
-            
-            #expect(parseableFunc(UInt8(), style: .number) == parseableFunc(UInt8(), style: IntegerFormatStyle.number))
-            #expect(parseableFunc(Int16(), style: .percent) == parseableFunc(Int16(), style: IntegerFormatStyle.Percent.percent))
-            #expect(parseableFunc(Int(), style: .currency(code: "usd")) == parseableFunc(Int(), style: IntegerFormatStyle.Currency.currency(code: "usd")))
-            
-            #expect(parseableFunc(Float(), style: .number) == parseableFunc(Float(), style: FloatingPointFormatStyle.number))
-            #expect(parseableFunc(Double(), style: .percent) == parseableFunc(Double(), style: FloatingPointFormatStyle.Percent.percent))
-            #expect(parseableFunc(CGFloat(), style: .currency(code: "usd")) == parseableFunc(CGFloat(), style: FloatingPointFormatStyle.Currency.currency(code: "usd")))
-            
-            #expect(parseableFunc(Decimal(), style: .number) == parseableFunc(Decimal(), style: Decimal.FormatStyle.number))
-            #expect(parseableFunc(Decimal(), style: .percent) == parseableFunc(Decimal(), style: Decimal.FormatStyle.Percent.percent))
-            #expect(parseableFunc(Decimal(), style: .currency(code: "usd")) == parseableFunc(Decimal(), style: Decimal.FormatStyle.Currency.currency(code: "usd")))
-            
-            struct GenericWrapper<V> {}
-            func parseableWrapperFunc<Style: ParseableFormatStyle>(_ value: GenericWrapper<Style.FormatInput>, style: Style) -> Style { style }
-            #expect(parseableWrapperFunc(GenericWrapper<Double>(), style: .number) == parseableWrapperFunc(GenericWrapper<Double>(), style: FloatingPointFormatStyle.number))
-        }
+        let locale = Locale(identifier: "ja_JP")
+        let integer = 12345
+        #expect(integer.formatted(.number.locale(locale)) == integer.formatted(IntegerFormatStyle.number.locale(locale)))
+        #expect(integer.formatted(.percent.locale(locale)) == integer.formatted(IntegerFormatStyle.Percent.percent.locale(locale)))
+        #expect(integer.formatted(.currency(code: "usd").locale(locale)) == integer.formatted(IntegerFormatStyle.Currency.currency(code: "usd").locale(locale)))
+
+        let double = 1.2345
+        #expect(double.formatted(.number.locale(locale)) == double.formatted(FloatingPointFormatStyle.number.locale(locale)))
+        #expect(double.formatted(.percent.locale(locale)) == double.formatted(FloatingPointFormatStyle.Percent.percent.locale(locale)))
+        #expect(double.formatted(.currency(code: "usd").locale(locale)) == double.formatted(FloatingPointFormatStyle.Currency.currency(code: "usd").locale(locale)))
+
+
+        func parseableFunc<Style: ParseableFormatStyle>(_ value: Style.FormatInput, style: Style) -> Style { style }
+
+        #expect(parseableFunc(UInt8(), style: .number.locale(locale)) == parseableFunc(UInt8(), style: IntegerFormatStyle.number.locale(locale)))
+        #expect(parseableFunc(Int16(), style: .percent.locale(locale)) == parseableFunc(Int16(), style: IntegerFormatStyle.Percent.percent.locale(locale)))
+        #expect(parseableFunc(Int(), style: .currency(code: "usd").locale(locale)) == parseableFunc(Int(), style: IntegerFormatStyle.Currency.currency(code: "usd").locale(locale)))
+
+        #expect(parseableFunc(Float(), style: .number.locale(locale)) == parseableFunc(Float(), style: FloatingPointFormatStyle.number.locale(locale)))
+        #expect(parseableFunc(Double(), style: .percent.locale(locale)) == parseableFunc(Double(), style: FloatingPointFormatStyle.Percent.percent.locale(locale)))
+        #expect(parseableFunc(CGFloat(), style: .currency(code: "usd").locale(locale)) == parseableFunc(CGFloat(), style: FloatingPointFormatStyle.Currency.currency(code: "usd").locale(locale)))
+
+        #expect(parseableFunc(Decimal(), style: .number.locale(locale)) == parseableFunc(Decimal(), style: Decimal.FormatStyle.number.locale(locale)))
+        #expect(parseableFunc(Decimal(), style: .percent.locale(locale)) == parseableFunc(Decimal(), style: Decimal.FormatStyle.Percent.percent.locale(locale)))
+        #expect(parseableFunc(Decimal(), style: .currency(code: "usd").locale(locale)) == parseableFunc(Decimal(), style: Decimal.FormatStyle.Currency.currency(code: "usd").locale(locale)))
+
+        struct GenericWrapper<V> {}
+        func parseableWrapperFunc<Style: ParseableFormatStyle>(_ value: GenericWrapper<Style.FormatInput>, style: Style) -> Style { style }
+        #expect(parseableWrapperFunc(GenericWrapper<Double>(), style: .number.locale(locale)) == parseableWrapperFunc(GenericWrapper<Double>(), style: FloatingPointFormatStyle.number.locale(locale)))
     }
 }
 #endif
