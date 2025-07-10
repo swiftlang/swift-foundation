@@ -209,12 +209,11 @@ extension AttributedString.Runs.Index: Comparable {
     }
 }
 
-#if !FOUNDATION_FRAMEWORK
-@available(macOS, deprecated: 10000, introduced: 12, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
-@available(iOS, deprecated: 10000, introduced: 15, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
-@available(tvOS, deprecated: 10000, introduced: 15, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
-@available(watchOS, deprecated: 10000, introduced: 8, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
-@available(visionOS, deprecated: 10000, introduced: 1, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(macOS, deprecated: 26, introduced: 12, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(iOS, deprecated: 26, introduced: 15, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(tvOS, deprecated: 26, introduced: 15, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(watchOS, deprecated: 26, introduced: 8, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
+@available(visionOS, deprecated: 26, introduced: 1, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
 @available(*, deprecated, message: "AttributedString.Runs.Index should not be used as a Strideable and should instead be offset using the API provided by AttributedString.Runs")
 extension AttributedString.Runs.Index: Strideable {
     public func distance(to other: Self) -> Int {
@@ -222,13 +221,12 @@ extension AttributedString.Runs.Index: Strideable {
         precondition(!self._withinDiscontiguous && !other._withinDiscontiguous, "AttributedString.Runs.Index's Strideable conformance may not be used with discontiguous sliced runs")
         return other._runOffset - self._runOffset
     }
-        
+    
     public func advanced(by n: Int) -> Self {
         precondition(!self._withinDiscontiguous, "AttributedString.Runs.Index's Strideable conformance may not be used with discontiguous sliced runs")
         return Self(_runOffset: self._runOffset + n, withinDiscontiguous: false)
     }
 }
-#endif
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Range<AttributedString.Runs.Index> {
@@ -332,12 +330,18 @@ extension AttributedString.Runs: BidirectionalCollection {
         }
     }
     
-    #if !FOUNDATION_FRAMEWORK
     @_alwaysEmitIntoClient
     public func distance(from start: Index, to end: Index) -> Int {
+        #if FOUNDATION_FRAMEWORK
+        if #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) {
+            _distance(from: start, to: end)
+        } else {
+            start.distance(to: end)
+        }
+        #else
         _distance(from: start, to: end)
+        #endif
     }
-    #endif
     
     @available(FoundationPreview 6.2, *)
     @usableFromInline
