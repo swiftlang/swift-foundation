@@ -689,5 +689,3 @@ extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible
         return self.description
     }
 }
-#endif
-// - this has a problem because it breaks additional properties when this happens, specifically when developers declare their own additional property type 
