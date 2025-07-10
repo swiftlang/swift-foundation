@@ -635,7 +635,7 @@ private struct DateAttributedFormatStyleTests {
     }
     
     @Test func individualFields() throws {
-        let baseStyle = Date.FormatStyle(locale: enUSLocale, timeZone: gmtTimeZone)
+        let baseStyle = Date.FormatStyle(locale: enUSLocale, calendar: Calendar(identifier: .gregorian), timeZone: gmtTimeZone)
         // dateFormatter.date(from: "2021-04-12 15:04:32")!
         let date = Date(timeIntervalSinceReferenceDate: 639932672.0)
         let expectations: [Date.FormatStyle : [Segment]] = [
