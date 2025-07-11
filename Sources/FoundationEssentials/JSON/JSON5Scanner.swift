@@ -1081,7 +1081,7 @@ extension JSON5Scanner {
             jsonBytes.formIndex(after: &index)
         }
 
-        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ _stringshims_strncasecmp_l($0, "0x", $1, nil) })
+        let cmp = jsonBytes[index..<endIndex].prefix(2).withUnsafePointer({ _stringshims_strncasecmp_clocale($0, "0x", $1) })
         if cmp == 0 {
             jsonBytes.formIndex(&index, offsetBy: 2)
 

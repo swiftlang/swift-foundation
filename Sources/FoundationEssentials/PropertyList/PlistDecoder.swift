@@ -231,7 +231,7 @@ open class PropertyListDecoder {
         }
         
         return try buffer[unchecked: baseIdx..<idx].withUnsafePointer { ptr, encodingLength in
-            if encodingLength == 5, _stringshims_strncasecmp_l(ptr, "utf-8", 5, nil) == 0 {
+            if encodingLength == 5, _stringshims_strncasecmp_clocale(ptr, "utf-8", 5) == 0 {
                 return .utf8
             }
             

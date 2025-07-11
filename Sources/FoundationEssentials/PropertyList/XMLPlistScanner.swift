@@ -645,7 +645,7 @@ extension XMLPlistMap.Value {
                     return .nan
                 }
             case (UInt8(ascii: "+"), 9):
-                if _stringshims_strncasecmp_l(buf.baseAddress, "+infinity", 9, nil) == 0 {
+                if _stringshims_strncasecmp_clocale(buf.baseAddress, "+infinity", 9) == 0 {
                     return .infinity
                 }
             case (UInt8(ascii: "+"), 4):
@@ -655,7 +655,7 @@ extension XMLPlistMap.Value {
                     return .infinity
                 }
             case (UInt8(ascii: "-"), 9):
-                if _stringshims_strncasecmp_l(buf.baseAddress, "-infinity", 9, nil) == 0 {
+                if _stringshims_strncasecmp_clocale(buf.baseAddress, "-infinity", 9) == 0 {
                     return .infinity * -1
                 }
             case (UInt8(ascii: "-"), 4):
@@ -665,7 +665,7 @@ extension XMLPlistMap.Value {
                     return .infinity * -1
                 }
             case (UInt8(ascii: "i"), 8), (UInt8(ascii: "I"), 8):
-                if _stringshims_strncasecmp_l(buf.baseAddress, "infinity", 8, nil) == 0 {
+                if _stringshims_strncasecmp_clocale(buf.baseAddress, "infinity", 8) == 0 {
                     return .infinity
                 }
             case (.none, 0):
@@ -728,9 +728,9 @@ extension XMLPlistMap.Value {
                 var parseEndPtr : UnsafeMutablePointer<CChar>?
                 let res : T
                 if MemoryLayout<T>.size == MemoryLayout<Float>.size {
-                    res = T(_stringshims_strtof_l(ptr, &parseEndPtr, nil))
+                    res = T(_stringshims_strtof_clocale(ptr, &parseEndPtr))
                 } else if MemoryLayout<T>.size == MemoryLayout<Double>.size {
-                    res = T(_stringshims_strtod_l(ptr, &parseEndPtr, nil))
+                    res = T(_stringshims_strtod_clocale(ptr, &parseEndPtr))
                 } else {
                     preconditionFailure("Only Float and Double are currently supported by PropertyListDecoder, not \(type))")
                 }

@@ -23,57 +23,57 @@
 #include <strings.h>
 #endif
 
-int _stringshims_strncasecmp_l(const char * _Nullable s1,
+#if TARGET_OS_WINDOWS
+#define FOUNDATION_C_LOCALE (_clocale())
+static _locale_t _clocale() {
+    static _locale_t storage;
+    static bool once = false;
+    if (!once) {
+        storage = _create_locale(LC_ALL, "C");
+        once = true;
+    }
+    return storage;
+}
+#elif TARGET_OS_MAC
+#define FOUNDATION_C_LOCALE LC_C_LOCALE
+#else
+#define FOUNDATION_C_LOCALE (_clocale())
+static locale_t _clocale() {
+    static locale_t storage;
+    static bool once = false;
+    if (!once) {
+        storage = newlocale(LC_ALL_MASK, "C", (locale_t)0);
+        once = true;
+    }
+    return storage;
+}
+#endif
+
+
+int _stringshims_strncasecmp_clocale(const char * _Nullable s1,
                       const char * _Nullable s2,
-                      size_t n,
-                      locale_t _Nullable loc)
+                      size_t n)
 {
 #if TARGET_OS_WINDOWS
-  static _locale_t storage;
-  static _locale_t *cloc = NULL;
-  if (cloc == NULL) {
-    storage = _create_locale(LC_ALL, "C");
-    cloc = &storage;
-  }
-  return _strnicmp_l(s1, s2, n, loc ? loc : *cloc);
-#else
-    if (loc != NULL) {
-#if (defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT) || \
-      (defined(TARGET_OS_ANDROID) && TARGET_OS_ANDROID && __ANDROID_API__ < 23)
-        abort();
-#else
-        return strncasecmp_l(s1, s2, n, loc);
-#endif
-    }
-    // On Darwin, NULL loc means unlocalized compare.
-    // Uses the standard C locale for Linux in this case
-#if (defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT) || \
+    return _strnicmp_l(s1, s2, n, FOUNDATION_C_LOCALE);
+#elif (defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT) || \
       (defined(TARGET_OS_ANDROID) && TARGET_OS_ANDROID && __ANDROID_API__ < 23)
     return strncasecmp(s1, s2, n);
-#elif TARGET_OS_MAC
-    return strncasecmp_l(s1, s2, n, NULL);
 #else
-    locale_t clocale = newlocale(LC_ALL_MASK, "C", (locale_t)0);
-    return strncasecmp_l(s1, s2, n, clocale);
-#endif // TARGET_OS_MAC
-#endif // TARGET_OS_WINDOWS
+    return strncasecmp_l(s1, s2, n, FOUNDATION_C_LOCALE);
+#endif
 }
 
-double _stringshims_strtod_l(const char * _Nullable restrict nptr,
-                 char * _Nullable * _Nullable restrict endptr,
-                 locale_t _Nullable loc)
+double _stringshims_strtod_clocale(const char * _Nullable restrict nptr,
+                 char * _Nullable * _Nullable restrict endptr)
 {
-#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
-    assert(loc == NULL);
-    return strtod_l(nptr, endptr, NULL);
-#elif TARGET_OS_MAC
-    return strtod_l(nptr, endptr, loc);
+#if TARGET_OS_MAC
+    return strtod_l(nptr, endptr, FOUNDATION_C_LOCALE);
 #elif TARGET_OS_WINDOWS
-    return _strtod_l(nptr, endptr, loc);
+    return _strtod_l(nptr, endptr, FOUNDATION_C_LOCALE);
 #else
     // Use the C locale
-    locale_t clocale = newlocale(LC_ALL_MASK, "C", (locale_t)0);
-    locale_t oldLocale = uselocale(clocale);
+    locale_t oldLocale = uselocale(FOUNDATION_C_LOCALE);
     double result = strtod(nptr, endptr);
     // Restore locale
     uselocale(oldLocale);
@@ -81,22 +81,17 @@ double _stringshims_strtod_l(const char * _Nullable restrict nptr,
 #endif
 }
 
-float _stringshims_strtof_l(const char * _Nullable restrict nptr,
-                 char * _Nullable * _Nullable restrict endptr,
-                 locale_t _Nullable loc)
+float _stringshims_strtof_clocale(const char * _Nullable restrict nptr,
+                 char * _Nullable * _Nullable restrict endptr)
 {
-#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
-    assert(loc == NULL);
-    return strtof_l(nptr, endptr, NULL);
-#elif TARGET_OS_MAC
-    return strtof_l(nptr, endptr, loc);
+#if TARGET_OS_MAC
+    return strtof_l(nptr, endptr, FOUNDATION_C_LOCALE);
 #elif TARGET_OS_WINDOWS
-    return _strtof_l(nptr, endptr, loc);
+    return _strtof_l(nptr, endptr, FOUNDATION_C_LOCALE);
 #else
     // Use the C locale
-    locale_t clocale = newlocale(LC_ALL_MASK, "C", (locale_t)0);
-    locale_t oldLocale = uselocale(clocale);
-    float result = strtof(nptr, endptr);
+    locale_t oldLocale = uselocale(FOUNDATION_C_LOCALE);
+    double result = strtof(nptr, endptr);
     // Restore locale
     uselocale(oldLocale);
     return result;
