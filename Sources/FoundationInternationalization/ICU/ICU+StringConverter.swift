@@ -75,7 +75,7 @@ extension ICU.StringConverter {
                         converter,
                         dest,
                         capacity,
-                        src.baseAddress,
+                        src.baseAddress?.assumingMemoryBound(to: CChar.self),
                         srcLength,
                         &status
                     )
@@ -85,7 +85,7 @@ extension ICU.StringConverter {
     }
 
     func encode(string: String, allowLossyConversion lossy: Bool) -> Data?  {
-        return _converter.withLock { (converter) -> Data? in
+        return self._converter.withLock { (converter) -> Data? in
             defer {
                 ucnv_resetFromUnicode(converter)
             }
@@ -117,7 +117,7 @@ extension ICU.StringConverter {
 
                 ucnv_setFromUCallBack(
                     converter,
-                    UCNV_FROM_U_CALLBACK_SUBSTITUTE,
+                    { UCNV_FROM_U_CALLBACK_SUBSTITUTE($0, $1, $2, $3, $4, $5, $6) },
                     nil, // newContext
                     nil, // oldAction
                     nil, // oldContext
@@ -127,7 +127,7 @@ extension ICU.StringConverter {
             } else {
                 ucnv_setFromUCallBack(
                     converter,
-                    UCNV_FROM_U_CALLBACK_STOP,
+                    { UCNV_FROM_U_CALLBACK_STOP($0, $1, $2, $3, $4, $5, $6) },
                     nil, // newContext
                     nil, // oldAction
                     nil, // oldContext
@@ -138,7 +138,7 @@ extension ICU.StringConverter {
 
             let actualLength = ucnv_fromUChars(
                 converter,
-                dest,
+                dest.assumingMemoryBound(to: CChar.self),
                 CInt(capacity),
                 uchars.baseAddress,
                 CInt(srcLength),

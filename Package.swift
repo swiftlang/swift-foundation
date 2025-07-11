@@ -36,6 +36,7 @@ let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
 
 let featureSettings: [SwiftSetting] = [
     .enableExperimentalFeature("StrictConcurrency"),
+    .enableExperimentalFeature("ImportMacroAliases"),
     .enableUpcomingFeature("InferSendableFromCaptures"),
     .enableUpcomingFeature("MemberImportVisibility")
 ]
