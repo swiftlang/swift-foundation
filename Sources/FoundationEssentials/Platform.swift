@@ -355,17 +355,14 @@ extension Platform {
         return try? FileManager.default.destinationOfSymbolicLink(
             atPath: "/proc/self/exe").standardizingPath
 #elseif os(Windows)
-        let hFile = GetModuleHandleW(nil)
-        let dwLength: DWORD = GetFinalPathNameByHandleW(hFile, nil, 0, FILE_NAME_NORMALIZED)
-        guard dwLength > 0 else { return nil }
-        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) { lpBuffer in
-            guard GetFinalPathNameByHandleW(hFile, lpBuffer.baseAddress, dwLength, FILE_NAME_NORMALIZED) == dwLength - 1 else {
+        return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(MAX_PATH)) { lpBuffer in
+            let actualLength = GetModuleFileNameW(nil, lpBuffer.baseAddress!, DWORD(lpBuffer.count))
+            // Windows Documentation:
+            // If the function fails, the return value is 0 (zero).
+            // To get extended error information, call GetLastError.
+            guard actualLength > 0 else {
                 return nil
             }
-
-            // The `GetFinalPathNameByHandleW` function will normalise the path
-            // for us as part of the query. This allows us to avoid having to
-            // standardize the path ourselves.
             return String(decodingCString: lpBuffer.baseAddress!, as: UTF16.self)
         }
 #else
