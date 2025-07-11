@@ -14,6 +14,10 @@
 extension PredicateExpressions {
     public enum ArithmeticOperator: Codable, Sendable {
         case add, subtract, multiply
+        
+        private typealias AddCodingKeys = EmptyCodingKeys
+        private typealias SubtractCodingKeys = EmptyCodingKeys
+        private typealias MultiplyCodingKeys = EmptyCodingKeys
     }
     
     public struct Arithmetic<

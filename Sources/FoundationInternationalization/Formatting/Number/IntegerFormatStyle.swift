@@ -492,6 +492,10 @@ extension IntegerFormatStyle {
             case integer(IntegerFormatStyle)
             case percent(IntegerFormatStyle.Percent)
             case currency(IntegerFormatStyle.Currency)
+            
+            private typealias IntegerCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
+            private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
         }
 
         var style: Style
