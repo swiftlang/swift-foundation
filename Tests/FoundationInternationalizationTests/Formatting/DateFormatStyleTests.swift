@@ -291,7 +291,7 @@ private struct DateFormatStyleTests {
         #expect(date.formatted(style.locale(Locale.localeAsIfCurrent(name: esES, overrides: .init(force24Hour: true)))) == "16:00:00")
     }
     
-#if !os(watchOS) // 99504292
+#if !os(watchOS) && FOUNDATION_FRAMEWORK // 99504292 && 155484008
     @Test func nsICUDateFormatterCache() async throws {
         await usingCurrentInternationalizationPreferences {
             // This test can only be run with the system set to the en_US language
@@ -405,7 +405,8 @@ private struct DateFormatStyleTests {
         var locale: Locale
         var format: Date.FormatStyle
         func verifyWithFormat(_ date: Date, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
-            let fmt = format.locale(locale)
+            var fmt = format.locale(locale)
+            fmt.calendar = Calendar(identifier: .gregorian)
             let formatted = fmt.format(date)
             #expect(formatted == expected, sourceLocation: sourceLocation)
         }
@@ -1408,6 +1409,7 @@ private struct TestDateStyleDiscreteConformance {
 
         let now = date("2023-05-15 08:47:20Z")
 
+#if FOUNDATION_FRAMEWORK // 155526268
         assertEvaluation(
             of: .init(date: .complete, time: .complete).secondFraction(.fractional(2)),
             in: (now - 0.1)...(now + 0.1),
@@ -1435,6 +1437,7 @@ private struct TestDateStyleDiscreteConformance {
                 "Monday, May 15, 2023 at 8:47:20.10 AM GMT",
             ])
 
+
         assertEvaluation(
             of: .init(date: .complete, time: .complete),
             in: (now - 3)...(now + 3),
@@ -1447,6 +1450,7 @@ private struct TestDateStyleDiscreteConformance {
                 "Monday, May 15, 2023 at 8:47:22 AM GMT",
                 "Monday, May 15, 2023 at 8:47:23 AM GMT",
             ])
+#endif
 
         assertEvaluation(
             of: .init().hour(.twoDigits(amPM: .abbreviated)).minute(),
