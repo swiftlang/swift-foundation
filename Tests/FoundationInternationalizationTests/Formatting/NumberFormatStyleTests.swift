@@ -1822,7 +1822,7 @@ private struct FormatStylePatternMatchingTests {
     typealias TestCase = (string: String, style: IntegerFormatStyle<Int>, value: Int?)
 
     @Test func integerFormatStyle_Consumer() {
-        let style: IntegerFormatStyle<Int> = .init()
+        let style: IntegerFormatStyle<Int> = .init(locale: Locale(identifier: "en_US"))
         let string = "42,000,000"
 
         _verifyMatching(string, formatStyle: style, expectedUpperBound: string.endIndex, expectedValue: 42000000)
@@ -1862,7 +1862,7 @@ private struct FormatStylePatternMatchingTests {
     }
 
     @Test func percentFormatStyle_Consumer() {
-        let style = IntegerFormatStyle<Int>.Percent()
+        let style = IntegerFormatStyle<Int>.Percent(locale: Locale(identifier: "en_US"))
         let string = "42%"
 
         _verifyMatching(string, formatStyle: style, expectedUpperBound: string.endIndex, expectedValue: 42)
