@@ -100,12 +100,15 @@ private struct DateIntervalFormatStyleTests {
     }
     
     @Test func leadingDotSyntax() async {
+        let locale = Locale(identifier: "en_GB")
+        let range = (Date(timeIntervalSinceReferenceDate: 0) ..< Date(timeIntervalSinceReferenceDate: 0) + (60 * 60))
         await usingCurrentInternationalizationPreferences {
-            let range = (Date(timeIntervalSinceReferenceDate: 0) ..< Date(timeIntervalSinceReferenceDate: 0) + (60 * 60))
+            // This test assumes both the left side and the right side of the comparison has the same `Locale.autoupdatingCurrent`, which assumes the state of the host machine remains unchanged.
             #expect(range.formatted() == Date.IntervalFormatStyle().format(range))
             #expect(range.formatted(date: .numeric, time: .shortened) == Date.IntervalFormatStyle(date: .numeric, time: .shortened).format(range))
-            #expect(range.formatted(.interval.day().month().year()) == Date.IntervalFormatStyle().day().month().year().format(range))
         }
+
+        #expect(range.formatted(.interval.day().month().year().locale(locale)) == Date.IntervalFormatStyle().day().month().year().locale(locale).format(range))
     }
     
 #if FIXED_ICU_74_DAYPERIOD
