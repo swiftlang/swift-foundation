@@ -242,20 +242,22 @@ private struct NumberFormatStyleTests {
     }
 
     @Test func formattedAttributedLeadingDotSyntax() throws {
+        let locale = Locale(identifier: "fr_FR")
         let int = 42
-        #expect(int.formatted(.number.attributed) == IntegerFormatStyle().attributed.format(int))
-        #expect(int.formatted(.percent.attributed) == IntegerFormatStyle.Percent().attributed.format(int))
-        #expect(int.formatted(.currency(code: "GBP").attributed) == IntegerFormatStyle.Currency(code: "GBP").attributed.format(int))
+        #expect(int.formatted(.number.attributed.locale(locale)) == IntegerFormatStyle().attributed.locale(locale).format(int))
+        #expect(int.formatted(.percent.attributed.locale(locale)) == IntegerFormatStyle.Percent().attributed.locale(locale).format(int))
+        #expect(int.formatted(.currency(code: "GBP").attributed.locale(locale)) == IntegerFormatStyle.Currency(code: "GBP").attributed.locale(locale).format(int))
 
         let float = 3.14159
-        #expect(float.formatted(.number.attributed) == FloatingPointFormatStyle<Double>().attributed.format(float))
-        #expect(float.formatted(.percent.attributed) == FloatingPointFormatStyle.Percent().attributed.format(float))
-        #expect(float.formatted(.currency(code: "GBP").attributed) == FloatingPointFormatStyle.Currency(code: "GBP").attributed.format(float))
+        #expect(float.formatted(.number.attributed.locale(locale)) == FloatingPointFormatStyle<Double>().attributed.locale(locale).format(float))
+        #expect(float.formatted(.percent.attributed.locale(locale)) == FloatingPointFormatStyle.Percent().attributed.locale(locale).format(float))
+        #expect(float.formatted(.currency(code: "GBP").attributed.locale(locale)) == FloatingPointFormatStyle.Currency(code: "GBP").attributed.locale(locale).format(float))
 
         let decimal = Decimal(2.999)
-        #expect(decimal.formatted(.number.attributed) == Decimal.FormatStyle().attributed.format(decimal))
-        #expect(decimal.formatted(.percent.attributed) == Decimal.FormatStyle.Percent().attributed.format(decimal))
-        #expect(decimal.formatted(.currency(code: "GBP").attributed) == Decimal.FormatStyle.Currency(code: "GBP").attributed.format(decimal))
+        #expect(decimal.formatted(.number.attributed.locale(locale)) == Decimal.FormatStyle().attributed.locale(locale).format(decimal))
+        #expect(decimal.formatted(.percent.attributed.locale(locale)) == Decimal.FormatStyle.Percent().attributed.locale(locale).format(decimal))
+        #expect(decimal.formatted(.currency(code: "GBP").attributed.locale(locale)) == Decimal.FormatStyle.Currency(code: "GBP").attributed.locale(locale).format(decimal))
+
     }
 
     @Test func decimalFormatStyle() throws {
