@@ -112,19 +112,19 @@ extension ProgressManager {
         public struct Throughput: Sendable, Property {
             public typealias Value = Int64
             
-            public typealias Summary = Int64
+            public typealias Summary = [Int64]
             
             public static var defaultValue: Int64 { return 0 }
             
-            public static var defaultSummary: Int64 { return 0 }
-            // array, total sum, average
+            public static var defaultSummary: [Int64] { return [0] }
+
             public typealias T = Int64
             
-            public static func reduce(into summary: inout Int64, value: Int64) {
-                summary += value
+            public static func reduce(into summary: inout [Int64], value: Int64) {
+                summary.append(value)
             }
             
-            public static func merge(_ summary1: Int64, _ summary2: Int64) -> Int64 {
+            public static func merge(_ summary1: [Int64], _ summary2: [Int64]) -> [Int64] {
                 return summary1 + summary2
             }
         }
@@ -136,19 +136,19 @@ extension ProgressManager {
             
             public typealias Value = Duration
             
-            public typealias Summary = Duration
+            public typealias Summary = [Duration]
             
             public static var defaultValue: Duration { return Duration.seconds(0) }
 
-            public static var defaultSummary: Duration { return Duration.seconds(0) }
+            public static var defaultSummary: [Duration] { return [Duration.seconds(0)] }
             
             public typealias T = Duration
             
-            public static func reduce(into summary: inout Duration, value: Duration) {
-                summary += value
+            public static func reduce(into summary: inout [Duration], value: Duration) {
+                summary.append(value)
             }
             
-            public static func merge(_ summary1: Duration, _ summary2: Duration) -> Duration {
+            public static func merge(_ summary1: [Duration], _ summary2: [Duration]) -> [Duration] {
                 return summary1 + summary2
             }
 
