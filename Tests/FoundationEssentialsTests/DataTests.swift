@@ -2306,27 +2306,23 @@ extension DataTests {
 
     // we have more encodeToStringTests than we have encodeToDataTests.
     // lets fix this by ensuring data output matches string output.
-    @Test func testBase64DataOutputMatchesStingOutput() {
-        for count in 0..<10_000 {
+
+    @Test(
+        arguments: [
+            Data.Base64EncodingOptions.lineLength64Characters,
+            [.lineLength64Characters, .endLineWithCarriageReturn],
+            .lineLength76Characters,
+            [.lineLength64Characters, .endLineWithLineFeed],
+            [],
+        ]
+    )
+    func testBase64DataOutputMatchesStingOutput(options: Data.Base64EncodingOptions) {
+        let iterations = 1_000
+
+        for count in 0..<iterations {
             let data = Data(repeating: 0, count: count)
-            let stringBase64 = data.base64EncodedString(options: .lineLength64Characters)
-            let dataBase64 = data.base64EncodedData(options: .lineLength64Characters)
-
-            #expect(stringBase64 == String(decoding: dataBase64, as: Unicode.UTF8.self))
-        }
-
-        for count in 0..<10_000 {
-            let data = Data(repeating: 0, count: count)
-            let stringBase64 = data.base64EncodedString(options: .lineLength76Characters)
-            let dataBase64 = data.base64EncodedData(options: .lineLength76Characters)
-
-            #expect(stringBase64 == String(decoding: dataBase64, as: Unicode.UTF8.self))
-        }
-
-        for count in 0..<10_000 {
-            let data = Data(repeating: 0, count: count)
-            let stringBase64 = data.base64EncodedString()
-            let dataBase64 = data.base64EncodedData()
+            let stringBase64 = data.base64EncodedString(options: options)
+            let dataBase64 = data.base64EncodedData(options: options)
 
             #expect(stringBase64 == String(decoding: dataBase64, as: Unicode.UTF8.self))
         }
