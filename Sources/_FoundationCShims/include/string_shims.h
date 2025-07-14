@@ -37,11 +37,11 @@ extern "C" {
 #define locale_t void *
 #endif
 
-INTERNAL int _stringshims_strncasecmp_l(const char * _Nullable s1, const char * _Nullable s2, size_t n, locale_t _Nullable loc);
+INTERNAL int _stringshims_strncasecmp_clocale(const char * _Nullable s1, const char * _Nullable s2, size_t n);
 
-INTERNAL double _stringshims_strtod_l(const char * _Nullable __restrict nptr, char * _Nullable * _Nullable __restrict endptr, locale_t _Nullable loc);
+INTERNAL double _stringshims_strtod_clocale(const char * _Nullable __restrict nptr, char * _Nullable * _Nullable __restrict endptr);
 
-INTERNAL float _stringshims_strtof_l(const char * _Nullable __restrict nptr, char * _Nullable * _Nullable __restrict endptr, locale_t _Nullable loc);
+INTERNAL float _stringshims_strtof_clocale(const char * _Nullable __restrict nptr, char * _Nullable * _Nullable __restrict endptr);
 
 #define _STRINGSHIMS_MACROMAN_MAP_SIZE 129
 INTERNAL const uint8_t _stringshims_macroman_mapping[_STRINGSHIMS_MACROMAN_MAP_SIZE][3];
