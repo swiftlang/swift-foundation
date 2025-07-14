@@ -854,15 +854,28 @@ private struct StringTests {
         #expect("/foo/bar/.zip".deletingPathExtension() == "/foo/bar/.zip")
         #expect("..".deletingPathExtension() == "..")
         #expect("..zip".deletingPathExtension() == "..zip")
+        #expect("/..".deletingPathExtension() == "/..")
+        #expect("/..zip".deletingPathExtension() == "/..zip")
         #expect("/foo/bar/..zip".deletingPathExtension() == "/foo/bar/..zip")
         #expect("/foo/bar/baz..zip".deletingPathExtension() == "/foo/bar/baz.")
         #expect("...".deletingPathExtension() == "...")
         #expect("...zip".deletingPathExtension() == "...zip")
+        #expect("/...".deletingPathExtension() == "/...")
+        #expect("/...zip".deletingPathExtension() == "/...zip")
         #expect("/foo/bar/...zip".deletingPathExtension() == "/foo/bar/...zip")
         #expect("/foo/bar/baz...zip".deletingPathExtension() == "/foo/bar/baz..")
         #expect("/foo.bar/bar.baz/baz.zip".deletingPathExtension() == "/foo.bar/bar.baz/baz")
         #expect("/.././.././a.zip".deletingPathExtension() == "/.././.././a")
         #expect("/.././.././.".deletingPathExtension() == "/.././.././.")
+
+        // File names starting with "." or ".." are OK
+        // as long as they aren't exactly "." or ".."
+        #expect("..name.txt".deletingPathExtension() == "..name")
+        #expect("/..name.txt".deletingPathExtension() == "/..name")
+        #expect("....txt".deletingPathExtension() == "...")
+        #expect("/....txt".deletingPathExtension() == "/...")
+        #expect(".name.txt".deletingPathExtension() == ".name")
+        #expect("/.name.txt".deletingPathExtension() == "/.name")
 
         #expect("path.foo".deletingPathExtension() == "path")
         #expect("path.foo.zip".deletingPathExtension() == "path.foo")
@@ -953,27 +966,27 @@ private struct StringTests {
         // UTF16 - specific endianness
         
         let utf16BEExpected = Data([0, 104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 216, 62, 221, 238])
-        let utf16BEOutput = s.data(using: String._Encoding.utf16BigEndian)
+        let utf16BEOutput = s.data(using: .utf16BigEndian)
         #expect(utf16BEOutput == utf16BEExpected)
         
-        let utf16BEOutputSubstring = subString.data(using: String._Encoding.utf16BigEndian)
+        let utf16BEOutputSubstring = subString.data(using: .utf16BigEndian)
         #expect(utf16BEOutputSubstring == utf16BEExpected)
         
         let utf16LEExpected = Data([104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 0, 62, 216, 238, 221])
-        let utf16LEOutput = s.data(using: String._Encoding.utf16LittleEndian)
+        let utf16LEOutput = s.data(using: .utf16LittleEndian)
         #expect(utf16LEOutput == utf16LEExpected)
 
-        let utf16LEOutputSubstring = subString.data(using: String._Encoding.utf16LittleEndian)
+        let utf16LEOutputSubstring = subString.data(using: .utf16LittleEndian)
         #expect(utf16LEOutputSubstring == utf16LEExpected)
 
         // UTF32 - specific endianness
         
         let utf32BEExpected = Data([0, 0, 0, 104, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 32, 0, 1, 249, 238])
-        let utf32BEOutput = s.data(using: String._Encoding.utf32BigEndian)
+        let utf32BEOutput = s.data(using: .utf32BigEndian)
         #expect(utf32BEOutput == utf32BEExpected)
 
         let utf32LEExpected = Data([104, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 32, 0, 0, 0, 238, 249, 1, 0])
-        let utf32LEOutput = s.data(using: String._Encoding.utf32LittleEndian)
+        let utf32LEOutput = s.data(using: .utf32LittleEndian)
         #expect(utf32LEOutput == utf32LEExpected)
         
         
@@ -983,8 +996,8 @@ private struct StringTests {
         let utf16BEWithBOM = Data([0xFE, 0xFF]) + utf16BEExpected
         let utf32BEWithBOM = Data([0x00, 0x00, 0xFE, 0xFF]) + utf32BEExpected
 
-        let utf16Output = s.data(using: String._Encoding.utf16)!
-        let utf32Output = s.data(using: String._Encoding.utf32)!
+        let utf16Output = s.data(using: .utf16)!
+        let utf32Output = s.data(using: .utf32)!
         
         let bom = 0xFFFE
         
@@ -1002,77 +1015,77 @@ private struct StringTests {
         
         // UTF16
         
-        let utf16BEString = String(bytes: utf16BEExpected, encoding: String._Encoding.utf16BigEndian)
+        let utf16BEString = String(bytes: utf16BEExpected, encoding: .utf16BigEndian)
         #expect(s == utf16BEString)
         
-        let utf16LEString = String(bytes: utf16LEExpected, encoding: String._Encoding.utf16LittleEndian)
+        let utf16LEString = String(bytes: utf16LEExpected, encoding: .utf16LittleEndian)
         #expect(s == utf16LEString)
         
-        let utf16LEBOMString = String(bytes: utf16LEWithBOM, encoding: String._Encoding.utf16)
+        let utf16LEBOMString = String(bytes: utf16LEWithBOM, encoding: .utf16)
         #expect(s == utf16LEBOMString)
         
-        let utf16BEBOMString = String(bytes: utf16BEWithBOM, encoding: String._Encoding.utf16)
+        let utf16BEBOMString = String(bytes: utf16BEWithBOM, encoding: .utf16)
         #expect(s == utf16BEBOMString)
         
         // No BOM, no encoding specified. We assume the data is big endian, which leads to garbage (but not nil).
-        let utf16LENoBOMString = String(bytes: utf16LEExpected, encoding: String._Encoding.utf16)
+        let utf16LENoBOMString = String(bytes: utf16LEExpected, encoding: .utf16)
         #expect(utf16LENoBOMString != nil)
 
         // No BOM, no encoding specified. We assume the data is big endian, which leads to an expected value.
-        let utf16BENoBOMString = String(bytes: utf16BEExpected, encoding: String._Encoding.utf16)
+        let utf16BENoBOMString = String(bytes: utf16BEExpected, encoding: .utf16)
         #expect(s == utf16BENoBOMString)
 
         // UTF32
         
-        let utf32BEString = String(bytes: utf32BEExpected, encoding: String._Encoding.utf32BigEndian)
+        let utf32BEString = String(bytes: utf32BEExpected, encoding: .utf32BigEndian)
         #expect(s == utf32BEString)
         
-        let utf32LEString = String(bytes: utf32LEExpected, encoding: String._Encoding.utf32LittleEndian)
+        let utf32LEString = String(bytes: utf32LEExpected, encoding: .utf32LittleEndian)
         #expect(s == utf32LEString)
         
         
-        let utf32BEBOMString = String(bytes: utf32BEWithBOM, encoding: String._Encoding.utf32)
+        let utf32BEBOMString = String(bytes: utf32BEWithBOM, encoding: .utf32)
         #expect(s == utf32BEBOMString)
         
-        let utf32LEBOMString = String(bytes: utf32LEWithBOM, encoding: String._Encoding.utf32)
+        let utf32LEBOMString = String(bytes: utf32LEWithBOM, encoding: .utf32)
         #expect(s == utf32LEBOMString)
         
         // No BOM, no encoding specified. We assume the data is big endian, which leads to a nil.
-        let utf32LENoBOMString = String(bytes: utf32LEExpected, encoding: String._Encoding.utf32)
+        let utf32LENoBOMString = String(bytes: utf32LEExpected, encoding: .utf32)
         #expect(utf32LENoBOMString == nil)
         
         // No BOM, no encoding specified. We assume the data is big endian, which leads to an expected value.
-        let utf32BENoBOMString = String(bytes: utf32BEExpected, encoding: String._Encoding.utf32)
+        let utf32BENoBOMString = String(bytes: utf32BEExpected, encoding: .utf32)
         #expect(s == utf32BENoBOMString)
 
         // Check what happens when we mismatch a string with a BOM and the encoding. The bytes are interpreted according to the specified encoding regardless of the BOM, the BOM is preserved, and the String will look garbled. However the bytes are preserved as-is. This is the expected behavior for UTF16.
-        let utf16LEBOMStringMismatch = String(bytes: utf16LEWithBOM, encoding: String._Encoding.utf16BigEndian)
-        let utf16LEBOMStringMismatchBytes = utf16LEBOMStringMismatch?.data(using: String._Encoding.utf16BigEndian)
+        let utf16LEBOMStringMismatch = String(bytes: utf16LEWithBOM, encoding: .utf16BigEndian)
+        let utf16LEBOMStringMismatchBytes = utf16LEBOMStringMismatch?.data(using: .utf16BigEndian)
         #expect(utf16LEWithBOM == utf16LEBOMStringMismatchBytes)
         
-        let utf16BEBOMStringMismatch = String(bytes: utf16BEWithBOM, encoding: String._Encoding.utf16LittleEndian)
-        let utf16BEBomStringMismatchBytes = utf16BEBOMStringMismatch?.data(using: String._Encoding.utf16LittleEndian)
+        let utf16BEBOMStringMismatch = String(bytes: utf16BEWithBOM, encoding: .utf16LittleEndian)
+        let utf16BEBomStringMismatchBytes = utf16BEBOMStringMismatch?.data(using: .utf16LittleEndian)
         #expect(utf16BEWithBOM == utf16BEBomStringMismatchBytes)
 
         // For a UTF32 mismatch, the string creation simply returns nil.
-        let utf32LEBOMStringMismatch = String(bytes: utf32LEWithBOM, encoding: String._Encoding.utf32BigEndian)
+        let utf32LEBOMStringMismatch = String(bytes: utf32LEWithBOM, encoding: .utf32BigEndian)
         #expect(utf32LEBOMStringMismatch == nil)
         
-        let utf32BEBOMStringMismatch = String(bytes: utf32BEWithBOM, encoding: String._Encoding.utf32LittleEndian)
+        let utf32BEBOMStringMismatch = String(bytes: utf32BEWithBOM, encoding: .utf32LittleEndian)
         #expect(utf32BEBOMStringMismatch == nil)
         
         // UTF-8 With BOM
         
         let utf8BOM = Data([0xEF, 0xBB, 0xBF])
         let helloWorld = Data("Hello, world".utf8)
-        #expect(String(bytes: utf8BOM + helloWorld, encoding: String._Encoding.utf8) == "Hello, world")
-        #expect(String(bytes: helloWorld + utf8BOM, encoding: String._Encoding.utf8) == "Hello, world\u{FEFF}")
+        #expect(String(bytes: utf8BOM + helloWorld, encoding: .utf8) == "Hello, world")
+        #expect(String(bytes: helloWorld + utf8BOM, encoding: .utf8) == "Hello, world\u{FEFF}")
     }
 
     @Test func dataUsingEncoding_preservingBOM() {
         func roundTrip(_ data: Data) -> Bool {
             let str = String(data: data, encoding: .utf8)!
-            let strAsUTF16BE = str.data(using: String._Encoding.utf16BigEndian)!
+            let strAsUTF16BE = str.data(using: .utf16BigEndian)!
             let strRoundTripUTF16BE = String(data: strAsUTF16BE, encoding: .utf16BigEndian)!
             return strRoundTripUTF16BE == str
         }
@@ -1089,8 +1102,8 @@ private struct StringTests {
     @Test func dataUsingEncoding_ascii() {
         #expect("abc".data(using: .ascii) == Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
         #expect("abc".data(using: .nonLossyASCII) == Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
-        #expect("e\u{301}\u{301}f".data(using: String._Encoding.ascii) == nil)
-        #expect("e\u{301}\u{301}f".data(using: String._Encoding.nonLossyASCII) == nil)
+        #expect("e\u{301}\u{301}f".data(using: .ascii) == nil)
+        #expect("e\u{301}\u{301}f".data(using: .nonLossyASCII) == nil)
         
         #expect("abc".data(using: .ascii, allowLossyConversion: true) == Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
         #expect("abc".data(using: .nonLossyASCII, allowLossyConversion: true) == Data([UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c")]))
@@ -1099,10 +1112,10 @@ private struct StringTests {
     }
     
     @Test func initWithBytes_ascii() {
-        #expect(String(bytes: "abc".utf8, encoding: String._Encoding.ascii) == "abc")
-        #expect(String(bytes: "abc".utf8, encoding: String._Encoding.nonLossyASCII) == "abc")
-        #expect(String(bytes: "e\u{301}\u{301}f".utf8, encoding: String._Encoding.ascii) == nil)
-        #expect(String(bytes: "e\u{301}\u{301}f".utf8, encoding: String._Encoding.nonLossyASCII) == nil)
+        #expect(String(bytes: "abc".utf8, encoding: .ascii) == "abc")
+        #expect(String(bytes: "abc".utf8, encoding: .nonLossyASCII) == "abc")
+        #expect(String(bytes: "e\u{301}\u{301}f".utf8, encoding: .ascii) == nil)
+        #expect(String(bytes: "e\u{301}\u{301}f".utf8, encoding: .nonLossyASCII) == nil)
     }
 
     @Test func compressingSlashes() {
@@ -1156,18 +1169,18 @@ private struct StringTests {
 
     @Test func init_contentsOfFile_encoding() throws {
         try withTemporaryStringFile { existingURL, nonExistentURL in
-            let content = try String(contentsOfFile: existingURL.path, encoding: String._Encoding.ascii)
+            let content = try String(contentsOfFile: existingURL.path, encoding: .ascii)
             #expect(temporaryFileContents == content)
 
             #expect(throws: (any Error).self) {
-                _ = try String(contentsOfFile: nonExistentURL.path, encoding: String._Encoding.ascii)
+                _ = try String(contentsOfFile: nonExistentURL.path, encoding: .ascii)
             }
         }
     }
 
     @Test func init_contentsOfFile_usedEncoding() throws {
         try withTemporaryStringFile { existingURL, nonExistentURL in
-            var usedEncoding: String._Encoding = String._Encoding(rawValue: 0)
+            var usedEncoding = String.Encoding(rawValue: 0)
             let content = try String(contentsOfFile: existingURL.path(), usedEncoding: &usedEncoding)
             #expect(0 != usedEncoding.rawValue)
             #expect(temporaryFileContents == content)
@@ -1178,11 +1191,11 @@ private struct StringTests {
 
     @Test func init_contentsOf_encoding() throws {
         try withTemporaryStringFile { existingURL, nonExistentURL in
-            let content = try String(contentsOf: existingURL, encoding: String._Encoding.ascii)
+            let content = try String(contentsOf: existingURL, encoding: .ascii)
             #expect(temporaryFileContents == content)
 
             #expect(throws: (any Error).self) {
-                _ = try String(contentsOf: nonExistentURL, encoding: String._Encoding.ascii)
+                _ = try String(contentsOf: nonExistentURL, encoding: .ascii)
             }
         }
 
@@ -1190,7 +1203,7 @@ private struct StringTests {
 
     @Test func init_contentsOf_usedEncoding() throws {
 #if FOUNDATION_FRAMEWORK
-        let encs : [String._Encoding] = [
+        let encs : [String.Encoding] = [
             .ascii,
             .nextstep,
             .japaneseEUC,
@@ -1215,7 +1228,7 @@ private struct StringTests {
             .utf32LittleEndian
         ]
 #else
-        var encs : [String._Encoding] = [
+        var encs : [String.Encoding] = [
             .utf8,
             .utf16,
             .utf32,
@@ -1238,7 +1251,7 @@ private struct StringTests {
         
         for encoding in encs {
             try withTemporaryStringFile(encoding: encoding) { existingURL, _ in
-                var usedEncoding = String._Encoding(rawValue: 0)
+                var usedEncoding = String.Encoding(rawValue: 0)
                 let content = try String(contentsOf: existingURL, usedEncoding: &usedEncoding)
                 
                 #expect(encoding == usedEncoding)
@@ -1248,7 +1261,7 @@ private struct StringTests {
         
         // Test non-existent file
         try withTemporaryStringFile { _, nonExistentURL in
-            var usedEncoding: String._Encoding = String._Encoding(rawValue: 0)
+            var usedEncoding = String.Encoding(rawValue: 0)
             #expect(throws: (any Error).self) {
                 _ = try String(contentsOf: nonExistentURL, usedEncoding: &usedEncoding)
             }
@@ -1259,7 +1272,7 @@ private struct StringTests {
 #if FOUNDATION_FRAMEWORK
     @Test func extendedAttributeEncodings() throws {
         // XAttr is supported on some platforms, but not all. For now we just test this code on Darwin.
-        let encs : [String._Encoding] = [
+        let encs : [String.Encoding] = [
             .ascii,
             .nextstep,
             .japaneseEUC,
@@ -1292,28 +1305,28 @@ private struct StringTests {
             #expect(back == encoding)
         }
         
-        #expect(encodingFromDataForExtendedAttribute("us-ascii;1536".data(using: .utf8)!)!.rawValue == String._Encoding.ascii.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("x-nextstep;2817".data(using: .utf8)!)!.rawValue == String._Encoding.nextstep.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("euc-jp;2336".data(using: .utf8)!)!.rawValue == String._Encoding.japaneseEUC.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("utf-8;134217984".data(using: .utf8)!)!.rawValue == String._Encoding.utf8.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("iso-8859-1;513".data(using: .utf8)!)!.rawValue == String._Encoding.isoLatin1.rawValue)
-        #expect(encodingFromDataForExtendedAttribute(";3071".data(using: .utf8)!)!.rawValue == String._Encoding.nonLossyASCII.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("cp932;1056".data(using: .utf8)!)!.rawValue == String._Encoding.shiftJIS.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("iso-8859-2;514".data(using: .utf8)!)!.rawValue == String._Encoding.isoLatin2.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("utf-16;256".data(using: .utf8)!)!.rawValue == String._Encoding.unicode.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("windows-1251;1282".data(using: .utf8)!)!.rawValue == String._Encoding.windowsCP1251.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("windows-1252;1280".data(using: .utf8)!)!.rawValue == String._Encoding.windowsCP1252.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("windows-1253;1283".data(using: .utf8)!)!.rawValue == String._Encoding.windowsCP1253.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("windows-1254;1284".data(using: .utf8)!)!.rawValue == String._Encoding.windowsCP1254.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("windows-1250;1281".data(using: .utf8)!)!.rawValue == String._Encoding.windowsCP1250.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("iso-2022-jp;2080".data(using: .utf8)!)!.rawValue == String._Encoding.iso2022JP.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("macintosh;0".data(using: .utf8)!)!.rawValue == String._Encoding.macOSRoman.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("utf-16;256".data(using: .utf8)!)!.rawValue == String._Encoding.utf16.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("utf-16be;268435712".data(using: .utf8)!)!.rawValue == String._Encoding.utf16BigEndian.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("utf-16le;335544576".data(using: .utf8)!)!.rawValue == String._Encoding.utf16LittleEndian.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("utf-32;201326848".data(using: .utf8)!)!.rawValue == String._Encoding.utf32.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("utf-32be;402653440".data(using: .utf8)!)!.rawValue == String._Encoding.utf32BigEndian.rawValue)
-        #expect(encodingFromDataForExtendedAttribute("utf-32le;469762304".data(using: .utf8)!)!.rawValue == String._Encoding.utf32LittleEndian.rawValue)
+        #expect(encodingFromDataForExtendedAttribute("us-ascii;1536".data(using: .utf8)!)! == .ascii)
+        #expect(encodingFromDataForExtendedAttribute("x-nextstep;2817".data(using: .utf8)!)! == .nextstep)
+        #expect(encodingFromDataForExtendedAttribute("euc-jp;2336".data(using: .utf8)!)! == .japaneseEUC)
+        #expect(encodingFromDataForExtendedAttribute("utf-8;134217984".data(using: .utf8)!)! == .utf8)
+        #expect(encodingFromDataForExtendedAttribute("iso-8859-1;513".data(using: .utf8)!)! == .isoLatin1)
+        #expect(encodingFromDataForExtendedAttribute(";3071".data(using: .utf8)!)! == .nonLossyASCII)
+        #expect(encodingFromDataForExtendedAttribute("cp932;1056".data(using: .utf8)!)! == .shiftJIS)
+        #expect(encodingFromDataForExtendedAttribute("iso-8859-2;514".data(using: .utf8)!)! == .isoLatin2)
+        #expect(encodingFromDataForExtendedAttribute("utf-16;256".data(using: .utf8)!)! == .unicode)
+        #expect(encodingFromDataForExtendedAttribute("windows-1251;1282".data(using: .utf8)!)! == .windowsCP1251)
+        #expect(encodingFromDataForExtendedAttribute("windows-1252;1280".data(using: .utf8)!)! == .windowsCP1252)
+        #expect(encodingFromDataForExtendedAttribute("windows-1253;1283".data(using: .utf8)!)! == .windowsCP1253)
+        #expect(encodingFromDataForExtendedAttribute("windows-1254;1284".data(using: .utf8)!)! == .windowsCP1254)
+        #expect(encodingFromDataForExtendedAttribute("windows-1250;1281".data(using: .utf8)!)! == .windowsCP1250)
+        #expect(encodingFromDataForExtendedAttribute("iso-2022-jp;2080".data(using: .utf8)!)! == .iso2022JP)
+        #expect(encodingFromDataForExtendedAttribute("macintosh;0".data(using: .utf8)!)! == .macOSRoman)
+        #expect(encodingFromDataForExtendedAttribute("utf-16;256".data(using: .utf8)!)! == .utf16)
+        #expect(encodingFromDataForExtendedAttribute("utf-16be;268435712".data(using: .utf8)!)! == .utf16BigEndian)
+        #expect(encodingFromDataForExtendedAttribute("utf-16le;335544576".data(using: .utf8)!)! == .utf16LittleEndian)
+        #expect(encodingFromDataForExtendedAttribute("utf-32;201326848".data(using: .utf8)!)! == .utf32)
+        #expect(encodingFromDataForExtendedAttribute("utf-32be;402653440".data(using: .utf8)!)! == .utf32BigEndian)
+        #expect(encodingFromDataForExtendedAttribute("utf-32le;469762304".data(using: .utf8)!)! == .utf32LittleEndian)
     }
 #endif
 
@@ -1321,9 +1334,9 @@ private struct StringTests {
         try withTemporaryStringFile { existingURL, nonExistentURL in
             let nonExistentPath = nonExistentURL.path()
             let s = "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
-            try s.write(toFile: nonExistentPath, atomically: false, encoding: String._Encoding.ascii)
+            try s.write(toFile: nonExistentPath, atomically: false, encoding: .ascii)
 
-            let content = try String(contentsOfFile: nonExistentPath, encoding: String._Encoding.ascii)
+            let content = try String(contentsOfFile: nonExistentPath, encoding: .ascii)
 
             #expect(s == content)
         }
@@ -1334,22 +1347,22 @@ private struct StringTests {
         try withTemporaryStringFile { existingURL, nonExistentURL in
             let nonExistentPath = nonExistentURL.path()
             let s = "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
-            try s.write(to: nonExistentURL, atomically: false, encoding: String._Encoding.ascii)
+            try s.write(to: nonExistentURL, atomically: false, encoding: .ascii)
             
-            let content = try String(contentsOfFile: nonExistentPath, encoding: String._Encoding.ascii)
+            let content = try String(contentsOfFile: nonExistentPath, encoding: .ascii)
             
             #expect(s == content)
         }
 
     }
     
-    func verifyEncoding(_ encoding: String._Encoding, valid: [String], invalid: [String], sourceLocation: SourceLocation = #_sourceLocation) throws {
+    func verifyEncoding(_ encoding: String.Encoding, valid: [String], invalid: [String], sourceLocation: SourceLocation = #_sourceLocation) throws {
         for string in valid {
             let data = try #require(string.data(using: encoding), "Failed to encode \(string.debugDescription)", sourceLocation: sourceLocation)
             #expect(String(data: data, encoding: encoding) != nil, "Failed to decode \(data) (\(string.debugDescription))", sourceLocation: sourceLocation)
         }
         for string in invalid {
-            #expect(string.data(using: String._Encoding.macOSRoman) == nil, "Incorrectly successfully encoded \(string.debugDescription)", sourceLocation: sourceLocation)
+            #expect(string.data(using: .macOSRoman) == nil, "Incorrectly successfully encoded \(string.debugDescription)", sourceLocation: sourceLocation)
         }
     }
     
@@ -1390,7 +1403,7 @@ private struct StringTests {
 
 let temporaryFileContents = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 
-func withTemporaryStringFile(encoding: String._Encoding = .utf8, _ block: (_ existingURL: URL, _ nonExistentURL: URL) throws -> ()) throws {
+func withTemporaryStringFile(encoding: String.Encoding = .utf8, _ block: (_ existingURL: URL, _ nonExistentURL: URL) throws -> ()) throws {
 
     let rootURL = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     let fileURL = rootURL.appending(path: "NSStringTest.txt", directoryHint: .notDirectory)

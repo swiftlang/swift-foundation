@@ -50,13 +50,6 @@ extension String {
         public static let utf32LittleEndian = Encoding(rawValue: 0x9c000100)
     }
 
-    // This is a workaround for Clang importer's ambiguous lookup issue since
-    // - Swift doesn't allow typealias to nested type
-    // - Swift doesn't allow typealias to builtin types like String
-    // We therefore rename String.Encoding to String._Encoding for package
-    // internal use so we can use `String._Encoding` to disambiguate.
-    internal typealias _Encoding = Encoding
-
 #if FOUNDATION_FRAMEWORK
     public typealias EncodingConversionOptions = NSString.EncodingConversionOptions
     public typealias EnumerationOptions = NSString.EnumerationOptions

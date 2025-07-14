@@ -8,7 +8,6 @@ import CompilerPluginSupport
 
 let availabilityTags: [_Availability] = [
     _Availability("FoundationPreview"), // Default FoundationPreview availability
-    _Availability("FoundationSpan", availability: .macOS26), // Availability of Span types
 ]
 let versionNumbers = ["6.0.2", "6.1", "6.2"]
 
@@ -108,10 +107,7 @@ let package = Package(
         // TestSupport (Internal)
         .target(
             name: "TestSupport",
-            dependencies: [
-                "FoundationEssentials",
-                "FoundationInternationalization",
-            ],
+            path: "Tests/TestSupport",
             cSettings: wasiLibcCSettings,
             swiftSettings: availabilityMacros + featureSettings
         ),

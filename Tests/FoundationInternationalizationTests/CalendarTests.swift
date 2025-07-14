@@ -66,7 +66,7 @@ extension DateComponents {
             let actualValue = d1?.value(for: component)
             let expectedValue = d2?.value(for: component)
             switch component {
-            case .era, .year, .month, .day, .dayOfYear, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .weekOfMonth, .timeZone, .isLeapMonth, .calendar:
+            case .era, .year, .month, .day, .dayOfYear, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .weekOfMonth, .timeZone, .isLeapMonth, .isRepeatedDay, .calendar:
                 if actualValue != expectedValue {
                     diffStr += "\ncomponent: \(component), 1st: \(String(describing: actualValue)), 2nd: \(String(describing: expectedValue))"
                     isEqual = false
@@ -637,6 +637,163 @@ private struct CalendarTests {
         #expect(!c.date(d1, matchesComponents: components))
         #expect(c.date(d2, matchesComponents: components))
     }
+
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+    @Test func test_isRepeatedDayProperty() throws {
+        var c = Calendar(identifier: .vikram)
+        c.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+
+        // Gregorian 2025-04-13 is the first Vikram 2082-02-01
+        // Gregorian 2025-04-14 is the second Vikram 2082-02-01 (repeated lunar day, a.k.a. "adhika tithi")
+        let d1 = try Date("2025-04-13 12:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))
+        let d2 = try Date("2025-04-14 12:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))
+        
+        var components = DateComponents()
+        components.isRepeatedDay = true
+        #expect(!c.date(d1, matchesComponents: components))
+        #expect(c.date(d2, matchesComponents: components))
+        components.isRepeatedDay = false
+        #expect(c.date(d1, matchesComponents: components))
+        #expect(!c.date(d2, matchesComponents: components))
+    }
+
+    @Test func test_isRepeatedDay_nextDate_YMD_strict() throws {
+        var cal = Calendar(identifier: .vikram)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+
+        let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
+        
+        let expectedNormalDate = try Date("2025-06-07 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (the first occurrence)
+
+        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+
+        var comps = DateComponents()
+        comps.year = 2082
+        comps.month = 3
+        comps.day = 27
+
+        let normalDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
+        #expect(normalDate == expectedNormalDate)
+
+        comps.isRepeatedDay = true
+
+        let repeatedDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
+        #expect(repeatedDate == expectedRepeatedDate)
+    }
+
+    @Test func test_isRepeatedDay_nextDate_MD_strict() throws {
+        var cal = Calendar(identifier: .vikram)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+
+        let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
+        
+        let expectedNormalDate = try Date("2025-06-07 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (the first occurrence)
+
+        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+
+        var comps = DateComponents()
+        comps.month = 3
+        comps.day = 27
+
+        let normalDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
+        #expect(normalDate == expectedNormalDate)
+
+        comps.isRepeatedDay = true
+
+        let repeatedDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
+        #expect(repeatedDate == expectedRepeatedDate)
+    }
+
+    @Test func test_isRepeatedDay_nextDate_D_strict() throws {
+        var cal = Calendar(identifier: .vikram)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+
+        let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
+        
+        let expectedNormalDate = try Date("2025-06-07 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (the first occurrence)
+
+        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+
+        var comps = DateComponents()
+        comps.day = 27
+
+        let normalDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
+        #expect(normalDate == expectedNormalDate)
+
+        comps.isRepeatedDay = true
+
+        let repeatedDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
+        #expect(repeatedDate == expectedRepeatedDate)
+    }
+
+    @Test func test_isRepeatedDay_nextDate_strict() throws {
+        var cal = Calendar(identifier: .vikram)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+
+        let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
+        
+        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+
+        var comps = DateComponents()
+        comps.isRepeatedDay = true
+
+        let repeatedDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
+        #expect(repeatedDate == expectedRepeatedDate)
+    }
+
+    @Test func test_isRepeatedDay_nextDate_strict_Gregorian() throws {
+        // testing with a calendar that doesn't have repeating days
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+
+        let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
+        
+        var comps = DateComponents()
+        comps.isRepeatedDay = true
+
+        let repeatedDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
+        #expect(repeatedDate == nil)
+    }
+
+    @Test func test_equality_with_isRepeatedDay() throws {
+        var c1 = DateComponents()
+        c1.month = 1; c1.year = 2082; c1.day=2
+        var c = c1
+        
+        // undefined == undefined?
+        #expect(c == c1)
+        #expect(c.hashValue == c1.hashValue)
+
+        // undefined == true?
+        c1.isRepeatedDay = true
+        #expect(c != c1)
+        #expect(c.hashValue != c1.hashValue)
+
+        // undefined == false?
+        c1.isRepeatedDay = false
+        #expect(c != c1)
+        #expect(c.hashValue != c1.hashValue)
+
+        // true == true?
+        c.isRepeatedDay = true
+        c1.isRepeatedDay = true
+        #expect(c == c1)
+        #expect(c.hashValue == c1.hashValue)
+
+        // false == false?
+        c.isRepeatedDay = false
+        c1.isRepeatedDay = false
+        #expect(c == c1)
+        #expect(c.hashValue == c1.hashValue)
+
+        // false == true?
+        c.isRepeatedDay = false
+        c1.isRepeatedDay = true
+        #expect(c != c1)
+        #expect(c.hashValue != c1.hashValue)
+    }
+
+#endif
 
     @Test func addingDeprecatedWeek() throws {
         let date = try Date("2024-02-24 01:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))

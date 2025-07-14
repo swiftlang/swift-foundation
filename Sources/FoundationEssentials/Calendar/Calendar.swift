@@ -248,6 +248,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         package static let timeZone = ComponentSet(rawValue: 1 << 15)
         package static let isLeapMonth = ComponentSet(rawValue: 1 << 16)
         package static let dayOfYear = ComponentSet(rawValue: 1 << 18)
+        package static let isRepeatedDay = ComponentSet(rawValue: 1 << 19)
 
         package var count: Int {
             rawValue.nonzeroBitCount
@@ -272,6 +273,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if contains(.calendar) { result.insert(.calendar) }
             if contains(.timeZone) { result.insert(.timeZone) }
             if contains(.isLeapMonth) { result.insert(.isLeapMonth) }
+            if contains(.isRepeatedDay) { result.insert(.isRepeatedDay) }
             if contains(.dayOfYear) { result.insert(.dayOfYear) }
             return result
         }
@@ -293,8 +295,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
             if self.contains(.yearForWeekOfYear) { return .yearForWeekOfYear }
             if self.contains(.nanosecond) { return .nanosecond }
 
-            // The algorithms that call this function assume that isLeapMonth counts as a 'highest unit set', but the order is after nanosecond.
+            // The algorithms that call this function assume that isLeapMonth and isRepeatedDay can count as 'highest unit set', but they are ordered after nanosecond.
             if self.contains(.isLeapMonth) { return .isLeapMonth }
+            if self.contains(.isRepeatedDay) { return .isRepeatedDay }
 
             // The calendar and timeZone properties do not count as a 'highest unit set', since they are not ordered in time like the others are.
             return nil
@@ -325,7 +328,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
         case timeZone
         @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
         case isLeapMonth
-        
+        @available(FoundationPreview 6.2, *)
+        case isRepeatedDay
         @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         case dayOfYear
         
@@ -349,6 +353,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .calendar: return ComponentSet.calendar.rawValue
             case .timeZone: return ComponentSet.timeZone.rawValue
             case .isLeapMonth: return ComponentSet.isLeapMonth.rawValue
+            case .isRepeatedDay: return ComponentSet.isRepeatedDay.rawValue
             }
         }
         
@@ -372,6 +377,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
             case .calendar: "calendar"
             case .timeZone: "timeZone"
             case .isLeapMonth: "isLeapMonth"
+            case .isRepeatedDay: "isRepeatedDay"
             }
         }
     }
@@ -694,6 +700,11 @@ public struct Calendar : Hashable, Equatable, Sendable {
         return dc
     }
 
+    /// True if this is a lunisolar calendar that repeats the month number for a leap month, false otherwise.
+    var hasRepeatingMonths: Bool {
+        return identifier == .chinese || identifier == .dangi || identifier == .gujarati || identifier == .kannada || identifier == .marathi || identifier == .telugu || identifier == .vietnamese || identifier == .vikram
+    }
+
     /// Returns all the date components of a date, as if in a given time zone (instead of the `Calendar` time zone).
     ///
     /// The time zone overrides the time zone of the `Calendar` for the purposes of this calculation.
@@ -809,7 +820,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
         }
 
         switch component {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return .orderedSame
         case .day, .hour:
             // Day here so we don't assume that time zone fall back situations don't fall back into a previous day
@@ -902,6 +913,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
         let comp1 = self.dateComponents(Set(units), from: date1)
         let comp2 = self.dateComponents(Set(units), from: date2)
 
+        // check if this is a lunisolar calendar that repeats the day number for a leap day
+        let hasRepeatingDays = identifier == .gujarati || identifier == .kannada || identifier == .marathi || identifier == .telugu || identifier == .vikram
+
         for c in units {
             guard let value1 = comp1.value(for: c), let value2 = comp2.value(for: c) else {
                 return fallback
@@ -913,13 +927,24 @@ public struct Calendar : Hashable, Equatable, Sendable {
                 return .orderedAscending
             }
 
-            if c == .month && identifier == .chinese {
+            if c == .month && hasRepeatingMonths {
                 let leap1 = comp1.isLeapMonth ?? false
                 let leap2 = comp2.isLeapMonth ?? false
 
                 if !leap1 && leap2 {
                     return .orderedAscending
                 } else if leap1 && !leap2 {
+                    return .orderedDescending
+                }
+            }
+
+            if c == .day && hasRepeatingDays {
+                let repeated1 = comp1.isRepeatedDay ?? false
+                let repeated2 = comp2.isRepeatedDay ?? false
+
+                if !repeated1 && repeated2 {
+                    return .orderedAscending
+                } else if repeated1 && !repeated2 {
                     return .orderedDescending
                 }
             }
@@ -1339,6 +1364,12 @@ public struct Calendar : Hashable, Equatable, Sendable {
             // `isLeapMonth` isn't part of `actualUnits`, so we have to retrieve
             // it separately
             comp.isLeapMonth = _dateComponents(.month, from: date).isLeapMonth
+        }
+
+        if components.isRepeatedDay != nil {
+            // `isRepeatedDay` isn't part of `actualUnits`, so we have to retrieve
+            // it separately
+            comp.isRepeatedDay = _dateComponents(.isRepeatedDay, from: date).isRepeatedDay
         }
 
         // Apply an epsilon to comparison of nanosecond values

@@ -1645,8 +1645,8 @@ private final class DataTests {
         #endif
     }
 
-    @available(FoundationSpan 6.2, *)
-    @Test func inlineDataSpan() throws {
+    @Test
+    func inlineDataSpan() throws {
         var source = Data()
         var span = source.span
         var isEmpty = span.isEmpty
@@ -1661,16 +1661,16 @@ private final class DataTests {
         #expect(firstElement == 1)
     }
 
-    @available(FoundationSpan 6.2, *)
-    @Test func inlineSliceDataSpan() throws {
+    @Test
+    func inlineSliceDataSpan() throws {
         let source = Data(0 ... .max)
         let span = source.span
         #expect(span.count == source.count)
         #expect(span[span.indices.last!] == .max)
     }
 
-    @available(FoundationSpan 6.2, *)
-    @Test func inlineDataMutableSpan() throws {
+    @Test
+    func inlineDataMutableSpan() throws {
 #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         var source = Data()
         var span = source.mutableSpan
@@ -1693,8 +1693,8 @@ private final class DataTests {
 #endif
     }
 
-    @available(FoundationSpan 6.2, *)
-    @Test func inlineSliceDataMutableSpan() throws {
+    @Test
+    func inlineSliceDataMutableSpan() throws {
 #if !canImport(Darwin) || FOUNDATION_FRAMEWORK
         var source = Data(0..<100)
         let count = source.count
@@ -1707,8 +1707,8 @@ private final class DataTests {
 #endif
     }
 
-    @available(FoundationSpan 6.2, *)
-    @Test func inlineDataMutableRawSpan() throws {
+    @Test
+    func inlineDataMutableRawSpan() throws {
         var source = Data()
         var span = source.mutableBytes
         var isEmpty = span.isEmpty
@@ -1728,8 +1728,8 @@ private final class DataTests {
         #expect(source[i] == v)
     }
 
-    @available(FoundationSpan 6.2, *)
-    @Test func inlineSliceDataMutableRawSpan() throws {
+    @Test
+    func inlineSliceDataMutableRawSpan() throws {
         var source = Data(0..<100)
         let count = source.count
         var span = source.mutableBytes
@@ -2386,7 +2386,6 @@ extension DataTests {
 @Suite("Large Data Tests", .serialized)
 struct LargeDataTests {
     @Test
-    @available(FoundationSpan 6.2, *)
     func largeSliceDataSpan() throws {
 #if _pointerBitWidth(_64)
         let count = Int(Int32.max)
@@ -2404,7 +2403,6 @@ struct LargeDataTests {
     }
     
     @Test
-    @available(FoundationSpan 6.2, *)
     func largeSliceDataMutableSpan() throws {
 #if _pointerBitWidth(_64)
         var count = Int(Int32.max)
@@ -2428,7 +2426,6 @@ struct LargeDataTests {
     }
     
     @Test
-    @available(FoundationSpan 6.2, *)
     func largeSliceDataMutableRawSpan() throws {
 #if _pointerBitWidth(_64)
         var count = Int(Int32.max)

@@ -295,7 +295,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             } else {
                 return nil
             }
-        case .era, .year, .month, .day, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear:
+        case .era, .year, .month, .day, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .yearForWeekOfYear, .dayOfYear, .isRepeatedDay:
             return nil
         }
     }
@@ -1168,6 +1168,9 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             ucal_set(ucalendar, UCAL_YEAR, 1)
             ucal_set(ucalendar, UCAL_MONTH, 0)
             ucal_set(ucalendar, UCAL_IS_LEAP_MONTH, 0)
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+            ucal_set(ucalendar, UCAL_IS_REPEATED_DAY, 0)
+#endif
             ucal_set(ucalendar, UCAL_DAY_OF_MONTH, 1)
             ucal_set(ucalendar, UCAL_HOUR_OF_DAY, 0)
             ucal_set(ucalendar, UCAL_MINUTE, 0)
@@ -1253,6 +1256,13 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 let result = ucal_get(ucalendar, UCAL_IS_LEAP_MONTH, &status)
                 dc.isLeapMonth = result == 0 ? false : true
             }
+
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+            if components.contains(.isRepeatedDay) {
+                let result = ucal_get(ucalendar, UCAL_IS_REPEATED_DAY, &status)
+                dc.isRepeatedDay = result == 0 ? false : true
+            }
+#endif
 
             if components.contains(.timeZone) {
                 dc.timeZone = timeZone
@@ -1400,7 +1410,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         var effectiveUnit = unit
         switch effectiveUnit {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
             switch identifier {
@@ -1520,7 +1530,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         var effectiveUnit = unit
         switch effectiveUnit {
-        case .calendar, .timeZone, .isLeapMonth:
+        case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
             switch identifier {
@@ -1814,6 +1824,9 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
         case .month:
             ucal_set(ucalendar, UCAL_DAY_OF_MONTH, ucal_getLimit(ucalendar, UCAL_DAY_OF_MONTH, UCAL_ACTUAL_MINIMUM, &status))
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+            ucal_set(ucalendar, UCAL_IS_REPEATED_DAY, 0)
+#endif
             fallthrough
 
         case .weekdayOrdinal, .weekday, .day, .dayOfYear:
@@ -1871,7 +1884,23 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         }
 
         let useDayOfMonth = startAtUnit == .day || startAtUnit == .weekday || startAtUnit == .weekdayOrdinal
-        
+
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+        if useDayOfMonth {
+            let targetDay = ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)
+            let targetRepeat = ucal_get(ucalendar, UCAL_IS_REPEATED_DAY, &status)
+            var currentDay = targetDay
+            var currentRepeat = targetRepeat
+
+            repeat {
+                udate = ucal_getMillis(ucalendar, &status)
+                ucal_add(ucalendar, UCAL_SECOND, -1, &status)
+                currentDay = ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)
+                currentRepeat = ucal_get(ucalendar, UCAL_IS_REPEATED_DAY, &status)
+            } while (targetDay == currentDay) && (targetRepeat == currentRepeat)
+            ucal_setMillis(ucalendar, udate, &status)
+        }
+#else
         if useDayOfMonth {
             let targetDay = ucal_get(ucalendar, UCAL_DAY_OF_MONTH, &status)
             var currentDay = targetDay
@@ -1883,6 +1912,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             } while targetDay == currentDay
             ucal_setMillis(ucalendar, udate, &status)
         }
+#endif
         
         udate = ucal_getMillis(ucalendar, &status)
         let start = Date(udate: udate)
@@ -2238,6 +2268,11 @@ extension Calendar.Component {
         case .weekOfYear: UCAL_WEEK_OF_YEAR
         case .yearForWeekOfYear: UCAL_YEAR_WOY
         case .isLeapMonth: UCAL_IS_LEAP_MONTH
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+        case .isRepeatedDay: UCAL_IS_REPEATED_DAY
+#else
+        case .isRepeatedDay: nil
+#endif
         case .dayOfYear: UCAL_DAY_OF_YEAR
         case .nanosecond: nil
         case .calendar: nil
@@ -2277,6 +2312,10 @@ extension Calendar.Component {
             self = .yearForWeekOfYear
         case UCAL_IS_LEAP_MONTH:
             self = .isLeapMonth
+#if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
+        case UCAL_IS_REPEATED_DAY:
+            self = .isRepeatedDay
+#endif
         default:
             return nil
         }
