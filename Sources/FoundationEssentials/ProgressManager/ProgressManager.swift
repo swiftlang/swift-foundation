@@ -38,7 +38,7 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
 @Observable public final class ProgressManager: Sendable {
     
     internal struct PropertyState {
-        var value: [(any Sendable)]
+        var value: (any Sendable)
         var isDirty: Bool
     }
     
@@ -137,9 +137,17 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     public protocol Property {
         
         associatedtype Value: Sendable, Hashable, Equatable
+        associatedtype Summary: Sendable, Hashable, Equatable
         
         /// The default value to return when property is not set to a specific value.
         static var defaultValue: Value { get }
+        // don't need default value because that just means dictionary is empty 
+        
+        static var defaultSummary: Summary { get }
+        
+        static func reduce(into: inout Summary, value: Value)
+        
+        static func merge(_ summary1: Summary, _ summary2: Summary) -> Summary
     }
     
     /// A container that holds values for properties that specify information on progress.
@@ -306,10 +314,10 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
     }
     
-    /// Returns an array of values for specified property in subtree.
+    /// Returns a summary for specified property in subtree.
     /// - Parameter metatype: Type of property.
-    /// - Returns: Array of values for property.
-    public func values<P: Property>(of property: P.Type) -> [P.Value] {
+    /// - Returns: Summary of property as specified.
+    public func summary<P: Property>(of property: P.Type) -> P.Summary {
 //        _$observationRegistrar.access(self, keyPath: \.state)
         return getUpdatedValues(property: property, includeSelf: true)
     }
@@ -317,8 +325,8 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// Returns the aggregated result of values.
     /// - Parameters:
     ///   - property: Type of property.
-    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value: AdditiveArithmetic {
-        return values(of: property).reduce(P.Value.zero, +)
+    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Summary where P.Value: AdditiveArithmetic {
+        return getUpdatedValues(property: property, includeSelf: true)
     }
     
     /// Mutates any settable properties that convey information about progress.
@@ -489,11 +497,11 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         markSelfDirty(property: property, parents: parents)
     }
     
-    private func getUpdatedValues<P: Property>(property: P.Type, includeSelf: Bool) -> [P.Value] {
-        let values: [P.Value] = state.withLock { state in
-            var values: [P.Value] = []
+    private func getUpdatedValues<P: Property>(property: P.Type, includeSelf: Bool) -> P.Summary {
+        let value: P.Summary = state.withLock { state in
+            var value: P.Summary = P.defaultSummary
             if includeSelf {
-                values.append(state.properties[AnyMetatypeWrapper(metatype: property)] as? P.Value ?? P.defaultValue)
+                P.self.reduce(into: &value, value: state.properties[AnyMetatypeWrapper(metatype: property)] as? P.Value ?? P.defaultValue)
             }
             if state.children.count > 0 {
                 for i in 0..<state.children.count {
@@ -504,29 +512,29 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
                                 let updatedValues = child.getUpdatedValues(property: property, includeSelf: true)
                                 let updatedPropertyState = PropertyState(value: updatedValues, isDirty: false)
                                 state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]! = updatedPropertyState
-                                values += updatedValues
+                                value = P.self.merge(value, updatedValues)
                             } else {
-                                values += childPropertyState.value as? [P.Value] ?? [P.defaultValue]
+                                value = P.self.merge(value, childPropertyState.value as? P.Summary ?? P.defaultSummary)
                             }
                         } else {
-                            values += childPropertyState.value as? [P.Value] ?? [P.defaultValue]
+                            value = P.self.merge(value, childPropertyState.value as? P.Summary ?? P.defaultSummary)
                         }
                     } else {
                         if let child = state.children[i].child {
-                            let childValues = child.getUpdatedValues(property: property, includeSelf: true)
-                            let childPropertyState = PropertyState(value: childValues, isDirty: false)
+                            let childValue = child.getUpdatedValues(property: property, includeSelf: true)
+                            let childPropertyState = PropertyState(value: childValue, isDirty: false)
                             state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] = childPropertyState
-                            values += childValues
+                            value = P.self.merge(value, childValue)
                         }
                     }
                 }
             }
-            return values
+            return value
         }
-        return values
+        return value
     }
     
-    private func setPropertyState<P: Property>(property: P.Type, value: [P.Value], at position: Int) {
+    private func setPropertyState<P: Property>(property: P.Type, value: P.Summary, at position: Int) {
         state.withLock { state in
             state.children[position].childProperties[AnyMetatypeWrapper(metatype: property)] = PropertyState(value: value, isDirty: false)
         }
@@ -657,17 +665,17 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         }
         
         for parentState in parents {
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.TotalFileCount.self, value: self.values(of: ProgressManager.Properties.TotalFileCount.self), at: parentState.positionInParent)
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.TotalFileCount.self, value: self.summary(of: ProgressManager.Properties.TotalFileCount.self), at: parentState.positionInParent)
             
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.CompletedFileCount.self, value: self.values(of: ProgressManager.Properties.CompletedFileCount.self), at: parentState.positionInParent)
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.CompletedFileCount.self, value: self.summary(of: ProgressManager.Properties.CompletedFileCount.self), at: parentState.positionInParent)
             
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.TotalByteCount.self, value: self.values(of: ProgressManager.Properties.TotalByteCount.self), at: parentState.positionInParent)
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.TotalByteCount.self, value: self.summary(of: ProgressManager.Properties.TotalByteCount.self), at: parentState.positionInParent)
 
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.CompletedByteCount.self, value: self.values(of: ProgressManager.Properties.CompletedByteCount.self), at: parentState.positionInParent)
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.CompletedByteCount.self, value: self.summary(of: ProgressManager.Properties.CompletedByteCount.self), at: parentState.positionInParent)
             
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.Throughput.self, value: self.values(of: ProgressManager.Properties.Throughput.self), at: parentState.positionInParent)
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.Throughput.self, value: self.summary(of: ProgressManager.Properties.Throughput.self), at: parentState.positionInParent)
             
-            parentState.parent.setPropertyState(property: ProgressManager.Properties.EstimatedTimeRemaining.self, value: self.values(of: ProgressManager.Properties.EstimatedTimeRemaining.self), at: parentState.positionInParent)
+            parentState.parent.setPropertyState(property: ProgressManager.Properties.EstimatedTimeRemaining.self, value: self.summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self), at: parentState.positionInParent)
         }
     }
 }
@@ -694,12 +702,12 @@ extension ProgressManager: CustomStringConvertible, CustomDebugStringConvertible
         fractionCompleted: \(fractionCompleted)
         isIndeterminate: \(isIndeterminate)
         isFinished: \(isFinished)
-        totalFileCount: \(values(of: ProgressManager.Properties.TotalFileCount.self))
-        completedFileCount: \(values(of: ProgressManager.Properties.CompletedFileCount.self))
-        totalByteCount: \(values(of: ProgressManager.Properties.TotalByteCount.self))
-        completedByteCount: \(values(of: ProgressManager.Properties.CompletedByteCount.self))
-        throughput: \(values(of: ProgressManager.Properties.Throughput.self))
-        estimatedTimeRemaining: \(values(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
+        totalFileCount: \(summary(of: ProgressManager.Properties.TotalFileCount.self))
+        completedFileCount: \(summary(of: ProgressManager.Properties.CompletedFileCount.self))
+        totalByteCount: \(summary(of: ProgressManager.Properties.TotalByteCount.self))
+        completedByteCount: \(summary(of: ProgressManager.Properties.CompletedByteCount.self))
+        throughput: \(summary(of: ProgressManager.Properties.Throughput.self))
+        estimatedTimeRemaining: \(summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
         """
     }
     

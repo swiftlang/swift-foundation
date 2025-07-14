@@ -56,12 +56,12 @@ import Observation
         fractionCompleted: \(fractionCompleted)
         isIndeterminate: \(isIndeterminate)
         isFinished: \(isFinished)
-        totalFileCount: \(values(of: ProgressManager.Properties.TotalFileCount.self))
-        completedFileCount: \(values(of: ProgressManager.Properties.CompletedFileCount.self))
-        totalByteCount: \(values(of: ProgressManager.Properties.TotalByteCount.self))
-        completedByteCount: \(values(of: ProgressManager.Properties.CompletedByteCount.self))
-        throughput: \(values(of: ProgressManager.Properties.Throughput.self))
-        estimatedTimeRemaining: \(values(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
+        totalFileCount: \(summary(of: ProgressManager.Properties.TotalFileCount.self))
+        completedFileCount: \(summary(of: ProgressManager.Properties.CompletedFileCount.self))
+        totalByteCount: \(summary(of: ProgressManager.Properties.TotalByteCount.self))
+        completedByteCount: \(summary(of: ProgressManager.Properties.CompletedByteCount.self))
+        throughput: \(summary(of: ProgressManager.Properties.Throughput.self))
+        estimatedTimeRemaining: \(summary(of: ProgressManager.Properties.EstimatedTimeRemaining.self))
         """
     }
     
@@ -79,14 +79,14 @@ import Observation
     /// Returns an array of values for specified property in subtree.
     /// - Parameter metatype: Type of property.
     /// - Returns: Array of values for property.
-    public func values<P: ProgressManager.Property>(of property: P.Type) -> [P.Value] {
-        manager.values(of: property)
+    public func summary<P: ProgressManager.Property>(of property: P.Type) -> P.Summary {
+        manager.summary(of: property)
     }
     
     /// Returns the aggregated result of values.
     /// - Parameters:
     ///   - property: Type of property.
-    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Value where P.Value: AdditiveArithmetic {
+    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Summary where P.Value: AdditiveArithmetic {
         manager.total(of: property)
     }
     
