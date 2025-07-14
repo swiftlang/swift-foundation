@@ -430,24 +430,21 @@ private struct NumberExtensionParseStrategyTests {
     }
 
     @Test func decimal_withFormat_localeDependent() throws {
-        guard Locale.autoupdatingCurrent.identifier == "en_US" else {
-            print("Your current locale is \(Locale.autoupdatingCurrent). Set it to en_US to run this test")
-            return
-        }
-        #expect(try Decimal("-3,000.14159", format: .number) == Decimal(-3000.14159))
-        #expect(try Decimal("-3.14159", format: .number) == Decimal(-3.14159))
-        #expect(try Decimal("12,345.678", format: .number) == Decimal(12345.678))
-        #expect(try Decimal("0.00", format: .number) == 0)
+        let locale = Locale(identifier: "en_US")
+        #expect(try Decimal("-3,000.14159", format: .number.locale(locale)) == Decimal(-3000.14159))
+        #expect(try Decimal("-3.14159", format: .number.locale(locale)) == Decimal(-3.14159))
+        #expect(try Decimal("12,345.678", format: .number.locale(locale)) == Decimal(12345.678))
+        #expect(try Decimal("0.00", format: .number.locale(locale)) == 0)
 
-        #expect(try Decimal("-3,000.14159%", format: .percent) == Decimal(-30.0014159))
-        #expect(try Decimal("-314.159%", format: .percent) == Decimal(-3.14159))
-        #expect(try Decimal("12,345.678%", format: .percent) == Decimal(123.45678))
-        #expect(try Decimal("0.00%", format: .percent) == 0)
+        #expect(try Decimal("-3,000.14159%", format: .percent.locale(locale)) == Decimal(-30.0014159))
+        #expect(try Decimal("-314.159%", format: .percent.locale(locale)) == Decimal(-3.14159))
+        #expect(try Decimal("12,345.678%", format: .percent.locale(locale)) == Decimal(123.45678))
+        #expect(try Decimal("0.00%", format: .percent.locale(locale)) == 0)
 
-        #expect(try Decimal("$12,345.00", format: .currency(code: "USD")) == Decimal(12345))
-        #expect(try Decimal("$12345.68", format: .currency(code: "USD")) == Decimal(12345.68))
-        #expect(try Decimal("$0.00", format: .currency(code: "USD")) == Decimal(0))
-        #expect(try Decimal("-$3000.0000014", format: .currency(code: "USD")) == Decimal(string: "-3000.0000014")!)
+        #expect(try Decimal("$12,345.00", format: .currency(code: "USD").locale(locale)) == Decimal(12345))
+        #expect(try Decimal("$12345.68", format: .currency(code: "USD").locale(locale)) == Decimal(12345.68))
+        #expect(try Decimal("$0.00", format: .currency(code: "USD").locale(locale)) == Decimal(0))
+        #expect(try Decimal("-$3000.0000014", format: .currency(code: "USD").locale(locale)) == Decimal(string: "-3000.0000014")!)
     }
 }
 
