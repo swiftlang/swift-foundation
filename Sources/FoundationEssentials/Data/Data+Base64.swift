@@ -395,7 +395,12 @@ extension Base64 {
 
         let lineLength = options.contains(.lineLength64Characters) ? 64 : 76
         let lineBreaks = capacityWithoutBreaks / lineLength
-        let lineBreakCapacity = lineBreaks * seperatorBytes
+        var lineBreakCapacity = lineBreaks * seperatorBytes
+        // in case the last row uses all available space, we don't need to add line breaks
+        // but we can't remove bytes if we have an empty input
+        if capacityWithoutBreaks % lineLength == 0 && capacityWithoutBreaks > seperatorBytes {
+            lineBreakCapacity -= seperatorBytes
+        }
         return capacityWithoutBreaks + lineBreakCapacity
     }
 
