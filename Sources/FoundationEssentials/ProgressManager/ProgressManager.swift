@@ -319,15 +319,15 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
     /// - Returns: Summary of property as specified.
     public func summary<P: Property>(of property: P.Type) -> P.Summary {
 //        _$observationRegistrar.access(self, keyPath: \.state)
-        return getUpdatedValues(property: property, includeSelf: true)
+        return getUpdatedSummary(property: property)
     }
     
     /// Returns the aggregated result of values.
     /// - Parameters:
     ///   - property: Type of property.
-    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Summary where P.Value: AdditiveArithmetic {
-        return getUpdatedValues(property: property, includeSelf: true)
-    }
+//    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Summary where P.Value: AdditiveArithmetic {
+//        return getUpdatedValues(property: property, includeSelf: true)
+//    }
     
     /// Mutates any settable properties that convey information about progress.
     public func withProperties<T, E: Error>(
@@ -497,41 +497,33 @@ internal struct AnyMetatypeWrapper: Hashable, Equatable, Sendable {
         markSelfDirty(property: property, parents: parents)
     }
     
-    private func getUpdatedValues<P: Property>(property: P.Type, includeSelf: Bool) -> P.Summary {
-        let value: P.Summary = state.withLock { state in
+    private func getUpdatedSummary<P: Property>(property: P.Type) -> P.Summary {
+        return state.withLock { state in
             var value: P.Summary = P.defaultSummary
-            if includeSelf {
-                P.self.reduce(into: &value, value: state.properties[AnyMetatypeWrapper(metatype: property)] as? P.Value ?? P.defaultValue)
-            }
+            P.reduce(into: &value, value: state.properties[AnyMetatypeWrapper(metatype: property)] as? P.Value ?? P.defaultValue)
             if state.children.count > 0 {
                 for i in 0..<state.children.count {
-                    let propertyState = state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]
-                    if let childPropertyState = propertyState {
+                    if let childPropertyState = state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] {
                         if childPropertyState.isDirty {
                             if let child = state.children[i].child {
-                                let updatedValues = child.getUpdatedValues(property: property, includeSelf: true)
-                                let updatedPropertyState = PropertyState(value: updatedValues, isDirty: false)
-                                state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]! = updatedPropertyState
-                                value = P.self.merge(value, updatedValues)
-                            } else {
-                                value = P.self.merge(value, childPropertyState.value as? P.Summary ?? P.defaultSummary)
+                                let updatedSummary = child.getUpdatedSummary(property: property)
+                                state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)]! = PropertyState(value: updatedSummary, isDirty: false)
+                                value = P.merge(value, updatedSummary)
                             }
                         } else {
-                            value = P.self.merge(value, childPropertyState.value as? P.Summary ?? P.defaultSummary)
+                            value = P.merge(value, childPropertyState.value as? P.Summary ?? P.defaultSummary)
                         }
                     } else {
                         if let child = state.children[i].child {
-                            let childValue = child.getUpdatedValues(property: property, includeSelf: true)
-                            let childPropertyState = PropertyState(value: childValue, isDirty: false)
-                            state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] = childPropertyState
-                            value = P.self.merge(value, childValue)
+                            let childSummary = child.getUpdatedSummary(property: property)
+                            state.children[i].childProperties[AnyMetatypeWrapper(metatype: property)] = PropertyState(value: childSummary, isDirty: false)
+                            value = P.merge(value, childSummary)
                         }
                     }
                 }
             }
             return value
         }
-        return value
     }
     
     private func setPropertyState<P: Property>(property: P.Type, value: P.Summary, at position: Int) {

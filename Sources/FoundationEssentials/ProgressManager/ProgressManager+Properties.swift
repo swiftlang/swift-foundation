@@ -116,7 +116,7 @@ extension ProgressManager {
             
             public static var defaultValue: Int64 { return 0 }
             
-            public static var defaultSummary: [Int64] { return [0] }
+            public static var defaultSummary: [Int64] { return [] }
 
             public typealias T = Int64
             
@@ -140,7 +140,7 @@ extension ProgressManager {
             
             public static var defaultValue: Duration { return Duration.seconds(0) }
 
-            public static var defaultSummary: [Duration] { return [Duration.seconds(0)] }
+            public static var defaultSummary: [Duration] { return [] }
             
             public typealias T = Duration
             

@@ -86,9 +86,9 @@ import Observation
     /// Returns the aggregated result of values.
     /// - Parameters:
     ///   - property: Type of property.
-    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Summary where P.Value: AdditiveArithmetic {
-        manager.total(of: property)
-    }
+//    public func total<P: ProgressManager.Property>(of property: P.Type) -> P.Summary where P.Value: AdditiveArithmetic {
+//        manager.total(of: property)
+//    }
     
     internal let manager: ProgressManager
     
