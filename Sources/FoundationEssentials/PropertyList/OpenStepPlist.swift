@@ -238,8 +238,13 @@ private func parseQuotedPlistString(_ pInfo: inout _ParseInfo, quote: UInt16) ->
                 pInfo.err = OpenStepPlistError("Unterminated backslash sequence on line \(lineNumberStrings(pInfo))")
                 return nil
             }
-
-            result!.unicodeScalars.append(UnicodeScalar(getSlashedChar(&pInfo))!)
+            
+            guard let scalar = UnicodeScalar(getSlashedChar(&pInfo)) else {
+                pInfo.err = OpenStepPlistError("Invalid character on line \(lineNumberStrings(pInfo))")
+                return nil
+            }
+            
+            result!.unicodeScalars.append(scalar)
             mark = pInfo.curr
         } else {
             pInfo.advance()
@@ -406,7 +411,10 @@ private func getDataBytes(_ pInfo: inout _ParseInfo, bytes: UnsafeMutableBufferP
             return numBytesRead
         }
 
-        func fromHexDigit(ch: UInt8) -> UInt8? {
+        func fromHexDigit(ch: UInt16) -> UInt8? {
+            guard let ch = UInt8(exactly: ch) else {
+                return nil
+            }
             if isdigit(Int32(ch)) != 0 {
                 return ch &- UInt8(ascii: "0")
             }
@@ -419,14 +427,14 @@ private func getDataBytes(_ pInfo: inout _ParseInfo, bytes: UnsafeMutableBufferP
             return nil
         }
 
-        if let first = fromHexDigit(ch: UInt8(ch1)) {
+        if let first = fromHexDigit(ch: ch1) {
             pInfo.advance()
             if pInfo.isAtEnd {
                 return -2 // Error: uneven number of hex digits
             }
 
             let ch2 = pInfo.currChar
-            guard let second = fromHexDigit(ch: UInt8(ch2)) else {
+            guard let second = fromHexDigit(ch: ch2) else {
                 return -2 // Error: uneven number of hex digits
             }
 
