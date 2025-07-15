@@ -79,7 +79,7 @@ else()
 endif()
 
 if (_SwiftCollections_SourceDIR)
-    message(STATUS "_SwiftCollections_SourceDIR provided, using swift-foundation-icu checkout at ${_SwiftCollections_SourceDIR}")
+    message(STATUS "_SwiftCollections_SourceDIR provided, using swift-collections checkout at ${_SwiftCollections_SourceDIR}")
     FetchContent_Declare(SwiftCollections
         SOURCE_DIR ${_SwiftCollections_SourceDIR})
 else()
